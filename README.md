@@ -27,7 +27,7 @@ Learn more at [agentclientprotocol.com](https://agentclientprotocol.com/).
   - [via Zed's SDK adapter](https://github.com/zed-industries/claude-code-acp)
 - [Gemini](https://github.com/google-gemini/gemini-cli)
 - [Goose](https://block.github.io/goose/docs/guides/acp-clients)
-- [Stakpak](https://github.com/stakpak/agent?tab=readme-ov-file#agent-client-protocol-acp))
+- [Stakpak](https://github.com/stakpak/agent?tab=readme-ov-file#agent-client-protocol-acp)
 - [VT Code](https://github.com/vinhnx/vtcode/blob/main/README.md#zed-ide-integration-agent-client-protocol)
 
 ## Libraries and Schema
