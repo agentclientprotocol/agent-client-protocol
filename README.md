@@ -16,6 +16,7 @@ Learn more at [agentclientprotocol.com](https://agentclientprotocol.com/).
 
 - [Zed](https://zed.dev/docs/ai/external-agents)
 - Emacs via [agent-shell.el](https://github.com/xenodium/agent-shell)
+- [JetBrains _(coming soon)_](https://blog.jetbrains.com/ai/2025/10/jetbrains-zed-open-interoperability-for-ai-coding-agents-in-your-ide/)
 - [marimo notebook](https://github.com/marimo-team/marimo)
 - [neovim](https://neovim.io)
   - through the [CodeCompanion](https://github.com/olimorris/codecompanion.nvim) plugin
@@ -27,6 +28,7 @@ Learn more at [agentclientprotocol.com](https://agentclientprotocol.com/).
   - [via Zed's SDK adapter](https://github.com/zed-industries/claude-code-acp)
 - [Gemini](https://github.com/google-gemini/gemini-cli)
 - [Goose](https://block.github.io/goose/docs/guides/acp-clients)
+- [JetBrains Junie _(coming soon)_](https://www.jetbrains.com/junie/)
 - [Stakpak](https://github.com/stakpak/agent?tab=readme-ov-file#agent-client-protocol-acp)
 - [VT Code](https://github.com/vinhnx/vtcode/blob/main/README.md#zed-ide-integration-agent-client-protocol)
 
