@@ -26,16 +26,16 @@ Learn more at [agentclientprotocol.com](https://agentclientprotocol.com/).
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview)
   - [via Zed's SDK adapter](https://github.com/zed-industries/claude-code-acp)
 - [Gemini](https://github.com/google-gemini/gemini-cli)
-- [Goose](https://github.com/block/goose)
-  - [via Goose's acp command](https://block.github.io/goose/docs/guides/acp-clients)
-- [VT Code](https://github.com/vinhnx/vtcode)
-  - [via VT Code's `acp` command, enabled by default](https://github.com/vinhnx/vtcode/blob/main/README.md#zed-ide-integration-agent-client-protocol)
+- [Goose](https://block.github.io/goose/docs/guides/acp-clients)
+- [Stakpak](https://github.com/stakpak/agent?tab=readme-ov-file#agent-client-protocol-acp))
+- [VT Code](https://github.com/vinhnx/vtcode/blob/main/README.md#zed-ide-integration-agent-client-protocol)
 
 ## Libraries and Schema
 
 - **Rust**: [`agent-client-protocol`](https://crates.io/crates/agent-client-protocol) - See [examples/agent.rs](./rust/examples/agent.rs) and [examples/client.rs](./rust/examples/client.rs)
 - **TypeScript**: [`@zed-industries/agent-client-protocol`](https://www.npmjs.com/package/@zed-industries/agent-client-protocol) - See [examples/](./typescript/examples/)
 - **JSON Schema**: [schema.json](./schema/schema.json)
+- **Python**: [`agent-client-protocol-python`](https://github.com/PsiACE/agent-client-protocol-python)
 - **React**: [use-acp](https://github.com/marimo-team/use-acp): hooks for connecting to Agent Client Protocol (ACP) servers.
 - **Emacs**: [acp.el](https://github.com/xenodium/acp.el)
 
