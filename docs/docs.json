@@ -72,8 +72,9 @@
       {
         "group": "Libraries",
         "pages": [
-          "libraries/typescript",
+          "libraries/kotlin",
           "libraries/rust",
+          "libraries/typescript",
           "libraries/community"
         ]
       },

@@ -35,12 +35,17 @@ Learn more at [agentclientprotocol.com](https://agentclientprotocol.com/).
 ## Libraries and Schema
 
 - **JSON Schema**: [`schema.json`](./schema/schema.json)
+- **Kotlin**: [`acp-kotlin`](https://github.com/agentclientprotocol/acp-kotlin-sdk)
 - **Rust**: [`agent-client-protocol`](https://crates.io/crates/agent-client-protocol) - See [examples/agent.rs](./rust/examples/agent.rs) and [examples/client.rs](./rust/examples/client.rs)
 - **TypeScript**: [`@agentclientprotocol/sdk`](https://www.npmjs.com/package/@agentclientprotocol/sdk) - See [examples/](./typescript/examples/)
+
+### From the Community
+
 - **Dart**: [`acp_dart`](https://github.com/SkrOYC/acp-dart)
+- **Emacs**: [`acp.el`](https://github.com/xenodium/acp.el)
+- **Go**: [`acp-go-sdk`](https://github.com/coder/acp-go-sdk)
 - **Python**: [`agent-client-protocol-python`](https://github.com/PsiACE/agent-client-protocol-python)
 - **React**: [`use-acp`](https://github.com/marimo-team/use-acp): hooks for connecting to Agent Client Protocol (ACP) servers.
-- **Emacs**: [`acp.el`](https://github.com/xenodium/acp.el)
 
 ## Contributing
 
