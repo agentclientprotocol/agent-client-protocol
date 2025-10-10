@@ -23,16 +23,16 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
 
       - name: Use Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
           node-version: latest
           cache: "npm"
 
       - name: Setup Rust
-        uses: actions-rust-lang/setup-rust-toolchain@fb51252c7ba57d633bc668f941da052e410add48
+        uses: actions-rust-lang/setup-rust-toolchain@1780873c7b576612439a134613cc4cc74ce5538c
         with:
           toolchain: nightly,stable
           components: rustfmt,clippy
@@ -44,7 +44,7 @@ jobs:
         run: npm run format:check
 
       - name: Check for typos
-        uses: crate-ci/typos@8e6a4285bcbde632c5d79900a7779746e8b7ea3f
+        uses: crate-ci/typos@80c8a4945eec0f6d464eaf9e65ed98ef085283d1
         with:
           config: ./typos.toml
 
@@ -62,7 +62,7 @@ jobs:
 
       - name: Upload documentation artifact
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b
         with:
           path: ./typescript/docs
 
