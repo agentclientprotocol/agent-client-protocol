@@ -1,5 +1,5 @@
 {
-  "name": "@zed-industries/agent-client-protocol",
+  "name": "@agentclientprotocol/sdk",
   "version": "0.4.5",
   "publishConfig": {
     "access": "public"

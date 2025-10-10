@@ -11,7 +11,7 @@ Learn more at https://agentclientprotocol.com
 ## Installation
 
 ```bash
-npm install @zed-industries/agent-client-protocol
+npm install @agentclientprotocol/sdk
 ```
 
 ## Get Started
@@ -42,7 +42,7 @@ For a complete, production-ready implementation, check out the [Gemini CLI Agent
 - [Examples](https://github.com/agentclientprotocol/agent-client-protocol/tree/main/typescript/examples)
 - [Protocol Documentation](https://agentclientprotocol.com)
 - [GitHub Repository](https://github.com/agentclientprotocol/agent-client-protocol)
-- [NPM Package](https://www.npmjs.com/package/@zed-industries/agent-client-protocol)
+- [NPM Package](https://www.npmjs.com/package/@agentclientprotocol/sdk)
 
 ## Contributing
 
