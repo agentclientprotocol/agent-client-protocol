@@ -14,7 +14,7 @@ While minimal, [`agent.ts`](./agent.ts) implements a compliant [ACP](https://age
 1. Clone this repo
 
 ```sh
-$ git clone https://github.com/zed-industries/agent-client-protocol.git
+$ git clone https://github.com/agentclientprotocol/agent-client-protocol.git
 ```
 
 2. Add the following at the root of your [Zed](https://zed.dev) settings:

@@ -5,7 +5,7 @@
   "out": "./docs",
   "navigationLinks": {
     "Protocol Docs": "https://agentclientprotocol.com",
-    "GitHub": "https://github.com/zed-industries/agent-client-protocol",
+    "GitHub": "https://github.com/agentclientprotocol/agent-client-protocol",
     "NPM": "https://www.npmjs.com/package/@zed-industries/agent-client-protocol"
   },
   "tsconfig": "../tsconfig.json",

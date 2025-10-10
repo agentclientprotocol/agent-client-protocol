@@ -5,13 +5,13 @@
     "access": "public"
   },
   "description": "The Agent Client Protocol (ACP) is a protocol that standardizes communication between *code editors* (interactive programs for viewing and editing source code) and *coding agents* (programs that use generative AI to autonomously modify code).",
-  "homepage": "https://github.com/zed-industries/agent-client-protocol#readme",
+  "homepage": "https://github.com/agentclientprotocol/agent-client-protocol#readme",
   "bugs": {
-    "url": "https://github.com/zed-industries/agent-client-protocol/issues"
+    "url": "https://github.com/agentclientprotocol/agent-client-protocol/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/zed-industries/agent-client-protocol.git"
+    "url": "git+https://github.com/agentclientprotocol/agent-client-protocol.git"
   },
   "license": "Apache-2.0",
   "author": "Zed Industries",

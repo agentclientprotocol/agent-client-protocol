@@ -54,13 +54,13 @@ No changes.
 
 ### Rust Library
 
-- Make `Agent` and `Client` dyn compatible (you'll need to annotate them with `#[async_trait]`) [#97](https://github.com/zed-industries/agent-client-protocol/pull/97)
-- `ext_method` and `ext_notification` methods are now more consistent with the other trait methods [#95](https://github.com/zed-industries/agent-client-protocol/pull/95)
+- Make `Agent` and `Client` dyn compatible (you'll need to annotate them with `#[async_trait]`) [#97](https://github.com/agentclientprotocol/agent-client-protocol/pull/97)
+- `ext_method` and `ext_notification` methods are now more consistent with the other trait methods [#95](https://github.com/agentclientprotocol/agent-client-protocol/pull/95)
   - There are also distinct types for `ExtRequest`, `ExtResponse`, and `ExtNotification`
-- Rexport `serde_json::RawValue` for easier use [#95](https://github.com/zed-industries/agent-client-protocol/pull/95)
+- Rexport `serde_json::RawValue` for easier use [#95](https://github.com/agentclientprotocol/agent-client-protocol/pull/95)
 
 ### Typescript Library
 
-- Use Stream abstraction instead of raw byte streams [#93](https://github.com/zed-industries/agent-client-protocol/pull/93)
+- Use Stream abstraction instead of raw byte streams [#93](https://github.com/agentclientprotocol/agent-client-protocol/pull/93)
   - Makes it easier to use with websockets instead of stdio
-- Improve type safety for method map helpers [#94](https://github.com/zed-industries/agent-client-protocol/pull/94)
+- Improve type safety for method map helpers [#94](https://github.com/agentclientprotocol/agent-client-protocol/pull/94)
