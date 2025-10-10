@@ -33,7 +33,7 @@ Learn more at [agentclientprotocol.com](https://agentclientprotocol.com/).
 ## Libraries and Schema
 
 - **JSON Schema**: [`schema.json`](./schema/schema.json)
-- **Kotlin**: [`acp-kotlin`](https://github.com/agentclientprotocol/acp-kotlin-sdk)
+- **Kotlin**: [`acp-kotlin`](https://github.com/agentclientprotocol/acp-kotlin-sdk) – supports JVM, other targets are in progress
 - **Rust**: [`agent-client-protocol`](https://crates.io/crates/agent-client-protocol) - See [examples/agent.rs](./rust/examples/agent.rs) and [examples/client.rs](./rust/examples/client.rs)
 - **TypeScript**: [`@agentclientprotocol/sdk`](https://www.npmjs.com/package/@agentclientprotocol/sdk) - See [examples/](./typescript/examples/)
 
