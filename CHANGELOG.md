@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.6 (2025-10-10)
+
+### Protocol
+
+- No changes
+
+### Rust
+
+- Fix: support all valid JSON-RPC ids (int, string, null)
+
 ## 0.4.5 (2025-10-02)
 
 ### Protocol
