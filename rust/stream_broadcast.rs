@@ -12,7 +12,7 @@ use serde_json::value::RawValue;
 
 use crate::{
     Error,
-    rpc::{OutgoingMessage, ResponseResult, Side},
+    rpc::{Id, OutgoingMessage, ResponseResult, Side},
 };
 
 /// A message that flows through the RPC stream.
@@ -50,7 +50,7 @@ pub enum StreamMessageContent {
     /// A JSON-RPC request message.
     Request {
         /// The unique identifier for this request.
-        id: i32,
+        id: Id,
         /// The name of the method being called.
         method: Arc<str>,
         /// Optional parameters for the method.
@@ -59,7 +59,7 @@ pub enum StreamMessageContent {
     /// A JSON-RPC response message.
     Response {
         /// The ID of the request this response is for.
-        id: i32,
+        id: Id,
         /// The result of the request (success or error).
         result: Result<Option<serde_json::Value>, Error>,
     },
@@ -124,12 +124,12 @@ impl StreamSender {
             direction: StreamMessageDirection::Outgoing,
             message: match message {
                 OutgoingMessage::Request { id, method, params } => StreamMessageContent::Request {
-                    id: *id,
+                    id: id.clone(),
                     method: method.clone(),
                     params: serde_json::to_value(params).ok(),
                 },
                 OutgoingMessage::Response { id, result } => StreamMessageContent::Response {
-                    id: *id,
+                    id: id.clone(),
                     result: match result {
                         ResponseResult::Result(value) => Ok(serde_json::to_value(value).ok()),
                         ResponseResult::Error(error) => Err(error.clone()),
@@ -150,7 +150,7 @@ impl StreamSender {
     /// Broadcasts an incoming request to all receivers.
     pub(crate) fn incoming_request(
         &self,
-        id: i32,
+        id: Id,
         method: impl Into<Arc<str>>,
         params: &impl Serialize,
     ) {
@@ -171,7 +171,7 @@ impl StreamSender {
     }
 
     /// Broadcasts an incoming response to all receivers.
-    pub(crate) fn incoming_response(&self, id: i32, result: Result<Option<&RawValue>, &Error>) {
+    pub(crate) fn incoming_response(&self, id: Id, result: Result<Option<&RawValue>, &Error>) {
         if self.0.receiver_count() == 0 {
             return;
         }

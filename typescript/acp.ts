@@ -690,7 +690,7 @@ export class ClientSideConnection implements Agent {
 export type { AnyMessage } from "./jsonrpc.js";
 
 class Connection {
-  #pendingResponses: Map<string | number, PendingResponse> = new Map();
+  #pendingResponses: Map<string | number | null, PendingResponse> = new Map();
   #nextRequestId: number = 0;
   #requestHandler: RequestHandler;
   #notificationHandler: NotificationHandler;

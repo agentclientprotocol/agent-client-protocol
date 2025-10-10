@@ -6,14 +6,14 @@ export type AnyMessage = AnyRequest | AnyResponse | AnyNotification;
 
 export type AnyRequest = {
   jsonrpc: "2.0";
-  id: string | number;
+  id: string | number | null;
   method: string;
   params?: unknown;
 };
 
 export type AnyResponse = {
   jsonrpc: "2.0";
-  id: string | number;
+  id: string | number | null;
 } & Result<unknown>;
 
 export type AnyNotification = {
