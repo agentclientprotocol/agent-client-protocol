@@ -25,7 +25,6 @@ All paths in the protocol should be absolute
 - Handle the new request in the blanket impl of MessageHandler<{Agent|Client}Side>
 - Add the method to markdown_generator.rs SideDocs functions
 - Run `npm run generate` and fix any issues that appear
-- Add the method to typescript/acp.ts classes and handlers
 - Run `npm run check`
 - Update the example agents and clients in tests and examples in both libraries
 
@@ -33,6 +32,5 @@ All paths in the protocol should be absolute
 
 - Update the mintlify docs and guides in the `docs` directory
 - Run `npm run check` to make sure the json and zod schemas gets generated properly
-- Params and responses docs make it to the schema, but the method-level docs, so make sure to update the typescript library accordingly.
 
 Never write readme files related to the conversation unless explicitly asked to.
