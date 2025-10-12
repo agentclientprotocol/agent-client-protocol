@@ -740,10 +740,10 @@ async fn test_full_conversation_flow() {
 
 #[tokio::test]
 async fn test_notification_wire_format() {
+    use super::rpc::{JsonRpcMessage, OutgoingMessage};
     use crate::{
         AgentNotification, AgentSide, CancelNotification, ClientNotification, ClientSide,
         ContentBlock, SessionNotification, SessionUpdate, TextContent,
-        rpc::{JsonRpcMessage, OutgoingMessage},
     };
     use serde_json::{Value, json};
 

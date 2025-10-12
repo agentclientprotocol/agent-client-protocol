@@ -10,10 +10,8 @@ use anyhow::Result;
 use serde::Serialize;
 use serde_json::value::RawValue;
 
-use crate::{
-    Error,
-    rpc::{Id, OutgoingMessage, ResponseResult, Side},
-};
+use super::rpc::{Id, OutgoingMessage, ResponseResult, Side};
+use crate::Error;
 
 /// A message that flows through the RPC stream.
 ///

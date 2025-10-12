@@ -24,8 +24,8 @@ use parking_lot::Mutex;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use serde_json::value::RawValue;
 
-use crate::stream_broadcast::{StreamBroadcast, StreamSender};
-use crate::{Error, StreamReceiver};
+use super::stream_broadcast::{StreamBroadcast, StreamReceiver, StreamSender};
+use crate::Error;
 
 pub struct RpcConnection<Local: Side, Remote: Side> {
     outgoing_tx: UnboundedSender<OutgoingMessage<Local, Remote>>,
