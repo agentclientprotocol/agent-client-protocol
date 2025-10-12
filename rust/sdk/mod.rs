@@ -6,11 +6,15 @@ use crate::{
     *,
 };
 
+mod agent;
+mod client;
 mod rpc;
 #[cfg(test)]
 mod rpc_tests;
 mod stream_broadcast;
 
+pub use agent::*;
+pub use client::*;
 pub use stream_broadcast::{
     StreamMessage, StreamMessageContent, StreamMessageDirection, StreamReceiver,
 };
