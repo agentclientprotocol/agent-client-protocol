@@ -541,14 +541,90 @@ pub(crate) const TERMINAL_KILL_METHOD_NAME: &str = "terminal/kill";
 #[serde(untagged)]
 #[schemars(extend("x-docs-ignore" = true))]
 pub enum AgentRequest {
+    /// Writes content to a text file in the client's file system.
+    ///
+    /// Only available if the client advertises the `fs.writeTextFile` capability.
+    /// Allows the agent to create or modify files within the client's environment.
+    ///
+    /// See protocol docs: [Client](https://agentclientprotocol.com/protocol/overview#client)
     WriteTextFileRequest(WriteTextFileRequest),
+    /// Reads content from a text file in the client's file system.
+    ///
+    /// Only available if the client advertises the `fs.readTextFile` capability.
+    /// Allows the agent to access file contents within the client's environment.
+    ///
+    /// See protocol docs: [Client](https://agentclientprotocol.com/protocol/overview#client)
     ReadTextFileRequest(ReadTextFileRequest),
+    /// Requests permission from the user for a tool call operation.
+    ///
+    /// Called by the agent when it needs user authorization before executing
+    /// a potentially sensitive operation. The client should present the options
+    /// to the user and return their decision.
+    ///
+    /// If the client cancels the prompt turn via `session/cancel`, it MUST
+    /// respond to this request with `RequestPermissionOutcome::Cancelled`.
+    ///
+    /// See protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/tool-calls#requesting-permission)
     RequestPermissionRequest(RequestPermissionRequest),
+    /// Executes a command in a new terminal
+    ///
+    /// Only available if the `terminal` Client capability is set to `true`.
+    ///
+    /// Returns a `TerminalId` that can be used with other terminal methods
+    /// to get the current output, wait for exit, and kill the command.
+    ///
+    /// The `TerminalId` can also be used to embed the terminal in a tool call
+    /// by using the `ToolCallContent::Terminal` variant.
+    ///
+    /// The Agent is responsible for releasing the terminal by using the `terminal/release`
+    /// method.
+    ///
+    /// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)
     CreateTerminalRequest(CreateTerminalRequest),
+    /// Gets the terminal output and exit status
+    ///
+    /// Returns the current content in the terminal without waiting for the command to exit.
+    /// If the command has already exited, the exit status is included.
+    ///
+    /// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)
     TerminalOutputRequest(TerminalOutputRequest),
+    /// Releases a terminal
+    ///
+    /// The command is killed if it hasn't exited yet. Use `terminal/wait_for_exit`
+    /// to wait for the command to exit before releasing the terminal.
+    ///
+    /// After release, the `TerminalId` can no longer be used with other `terminal/*` methods,
+    /// but tool calls that already contain it, continue to display its output.
+    ///
+    /// The `terminal/kill` method can be used to terminate the command without releasing
+    /// the terminal, allowing the Agent to call `terminal/output` and other methods.
+    ///
+    /// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)
     ReleaseTerminalRequest(ReleaseTerminalRequest),
+    /// Waits for the terminal command to exit and return its exit status
+    ///
+    /// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)
     WaitForTerminalExitRequest(WaitForTerminalExitRequest),
+    /// Kills the terminal command without releasing the terminal
+    ///
+    /// While `terminal/release` will also kill the command, this method will keep
+    /// the `TerminalId` valid so it can be used with other methods.
+    ///
+    /// This method can be helpful when implementing command timeouts which terminate
+    /// the command as soon as elapsed, and then get the final output so it can be sent
+    /// to the model.
+    ///
+    /// Note: `terminal/release` when `TerminalId` is no longer needed.
+    ///
+    /// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)
     KillTerminalCommandRequest(KillTerminalCommandRequest),
+    /// Handles extension method requests from the agent.
+    ///
+    /// Allows the Agent to send an arbitrary request that is not part of the ACP spec.
+    /// Extension methods provide a way to add custom functionality while maintaining
+    /// protocol compatibility.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     ExtMethodRequest(ExtRequest),
 }
 
@@ -584,6 +660,24 @@ pub enum ClientResponse {
 #[allow(clippy::large_enum_variant)]
 #[schemars(extend("x-docs-ignore" = true))]
 pub enum AgentNotification {
+    /// Handles session update notifications from the agent.
+    ///
+    /// This is a notification endpoint (no response expected) that receives
+    /// real-time updates about session progress, including message chunks,
+    /// tool calls, and execution plans.
+    ///
+    /// Note: Clients SHOULD continue accepting tool call updates even after
+    /// sending a `session/cancel` notification, as the agent may send final
+    /// updates before responding with the cancelled stop reason.
+    ///
+    /// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-turn#3-agent-reports-output)
     SessionNotification(SessionNotification),
+    /// Handles extension notifications from the agent.
+    ///
+    /// Allows the Agent to send an arbitrary notification that is not part of the ACP spec.
+    /// Extension notifications provide a way to send one-way messages for custom functionality
+    /// while maintaining protocol compatibility.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     ExtNotification(ExtNotification),
 }
