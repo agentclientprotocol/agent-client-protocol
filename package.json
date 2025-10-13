@@ -17,7 +17,7 @@
   "author": "Zed Industries",
   "files": [
     "schema/schema.json",
-    "LICENSE-APACHE"
+    "LICENSE"
   ],
   "type": "module",
   "scripts": {

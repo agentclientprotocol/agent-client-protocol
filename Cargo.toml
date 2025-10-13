@@ -1,5 +1,5 @@
 [package]
-name = "agent-client-protocol"
+name = "agent-client-protocol-schema"
 authors = ["Zed <hi@zed.dev>"]
 version = "0.4.6"
 edition = "2024"
@@ -11,7 +11,7 @@ documentation = "https://docs.rs/agent-client-protocol"
 readme = "README.md"
 keywords = ["agent", "client", "protocol", "ai", "editor"]
 categories = ["development-tools", "api-bindings"]
-include = ["/rust/**/*.rs", "/README.md", "/LICENSE-APACHE", "/Cargo.toml"]
+include = ["/rust/**/*.rs", "/README.md", "/LICENSE", "/Cargo.toml"]
 
 [features]
 unstable = []
@@ -20,43 +20,8 @@ unstable = []
 path = "rust/acp.rs"
 doctest = false
 
-[[bin]]
-name = "generate"
-path = "rust/bin/generate.rs"
-
-[[example]]
-name = "agent"
-path = "rust/examples/agent.rs"
-
-[[example]]
-name = "client"
-path = "rust/examples/client.rs"
-
 [dependencies]
 anyhow = "1"
-async-broadcast = "0.7"
-async-trait = "0.1"
-futures = { version = "0.3" }
-log = "0.4"
-parking_lot = "0.12"
 schemars = { version = "1" }
 serde = { version = "1", features = ["derive", "rc"] }
 serde_json = { version = "1", features = ["raw_value"] }
-
-[dev-dependencies]
-env_logger = "0.11"
-futures-util = { version = "0.3", features = ["io"] }
-piper = "0.2"
-pretty_assertions = "1"
-rustyline = "17"
-tokio = { version = "1", features = [
-    "macros",
-    "rt",
-    "time",
-    "io-std",
-    "io-util",
-    "net",
-    "process",
-    "sync",
-] }
-tokio-util = { version = "0.7", features = ["compat"] }
