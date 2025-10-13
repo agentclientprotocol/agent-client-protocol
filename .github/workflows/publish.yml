@@ -21,3 +21,35 @@ jobs:
       - run: cargo publish
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+
+  publish-schema:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@1780873c7b576612439a134613cc4cc74ce5538c
+        with:
+          toolchain: nightly,stable
+          components: rustfmt
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+          cache: "npm"
+      - name: Install dependencies
+        run: npm ci
+      - name: Generate schema
+        run: npm run generate
+      - name: Create release if missing
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            gh release create "$tag" --title "$tag"
+          fi
+      - name: Upload schema assets
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          gh release upload "$tag" schema.json meta.json --clobber
