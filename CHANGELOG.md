@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.7 (2025-10-13)
+
+### Protocol
+
+- Schema uploaded to GitHub releases
+
+### Rust
+
+- SDK has moved to https://github.com/agentclientprotocol/rust-sdk
+- Start publishing schema types to crates.io: https://crates.io/crates/agent-client-protocol-schema
+
 ## 0.4.6 (2025-10-10)
 
 ### Protocol
