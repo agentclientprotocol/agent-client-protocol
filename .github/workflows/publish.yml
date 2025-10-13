@@ -34,7 +34,7 @@ jobs:
           toolchain: nightly,stable
           components: rustfmt
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
           node-version: "lts/*"
           cache: "npm"
