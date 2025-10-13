@@ -19,6 +19,7 @@ Learn more at [agentclientprotocol.com](https://agentclientprotocol.com/).
 - [neovim](https://neovim.io)
   - through the [CodeCompanion](https://github.com/olimorris/codecompanion.nvim) plugin
   - through the [yetone/avante.nvim](https://github.com/yetone/avante.nvim) plugin
+- [Sidequery _(coming soon)_](https://sidequery.dev)
 
 ### Agents
 
