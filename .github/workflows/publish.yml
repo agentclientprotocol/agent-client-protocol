@@ -11,11 +11,11 @@ jobs:
       contents: read
       id-token: write # Required for OIDC token exchange
     steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
       - name: Setup Rust
         uses: actions-rust-lang/setup-rust-toolchain@1780873c7b576612439a134613cc4cc74ce5538c
         with:
           toolchain: nightly,stable
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
       - uses: rust-lang/crates-io-auth-action@e919bc7605cde86df457cf5b93c5e103838bd879
         id: auth
       - run: cargo publish
