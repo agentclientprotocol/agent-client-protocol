@@ -15,6 +15,7 @@ Learn more at [agentclientprotocol.com](https://agentclientprotocol.com/).
 - [Zed](https://zed.dev/docs/ai/external-agents)
 - Emacs via [agent-shell.el](https://github.com/xenodium/agent-shell)
 - [JetBrains _(coming soon)_](https://blog.jetbrains.com/ai/2025/10/jetbrains-zed-open-interoperability-for-ai-coding-agents-in-your-ide/)
+- [AionUi](https://github.com/iOfficeAI/AionUi)
 - [marimo notebook](https://github.com/marimo-team/marimo)
 - [neovim](https://neovim.io)
   - through the [CodeCompanion](https://github.com/olimorris/codecompanion.nvim) plugin
