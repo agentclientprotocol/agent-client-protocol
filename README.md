@@ -24,6 +24,8 @@ Learn more at [agentclientprotocol.com](https://agentclientprotocol.com/).
 
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview)
   - [via Zed's SDK adapter](https://github.com/zed-industries/claude-code-acp)
+- [Codex CLI](https://developers.openai.com/codex/cli)
+  - [via Zed's adapter](https://github.com/zed-industries/codex-acp)
 - [Gemini](https://github.com/google-gemini/gemini-cli)
 - [Goose](https://block.github.io/goose/docs/guides/acp-clients)
 - [JetBrains Junie _(coming soon)_](https://www.jetbrains.com/junie/)
