@@ -15,6 +15,8 @@ use std::fmt::Display;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+pub type Result<T, E = Error> = std::result::Result<T, E>;
+
 /// JSON-RPC error object.
 ///
 /// Represents an error that occurred during method execution, following the

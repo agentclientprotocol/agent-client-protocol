@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.10 (2025-10-16)
+
+### Protocol
+
+- No changes
+
+### Rust
+
+- Export `Result` type with a default of `acp::Error`
+
 ## 0.4.9 (2025-10-13)
 
 - Fix schema publishing
