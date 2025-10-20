@@ -857,7 +857,7 @@ and control access to resources."
 
         // Parse the JSON output
         let json_path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("target/doc/agent_client_protocol.json");
+            .join("target/doc/agent_client_protocol_schema.json");
         let json_content = fs::read_to_string(json_path).unwrap();
         let doc: Value = serde_json::from_str(&json_content).unwrap();
 
