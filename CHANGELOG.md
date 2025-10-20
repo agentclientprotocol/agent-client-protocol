@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.11 (2025-10-17)
+
+### Protocol
+
+- No changes
+
+### Rust
+
+- Make id types easier to create and add `PartialEq` and `Eq` impls for as many types as possible.
+
 ## 0.4.10 (2025-10-16)
 
 ### Protocol
