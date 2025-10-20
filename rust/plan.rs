@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 /// Plans can evolve during execution as the agent discovers new requirements or completes tasks.
 ///
 /// See protocol docs: [Agent Plan](https://agentclientprotocol.com/protocol/agent-plan)
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Plan {
     /// The list of tasks to be accomplished.
@@ -33,7 +33,7 @@ pub struct Plan {
 /// Represents a task or goal that the assistant intends to accomplish
 /// as part of fulfilling the user's request.
 /// See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/agent-plan#plan-entries)
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct PlanEntry {
     /// Human-readable description of what this task aims to accomplish.
@@ -53,7 +53,7 @@ pub struct PlanEntry {
 /// Used to indicate the relative importance or urgency of different
 /// tasks in the execution plan.
 /// See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/agent-plan#plan-entries)
-#[derive(Deserialize, Serialize, JsonSchema, Debug, Clone)]
+#[derive(Deserialize, Serialize, JsonSchema, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum PlanEntryPriority {
     /// High priority task - critical to the overall goal.
@@ -68,7 +68,7 @@ pub enum PlanEntryPriority {
 ///
 /// Tracks the lifecycle of each task from planning through completion.
 /// See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/agent-plan#plan-entries)
-#[derive(Deserialize, Serialize, JsonSchema, Debug, Clone)]
+#[derive(Deserialize, Serialize, JsonSchema, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum PlanEntryStatus {
     /// The task has not started yet.

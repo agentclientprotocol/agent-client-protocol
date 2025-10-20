@@ -26,6 +26,7 @@ path = "rust/bin/generate.rs"
 
 [dependencies]
 anyhow = "1"
+derive_more = { version = "2.0.1", features = ["from", "display"] }
 schemars = { version = "1" }
 serde = { version = "1", features = ["derive", "rc"] }
 serde_json = { version = "1", features = ["raw_value"] }

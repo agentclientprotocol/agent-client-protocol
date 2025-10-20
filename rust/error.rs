@@ -23,7 +23,7 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 /// JSON-RPC 2.0 error object specification with optional additional data.
 ///
 /// See protocol docs: [JSON-RPC Error Object](https://www.jsonrpc.org/specification#error_object)
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 pub struct Error {
     /// A number indicating the error type that occurred.
     /// This must be an integer as defined in the JSON-RPC specification.
@@ -119,7 +119,7 @@ impl Error {
 ///
 /// These codes follow the JSON-RPC 2.0 specification for standard errors
 /// and use the reserved range (-32000 to -32099) for protocol-specific errors.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 pub struct ErrorCode {
     /// The numeric error code.
     pub code: i32,

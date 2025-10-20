@@ -184,7 +184,7 @@ pub struct Annotations {
 }
 
 /// The sender or recipient of messages and data in a conversation.
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
 pub enum Role {
     #[serde(rename = "assistant")]
     Assistant,

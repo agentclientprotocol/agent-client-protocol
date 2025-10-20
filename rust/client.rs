@@ -3,8 +3,9 @@
 //! This module defines the Client trait and all associated types for implementing
 //! a client that interacts with AI coding agents via the Agent Client Protocol (ACP).
 
-use std::{fmt, path::PathBuf, sync::Arc};
+use std::{path::PathBuf, sync::Arc};
 
+use derive_more::{Display, From};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::value::RawValue;
@@ -21,7 +22,7 @@ use crate::{
 /// Used to stream real-time progress and results during prompt processing.
 ///
 /// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-turn#3-agent-reports-output)
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[schemars(extend("x-side" = "client", "x-method" = SESSION_UPDATE_NOTIFICATION))]
 #[serde(rename_all = "camelCase")]
 pub struct SessionNotification {
@@ -39,7 +40,7 @@ pub struct SessionNotification {
 /// These updates provide real-time feedback about the agent's progress.
 ///
 /// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-turn#3-agent-reports-output)
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[serde(rename_all = "snake_case", tag = "sessionUpdate")]
 pub enum SessionUpdate {
     /// A chunk of the user's message being streamed.
@@ -68,7 +69,7 @@ pub enum SessionUpdate {
 }
 
 /// Information about a command.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct AvailableCommand {
     /// Command name (e.g., `create_plan`, `research_codebase`).
@@ -83,7 +84,7 @@ pub struct AvailableCommand {
 }
 
 /// The input specification for a command.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(untagged, rename_all = "camelCase")]
 pub enum AvailableCommandInput {
     /// All text that was typed after the command name is provided as input.
@@ -101,7 +102,7 @@ pub enum AvailableCommandInput {
 /// Sent when the agent needs authorization before performing a sensitive operation.
 ///
 /// See protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/tool-calls#requesting-permission)
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[schemars(extend("x-side" = "client", "x-method" = SESSION_REQUEST_PERMISSION_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 pub struct RequestPermissionRequest {
@@ -117,7 +118,7 @@ pub struct RequestPermissionRequest {
 }
 
 /// An option presented to the user when requesting permission.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 pub struct PermissionOption {
     /// Unique identifier for this permission option.
     #[serde(rename = "optionId")]
@@ -132,15 +133,10 @@ pub struct PermissionOption {
 }
 
 /// Unique identifier for a permission option.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
+#[from(Arc<str>, String, &'static str)]
 pub struct PermissionOptionId(pub Arc<str>);
-
-impl fmt::Display for PermissionOptionId {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.0.fmt(f)
-    }
-}
 
 /// The type of permission option being presented to the user.
 ///
@@ -159,7 +155,7 @@ pub enum PermissionOptionKind {
 }
 
 /// Response to a permission request.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "client", "x-method" = SESSION_REQUEST_PERMISSION_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 pub struct RequestPermissionResponse {
@@ -172,7 +168,7 @@ pub struct RequestPermissionResponse {
 }
 
 /// The outcome of a permission request.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(tag = "outcome", rename_all = "snake_case")]
 pub enum RequestPermissionOutcome {
     /// The prompt turn was cancelled before the user responded.
@@ -196,7 +192,7 @@ pub enum RequestPermissionOutcome {
 /// Request to write content to a text file.
 ///
 /// Only available if the client supports the `fs.writeTextFile` capability.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "client", "x-method" = FS_WRITE_TEXT_FILE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 pub struct WriteTextFileRequest {
@@ -212,7 +208,7 @@ pub struct WriteTextFileRequest {
 }
 
 /// Response to `fs/write_text_file`
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = FS_WRITE_TEXT_FILE_METHOD_NAME))]
 #[serde(default)]
@@ -227,7 +223,7 @@ pub struct WriteTextFileResponse {
 /// Request to read content from a text file.
 ///
 /// Only available if the client supports the `fs.readTextFile` capability.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "client", "x-method" = FS_READ_TEXT_FILE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 pub struct ReadTextFileRequest {
@@ -247,7 +243,7 @@ pub struct ReadTextFileRequest {
 }
 
 /// Response containing the contents of a text file.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "client", "x-method" = FS_READ_TEXT_FILE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 pub struct ReadTextFileResponse {
@@ -259,18 +255,13 @@ pub struct ReadTextFileResponse {
 
 // Terminals
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
+#[from(Arc<str>, String, &'static str)]
 pub struct TerminalId(pub Arc<str>);
 
-impl std::fmt::Display for TerminalId {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
 /// Request to create a new terminal and execute a command.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_CREATE_METHOD_NAME))]
 pub struct CreateTerminalRequest {
@@ -303,7 +294,7 @@ pub struct CreateTerminalRequest {
 }
 
 /// Response containing the ID of the created terminal.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_CREATE_METHOD_NAME))]
 pub struct CreateTerminalResponse {
@@ -315,7 +306,7 @@ pub struct CreateTerminalResponse {
 }
 
 /// Request to get the current output and status of a terminal.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_OUTPUT_METHOD_NAME))]
 pub struct TerminalOutputRequest {
@@ -329,7 +320,7 @@ pub struct TerminalOutputRequest {
 }
 
 /// Response containing the terminal output and exit status.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_OUTPUT_METHOD_NAME))]
 pub struct TerminalOutputResponse {
@@ -345,7 +336,7 @@ pub struct TerminalOutputResponse {
 }
 
 /// Request to release a terminal and free its resources.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_RELEASE_METHOD_NAME))]
 pub struct ReleaseTerminalRequest {
@@ -359,7 +350,7 @@ pub struct ReleaseTerminalRequest {
 }
 
 /// Response to terminal/release method
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_RELEASE_METHOD_NAME))]
 pub struct ReleaseTerminalResponse {
@@ -369,7 +360,7 @@ pub struct ReleaseTerminalResponse {
 }
 
 /// Request to kill a terminal command without releasing the terminal.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_KILL_METHOD_NAME))]
 pub struct KillTerminalCommandRequest {
@@ -383,7 +374,7 @@ pub struct KillTerminalCommandRequest {
 }
 
 /// Response to terminal/kill command method
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_KILL_METHOD_NAME))]
 pub struct KillTerminalCommandResponse {
@@ -393,7 +384,7 @@ pub struct KillTerminalCommandResponse {
 }
 
 /// Request to wait for a terminal command to exit.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_WAIT_FOR_EXIT_METHOD_NAME))]
 pub struct WaitForTerminalExitRequest {
@@ -407,7 +398,7 @@ pub struct WaitForTerminalExitRequest {
 }
 
 /// Response containing the exit status of a terminal command.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_WAIT_FOR_EXIT_METHOD_NAME))]
 pub struct WaitForTerminalExitResponse {
@@ -420,7 +411,7 @@ pub struct WaitForTerminalExitResponse {
 }
 
 /// Exit status of a terminal command.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct TerminalExitStatus {
     /// The process exit code (may be null if terminated by signal).
@@ -440,7 +431,7 @@ pub struct TerminalExitStatus {
 /// available features and methods.
 ///
 /// See protocol docs: [Client Capabilities](https://agentclientprotocol.com/protocol/initialization#client-capabilities)
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct ClientCapabilities {
     /// File system capabilities supported by the client.
@@ -458,7 +449,7 @@ pub struct ClientCapabilities {
 /// File system capabilities that a client may support.
 ///
 /// See protocol docs: [FileSystem](https://agentclientprotocol.com/protocol/initialization#filesystem)
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct FileSystemCapability {
     /// Whether the Client supports `fs/read_text_file` requests.
@@ -477,7 +468,7 @@ pub struct FileSystemCapability {
 /// Names of all methods that clients handle.
 ///
 /// Provides a centralized definition of method names used in the protocol.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ClientMethodNames {
     /// Method for requesting permission from the user.
     pub session_request_permission: &'static str,

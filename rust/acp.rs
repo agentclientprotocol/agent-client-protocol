@@ -62,6 +62,7 @@ mod version;
 pub use agent::*;
 pub use client::*;
 pub use content::*;
+use derive_more::{Display, From};
 pub use error::*;
 pub use ext::*;
 pub use plan::*;
@@ -71,7 +72,7 @@ pub use version::*;
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::{fmt, sync::Arc};
+use std::sync::Arc;
 
 /// A unique identifier for a conversation session between a client and agent.
 ///
@@ -88,12 +89,7 @@ use std::{fmt, sync::Arc};
 /// ```
 ///
 /// See protocol docs: [Session ID](https://agentclientprotocol.com/protocol/session-setup#session-id)
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
+#[from(Arc<str>, String, &'static str)]
 pub struct SessionId(pub Arc<str>);
-
-impl fmt::Display for SessionId {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
