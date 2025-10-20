@@ -338,7 +338,7 @@ pub struct Diff {
 ///
 /// See protocol docs: [Following the Agent](https://agentclientprotocol.com/protocol/tool-calls#following-the-agent)
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(tag = "type", rename_all = "camelCase")]
+#[serde(rename_all = "camelCase")]
 pub struct ToolCallLocation {
     /// The file path being accessed or modified.
     pub path: PathBuf,
