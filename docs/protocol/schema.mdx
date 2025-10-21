@@ -3,6 +3,135 @@ title: "Schema"
 description: "Schema definitions for the Agent Client Protocol"
 ---
 
+## JSON RPC
+
+The Agent Client Protocol uses JSON RPC 2.0 for communication.
+
+### <span class="font-mono">JsonRpcRequest</span>
+
+A JSON-RPC request is represented by sending a request object to the remote side.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="id" type={"integer | string"} required>
+  An identifier established by the calling side. The id must be a integer or
+  string.
+</ResponseField>
+<ResponseField name="method" type={"string"} required>
+  The name of the method to be invoked (e.g., "initialize", "session/new",
+  "session/prompt").
+</ResponseField>
+<ResponseField name="params" type={"object"}>
+  A structured value that holds the parameter values to be used during the
+  invocation of the method.
+</ResponseField>
+<ResponseField name="jsonrpc" type={"string"} required>
+  The version of the JSON-RPC protocol. Must be exactly "2.0".
+</ResponseField>
+
+### <span class="font-mono">JsonRpcResponse</span>
+
+When a JSON-RPC call is made, the server replies with a response.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="id" type={"integer | string"} required>
+  This member is required. It must be the same as the value of the id member in
+  the request object.
+</ResponseField>
+<ResponseField name="result" type={"any"}>
+  This member is required on success. This member must not exist if there was an
+  error invoking the method. The value is determined by the method invoked on
+  the server.
+</ResponseField>
+<ResponseField name="error" type={<a href="#jsonrpcerror">Error</a>}>
+  This member is required on error. This member must not exist if there was no
+  error triggered during invocation.
+</ResponseField>
+<ResponseField name="jsonrpc" type={"string"} required>
+  The version of the JSON-RPC protocol. Must be exactly "2.0".
+</ResponseField>
+
+### <span class="font-mono">JsonRpcError</span>
+
+When a JSON-RPC call encounters an error, the response contains the error member with a value that is an object.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="code" type={"integer"} required>
+  A number that indicates the error type that occurred.
+
+Standard error codes:
+
+- `-32700`: Parse error - Invalid JSON was received
+- `-32600`: Invalid request - The JSON sent is not a valid request object
+- `-32601`: Method not found - The method does not exist or is not available
+- `-32602`: Invalid params - Invalid method parameter(s)
+- `-32603`: Internal error - Internal JSON-RPC error
+- `-32800`: Cancelled - The request was cancelled
+
+</ResponseField>
+<ResponseField name="message" type={"string"} required>
+  A short description of the error.
+</ResponseField>
+<ResponseField name="data" type={"any"}>
+  A primitive or structured value that contains additional information about the error. This may be omitted.
+</ResponseField>
+
+### <span class="font-mono">Notification</span>
+
+A notification is a request object without an "id" member. Notifications express a lack of interest in the corresponding response and as such no response needs to be returned.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="method" type={"string"} required>
+  The name of the method to be invoked (e.g., "session/cancel",
+  "session/update").
+</ResponseField>
+<ResponseField name="params" type={"object"}>
+  A structured value that holds the parameter values to be used during the
+  invocation of the method.
+</ResponseField>
+<ResponseField name="jsonrpc" type={"string"} required>
+  The version of the JSON-RPC protocol. MUST be exactly "2.0".
+</ResponseField>
+
+### <span class="font-mono">$/cancelRequest</span>
+
+Cancels a previously sent request by its ID.
+
+This is a standard JSON-RPC notification that can be sent by either party to signal
+that they are no longer interested in the response to a previously sent request.
+
+#### <span class="font-mono">CancelNotification</span>
+
+Notification parameters for cancelling a request.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="id" type={"integer | string"} required>
+  The ID of the request to cancel. Must match the id from a previously sent
+  request.
+</ResponseField>
+<ResponseField name="method" type={"string"} required>
+  The name of the method to be invoked (e.g., "session/cancel",
+  "session/update").
+</ResponseField>
+<ResponseField name="params" type={"object"}>
+  A structured value that holds the parameter values to be used during the
+  invocation of the method.
+</ResponseField>
+
 ## Agent
 
 Defines the interface that all ACP-compliant agents must implement.

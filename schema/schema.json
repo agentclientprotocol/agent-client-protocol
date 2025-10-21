@@ -1,5 +1,16 @@
 {
   "$defs": {
+    "CancelNotification": {
+      "description": "Parameter type for JsonRPC cancellation method `$/cancelRequest`.\n\nA request that got canceled still needs send a response with cancellation signal back. It can not be left open / hanging.",
+      "properties": {
+        "id": {
+          "description": "ID of JsonRPC request to cancel",
+          "type": "integer"
+        }
+      },
+      "type": "object",
+      "x-method": "$/cancelRequest"
+    },
     "AgentCapabilities": {
       "description": "Capabilities supported by the agent.\n\nAdvertised during initialization to inform the client about\navailable features and content types.\n\nSee protocol docs: [Agent Capabilities](https://agentclientprotocol.com/protocol/initialization#agent-capabilities)",
       "properties": {

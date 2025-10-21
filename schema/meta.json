@@ -1,4 +1,7 @@
 {
+  "jsonRpcMethods": {
+    "cancel_request": "$/cancelRequest"
+  },
   "agentMethods": {
     "authenticate": "authenticate",
     "initialize": "initialize",
