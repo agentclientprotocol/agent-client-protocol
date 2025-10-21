@@ -234,11 +234,9 @@ Response from loading an existing session.
   Extension point for implementations
 </ResponseField>
 <ResponseField name="models" type={<><span><a href="#sessionmodelstate">SessionModelState</a></span><span> | null</span></>} >
-  **UNSTABLE**
+  Initial model state if supported by the Agent
 
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Initial model state if supported by the Agent
+See protocol docs: [Model Selection](https://agentclientprotocol.com/protocol/model-selection)
 
 </ResponseField>
 <ResponseField name="modes" type={<><span><a href="#sessionmodestate">SessionModeState</a></span><span> | null</span></>} >
@@ -310,11 +308,9 @@ See protocol docs: [Creating a Session](https://agentclientprotocol.com/protocol
   Extension point for implementations
 </ResponseField>
 <ResponseField name="models" type={<><span><a href="#sessionmodelstate">SessionModelState</a></span><span> | null</span></>} >
-  **UNSTABLE**
+  Initial model state if supported by the Agent
 
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Initial model state if supported by the Agent
+See protocol docs: [Model Selection](https://agentclientprotocol.com/protocol/model-selection)
 
 </ResponseField>
 <ResponseField name="modes" type={<><span><a href="#sessionmodestate">SessionModeState</a></span><span> | null</span></>} >
@@ -458,17 +454,23 @@ Response to `session/set_mode` method.
 <a id="session-set_model"></a>
 ### <span class="font-mono">session/set_model</span>
 
-**UNSTABLE**
+Sets the current model for a session.
 
-This capability is not part of the spec yet, and may be removed or changed at any point.
+Agents can provide a set of models for the client to choose from within the session.
+A model in the protocol does not necessarily map one-to-one to a provider's base model
+offerings. It can be a combination of a base model as well as other parameters, such as a
+thinking or reasoning budget that make sense to group together.
 
-Select a model for a given session.
+The model must be one of the models advertised in `availableModels` during session
+creation or loading. Agents may also change models autonomously and notify the
+client via `current_model_update` notifications.
+
+This method can be called at any time during a session, whether the Agent is
+idle or actively generating a response.
+
+See protocol docs: [Model Selection](https://agentclientprotocol.com/protocol/model-selection)
 
 #### <span class="font-mono">SetSessionModelRequest</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Request parameters for setting a session model.
 
@@ -491,10 +493,6 @@ Request parameters for setting a session model.
 </ResponseField>
 
 #### <span class="font-mono">SetSessionModelResponse</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Response to `session/set_model` method.
 
@@ -1691,19 +1689,11 @@ All Agents MUST support this transport.
 
 ## <span class="font-mono">ModelId</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 A unique identifier for a model.
 
 **Type:** `string`
 
 ## <span class="font-mono">ModelInfo</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Information about a selectable model.
 
@@ -2102,10 +2092,6 @@ The set of modes and the one currently active.
 
 ## <span class="font-mono">SessionModelState</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 The set of models and the one currently active.
 
 **Type:** Object
@@ -2134,7 +2120,7 @@ The set of models and the one currently active.
   type={<a href="#modelid">ModelId</a>}
   required
 >
-  The current model the Agent is in.
+  The current model the Agent is using.
 </ResponseField>
 
 ## <span class="font-mono">SessionUpdate</span>
@@ -2373,6 +2359,23 @@ See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/sess
 <ResponseField
   name="currentModeId"
   type={<a href="#sessionmodeid">SessionModeId</a>}
+  required
+></ResponseField>
+<ResponseField name="sessionUpdate" type={"string"} required></ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="current_model_update">
+The current model of the session has changed
+
+See protocol docs: [Model Selection](https://agentclientprotocol.com/protocol/model-selection)
+
+<Expandable title="Properties">
+
+<ResponseField
+  name="currentModelId"
+  type={<a href="#modelid">ModelId</a>}
   required
 ></ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required></ResponseField>

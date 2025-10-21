@@ -141,12 +141,9 @@ pub struct NewSessionResponse {
     /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub modes: Option<SessionModeState>,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Initial model state if supported by the Agent
-    #[cfg(feature = "unstable")]
+    ///
+    /// See protocol docs: [Model Selection](https://agentclientprotocol.com/protocol/model-selection)
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub models: Option<SessionModelState>,
     /// Extension point for implementations
@@ -186,13 +183,9 @@ pub struct LoadSessionResponse {
     /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub modes: Option<SessionModeState>,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Initial model state if supported by the Agent
-    #[cfg(feature = "unstable")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    ///
+    /// See protocol docs: [Model Selection](https://agentclientprotocol.com/protocol/model-selection)
     pub models: Option<SessionModelState>,
     /// Extension point for implementations
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
@@ -413,16 +406,11 @@ pub enum StopReason {
 
 // Model
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// The set of models and the one currently active.
-#[cfg(feature = "unstable")]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct SessionModelState {
-    /// The current model the Agent is in.
+    /// The current model the Agent is using.
     pub current_model_id: ModelId,
     /// The set of models that the Agent can use
     pub available_models: Vec<ModelInfo>,
@@ -431,23 +419,13 @@ pub struct SessionModelState {
     pub meta: Option<serde_json::Value>,
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// A unique identifier for a model.
-#[cfg(feature = "unstable")]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
 #[from(Arc<str>, String, &'static str)]
 pub struct ModelId(pub Arc<str>);
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Information about a selectable model.
-#[cfg(feature = "unstable")]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct ModelInfo {
@@ -463,12 +441,7 @@ pub struct ModelInfo {
     pub meta: Option<serde_json::Value>,
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Request parameters for setting a session model.
-#[cfg(feature = "unstable")]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_SET_MODEL_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -482,12 +455,7 @@ pub struct SetSessionModelRequest {
     pub meta: Option<serde_json::Value>,
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Response to `session/set_model` method.
-#[cfg(feature = "unstable")]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_SET_MODEL_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -591,7 +559,6 @@ pub struct AgentMethodNames {
     /// Notification for cancelling operations.
     pub session_cancel: &'static str,
     /// Method for selecting a model for a given session.
-    #[cfg(feature = "unstable")]
     pub session_set_model: &'static str,
 }
 
@@ -604,7 +571,6 @@ pub const AGENT_METHOD_NAMES: AgentMethodNames = AgentMethodNames {
     session_set_mode: SESSION_SET_MODE_METHOD_NAME,
     session_prompt: SESSION_PROMPT_METHOD_NAME,
     session_cancel: SESSION_CANCEL_METHOD_NAME,
-    #[cfg(feature = "unstable")]
     session_set_model: SESSION_SET_MODEL_METHOD_NAME,
 };
 
@@ -623,7 +589,6 @@ pub(crate) const SESSION_PROMPT_METHOD_NAME: &str = "session/prompt";
 /// Method name for the cancel notification.
 pub(crate) const SESSION_CANCEL_METHOD_NAME: &str = "session/cancel";
 /// Method name for selecting a model for a given session.
-#[cfg(feature = "unstable")]
 pub(crate) const SESSION_SET_MODEL_METHOD_NAME: &str = "session/set_model";
 
 /// All possible requests that a client can send to an agent.
@@ -695,6 +660,22 @@ pub enum ClientRequest {
     ///
     /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
     SetSessionModeRequest(SetSessionModeRequest),
+    /// Sets the current model for a session.
+    ///
+    /// Agents can provide a set of models for the client to choose from within the session.
+    /// A model in the protocol does not necessarily map one-to-one to a provider's base model
+    /// offerings. It can be a combination of a base model as well as other parameters, such as a
+    /// thinking or reasoning budget that make sense to group together.
+    ///
+    /// The model must be one of the models advertised in `availableModels` during session
+    /// creation or loading. Agents may also change models autonomously and notify the
+    /// client via `current_model_update` notifications.
+    ///
+    /// This method can be called at any time during a session, whether the Agent is
+    /// idle or actively generating a response.
+    ///
+    /// See protocol docs: [Model Selection](https://agentclientprotocol.com/protocol/model-selection)
+    SetSessionModelRequest(SetSessionModelRequest),
     /// Processes a user prompt within a session.
     ///
     /// This method handles the whole lifecycle of a prompt:
@@ -707,13 +688,6 @@ pub enum ClientRequest {
     ///
     /// See protocol docs: [Prompt Turn](https://agentclientprotocol.com/protocol/prompt-turn)
     PromptRequest(PromptRequest),
-    #[cfg(feature = "unstable")]
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// Select a model for a given session.
-    SetSessionModelRequest(SetSessionModelRequest),
     /// Handles extension method requests from the client.
     ///
     /// Extension methods provide a way to add custom functionality while maintaining
@@ -739,7 +713,6 @@ pub enum AgentResponse {
     LoadSessionResponse(#[serde(default)] LoadSessionResponse),
     SetSessionModeResponse(#[serde(default)] SetSessionModeResponse),
     PromptResponse(PromptResponse),
-    #[cfg(feature = "unstable")]
     SetSessionModelResponse(SetSessionModelResponse),
     ExtMethodResponse(#[schemars(with = "serde_json::Value")] Arc<RawValue>),
 }

@@ -1,0 +1,115 @@
+---
+title: "Model Selection"
+description: "Switch between different models within a session"
+---
+
+Agents can provide a set of models for the client to choose from within the session. A model in the protocol does not necessarily map one-to-one to a provider's base model offerings. It can be a combination of a base model as well as other parameters, such as a thinking or reasoning budget that make sense to group together.
+
+## Initial state
+
+During [Session Setup](./session-setup) the Agent **MAY** return a list of models it can use and the currently active model:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "sessionId": "sess_abc123def456",
+    "models": {
+      "currentModelId": "acme-1",
+      "availableModels": [
+        {
+          "modelId": "acme-1",
+          "name": "Acme 1",
+          "description": "For general purpose tasks"
+        },
+        {
+          "modelId": "acme-1-thinking",
+          "name": "Acme 1 Thinking",
+          "description": "For tasks that require additional reasoning"
+        },
+        {
+          "modelId": "acme-1-fast",
+          "name": "Acme 1 Fast",
+          "description": "For simple tasks"
+        }
+      ]
+    }
+  }
+}
+```
+
+<ResponseField name="models" type="SessionModelState">
+  The current model state for the session
+</ResponseField>
+
+### SessionModeState
+
+<ResponseField name="currentModelId" type="ModelId" required>
+  The ID of the model that is currently active
+</ResponseField>
+
+<ResponseField name="availableModels" type="ModelInfo[]" required>
+  The set of models that the Agent can use
+</ResponseField>
+
+### ModelInfo
+
+<ResponseField name="modelId" type="ModelId" required>
+  Unique identifier for this model
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Human-readable name of the model
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  Optional description providing more details about the model
+</ResponseField>
+
+## Setting the current model
+
+The current model can be changed at any point during a session, whether the Agent is idle or generating a response.
+
+### From the Client
+
+Typically, Clients display the available models to the user and allow them to change the current one, which they can do by calling the [`session/set_model`](./schema#session%2Fset-model) method.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "session/set_model",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "modelId": "acme-1-fast"
+  }
+}
+```
+
+<ParamField path="sessionId" type="SessionId" required>
+  The ID of the session to set the mode for
+</ParamField>
+
+<ParamField path="modelId" type="ModelId" required>
+  The ID of the model to switch to. Must be one of the models listed in
+  `availableModels`
+</ParamField>
+
+### From the Agent
+
+The Agent can also change its own model and let the Client know by sending the `current_model_update` session notification:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "current_model_update",
+      "modeId": "acme-1-thinking"
+    }
+  }
+}
+```

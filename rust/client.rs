@@ -11,8 +11,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::value::RawValue;
 
 use crate::{
-    ContentBlock, ExtNotification, Plan, SessionId, SessionModeId, ToolCall, ToolCallUpdate,
-    ext::ExtRequest,
+    ContentBlock, ExtNotification, ModelId, Plan, SessionId, SessionModeId, ToolCall,
+    ToolCallUpdate, ext::ExtRequest,
 };
 
 // Session updates
@@ -66,6 +66,11 @@ pub enum SessionUpdate {
     /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
     #[serde(rename_all = "camelCase")]
     CurrentModeUpdate { current_mode_id: SessionModeId },
+    /// The current model of the session has changed
+    ///
+    /// See protocol docs: [Model Selection](https://agentclientprotocol.com/protocol/model-selection)
+    #[serde(rename_all = "camelCase")]
+    CurrentModelUpdate { current_model_id: ModelId },
 }
 
 /// Information about a command.
