@@ -24,7 +24,7 @@ Note: This document describes how ACP governance is structured today (Zed-led) a
     - Discussions should address what change is looking to be made, why, and summarize the hypothesized technical direction
     - PRs submitted without a discussion will be redirected to create a discussion
     - Repository admins (whether Zed, or specific component admins) are required code reviewers to merge any PRs
-- Breaking **protocol** change proposals must be flagged for a 5 business day review/objection window
+- Proposals for breaking changes to the **protocol** must be flagged for a 5 business day review/objection window
     - if no objections, the Zed team may self-merge after the window expires
 - Non-breaking changes can be merged at any time. However, changes that would require additional implementation effort should have followed the discussion model above.
 - Repository admins, in _*their own repository*_ may merge non-breaking and breaking changes at any time. It is acknowledged that library design may require changes over time, and each repository can follow its own method of gathering feedback and discussion before making breaking changes.
