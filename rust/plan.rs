@@ -17,6 +17,7 @@ use serde::{Deserialize, Serialize};
 /// See protocol docs: [Agent Plan](https://agentclientprotocol.com/protocol/agent-plan)
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+// #[schemars(inline)]
 pub struct Plan {
     /// The list of tasks to be accomplished.
     ///

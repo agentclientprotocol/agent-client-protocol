@@ -20,6 +20,7 @@ use crate::{ContentBlock, Error};
 /// See protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/tool-calls)
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
+// #[schemars(inline)]
 pub struct ToolCall {
     /// Unique identifier for this tool call within the session.
     #[serde(rename = "toolCallId")]
@@ -87,6 +88,7 @@ impl ToolCall {
 /// See protocol docs: [Updating](https://agentclientprotocol.com/protocol/tool-calls#updating)
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
+// #[schemars(inline)]
 pub struct ToolCallUpdate {
     /// The ID of the tool call being updated.
     #[serde(rename = "toolCallId")]

@@ -56,6 +56,7 @@ mod content;
 mod error;
 mod ext;
 mod plan;
+mod rpc;
 mod tool_call;
 mod version;
 
@@ -66,6 +67,7 @@ use derive_more::{Display, From};
 pub use error::*;
 pub use ext::*;
 pub use plan::*;
+pub use rpc::*;
 pub use serde_json::value::RawValue;
 pub use tool_call::*;
 pub use version::*;

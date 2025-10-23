@@ -1,6 +1,6 @@
 use agent_client_protocol_schema::{
-    AGENT_METHOD_NAMES, AgentNotification, AgentRequest, AgentResponse, CLIENT_METHOD_NAMES,
-    ClientNotification, ClientRequest, ClientResponse, VERSION,
+    AGENT_METHOD_NAMES, AgentSide, CLIENT_METHOD_NAMES, ClientSide, JsonRpcMessage,
+    OutgoingMessage, VERSION,
 };
 use schemars::{JsonSchema, generate::SchemaSettings};
 use serde_json::Value;
@@ -8,16 +8,20 @@ use std::{fs, path::Path};
 
 use markdown_generator::MarkdownGenerator;
 
-#[allow(dead_code)]
+#[expect(dead_code)]
+#[derive(JsonSchema)]
+struct AgentOutgoingMessage(JsonRpcMessage<OutgoingMessage<AgentSide, ClientSide>>);
+
+#[expect(dead_code)]
+#[derive(JsonSchema)]
+struct ClientOutgoingMessage(JsonRpcMessage<OutgoingMessage<ClientSide, AgentSide>>);
+
+#[expect(dead_code)]
 #[derive(JsonSchema)]
 #[serde(untagged)]
 enum AcpTypes {
-    ClientRequest(AgentRequest),
-    ClientResponse(ClientResponse),
-    ClientNotification(ClientNotification),
-    AgentRequest(ClientRequest),
-    AgentResponse(AgentResponse),
-    AgentNotification(AgentNotification),
+    AgentOutgoingMessage(AgentOutgoingMessage),
+    ClientOutgoingMessage(ClientOutgoingMessage),
 }
 
 fn main() {
