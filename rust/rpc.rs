@@ -268,3 +268,57 @@ impl Side for AgentSide {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use serde_json::{Number, Value};
+
+    #[test]
+    fn id_deserialization() {
+        let id = serde_json::from_value::<RequestId>(Value::Null).unwrap();
+        assert_eq!(id, RequestId::Null);
+
+        let id = serde_json::from_value::<RequestId>(Value::Number(Number::from_u128(1).unwrap()))
+            .unwrap();
+        assert_eq!(id, RequestId::Number(1));
+
+        let id = serde_json::from_value::<RequestId>(Value::Number(Number::from_i128(-1).unwrap()))
+            .unwrap();
+        assert_eq!(id, RequestId::Number(-1));
+
+        let id = serde_json::from_value::<RequestId>(Value::String("id".to_owned())).unwrap();
+        assert_eq!(id, RequestId::Str("id".to_owned()));
+    }
+
+    #[test]
+    fn id_serialization() {
+        let id = serde_json::to_value(RequestId::Null).unwrap();
+        assert_eq!(id, Value::Null);
+
+        let id = serde_json::to_value(RequestId::Number(1)).unwrap();
+        assert_eq!(id, Value::Number(Number::from_u128(1).unwrap()));
+
+        let id = serde_json::to_value(RequestId::Number(-1)).unwrap();
+        assert_eq!(id, Value::Number(Number::from_i128(-1).unwrap()));
+
+        let id = serde_json::to_value(RequestId::Str("id".to_owned())).unwrap();
+        assert_eq!(id, Value::String("id".to_owned()));
+    }
+
+    #[test]
+    fn id_display() {
+        let id = RequestId::Null;
+        assert_eq!(id.to_string(), "null");
+
+        let id = RequestId::Number(1);
+        assert_eq!(id.to_string(), "1");
+
+        let id = RequestId::Number(-1);
+        assert_eq!(id.to_string(), "-1");
+
+        let id = RequestId::Str("id".to_owned());
+        assert_eq!(id.to_string(), "id");
+    }
+}

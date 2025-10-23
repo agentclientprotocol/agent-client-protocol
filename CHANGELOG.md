@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.5.0 (2025-10-23)
+
+### Protocol
+
+- JSON Schema: More consistent inlining for enum representations to fix issues with code generation in language tooling.
+- Provide more schema-level information about JSON-RPC format.
+- Provide missing _meta fields on certain enum variants.
+
+### Rust
+
+- More consistent enum usage. Enums are always either newtype or struct variants within a single enum, not mixed.
+
 ## 0.4.11 (2025-10-20)
 
 ### Protocol
