@@ -322,3 +322,71 @@ mod tests {
         assert_eq!(id.to_string(), "id");
     }
 }
+
+#[test]
+fn test_notification_wire_format() {
+    use super::*;
+
+    use serde_json::{Value, json};
+
+    // Test client -> agent notification wire format
+    let outgoing_msg =
+        JsonRpcMessage::wrap(OutgoingMessage::<ClientSide, AgentSide>::Notification {
+            method: "cancel".into(),
+            params: Some(ClientNotification::CancelNotification(CancelNotification {
+                session_id: SessionId("test-123".into()),
+                meta: None,
+            })),
+        });
+
+    let serialized: Value = serde_json::to_value(&outgoing_msg).unwrap();
+    assert_eq!(
+        serialized,
+        json!({
+            "jsonrpc": "2.0",
+            "method": "cancel",
+            "params": {
+                "sessionId": "test-123"
+            },
+        })
+    );
+
+    // Test agent -> client notification wire format
+    let outgoing_msg =
+        JsonRpcMessage::wrap(OutgoingMessage::<AgentSide, ClientSide>::Notification {
+            method: "sessionUpdate".into(),
+            params: Some(AgentNotification::SessionNotification(
+                SessionNotification {
+                    session_id: SessionId("test-456".into()),
+                    update: SessionUpdate::AgentMessageChunk(ContentChunk {
+                        content: ContentBlock::Text(TextContent {
+                            annotations: None,
+                            text: "Hello".to_string(),
+                            meta: None,
+                        }),
+                        meta: None,
+                    }),
+                    meta: None,
+                },
+            )),
+        });
+
+    let serialized: Value = serde_json::to_value(&outgoing_msg).unwrap();
+    assert_eq!(
+        serialized,
+        json!({
+            "jsonrpc": "2.0",
+            "method": "sessionUpdate",
+            "params": {
+                "sessionId": "test-456",
+                "update": {
+                    "sessionUpdate": "agent_message_chunk",
+                    "content": {
+                        "type": "text",
+                        "text": "Hello"
+                    }
+                }
+            }
+        })
+    );
+}
