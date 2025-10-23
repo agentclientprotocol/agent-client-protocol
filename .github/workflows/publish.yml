@@ -24,21 +24,16 @@ jobs:
 
   publish-schema:
     runs-on: ubuntu-latest
+    needs: [publish-rust]
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
-      - name: Create release if missing
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          tag="${GITHUB_REF#refs/tags/}"
-          if ! gh release view "$tag" >/dev/null 2>&1; then
-            gh release create "$tag" --title "$tag"
-          fi
-      - name: Upload schema assets
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          tag="${GITHUB_REF#refs/tags/}"
-          gh release upload "$tag" schema/schema.json schema/meta.json --clobber
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@6da8fa9354ddfdc4aeace5fc48d7f679b5214090
+        with:
+          draft: true
+          fail_on_unmatched_files: true
+          files: |
+            schema/**/*.json
