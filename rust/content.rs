@@ -55,7 +55,7 @@ pub enum ContentBlock {
 
 /// Text provided to or from an LLM.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
-// #[schemars(inline)]
+#[schemars(inline)]
 pub struct TextContent {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub annotations: Option<Annotations>,
@@ -77,7 +77,7 @@ impl<T: Into<String>> From<T> for ContentBlock {
 
 /// An image provided to or from an LLM.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
-// #[schemars(inline)]
+#[schemars(inline)]
 pub struct ImageContent {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub annotations: Option<Annotations>,
@@ -93,7 +93,7 @@ pub struct ImageContent {
 
 /// Audio provided to or from an LLM.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
-// #[schemars(inline)]
+#[schemars(inline)]
 pub struct AudioContent {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub annotations: Option<Annotations>,
@@ -107,7 +107,7 @@ pub struct AudioContent {
 
 /// The contents of a resource, embedded into a prompt or tool call result.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
-// #[schemars(inline)]
+#[schemars(inline)]
 pub struct EmbeddedResource {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub annotations: Option<Annotations>,
@@ -151,7 +151,7 @@ pub struct BlobResourceContents {
 
 /// A resource that the server is capable of reading, included in a prompt or tool call result.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
-// #[schemars(inline)]
+#[schemars(inline)]
 pub struct ResourceLink {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub annotations: Option<Annotations>,

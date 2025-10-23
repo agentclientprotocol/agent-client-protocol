@@ -38,7 +38,6 @@ fn main() {
     // Convert to serde_json::Value for post-processing
     let mut schema_value = serde_json::to_value(&schema).unwrap();
 
-    inline_enum_variants(&mut schema_value, "ContentBlock");
     inline_enum_variants(&mut schema_value, "SessionUpdate");
 
     let root = env!("CARGO_MANIFEST_DIR");

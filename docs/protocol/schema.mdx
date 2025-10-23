@@ -1146,31 +1146,6 @@ Optional annotations for the client. The client can use annotations to inform ho
 <ResponseField name="lastModified" type={"string | null"}></ResponseField>
 <ResponseField name="priority" type={"number | null"}></ResponseField>
 
-## <span class="font-mono">AudioContent</span>
-
-Audio provided to or from an LLM.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object"}>
-  Extension point for implementations
-</ResponseField>
-<ResponseField
-  name="annotations"
-  type={
-    <>
-      <span>
-        <a href="#annotations">Annotations</a>
-      </span>
-      <span> | null</span>
-    </>
-  }
-></ResponseField>
-<ResponseField name="data" type={"string"} required></ResponseField>
-<ResponseField name="mimeType" type={"string"} required></ResponseField>
-
 ## <span class="font-mono">AuthMethod</span>
 
 Describes an available authentication method.
@@ -1535,34 +1510,6 @@ Requires the `embeddedContext` prompt capability when included in prompts.
 </Expandable>
 </ResponseField>
 
-## <span class="font-mono">EmbeddedResource</span>
-
-The contents of a resource, embedded into a prompt or tool call result.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object"}>
-  Extension point for implementations
-</ResponseField>
-<ResponseField
-  name="annotations"
-  type={
-    <>
-      <span>
-        <a href="#annotations">Annotations</a>
-      </span>
-      <span> | null</span>
-    </>
-  }
-></ResponseField>
-<ResponseField
-  name="resource"
-  type={<a href="#embeddedresourceresource">EmbeddedResourceResource</a>}
-  required
-></ResponseField>
-
 ## <span class="font-mono">EmbeddedResourceResource</span>
 
 Resource content that can be embedded in a message.
@@ -1687,32 +1634,6 @@ An HTTP header to set when making requests to the MCP server.
 <ResponseField name="value" type={"string"} required>
   The value to set for the HTTP header.
 </ResponseField>
-
-## <span class="font-mono">ImageContent</span>
-
-An image provided to or from an LLM.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object"}>
-  Extension point for implementations
-</ResponseField>
-<ResponseField
-  name="annotations"
-  type={
-    <>
-      <span>
-        <a href="#annotations">Annotations</a>
-      </span>
-      <span> | null</span>
-    </>
-  }
-></ResponseField>
-<ResponseField name="data" type={"string"} required></ResponseField>
-<ResponseField name="mimeType" type={"string"} required></ResponseField>
-<ResponseField name="uri" type={"string | null"}></ResponseField>
 
 ## <span class="font-mono">McpCapabilities</span>
 
@@ -2167,35 +2088,6 @@ The user selected one of the provided options.
 </Expandable>
 </ResponseField>
 
-## <span class="font-mono">ResourceLink</span>
-
-A resource that the server is capable of reading, included in a prompt or tool call result.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object"}>
-  Extension point for implementations
-</ResponseField>
-<ResponseField
-  name="annotations"
-  type={
-    <>
-      <span>
-        <a href="#annotations">Annotations</a>
-      </span>
-      <span> | null</span>
-    </>
-  }
-></ResponseField>
-<ResponseField name="description" type={"string | null"}></ResponseField>
-<ResponseField name="mimeType" type={"string | null"}></ResponseField>
-<ResponseField name="name" type={"string"} required></ResponseField>
-<ResponseField name="size" type={"integer | null"}></ResponseField>
-<ResponseField name="title" type={"string | null"}></ResponseField>
-<ResponseField name="uri" type={"string"} required></ResponseField>
-
 ## <span class="font-mono">Role</span>
 
 The sender or recipient of messages and data in a conversation.
@@ -2622,30 +2514,6 @@ Exit status of a terminal command.
 <ResponseField name="signal" type={"string | null"} >
   The signal that terminated the process (may be null if exited normally).
 </ResponseField>
-
-## <span class="font-mono">TextContent</span>
-
-Text provided to or from an LLM.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object"}>
-  Extension point for implementations
-</ResponseField>
-<ResponseField
-  name="annotations"
-  type={
-    <>
-      <span>
-        <a href="#annotations">Annotations</a>
-      </span>
-      <span> | null</span>
-    </>
-  }
-></ResponseField>
-<ResponseField name="text" type={"string"} required></ResponseField>
 
 ## <span class="font-mono">TextResourceContents</span>
 

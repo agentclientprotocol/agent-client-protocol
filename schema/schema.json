@@ -241,32 +241,6 @@
       },
       "type": "object"
     },
-    "AudioContent": {
-      "description": "Audio provided to or from an LLM.",
-      "properties": {
-        "_meta": {
-          "description": "Extension point for implementations"
-        },
-        "annotations": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/Annotations"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "data": {
-          "type": "string"
-        },
-        "mimeType": {
-          "type": "string"
-        }
-      },
-      "required": ["data", "mimeType"],
-      "type": "object"
-    },
     "AuthMethod": {
       "description": "Describes an available authentication method.",
       "properties": {
@@ -835,29 +809,6 @@
       "x-method": "terminal/create",
       "x-side": "client"
     },
-    "EmbeddedResource": {
-      "description": "The contents of a resource, embedded into a prompt or tool call result.",
-      "properties": {
-        "_meta": {
-          "description": "Extension point for implementations"
-        },
-        "annotations": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/Annotations"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "resource": {
-          "$ref": "#/$defs/EmbeddedResourceResource"
-        }
-      },
-      "required": ["resource"],
-      "type": "object"
-    },
     "EmbeddedResourceResource": {
       "anyOf": [
         {
@@ -943,35 +894,6 @@
         }
       },
       "required": ["name", "value"],
-      "type": "object"
-    },
-    "ImageContent": {
-      "description": "An image provided to or from an LLM.",
-      "properties": {
-        "_meta": {
-          "description": "Extension point for implementations"
-        },
-        "annotations": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/Annotations"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "data": {
-          "type": "string"
-        },
-        "mimeType": {
-          "type": "string"
-        },
-        "uri": {
-          "type": ["string", "null"]
-        }
-      },
-      "required": ["data", "mimeType"],
       "type": "object"
     },
     "InitializeRequest": {
@@ -1695,45 +1617,6 @@
       "x-method": "session/request_permission",
       "x-side": "client"
     },
-    "ResourceLink": {
-      "description": "A resource that the server is capable of reading, included in a prompt or tool call result.",
-      "properties": {
-        "_meta": {
-          "description": "Extension point for implementations"
-        },
-        "annotations": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/Annotations"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "description": {
-          "type": ["string", "null"]
-        },
-        "mimeType": {
-          "type": ["string", "null"]
-        },
-        "name": {
-          "type": "string"
-        },
-        "size": {
-          "format": "int64",
-          "type": ["integer", "null"]
-        },
-        "title": {
-          "type": ["string", "null"]
-        },
-        "uri": {
-          "type": "string"
-        }
-      },
-      "required": ["name", "uri"],
-      "type": "object"
-    },
     "Role": {
       "description": "The sender or recipient of messages and data in a conversation.",
       "enum": ["assistant", "user"],
@@ -2200,29 +2083,6 @@
       "type": "object",
       "x-method": "terminal/output",
       "x-side": "client"
-    },
-    "TextContent": {
-      "description": "Text provided to or from an LLM.",
-      "properties": {
-        "_meta": {
-          "description": "Extension point for implementations"
-        },
-        "annotations": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/Annotations"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "text": {
-          "type": "string"
-        }
-      },
-      "required": ["text"],
-      "type": "object"
     },
     "TextResourceContents": {
       "description": "Text-based resource contents.",
