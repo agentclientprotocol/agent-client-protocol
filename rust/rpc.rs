@@ -24,6 +24,7 @@ use crate::{
 )]
 #[serde(deny_unknown_fields)]
 #[serde(untagged)]
+#[schemars(inline)]
 pub enum RequestId {
     #[display("null")]
     #[schemars(title = "null")]

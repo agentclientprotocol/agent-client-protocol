@@ -9,10 +9,12 @@ use markdown_generator::MarkdownGenerator;
 
 #[expect(dead_code)]
 #[derive(JsonSchema)]
+#[schemars(extend("x-docs-ignore" = true))]
 struct AgentOutgoingMessage(JsonRpcMessage<OutgoingMessage<AgentSide, ClientSide>>);
 
 #[expect(dead_code)]
 #[derive(JsonSchema)]
+#[schemars(extend("x-docs-ignore" = true))]
 struct ClientOutgoingMessage(JsonRpcMessage<OutgoingMessage<ClientSide, AgentSide>>);
 
 #[expect(dead_code, clippy::large_enum_variant)]
