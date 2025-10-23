@@ -6,7 +6,7 @@
 
 - JSON Schema: More consistent inlining for enum representations to fix issues with code generation in language tooling.
 - Provide more schema-level information about JSON-RPC format.
-- Provide missing _meta fields on certain enum variants.
+- Provide missing \_meta fields on certain enum variants.
 
 ### Rust
 
