@@ -668,11 +668,7 @@ See protocol docs: [Requesting Permission](https://agentclientprotocol.com/proto
 >
   The session ID for this request.
 </ResponseField>
-<ResponseField
-  name="toolCall"
-  type={<a href="#toolcallupdate">ToolCallUpdate</a>}
-  required
->
+<ResponseField name="toolCall" type={"object"} required>
   Details about the tool call requiring permission.
 </ResponseField>
 
@@ -1871,31 +1867,6 @@ Helps clients choose appropriate icons and UI treatment.
   Reject this operation and remember the choice.
 </ResponseField>
 
-## <span class="font-mono">Plan</span>
-
-An execution plan for accomplishing complex tasks.
-
-Plans consist of multiple entries representing individual tasks or goals.
-Agents report plans to clients to provide visibility into their execution strategy.
-Plans can evolve during execution as the agent discovers new requirements or completes tasks.
-
-See protocol docs: [Agent Plan](https://agentclientprotocol.com/protocol/agent-plan)
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object"} >
-  Extension point for implementations
-</ResponseField>
-<ResponseField name="entries" type={<><span><a href="#planentry">PlanEntry</a></span><span>[]</span></>} required>
-  The list of tasks to be accomplished.
-
-When updating a plan, the agent must send a complete list of all entries
-with their current status. The client replaces the entire plan with each update.
-
-</ResponseField>
-
 ## <span class="font-mono">PlanEntry</span>
 
 A single entry in the execution plan.
@@ -2231,11 +2202,16 @@ A chunk of the user's message being streamed.
 
 <Expandable title="Properties">
 
+<ResponseField name="_meta" type={"object"}>
+  Extension point for implementations
+</ResponseField>
 <ResponseField
   name="content"
   type={<a href="#contentblock">ContentBlock</a>}
   required
-></ResponseField>
+>
+  A single item of content
+</ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required></ResponseField>
 
 </Expandable>
@@ -2246,11 +2222,16 @@ A chunk of the agent's response being streamed.
 
 <Expandable title="Properties">
 
+<ResponseField name="_meta" type={"object"}>
+  Extension point for implementations
+</ResponseField>
 <ResponseField
   name="content"
   type={<a href="#contentblock">ContentBlock</a>}
   required
-></ResponseField>
+>
+  A single item of content
+</ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required></ResponseField>
 
 </Expandable>
@@ -2261,11 +2242,16 @@ A chunk of the agent's internal reasoning being streamed.
 
 <Expandable title="Properties">
 
+<ResponseField name="_meta" type={"object"}>
+  Extension point for implementations
+</ResponseField>
 <ResponseField
   name="content"
   type={<a href="#contentblock">ContentBlock</a>}
   required
-></ResponseField>
+>
+  A single item of content
+</ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required></ResponseField>
 
 </Expandable>
@@ -2425,6 +2411,9 @@ Available commands are ready or have changed
 
 <Expandable title="Properties">
 
+<ResponseField name="_meta" type={"object"}>
+  Extension point for implementations
+</ResponseField>
 <ResponseField
   name="availableCommands"
   type={
@@ -2436,7 +2425,9 @@ Available commands are ready or have changed
     </>
   }
   required
-></ResponseField>
+>
+  Commands the agent can execute
+</ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required></ResponseField>
 
 </Expandable>
@@ -2449,11 +2440,16 @@ See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/sess
 
 <Expandable title="Properties">
 
+<ResponseField name="_meta" type={"object"}>
+  Extension point for implementations
+</ResponseField>
 <ResponseField
   name="currentModeId"
   type={<a href="#sessionmodeid">SessionModeId</a>}
   required
-></ResponseField>
+>
+  The ID of the current mode
+</ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required></ResponseField>
 
 </Expandable>
@@ -2529,76 +2525,6 @@ Text-based resource contents.
 <ResponseField name="mimeType" type={"string | null"}></ResponseField>
 <ResponseField name="text" type={"string"} required></ResponseField>
 <ResponseField name="uri" type={"string"} required></ResponseField>
-
-## <span class="font-mono">ToolCall</span>
-
-Represents a tool call that the language model has requested.
-
-Tool calls are actions that the agent executes on behalf of the language model,
-such as reading files, executing code, or fetching data from external sources.
-
-See protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/tool-calls)
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object"}>
-  Extension point for implementations
-</ResponseField>
-<ResponseField
-  name="content"
-  type={
-    <>
-      <span>
-        <a href="#toolcallcontent">ToolCallContent</a>
-      </span>
-      <span>[]</span>
-    </>
-  }
->
-  Content produced by the tool call.
-</ResponseField>
-<ResponseField name="kind" type={<a href="#toolkind">ToolKind</a>}>
-  The category of tool being invoked. Helps clients choose appropriate icons and
-  UI treatment.
-</ResponseField>
-<ResponseField
-  name="locations"
-  type={
-    <>
-      <span>
-        <a href="#toolcalllocation">ToolCallLocation</a>
-      </span>
-      <span>[]</span>
-    </>
-  }
->
-  File locations affected by this tool call. Enables "follow-along" features in
-  clients.
-</ResponseField>
-<ResponseField name="rawInput" type={"object"}>
-  Raw input parameters sent to the tool.
-</ResponseField>
-<ResponseField name="rawOutput" type={"object"}>
-  Raw output returned by the tool.
-</ResponseField>
-<ResponseField
-  name="status"
-  type={<a href="#toolcallstatus">ToolCallStatus</a>}
->
-  Current execution status of the tool call.
-</ResponseField>
-<ResponseField name="title" type={"string"} required>
-  Human-readable title describing what the tool is doing.
-</ResponseField>
-<ResponseField
-  name="toolCallId"
-  type={<a href="#toolcallid">ToolCallId</a>}
-  required
->
-  Unique identifier for this tool call within the session.
-</ResponseField>
 
 ## <span class="font-mono">ToolCallContent</span>
 
@@ -2721,71 +2647,6 @@ See protocol docs: [Status](https://agentclientprotocol.com/protocol/tool-calls#
 </ResponseField>
 
 <ResponseField name="failed">The tool call failed with an error.</ResponseField>
-
-## <span class="font-mono">ToolCallUpdate</span>
-
-An update to an existing tool call.
-
-Used to report progress and results as tools execute. All fields except
-the tool call ID are optional - only changed fields need to be included.
-
-See protocol docs: [Updating](https://agentclientprotocol.com/protocol/tool-calls#updating)
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object"}>
-  Extension point for implementations
-</ResponseField>
-<ResponseField name="content" type={"array | null"}>
-  Replace the content collection.
-</ResponseField>
-<ResponseField
-  name="kind"
-  type={
-    <>
-      <span>
-        <a href="#toolkind">ToolKind</a>
-      </span>
-      <span> | null</span>
-    </>
-  }
->
-  Update the tool kind.
-</ResponseField>
-<ResponseField name="locations" type={"array | null"}>
-  Replace the locations collection.
-</ResponseField>
-<ResponseField name="rawInput" type={"object"}>
-  Update the raw input.
-</ResponseField>
-<ResponseField name="rawOutput" type={"object"}>
-  Update the raw output.
-</ResponseField>
-<ResponseField
-  name="status"
-  type={
-    <>
-      <span>
-        <a href="#toolcallstatus">ToolCallStatus</a>
-      </span>
-      <span> | null</span>
-    </>
-  }
->
-  Update the execution status.
-</ResponseField>
-<ResponseField name="title" type={"string | null"}>
-  Update the human-readable title.
-</ResponseField>
-<ResponseField
-  name="toolCallId"
-  type={<a href="#toolcallid">ToolCallId</a>}
-  required
->
-  The ID of the tool call being updated.
-</ResponseField>
 
 ## <span class="font-mono">ToolKind</span>
 

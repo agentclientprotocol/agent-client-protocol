@@ -1298,23 +1298,6 @@
         }
       ]
     },
-    "Plan": {
-      "description": "An execution plan for accomplishing complex tasks.\n\nPlans consist of multiple entries representing individual tasks or goals.\nAgents report plans to clients to provide visibility into their execution strategy.\nPlans can evolve during execution as the agent discovers new requirements or completes tasks.\n\nSee protocol docs: [Agent Plan](https://agentclientprotocol.com/protocol/agent-plan)",
-      "properties": {
-        "_meta": {
-          "description": "Extension point for implementations"
-        },
-        "entries": {
-          "description": "The list of tasks to be accomplished.\n\nWhen updating a plan, the agent must send a complete list of all entries\nwith their current status. The client replaces the entire plan with each update.",
-          "items": {
-            "$ref": "#/$defs/PlanEntry"
-          },
-          "type": "array"
-        }
-      },
-      "required": ["entries"],
-      "type": "object"
-    },
     "PlanEntry": {
       "description": "A single entry in the execution plan.\n\nRepresents a task or goal that the assistant intends to accomplish\nas part of fulfilling the user's request.\nSee protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/agent-plan#plan-entries)",
       "properties": {
@@ -1592,8 +1575,64 @@
           "description": "The session ID for this request."
         },
         "toolCall": {
-          "$ref": "#/$defs/ToolCallUpdate",
-          "description": "Details about the tool call requiring permission."
+          "description": "Details about the tool call requiring permission.",
+          "properties": {
+            "_meta": {
+              "description": "Extension point for implementations"
+            },
+            "content": {
+              "description": "Replace the content collection.",
+              "items": {
+                "$ref": "#/$defs/ToolCallContent"
+              },
+              "type": ["array", "null"]
+            },
+            "kind": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/ToolKind"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Update the tool kind."
+            },
+            "locations": {
+              "description": "Replace the locations collection.",
+              "items": {
+                "$ref": "#/$defs/ToolCallLocation"
+              },
+              "type": ["array", "null"]
+            },
+            "rawInput": {
+              "description": "Update the raw input."
+            },
+            "rawOutput": {
+              "description": "Update the raw output."
+            },
+            "status": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/ToolCallStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Update the execution status."
+            },
+            "title": {
+              "description": "Update the human-readable title.",
+              "type": ["string", "null"]
+            },
+            "toolCallId": {
+              "$ref": "#/$defs/ToolCallId",
+              "description": "The ID of the tool call being updated."
+            }
+          },
+          "required": ["toolCallId"],
+          "type": "object"
         }
       },
       "required": ["sessionId", "toolCall", "options"],
@@ -1717,8 +1756,12 @@
         {
           "description": "A chunk of the user's message being streamed.",
           "properties": {
+            "_meta": {
+              "description": "Extension point for implementations"
+            },
             "content": {
-              "$ref": "#/$defs/ContentBlock"
+              "$ref": "#/$defs/ContentBlock",
+              "description": "A single item of content"
             },
             "sessionUpdate": {
               "const": "user_message_chunk",
@@ -1731,8 +1774,12 @@
         {
           "description": "A chunk of the agent's response being streamed.",
           "properties": {
+            "_meta": {
+              "description": "Extension point for implementations"
+            },
             "content": {
-              "$ref": "#/$defs/ContentBlock"
+              "$ref": "#/$defs/ContentBlock",
+              "description": "A single item of content"
             },
             "sessionUpdate": {
               "const": "agent_message_chunk",
@@ -1745,8 +1792,12 @@
         {
           "description": "A chunk of the agent's internal reasoning being streamed.",
           "properties": {
+            "_meta": {
+              "description": "Extension point for implementations"
+            },
             "content": {
-              "$ref": "#/$defs/ContentBlock"
+              "$ref": "#/$defs/ContentBlock",
+              "description": "A single item of content"
             },
             "sessionUpdate": {
               "const": "agent_thought_chunk",
@@ -1894,7 +1945,11 @@
         {
           "description": "Available commands are ready or have changed",
           "properties": {
+            "_meta": {
+              "description": "Extension point for implementations"
+            },
             "availableCommands": {
+              "description": "Commands the agent can execute",
               "items": {
                 "$ref": "#/$defs/AvailableCommand"
               },
@@ -1911,8 +1966,12 @@
         {
           "description": "The current mode of the session has changed\n\nSee protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)",
           "properties": {
+            "_meta": {
+              "description": "Extension point for implementations"
+            },
             "currentModeId": {
-              "$ref": "#/$defs/SessionModeId"
+              "$ref": "#/$defs/SessionModeId",
+              "description": "The ID of the current mode"
             },
             "sessionUpdate": {
               "const": "current_mode_update",
@@ -2103,52 +2162,6 @@
       "required": ["text", "uri"],
       "type": "object"
     },
-    "ToolCall": {
-      "description": "Represents a tool call that the language model has requested.\n\nTool calls are actions that the agent executes on behalf of the language model,\nsuch as reading files, executing code, or fetching data from external sources.\n\nSee protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/tool-calls)",
-      "properties": {
-        "_meta": {
-          "description": "Extension point for implementations"
-        },
-        "content": {
-          "description": "Content produced by the tool call.",
-          "items": {
-            "$ref": "#/$defs/ToolCallContent"
-          },
-          "type": "array"
-        },
-        "kind": {
-          "$ref": "#/$defs/ToolKind",
-          "description": "The category of tool being invoked.\nHelps clients choose appropriate icons and UI treatment."
-        },
-        "locations": {
-          "description": "File locations affected by this tool call.\nEnables \"follow-along\" features in clients.",
-          "items": {
-            "$ref": "#/$defs/ToolCallLocation"
-          },
-          "type": "array"
-        },
-        "rawInput": {
-          "description": "Raw input parameters sent to the tool."
-        },
-        "rawOutput": {
-          "description": "Raw output returned by the tool."
-        },
-        "status": {
-          "$ref": "#/$defs/ToolCallStatus",
-          "description": "Current execution status of the tool call."
-        },
-        "title": {
-          "description": "Human-readable title describing what the tool is doing.",
-          "type": "string"
-        },
-        "toolCallId": {
-          "$ref": "#/$defs/ToolCallId",
-          "description": "Unique identifier for this tool call within the session."
-        }
-      },
-      "required": ["toolCallId", "title"],
-      "type": "object"
-    },
     "ToolCallContent": {
       "description": "Content produced by a tool call.\n\nTool calls can produce different types of content including\nstandard content blocks (text, images) or file diffs.\n\nSee protocol docs: [Content](https://agentclientprotocol.com/protocol/tool-calls#content)",
       "oneOf": [
@@ -2257,66 +2270,6 @@
           "type": "string"
         }
       ]
-    },
-    "ToolCallUpdate": {
-      "description": "An update to an existing tool call.\n\nUsed to report progress and results as tools execute. All fields except\nthe tool call ID are optional - only changed fields need to be included.\n\nSee protocol docs: [Updating](https://agentclientprotocol.com/protocol/tool-calls#updating)",
-      "properties": {
-        "_meta": {
-          "description": "Extension point for implementations"
-        },
-        "content": {
-          "description": "Replace the content collection.",
-          "items": {
-            "$ref": "#/$defs/ToolCallContent"
-          },
-          "type": ["array", "null"]
-        },
-        "kind": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/ToolKind"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "Update the tool kind."
-        },
-        "locations": {
-          "description": "Replace the locations collection.",
-          "items": {
-            "$ref": "#/$defs/ToolCallLocation"
-          },
-          "type": ["array", "null"]
-        },
-        "rawInput": {
-          "description": "Update the raw input."
-        },
-        "rawOutput": {
-          "description": "Update the raw output."
-        },
-        "status": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/ToolCallStatus"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "Update the execution status."
-        },
-        "title": {
-          "description": "Update the human-readable title.",
-          "type": ["string", "null"]
-        },
-        "toolCallId": {
-          "$ref": "#/$defs/ToolCallId",
-          "description": "The ID of the tool call being updated."
-        }
-      },
-      "required": ["toolCallId"],
-      "type": "object"
     },
     "ToolKind": {
       "description": "Categories of tools that can be invoked.\n\nTool kinds help clients choose appropriate icons and optimize how they\ndisplay tool execution progress.\n\nSee protocol docs: [Creating](https://agentclientprotocol.com/protocol/tool-calls#creating)",

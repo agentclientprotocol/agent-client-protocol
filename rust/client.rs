@@ -44,11 +44,11 @@ pub struct SessionNotification {
 #[serde(rename_all = "snake_case", tag = "sessionUpdate")]
 pub enum SessionUpdate {
     /// A chunk of the user's message being streamed.
-    UserMessageChunk { content: ContentBlock },
+    UserMessageChunk(ContentChunk),
     /// A chunk of the agent's response being streamed.
-    AgentMessageChunk { content: ContentBlock },
+    AgentMessageChunk(ContentChunk),
     /// A chunk of the agent's internal reasoning being streamed.
-    AgentThoughtChunk { content: ContentBlock },
+    AgentThoughtChunk(ContentChunk),
     /// Notification that a new tool call has been initiated.
     ToolCall(ToolCall),
     /// Update on the status or results of a tool call.
@@ -57,15 +57,49 @@ pub enum SessionUpdate {
     /// See protocol docs: [Agent Plan](https://agentclientprotocol.com/protocol/agent-plan)
     Plan(Plan),
     /// Available commands are ready or have changed
-    #[serde(rename_all = "camelCase")]
-    AvailableCommandsUpdate {
-        available_commands: Vec<AvailableCommand>,
-    },
+    AvailableCommandsUpdate(AvailableCommandsUpdate),
     /// The current mode of the session has changed
     ///
     /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
-    #[serde(rename_all = "camelCase")]
-    CurrentModeUpdate { current_mode_id: SessionModeId },
+    CurrentModeUpdate(CurrentModeUpdate),
+}
+
+/// The current mode of the session has changed
+///
+/// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[schemars(inline)]
+pub struct CurrentModeUpdate {
+    /// The ID of the current mode
+    pub current_mode_id: SessionModeId,
+    /// Extension point for implementations
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<serde_json::Value>,
+}
+
+/// A streamed item of content
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[schemars(inline)]
+pub struct ContentChunk {
+    /// A single item of content
+    pub content: ContentBlock,
+    /// Extension point for implementations
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<serde_json::Value>,
+}
+
+/// Available commands are ready or have changed
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[schemars(inline)]
+pub struct AvailableCommandsUpdate {
+    /// Commands the agent can execute
+    pub available_commands: Vec<AvailableCommand>,
+    /// Extension point for implementations
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<serde_json::Value>,
 }
 
 /// Information about a command.
