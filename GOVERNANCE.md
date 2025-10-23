@@ -2,68 +2,50 @@
 
 Note: This document describes how ACP governance is structured today (Zed-led) and paints a picture of our desired evolutionary path (following MCP).
 
-## Design and Governance Principles
-- TODO enumerate principles
-    - editor/agent decoupling
-    - interoperability
-    - _others_
-
 ## Current Governance Model (Zed-led)
-- Authority
-  - Zed acts as Lead Maintainer (BDFL-style) for the overall project.
-- Code
-  - Repositories are housed under a neutral Github Organization - [agentclientprotocol](https://github.com/agentclientprotocol).
-  - Permissions model:
-        TODO describe admin/maintainer roles and least-privilege setup.
-- Delegated Component Stewardship
-  - Companies and individuals with relevant expertise may contact Zed for component-specific administration rights
-    - The goal of component-specific admins: allow companies/indiviuals with specific knowledge and skillsets to administer code they're best equipped to administer
-    - Example: JetBrains as admins of the Kotlin SDK
-  - Appointment mechanism: contact Zed via shared Slack channel or at hi@zed.dev
-- Contribution and Change Control
-    - TODO: admins can do whatever to their repos subject to
-        - TODO: Non-breaking changes: admins may merge directly, subject to repo protections.
-        - TODO: Breaking changes: review/objection window of 5 business days before merge.
-    - TODO: propose changes via discussion -> then PR
-        - TODO: PRs approved by admin
-        - TODO: admins can self merge after 5 business day window
-        - TODO: non-admins must have code merged by admin
-- Conflict Resolution
-  - TODO Escalation path
-  - Final decision-maker: Zed during Phase 0
+- Given the rapid iteration on the core protocol, Zed _currently_ leads ACP in a "Lead Maintainer"/"[BDFL](https://en.wikipedia.org/wiki/Benevolent_dictator_for_life" capacity
+- As the foundations of ACP harden and adoption increases, Zed _intends_ on transitioning ACP to a hierarchical structure with a steering committee, similar to [MCP](https://modelcontextprotocol.io/community/governance)
+
+### Core Ownership
+- All ACP repositories are housed under a neutral Github Organization - [agentclientprotocol](https://github.com/agentclientprotocol).
+    - Zed owns and administers this organization, the main protocol repo, and all repositories not administered by other companies or contributors
+
+### Component-Specific Admins
+- Companies and individuals with relevant expertise may contact Zed for component-specific administration rights
+    - The goal of component-specific admins: allowing companies/indiviuals with specific knowledge and skillsets to administer code they're best equipped to administer
+        - Example: JetBrains administers [the Kotlin SDK](https://github.com/agentclientprotocol/kotlin-sdk)
+  - Companies or individuals interested in administration may contact Zed via shared Slack channel or at hi@zed.dev
+- Access to component administration is granted at via _teams_
+    - These teams have admin permissions to their specific repository/repositories, and maintain permissions to the [main protocol repository](https://github.com/agentclientprotocol/agent-client-protocol)
+- Zed will provide suggested permissions/rule sets for component admins, but admins are free to update these permissions within their repository(ies) as they see fit
+
+### Contribution and PR Control
+- Contributors should follow a discussion -> PR model
+    - Discussions should address what change is looking to be made, why, and summarize the hypothesized technical direction
+    - PRs submitted without a discussion will be redirected to create a discussion
+    - Repository admins (whether Zed, or specific component admins) are required code reviewers to merge any PRs
+- Repository admins, in _*their own repository*_:
+    - may merge non breaking changes at any time
+    - must flag breaking changes for a 5 business day review/objection window
+        - if not objections, may self-merge after the window expires
 
 ## Future Governance Model
-- Target Structure (modeled after MCP)
+- The current target structure for ACP is modeled after [MCP](https://modelcontextprotocol.io/community/governance)
   - Contributors
   - Maintainers (component-level)
   - Core Maintainers (project-level)
   - Lead Maintainer(s) / BDFL (initially Zed; will evolve)
   - Steering Committee
-
-## Roles and Responsibilities
-- Contributors
-  - TODO
-- Maintainers
-  - TODO
-- Lead Maintainers (BDFL)
-  - TODO
-
-## Versioning, Releases, and Deprecation
-- Specification
-  - TODO Versioning scheme
-  - TODO Deprecation policy
-- Migration Guides
-  - TODO Required for breaking changes
+- _Unlike_ MCP, we have a hypothesis that companies will have a strong role in the future governance model of ACP, given its primary utility _today_ is for company interactivity. That's just a hypothesis, though, and as the protocol develops we're happy to hear alternate perspectives
 
 ## Security Policy and Vulnerability Disclosure
-- Reporting channel:
-    - TODO email/security.txt/GitHub advisories.
+- Zed will triage all potential security and vulnerability issues between the Zed team and other maintainers
+- Reports can be submitted to security@zed.dev
 
 ## Communication
-- Public Channels
-  - TODO GitHub (issues, discussions)
+- Asynchronous communication lives in GitHub
+    - Discussions about the protocol, future direction, governance, etc. should be in the form of a discussion
+    - Bugs, feature requests, etc. should be submitted as an issue
 
 ## Legal, Licensing, and Contributor Terms
-- License
-  - TODO Apache 2.0
-- By contributing, you agree that your contributions will be licensed under the MIT License.
+- By contributing, you agree that your contributions will be licensed under the Apache 2.0 License.
