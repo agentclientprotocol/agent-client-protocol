@@ -287,6 +287,7 @@ pub struct SetSessionModeRequest {
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_SET_MODE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 pub struct SetSessionModeResponse {
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<serde_json::Value>,
 }
 

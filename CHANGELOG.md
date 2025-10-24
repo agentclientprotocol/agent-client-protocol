@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.2 (2025-10-24)
+
+### Protocol
+
+Fix incorrectly named `_meta` field on `SetSessionModeResponse`
+
 ## 0.6.1 (2025-10-24)
 
 ### Protocol

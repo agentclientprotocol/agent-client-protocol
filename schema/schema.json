@@ -2091,7 +2091,7 @@
     "SetSessionModeResponse": {
       "description": "Response to `session/set_mode` method.",
       "properties": {
-        "meta": true
+        "_meta": true
       },
       "type": "object",
       "x-method": "session/set_mode",
