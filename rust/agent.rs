@@ -3,238 +3,15 @@
 //! This module defines the Agent trait and all associated types for implementing
 //! an AI coding agent that follows the Agent Client Protocol (ACP).
 
-use std::rc::Rc;
 use std::{path::PathBuf, sync::Arc};
 
-use anyhow::Result;
+use derive_more::{Display, From};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::value::RawValue;
 
 use crate::ext::ExtRequest;
-use crate::{
-    ClientCapabilities, ContentBlock, Error, ExtNotification, ExtResponse, ProtocolVersion,
-    SessionId,
-};
-
-/// Defines the interface that all ACP-compliant agents must implement.
-///
-/// Agents are programs that use generative AI to autonomously modify code. They handle
-/// requests from clients and execute tasks using language models and tools.
-#[async_trait::async_trait(?Send)]
-pub trait Agent {
-    /// Establishes the connection with a client and negotiates protocol capabilities.
-    ///
-    /// This method is called once at the beginning of the connection to:
-    /// - Negotiate the protocol version to use
-    /// - Exchange capability information between client and agent
-    /// - Determine available authentication methods
-    ///
-    /// The agent should respond with its supported protocol version and capabilities.
-    ///
-    /// See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)
-    async fn initialize(&self, args: InitializeRequest) -> Result<InitializeResponse, Error>;
-
-    /// Authenticates the client using the specified authentication method.
-    ///
-    /// Called when the agent requires authentication before allowing session creation.
-    /// The client provides the authentication method ID that was advertised during initialization.
-    ///
-    /// After successful authentication, the client can proceed to create sessions with
-    /// `new_session` without receiving an `auth_required` error.
-    ///
-    /// See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)
-    async fn authenticate(&self, args: AuthenticateRequest) -> Result<AuthenticateResponse, Error>;
-
-    /// Creates a new conversation session with the agent.
-    ///
-    /// Sessions represent independent conversation contexts with their own history and state.
-    ///
-    /// The agent should:
-    /// - Create a new session context
-    /// - Connect to any specified MCP servers
-    /// - Return a unique session ID for future requests
-    ///
-    /// May return an `auth_required` error if the agent requires authentication.
-    ///
-    /// See protocol docs: [Session Setup](https://agentclientprotocol.com/protocol/session-setup)
-    async fn new_session(&self, args: NewSessionRequest) -> Result<NewSessionResponse, Error>;
-
-    /// Processes a user prompt within a session.
-    ///
-    /// This method handles the whole lifecycle of a prompt:
-    /// - Receives user messages with optional context (files, images, etc.)
-    /// - Processes the prompt using language models
-    /// - Reports language model content and tool calls to the Clients
-    /// - Requests permission to run tools
-    /// - Executes any requested tool calls
-    /// - Returns when the turn is complete with a stop reason
-    ///
-    /// See protocol docs: [Prompt Turn](https://agentclientprotocol.com/protocol/prompt-turn)
-    async fn prompt(&self, args: PromptRequest) -> Result<PromptResponse, Error>;
-
-    /// Cancels ongoing operations for a session.
-    ///
-    /// This is a notification sent by the client to cancel an ongoing prompt turn.
-    ///
-    /// Upon receiving this notification, the Agent SHOULD:
-    /// - Stop all language model requests as soon as possible
-    /// - Abort all tool call invocations in progress
-    /// - Send any pending `session/update` notifications
-    /// - Respond to the original `session/prompt` request with `StopReason::Cancelled`
-    ///
-    /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-turn#cancellation)
-    async fn cancel(&self, args: CancelNotification) -> Result<(), Error>;
-
-    /// Loads an existing session to resume a previous conversation.
-    ///
-    /// This method is only available if the agent advertises the `loadSession` capability.
-    ///
-    /// The agent should:
-    /// - Restore the session context and conversation history
-    /// - Connect to the specified MCP servers
-    /// - Stream the entire conversation history back to the client via notifications
-    ///
-    /// See protocol docs: [Loading Sessions](https://agentclientprotocol.com/protocol/session-setup#loading-sessions)
-    async fn load_session(&self, _args: LoadSessionRequest) -> Result<LoadSessionResponse, Error> {
-        Err(Error::method_not_found())
-    }
-
-    /// Sets the current mode for a session.
-    ///
-    /// Allows switching between different agent modes (e.g., "ask", "architect", "code")
-    /// that affect system prompts, tool availability, and permission behaviors.
-    ///
-    /// The mode must be one of the modes advertised in `availableModes` during session
-    /// creation or loading. Agents may also change modes autonomously and notify the
-    /// client via `current_mode_update` notifications.
-    ///
-    /// This method can be called at any time during a session, whether the Agent is
-    /// idle or actively generating a response.
-    ///
-    /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
-    async fn set_session_mode(
-        &self,
-        _args: SetSessionModeRequest,
-    ) -> Result<SetSessionModeResponse, Error> {
-        Err(Error::method_not_found())
-    }
-
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// Select a model for a given session.
-    #[cfg(feature = "unstable")]
-    async fn set_session_model(
-        &self,
-        _args: SetSessionModelRequest,
-    ) -> Result<SetSessionModelResponse, Error> {
-        Err(Error::method_not_found())
-    }
-
-    /// Handles extension method requests from the client.
-    ///
-    /// Extension methods provide a way to add custom functionality while maintaining
-    /// protocol compatibility.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    async fn ext_method(&self, _args: ExtRequest) -> Result<ExtResponse, Error> {
-        Ok(RawValue::NULL.to_owned().into())
-    }
-
-    /// Handles extension notifications from the client.
-    ///
-    /// Extension notifications provide a way to send one-way messages for custom functionality
-    /// while maintaining protocol compatibility.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    async fn ext_notification(&self, _args: ExtNotification) -> Result<(), Error> {
-        Ok(())
-    }
-}
-
-#[async_trait::async_trait(?Send)]
-impl<T: Agent> Agent for Rc<T> {
-    async fn initialize(&self, args: InitializeRequest) -> Result<InitializeResponse, Error> {
-        self.as_ref().initialize(args).await
-    }
-    async fn authenticate(&self, args: AuthenticateRequest) -> Result<AuthenticateResponse, Error> {
-        self.as_ref().authenticate(args).await
-    }
-    async fn new_session(&self, args: NewSessionRequest) -> Result<NewSessionResponse, Error> {
-        self.as_ref().new_session(args).await
-    }
-    async fn load_session(&self, args: LoadSessionRequest) -> Result<LoadSessionResponse, Error> {
-        self.as_ref().load_session(args).await
-    }
-    async fn set_session_mode(
-        &self,
-        args: SetSessionModeRequest,
-    ) -> Result<SetSessionModeResponse, Error> {
-        self.as_ref().set_session_mode(args).await
-    }
-    async fn prompt(&self, args: PromptRequest) -> Result<PromptResponse, Error> {
-        self.as_ref().prompt(args).await
-    }
-    async fn cancel(&self, args: CancelNotification) -> Result<(), Error> {
-        self.as_ref().cancel(args).await
-    }
-    #[cfg(feature = "unstable")]
-    async fn set_session_model(
-        &self,
-        args: SetSessionModelRequest,
-    ) -> Result<SetSessionModelResponse, Error> {
-        self.as_ref().set_session_model(args).await
-    }
-    async fn ext_method(&self, args: ExtRequest) -> Result<ExtResponse, Error> {
-        self.as_ref().ext_method(args).await
-    }
-    async fn ext_notification(&self, args: ExtNotification) -> Result<(), Error> {
-        self.as_ref().ext_notification(args).await
-    }
-}
-
-#[async_trait::async_trait(?Send)]
-impl<T: Agent> Agent for Arc<T> {
-    async fn initialize(&self, args: InitializeRequest) -> Result<InitializeResponse, Error> {
-        self.as_ref().initialize(args).await
-    }
-    async fn authenticate(&self, args: AuthenticateRequest) -> Result<AuthenticateResponse, Error> {
-        self.as_ref().authenticate(args).await
-    }
-    async fn new_session(&self, args: NewSessionRequest) -> Result<NewSessionResponse, Error> {
-        self.as_ref().new_session(args).await
-    }
-    async fn load_session(&self, args: LoadSessionRequest) -> Result<LoadSessionResponse, Error> {
-        self.as_ref().load_session(args).await
-    }
-    async fn set_session_mode(
-        &self,
-        args: SetSessionModeRequest,
-    ) -> Result<SetSessionModeResponse, Error> {
-        self.as_ref().set_session_mode(args).await
-    }
-    async fn prompt(&self, args: PromptRequest) -> Result<PromptResponse, Error> {
-        self.as_ref().prompt(args).await
-    }
-    async fn cancel(&self, args: CancelNotification) -> Result<(), Error> {
-        self.as_ref().cancel(args).await
-    }
-    #[cfg(feature = "unstable")]
-    async fn set_session_model(
-        &self,
-        args: SetSessionModelRequest,
-    ) -> Result<SetSessionModelResponse, Error> {
-        self.as_ref().set_session_model(args).await
-    }
-    async fn ext_method(&self, args: ExtRequest) -> Result<ExtResponse, Error> {
-        self.as_ref().ext_method(args).await
-    }
-    async fn ext_notification(&self, args: ExtNotification) -> Result<(), Error> {
-        self.as_ref().ext_notification(args).await
-    }
-}
+use crate::{ClientCapabilities, ContentBlock, ExtNotification, ProtocolVersion, SessionId};
 
 // Initialize
 
@@ -243,7 +20,7 @@ impl<T: Agent> Agent for Arc<T> {
 /// Sent by the client to establish connection and negotiate capabilities.
 ///
 /// See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = INITIALIZE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 pub struct InitializeRequest {
@@ -262,7 +39,7 @@ pub struct InitializeRequest {
 /// Contains the negotiated protocol version and agent capabilities.
 ///
 /// See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = INITIALIZE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 pub struct InitializeResponse {
@@ -287,7 +64,7 @@ pub struct InitializeResponse {
 /// Request parameters for the authenticate method.
 ///
 /// Specifies which authentication method to use.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = AUTHENTICATE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 pub struct AuthenticateRequest {
@@ -300,7 +77,7 @@ pub struct AuthenticateRequest {
 }
 
 /// Response to authenticate method
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "agent", "x-method" = AUTHENTICATE_METHOD_NAME))]
 pub struct AuthenticateResponse {
@@ -310,12 +87,13 @@ pub struct AuthenticateResponse {
 }
 
 /// Unique identifier for an authentication method.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
+#[from(Arc<str>, String, &'static str)]
 pub struct AuthMethodId(pub Arc<str>);
 
 /// Describes an available authentication method.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct AuthMethod {
     /// Unique identifier for this authentication method.
@@ -334,7 +112,7 @@ pub struct AuthMethod {
 /// Request parameters for creating a new session.
 ///
 /// See protocol docs: [Creating a Session](https://agentclientprotocol.com/protocol/session-setup#creating-a-session)
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_NEW_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 pub struct NewSessionRequest {
@@ -350,7 +128,7 @@ pub struct NewSessionRequest {
 /// Response from creating a new session.
 ///
 /// See protocol docs: [Creating a Session](https://agentclientprotocol.com/protocol/session-setup#creating-a-session)
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_NEW_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 pub struct NewSessionResponse {
@@ -383,7 +161,7 @@ pub struct NewSessionResponse {
 /// Only available if the Agent supports the `loadSession` capability.
 ///
 /// See protocol docs: [Loading Sessions](https://agentclientprotocol.com/protocol/session-setup#loading-sessions)
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_LOAD_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 pub struct LoadSessionRequest {
@@ -399,7 +177,7 @@ pub struct LoadSessionRequest {
 }
 
 /// Response from loading an existing session.
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_LOAD_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 pub struct LoadSessionResponse {
@@ -424,7 +202,7 @@ pub struct LoadSessionResponse {
 // Session modes
 
 /// The set of modes and the one currently active.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct SessionModeState {
     /// The current mode the Agent is in.
@@ -439,7 +217,7 @@ pub struct SessionModeState {
 /// A mode the agent can operate in.
 ///
 /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct SessionMode {
     pub id: SessionModeId,
@@ -463,7 +241,7 @@ impl std::fmt::Display for SessionModeId {
 }
 
 /// Request parameters for setting a session mode.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_SET_MODE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 pub struct SetSessionModeRequest {
@@ -477,7 +255,7 @@ pub struct SetSessionModeRequest {
 }
 
 /// Response to `session/set_mode` method.
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_SET_MODE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 pub struct SetSessionModeResponse {
@@ -492,7 +270,7 @@ pub struct SetSessionModeResponse {
 /// processing prompts.
 ///
 /// See protocol docs: [MCP Servers](https://agentclientprotocol.com/protocol/session-setup#mcp-servers)
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum McpServer {
     /// HTTP transport configuration
@@ -536,7 +314,7 @@ pub enum McpServer {
 }
 
 /// An environment variable to set when launching an MCP server.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct EnvVariable {
     /// The name of the environment variable.
@@ -549,7 +327,7 @@ pub struct EnvVariable {
 }
 
 /// An HTTP header to set when making requests to the MCP server.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct HttpHeader {
     /// The name of the HTTP header.
@@ -568,7 +346,7 @@ pub struct HttpHeader {
 /// Contains the user's message and any additional context.
 ///
 /// See protocol docs: [User Message](https://agentclientprotocol.com/protocol/prompt-turn#1-user-message)
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_PROMPT_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 pub struct PromptRequest {
@@ -596,7 +374,7 @@ pub struct PromptRequest {
 /// Response from processing a user prompt.
 ///
 /// See protocol docs: [Check for Completion](https://agentclientprotocol.com/protocol/prompt-turn#4-check-for-completion)
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_PROMPT_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 pub struct PromptResponse {
@@ -641,7 +419,7 @@ pub enum StopReason {
 ///
 /// The set of models and the one currently active.
 #[cfg(feature = "unstable")]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct SessionModelState {
     /// The current model the Agent is in.
@@ -659,16 +437,10 @@ pub struct SessionModelState {
 ///
 /// A unique identifier for a model.
 #[cfg(feature = "unstable")]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
+#[from(Arc<str>, String, &'static str)]
 pub struct ModelId(pub Arc<str>);
-
-#[cfg(feature = "unstable")]
-impl std::fmt::Display for ModelId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
 
 /// **UNSTABLE**
 ///
@@ -676,7 +448,7 @@ impl std::fmt::Display for ModelId {
 ///
 /// Information about a selectable model.
 #[cfg(feature = "unstable")]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct ModelInfo {
     /// Unique identifier for the model.
@@ -697,7 +469,7 @@ pub struct ModelInfo {
 ///
 /// Request parameters for setting a session model.
 #[cfg(feature = "unstable")]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_SET_MODEL_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 pub struct SetSessionModelRequest {
@@ -716,7 +488,7 @@ pub struct SetSessionModelRequest {
 ///
 /// Response to `session/set_model` method.
 #[cfg(feature = "unstable")]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_SET_MODEL_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 pub struct SetSessionModelResponse {
@@ -733,7 +505,7 @@ pub struct SetSessionModelResponse {
 /// available features and content types.
 ///
 /// See protocol docs: [Agent Capabilities](https://agentclientprotocol.com/protocol/initialization#agent-capabilities)
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct AgentCapabilities {
     /// Whether the agent supports `session/load`.
@@ -762,7 +534,7 @@ pub struct AgentCapabilities {
 /// the agent can process.
 ///
 /// See protocol docs: [Prompt Capabilities](https://agentclientprotocol.com/protocol/initialization#prompt-capabilities)
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct PromptCapabilities {
     /// Agent supports [`ContentBlock::Image`].
@@ -783,7 +555,7 @@ pub struct PromptCapabilities {
 }
 
 /// MCP capabilities supported by the agent
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct McpCapabilities {
     /// Agent supports [`McpServer::Http`].
@@ -802,7 +574,7 @@ pub struct McpCapabilities {
 /// Names of all methods that agents handle.
 ///
 /// Provides a centralized definition of method names used in the protocol.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct AgentMethodNames {
     /// Method for initializing the connection.
     pub initialize: &'static str,
@@ -864,14 +636,90 @@ pub(crate) const SESSION_SET_MODEL_METHOD_NAME: &str = "session/set_model";
 #[serde(untagged)]
 #[schemars(extend("x-docs-ignore" = true))]
 pub enum ClientRequest {
+    /// Establishes the connection with a client and negotiates protocol capabilities.
+    ///
+    /// This method is called once at the beginning of the connection to:
+    /// - Negotiate the protocol version to use
+    /// - Exchange capability information between client and agent
+    /// - Determine available authentication methods
+    ///
+    /// The agent should respond with its supported protocol version and capabilities.
+    ///
+    /// See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)
     InitializeRequest(InitializeRequest),
+    /// Authenticates the client using the specified authentication method.
+    ///
+    /// Called when the agent requires authentication before allowing session creation.
+    /// The client provides the authentication method ID that was advertised during initialization.
+    ///
+    /// After successful authentication, the client can proceed to create sessions with
+    /// `new_session` without receiving an `auth_required` error.
+    ///
+    /// See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)
     AuthenticateRequest(AuthenticateRequest),
+    /// Creates a new conversation session with the agent.
+    ///
+    /// Sessions represent independent conversation contexts with their own history and state.
+    ///
+    /// The agent should:
+    /// - Create a new session context
+    /// - Connect to any specified MCP servers
+    /// - Return a unique session ID for future requests
+    ///
+    /// May return an `auth_required` error if the agent requires authentication.
+    ///
+    /// See protocol docs: [Session Setup](https://agentclientprotocol.com/protocol/session-setup)
     NewSessionRequest(NewSessionRequest),
+    /// Loads an existing session to resume a previous conversation.
+    ///
+    /// This method is only available if the agent advertises the `loadSession` capability.
+    ///
+    /// The agent should:
+    /// - Restore the session context and conversation history
+    /// - Connect to the specified MCP servers
+    /// - Stream the entire conversation history back to the client via notifications
+    ///
+    /// See protocol docs: [Loading Sessions](https://agentclientprotocol.com/protocol/session-setup#loading-sessions)
     LoadSessionRequest(LoadSessionRequest),
+    /// Sets the current mode for a session.
+    ///
+    /// Allows switching between different agent modes (e.g., "ask", "architect", "code")
+    /// that affect system prompts, tool availability, and permission behaviors.
+    ///
+    /// The mode must be one of the modes advertised in `availableModes` during session
+    /// creation or loading. Agents may also change modes autonomously and notify the
+    /// client via `current_mode_update` notifications.
+    ///
+    /// This method can be called at any time during a session, whether the Agent is
+    /// idle or actively generating a response.
+    ///
+    /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
     SetSessionModeRequest(SetSessionModeRequest),
+    /// Processes a user prompt within a session.
+    ///
+    /// This method handles the whole lifecycle of a prompt:
+    /// - Receives user messages with optional context (files, images, etc.)
+    /// - Processes the prompt using language models
+    /// - Reports language model content and tool calls to the Clients
+    /// - Requests permission to run tools
+    /// - Executes any requested tool calls
+    /// - Returns when the turn is complete with a stop reason
+    ///
+    /// See protocol docs: [Prompt Turn](https://agentclientprotocol.com/protocol/prompt-turn)
     PromptRequest(PromptRequest),
     #[cfg(feature = "unstable")]
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Select a model for a given session.
     SetSessionModelRequest(SetSessionModelRequest),
+    /// Handles extension method requests from the client.
+    ///
+    /// Extension methods provide a way to add custom functionality while maintaining
+    /// protocol compatibility.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     ExtMethodRequest(ExtRequest),
 }
 
@@ -906,14 +754,31 @@ pub enum AgentResponse {
 #[serde(untagged)]
 #[schemars(extend("x-docs-ignore" = true))]
 pub enum ClientNotification {
+    /// Cancels ongoing operations for a session.
+    ///
+    /// This is a notification sent by the client to cancel an ongoing prompt turn.
+    ///
+    /// Upon receiving this notification, the Agent SHOULD:
+    /// - Stop all language model requests as soon as possible
+    /// - Abort all tool call invocations in progress
+    /// - Send any pending `session/update` notifications
+    /// - Respond to the original `session/prompt` request with `StopReason::Cancelled`
+    ///
+    /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-turn#cancellation)
     CancelNotification(CancelNotification),
+    /// Handles extension notifications from the client.
+    ///
+    /// Extension notifications provide a way to send one-way messages for custom functionality
+    /// while maintaining protocol compatibility.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     ExtNotification(ExtNotification),
 }
 
 /// Notification to cancel ongoing operations for a session.
 ///
 /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-turn#cancellation)
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_CANCEL_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 pub struct CancelNotification {

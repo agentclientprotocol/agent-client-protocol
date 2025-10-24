@@ -1,327 +1,52 @@
-use std::{
-    any::Any,
-    collections::HashMap,
-    rc::Rc,
-    sync::{
-        Arc,
-        atomic::{AtomicI32, Ordering},
-    },
-};
+use std::sync::Arc;
 
-use anyhow::Result;
-use futures::{
-    AsyncBufReadExt as _, AsyncRead, AsyncWrite, AsyncWriteExt as _, FutureExt as _,
-    StreamExt as _,
-    channel::{
-        mpsc::{self, UnboundedReceiver, UnboundedSender},
-        oneshot,
-    },
-    future::LocalBoxFuture,
-    io::BufReader,
-    select_biased,
-};
-use parking_lot::Mutex;
+use derive_more::Display;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use serde_json::value::RawValue;
 
-use crate::stream_broadcast::{StreamBroadcast, StreamSender};
-use crate::{Error, StreamReceiver};
+use crate::{
+    AGENT_METHOD_NAMES, AgentNotification, AgentRequest, AgentResponse, CLIENT_METHOD_NAMES,
+    ClientNotification, ClientRequest, ClientResponse, Error, ExtNotification, ExtRequest, Result,
+};
 
-pub struct RpcConnection<Local: Side, Remote: Side> {
-    outgoing_tx: UnboundedSender<OutgoingMessage<Local, Remote>>,
-    pending_responses: Arc<Mutex<HashMap<i32, PendingResponse>>>,
-    next_id: AtomicI32,
-    broadcast: StreamBroadcast,
-}
-
-struct PendingResponse {
-    deserialize: fn(&serde_json::value::RawValue) -> Result<Box<dyn Any + Send>, Error>,
-    respond: oneshot::Sender<Result<Box<dyn Any + Send>, Error>>,
-}
-
-impl<Local, Remote> RpcConnection<Local, Remote>
-where
-    Local: Side + 'static,
-    Remote: Side + 'static,
-{
-    pub fn new<Handler>(
-        handler: Handler,
-        outgoing_bytes: impl Unpin + AsyncWrite,
-        incoming_bytes: impl Unpin + AsyncRead,
-        spawn: impl Fn(LocalBoxFuture<'static, ()>) + 'static,
-    ) -> (Self, impl futures::Future<Output = Result<()>>)
-    where
-        Handler: MessageHandler<Local> + 'static,
-    {
-        let (incoming_tx, incoming_rx) = mpsc::unbounded();
-        let (outgoing_tx, outgoing_rx) = mpsc::unbounded();
-
-        let pending_responses = Arc::new(Mutex::new(HashMap::default()));
-        let (broadcast_tx, broadcast) = StreamBroadcast::new();
-
-        let io_task = {
-            let pending_responses = pending_responses.clone();
-            async move {
-                let result = Self::handle_io(
-                    incoming_tx,
-                    outgoing_rx,
-                    outgoing_bytes,
-                    incoming_bytes,
-                    pending_responses.clone(),
-                    broadcast_tx,
-                )
-                .await;
-                pending_responses.lock().clear();
-                result
-            }
-        };
-
-        Self::handle_incoming(outgoing_tx.clone(), incoming_rx, handler, spawn);
-
-        let this = Self {
-            outgoing_tx,
-            pending_responses,
-            next_id: AtomicI32::new(0),
-            broadcast,
-        };
-
-        (this, io_task)
-    }
-
-    pub fn subscribe(&self) -> StreamReceiver {
-        self.broadcast.receiver()
-    }
-
-    pub fn notify(
-        &self,
-        method: impl Into<Arc<str>>,
-        params: Option<Remote::InNotification>,
-    ) -> Result<(), Error> {
-        self.outgoing_tx
-            .unbounded_send(OutgoingMessage::Notification {
-                method: method.into(),
-                params,
-            })
-            .map_err(|_| Error::internal_error().with_data("failed to send notification"))
-    }
-
-    pub fn request<Out: DeserializeOwned + Send + 'static>(
-        &self,
-        method: impl Into<Arc<str>>,
-        params: Option<Remote::InRequest>,
-    ) -> impl Future<Output = Result<Out, Error>> {
-        let (tx, rx) = oneshot::channel();
-        let id = self.next_id.fetch_add(1, Ordering::SeqCst);
-        self.pending_responses.lock().insert(
-            id,
-            PendingResponse {
-                deserialize: |value| {
-                    serde_json::from_str::<Out>(value.get())
-                        .map(|out| Box::new(out) as _)
-                        .map_err(|_| {
-                            Error::internal_error().with_data("failed to deserialize response")
-                        })
-                },
-                respond: tx,
-            },
-        );
-
-        if self
-            .outgoing_tx
-            .unbounded_send(OutgoingMessage::Request {
-                id,
-                method: method.into(),
-                params,
-            })
-            .is_err()
-        {
-            self.pending_responses.lock().remove(&id);
-        }
-        async move {
-            let result = rx
-                .await
-                .map_err(|_| Error::internal_error().with_data("server shut down unexpectedly"))??
-                .downcast::<Out>()
-                .map_err(|_| Error::internal_error().with_data("failed to deserialize response"))?;
-
-            Ok(*result)
-        }
-    }
-
-    async fn handle_io(
-        incoming_tx: UnboundedSender<IncomingMessage<Local>>,
-        mut outgoing_rx: UnboundedReceiver<OutgoingMessage<Local, Remote>>,
-        mut outgoing_bytes: impl Unpin + AsyncWrite,
-        incoming_bytes: impl Unpin + AsyncRead,
-        pending_responses: Arc<Mutex<HashMap<i32, PendingResponse>>>,
-        broadcast: StreamSender,
-    ) -> Result<()> {
-        // TODO: Create nicer abstraction for broadcast
-        let mut input_reader = BufReader::new(incoming_bytes);
-        let mut outgoing_line = Vec::new();
-        let mut incoming_line = String::new();
-        loop {
-            select_biased! {
-                message = outgoing_rx.next() => {
-                    if let Some(message) = message {
-                        outgoing_line.clear();
-                        serde_json::to_writer(&mut outgoing_line, &JsonRpcMessage::wrap(&message)).map_err(Error::into_internal_error)?;
-                        log::trace!("send: {}", String::from_utf8_lossy(&outgoing_line));
-                        outgoing_line.push(b'\n');
-                        outgoing_bytes.write_all(&outgoing_line).await.ok();
-                        broadcast.outgoing(&message);
-                    } else {
-                        break;
-                    }
-                }
-                bytes_read = input_reader.read_line(&mut incoming_line).fuse() => {
-                    if bytes_read.map_err(Error::into_internal_error)? == 0 {
-                        break
-                    }
-                    log::trace!("recv: {}", &incoming_line);
-
-                    match serde_json::from_str::<RawIncomingMessage>(&incoming_line) {
-                        Ok(message) => {
-                            if let Some(id) = message.id {
-                                if let Some(method) = message.method {
-                                    // Request
-                                    match Local::decode_request(method, message.params) {
-                                        Ok(request) => {
-                                            broadcast.incoming_request(id, method, &request);
-                                            incoming_tx.unbounded_send(IncomingMessage::Request { id, request }).ok();
-                                        }
-                                        Err(err) => {
-                                            outgoing_line.clear();
-                                            let error_response = OutgoingMessage::<Local, Remote>::Response {
-                                                id,
-                                                result: ResponseResult::Error(err),
-                                            };
-
-                                            serde_json::to_writer(&mut outgoing_line, &JsonRpcMessage::wrap(&error_response))?;
-                                            log::trace!("send: {}", String::from_utf8_lossy(&outgoing_line));
-                                            outgoing_line.push(b'\n');
-                                            outgoing_bytes.write_all(&outgoing_line).await.ok();
-                                            broadcast.outgoing(&error_response);
-                                        }
-                                    }
-                                } else if let Some(pending_response) = pending_responses.lock().remove(&id) {
-                                    // Response
-                                    if let Some(result_value) = message.result {
-                                        broadcast.incoming_response(id, Ok(Some(result_value)));
-
-                                        let result = (pending_response.deserialize)(result_value);
-                                        pending_response.respond.send(result).ok();
-                                    } else if let Some(error) = message.error {
-                                        broadcast.incoming_response(id, Err(&error));
-
-                                        pending_response.respond.send(Err(error)).ok();
-                                    } else {
-                                        broadcast.incoming_response(id, Ok(None));
-
-                                        let result = (pending_response.deserialize)(&RawValue::from_string("null".into()).unwrap());
-                                        pending_response.respond.send(result).ok();
-                                    }
-                                } else {
-                                    log::error!("received response for unknown request id: {id}");
-                                }
-                            } else if let Some(method) = message.method {
-                                // Notification
-                                match Local::decode_notification(method, message.params) {
-                                    Ok(notification) => {
-                                        broadcast.incoming_notification(method, &notification);
-                                        incoming_tx.unbounded_send(IncomingMessage::Notification { notification }).ok();
-                                    }
-                                    Err(err) => {
-                                        log::error!("failed to decode {:?}: {err}", message.params);
-                                    }
-                                }
-                            } else {
-                                log::error!("received message with neither id nor method");
-                            }
-                        }
-                        Err(error) => {
-                            log::error!("failed to parse incoming message: {error}. Raw: {incoming_line}");
-                        }
-                    }
-                    incoming_line.clear();
-                }
-            }
-        }
-        Ok(())
-    }
-
-    fn handle_incoming<Handler: MessageHandler<Local> + 'static>(
-        outgoing_tx: UnboundedSender<OutgoingMessage<Local, Remote>>,
-        mut incoming_rx: UnboundedReceiver<IncomingMessage<Local>>,
-        handler: Handler,
-        spawn: impl Fn(LocalBoxFuture<'static, ()>) + 'static,
-    ) {
-        let spawn = Rc::new(spawn);
-        let handler = Rc::new(handler);
-        spawn({
-            let spawn = spawn.clone();
-            async move {
-                while let Some(message) = incoming_rx.next().await {
-                    match message {
-                        IncomingMessage::Request { id, request } => {
-                            let outgoing_tx = outgoing_tx.clone();
-                            let handler = handler.clone();
-                            spawn(
-                                async move {
-                                    let result = handler.handle_request(request).await.into();
-                                    outgoing_tx
-                                        .unbounded_send(OutgoingMessage::Response { id, result })
-                                        .ok();
-                                }
-                                .boxed_local(),
-                            );
-                        }
-                        IncomingMessage::Notification { notification } => {
-                            let handler = handler.clone();
-                            spawn(
-                                async move {
-                                    if let Err(err) =
-                                        handler.handle_notification(notification).await
-                                    {
-                                        log::error!("failed to handle notification: {err:?}");
-                                    }
-                                }
-                                .boxed_local(),
-                            );
-                        }
-                    }
-                }
-            }
-            .boxed_local()
-        });
-    }
-}
-
-#[derive(Deserialize)]
-struct RawIncomingMessage<'a> {
-    id: Option<i32>,
-    method: Option<&'a str>,
-    params: Option<&'a RawValue>,
-    result: Option<&'a RawValue>,
-    error: Option<Error>,
-}
-
-enum IncomingMessage<Local: Side> {
-    Request { id: i32, request: Local::InRequest },
-    Notification { notification: Local::InNotification },
-}
-
-#[derive(Serialize, Deserialize, Clone)]
+/// JSON RPC Request Id
+///
+/// An identifier established by the Client that MUST contain a String, Number, or NULL value if included. If it is not included it is assumed to be a notification. The value SHOULD normally not be Null [1] and Numbers SHOULD NOT contain fractional parts [2]
+///
+/// The Server MUST reply with the same value in the Response object if included. This member is used to correlate the context between the two objects.
+///
+/// [1] The use of Null as a value for the id member in a Request object is discouraged, because this specification uses a value of Null for Responses with an unknown id. Also, because JSON-RPC 1.0 uses an id value of Null for Notifications this could cause confusion in handling.
+///
+/// [2] Fractional parts may be problematic, since many decimal fractions cannot be represented exactly as binary fractions.
+#[derive(
+    Debug, PartialEq, Clone, Hash, Eq, Deserialize, Serialize, PartialOrd, Ord, Display, JsonSchema,
+)]
+#[serde(deny_unknown_fields)]
 #[serde(untagged)]
+#[schemars(inline)]
+pub enum RequestId {
+    #[display("null")]
+    #[schemars(title = "null")]
+    Null,
+    #[schemars(title = "number")]
+    Number(i64),
+    #[schemars(title = "string")]
+    Str(String),
+}
+
+#[derive(Serialize, Deserialize, Clone, JsonSchema)]
+#[serde(untagged)]
+#[schemars(inline)]
 pub enum OutgoingMessage<Local: Side, Remote: Side> {
     Request {
-        id: i32,
+        id: RequestId,
         method: Arc<str>,
         #[serde(skip_serializing_if = "Option::is_none")]
         params: Option<Remote::InRequest>,
     },
     Response {
-        id: i32,
+        id: RequestId,
         #[serde(flatten)]
         result: ResponseResult<Local::OutResponse>,
     },
@@ -332,43 +57,46 @@ pub enum OutgoingMessage<Local: Side, Remote: Side> {
     },
 }
 
-/// Either [`OutgoingMessage`] or [`IncomingMessage`] with `"jsonrpc": "2.0"` specified as
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[schemars(inline)]
+enum JsonRpcVersion {
+    #[serde(rename = "2.0")]
+    V2,
+}
+
+/// A message (request, response, or notification) with `"jsonrpc": "2.0"` specified as
 /// [required by JSON-RPC 2.0 Specification][1].
 ///
 /// [1]: https://www.jsonrpc.org/specification#compatibility
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[schemars(inline)]
 pub struct JsonRpcMessage<M> {
-    jsonrpc: &'static str,
+    jsonrpc: JsonRpcVersion,
     #[serde(flatten)]
     message: M,
 }
 
 impl<M> JsonRpcMessage<M> {
-    /// Used version of [JSON-RPC protocol].
-    ///
-    /// [JSON-RPC]: https://www.jsonrpc.org
-    pub const VERSION: &'static str = "2.0";
-
     /// Wraps the provided [`OutgoingMessage`] or [`IncomingMessage`] into a versioned
     /// [`JsonRpcMessage`].
     #[must_use]
     pub fn wrap(message: M) -> Self {
         Self {
-            jsonrpc: Self::VERSION,
+            jsonrpc: JsonRpcVersion::V2,
             message,
         }
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ResponseResult<Res> {
     Result(Res),
     Error(Error),
 }
 
-impl<T> From<Result<T, Error>> for ResponseResult<T> {
-    fn from(result: Result<T, Error>) -> Self {
+impl<T> From<Result<T>> for ResponseResult<T> {
+    fn from(result: Result<T>) -> Self {
         match result {
             Ok(value) => ResponseResult::Result(value),
             Err(error) => ResponseResult::Error(error),
@@ -377,26 +105,288 @@ impl<T> From<Result<T, Error>> for ResponseResult<T> {
 }
 
 pub trait Side: Clone {
-    type InRequest: Clone + Serialize + DeserializeOwned + 'static;
-    type OutResponse: Clone + Serialize + DeserializeOwned + 'static;
-    type InNotification: Clone + Serialize + DeserializeOwned + 'static;
+    type InRequest: Clone + Serialize + DeserializeOwned + JsonSchema + 'static;
+    type InNotification: Clone + Serialize + DeserializeOwned + JsonSchema + 'static;
+    type OutResponse: Clone + Serialize + DeserializeOwned + JsonSchema + 'static;
 
-    fn decode_request(method: &str, params: Option<&RawValue>) -> Result<Self::InRequest, Error>;
+    fn decode_request(method: &str, params: Option<&RawValue>) -> Result<Self::InRequest>;
 
-    fn decode_notification(
-        method: &str,
-        params: Option<&RawValue>,
-    ) -> Result<Self::InNotification, Error>;
+    fn decode_notification(method: &str, params: Option<&RawValue>)
+    -> Result<Self::InNotification>;
 }
 
-pub trait MessageHandler<Local: Side> {
-    fn handle_request(
-        &self,
-        request: Local::InRequest,
-    ) -> impl Future<Output = Result<Local::OutResponse, Error>>;
+/// Marker type representing the client side of an ACP connection.
+///
+/// This type is used by the RPC layer to determine which messages
+/// are incoming vs outgoing from the client's perspective.
+///
+/// See protocol docs: [Communication Model](https://agentclientprotocol.com/protocol/overview#communication-model)
+#[derive(Clone, JsonSchema)]
+pub struct ClientSide;
 
-    fn handle_notification(
-        &self,
-        notification: Local::InNotification,
-    ) -> impl Future<Output = Result<(), Error>>;
+impl Side for ClientSide {
+    type InRequest = AgentRequest;
+    type InNotification = AgentNotification;
+    type OutResponse = ClientResponse;
+
+    fn decode_request(method: &str, params: Option<&RawValue>) -> Result<AgentRequest> {
+        let params = params.ok_or_else(Error::invalid_params)?;
+
+        match method {
+            m if m == CLIENT_METHOD_NAMES.session_request_permission => {
+                serde_json::from_str(params.get())
+                    .map(AgentRequest::RequestPermissionRequest)
+                    .map_err(Into::into)
+            }
+            m if m == CLIENT_METHOD_NAMES.fs_write_text_file => serde_json::from_str(params.get())
+                .map(AgentRequest::WriteTextFileRequest)
+                .map_err(Into::into),
+            m if m == CLIENT_METHOD_NAMES.fs_read_text_file => serde_json::from_str(params.get())
+                .map(AgentRequest::ReadTextFileRequest)
+                .map_err(Into::into),
+            m if m == CLIENT_METHOD_NAMES.terminal_create => serde_json::from_str(params.get())
+                .map(AgentRequest::CreateTerminalRequest)
+                .map_err(Into::into),
+            m if m == CLIENT_METHOD_NAMES.terminal_output => serde_json::from_str(params.get())
+                .map(AgentRequest::TerminalOutputRequest)
+                .map_err(Into::into),
+            m if m == CLIENT_METHOD_NAMES.terminal_kill => serde_json::from_str(params.get())
+                .map(AgentRequest::KillTerminalCommandRequest)
+                .map_err(Into::into),
+            m if m == CLIENT_METHOD_NAMES.terminal_release => serde_json::from_str(params.get())
+                .map(AgentRequest::ReleaseTerminalRequest)
+                .map_err(Into::into),
+            m if m == CLIENT_METHOD_NAMES.terminal_wait_for_exit => {
+                serde_json::from_str(params.get())
+                    .map(AgentRequest::WaitForTerminalExitRequest)
+                    .map_err(Into::into)
+            }
+            _ => {
+                if let Some(custom_method) = method.strip_prefix('_') {
+                    Ok(AgentRequest::ExtMethodRequest(ExtRequest {
+                        method: custom_method.into(),
+                        params: params.to_owned().into(),
+                    }))
+                } else {
+                    Err(Error::method_not_found())
+                }
+            }
+        }
+    }
+
+    fn decode_notification(method: &str, params: Option<&RawValue>) -> Result<AgentNotification> {
+        let params = params.ok_or_else(Error::invalid_params)?;
+
+        match method {
+            m if m == CLIENT_METHOD_NAMES.session_update => serde_json::from_str(params.get())
+                .map(AgentNotification::SessionNotification)
+                .map_err(Into::into),
+            _ => {
+                if let Some(custom_method) = method.strip_prefix('_') {
+                    Ok(AgentNotification::ExtNotification(ExtNotification {
+                        method: custom_method.into(),
+                        params: RawValue::from_string(params.get().to_string())?.into(),
+                    }))
+                } else {
+                    Err(Error::method_not_found())
+                }
+            }
+        }
+    }
+}
+
+/// Marker type representing the agent side of an ACP connection.
+///
+/// This type is used by the RPC layer to determine which messages
+/// are incoming vs outgoing from the agent's perspective.
+///
+/// See protocol docs: [Communication Model](https://agentclientprotocol.com/protocol/overview#communication-model)
+#[derive(Clone, JsonSchema)]
+pub struct AgentSide;
+
+impl Side for AgentSide {
+    type InRequest = ClientRequest;
+    type InNotification = ClientNotification;
+    type OutResponse = AgentResponse;
+
+    fn decode_request(method: &str, params: Option<&RawValue>) -> Result<ClientRequest> {
+        let params = params.ok_or_else(Error::invalid_params)?;
+
+        match method {
+            m if m == AGENT_METHOD_NAMES.initialize => serde_json::from_str(params.get())
+                .map(ClientRequest::InitializeRequest)
+                .map_err(Into::into),
+            m if m == AGENT_METHOD_NAMES.authenticate => serde_json::from_str(params.get())
+                .map(ClientRequest::AuthenticateRequest)
+                .map_err(Into::into),
+            m if m == AGENT_METHOD_NAMES.session_new => serde_json::from_str(params.get())
+                .map(ClientRequest::NewSessionRequest)
+                .map_err(Into::into),
+            m if m == AGENT_METHOD_NAMES.session_load => serde_json::from_str(params.get())
+                .map(ClientRequest::LoadSessionRequest)
+                .map_err(Into::into),
+            m if m == AGENT_METHOD_NAMES.session_set_mode => serde_json::from_str(params.get())
+                .map(ClientRequest::SetSessionModeRequest)
+                .map_err(Into::into),
+            #[cfg(feature = "unstable")]
+            m if m == AGENT_METHOD_NAMES.session_set_model => serde_json::from_str(params.get())
+                .map(ClientRequest::SetSessionModelRequest)
+                .map_err(Into::into),
+            m if m == AGENT_METHOD_NAMES.session_prompt => serde_json::from_str(params.get())
+                .map(ClientRequest::PromptRequest)
+                .map_err(Into::into),
+            _ => {
+                if let Some(custom_method) = method.strip_prefix('_') {
+                    Ok(ClientRequest::ExtMethodRequest(ExtRequest {
+                        method: custom_method.into(),
+                        params: params.to_owned().into(),
+                    }))
+                } else {
+                    Err(Error::method_not_found())
+                }
+            }
+        }
+    }
+
+    fn decode_notification(method: &str, params: Option<&RawValue>) -> Result<ClientNotification> {
+        let params = params.ok_or_else(Error::invalid_params)?;
+
+        match method {
+            m if m == AGENT_METHOD_NAMES.session_cancel => serde_json::from_str(params.get())
+                .map(ClientNotification::CancelNotification)
+                .map_err(Into::into),
+            _ => {
+                if let Some(custom_method) = method.strip_prefix('_') {
+                    Ok(ClientNotification::ExtNotification(ExtNotification {
+                        method: custom_method.into(),
+                        params: RawValue::from_string(params.get().to_string())?.into(),
+                    }))
+                } else {
+                    Err(Error::method_not_found())
+                }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use serde_json::{Number, Value};
+
+    #[test]
+    fn id_deserialization() {
+        let id = serde_json::from_value::<RequestId>(Value::Null).unwrap();
+        assert_eq!(id, RequestId::Null);
+
+        let id = serde_json::from_value::<RequestId>(Value::Number(Number::from_u128(1).unwrap()))
+            .unwrap();
+        assert_eq!(id, RequestId::Number(1));
+
+        let id = serde_json::from_value::<RequestId>(Value::Number(Number::from_i128(-1).unwrap()))
+            .unwrap();
+        assert_eq!(id, RequestId::Number(-1));
+
+        let id = serde_json::from_value::<RequestId>(Value::String("id".to_owned())).unwrap();
+        assert_eq!(id, RequestId::Str("id".to_owned()));
+    }
+
+    #[test]
+    fn id_serialization() {
+        let id = serde_json::to_value(RequestId::Null).unwrap();
+        assert_eq!(id, Value::Null);
+
+        let id = serde_json::to_value(RequestId::Number(1)).unwrap();
+        assert_eq!(id, Value::Number(Number::from_u128(1).unwrap()));
+
+        let id = serde_json::to_value(RequestId::Number(-1)).unwrap();
+        assert_eq!(id, Value::Number(Number::from_i128(-1).unwrap()));
+
+        let id = serde_json::to_value(RequestId::Str("id".to_owned())).unwrap();
+        assert_eq!(id, Value::String("id".to_owned()));
+    }
+
+    #[test]
+    fn id_display() {
+        let id = RequestId::Null;
+        assert_eq!(id.to_string(), "null");
+
+        let id = RequestId::Number(1);
+        assert_eq!(id.to_string(), "1");
+
+        let id = RequestId::Number(-1);
+        assert_eq!(id.to_string(), "-1");
+
+        let id = RequestId::Str("id".to_owned());
+        assert_eq!(id.to_string(), "id");
+    }
+}
+
+#[test]
+fn test_notification_wire_format() {
+    use super::*;
+
+    use serde_json::{Value, json};
+
+    // Test client -> agent notification wire format
+    let outgoing_msg =
+        JsonRpcMessage::wrap(OutgoingMessage::<ClientSide, AgentSide>::Notification {
+            method: "cancel".into(),
+            params: Some(ClientNotification::CancelNotification(CancelNotification {
+                session_id: SessionId("test-123".into()),
+                meta: None,
+            })),
+        });
+
+    let serialized: Value = serde_json::to_value(&outgoing_msg).unwrap();
+    assert_eq!(
+        serialized,
+        json!({
+            "jsonrpc": "2.0",
+            "method": "cancel",
+            "params": {
+                "sessionId": "test-123"
+            },
+        })
+    );
+
+    // Test agent -> client notification wire format
+    let outgoing_msg =
+        JsonRpcMessage::wrap(OutgoingMessage::<AgentSide, ClientSide>::Notification {
+            method: "sessionUpdate".into(),
+            params: Some(AgentNotification::SessionNotification(
+                SessionNotification {
+                    session_id: SessionId("test-456".into()),
+                    update: SessionUpdate::AgentMessageChunk(ContentChunk {
+                        content: ContentBlock::Text(TextContent {
+                            annotations: None,
+                            text: "Hello".to_string(),
+                            meta: None,
+                        }),
+                        meta: None,
+                    }),
+                    meta: None,
+                },
+            )),
+        });
+
+    let serialized: Value = serde_json::to_value(&outgoing_msg).unwrap();
+    assert_eq!(
+        serialized,
+        json!({
+            "jsonrpc": "2.0",
+            "method": "sessionUpdate",
+            "params": {
+                "sessionId": "test-456",
+                "update": {
+                    "sessionUpdate": "agent_message_chunk",
+                    "content": {
+                        "type": "text",
+                        "text": "Hello"
+                    }
+                }
+            }
+        })
+    );
 }

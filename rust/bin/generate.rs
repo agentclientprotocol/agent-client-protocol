@@ -1,23 +1,28 @@
-use agent_client_protocol::{
-    AGENT_METHOD_NAMES, AgentNotification, AgentRequest, AgentResponse, CLIENT_METHOD_NAMES,
-    ClientNotification, ClientRequest, ClientResponse, VERSION,
+use agent_client_protocol_schema::{
+    AGENT_METHOD_NAMES, AgentSide, CLIENT_METHOD_NAMES, ClientSide, JsonRpcMessage,
+    OutgoingMessage, VERSION,
 };
 use schemars::{JsonSchema, generate::SchemaSettings};
-use serde_json::Value;
 use std::{fs, path::Path};
 
 use markdown_generator::MarkdownGenerator;
 
-#[allow(dead_code)]
+#[expect(dead_code)]
+#[derive(JsonSchema)]
+#[schemars(extend("x-docs-ignore" = true))]
+struct AgentOutgoingMessage(JsonRpcMessage<OutgoingMessage<AgentSide, ClientSide>>);
+
+#[expect(dead_code)]
+#[derive(JsonSchema)]
+#[schemars(extend("x-docs-ignore" = true))]
+struct ClientOutgoingMessage(JsonRpcMessage<OutgoingMessage<ClientSide, AgentSide>>);
+
+#[expect(dead_code, clippy::large_enum_variant)]
 #[derive(JsonSchema)]
 #[serde(untagged)]
 enum AcpTypes {
-    ClientRequest(AgentRequest),
-    ClientResponse(ClientResponse),
-    ClientNotification(ClientNotification),
-    AgentRequest(ClientRequest),
-    AgentResponse(AgentResponse),
-    AgentNotification(AgentNotification),
+    AgentOutgoingMessage(AgentOutgoingMessage),
+    ClientOutgoingMessage(ClientOutgoingMessage),
 }
 
 fn main() {
@@ -32,10 +37,7 @@ fn main() {
     }
 
     // Convert to serde_json::Value for post-processing
-    let mut schema_value = serde_json::to_value(&schema).unwrap();
-
-    inline_enum_variants(&mut schema_value, "ContentBlock");
-    inline_enum_variants(&mut schema_value, "SessionUpdate");
+    let schema_value = serde_json::to_value(&schema).unwrap();
 
     let root = env!("CARGO_MANIFEST_DIR");
     let schema_dir = Path::new(root).join("schema");
@@ -73,84 +75,6 @@ fn main() {
     println!("✓ Generated schema.json");
     println!("✓ Generated meta.json");
     println!("✓ Generated schema.mdx");
-}
-
-fn inline_enum_variants(schema: &mut Value, enum_name: &str) {
-    let defs_clone = schema.get("$defs").and_then(|v| v.as_object()).cloned();
-
-    let Some(defs_map) = defs_clone else {
-        return;
-    };
-
-    let Some(defs) = schema.get_mut("$defs").and_then(|v| v.as_object_mut()) else {
-        return;
-    };
-
-    let Some(enum_def) = defs.get_mut(enum_name).and_then(|v| v.as_object_mut()) else {
-        return;
-    };
-
-    // Handle both oneOf and anyOf patterns
-    let variants = if let Some(one_of) = enum_def.get_mut("oneOf") {
-        one_of.as_array_mut()
-    } else if let Some(any_of) = enum_def.get_mut("anyOf") {
-        any_of.as_array_mut()
-    } else {
-        None
-    };
-
-    let Some(variants) = variants else {
-        return;
-    };
-
-    for variant in variants.iter_mut() {
-        let _ = inline_variant(variant, &defs_map);
-    }
-}
-
-fn inline_variant(variant: &mut Value, defs_map: &serde_json::Map<String, Value>) -> Option<()> {
-    let variant_obj = variant.as_object_mut()?;
-
-    let ref_value = variant_obj.get("$ref")?.as_str()?.to_string();
-
-    let type_name = ref_value.strip_prefix("#/$defs/")?;
-    let referenced_type = defs_map.get(type_name)?;
-
-    // Merge properties
-    if let Some(ref_props) = referenced_type
-        .get("properties")
-        .and_then(|v| v.as_object())
-    {
-        let existing_props = variant_obj
-            .entry("properties")
-            .or_insert_with(|| Value::Object(serde_json::Map::new()));
-
-        if let Some(existing_obj) = existing_props.as_object_mut() {
-            for (key, value) in ref_props {
-                existing_obj.insert(key.clone(), value.clone());
-            }
-        }
-    }
-
-    // Merge required fields
-    if let Some(ref_required) = referenced_type.get("required").and_then(|v| v.as_array()) {
-        let existing_required = variant_obj
-            .entry("required")
-            .or_insert_with(|| Value::Array(Vec::new()));
-
-        if let Some(existing_arr) = existing_required.as_array_mut() {
-            for req in ref_required {
-                if !existing_arr.contains(req) {
-                    existing_arr.push(req.clone());
-                }
-            }
-        }
-    }
-
-    // Remove the $ref
-    variant_obj.remove("$ref");
-
-    Some(())
 }
 
 mod markdown_generator {
@@ -226,7 +150,14 @@ mod markdown_generator {
 
             writeln!(&mut self.output, "## Agent").unwrap();
             writeln!(&mut self.output).unwrap();
-            writeln!(&mut self.output, "{}", side_docs.agent_trait).unwrap();
+            writeln!(
+                &mut self.output,
+                "Defines the interface that all ACP-compliant agents must implement.
+
+Agents are programs that use generative AI to autonomously modify code. They handle
+requests from clients and execute tasks using language models and tools."
+            )
+            .unwrap();
             writeln!(&mut self.output).unwrap();
 
             for (method, types) in agent_types {
@@ -235,7 +166,15 @@ mod markdown_generator {
 
             writeln!(&mut self.output, "## Client").unwrap();
             writeln!(&mut self.output).unwrap();
-            writeln!(&mut self.output, "{}", side_docs.client_trait).unwrap();
+            writeln!(
+                &mut self.output,
+                "Defines the interface that ACP-compliant clients must implement.
+
+Clients are typically code editors (IDEs, text editors) that provide the interface
+between users and AI agents. They manage the environment, handle user interactions,
+and control access to resources."
+            )
+            .unwrap();
 
             for (method, types) in client_types {
                 self.generate_method(&method, side_docs.client_method_doc(&method), types);
@@ -775,23 +714,21 @@ mod markdown_generator {
     }
 
     struct SideDocs {
-        agent_trait: String,
         agent_methods: HashMap<String, String>,
-        client_trait: String,
         client_methods: HashMap<String, String>,
     }
 
     impl SideDocs {
         fn agent_method_doc(&self, method_name: &str) -> &String {
             match method_name {
-                "initialize" => self.agent_methods.get("initialize").unwrap(),
-                "authenticate" => self.agent_methods.get("authenticate").unwrap(),
-                "session/new" => self.agent_methods.get("new_session").unwrap(),
-                "session/load" => self.agent_methods.get("load_session").unwrap(),
-                "session/set_mode" => self.agent_methods.get("set_session_mode").unwrap(),
-                "session/prompt" => self.agent_methods.get("prompt").unwrap(),
-                "session/cancel" => self.agent_methods.get("cancel").unwrap(),
-                "session/set_model" => self.agent_methods.get("set_session_model").unwrap(),
+                "initialize" => self.agent_methods.get("InitializeRequest").unwrap(),
+                "authenticate" => self.agent_methods.get("AuthenticateRequest").unwrap(),
+                "session/new" => self.agent_methods.get("NewSessionRequest").unwrap(),
+                "session/load" => self.agent_methods.get("LoadSessionRequest").unwrap(),
+                "session/set_mode" => self.agent_methods.get("SetSessionModeRequest").unwrap(),
+                "session/prompt" => self.agent_methods.get("PromptRequest").unwrap(),
+                "session/cancel" => self.agent_methods.get("CancelNotification").unwrap(),
+                "session/set_model" => self.agent_methods.get("SetSessionModelRequest").unwrap(),
                 _ => panic!("Introduced a method? Add it here :)"),
             }
         }
@@ -799,18 +736,22 @@ mod markdown_generator {
         fn client_method_doc(&self, method_name: &str) -> &String {
             match method_name {
                 "session/request_permission" => {
-                    self.client_methods.get("request_permission").unwrap()
+                    self.client_methods.get("RequestPermissionRequest").unwrap()
                 }
-                "fs/write_text_file" => self.client_methods.get("write_text_file").unwrap(),
-                "fs/read_text_file" => self.client_methods.get("read_text_file").unwrap(),
-                "session/update" => self.client_methods.get("session_notification").unwrap(),
-                "terminal/create" => self.client_methods.get("create_terminal").unwrap(),
-                "terminal/output" => self.client_methods.get("terminal_output").unwrap(),
-                "terminal/release" => self.client_methods.get("release_terminal").unwrap(),
-                "terminal/wait_for_exit" => {
-                    self.client_methods.get("wait_for_terminal_exit").unwrap()
-                }
-                "terminal/kill" => self.client_methods.get("kill_terminal_command").unwrap(),
+                "fs/write_text_file" => self.client_methods.get("WriteTextFileRequest").unwrap(),
+                "fs/read_text_file" => self.client_methods.get("ReadTextFileRequest").unwrap(),
+                "session/update" => self.client_methods.get("SessionNotification").unwrap(),
+                "terminal/create" => self.client_methods.get("CreateTerminalRequest").unwrap(),
+                "terminal/output" => self.client_methods.get("TerminalOutputRequest").unwrap(),
+                "terminal/release" => self.client_methods.get("ReleaseTerminalRequest").unwrap(),
+                "terminal/wait_for_exit" => self
+                    .client_methods
+                    .get("WaitForTerminalExitRequest")
+                    .unwrap(),
+                "terminal/kill" => self
+                    .client_methods
+                    .get("KillTerminalCommandRequest")
+                    .unwrap(),
                 _ => panic!("Introduced a method? Add it here :)"),
             }
         }
@@ -840,53 +781,73 @@ mod markdown_generator {
 
         // Parse the JSON output
         let json_path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("target/doc/agent_client_protocol.json");
+            .join("target/doc/agent_client_protocol_schema.json");
         let json_content = fs::read_to_string(json_path).unwrap();
         let doc: Value = serde_json::from_str(&json_content).unwrap();
 
         let mut side_docs = SideDocs {
-            agent_trait: String::new(),
             agent_methods: HashMap::new(),
-            client_trait: String::new(),
             client_methods: HashMap::new(),
         };
 
         if let Some(index) = doc["index"].as_object() {
             for (_, item) in index {
-                if item["name"].as_str() == Some("Agent") {
-                    if let Some(docs) = item["docs"].as_str() {
-                        side_docs.agent_trait = docs.to_string();
-                    }
-
-                    if let Some(items) = item["inner"]["trait"]["items"].as_array() {
-                        for method_id in items {
-                            if let Some(method) = doc["index"][method_id.to_string()].as_object()
-                                && let Some(name) = method["name"].as_str()
-                            {
-                                side_docs.agent_methods.insert(
-                                    name.to_string(),
-                                    method["docs"].as_str().unwrap_or_default().to_string(),
-                                );
-                            }
+                if item["name"].as_str() == Some("ClientRequest")
+                    && let Some(variants) = item["inner"]["enum"]["variants"].as_array()
+                {
+                    for variant_id in variants {
+                        if let Some(variant) = doc["index"][variant_id.to_string()].as_object()
+                            && let Some(name) = variant["name"].as_str()
+                        {
+                            side_docs.agent_methods.insert(
+                                name.to_string(),
+                                variant["docs"].as_str().unwrap_or_default().to_string(),
+                            );
                         }
                     }
                 }
 
-                if item["name"].as_str() == Some("Client") {
-                    if let Some(docs) = item["docs"].as_str() {
-                        side_docs.client_trait = docs.to_string();
+                if item["name"].as_str() == Some("ClientNotification")
+                    && let Some(variants) = item["inner"]["enum"]["variants"].as_array()
+                {
+                    for variant_id in variants {
+                        if let Some(variant) = doc["index"][variant_id.to_string()].as_object()
+                            && let Some(name) = variant["name"].as_str()
+                        {
+                            side_docs.agent_methods.insert(
+                                name.to_string(),
+                                variant["docs"].as_str().unwrap_or_default().to_string(),
+                            );
+                        }
                     }
+                }
 
-                    if let Some(items) = item["inner"]["trait"]["items"].as_array() {
-                        for method_id in items {
-                            if let Some(method) = doc["index"][method_id.to_string()].as_object()
-                                && let Some(name) = method["name"].as_str()
-                            {
-                                side_docs.client_methods.insert(
-                                    name.to_string(),
-                                    method["docs"].as_str().unwrap_or_default().to_string(),
-                                );
-                            }
+                if item["name"].as_str() == Some("AgentRequest")
+                    && let Some(variants) = item["inner"]["enum"]["variants"].as_array()
+                {
+                    for variant_id in variants {
+                        if let Some(variant) = doc["index"][variant_id.to_string()].as_object()
+                            && let Some(name) = variant["name"].as_str()
+                        {
+                            side_docs.client_methods.insert(
+                                name.to_string(),
+                                variant["docs"].as_str().unwrap_or_default().to_string(),
+                            );
+                        }
+                    }
+                }
+
+                if item["name"].as_str() == Some("AgentNotification")
+                    && let Some(variants) = item["inner"]["enum"]["variants"].as_array()
+                {
+                    for variant_id in variants {
+                        if let Some(variant) = doc["index"][variant_id.to_string()].as_object()
+                            && let Some(name) = variant["name"].as_str()
+                        {
+                            side_docs.client_methods.insert(
+                                name.to_string(),
+                                variant["docs"].as_str().unwrap_or_default().to_string(),
+                            );
                         }
                     }
                 }

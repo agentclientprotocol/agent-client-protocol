@@ -3,305 +3,17 @@
 //! This module defines the Client trait and all associated types for implementing
 //! a client that interacts with AI coding agents via the Agent Client Protocol (ACP).
 
-use std::rc::Rc;
-use std::{fmt, path::PathBuf, sync::Arc};
+use std::{path::PathBuf, sync::Arc};
 
-use anyhow::Result;
+use derive_more::{Display, From};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::value::RawValue;
 
-use crate::ext::ExtRequest;
-use crate::{ContentBlock, Error, ExtNotification, Plan, SessionId, ToolCall, ToolCallUpdate};
-use crate::{ExtResponse, SessionModeId};
-
-/// Defines the interface that ACP-compliant clients must implement.
-///
-/// Clients are typically code editors (IDEs, text editors) that provide the interface
-/// between users and AI agents. They manage the environment, handle user interactions,
-/// and control access to resources.
-#[async_trait::async_trait(?Send)]
-pub trait Client {
-    /// Requests permission from the user for a tool call operation.
-    ///
-    /// Called by the agent when it needs user authorization before executing
-    /// a potentially sensitive operation. The client should present the options
-    /// to the user and return their decision.
-    ///
-    /// If the client cancels the prompt turn via `session/cancel`, it MUST
-    /// respond to this request with `RequestPermissionOutcome::Cancelled`.
-    ///
-    /// See protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/tool-calls#requesting-permission)
-    async fn request_permission(
-        &self,
-        args: RequestPermissionRequest,
-    ) -> Result<RequestPermissionResponse, Error>;
-
-    /// Handles session update notifications from the agent.
-    ///
-    /// This is a notification endpoint (no response expected) that receives
-    /// real-time updates about session progress, including message chunks,
-    /// tool calls, and execution plans.
-    ///
-    /// Note: Clients SHOULD continue accepting tool call updates even after
-    /// sending a `session/cancel` notification, as the agent may send final
-    /// updates before responding with the cancelled stop reason.
-    ///
-    /// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-turn#3-agent-reports-output)
-    async fn session_notification(&self, args: SessionNotification) -> Result<(), Error>;
-
-    /// Writes content to a text file in the client's file system.
-    ///
-    /// Only available if the client advertises the `fs.writeTextFile` capability.
-    /// Allows the agent to create or modify files within the client's environment.
-    ///
-    /// See protocol docs: [Client](https://agentclientprotocol.com/protocol/overview#client)
-    async fn write_text_file(
-        &self,
-        _args: WriteTextFileRequest,
-    ) -> Result<WriteTextFileResponse, Error> {
-        Err(Error::method_not_found())
-    }
-
-    /// Reads content from a text file in the client's file system.
-    ///
-    /// Only available if the client advertises the `fs.readTextFile` capability.
-    /// Allows the agent to access file contents within the client's environment.
-    ///
-    /// See protocol docs: [Client](https://agentclientprotocol.com/protocol/overview#client)
-    async fn read_text_file(
-        &self,
-        _args: ReadTextFileRequest,
-    ) -> Result<ReadTextFileResponse, Error> {
-        Err(Error::method_not_found())
-    }
-
-    /// Executes a command in a new terminal
-    ///
-    /// Only available if the `terminal` Client capability is set to `true`.
-    ///
-    /// Returns a `TerminalId` that can be used with other terminal methods
-    /// to get the current output, wait for exit, and kill the command.
-    ///
-    /// The `TerminalId` can also be used to embed the terminal in a tool call
-    /// by using the `ToolCallContent::Terminal` variant.
-    ///
-    /// The Agent is responsible for releasing the terminal by using the `terminal/release`
-    /// method.
-    ///
-    /// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)
-    async fn create_terminal(
-        &self,
-        _args: CreateTerminalRequest,
-    ) -> Result<CreateTerminalResponse, Error> {
-        Err(Error::method_not_found())
-    }
-
-    /// Gets the terminal output and exit status
-    ///
-    /// Returns the current content in the terminal without waiting for the command to exit.
-    /// If the command has already exited, the exit status is included.
-    ///
-    /// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)
-    async fn terminal_output(
-        &self,
-        _args: TerminalOutputRequest,
-    ) -> Result<TerminalOutputResponse, Error> {
-        Err(Error::method_not_found())
-    }
-
-    /// Releases a terminal
-    ///
-    /// The command is killed if it hasn't exited yet. Use `terminal/wait_for_exit`
-    /// to wait for the command to exit before releasing the terminal.
-    ///
-    /// After release, the `TerminalId` can no longer be used with other `terminal/*` methods,
-    /// but tool calls that already contain it, continue to display its output.
-    ///
-    /// The `terminal/kill` method can be used to terminate the command without releasing
-    /// the terminal, allowing the Agent to call `terminal/output` and other methods.
-    ///
-    /// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)
-    async fn release_terminal(
-        &self,
-        _args: ReleaseTerminalRequest,
-    ) -> Result<ReleaseTerminalResponse, Error> {
-        Err(Error::method_not_found())
-    }
-
-    /// Waits for the terminal command to exit and return its exit status
-    ///
-    /// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)
-    async fn wait_for_terminal_exit(
-        &self,
-        _args: WaitForTerminalExitRequest,
-    ) -> Result<WaitForTerminalExitResponse, Error> {
-        Err(Error::method_not_found())
-    }
-
-    /// Kills the terminal command without releasing the terminal
-    ///
-    /// While `terminal/release` will also kill the command, this method will keep
-    /// the `TerminalId` valid so it can be used with other methods.
-    ///
-    /// This method can be helpful when implementing command timeouts which terminate
-    /// the command as soon as elapsed, and then get the final output so it can be sent
-    /// to the model.
-    ///
-    /// Note: `terminal/release` when `TerminalId` is no longer needed.
-    ///
-    /// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)
-    async fn kill_terminal_command(
-        &self,
-        _args: KillTerminalCommandRequest,
-    ) -> Result<KillTerminalCommandResponse, Error> {
-        Err(Error::method_not_found())
-    }
-
-    /// Handles extension method requests from the agent.
-    ///
-    /// Allows the Agent to send an arbitrary request that is not part of the ACP spec.
-    /// Extension methods provide a way to add custom functionality while maintaining
-    /// protocol compatibility.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    async fn ext_method(&self, _args: ExtRequest) -> Result<ExtResponse, Error> {
-        Ok(RawValue::NULL.to_owned().into())
-    }
-
-    /// Handles extension notifications from the agent.
-    ///
-    /// Allows the Agent to send an arbitrary notification that is not part of the ACP spec.
-    /// Extension notifications provide a way to send one-way messages for custom functionality
-    /// while maintaining protocol compatibility.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    async fn ext_notification(&self, _args: ExtNotification) -> Result<(), Error> {
-        Ok(())
-    }
-}
-
-#[async_trait::async_trait(?Send)]
-impl<T: Client> Client for Rc<T> {
-    async fn request_permission(
-        &self,
-        args: RequestPermissionRequest,
-    ) -> Result<RequestPermissionResponse, Error> {
-        self.as_ref().request_permission(args).await
-    }
-    async fn write_text_file(
-        &self,
-        args: WriteTextFileRequest,
-    ) -> Result<WriteTextFileResponse, Error> {
-        self.as_ref().write_text_file(args).await
-    }
-    async fn read_text_file(
-        &self,
-        args: ReadTextFileRequest,
-    ) -> Result<ReadTextFileResponse, Error> {
-        self.as_ref().read_text_file(args).await
-    }
-    async fn session_notification(&self, args: SessionNotification) -> Result<(), Error> {
-        self.as_ref().session_notification(args).await
-    }
-    async fn create_terminal(
-        &self,
-        args: CreateTerminalRequest,
-    ) -> Result<CreateTerminalResponse, Error> {
-        self.as_ref().create_terminal(args).await
-    }
-    async fn terminal_output(
-        &self,
-        args: TerminalOutputRequest,
-    ) -> Result<TerminalOutputResponse, Error> {
-        self.as_ref().terminal_output(args).await
-    }
-    async fn release_terminal(
-        &self,
-        args: ReleaseTerminalRequest,
-    ) -> Result<ReleaseTerminalResponse, Error> {
-        self.as_ref().release_terminal(args).await
-    }
-    async fn wait_for_terminal_exit(
-        &self,
-        args: WaitForTerminalExitRequest,
-    ) -> Result<WaitForTerminalExitResponse, Error> {
-        self.as_ref().wait_for_terminal_exit(args).await
-    }
-    async fn kill_terminal_command(
-        &self,
-        args: KillTerminalCommandRequest,
-    ) -> Result<KillTerminalCommandResponse, Error> {
-        self.as_ref().kill_terminal_command(args).await
-    }
-    async fn ext_method(&self, args: ExtRequest) -> Result<ExtResponse, Error> {
-        self.as_ref().ext_method(args).await
-    }
-    async fn ext_notification(&self, args: ExtNotification) -> Result<(), Error> {
-        self.as_ref().ext_notification(args).await
-    }
-}
-
-#[async_trait::async_trait(?Send)]
-impl<T: Client> Client for Arc<T> {
-    async fn request_permission(
-        &self,
-        args: RequestPermissionRequest,
-    ) -> Result<RequestPermissionResponse, Error> {
-        self.as_ref().request_permission(args).await
-    }
-    async fn write_text_file(
-        &self,
-        args: WriteTextFileRequest,
-    ) -> Result<WriteTextFileResponse, Error> {
-        self.as_ref().write_text_file(args).await
-    }
-    async fn read_text_file(
-        &self,
-        args: ReadTextFileRequest,
-    ) -> Result<ReadTextFileResponse, Error> {
-        self.as_ref().read_text_file(args).await
-    }
-    async fn session_notification(&self, args: SessionNotification) -> Result<(), Error> {
-        self.as_ref().session_notification(args).await
-    }
-    async fn create_terminal(
-        &self,
-        args: CreateTerminalRequest,
-    ) -> Result<CreateTerminalResponse, Error> {
-        self.as_ref().create_terminal(args).await
-    }
-    async fn terminal_output(
-        &self,
-        args: TerminalOutputRequest,
-    ) -> Result<TerminalOutputResponse, Error> {
-        self.as_ref().terminal_output(args).await
-    }
-    async fn release_terminal(
-        &self,
-        args: ReleaseTerminalRequest,
-    ) -> Result<ReleaseTerminalResponse, Error> {
-        self.as_ref().release_terminal(args).await
-    }
-    async fn wait_for_terminal_exit(
-        &self,
-        args: WaitForTerminalExitRequest,
-    ) -> Result<WaitForTerminalExitResponse, Error> {
-        self.as_ref().wait_for_terminal_exit(args).await
-    }
-    async fn kill_terminal_command(
-        &self,
-        args: KillTerminalCommandRequest,
-    ) -> Result<KillTerminalCommandResponse, Error> {
-        self.as_ref().kill_terminal_command(args).await
-    }
-    async fn ext_method(&self, args: ExtRequest) -> Result<ExtResponse, Error> {
-        self.as_ref().ext_method(args).await
-    }
-    async fn ext_notification(&self, args: ExtNotification) -> Result<(), Error> {
-        self.as_ref().ext_notification(args).await
-    }
-}
+use crate::{
+    ContentBlock, ExtNotification, Plan, SessionId, SessionModeId, ToolCall, ToolCallUpdate,
+    ext::ExtRequest,
+};
 
 // Session updates
 
@@ -310,7 +22,7 @@ impl<T: Client> Client for Arc<T> {
 /// Used to stream real-time progress and results during prompt processing.
 ///
 /// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-turn#3-agent-reports-output)
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[schemars(extend("x-side" = "client", "x-method" = SESSION_UPDATE_NOTIFICATION))]
 #[serde(rename_all = "camelCase")]
 pub struct SessionNotification {
@@ -328,15 +40,15 @@ pub struct SessionNotification {
 /// These updates provide real-time feedback about the agent's progress.
 ///
 /// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-turn#3-agent-reports-output)
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[serde(rename_all = "snake_case", tag = "sessionUpdate")]
 pub enum SessionUpdate {
     /// A chunk of the user's message being streamed.
-    UserMessageChunk { content: ContentBlock },
+    UserMessageChunk(ContentChunk),
     /// A chunk of the agent's response being streamed.
-    AgentMessageChunk { content: ContentBlock },
+    AgentMessageChunk(ContentChunk),
     /// A chunk of the agent's internal reasoning being streamed.
-    AgentThoughtChunk { content: ContentBlock },
+    AgentThoughtChunk(ContentChunk),
     /// Notification that a new tool call has been initiated.
     ToolCall(ToolCall),
     /// Update on the status or results of a tool call.
@@ -345,19 +57,53 @@ pub enum SessionUpdate {
     /// See protocol docs: [Agent Plan](https://agentclientprotocol.com/protocol/agent-plan)
     Plan(Plan),
     /// Available commands are ready or have changed
-    #[serde(rename_all = "camelCase")]
-    AvailableCommandsUpdate {
-        available_commands: Vec<AvailableCommand>,
-    },
+    AvailableCommandsUpdate(AvailableCommandsUpdate),
     /// The current mode of the session has changed
     ///
     /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
-    #[serde(rename_all = "camelCase")]
-    CurrentModeUpdate { current_mode_id: SessionModeId },
+    CurrentModeUpdate(CurrentModeUpdate),
+}
+
+/// The current mode of the session has changed
+///
+/// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[schemars(inline)]
+pub struct CurrentModeUpdate {
+    /// The ID of the current mode
+    pub current_mode_id: SessionModeId,
+    /// Extension point for implementations
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<serde_json::Value>,
+}
+
+/// A streamed item of content
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[schemars(inline)]
+pub struct ContentChunk {
+    /// A single item of content
+    pub content: ContentBlock,
+    /// Extension point for implementations
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<serde_json::Value>,
+}
+
+/// Available commands are ready or have changed
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[schemars(inline)]
+pub struct AvailableCommandsUpdate {
+    /// Commands the agent can execute
+    pub available_commands: Vec<AvailableCommand>,
+    /// Extension point for implementations
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<serde_json::Value>,
 }
 
 /// Information about a command.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct AvailableCommand {
     /// Command name (e.g., `create_plan`, `research_codebase`).
@@ -372,7 +118,7 @@ pub struct AvailableCommand {
 }
 
 /// The input specification for a command.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(untagged, rename_all = "camelCase")]
 pub enum AvailableCommandInput {
     /// All text that was typed after the command name is provided as input.
@@ -390,7 +136,7 @@ pub enum AvailableCommandInput {
 /// Sent when the agent needs authorization before performing a sensitive operation.
 ///
 /// See protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/tool-calls#requesting-permission)
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[schemars(extend("x-side" = "client", "x-method" = SESSION_REQUEST_PERMISSION_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 pub struct RequestPermissionRequest {
@@ -406,7 +152,7 @@ pub struct RequestPermissionRequest {
 }
 
 /// An option presented to the user when requesting permission.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 pub struct PermissionOption {
     /// Unique identifier for this permission option.
     #[serde(rename = "optionId")]
@@ -421,15 +167,10 @@ pub struct PermissionOption {
 }
 
 /// Unique identifier for a permission option.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
+#[from(Arc<str>, String, &'static str)]
 pub struct PermissionOptionId(pub Arc<str>);
-
-impl fmt::Display for PermissionOptionId {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.0.fmt(f)
-    }
-}
 
 /// The type of permission option being presented to the user.
 ///
@@ -448,7 +189,7 @@ pub enum PermissionOptionKind {
 }
 
 /// Response to a permission request.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "client", "x-method" = SESSION_REQUEST_PERMISSION_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 pub struct RequestPermissionResponse {
@@ -461,7 +202,7 @@ pub struct RequestPermissionResponse {
 }
 
 /// The outcome of a permission request.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(tag = "outcome", rename_all = "snake_case")]
 pub enum RequestPermissionOutcome {
     /// The prompt turn was cancelled before the user responded.
@@ -485,7 +226,7 @@ pub enum RequestPermissionOutcome {
 /// Request to write content to a text file.
 ///
 /// Only available if the client supports the `fs.writeTextFile` capability.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "client", "x-method" = FS_WRITE_TEXT_FILE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 pub struct WriteTextFileRequest {
@@ -501,7 +242,7 @@ pub struct WriteTextFileRequest {
 }
 
 /// Response to `fs/write_text_file`
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = FS_WRITE_TEXT_FILE_METHOD_NAME))]
 #[serde(default)]
@@ -516,7 +257,7 @@ pub struct WriteTextFileResponse {
 /// Request to read content from a text file.
 ///
 /// Only available if the client supports the `fs.readTextFile` capability.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "client", "x-method" = FS_READ_TEXT_FILE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 pub struct ReadTextFileRequest {
@@ -536,7 +277,7 @@ pub struct ReadTextFileRequest {
 }
 
 /// Response containing the contents of a text file.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "client", "x-method" = FS_READ_TEXT_FILE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 pub struct ReadTextFileResponse {
@@ -548,18 +289,13 @@ pub struct ReadTextFileResponse {
 
 // Terminals
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
+#[from(Arc<str>, String, &'static str)]
 pub struct TerminalId(pub Arc<str>);
 
-impl std::fmt::Display for TerminalId {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
 /// Request to create a new terminal and execute a command.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_CREATE_METHOD_NAME))]
 pub struct CreateTerminalRequest {
@@ -592,7 +328,7 @@ pub struct CreateTerminalRequest {
 }
 
 /// Response containing the ID of the created terminal.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_CREATE_METHOD_NAME))]
 pub struct CreateTerminalResponse {
@@ -604,7 +340,7 @@ pub struct CreateTerminalResponse {
 }
 
 /// Request to get the current output and status of a terminal.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_OUTPUT_METHOD_NAME))]
 pub struct TerminalOutputRequest {
@@ -618,7 +354,7 @@ pub struct TerminalOutputRequest {
 }
 
 /// Response containing the terminal output and exit status.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_OUTPUT_METHOD_NAME))]
 pub struct TerminalOutputResponse {
@@ -634,7 +370,7 @@ pub struct TerminalOutputResponse {
 }
 
 /// Request to release a terminal and free its resources.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_RELEASE_METHOD_NAME))]
 pub struct ReleaseTerminalRequest {
@@ -648,7 +384,7 @@ pub struct ReleaseTerminalRequest {
 }
 
 /// Response to terminal/release method
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_RELEASE_METHOD_NAME))]
 pub struct ReleaseTerminalResponse {
@@ -658,7 +394,7 @@ pub struct ReleaseTerminalResponse {
 }
 
 /// Request to kill a terminal command without releasing the terminal.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_KILL_METHOD_NAME))]
 pub struct KillTerminalCommandRequest {
@@ -672,7 +408,7 @@ pub struct KillTerminalCommandRequest {
 }
 
 /// Response to terminal/kill command method
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_KILL_METHOD_NAME))]
 pub struct KillTerminalCommandResponse {
@@ -682,7 +418,7 @@ pub struct KillTerminalCommandResponse {
 }
 
 /// Request to wait for a terminal command to exit.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_WAIT_FOR_EXIT_METHOD_NAME))]
 pub struct WaitForTerminalExitRequest {
@@ -696,7 +432,7 @@ pub struct WaitForTerminalExitRequest {
 }
 
 /// Response containing the exit status of a terminal command.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_WAIT_FOR_EXIT_METHOD_NAME))]
 pub struct WaitForTerminalExitResponse {
@@ -709,7 +445,7 @@ pub struct WaitForTerminalExitResponse {
 }
 
 /// Exit status of a terminal command.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct TerminalExitStatus {
     /// The process exit code (may be null if terminated by signal).
@@ -729,7 +465,7 @@ pub struct TerminalExitStatus {
 /// available features and methods.
 ///
 /// See protocol docs: [Client Capabilities](https://agentclientprotocol.com/protocol/initialization#client-capabilities)
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct ClientCapabilities {
     /// File system capabilities supported by the client.
@@ -747,7 +483,7 @@ pub struct ClientCapabilities {
 /// File system capabilities that a client may support.
 ///
 /// See protocol docs: [FileSystem](https://agentclientprotocol.com/protocol/initialization#filesystem)
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct FileSystemCapability {
     /// Whether the Client supports `fs/read_text_file` requests.
@@ -766,7 +502,7 @@ pub struct FileSystemCapability {
 /// Names of all methods that clients handle.
 ///
 /// Provides a centralized definition of method names used in the protocol.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ClientMethodNames {
     /// Method for requesting permission from the user.
     pub session_request_permission: &'static str,
@@ -830,14 +566,90 @@ pub(crate) const TERMINAL_KILL_METHOD_NAME: &str = "terminal/kill";
 #[serde(untagged)]
 #[schemars(extend("x-docs-ignore" = true))]
 pub enum AgentRequest {
+    /// Writes content to a text file in the client's file system.
+    ///
+    /// Only available if the client advertises the `fs.writeTextFile` capability.
+    /// Allows the agent to create or modify files within the client's environment.
+    ///
+    /// See protocol docs: [Client](https://agentclientprotocol.com/protocol/overview#client)
     WriteTextFileRequest(WriteTextFileRequest),
+    /// Reads content from a text file in the client's file system.
+    ///
+    /// Only available if the client advertises the `fs.readTextFile` capability.
+    /// Allows the agent to access file contents within the client's environment.
+    ///
+    /// See protocol docs: [Client](https://agentclientprotocol.com/protocol/overview#client)
     ReadTextFileRequest(ReadTextFileRequest),
+    /// Requests permission from the user for a tool call operation.
+    ///
+    /// Called by the agent when it needs user authorization before executing
+    /// a potentially sensitive operation. The client should present the options
+    /// to the user and return their decision.
+    ///
+    /// If the client cancels the prompt turn via `session/cancel`, it MUST
+    /// respond to this request with `RequestPermissionOutcome::Cancelled`.
+    ///
+    /// See protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/tool-calls#requesting-permission)
     RequestPermissionRequest(RequestPermissionRequest),
+    /// Executes a command in a new terminal
+    ///
+    /// Only available if the `terminal` Client capability is set to `true`.
+    ///
+    /// Returns a `TerminalId` that can be used with other terminal methods
+    /// to get the current output, wait for exit, and kill the command.
+    ///
+    /// The `TerminalId` can also be used to embed the terminal in a tool call
+    /// by using the `ToolCallContent::Terminal` variant.
+    ///
+    /// The Agent is responsible for releasing the terminal by using the `terminal/release`
+    /// method.
+    ///
+    /// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)
     CreateTerminalRequest(CreateTerminalRequest),
+    /// Gets the terminal output and exit status
+    ///
+    /// Returns the current content in the terminal without waiting for the command to exit.
+    /// If the command has already exited, the exit status is included.
+    ///
+    /// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)
     TerminalOutputRequest(TerminalOutputRequest),
+    /// Releases a terminal
+    ///
+    /// The command is killed if it hasn't exited yet. Use `terminal/wait_for_exit`
+    /// to wait for the command to exit before releasing the terminal.
+    ///
+    /// After release, the `TerminalId` can no longer be used with other `terminal/*` methods,
+    /// but tool calls that already contain it, continue to display its output.
+    ///
+    /// The `terminal/kill` method can be used to terminate the command without releasing
+    /// the terminal, allowing the Agent to call `terminal/output` and other methods.
+    ///
+    /// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)
     ReleaseTerminalRequest(ReleaseTerminalRequest),
+    /// Waits for the terminal command to exit and return its exit status
+    ///
+    /// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)
     WaitForTerminalExitRequest(WaitForTerminalExitRequest),
+    /// Kills the terminal command without releasing the terminal
+    ///
+    /// While `terminal/release` will also kill the command, this method will keep
+    /// the `TerminalId` valid so it can be used with other methods.
+    ///
+    /// This method can be helpful when implementing command timeouts which terminate
+    /// the command as soon as elapsed, and then get the final output so it can be sent
+    /// to the model.
+    ///
+    /// Note: `terminal/release` when `TerminalId` is no longer needed.
+    ///
+    /// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)
     KillTerminalCommandRequest(KillTerminalCommandRequest),
+    /// Handles extension method requests from the agent.
+    ///
+    /// Allows the Agent to send an arbitrary request that is not part of the ACP spec.
+    /// Extension methods provide a way to add custom functionality while maintaining
+    /// protocol compatibility.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     ExtMethodRequest(ExtRequest),
 }
 
@@ -873,6 +685,24 @@ pub enum ClientResponse {
 #[allow(clippy::large_enum_variant)]
 #[schemars(extend("x-docs-ignore" = true))]
 pub enum AgentNotification {
+    /// Handles session update notifications from the agent.
+    ///
+    /// This is a notification endpoint (no response expected) that receives
+    /// real-time updates about session progress, including message chunks,
+    /// tool calls, and execution plans.
+    ///
+    /// Note: Clients SHOULD continue accepting tool call updates even after
+    /// sending a `session/cancel` notification, as the agent may send final
+    /// updates before responding with the cancelled stop reason.
+    ///
+    /// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-turn#3-agent-reports-output)
     SessionNotification(SessionNotification),
+    /// Handles extension notifications from the agent.
+    ///
+    /// Allows the Agent to send an arbitrary notification that is not part of the ACP spec.
+    /// Extension notifications provide a way to send one-way messages for custom functionality
+    /// while maintaining protocol compatibility.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     ExtNotification(ExtNotification),
 }

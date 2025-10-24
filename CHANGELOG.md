@@ -1,5 +1,66 @@
 # Changelog
 
+## 0.5.0 (2025-10-23)
+
+### Protocol
+
+- JSON Schema: More consistent inlining for enum representations to fix issues with code generation in language tooling.
+- Provide more schema-level information about JSON-RPC format.
+- Provide missing `_meta` fields on certain enum variants.
+
+### Rust
+
+- More consistent enum usage. Enums are always either newtype or struct variants within a single enum, not mixed.
+
+## 0.4.11 (2025-10-20)
+
+### Protocol
+
+- No changes
+
+### Rust
+
+- Make id types easier to create and add `PartialEq` and `Eq` impls for as many types as possible.
+
+## 0.4.10 (2025-10-16)
+
+### Protocol
+
+- No changes
+
+### Rust
+
+- Export `Result` type with a default of `acp::Error`
+
+## 0.4.9 (2025-10-13)
+
+- Fix schema publishing
+
+## 0.4.8 (2025-10-13)
+
+- Fix publishing
+
+## 0.4.7 (2025-10-13)
+
+### Protocol
+
+- Schema uploaded to GitHub releases
+
+### Rust
+
+- SDK has moved to https://github.com/agentclientprotocol/rust-sdk
+- Start publishing schema types to crates.io: https://crates.io/crates/agent-client-protocol-schema
+
+## 0.4.6 (2025-10-10)
+
+### Protocol
+
+- No changes
+
+### Rust
+
+- Fix: support all valid JSON-RPC ids (int, string, null)
+
 ## 0.4.5 (2025-10-02)
 
 ### Protocol
@@ -54,13 +115,13 @@ No changes.
 
 ### Rust Library
 
-- Make `Agent` and `Client` dyn compatible (you'll need to annotate them with `#[async_trait]`) [#97](https://github.com/zed-industries/agent-client-protocol/pull/97)
-- `ext_method` and `ext_notification` methods are now more consistent with the other trait methods [#95](https://github.com/zed-industries/agent-client-protocol/pull/95)
+- Make `Agent` and `Client` dyn compatible (you'll need to annotate them with `#[async_trait]`) [#97](https://github.com/agentclientprotocol/agent-client-protocol/pull/97)
+- `ext_method` and `ext_notification` methods are now more consistent with the other trait methods [#95](https://github.com/agentclientprotocol/agent-client-protocol/pull/95)
   - There are also distinct types for `ExtRequest`, `ExtResponse`, and `ExtNotification`
-- Rexport `serde_json::RawValue` for easier use [#95](https://github.com/zed-industries/agent-client-protocol/pull/95)
+- Rexport `serde_json::RawValue` for easier use [#95](https://github.com/agentclientprotocol/agent-client-protocol/pull/95)
 
 ### Typescript Library
 
-- Use Stream abstraction instead of raw byte streams [#93](https://github.com/zed-industries/agent-client-protocol/pull/93)
+- Use Stream abstraction instead of raw byte streams [#93](https://github.com/agentclientprotocol/agent-client-protocol/pull/93)
   - Makes it easier to use with websockets instead of stdio
-- Improve type safety for method map helpers [#94](https://github.com/zed-industries/agent-client-protocol/pull/94)
+- Improve type safety for method map helpers [#94](https://github.com/agentclientprotocol/agent-client-protocol/pull/94)

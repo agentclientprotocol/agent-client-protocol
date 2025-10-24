@@ -1,69 +1,37 @@
 {
-  "name": "@zed-industries/agent-client-protocol",
-  "version": "0.4.5",
+  "name": "@agentclientprotocol/schema",
+  "version": "0.0.0",
   "publishConfig": {
     "access": "public"
   },
   "description": "The Agent Client Protocol (ACP) is a protocol that standardizes communication between *code editors* (interactive programs for viewing and editing source code) and *coding agents* (programs that use generative AI to autonomously modify code).",
-  "homepage": "https://github.com/zed-industries/agent-client-protocol#readme",
+  "homepage": "https://github.com/agentclientprotocol/agent-client-protocol#readme",
   "bugs": {
-    "url": "https://github.com/zed-industries/agent-client-protocol/issues"
+    "url": "https://github.com/agentclientprotocol/agent-client-protocol/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/zed-industries/agent-client-protocol.git"
+    "url": "git+https://github.com/agentclientprotocol/agent-client-protocol.git"
   },
   "license": "Apache-2.0",
   "author": "Zed Industries",
   "files": [
-    "typescript",
-    "dist",
     "schema/schema.json",
-    "LICENSE-APACHE"
+    "LICENSE"
   ],
   "type": "module",
-  "main": "dist/acp.js",
-  "types": "dist/acp.d.ts",
-  "directories": {
-    "example": "examples"
-  },
   "scripts": {
-    "prepublishOnly": "cp typescript/README.md README.md",
-    "postpublish": "git checkout README.md",
-    "clean": "rm -rf dist tsconfig.tsbuildinfo && cargo clean",
-    "test": "cargo check --all-targets && cargo test && vitest run",
-    "test:ts": "vitest run",
-    "test:ts:watch": "vitest",
     "generate:json-schema": "cd rust && cargo run --bin generate --features unstable",
-    "generate:ts-schema": "node typescript/generate.js",
-    "generate": "npm run generate:json-schema && npm run generate:ts-schema && npm run format",
-    "build": "npm run generate && tsc",
+    "generate": "npm run generate:json-schema && npm run format",
     "format": "prettier --write . && cargo fmt",
     "format:check": "prettier --check . && cargo fmt -- --check",
-    "lint": "cargo clippy",
-    "lint:fix": "cargo clippy --fix",
     "spellcheck": "./scripts/spellcheck.sh",
     "spellcheck:fix": "./scripts/spellcheck.sh --write-changes",
-    "check": "npm run lint && npm run format:check && npm run spellcheck && npm run build && npm run test && npm run docs:ts:verify",
-    "docs": "cd docs && npx mint@4.2.93 dev",
-    "docs:ts:build": "cd typescript && typedoc && echo 'TypeScript documentation generated in ./typescript/docs'",
-    "docs:ts:dev": "concurrently \"cd typescript && typedoc --watch --preserveWatchOutput\" \"npx http-server typescript/docs -p 8081\"",
-    "docs:ts:verify": "cd typescript && typedoc --emit none && echo 'TypeDoc verification passed'"
-  },
-  "dependencies": {
-    "zod": "^3.0.0"
+    "check": "npm run lint && npm run format:check && npm run spellcheck && npm run build && npm run test",
+    "docs": "cd docs && npx mint@4.2.93 dev"
   },
   "devDependencies": {
-    "@types/node": "^24.1.0",
-    "concurrently": "^9.1.0",
-    "http-server": "^14.1.1",
-    "json-schema-to-typescript": "^15.0.4",
     "prettier": "^3.3.3",
-    "ts-to-zod": "^3.15.0",
-    "tsx": "^4.20.5",
-    "typedoc": "^0.28.11",
-    "typedoc-github-theme": "^0.3.1",
-    "typescript": "^5.8.3",
-    "vitest": "^3.2.4"
+    "tsx": "^4.20.5"
   }
 }

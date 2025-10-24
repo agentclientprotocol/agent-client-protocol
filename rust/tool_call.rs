@@ -6,6 +6,7 @@
 /// See protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/tool-calls)
 use std::{path::PathBuf, sync::Arc};
 
+use derive_more::{Display, From};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -19,6 +20,7 @@ use crate::{ContentBlock, Error};
 /// See protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/tool-calls)
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
+#[schemars(inline)]
 pub struct ToolCall {
     /// Unique identifier for this tool call within the session.
     #[serde(rename = "toolCallId")]
@@ -86,6 +88,7 @@ impl ToolCall {
 /// See protocol docs: [Updating](https://agentclientprotocol.com/protocol/tool-calls#updating)
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
+#[schemars(inline)]
 pub struct ToolCallUpdate {
     /// The ID of the tool call being updated.
     #[serde(rename = "toolCallId")]
@@ -198,8 +201,9 @@ impl From<ToolCall> for ToolCallUpdate {
 }
 
 /// Unique identifier for a tool call within a session.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
+#[from(Arc<str>, String, &'static str)]
 pub struct ToolCallId(pub Arc<str>);
 
 /// Categories of tools that can be invoked.
@@ -315,7 +319,7 @@ impl From<Diff> for ToolCallContent {
 /// Shows changes to files in a format suitable for display in the client UI.
 ///
 /// See protocol docs: [Content](https://agentclientprotocol.com/protocol/tool-calls#content)
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Diff {
     /// The file path being modified.
@@ -335,8 +339,8 @@ pub struct Diff {
 /// which files the agent is working with in real-time.
 ///
 /// See protocol docs: [Following the Agent](https://agentclientprotocol.com/protocol/tool-calls#following-the-agent)
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
-#[serde(tag = "type", rename_all = "camelCase")]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct ToolCallLocation {
     /// The file path being accessed or modified.
     pub path: PathBuf,
