@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.0 (2025-10-24)
+
+### Protocol
+
+- Add ability for agents and clients to provide information about their implementation https://github.com/agentclientprotocol/agent-client-protocol/pull/192
+
 ## 0.5.0 (2025-10-23)
 
 ### Protocol
