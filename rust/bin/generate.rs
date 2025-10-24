@@ -17,7 +17,7 @@ struct AgentOutgoingMessage(JsonRpcMessage<OutgoingMessage<AgentSide, ClientSide
 #[schemars(extend("x-docs-ignore" = true))]
 struct ClientOutgoingMessage(JsonRpcMessage<OutgoingMessage<ClientSide, AgentSide>>);
 
-#[expect(dead_code, clippy::large_enum_variant)]
+#[expect(dead_code)]
 #[derive(JsonSchema)]
 #[serde(untagged)]
 enum AcpTypes {
