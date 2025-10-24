@@ -29,6 +29,11 @@ pub struct InitializeRequest {
     /// Capabilities supported by the client.
     #[serde(default)]
     pub client_capabilities: ClientCapabilities,
+    /// Information about the Client name and version sent to the Agent.
+    ///
+    /// Note: in future versions of the protocol, this will be required.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub client_info: Option<Implementation>,
     /// Extension point for implementations
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<serde_json::Value>,
@@ -54,9 +59,32 @@ pub struct InitializeResponse {
     /// Authentication methods supported by the agent.
     #[serde(default)]
     pub auth_methods: Vec<AuthMethod>,
+    /// Information about the Agent name and version sent to the Client.
+    ///
+    /// Note: in future versions of the protocol, this will be required.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub agent_info: Option<Implementation>,
     /// Extension point for implementations
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<serde_json::Value>,
+}
+
+/// Describes the name and version of an MCP implementation, with an optional
+/// title for UI representation.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct Implementation {
+    /// Intended for programmatic or logical use, but can be used as a display
+    /// name fallback if title isn’t present.
+    name: String,
+    /// Intended for UI and end-user contexts — optimized to be human-readable
+    /// and easily understood.
+    ///
+    /// If not provided, the name should be used for display.
+    title: Option<String>,
+    /// Version of the implementation. Can be displayed to the user or used
+    /// for debugging or metrics purposes.
+    version: String,
 }
 
 // Authentication

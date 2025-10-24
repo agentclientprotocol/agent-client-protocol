@@ -958,6 +958,25 @@
       "required": ["name", "value"],
       "type": "object"
     },
+    "Implementation": {
+      "description": "Describes the name and version of an MCP implementation, with an optional\ntitle for UI representation.",
+      "properties": {
+        "name": {
+          "description": "Intended for programmatic or logical use, but can be used as a display\nname fallback if title isn’t present.",
+          "type": "string"
+        },
+        "title": {
+          "description": "Intended for UI and end-user contexts — optimized to be human-readable\nand easily understood.\n\nIf not provided, the name should be used for display.",
+          "type": ["string", "null"]
+        },
+        "version": {
+          "description": "Version of the implementation. Can be displayed to the user or used\nfor debugging or metrics purposes.",
+          "type": "string"
+        }
+      },
+      "required": ["name", "version"],
+      "type": "object"
+    },
     "InitializeRequest": {
       "description": "Request parameters for the initialize method.\n\nSent by the client to establish connection and negotiate capabilities.\n\nSee protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)",
       "properties": {
@@ -974,6 +993,17 @@
             "terminal": false
           },
           "description": "Capabilities supported by the client."
+        },
+        "clientInfo": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Implementation"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Information about the Client name and version sent to the Agent.\n\nNote: in future versions of the protocol, this will be required."
         },
         "protocolVersion": {
           "$ref": "#/$defs/ProtocolVersion",
@@ -1006,6 +1036,17 @@
             }
           },
           "description": "Capabilities supported by the agent."
+        },
+        "agentInfo": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Implementation"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Information about the Agent name and version sent to the Client.\n\nNote: in future versions of the protocol, this will be required."
         },
         "authMethods": {
           "default": [],

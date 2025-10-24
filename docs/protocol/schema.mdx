@@ -91,6 +91,12 @@ See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/ini
     - Default: `{"fs":{"readTextFile":false,"writeTextFile":false},"terminal":false}`
 
 </ResponseField>
+<ResponseField name="clientInfo" type={<><span><a href="#implementation">Implementation</a></span><span> | null</span></>} >
+  Information about the Client name and version sent to the Agent.
+
+Note: in future versions of the protocol, this will be required.
+
+</ResponseField>
 <ResponseField name="protocolVersion" type={<a href="#protocolversion">ProtocolVersion</a>} required>
   The latest protocol version supported by the client.
 </ResponseField>
@@ -114,6 +120,12 @@ See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/ini
   Capabilities supported by the agent.
 
     - Default: `{"loadSession":false,"mcpCapabilities":{"http":false,"sse":false},"promptCapabilities":{"audio":false,"embeddedContext":false,"image":false}}`
+
+</ResponseField>
+<ResponseField name="agentInfo" type={<><span><a href="#implementation">Implementation</a></span><span> | null</span></>} >
+  Information about the Agent name and version sent to the Client.
+
+Note: in future versions of the protocol, this will be required.
 
 </ResponseField>
 <ResponseField name="authMethods" type={<><span><a href="#authmethod">AuthMethod</a></span><span>[]</span></>} >
@@ -1489,6 +1501,31 @@ An HTTP header to set when making requests to the MCP server.
 </ResponseField>
 <ResponseField name="value" type={"string"} required>
   The value to set for the HTTP header.
+</ResponseField>
+
+## <span class="font-mono">Implementation</span>
+
+Describes the name and version of an MCP implementation, with an optional
+title for UI representation.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="name" type={"string"} required>
+  Intended for programmatic or logical use, but can be used as a display
+name fallback if title isn’t present.
+</ResponseField>
+<ResponseField name="title" type={"string | null"} >
+  Intended for UI and end-user contexts — optimized to be human-readable
+and easily understood.
+
+If not provided, the name should be used for display.
+
+</ResponseField>
+<ResponseField name="version" type={"string"} required>
+  Version of the implementation. Can be displayed to the user or used
+for debugging or metrics purposes.
 </ResponseField>
 
 ## <span class="font-mono">McpCapabilities</span>

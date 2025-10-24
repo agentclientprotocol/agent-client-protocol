@@ -28,6 +28,8 @@ Before a Session can be created, Clients **MUST** initialize the connection by c
 - The latest [protocol version](#protocol-version) supported
 - The [capabilities](#client-capabilities) supported
 
+They **SHOULD** also provide a name and version to the Agent.
+
 ```json
 {
   "jsonrpc": "2.0",
@@ -41,12 +43,17 @@ Before a Session can be created, Clients **MUST** initialize the connection by c
         "writeTextFile": true
       },
       "terminal": true
+    },
+    "clientInfo": {
+      "name": "my-client",
+      "title": "My Client",
+      "version": "1.0.0"
     }
   }
 }
 ```
 
-The Agent **MUST** respond with the chosen [protocol version](#protocol-version) and the [capabilities](#agent-capabilities) it supports:
+The Agent **MUST** respond with the chosen [protocol version](#protocol-version) and the [capabilities](#agent-capabilities) it supports. It **SHOULD** also provide a name and version to the Client as well:
 
 ```json
 {
@@ -65,6 +72,11 @@ The Agent **MUST** respond with the chosen [protocol version](#protocol-version)
         "http": true,
         "sse": true
       }
+    },
+    "agentInfo": {
+      "name": "my-agent",
+      "title": "My Agent",
+      "version": "1.0.0"
     },
     "authMethods": []
   }
@@ -173,6 +185,29 @@ Optionally, they **MAY** support richer types of [content](./content) by specify
 Note: This transport has been deprecated by the MCP spec.
 
 </ResponseField>
+
+## Implementation Information
+
+Both Clients and Agents **SHOULD** provide information about their implementation in the `clientInfo` and `agentInfo` fields respectively. Both take the following three fields:
+
+<ParamField path="name" type="string">
+  Intended for programmatic or logical use, but can be used as a display name
+  fallback if title isn’t present.
+</ParamField>
+
+<ParamField path="title" type="string">
+  Intended for UI and end-user contexts — optimized to be human-readable and
+  easily understood. If not provided, the name should be used for display.
+</ParamField>
+
+<ParamField path="version" type="string">
+  Version of the implementation. Can be displayed to the user or used for
+  debugging or metrics purposes.
+</ParamField>
+
+<Info>
+  Note: in future versions of the protocol, this information will be required.
+</Info>
 
 ---
 
