@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.1 (2025-10-24)
+
+### Protocol
+
+- No changes
+
+### Rust
+
+- Make `Implementation` fields public
+
 ## 0.6.0 (2025-10-24)
 
 ### Protocol

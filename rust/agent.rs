@@ -76,15 +76,15 @@ pub struct InitializeResponse {
 pub struct Implementation {
     /// Intended for programmatic or logical use, but can be used as a display
     /// name fallback if title isn’t present.
-    name: String,
+    pub name: String,
     /// Intended for UI and end-user contexts — optimized to be human-readable
     /// and easily understood.
     ///
     /// If not provided, the name should be used for display.
-    title: Option<String>,
+    pub title: Option<String>,
     /// Version of the implementation. Can be displayed to the user or used
     /// for debugging or metrics purposes.
-    version: String,
+    pub version: String,
 }
 
 // Authentication
