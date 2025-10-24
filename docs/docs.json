@@ -81,7 +81,11 @@
       },
       {
         "group": "Community",
-        "pages": ["community/code-of-conduct", "community/contributing"]
+        "pages": [
+          "community/governance",
+          "community/code-of-conduct",
+          "community/contributing"
+        ]
       }
     ]
   },
