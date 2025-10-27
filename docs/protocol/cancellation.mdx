@@ -1,0 +1,20 @@
+---
+title: "Cancellation"
+description: "Mechanisms for request cancellation"
+---
+
+ACP uses JSON-RPC 2.0 for making requests and getting responses.
+
+The JSON-RPC specification doesn't define any standard mechanism for request cancellation and keeps it up to the implementation.
+
+- The agent and the client **MUST** implement [$/cancelRequest](./schema#%24%2Fcancelrequest) notification method to support per-request cancellation.
+
+- When a cancellation request is received from the remote side, the corresponding request activity and all nested activities (including outgoing requests) **MUST** be cancelled, then one of the responses **MUST** be sent back:
+  - an error response with the Cancelled [error code `-32800`](./schema#param-code)
+  - a valid response with the appropriate data (e.g., a partial result or a valid result with the Cancelled marker)
+
+- The calling side **MAY** implement graceful cancellation processing by waiting for the cancelled response (error code `-32800`) from the remote side.
+
+- The request **MAY** be also cancelled from inside the request handler activity (e.g. when a heavy action is being performed in IDE by a request and the user cancels it explicitly). In this case the response with the [error code `-32800`](./schema#param-code) and the appropriate message **MUST** be sent back and the cancellation **SHOULD** be propagated on the calling side.
+
+- Cancellation **MAY** also be done explicitly on a per-feature basis to cover the bigger scope of things to cancel (e.g., cancellation of a [prompt turn](./prompt-turn#cancellation))
