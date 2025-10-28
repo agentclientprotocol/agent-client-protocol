@@ -1,0 +1,67 @@
+---
+title: "Requests for Dialog (RFDs)"
+description: "Our process for introducing changes to the protocol"
+---
+
+A "Request for Dialog" (RFD) is ACP's version of the RFC process. RFDs are the primary mechanism for proposing new features, collecting community input on an issue, and documenting design decisions.
+
+## When to write an RFD
+
+You should consider writing an RFD if you intend to make a "substantial" change to ACP or its documentation. What constitutes a "substantial" change is evolving based on community norms and varies depending on what part of the ecosystem you are proposing to change.
+
+Some changes do not require an RFD:
+
+- Rephrasing, reorganizing or refactoring
+- Addition or removal of warnings
+- Additions that strictly improve objective, numerical quality criteria (speedup, better browser support)
+- Fixing objectively incorrect behavior
+
+## The RFD Process
+
+### 1. Propose by opening a PR
+
+Fork the repo and copy `rfds/TEMPLATE.md` to `rfds/my-feature.md` (using kebab-case naming). The RFD can start minimal - just an elevator pitch and status quo are enough to begin dialog. Pull requests become the discussion forum where ideas get refined through collaborative iteration.
+
+### 2. Merge to "Draft" when championed
+
+RFD proposals are merged into the "Draft" section if a core team member decides to champion them. The champion becomes the point-of-contact and will work with authors to make it reality. Once in draft, implementation may begin (properly feature-gated with the RFD name). Implementation can also begin at a particular SDK or agent/client level to prove out the design for better review and feedback before broader adoption.
+
+RFDs are living documents that track implementation progress. PRs working towards an RFC will typically update it to reflect changes in design or direction.
+
+### 2b. Move to "To be removed"
+
+RFDs that have never landed may be closed at the discretion of a core team member. RFDs that have landed in draft form are moved to "To be removed" instead until there has been time to remove them fully from the codebase, then they are removed entirely.
+
+### 3. Move to "Preview" when fully implemented
+
+When the champion feels the RFD is ready for broader review, they open a PR to move it to "Preview." This signals the community to provide feedback. The PR stays open for a few days before the champion decides whether to land it.
+
+### 4. Completed
+
+Once in preview, the RFD can be moved to "completed" with a final PR. The core team should comment and express concerns, but **final decision is always made by the core team lead**. Depending on what the RFD is about, "completed" is the only state that can represent a 1-way door (if there is a stability commitment involved), as changes might require a breaking change to the protocol after this point.
+
+Preview RFDs don't have to be completed. They may also go back to draft to await further changes or even be moved to "To be removed".
+
+### 5. Implementation and completion
+
+#### RFD Lifecycle
+
+- **Early drafts**: Initial ideas, brainstorming, early exploration
+- **Mature drafts**: Well-formed proposals ready for broader review
+- **Accepted**: Approved for implementation, may reference implementation work
+- **To be removed (yet?)**: Decided against for now, but preserved for future consideration
+- **Completed**: Implementation finished and merged
+
+## Governance
+
+The project currently has a design team with the [Zed team as the lead (BDFL)](../community/governance). Champions from the core team guide RFDs through the process, but final decisions rest with the team lead. This structure maintains velocity while anticipating future governance expansion.
+
+## Discussion and Moderation
+
+Detailed discussions often happen on Slack, with PR comments for process decisions. The results of detailed discussions should be incorporated into the relevant RFD. RFD champions actively curate discussions by collecting questions in the FAQ section. If PR discussions become too long, they should be closed, feedback summarized, and reopened with links to the original.
+
+## Licensing
+
+All RFDs are licensed under Apache 2.0. The project remains open source.
+
+##

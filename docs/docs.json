@@ -85,6 +85,16 @@
         ]
       },
       {
+        "tab": "RFDs",
+        "pages": [
+          "rfds/about",
+          { "group": "Draft", "pages": [] },
+          { "group": "Preview", "pages": [] },
+          { "group": "Accepted", "pages": ["rfds/introduce-rfd-process"] },
+          { "group": "Completed", "pages": [] }
+        ]
+      },
+      {
         "tab": "Community",
         "pages": [
           "community/governance",
