@@ -41,7 +41,8 @@ pub struct SessionNotification {
 ///
 /// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-turn#3-agent-reports-output)
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
-#[serde(rename_all = "snake_case", tag = "sessionUpdate")]
+#[serde(tag = "sessionUpdate", rename_all = "snake_case")]
+#[schemars(extend("discriminator" = {"propertyName": "sessionUpdate"}))]
 pub enum SessionUpdate {
     /// A chunk of the user's message being streamed.
     UserMessageChunk(ContentChunk),
@@ -204,6 +205,7 @@ pub struct RequestPermissionResponse {
 /// The outcome of a permission request.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(tag = "outcome", rename_all = "snake_case")]
+#[schemars(extend("discriminator" = {"propertyName": "outcome"}))]
 pub enum RequestPermissionOutcome {
     /// The prompt turn was cancelled before the user responded.
     ///
