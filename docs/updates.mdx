@@ -1,0 +1,16 @@
+---
+title: Updates
+description: Updates and announcements about the Agent Client Protocol
+rss: true
+---
+
+<Update label="October 24, 2025" tags={["Protocol"]}>
+## Implementation Information for Agents and Clients
+
+Agents and Clients are [now able to provide information about themselves](./protocol/initialization#implementation-information) to the other party. The [`InitializeRequest`](./protocol/schema#initializerequest) message now includes an optional `clientInfo` field and the [`InitializeResponse`](./protocol/schema#initializeresponse) message includes an optional `agentInfo` field.
+
+This information can be used by Clients to show users which Agent is running and what version, by both sides to track usage metrics of which agents and clients are most popular among their users, and also to help track down if any issues are encountered with particular implementation version. This follows the existing pattern laid out in the [Model Context Protocol](https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle#initialization).
+
+This is being introduced as an optional field for now for backwards compatibility. It is possible it will be made into a required field in a future version of the protocol, like MCP, so that both sides can count on this information being available.
+
+</Update>

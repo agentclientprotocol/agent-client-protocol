@@ -91,6 +91,10 @@
           "community/code-of-conduct",
           "community/contributing"
         ]
+      },
+      {
+        "tab": "Updates",
+        "pages": ["updates"]
       }
     ]
   },
