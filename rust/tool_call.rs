@@ -279,6 +279,7 @@ impl ToolCallStatus {
 /// See protocol docs: [Content](https://agentclientprotocol.com/protocol/tool-calls#content)
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(tag = "type", rename_all = "snake_case")]
+#[schemars(extend("discriminator" = {"propertyName": "type"}))]
 pub enum ToolCallContent {
     /// Standard content block (text, images, resources).
     Content {

@@ -2249,6 +2249,9 @@
     },
     "ToolCallContent": {
       "description": "Content produced by a tool call.\n\nTool calls can produce different types of content including\nstandard content blocks (text, images) or file diffs.\n\nSee protocol docs: [Content](https://agentclientprotocol.com/protocol/tool-calls#content)",
+      "discriminator": {
+        "propertyName": "type"
+      },
       "oneOf": [
         {
           "description": "Standard content block (text, images, resources).",
