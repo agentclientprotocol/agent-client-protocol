@@ -28,7 +28,7 @@
     "spellcheck": "./scripts/spellcheck.sh",
     "spellcheck:fix": "./scripts/spellcheck.sh --write-changes",
     "check": "npm run lint && npm run format:check && npm run spellcheck && npm run build && npm run test",
-    "docs": "cd docs && npx mint@4.2.93 dev"
+    "docs": "cd docs && npx mint dev"
   },
   "devDependencies": {
     "prettier": "^3.3.3",
