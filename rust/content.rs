@@ -29,9 +29,10 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum ContentBlock {
-    /// Plain text content
+    /// Text content. May be plain text or formatted with Markdown.
     ///
     /// All agents MUST support text content blocks in prompts.
+    /// Clients SHOULD render this text as Markdown.
     Text(TextContent),
     /// Images for visual context or analysis.
     ///

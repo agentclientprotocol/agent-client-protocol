@@ -1230,9 +1230,10 @@ See protocol docs: [Content](https://agentclientprotocol.com/protocol/content)
 **Type:** Union
 
 <ResponseField name="text">
-Plain text content
+Text content. May be plain text or formatted with Markdown.
 
 All agents MUST support text content blocks in prompts.
+Clients SHOULD render this text as Markdown.
 
 <Expandable title="Properties">
 
