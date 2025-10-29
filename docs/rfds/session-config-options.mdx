@@ -148,6 +148,33 @@ For updating the value from the client and agent, it would follow the same patte
 }
 ```
 
+And the response to this request would return the full list of config options with current values.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "config_options": [
+      {
+        "id": "mode",
+        "name": "Session Mode",
+        "currentId": "ask",
+        "options": [..]
+      },
+      {
+        "id": "models",
+        "name": "Model",
+        "currentId": "ask",
+        "options": [..]
+      }
+    ]
+  }
+}
+```
+
+The notification would return the full list of config options with current values as well.
+
 ```json
 {
   "jsonrpc": "2.0",
@@ -156,8 +183,20 @@ For updating the value from the client and agent, it would follow the same patte
     "sessionId": "sess_abc123def456",
     "update": {
       "sessionUpdate": "config_option_update",
-      "configId": "mode",
-      "optionId": "code"
+      "config_options": [
+        {
+          "id": "mode",
+          "name": "Session Mode",
+          "currentId": "ask",
+          "options": [..]
+        },
+        {
+          "id": "models",
+          "name": "Model",
+          "currentId": "ask",
+          "options": [..]
+        }
+      ]
     }
   }
 }
