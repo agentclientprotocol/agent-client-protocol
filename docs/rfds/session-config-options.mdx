@@ -1,0 +1,200 @@
+---
+title: "Session Config Options"
+---
+
+Author(s): [@benbrandt](https://github.com/benbrandt)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Allow Agents to provide an arbitrary list of configuration selectors for a given session. Rather than only supporting modes or models, we can allow each Agent to more flexibly specify which configurations to allow the Client to offer the user.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+Currently, we allow Agents to [specify a list of modes](https://agentclientprotocol.com/protocol/session-modes) they can run in. The state of the currently selected item is allowed to be modified by both the [Client](https://agentclientprotocol.com/protocol/session-modes#from-the-client) and the [Agent](https://agentclientprotocol.com/protocol/session-modes#from-the-agent).
+
+The obvious next selector was a [model selector](https://github.com/agentclientprotocol/agent-client-protocol/pull/182). However, when implementing this, it became clear that even for our current agents, it is not just as simple as "which model do you want?", but also which variant of a given model in terms of thinking parameters that might be better to express as yet another selector.
+
+Adding more hard-coded selector options would potentially lead the protocol to need to support many optional ones, or implementors would need to try to find the best existing selector to hack an option into if there wasn't an obvious fit. And if, a few months from now, no agents support something like a mode or reasoning selector, the protocol is left with leftover methods no one really uses, cluttering the interface.
+
+Since this space is moving fast, we ideally would find a more flexible option with enough constraints to allow Clients and Agents to both reason about the options provided.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+Instead, we can allow Agents to provide configuration options in the `session/new` response that not only provide a list of options, but also a `key` of some kind that is a unique identifier for that selector.
+
+When the Client receives or sends an update to this selector, it would require both the selector key and the key for the new value.
+
+To start, we could continue offering single-value selectors (dropdowns), but allow for the Agent to decide what those are for.
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+The Agent provides a list of available configuration options. The Agent cannot rely on the Client to set or even display these options, as it may not support it. So an Agent MUST always have a default configuration value for every option it provides, and MUST be able to run a turn without these configuration options being set.
+
+The Client can render the options provided, send updated values to the Agent, and also display any changes the Agent made during the course of it's execution (for example, if it changes modes or models because of fallbacks or a change in strategy, so that the user can always see the current state).
+
+Since we are moving to a world in which there are multiple configuration options, some of which may depend on each other, the Agent MUST provide the complete set of configuration options and their current values whenever a change is made. We would tradeoff some extra data being sent to the Client in order to help minimize the amount of state required to be managed by the Client. The Client would submit a new value, and receive back the full state of all configuration options that it can then replace it's current state with and render. So if changing a model means there are no thinking options, or a new option becomes available, or another value needs to change because the values of an option are different, the Agent will reflect this in its response by providing the entire new state (or an error if it is somehow an invalid selection).
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+To start, we can implement this based on the [Session Modes](https://agentclientprotocol.com/protocol/session-modes) api.
+
+Something like an `InitializeResponse` that looks like:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "sessionId": "sess_abc123def456",
+    "config_options": [
+      {
+        "id": "mode", // this is the unique `key` for communication about which option is being used
+        "name": "Session Mode", // Human-readable label for the option
+        "description": "Optional description for the Client to display to the user."
+        "currentId": "ask",
+        "options": [
+          {
+            "id": "ask",
+            "name": "Ask",
+            "description": "Request permission before making any changes"
+          },
+          {
+            "id": "code",
+            "name": "Code",
+            "description": "Write and modify code with full tool access"
+          }
+        ]
+      },
+      {
+        "id": "models",
+        "name": "Model",
+        "currentId": "ask",
+        "options": [
+          {
+            "id": "model-1",
+            "name": "Model 1",
+            "description": "The fastest model"
+          },
+          {
+            "id": "model-2",
+            "name": "Model 2",
+            "description": "The most powerful model"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+When we introduce this, we could also allow for grouped options, in case there are logical sub-headers and groupings for the options in an individual selector. It
+
+```json
+{
+  "id": "models",
+  "name": "Model",
+  "currentId": "ask",
+  "options": [
+    {
+      "group": "Provider A",
+      "options": [
+        {
+          "id": "model-1",
+          "name": "Model 1",
+          "description": "The fastest model"
+        }
+      ]
+    },
+    {
+      "group": "Provider B",
+      "options": [
+        {
+          "id": "model-2",
+          "name": "Model 2",
+          "description": "The most powerful model"
+        }
+      ]
+    }
+  ]
+}
+```
+
+We use a list of objects for all of these, to ensure consistent ordering of both the config options and the possible values across languages that may or may not preserve ordering.
+
+For grouping options, it needs to be explored whether or not grouped and ungrouped options can be interspersed, or if we need to restrict to one mode or the other (likely the latter).
+
+For updating the value from the client and agent, it would follow the same pattern as [session modes](https://agentclientprotocol.com/protocol/session-modes#from-the-client) but have an additional key.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "session/set_config_option",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "configId": "mode",
+    "optionId": "code"
+  }
+}
+```
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "config_option_update",
+      "configId": "mode",
+      "optionId": "code"
+    }
+  }
+}
+```
+
+We would also likely move session modes to be `@deprecated` in favor of this approach. Until it is removed, we may want Agents to support both fields, and then the Client, if it uses the new config options, should only use the config options supplied and not the `modes` field to avoid duplication.
+
+Open questions at the moment are:
+
+- What types of values do we support initially? Single select? Multiselect? Checkbox?
+  - Push back: Multiselect could theoretically be helpful in some cases, but not utilized by any agents at the moment (could change). A checkbox could be represented by a select as well.
+- Does the Client express capabilities of which types of inputs it supports? And the Agent adjusts the options accordingly?
+- Or, does the Client ignore settings options it doesn't support and the User just doesn't see them?
+- Should we instead move to a more HTML form inspired approach where we use the terms `label`, and `value`?
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+As noted, the Zed team already looked into and implemented experimental support for a model selector.
+
+However, this has already diverged from how the Codex CLI is modeling their model selector as of last week, so it seems reasonable to, as per a core design principle of the protocol, only limit the Agent implementations where necessary for the Client to render a faithful UX. Maximizing flexibility for the Agent as they iterate on the best way to model new paradigms seems key here, and it is unclear whether the Client benefits from knowing which type of selector this is.
+
+We originally discussed internally having a design closer to this proposal, however walked it back thinking it would be helpful for the Client to know what was being selected. However, as we've now dealt with multiple Agent implementations, it is unclear if this has actually helped the Client, and allowing for more flexibility seems desirable.
+
+### What about connection-level configuration options?
+
+This RFD is only concerned with session-level configuration, for which it seems reasonable to require that the Agent can select a default value at all times and not require input from the client before continuing.
+
+There seems to be another type of configuration option that is needed when first setting up an Agent (i.e. provider options, plugins, etc.) that are more persistent and may be required by an Agent prior to being able to create a session. These would need to be tackled somewhere closer to the initialization phase, or elsewhere and are out of scope for this RFD.
+
+### What about multi-value selectors? or checkboxes? Or _insert favorite input option here_?
+
+This is a question we should discuss of how much complexity we want to introduce for the first version, and how we want to express this to via Client capabilities to allow for more option types in the future.
+
+## Revision history
+
+- 2025-10-29: Initial draft
