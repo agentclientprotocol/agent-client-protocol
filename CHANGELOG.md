@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.3 (2025-10-30)
+
+### Protocol
+
+- Add `discriminator` fields to the schema.json for tagged enums to aid with code generation in language tooling.
+
 ## 0.6.2 (2025-10-24)
 
 ### Protocol
