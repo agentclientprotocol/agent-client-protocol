@@ -38,7 +38,7 @@ Add a new `session/list` JSON-RPC method to the protocol that returns metadata a
    - `lastAccessedAt` - Timestamp of last activity
    - `cwd` - Working directory for the session
    - `title` - Optional human-readable title (could be auto-generated from first prompt)
-   - `metadata` - Optional agent-specific metadata
+   - `_meta` - Optional agent-specific metadata
 
 2. **Support filtering and pagination**:
    - Filter by creation date, last accessed date, or working directory
@@ -113,7 +113,7 @@ The agent responds with a list of sessions and total count:
         "cwd": "/home/user/project",
         "title": "Implement session list API",
         "preview": "I want to propose session/list api using...",
-        "metadata": {
+        "_meta": {
           "messageCount": 12,
           "hasErrors": false
         }
@@ -152,7 +152,7 @@ The agent responds with a list of sessions and total count:
 - `cwd` (string, required) - Working directory for the session
 - `title` (string, optional) - Human-readable title (may be auto-generated from first prompt)
 - `preview` (string, optional) - Snippet of the first user message or conversation preview
-- `metadata` (object, optional) - Agent-specific metadata (e.g., message count, error status, tags)
+- `_meta` (object, optional) - Agent-specific metadata (e.g., message count, error status, tags)
 
 #### Empty Result Example
 
@@ -303,3 +303,4 @@ Alternative cursor-based pagination could be considered in future iterations if 
 ## Revision history
 
 - **2025-10-29**: Initial draft proposal
+- **2025-10-30**: Update to use `_meta` field for agent-specific metadata
