@@ -19,7 +19,6 @@ This creates several problems:
 
 - **Poor user experience** - Users cannot browse their conversation history or resume previous sessions easily
 - **Client-side complexity** - Each client must implement its own session tracking and persistence
-- **Session orphaning** - Sessions may be left running or consuming resources without the client knowing
 - **Inconsistent behavior** - Different clients handle session management differently, leading to fragmented experiences
 
 The current workaround is for clients to maintain their own session registry, but this:
@@ -35,7 +34,7 @@ Add a new `session/list` JSON-RPC method to the protocol that returns metadata a
 1. **Return a list of sessions** with essential metadata:
    - `sessionId` - Unique identifier
    - `createdAt` - Timestamp when session was created
-   - `lastAccessedAt` - Timestamp of last activity
+   - `updatedAt` - Timestamp of last update to the session
    - `cwd` - Working directory for the session
    - `title` - Optional human-readable title (could be auto-generated from first prompt)
    - `_meta` - Optional agent-specific metadata
@@ -43,7 +42,7 @@ Add a new `session/list` JSON-RPC method to the protocol that returns metadata a
 2. **Support filtering and pagination**:
    - Filter by creation date, last accessed date, or working directory
    - Limit the number of results returned
-   - Sort by various criteria (newest first, recently accessed, etc.)
+   - Search by title or agent-provided metadata
 
 3. **Be an optional capability**:
    - Agents advertise `listSessions: true` in initialization if they support this feature
@@ -63,9 +62,8 @@ The client calls `session/list` with optional filtering and pagination parameter
     "cwd": "/home/user/project",
     "createdAfter": "2025-10-20T00:00:00Z",
     "limit": 20,
-    "offset": 0,
-    "sortBy": "lastAccessedAt",
-    "sortOrder": "desc"
+    "continuationToken": "offset:20",
+    "search": "auth"
   }
 }
 ```
@@ -77,11 +75,10 @@ All parameters are optional:
 - `cwd` (string) - Filter sessions by working directory
 - `createdAfter` (string) - ISO 8601 timestamp, only return sessions created after this time
 - `createdBefore` (string) - ISO 8601 timestamp, only return sessions created before this time
-- `lastAccessedAfter` (string) - ISO 8601 timestamp, only return sessions accessed after this time
+- `updatedAfter` (string) - ISO 8601 timestamp, only return sessions updated after this time
 - `limit` (number) - Maximum number of results to return (default: 50, max: 1000)
-- `offset` (number) - Number of results to skip for pagination (default: 0)
-- `sortBy` (string) - Field to sort by: `"createdAt"`, `"lastAccessedAt"`, or `"title"`
-- `sortOrder` (string) - Sort direction: `"asc"` or `"desc"` (default: `"desc"`)
+- `continuationToken` (string) - Opaque/stringified token from a previous response for cursor-based pagination
+- `search` (string) - Free-text search across titles or agent metadata
 
 #### Minimal Request Example
 
@@ -98,7 +95,7 @@ A request with no filters returns all sessions with default sorting:
 
 ### JSON-RPC Response
 
-The agent responds with a list of sessions and total count:
+The agent responds with a list of sessions and cursor pagination metadata:
 
 ```json
 {
@@ -109,10 +106,9 @@ The agent responds with a list of sessions and total count:
       {
         "sessionId": "sess_abc123def456",
         "createdAt": "2025-10-29T10:30:00Z",
-        "lastAccessedAt": "2025-10-29T14:22:15Z",
+        "updatedAt": "2025-10-29T14:22:15Z",
         "cwd": "/home/user/project",
         "title": "Implement session list API",
-        "preview": "I want to propose session/list api using...",
         "_meta": {
           "messageCount": 12,
           "hasErrors": false
@@ -121,20 +117,19 @@ The agent responds with a list of sessions and total count:
       {
         "sessionId": "sess_xyz789ghi012",
         "createdAt": "2025-10-28T09:15:00Z",
-        "lastAccessedAt": "2025-10-28T16:45:30Z",
+        "updatedAt": "2025-10-28T16:45:30Z",
         "cwd": "/home/user/another-project",
-        "title": "Debug authentication flow",
-        "preview": "Help me debug why users can't log in..."
+        "title": "Debug authentication flow"
       },
       {
         "sessionId": "sess_uvw345rst678",
         "createdAt": "2025-10-27T14:00:00Z",
-        "lastAccessedAt": "2025-10-27T15:30:00Z",
-        "cwd": "/home/user/project",
-        "preview": "What's the best way to structure..."
+        "updatedAt": "2025-10-27T15:30:00Z",
+        "cwd": "/home/user/project"
       }
     ],
-    "total": 47
+    "hasMore": true,
+    "nextContinuationToken": "offset:40"
   }
 }
 ```
@@ -143,15 +138,15 @@ The agent responds with a list of sessions and total count:
 
 **Response object:**
 - `sessions` (array) - Array of session information objects
-- `total` (number) - Total number of sessions matching the filter criteria (for pagination)
+- `hasMore` (boolean) - Whether more results are available after this page
+- `nextContinuationToken` (string, optional) - Pass this token in the next request's `continuationToken` to fetch the next page
 
 **SessionInfo object:**
 - `sessionId` (string, required) - Unique identifier for the session
 - `createdAt` (string, required) - ISO 8601 timestamp when session was created
-- `lastAccessedAt` (string, required) - ISO 8601 timestamp of last activity
+- `updatedAt` (string, required) - ISO 8601 timestamp of last activity
 - `cwd` (string, required) - Working directory for the session
 - `title` (string, optional) - Human-readable title (may be auto-generated from first prompt)
-- `preview` (string, optional) - Snippet of the first user message or conversation preview
 - `_meta` (object, optional) - Agent-specific metadata (e.g., message count, error status, tags)
 
 #### Empty Result Example
@@ -164,7 +159,7 @@ When no sessions match the criteria:
   "id": 2,
   "result": {
     "sessions": [],
-    "total": 0
+    "hasMore": false
   }
 }
 ```
@@ -231,7 +226,6 @@ Agents that implement this feature gain:
 ### Security Considerations
 
 - **Session isolation**: Agents must ensure sessions are only listed for the authenticated client
-- **Privacy**: The `preview` field should be optional and respect any privacy settings
 - **Resource limits**: Agents should enforce reasonable limits on pagination to prevent abuse
 
 ## Frequently asked questions
@@ -285,7 +279,6 @@ No, for several reasons:
 - **Privacy** - Listing sessions might be less sensitive than exposing full content
 - **Separation of concerns** - Use `session/load` to get full session content
 
-The `preview` field provides a lightweight way to show context without full content.
 
 ### What about session deletion?
 
@@ -293,14 +286,49 @@ Session deletion is intentionally left out of this RFD to keep scope focused. A 
 
 ### How should pagination work for large session lists?
 
-The proposal includes `limit` and `offset` parameters following common REST API patterns:
-- Request: `limit: 50, offset: 0` → first 50 sessions
-- Request: `limit: 50, offset: 50` → next 50 sessions
-- Response includes `total` count for clients to calculate pages
+We use cursor-based pagination with an opaque continuation token:
+- Request includes `limit` and optional `continuationToken`
+- Response includes `hasMore` and `nextContinuationToken` when more data is available
+- Clients should not assume anything about the token's contents; treat it as opaque
+- The token MUST be a string; never send a raw JSON object as the token
 
-Alternative cursor-based pagination could be considered in future iterations if needed.
+Good request example:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "session/list",
+  "params": {
+    "cwd": "/home/user/project",
+    "createdAfter": "2025-10-20T00:00:00Z",
+    "limit": 20,
+    "continuationToken": "offset:0",
+    "search": "auth"
+  }
+}
+```
+
+Corresponding response example:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "sessions": [ /* ... */ ],
+    "hasMore": true,
+    "nextContinuationToken": "offset:20"
+  }
+}
+```
 
 ## Revision history
 
 - **2025-10-29**: Initial draft proposal
 - **2025-10-30**: Update to use `_meta` field for agent-specific metadata
+- **2025-10-30**: Switch from offset-based to cursor-based pagination using continuation tokens
+- **2025-10-30**: Rename `lastAccessedAt` to `updatedAt` for consistency
+- **2025-10-30**: Remove `preview` field from SessionInfo (out of scope)
+- **2025-10-30**: Remove session orphaning from problem statement
+- **2025-10-30**: Replace `sortBy`/`sortOrder` with `search` parameter; remove `total` count from response
