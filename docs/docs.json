@@ -105,6 +105,10 @@
       {
         "tab": "Updates",
         "pages": ["updates"]
+      },
+      {
+        "tab": "Brand",
+        "pages": ["brand"]
       }
     ]
   },
