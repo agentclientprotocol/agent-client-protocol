@@ -88,7 +88,7 @@
         "tab": "RFDs",
         "pages": [
           "rfds/about",
-          { "group": "Draft", "pages": [] },
+          { "group": "Draft", "pages": ["rfds/sessions-list-api"] },
           { "group": "Preview", "pages": [] },
           { "group": "Accepted", "pages": ["rfds/introduce-rfd-process"] },
           { "group": "Completed", "pages": [] }

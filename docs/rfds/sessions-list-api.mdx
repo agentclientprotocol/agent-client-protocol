@@ -2,6 +2,9 @@
 title: "Session List API"
 ---
 
+Author(s): [@ahmedhesham6](https://github.com/ahmedhesham6)
+Champion: [@benbrandt](https://github.com/benbrandt)
+
 ## Elevator pitch
 
 Add a `session/list` endpoint to the ACP protocol that allows clients to query and enumerate existing sessions from an agent, enabling session management features like session history, session switching, and session cleanup.
@@ -22,6 +25,7 @@ This creates several problems:
 - **Inconsistent behavior** - Different clients handle session management differently, leading to fragmented experiences
 
 The current workaround is for clients to maintain their own session registry, but this:
+
 - Requires persistent storage on the client side
 - Can get out of sync if sessions are created/destroyed outside the client
 - Doesn't work across different client instances or devices
@@ -137,11 +141,13 @@ The agent responds with a list of sessions and cursor pagination metadata:
 #### Response Fields
 
 **Response object:**
+
 - `sessions` (array) - Array of session information objects
 - `hasMore` (boolean) - Whether more results are available after this page
 - `nextContinuationToken` (string, optional) - Pass this token in the next request's `continuationToken` to fetch the next page
 
 **SessionInfo object:**
+
 - `sessionId` (string, required) - Unique identifier for the session
 - `createdAt` (string, required) - ISO 8601 timestamp when session was created
 - `updatedAt` (string, required) - ISO 8601 timestamp of last activity
@@ -179,6 +185,7 @@ Once this feature exists:
    - Resume interrupted work easily
 
 Agents that implement this feature gain:
+
 - Better visibility into active sessions
 - Opportunity to implement session lifecycle policies
 - Foundation for future features like session sharing or collaboration
@@ -251,6 +258,7 @@ Several alternatives were considered:
    - No standard format
 
 The proposed RPC approach is:
+
 - **Consistent with existing protocol design** - Uses same RPC patterns as other endpoints
 - **Flexible** - Supports filtering, pagination, and agent-specific metadata
 - **Optional** - Agents can opt-in based on their architecture
@@ -259,6 +267,7 @@ The proposed RPC approach is:
 ### Why not make this mandatory for all agents?
 
 Many agents may not have persistent storage or multi-session capabilities. Making this optional:
+
 - Allows simple, stateless agents to remain compliant
 - Reduces implementation burden
 - Lets agents evolve session management over time
@@ -266,6 +275,7 @@ Many agents may not have persistent storage or multi-session capabilities. Makin
 ### How does this interact with `session/load`?
 
 `session/load` remains the mechanism to actually restore a session. `session/list` is for discovery only:
+
 1. Client calls `session/list` to get available sessions
 2. User selects a session
 3. Client calls `session/load` with the chosen `sessionId`
@@ -275,10 +285,10 @@ Agents may support `session/list` without supporting `session/load` (e.g., for r
 ### Should we include session content in the list response?
 
 No, for several reasons:
+
 - **Performance** - Full conversation history could be large
 - **Privacy** - Listing sessions might be less sensitive than exposing full content
 - **Separation of concerns** - Use `session/load` to get full session content
-
 
 ### What about session deletion?
 
@@ -287,6 +297,7 @@ Session deletion is intentionally left out of this RFD to keep scope focused. A 
 ### How should pagination work for large session lists?
 
 We use cursor-based pagination with an opaque continuation token:
+
 - Request includes `limit` and optional `continuationToken`
 - Response includes `hasMore` and `nextContinuationToken` when more data is available
 - Clients should not assume anything about the token's contents; treat it as opaque
@@ -316,7 +327,9 @@ Corresponding response example:
   "jsonrpc": "2.0",
   "id": 2,
   "result": {
-    "sessions": [ /* ... */ ],
+    "sessions": [
+      /* ... */
+    ],
     "hasMore": true,
     "nextContinuationToken": "offset:20"
   }
