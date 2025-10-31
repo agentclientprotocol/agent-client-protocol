@@ -66,7 +66,7 @@ The client calls `session/list` with optional filtering and pagination parameter
     "cwd": "/home/user/project",
     "createdAfter": "2025-10-20T00:00:00Z",
     "limit": 20,
-    "continuationToken": "offset:20",
+    "cursor": "eyJwYWdlIjogMn0=",
     "search": "auth"
   }
 }
@@ -81,7 +81,7 @@ All parameters are optional:
 - `createdBefore` (string) - ISO 8601 timestamp, only return sessions created before this time
 - `updatedAfter` (string) - ISO 8601 timestamp, only return sessions updated after this time
 - `limit` (number) - Maximum number of results to return (default: 50, max: 1000)
-- `continuationToken` (string) - Opaque/stringified token from a previous response for cursor-based pagination
+- `cursor` (string) - Opaque cursor token from a previous response's `nextCursor` field for cursor-based pagination
 - `search` (string) - Free-text search across titles or agent metadata
 
 #### Minimal Request Example
@@ -132,8 +132,7 @@ The agent responds with a list of sessions and cursor pagination metadata:
         "cwd": "/home/user/project"
       }
     ],
-    "hasMore": true,
-    "nextContinuationToken": "offset:40"
+    "nextCursor": "eyJwYWdlIjogM30="
   }
 }
 ```
@@ -143,8 +142,7 @@ The agent responds with a list of sessions and cursor pagination metadata:
 **Response object:**
 
 - `sessions` (array) - Array of session information objects
-- `hasMore` (boolean) - Whether more results are available after this page
-- `nextContinuationToken` (string, optional) - Pass this token in the next request's `continuationToken` to fetch the next page
+- `nextCursor` (string, optional) - Opaque cursor token. If present, pass this in the next request's `cursor` parameter to fetch the next page. If absent, there are no more results.
 
 **SessionInfo object:**
 
@@ -164,8 +162,7 @@ When no sessions match the criteria:
   "jsonrpc": "2.0",
   "id": 2,
   "result": {
-    "sessions": [],
-    "hasMore": false
+    "sessions": []
   }
 }
 ```
@@ -296,12 +293,14 @@ Session deletion is intentionally left out of this RFD to keep scope focused. A 
 
 ### How should pagination work for large session lists?
 
-We use cursor-based pagination with an opaque continuation token:
+We use cursor-based pagination:
 
-- Request includes `limit` and optional `continuationToken`
-- Response includes `hasMore` and `nextContinuationToken` when more data is available
-- Clients should not assume anything about the token's contents; treat it as opaque
-- The token MUST be a string; never send a raw JSON object as the token
+- Request includes `limit` and optional `cursor`
+- Response includes `nextCursor` when more results are available
+- Clients should treat a missing `nextCursor` as the end of results
+- Clients MUST treat cursors as opaque tokens: don't parse, modify, or persist them across sessions
+- The cursor MUST be a string; never send a raw JSON object as the cursor
+- Servers SHOULD provide stable cursors and handle invalid cursors gracefully
 
 Good request example:
 
@@ -314,7 +313,7 @@ Good request example:
     "cwd": "/home/user/project",
     "createdAfter": "2025-10-20T00:00:00Z",
     "limit": 20,
-    "continuationToken": "offset:0",
+    "cursor": "eyJwYWdlIjogMn0=",
     "search": "auth"
   }
 }
@@ -330,8 +329,7 @@ Corresponding response example:
     "sessions": [
       /* ... */
     ],
-    "hasMore": true,
-    "nextContinuationToken": "offset:20"
+    "nextCursor": "eyJwYWdlIjogM30="
   }
 }
 ```
@@ -345,3 +343,4 @@ Corresponding response example:
 - **2025-10-30**: Remove `preview` field from SessionInfo (out of scope)
 - **2025-10-30**: Remove session orphaning from problem statement
 - **2025-10-30**: Replace `sortBy`/`sortOrder` with `search` parameter; remove `total` count from response
+- **2025-10-31**: Update pagination: `continuationToken` → `cursor`, `nextContinuationToken` → `nextCursor`, remove `hasMore`
