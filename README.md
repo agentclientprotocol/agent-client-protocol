@@ -21,17 +21,10 @@ Learn more at [agentclientprotocol.com](https://agentclientprotocol.com/).
 
 ## Contributing
 
-ACP is a protocol intended for broad adoption across the ecosystem; we follow a structured process to ensure changes are well-considered.
+ACP is a protocol intended for broad adoption across the ecosystem; we follow a structured process to ensure changes are well-considered. Read the [Contributing Guide](./CONTRIBUTING.md) for more information.
 
-### Pull Requests
+## Contribution Policy
 
-Pull requests should intend to close [an existing issue](https://github.com/agentclientprotocol/agent-client-protocol/issues).
+This project does not require a Contributor License Agreement (CLA). Instead, contributions are accepted under the following terms:
 
-### Issues
-
-- **Bug Reports**: If you notice a bug in the protocol, please file [an issue](https://github.com/agentclientprotocol/agent-client-protocol/issues/new?template=05_bug_report.yml) and we will be in touch.
-- **Protocol Suggestions**: If you'd like to propose additions or changes to the protocol, please start a [discussion](https://github.com/agentclientprotocol/agent-client-protocol/discussions/categories/protocol-suggestions) first. We want to make sure proposed suggestions align well with the project. If accepted, we can have a conversation around the implementation of these changes. Once that is complete, we will create an issue for pull requests to target.
-
-### License
-
-By contributing, you agree that your contributions will be licensed under the Apache 2.0 License.
+> By contributing to this project, you agree that your contributions will be licensed under the [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0). You affirm that you have the legal right to submit your work, that you are not including code you do not have rights to, and that you understand contributions are made without requiring a Contributor License Agreement (CLA).
