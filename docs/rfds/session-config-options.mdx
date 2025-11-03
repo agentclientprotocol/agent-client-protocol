@@ -56,20 +56,21 @@ Something like an `InitializeResponse` that looks like:
   "id": 1,
   "result": {
     "sessionId": "sess_abc123def456",
-    "config_options": [
+    "configOptions": [
       {
         "id": "mode", // this is the unique `key` for communication about which option is being used
         "name": "Session Mode", // Human-readable label for the option
         "description": "Optional description for the Client to display to the user."
-        "currentId": "ask",
+        "type": "select",
+        "currentValue": "ask",
         "options": [
           {
-            "id": "ask",
+            "value": "ask",
             "name": "Ask",
             "description": "Request permission before making any changes"
           },
           {
-            "id": "code",
+            "value": "code",
             "name": "Code",
             "description": "Write and modify code with full tool access"
           }
@@ -78,15 +79,16 @@ Something like an `InitializeResponse` that looks like:
       {
         "id": "models",
         "name": "Model",
-        "currentId": "ask",
+        "type": "select",
+        "currentValue": "ask",
         "options": [
           {
-            "id": "model-1",
+            "value": "model-1",
             "name": "Model 1",
             "description": "The fastest model"
           },
           {
-            "id": "model-2",
+            "value": "model-2",
             "name": "Model 2",
             "description": "The most powerful model"
           }
@@ -103,13 +105,14 @@ When we introduce this, we could also allow for grouped options, in case there a
 {
   "id": "models",
   "name": "Model",
-  "currentId": "ask",
+  "currentValue": "ask",
+  "type": "select",
   "options": [
     {
       "group": "Provider A",
       "options": [
         {
-          "id": "model-1",
+          "value": "model-1",
           "name": "Model 1",
           "description": "The fastest model"
         }
@@ -119,7 +122,7 @@ When we introduce this, we could also allow for grouped options, in case there a
       "group": "Provider B",
       "options": [
         {
-          "id": "model-2",
+          "value": "model-2",
           "name": "Model 2",
           "description": "The most powerful model"
         }
@@ -143,7 +146,7 @@ For updating the value from the client and agent, it would follow the same patte
   "params": {
     "sessionId": "sess_abc123def456",
     "configId": "mode",
-    "optionId": "code"
+    "value": "code"
   }
 }
 ```
@@ -155,17 +158,19 @@ And the response to this request would return the full list of config options wi
   "jsonrpc": "2.0",
   "id": 2,
   "result": {
-    "config_options": [
+    "configOptions": [
       {
         "id": "mode",
         "name": "Session Mode",
-        "currentId": "ask",
+        "type": "select",
+        "currentValue": "ask",
         "options": [..]
       },
       {
         "id": "models",
         "name": "Model",
-        "currentId": "ask",
+        "type": "select",
+        "currentValue": "ask",
         "options": [..]
       }
     ]
@@ -183,17 +188,19 @@ The notification would return the full list of config options with current value
     "sessionId": "sess_abc123def456",
     "update": {
       "sessionUpdate": "config_option_update",
-      "config_options": [
+      "configOptions": [
         {
           "id": "mode",
           "name": "Session Mode",
-          "currentId": "ask",
+          "type": "select",
+          "currentValue": "ask",
           "options": [..]
         },
         {
           "id": "models",
           "name": "Model",
-          "currentId": "ask",
+          "type": "select",
+          "currentValue": "ask",
           "options": [..]
         }
       ]
@@ -204,14 +211,9 @@ The notification would return the full list of config options with current value
 
 We would also likely move session modes to be `@deprecated` in favor of this approach. Until it is removed, we may want Agents to support both fields, and then the Client, if it uses the new config options, should only use the config options supplied and not the `modes` field to avoid duplication.
 
-Open questions at the moment are:
+The config options would also take a `type` field to specify different forms of input for the Client to display. If a client receives an option it doesn't recognize, it should ignore it. Since the Agent is required to have a default value, it can gracefully degrade and ignore the option and the Agent should handle it regardless. The Client should also treat the list of options as prioritized by the Agent. So, if for some reason the Agent provides more options than the Client can reasonably display, the Client should show as many as possible, starting at the beginning of the list.
 
-- What types of values do we support initially? Single select? Multiselect? Checkbox?
-  - Push back: Multiselect could theoretically be helpful in some cases, but not utilized by any agents at the moment (could change). A checkbox could be represented by a select as well.
-- Does the Client express capabilities of which types of inputs it supports? And the Agent adjusts the options accordingly?
-- Or, does the Client ignore settings options it doesn't support and the User just doesn't see them?
-- Should we instead move to a more HTML form inspired approach where we use the terms `label`, and `value`?
-- How do we handle the Agent providing more options than the Client can reasonably display?
+We will start with just supporting `select` for now, and expand to other types as needed.
 
 ## Frequently asked questions
 
