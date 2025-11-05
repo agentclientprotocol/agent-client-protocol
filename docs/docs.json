@@ -93,8 +93,7 @@
             "pages": ["rfds/session-list", "rfds/session-config-options"]
           },
           { "group": "Preview", "pages": [] },
-          { "group": "Accepted", "pages": ["rfds/introduce-rfd-process"] },
-          { "group": "Completed", "pages": [] }
+          { "group": "Completed", "pages": ["rfds/introduce-rfd-process"] }
         ]
       },
       {
