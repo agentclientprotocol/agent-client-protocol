@@ -49,7 +49,7 @@ Add a new `session/list` JSON-RPC method to the protocol that returns metadata a
    - Search by title or agent-provided metadata
 
 3. **Be an optional capability**:
-   - Agents advertise `listSessions: true` in initialization if they support this feature
+   - Agents advertise `listSessions: {}` in initialization if they support this feature
    - Clients check for this capability before attempting to call `session/list`
    - Agents without persistent session storage don't need to implement this
 
@@ -64,10 +64,8 @@ The client calls `session/list` with optional filtering and pagination parameter
   "method": "session/list",
   "params": {
     "cwd": "/home/user/project",
-    "createdAfter": "2025-10-20T00:00:00Z",
     "limit": 20,
-    "cursor": "eyJwYWdlIjogMn0=",
-    "search": "auth"
+    "cursor": "eyJwYWdlIjogMn0="
   }
 }
 ```
@@ -77,12 +75,8 @@ The client calls `session/list` with optional filtering and pagination parameter
 All parameters are optional:
 
 - `cwd` (string) - Filter sessions by working directory
-- `createdAfter` (string) - ISO 8601 timestamp, only return sessions created after this time
-- `createdBefore` (string) - ISO 8601 timestamp, only return sessions created before this time
-- `updatedAfter` (string) - ISO 8601 timestamp, only return sessions updated after this time
-- `limit` (number) - Maximum number of results to return (default: 50, max: 1000)
+- `limit` (number) - Maximum number of results to return
 - `cursor` (string) - Opaque cursor token from a previous response's `nextCursor` field for cursor-based pagination
-- `search` (string) - Free-text search across titles or agent metadata
 
 #### Minimal Request Example
 
@@ -295,7 +289,7 @@ Session deletion is intentionally left out of this RFD to keep scope focused. A 
 
 We use cursor-based pagination:
 
-- Request includes `limit` and optional `cursor`
+- Request includes an optional `cursor`
 - Response includes `nextCursor` when more results are available
 - Clients should treat a missing `nextCursor` as the end of results
 - Clients MUST treat cursors as opaque tokens: don't parse, modify, or persist them across sessions
