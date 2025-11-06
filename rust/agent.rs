@@ -227,6 +227,77 @@ pub struct LoadSessionResponse {
     pub meta: Option<serde_json::Value>,
 }
 
+// List sessions
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Request parameters for listing existing sessions.
+///
+/// Only available if the Agent supports the `listSessions` capability.
+#[cfg(feature = "unstable")]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[schemars(extend("x-side" = "agent", "x-method" = SESSION_LIST_METHOD_NAME))]
+#[serde(rename_all = "camelCase")]
+pub struct ListSessionsRequest {
+    /// Filter sessions by working directory
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cwd: Option<PathBuf>,
+    /// Maximum number of results to return (default: 50, max: 1000)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub limit: Option<u32>,
+    /// Opaque cursor token from a previous response's nextCursor field for cursor-based pagination
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cursor: Option<String>,
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Response from listing sessions.
+#[cfg(feature = "unstable")]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[schemars(extend("x-side" = "agent", "x-method" = SESSION_LIST_METHOD_NAME))]
+#[serde(rename_all = "camelCase")]
+pub struct ListSessionsResponse {
+    /// Array of session information objects
+    pub sessions: Vec<SessionInfo>,
+    /// Opaque cursor token. If present, pass this in the next request's cursor parameter
+    /// to fetch the next page. If absent, there are no more results.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub next_cursor: Option<String>,
+    /// Extension point for implementations
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<serde_json::Value>,
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Information about a session returned by session/list
+#[cfg(feature = "unstable")]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct SessionInfo {
+    /// Unique identifier for the session
+    pub session_id: SessionId,
+    /// ISO 8601 timestamp when session was created
+    pub created_at: String,
+    /// ISO 8601 timestamp of last activity
+    pub updated_at: String,
+    /// Working directory for the session
+    pub cwd: PathBuf,
+    /// Human-readable title (may be auto-generated from first prompt)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    /// Agent-specific metadata (e.g., message count, error status, tags)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<serde_json::Value>,
+}
+
 // Session modes
 
 /// The set of modes and the one currently active.
@@ -547,6 +618,14 @@ pub struct AgentCapabilities {
     /// MCP capabilities supported by the agent.
     #[serde(default)]
     pub mcp_capabilities: McpCapabilities,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Whether the agent supports `session/list`.
+    #[cfg(feature = "unstable")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub list_sessions: Option<serde_json::Value>,
     /// Extension point for implementations
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<serde_json::Value>,
@@ -623,6 +702,9 @@ pub struct AgentMethodNames {
     /// Method for selecting a model for a given session.
     #[cfg(feature = "unstable")]
     pub session_set_model: &'static str,
+    /// Method for listing existing sessions.
+    #[cfg(feature = "unstable")]
+    pub session_list: &'static str,
 }
 
 /// Constant containing all agent method names.
@@ -636,6 +718,8 @@ pub const AGENT_METHOD_NAMES: AgentMethodNames = AgentMethodNames {
     session_cancel: SESSION_CANCEL_METHOD_NAME,
     #[cfg(feature = "unstable")]
     session_set_model: SESSION_SET_MODEL_METHOD_NAME,
+    #[cfg(feature = "unstable")]
+    session_list: SESSION_LIST_METHOD_NAME,
 };
 
 /// Method name for the initialize request.
@@ -655,6 +739,9 @@ pub(crate) const SESSION_CANCEL_METHOD_NAME: &str = "session/cancel";
 /// Method name for selecting a model for a given session.
 #[cfg(feature = "unstable")]
 pub(crate) const SESSION_SET_MODEL_METHOD_NAME: &str = "session/set_model";
+/// Method name for listing existing sessions.
+#[cfg(feature = "unstable")]
+pub(crate) const SESSION_LIST_METHOD_NAME: &str = "session/list";
 
 /// All possible requests that a client can send to an agent.
 ///
@@ -711,6 +798,17 @@ pub enum ClientRequest {
     ///
     /// See protocol docs: [Loading Sessions](https://agentclientprotocol.com/protocol/session-setup#loading-sessions)
     LoadSessionRequest(LoadSessionRequest),
+    #[cfg(feature = "unstable")]
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Lists existing sessions known to the agent.
+    ///
+    /// This method is only available if the agent advertises the `listSessions` capability.
+    ///
+    /// The agent should return metadata about sessions with optional filtering and pagination support.
+    ListSessionsRequest(ListSessionsRequest),
     /// Sets the current mode for a session.
     ///
     /// Allows switching between different agent modes (e.g., "ask", "architect", "code")
@@ -767,6 +865,8 @@ pub enum AgentResponse {
     AuthenticateResponse(#[serde(default)] AuthenticateResponse),
     NewSessionResponse(NewSessionResponse),
     LoadSessionResponse(#[serde(default)] LoadSessionResponse),
+    #[cfg(feature = "unstable")]
+    ListSessionsResponse(ListSessionsResponse),
     SetSessionModeResponse(#[serde(default)] SetSessionModeResponse),
     PromptResponse(PromptResponse),
     #[cfg(feature = "unstable")]

@@ -179,6 +179,80 @@ See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/promp
   The ID of the session to cancel operations for.
 </ResponseField>
 
+<a id="session-list"></a>
+### <span class="font-mono">session/list</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Lists existing sessions known to the agent.
+
+This method is only available if the agent advertises the `listSessions` capability.
+
+The agent should return metadata about sessions with optional filtering and pagination support.
+
+#### <span class="font-mono">ListSessionsRequest</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Request parameters for listing existing sessions.
+
+Only available if the Agent supports the `listSessions` capability.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="cursor" type={"string | null"} >
+  Opaque cursor token from a previous response's nextCursor field for cursor-based pagination
+</ResponseField>
+<ResponseField name="cwd" type={"string | null"} >
+  Filter sessions by working directory
+</ResponseField>
+<ResponseField name="limit" type={"integer | null"} >
+  Maximum number of results to return (default: 50, max: 1000)
+
+    - Minimum: `0`
+
+</ResponseField>
+
+#### <span class="font-mono">ListSessionsResponse</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Response from listing sessions.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object"}>
+  Extension point for implementations
+</ResponseField>
+<ResponseField name="nextCursor" type={"string | null"}>
+  Opaque cursor token. If present, pass this in the next request's cursor
+  parameter to fetch the next page. If absent, there are no more results.
+</ResponseField>
+<ResponseField
+  name="sessions"
+  type={
+    <>
+      <span>
+        <a href="#sessioninfo">SessionInfo</a>
+      </span>
+      <span>[]</span>
+    </>
+  }
+  required
+>
+  Array of session information objects
+</ResponseField>
+
 <a id="session-load"></a>
 ### <span class="font-mono">session/load</span>
 
@@ -982,6 +1056,14 @@ See protocol docs: [Agent Capabilities](https://agentclientprotocol.com/protocol
 
 <ResponseField name="_meta" type={"object"} >
   Extension point for implementations
+</ResponseField>
+<ResponseField name="listSessions" type={"object"} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Whether the agent supports `session/list`.
+
 </ResponseField>
 <ResponseField name="loadSession" type={"boolean"} >
   Whether the agent supports `session/load`.
@@ -1865,6 +1947,41 @@ let session_id = SessionId(Arc::from("sess_abc123def456"));
 See protocol docs: [Session ID](https://agentclientprotocol.com/protocol/session-setup#session-id)
 
 **Type:** `string`
+
+## <span class="font-mono">SessionInfo</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Information about a session returned by session/list
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object"}>
+  Agent-specific metadata (e.g., message count, error status, tags)
+</ResponseField>
+<ResponseField name="createdAt" type={"string"} required>
+  ISO 8601 timestamp when session was created
+</ResponseField>
+<ResponseField name="cwd" type={"string"} required>
+  Working directory for the session
+</ResponseField>
+<ResponseField
+  name="sessionId"
+  type={<a href="#sessionid">SessionId</a>}
+  required
+>
+  Unique identifier for the session
+</ResponseField>
+<ResponseField name="title" type={"string | null"}>
+  Human-readable title (may be auto-generated from first prompt)
+</ResponseField>
+<ResponseField name="updatedAt" type={"string"} required>
+  ISO 8601 timestamp of last activity
+</ResponseField>
 
 ## <span class="font-mono">SessionMode</span>
 
