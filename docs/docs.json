@@ -101,6 +101,7 @@
         "tab": "Community",
         "pages": [
           "community/governance",
+          "community/communication",
           "community/code-of-conduct",
           "community/contributing"
         ]

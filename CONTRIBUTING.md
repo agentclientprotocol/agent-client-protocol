@@ -11,7 +11,7 @@ We welcome many different types of contributions including:
 - Bug fixes
 - Documentation
 - Issue Triage
-- Answering questions on Slack/Mailing List
+- Answering questions on Zulip/Mailing List
 - Web design
 - Communications / Social Media / Blog Posts
 - Release management
@@ -62,7 +62,7 @@ Before a significant change or addition to the protocol is made, you should like
 If you’re unsure about anything, feel free to reach out! The best way to reach us with a question when contributing is to ask on:
 
 - The original GitHub issue or discussion thread
-- Slack
+- [Zulip](https://agentclientprotocol.zulipchat.com/)
 
 ## Code of Conduct
 
