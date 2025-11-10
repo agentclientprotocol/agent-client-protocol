@@ -1,0 +1,66 @@
+---
+title: "Forking of existing sessions"
+---
+
+Author(s): [@josevalim](https://github.com/josevalim)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+We propose adding the ability to "fork" a new session based on an existing one.
+This will allow us to use the current conversation as context to generate pull
+request descriptions, summaries, etc. without polluting the user history.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+Imagine we want to summarize the current conversation to use it in a future chat. If we send a message
+asking for the summary, it will become part of its context, affecting future user interactions.
+Therefore we want to be able to fork a session, issue additional messages, and then close the fork.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+One possible solution is to add a session/fork command.
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+We will be able to implement functionality that requires using the current chat
+without polluting its history, ranging from summaries to potentially subagents.
+
+I can also see this feature being extended in the future to support an optional
+message ID, so the fork happens at a specific message, allowing clients to implement
+functionality like editing previous messages and similar.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+<!--
+    Use this section to add details that were not covered in the "What we propose to do about it" section and also include an implementation plan with phases.
+
+    Note: This section is OPTIONAL and NOT RECOMMENDED when RFDs are first opened. It can distract from the discussion of the problem.
+-->
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+<!--
+    Keep this section up-to-date as discussion proceeds. The goal is to capture major points that came up on a PR or in a discussion forum -- and if they reoccur, to point people to the FAQ so that we can start the dialog from a more informed place.
+-->
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+None. This proposal is inspired by the abilities exposed in Claude Agent SDK. It must be validated against other agents too.
+
+<!-- You...may want to adjust this. -->
+
+## Revision history
+
+<!-- If there have been major updates to this RFD, you can include the git revisions and a summary of the changes. -->
