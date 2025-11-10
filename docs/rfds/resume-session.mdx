@@ -1,0 +1,100 @@
+---
+title: "Resuming of existing sessions"
+---
+
+Author(s): [@josevalim](https://github.com/josevalim)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+We propose adding the ability to resume existing sessions. This is similar to session/load,
+except it does not return previous messages.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+While the spec provides a "session/load" command, most coding agents do not implement it.
+This means that, once you close your editor, browser, etc, you can't resume the conversation.
+
+An obvious answer to this question would be to implement "session/load" for existing coding
+agents. For example, `claude-code-acp` could intercept all messages, write them to disk,
+and emulate "session/load". We considered contributing this when we realized that, we already
+store all messages in our own application, independent from ACP, given we want to provide
+users to navigate or share old chats even if the coding agent is removed. And if we were to use
+"session/load", we would likely just discard them anyway.
+
+In those cases, the ability to resume a session is beneficial because:
+
+* it is exactly what we need
+* it is more straight-forward to implement for both clients and servers
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+Two possible options:
+
+* Add a "session/resume" command
+* Add an option to "session/load" which allows us to continue even if
+  it doesn't return the previous conversation
+
+In the rest of the document, I will refer to the solution as "session/resume",
+but it implies any of the solutions above.
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+We will be able to resume existing conversations, providing a better user experience.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+<!--
+    Use this section to add details that were not covered in the "What we propose to do about it" section and also include an implementation plan with phases.
+
+    Note: This section is OPTIONAL and NOT RECOMMENDED when RFDs are first opened. It can distract from the discussion of the problem.
+-->
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+<!--
+    Keep this section up-to-date as discussion proceeds. The goal is to capture major points that came up on a PR or in a discussion forum -- and if they reoccur, to point people to the FAQ so that we can start the dialog from a more informed place.
+-->
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+The biggest question is if it makes sense to support both "session/load" and
+"session/resume". However, I do wonder: how portable "session/load" is in practice?
+
+When we start a new session over ACP, we introduce custom MCP tools and configuration.
+This means that, while we could use "session/load" to load our own chats and chats
+not started by us, I presume loading third-party chats would lead to a flawed user
+experience, as our tools would not be available. And depending on the ACP implementation,
+not even the capabilities would be respected.
+
+Therefore, I see functionality such as "session/load" and "session/list" being
+useful for those who want to provide a different interface for coding agents, without
+injecting custom functionality. Outside of that, the other benefit of "session/load"
+is that we could rely on the coding agent's own storage, but unfortunately that does
+not seem to be exposed at the moment. So if we have to emulate "session/load" at the
+ACP layer, we may know have chats stored in the coding agent, in ACP, and in our
+applications.
+
+If we can trivially implement "session/load" across agents, then I don't believe this
+RFD has weight. But assuming we don't, we may need to deal with these trade-offs:
+
+* If "session/resume" exists, coding agents may avoid implementing "session/load",
+  hurting those who want a "session/list" and "session/load" style functionality
+
+* If "session/resume" does not exist, coding agents may still not implement "session/load"
+  anyway, and clients will be unable to resume conversations (this is where we are)
+
+## Revision history
+
+<!-- If there have been major updates to this RFD, you can include the git revisions and a summary of the changes. -->
