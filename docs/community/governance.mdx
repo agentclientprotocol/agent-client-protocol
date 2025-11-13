@@ -3,59 +3,165 @@ title: "Governance"
 description: "How the ACP project is governed"
 ---
 
-Note: This document describes how ACP governance is structured today (Zed-led) and paints a picture of our desired evolutionary path (following MCP).
+This document describes the governance model for the Agent Client Protocol (ACP). It defines the roles, responsibilities, and processes that guide how the project operates and makes decisions.
 
-## Current Governance Model (Zed-led)
+## Principles
 
-- Given the rapid iteration on the core protocol, Zed _currently_ leads ACP in a "Lead Maintainer"/"[BDFL](https://en.wikipedia.org/wiki/Benevolent_dictator_for_life)" capacity
-- As the foundations of ACP harden and adoption increases, Zed _intends_ on transitioning ACP to a hierarchical structure with a steering committee, similar to [MCP](https://modelcontextprotocol.io/community/governance)
+We aim to operate transparently and make decisions in the best interests of ACP and its community.
 
-### Core Ownership
+## Technical Governance
 
-- All ACP repositories are housed under a neutral Github Organization - [agentclientprotocol](https://github.com/agentclientprotocol).
-  - Zed owns and administers this organization, the main protocol repo, and all repositories not administered by other companies or contributors
+The ACP project adopts a hierarchical structure, similar to MCP, Rust Foundation projects, and other open source projects:
 
-### Component-Specific Admins
+- A community of **contributors** who file issues, make pull requests, and contribute to the project.
+- A small set of **maintainers** drive components within the ACP project, such as SDKs, documentation, and others.
+- Contributors and maintainers are overseen by **core maintainers**, who drive the overall project direction.
+- The core maintainers have two **lead core maintainers** who are the catch-all decision makers.
+- Maintainers, core maintainers, and lead core maintainers form the **ACP steering group**.
 
-- Companies and individuals with relevant expertise may contact Zed for component-specific administration rights
-  - The goal of component-specific admins: allowing companies/individuals with specific knowledge and skillsets to administer code they're best equipped to administer
-    - Example: JetBrains administers [the Kotlin SDK](https://github.com/agentclientprotocol/kotlin-sdk)
-  - Companies or individuals interested in administration may contact Zed via [Zulip](https://agentclientprotocol.zulipchat.com/), shared Slack channel, or at hi@zed.dev
-- Access to component administration is granted via _teams_
-  - These teams have admin permissions to their specific repository/repositories, and write permissions to the [main protocol repository](https://github.com/agentclientprotocol/agent-client-protocol)
-- Zed will provide suggested permissions/rule sets for component admins, but admins are free to update these permissions within their repository(ies) as they see fit
+All maintainers are expected to have a strong bias towards ACP's design philosophy.
 
-### Contribution and PR Control
+### Channels
 
-- Contributors should follow a discussion -> PR model
-  - Discussions should address what change is looking to be made, why, and summarize the hypothesized technical direction
-  - PRs submitted without prior discussion may be redirected to create a discussion, especially for larger changes that need more input.
-  - Repository admins (whether Zed, or specific component admins) are required code reviewers to merge any PRs
-- Proposals for breaking changes to the **protocol** must be flagged for a 5 business day review/objection window before they are merged.
-  - if no objections, the Zed team may self-merge after the window expires
-- Non-breaking changes can be merged at any time. However, changes that would require additional implementation effort should have followed the discussion model above, and ideally without major objections.
-- Repository admins, in **their own repository** may merge non-breaking and breaking changes at any time. It is acknowledged that library design may require changes over time, and each repository can follow its own method of gathering feedback and discussion before making breaking changes.
+Technical Governance is facilitated through shared [communication channels](/community/communication) of all **maintainers, core maintainers** and **lead maintainers**. Each maintainer group can choose additional communication channels, but all decisions and their supporting discussions must be recorded and made transparently available in one of the main communication channels.
 
-## Future Governance Model
+### Contributors
 
-- The current target structure for ACP is modeled after [MCP](https://modelcontextprotocol.io/community/governance)
-  - Contributors
-  - Maintainers (component-level)
-  - Core Maintainers (project-level)
-  - Lead Maintainer(s) / BDFL (initially Zed; will evolve)
-  - Steering Committee
-- _Unlike_ MCP, we have a hypothesis that companies will have a strong role in the future governance model of ACP, given its primary utility _today_ is for company interactivity. That's just a hypothesis, though, and as the protocol develops we're happy to hear alternate perspectives.
+Anyone who submits code, documentation or other improvements is counted as a contributor. Contributors do not have formal decision-making power, but are encouraged to participate in discussions about project direction and propose changes.
+
+### Maintainers
+
+Maintainers are responsible for components within the ACP project. These generally are independent repositories such as language-specific SDKs. Maintainers may adopt their own rules and procedures for making decisions. Maintainers are expected to make decisions for their respective projects independently, but can defer or escalate to the core maintainers when needed.
+
+Maintainers are responsible for the:
+
+- Thoughtful and productive engagement with community contributors,
+- Maintaining and improving their respective area of the ACP project,
+- Supporting documentation, roadmaps and other adjacent parts of the ACP project,
+- Present ideas from community to core.
+
+New maintainers are added by a consensus or majority vote of the current maintainers, based on sustained and high-quality contributions to the project, alignment with its goals, and a demonstrated commitment to community standards. Prospective maintainers should have a track record of participation in discussions, issue triage, and code or documentation improvements.
+
+Maintainers have write and/or admin access to their respective repositories.
+
+A maintainer may step down at any time by notifying the other maintainers. In rare cases, a maintainer may be removed by a consensus or a two-thirds supermajority vote of the other maintainers if they are inactive for an extended period, violate the Code of Conduct, or act against the project’s interests. Maintainers can be removed by core maintainers or lead core maintainers at any time and without reason.
+
+### Core Maintainers
+
+Core maintainers are contributors who have write access to ACP’s source code. They review and merge contributions, participate in project decision-making, and help to onboard and mentor new contributors. The core maintainers are expected to have a deep understanding of the Agent Client Protocol and its specification. Their responsibilities include:
+
+- Designing, reviewing and steering the evolution of the ACP specification, as well as all other parts of the ACP project, such as documentation,
+- Articulating a cohesive long-term vision for the project,
+- Mediating and resolving contentious issues with fairness and transparency, seeking consensus where possible while making decisive choices when necessary,
+- Appoint or remove maintainers,
+- Stewardship of the ACP project in the best interest of ACP.
+
+The core maintainers as a group have the power to veto any decisions made by maintainers by majority vote. The core maintainers have power to resolve disputes as they see fit. The core maintainers should publicly articulate their decision-making. The core group is responsible for adopting their own procedures for making decisions.
+
+Core maintainers generally have write and admin access to all ACP repositories, but should use the same contribution (usually pull-requests) mechanism as outside contributors. Exceptions can be made based on security considerations.
+
+A core maintainer may step down at any time by notifying the other core maintainers. In rare cases, a core maintainer may be removed by a consensus or a two-thirds supermajority vote of the other core maintainers if they are inactive for an extended period, violate the Code of Conduct, or act against the project’s interests.
+
+### Lead Maintainers (BDFL)
+
+ACP has two lead maintainers: Ben Brandt and Morgan Krey. Lead Maintainers can veto any decision by core maintainers or maintainers. This model is also commonly known as Benevolent Dictator for Life (BDFL) in the open source community. The Lead Maintainers should publicly articulate their decision-making and give clear reasoning for their decisions. Lead maintainers are part of the core maintainer group.
+
+The Lead Maintainers are responsible for confirming or removing core maintainers.
+
+Lead Maintainers are administrators on all infrastructure for the ACP project where possible. This includes but is not restricted to all communication channels, GitHub organizations and repositories.
+
+The Lead Maintainers are the primary contacts, and responsible for:
+
+- Representing ACP in official matters.
+- Coordinating major decisions about project direction.
+- Signing off project expenses.
+
+### Decision Process
+
+The core maintainer group meets every two weeks to discuss and vote on proposals, as well as discuss any topics needed. The [ACP RFD process](https://agentclientprotocol.com/rfds/about) and Zulip chat can be used to discuss and vote on smaller proposals as needed.
+
+## Processes
+
+Core and lead maintainers are responsible for all aspects of Agent Client Protocol, including documentation, issues, suggestions for content, and all other parts under the [ACP project](https://github.com/agentclientprotocol). Maintainers are responsible for documentation, issues, and suggestions of content for their area of the ACP project, but are encouraged to partake in general maintenance of the ACP projects. Maintainers, core maintainers, and lead maintainers should use the same contribution process as external contributors, rather than making direct changes to repos. This provides insight into intent and opportunity for discussion.
+
+### Governance Principles
+
+All groups are self-governed while adhering to these core principles:
+
+1. Clear contribution and decision-making processes
+2. Open communication and transparent decisions
+
+They must:
+
+- Document their contribution process
+- Maintain transparent communication
+- Make decisions publicly (groups must publish meeting notes and proposals)
+
+Projects and working groups without specified processes default to:
+
+- GitHub pull requests and issues for contributions
+- A public channel in the official [ACP Contributor Zulip](/community/communication#zulip)
+
+### Maintenance Responsibilities
+
+Components without dedicated maintainers (such as documentation) fall under core maintainer responsibility. These follow standard contribution guidelines through pull requests, with maintainers handling reviews and escalating to core maintainer review for any significant changes.
+
+Core maintainers and maintainers are encouraged to improve any part of the ACP project, regardless of formal maintenance assignments.
+
+## Communication
+
+### Core Maintainer Meetings
+
+The core maintainer group meets on a bi-weekly basis to discuss proposals and the project. Notes on proposals should be made public.
+
+### Public Chat
+
+The ACP project maintains a [public Zulip Chat](/community/communication#zulip) with open chats for different groups. The ACP project may have private channels for certain communications.
+
+## Nominating, Confirming and Removing Maintainers
+
+### The Principles
+
+- Membership in module maintainer groups is given to individuals on merit basis after they demonstrated strong expertise of their area of work through contributions, reviews, and discussions and are aligned with the overall ACP direction.
+- For membership in the maintainer group the individual has to demonstrate strong and continued alignment with the overall MCP principles.
+- No term limits for module maintainers or core maintainers
+- Light criteria of moving sub-project maintenance to 'emeritus' status if they don't actively participate over long periods of time. Each maintainer group may define the inactive period that's appropriate for their area.
+
+### Nomination and Removal
+
+- Core Maintainers are responsible for adding and removing maintainers. They will take the consideration of existing maintainers into account.
+- The lead maintainers are responsible for adding and removing core maintainers.
+
+#### Nomination Process
+
+If a Maintainer (or Core / Lead Maintainer) wishes to propose a nomination for the Core / Lead Maintainers’ consideration, they should follow the following process:
+
+1. Collect evidence for the nomination. This will generally come in the form of a history of merged PRs on the repositories for which maintainership is being considered.
+2. Discuss among maintainers of the relevant group(s) as to whether they would be supportive of approving the nomination.
+3. DM a Core Maintainer to create a private channel in Zulip, in the format `nomination-{name}-{group}`. Add all core maintainers, lead maintainers, and co-maintainers on the relevant group.
+4. Provide context for the individual under nomination. See below for suggestions on what to include here.
+5. Create a Zulip topic and ask Core / Lead Maintainers to vote Yes / No on the nomination. Reaching consensus is encouraged though not required.
+6. After Core / Lead Maintainers discuss and/or vote, if the nomination is favorable, relevant members with permissions to update GitHub and Zulip roles will add the nominee to the appropriate groups. The nominator should announce the new maintainership in the relevant Zulip channel.
+7. The temporary Zulip channel will be deleted a week later.
+
+Suggestions for the kind of information to share with core maintainers when nominating someone:
+
+- GitHub profile link, LinkedIn profile link, Zulip username
+- For what group(s) are you nominating the individual for maintainership
+- Whether the group(s) agree that this person should be elevated to maintainership
+- Description of their contributions to date (including links to most substantial contributions)
+- Description of expected contributions moving forward (e.g. Are they eager to be a maintainer? Will they have capacity to do so?)
+- Other context about the individual (e.g. current employer, motivations behind ACP involvement)
+- Anything else you think may be relevant to consider for the nomination
+
+## Current Maintainers
+
+Refer to [the maintainer list](https://github.com/agentclientprotocol/agent-client-protocol/blob/main/MAINTAINERS.md).
 
 ## Security Policy and Vulnerability Disclosure
 
 - Zed will triage all potential security and vulnerability issues between the Zed team and other maintainers
 - Reports can be submitted to security@zed.dev
-
-## Communication
-
-- Asynchronous communication lives in GitHub
-  - Discussions about the protocol, future direction, governance, etc. should be in the form of a discussion
-  - Bugs, feature requests, etc. should be submitted as an issue
 
 ## Legal, Licensing, and Contributor Terms
 
