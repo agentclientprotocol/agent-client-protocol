@@ -100,9 +100,10 @@
       {
         "tab": "Community",
         "pages": [
-          "community/governance",
           "community/communication",
           "community/code-of-conduct",
+          "community/governance",
+          "community/working-interest-groups",
           "community/contributing"
         ]
       },
