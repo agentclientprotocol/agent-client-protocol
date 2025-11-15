@@ -111,7 +111,8 @@
               "rfds/session-resume",
               "rfds/meta-propagation",
               "rfds/session-info-update",
-              "rfds/agent-telemetry-export"
+              "rfds/agent-telemetry-export",
+              "rfds/proxy-chains"
             ]
           },
           { "group": "Preview", "pages": [] },
