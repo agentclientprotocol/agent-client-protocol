@@ -91,7 +91,7 @@
           "rfds/about",
           {
             "group": "Draft",
-            "pages": ["rfds/session-list", "rfds/session-config-options"]
+            "pages": ["rfds/session-list", "rfds/session-config-options", "rfds/proxy-chains"]
           },
           { "group": "Preview", "pages": [] },
           { "group": "Completed", "pages": ["rfds/introduce-rfd-process"] }
