@@ -24,7 +24,7 @@ Therefore we want to be able to fork a session, issue additional messages, and t
 
 > What are you proposing to improve the situation?
 
-One possible solution is to add a session/fork command.
+To add a "session/fork" method.
 
 ## Shiny future
 
@@ -41,26 +41,27 @@ functionality like editing previous messages and similar.
 
 > Tell me more about your implementation. What is your detailed implementation plan?
 
-<!--
-    Use this section to add details that were not covered in the "What we propose to do about it" section and also include an implementation plan with phases.
+We propose to add a new "session/fork" method. Agents must declare this option is
+available by returning `forkSession: {}` in its capabilities. The object is reserved
+to declare future capabilities, such as forking from a message, a tool call, or similar.
 
-    Note: This section is OPTIONAL and NOT RECOMMENDED when RFDs are first opened. It can distract from the discussion of the problem.
--->
+A proof of concept is available here: https://github.com/zed-industries/claude-code-acp/pull/145
 
 ## Frequently asked questions
 
 > What questions have arisen over the course of authoring this document or during subsequent discussions?
 
-<!--
-    Keep this section up-to-date as discussion proceeds. The goal is to capture major points that came up on a PR or in a discussion forum -- and if they reoccur, to point people to the FAQ so that we can start the dialog from a more informed place.
--->
+**Q: Should a new method be introduced or should "session/new" be expanded?**
+
+They must be different because they will effectively require different options.
+For example, "session/new" has options such as capabilities and MCP which are not
+recommended to be set when forking, as the context being forked was built with other
+tools, and forking may accept a messageId for checkpoints.
 
 ### What alternative approaches did you consider, and why did you settle on this one?
 
 None. This proposal is inspired by the abilities exposed in Claude Agent SDK. It must be validated against other agents too.
 
-<!-- You...may want to adjust this. -->
-
 ## Revision history
 
-<!-- If there have been major updates to this RFD, you can include the git revisions and a summary of the changes. -->
+2025-11-17: Mentioned capabilities format, updated FAQ.
