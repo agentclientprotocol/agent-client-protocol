@@ -13,12 +13,13 @@ The current maintainers for ACP are:
 
 ## Core Maintainers
 
-| Name            | GitHub                       |
-| --------------- | ---------------------------- |
-| Richard Feldman | https://github.com/rtfeldman |
-| Agus Zubiaga    | https://github.com/agu-z     |
-| Sergey Ignatov  | https://github.com/ignatov   |
-| Anna Zhdan      | https://github.com/anna239   |
+| Name            | GitHub                          |
+| --------------- | ------------------------------- |
+| Richard Feldman | https://github.com/rtfeldman    |
+| Agus Zubiaga    | https://github.com/agu-z        |
+| Sergey Ignatov  | https://github.com/ignatov      |
+| Anna Zhdan      | https://github.com/anna239      |
+| Niko Matsakis   | https://github.com/nikomatsakis |
 
 ## SDK Maintainers
 
