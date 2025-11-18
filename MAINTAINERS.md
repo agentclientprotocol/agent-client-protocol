@@ -2,7 +2,7 @@
 
 The current maintainers for ACP are:
 
-**Last updated:** November 14, 2025
+**Last updated:** November 18, 2025
 
 ## Lead Maintainers
 
@@ -21,6 +21,12 @@ The current maintainers for ACP are:
 | Niko Matsakis   | https://github.com/nikomatsakis |
 
 ## SDK Maintainers
+
+### Java SDK
+
+| Name         | GitHub                         |
+| ------------ | ------------------------------ |
+| Mark Pollack | https://github.com/markpollack |
 
 ### Kotlin SDK
 
