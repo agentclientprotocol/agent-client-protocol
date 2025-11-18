@@ -296,7 +296,7 @@ pub enum ToolCallContent {
     ///
     /// The terminal must be added before calling `terminal/release`.
     ///
-    /// See protocol docs: [Terminal](https://agentclientprotocol.com/protocol/terminal)
+    /// See protocol docs: [Terminal](https://agentclientprotocol.com/protocol/terminals)
     #[serde(rename_all = "camelCase")]
     Terminal { terminal_id: crate::TerminalId },
 }
