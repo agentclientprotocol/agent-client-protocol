@@ -21,8 +21,9 @@
   ],
   "type": "module",
   "scripts": {
-    "generate:json-schema": "cd rust && cargo run --bin generate --features unstable",
-    "generate": "npm run generate:json-schema && npm run format",
+    "generate:json-schema": "cd rust && cargo run --bin generate",
+    "generate:json-schema:unstable": "cd rust && cargo run --bin generate --features unstable ../unstable",
+    "generate": "npm run generate:json-schema && npm run generate:json-schema:unstable && npm run format",
     "format": "prettier --write . && cargo fmt",
     "format:check": "prettier --check . && cargo fmt -- --check",
     "spellcheck": "./scripts/spellcheck.sh",

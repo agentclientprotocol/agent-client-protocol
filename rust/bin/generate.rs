@@ -3,7 +3,7 @@ use agent_client_protocol_schema::{
     OutgoingMessage, VERSION,
 };
 use schemars::{JsonSchema, generate::SchemaSettings};
-use std::{fs, path::Path};
+use std::{env, fs, path::Path};
 
 use markdown_generator::MarkdownGenerator;
 
@@ -39,7 +39,8 @@ fn main() {
     // Convert to serde_json::Value for post-processing
     let schema_value = serde_json::to_value(&schema).unwrap();
 
-    let root = env!("CARGO_MANIFEST_DIR");
+    let root_arg = env::args().nth(1);
+    let root = root_arg.as_deref().unwrap_or(env!("CARGO_MANIFEST_DIR"));
     let schema_dir = Path::new(root).join("schema");
     let docs_protocol_dir = Path::new(root).join("docs").join("protocol");
 

@@ -245,6 +245,14 @@ Response from loading an existing session.
 <ResponseField name="_meta" type={"object"} >
   Extension point for implementations
 </ResponseField>
+<ResponseField name="models" type={<><span><a href="#sessionmodelstate">SessionModelState</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Initial model state if supported by the Agent
+
+</ResponseField>
 <ResponseField name="modes" type={<><span><a href="#sessionmodestate">SessionModeState</a></span><span> | null</span></>} >
   Initial mode state if supported by the Agent
 
@@ -312,6 +320,14 @@ See protocol docs: [Creating a Session](https://agentclientprotocol.com/protocol
 
 <ResponseField name="_meta" type={"object"} >
   Extension point for implementations
+</ResponseField>
+<ResponseField name="models" type={<><span><a href="#sessionmodelstate">SessionModelState</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Initial model state if supported by the Agent
+
 </ResponseField>
 <ResponseField name="modes" type={<><span><a href="#sessionmodestate">SessionModeState</a></span><span> | null</span></>} >
   Initial mode state if supported by the Agent
@@ -450,6 +466,57 @@ Response to `session/set_mode` method.
 **Properties:**
 
 <ResponseField name="_meta" type={"object"}></ResponseField>
+
+<a id="session-set_model"></a>
+### <span class="font-mono">session/set_model</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Select a model for a given session.
+
+#### <span class="font-mono">SetSessionModelRequest</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Request parameters for setting a session model.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object"}>
+  Extension point for implementations
+</ResponseField>
+<ResponseField name="modelId" type={<a href="#modelid">ModelId</a>} required>
+  The ID of the model to set.
+</ResponseField>
+<ResponseField
+  name="sessionId"
+  type={<a href="#sessionid">SessionId</a>}
+  required
+>
+  The ID of the session to set the model for.
+</ResponseField>
+
+#### <span class="font-mono">SetSessionModelResponse</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Response to `session/set_model` method.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object"}>
+  Extension point for implementations
+</ResponseField>
 
 ## Client
 
@@ -1604,6 +1671,41 @@ All Agents MUST support this transport.
 </Expandable>
 </ResponseField>
 
+## <span class="font-mono">ModelId</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+A unique identifier for a model.
+
+**Type:** `string`
+
+## <span class="font-mono">ModelInfo</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Information about a selectable model.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object"}>
+  Extension point for implementations
+</ResponseField>
+<ResponseField name="description" type={"string | null"}>
+  Optional description of the model.
+</ResponseField>
+<ResponseField name="modelId" type={<a href="#modelid">ModelId</a>} required>
+  Unique identifier for the model.
+</ResponseField>
+<ResponseField name="name" type={"string"} required>
+  Human-readable name of the model.
+</ResponseField>
+
 ## <span class="font-mono">PermissionOption</span>
 
 An option presented to the user when requesting permission.
@@ -1924,6 +2026,43 @@ The set of modes and the one currently active.
   required
 >
   The current mode the Agent is in.
+</ResponseField>
+
+## <span class="font-mono">SessionModelState</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+The set of models and the one currently active.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object"}>
+  Extension point for implementations
+</ResponseField>
+<ResponseField
+  name="availableModels"
+  type={
+    <>
+      <span>
+        <a href="#modelinfo">ModelInfo</a>
+      </span>
+      <span>[]</span>
+    </>
+  }
+  required
+>
+  The set of models that the Agent can use
+</ResponseField>
+<ResponseField
+  name="currentModelId"
+  type={<a href="#modelid">ModelId</a>}
+  required
+>
+  The current model the Agent is in.
 </ResponseField>
 
 ## <span class="font-mono">SessionUpdate</span>
