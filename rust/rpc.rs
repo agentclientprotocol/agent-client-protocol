@@ -225,7 +225,7 @@ impl Side for AgentSide {
             m if m == AGENT_METHOD_NAMES.session_load => serde_json::from_str(params.get())
                 .map(ClientRequest::LoadSessionRequest)
                 .map_err(Into::into),
-            #[cfg(feature = "unstable")]
+            #[cfg(feature = "unstable_session_list")]
             m if m == AGENT_METHOD_NAMES.session_list => serde_json::from_str(params.get())
                 .map(ClientRequest::ListSessionsRequest)
                 .map_err(Into::into),

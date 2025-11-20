@@ -236,7 +236,7 @@ pub struct LoadSessionResponse {
 /// Request parameters for listing existing sessions.
 ///
 /// Only available if the Agent supports the `listSessions` capability.
-#[cfg(feature = "unstable")]
+#[cfg(feature = "unstable_session_list")]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_LIST_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -257,7 +257,7 @@ pub struct ListSessionsRequest {
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
 /// Response from listing sessions.
-#[cfg(feature = "unstable")]
+#[cfg(feature = "unstable_session_list")]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_LIST_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -278,7 +278,7 @@ pub struct ListSessionsResponse {
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
 /// Information about a session returned by session/list
-#[cfg(feature = "unstable")]
+#[cfg(feature = "unstable_session_list")]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct SessionInfo {
@@ -623,7 +623,7 @@ pub struct AgentCapabilities {
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
     /// Whether the agent supports `session/list`.
-    #[cfg(feature = "unstable")]
+    #[cfg(feature = "unstable_session_list")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub list_sessions: Option<serde_json::Value>,
     /// Extension point for implementations
@@ -703,7 +703,7 @@ pub struct AgentMethodNames {
     #[cfg(feature = "unstable")]
     pub session_set_model: &'static str,
     /// Method for listing existing sessions.
-    #[cfg(feature = "unstable")]
+    #[cfg(feature = "unstable_session_list")]
     pub session_list: &'static str,
 }
 
@@ -718,7 +718,7 @@ pub const AGENT_METHOD_NAMES: AgentMethodNames = AgentMethodNames {
     session_cancel: SESSION_CANCEL_METHOD_NAME,
     #[cfg(feature = "unstable")]
     session_set_model: SESSION_SET_MODEL_METHOD_NAME,
-    #[cfg(feature = "unstable")]
+    #[cfg(feature = "unstable_session_list")]
     session_list: SESSION_LIST_METHOD_NAME,
 };
 
@@ -740,7 +740,7 @@ pub(crate) const SESSION_CANCEL_METHOD_NAME: &str = "session/cancel";
 #[cfg(feature = "unstable")]
 pub(crate) const SESSION_SET_MODEL_METHOD_NAME: &str = "session/set_model";
 /// Method name for listing existing sessions.
-#[cfg(feature = "unstable")]
+#[cfg(feature = "unstable_session_list")]
 pub(crate) const SESSION_LIST_METHOD_NAME: &str = "session/list";
 
 /// All possible requests that a client can send to an agent.
@@ -798,7 +798,7 @@ pub enum ClientRequest {
     ///
     /// See protocol docs: [Loading Sessions](https://agentclientprotocol.com/protocol/session-setup#loading-sessions)
     LoadSessionRequest(LoadSessionRequest),
-    #[cfg(feature = "unstable")]
+    #[cfg(feature = "unstable_session_list")]
     /// **UNSTABLE**
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -865,7 +865,7 @@ pub enum AgentResponse {
     AuthenticateResponse(#[serde(default)] AuthenticateResponse),
     NewSessionResponse(NewSessionResponse),
     LoadSessionResponse(#[serde(default)] LoadSessionResponse),
-    #[cfg(feature = "unstable")]
+    #[cfg(feature = "unstable_session_list")]
     ListSessionsResponse(ListSessionsResponse),
     SetSessionModeResponse(#[serde(default)] SetSessionModeResponse),
     PromptResponse(PromptResponse),
