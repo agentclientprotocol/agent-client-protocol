@@ -3,10 +3,11 @@ title: "Request Cancellation Mechanism"
 ---
 
 Author(s): [Artem Bukhonov](https://github.com/nerzhulart)
+Champion: [@benbrandt](https://github.com/benbrandt)
 
 ## Elevator pitch
 
-Introduce a standardized per-request cancellation mechanism for the Agent Client Protocol, inspired by the Language Server Protocol (LSP), to enable a more granular cancellation of requests where individual JSON-RPC requests can be cancelled one by one.
+Introduce a standardized per-request cancellation mechanism for the Agent Client Protocol, inspired by the [Language Server Protocol (LSP)](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#cancelRequest), to enable a more granular cancellation of requests where individual JSON-RPC requests can be cancelled one by one.
 
 ## Status quo
 
@@ -53,7 +54,7 @@ Cancellation support must be declared during the capabilities exchange. Add new 
 
 ```typescript
 interface CancellationCapabilities {
-  supportsRequestCancellation?: boolean; // Default: false
+  request?: boolean; // Default: false
 }
 
 interface ClientCapabilities {
@@ -84,7 +85,7 @@ interface CancelNotification {
 
 #### Prerequisites
 
-- A party **MUST** declare `supportsRequestCancellation: true` in their capabilities to handle `$/cancelRequest` notifications for their requests
+- A party **MUST** declare `{ cancellation: { request: true } }` in their capabilities to handle `$/cancelRequest` notifications for their requests
 - The other party can send `$/cancelRequest` to cancel requests if the recipient declared support
 - Until capabilities are exchanged, **NO** requests can be cancelled
 - The `initialize` request **CANNOT** be cancelled as it occurs before capability exchange
@@ -171,6 +172,8 @@ Both mechanisms serve different purposes:
 - Standardized error responses
 
 Implementations can use both: feature-specific methods for rich semantics, and `$/cancelRequest` for simple per-request cancellation.
+
+Note: it is possible that `session/cancel` could be replaced by the more generic `$/cancelRequest` in future versions of the protocol.
 
 #### Example: Cascading Cancellation Flow
 
