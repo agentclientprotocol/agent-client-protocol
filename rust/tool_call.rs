@@ -22,8 +22,7 @@ use crate::{ContentBlock, Error};
 #[serde(rename_all = "camelCase")]
 pub struct ToolCall {
     /// Unique identifier for this tool call within the session.
-    #[serde(rename = "toolCallId")]
-    pub id: ToolCallId,
+    pub tool_call_id: ToolCallId,
     /// Human-readable title describing what the tool is doing.
     pub title: String,
     /// The category of tool being invoked.
@@ -89,8 +88,7 @@ impl ToolCall {
 #[serde(rename_all = "camelCase")]
 pub struct ToolCallUpdate {
     /// The ID of the tool call being updated.
-    #[serde(rename = "toolCallId")]
-    pub id: ToolCallId,
+    pub tool_call_id: ToolCallId,
     /// Fields being updated.
     #[serde(flatten)]
     pub fields: ToolCallUpdateFields,
@@ -138,7 +136,7 @@ impl TryFrom<ToolCallUpdate> for ToolCall {
 
     fn try_from(update: ToolCallUpdate) -> Result<Self, Self::Error> {
         let ToolCallUpdate {
-            id,
+            tool_call_id,
             fields:
                 ToolCallUpdateFields {
                     kind,
@@ -149,11 +147,11 @@ impl TryFrom<ToolCallUpdate> for ToolCall {
                     raw_input,
                     raw_output,
                 },
-            meta: _,
+            meta,
         } = update;
 
         Ok(Self {
-            id,
+            tool_call_id,
             title: title.ok_or_else(|| {
                 Error::invalid_params()
                     .with_data(serde_json::json!("title is required for a tool call"))
@@ -164,7 +162,7 @@ impl TryFrom<ToolCallUpdate> for ToolCall {
             locations: locations.unwrap_or_default(),
             raw_input,
             raw_output,
-            meta: None,
+            meta,
         })
     }
 }
@@ -172,7 +170,7 @@ impl TryFrom<ToolCallUpdate> for ToolCall {
 impl From<ToolCall> for ToolCallUpdate {
     fn from(value: ToolCall) -> Self {
         let ToolCall {
-            id,
+            tool_call_id,
             title,
             kind,
             status,
@@ -180,10 +178,10 @@ impl From<ToolCall> for ToolCallUpdate {
             locations,
             raw_input,
             raw_output,
-            meta: _,
+            meta,
         } = value;
         Self {
-            id,
+            tool_call_id,
             fields: ToolCallUpdateFields {
                 kind: Some(kind),
                 status: Some(status),
@@ -193,7 +191,7 @@ impl From<ToolCall> for ToolCallUpdate {
                 raw_input,
                 raw_output,
             },
-            meta: None,
+            meta,
         }
     }
 }

@@ -120,7 +120,6 @@ pub struct AvailableCommand {
 #[serde(untagged, rename_all = "camelCase")]
 pub enum AvailableCommandInput {
     /// All text that was typed after the command name is provided as input.
-    #[schemars(rename = "UnstructuredCommandInput")]
     Unstructured {
         /// A hint to display when the input hasn't been provided yet
         hint: String,
@@ -151,10 +150,10 @@ pub struct RequestPermissionRequest {
 
 /// An option presented to the user when requesting permission.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct PermissionOption {
     /// Unique identifier for this permission option.
-    #[serde(rename = "optionId")]
-    pub id: PermissionOptionId,
+    pub option_id: PermissionOptionId,
     /// Human-readable label to display to the user.
     pub name: String,
     /// Hint about the nature of this permission option.
