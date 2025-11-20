@@ -14,7 +14,8 @@ categories = ["development-tools", "api-bindings"]
 include = ["/rust/**/*.rs", "/README.md", "/LICENSE", "/Cargo.toml"]
 
 [features]
-unstable = []
+unstable = ["unstable_session_model"]
+unstable_session_model = []
 
 [lib]
 path = "rust/acp.rs"
