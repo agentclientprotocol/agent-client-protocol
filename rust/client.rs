@@ -70,7 +70,6 @@ pub enum SessionUpdate {
 /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-#[schemars(inline)]
 pub struct CurrentModeUpdate {
     /// The ID of the current mode
     pub current_mode_id: SessionModeId,
@@ -82,7 +81,6 @@ pub struct CurrentModeUpdate {
 /// A streamed item of content
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
-#[schemars(inline)]
 pub struct ContentChunk {
     /// A single item of content
     pub content: ContentBlock,
@@ -94,7 +92,6 @@ pub struct ContentChunk {
 /// Available commands are ready or have changed
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-#[schemars(inline)]
 pub struct AvailableCommandsUpdate {
     /// Commands the agent can execute
     pub available_commands: Vec<AvailableCommand>,

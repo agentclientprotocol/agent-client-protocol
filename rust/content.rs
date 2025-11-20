@@ -57,7 +57,6 @@ pub enum ContentBlock {
 
 /// Text provided to or from an LLM.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
-#[schemars(inline)]
 pub struct TextContent {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub annotations: Option<Annotations>,
@@ -79,7 +78,6 @@ impl<T: Into<String>> From<T> for ContentBlock {
 
 /// An image provided to or from an LLM.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
-#[schemars(inline)]
 pub struct ImageContent {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub annotations: Option<Annotations>,
@@ -95,7 +93,6 @@ pub struct ImageContent {
 
 /// Audio provided to or from an LLM.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
-#[schemars(inline)]
 pub struct AudioContent {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub annotations: Option<Annotations>,
@@ -109,7 +106,6 @@ pub struct AudioContent {
 
 /// The contents of a resource, embedded into a prompt or tool call result.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
-#[schemars(inline)]
 pub struct EmbeddedResource {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub annotations: Option<Annotations>,
@@ -153,7 +149,6 @@ pub struct BlobResourceContents {
 
 /// A resource that the server is capable of reading, included in a prompt or tool call result.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
-#[schemars(inline)]
 pub struct ResourceLink {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub annotations: Option<Annotations>,
@@ -174,16 +169,13 @@ pub struct ResourceLink {
 
 /// Optional annotations for the client. The client can use annotations to inform how objects are used or displayed
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct Annotations {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub audience: Option<Vec<Role>>,
-    #[serde(
-        rename = "lastModified",
-        default,
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub last_modified: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub priority: Option<f64>,
     /// Extension point for implementations
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
