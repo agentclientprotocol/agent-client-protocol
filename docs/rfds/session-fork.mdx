@@ -3,6 +3,7 @@ title: "Forking of existing sessions"
 ---
 
 Author(s): [@josevalim](https://github.com/josevalim)
+Champion: [@benbrandt](https://github.com/benbrandt)
 
 ## Elevator pitch
 
@@ -42,8 +43,23 @@ functionality like editing previous messages and similar.
 > Tell me more about your implementation. What is your detailed implementation plan?
 
 We propose to add a new "session/fork" method. Agents must declare this option is
-available by returning `forkSession: {}` in its capabilities. The object is reserved
-to declare future capabilities, such as forking from a message, a tool call, or similar.
+available by returning `session: { fork : {} }` in its capabilities. The object is reserved
+to declare future capabilities, such as forking from a specific message, a tool call, or similar.
+
+Then the client would be able to request a fork of the current session:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "session/fork",
+  "params": {
+    "sessionId": "sess_789xyz"
+  }
+}
+```
+
+And the agent would respond with optional data such as config options, the same as `session/load`.
 
 A proof of concept is available here: https://github.com/zed-industries/claude-code-acp/pull/145
 
