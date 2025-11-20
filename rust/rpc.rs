@@ -34,6 +34,7 @@ pub enum RequestId {
 
 #[derive(Serialize, Deserialize, Clone, JsonSchema)]
 #[serde(untagged)]
+#[schemars(inline)]
 pub enum OutgoingMessage<Local: Side, Remote: Side> {
     Request {
         id: RequestId,
@@ -65,6 +66,7 @@ enum JsonRpcVersion {
 ///
 /// [1]: https://www.jsonrpc.org/specification#compatibility
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[schemars(inline)]
 pub struct JsonRpcMessage<M> {
     jsonrpc: JsonRpcVersion,
     #[serde(flatten)]
