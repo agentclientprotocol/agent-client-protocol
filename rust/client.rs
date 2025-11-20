@@ -265,10 +265,10 @@ pub struct ReadTextFileRequest {
     /// Absolute path to the file to read.
     pub path: PathBuf,
     /// Line number to start reading from (1-based).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub line: Option<u32>,
     /// Maximum number of lines to read.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub limit: Option<u32>,
     /// Extension point for implementations
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
@@ -309,7 +309,7 @@ pub struct CreateTerminalRequest {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub env: Vec<crate::EnvVariable>,
     /// Working directory for the command (absolute path).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub cwd: Option<PathBuf>,
     /// Maximum number of output bytes to retain.
     ///
@@ -319,7 +319,7 @@ pub struct CreateTerminalRequest {
     /// The Client MUST ensure truncation happens at a character boundary to maintain valid
     /// string output, even if this means the retained output is slightly less than the
     /// specified limit.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub output_byte_limit: Option<u64>,
     /// Extension point for implementations
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]

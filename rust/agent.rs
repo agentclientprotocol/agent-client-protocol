@@ -167,7 +167,7 @@ pub struct NewSessionResponse {
     /// Initial mode state if supported by the Agent
     ///
     /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub modes: Option<SessionModeState>,
     /// **UNSTABLE**
     ///
@@ -175,7 +175,7 @@ pub struct NewSessionResponse {
     ///
     /// Initial model state if supported by the Agent
     #[cfg(feature = "unstable_session_model")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub models: Option<SessionModelState>,
     /// Extension point for implementations
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]

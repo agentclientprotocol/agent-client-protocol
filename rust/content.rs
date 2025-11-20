@@ -58,7 +58,7 @@ pub enum ContentBlock {
 /// Text provided to or from an LLM.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
 pub struct TextContent {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub annotations: Option<Annotations>,
     pub text: String,
     /// Extension point for implementations
@@ -79,12 +79,12 @@ impl<T: Into<String>> From<T> for ContentBlock {
 /// An image provided to or from an LLM.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
 pub struct ImageContent {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub annotations: Option<Annotations>,
     pub data: String,
     #[serde(rename = "mimeType")]
     pub mime_type: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub uri: Option<String>,
     /// Extension point for implementations
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
@@ -94,7 +94,7 @@ pub struct ImageContent {
 /// Audio provided to or from an LLM.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
 pub struct AudioContent {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub annotations: Option<Annotations>,
     pub data: String,
     #[serde(rename = "mimeType")]
@@ -107,7 +107,7 @@ pub struct AudioContent {
 /// The contents of a resource, embedded into a prompt or tool call result.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
 pub struct EmbeddedResource {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub annotations: Option<Annotations>,
     pub resource: EmbeddedResourceResource,
     /// Extension point for implementations
@@ -126,7 +126,7 @@ pub enum EmbeddedResourceResource {
 /// Text-based resource contents.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
 pub struct TextResourceContents {
-    #[serde(rename = "mimeType", default, skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "mimeType", skip_serializing_if = "Option::is_none")]
     pub mime_type: Option<String>,
     pub text: String,
     pub uri: String,
@@ -139,7 +139,7 @@ pub struct TextResourceContents {
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
 pub struct BlobResourceContents {
     pub blob: String,
-    #[serde(rename = "mimeType", default, skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "mimeType", skip_serializing_if = "Option::is_none")]
     pub mime_type: Option<String>,
     pub uri: String,
     /// Extension point for implementations
@@ -150,16 +150,16 @@ pub struct BlobResourceContents {
 /// A resource that the server is capable of reading, included in a prompt or tool call result.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
 pub struct ResourceLink {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub annotations: Option<Annotations>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
-    #[serde(rename = "mimeType", default, skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "mimeType", skip_serializing_if = "Option::is_none")]
     pub mime_type: Option<String>,
     pub name: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub size: Option<i64>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
     pub uri: String,
     /// Extension point for implementations

@@ -2275,6 +2275,7 @@
               "$ref": "#/$defs/ToolKind"
             }
           ],
+          "default": "other",
           "description": "The category of tool being invoked.\nHelps clients choose appropriate icons and UI treatment."
         },
         "locations": {
@@ -2296,6 +2297,7 @@
               "$ref": "#/$defs/ToolCallStatus"
             }
           ],
+          "default": "pending",
           "description": "Current execution status of the tool call."
         },
         "title": {

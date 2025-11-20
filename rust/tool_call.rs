@@ -28,10 +28,10 @@ pub struct ToolCall {
     pub title: String,
     /// The category of tool being invoked.
     /// Helps clients choose appropriate icons and UI treatment.
-    #[serde(default, skip_serializing_if = "ToolKind::is_default")]
+    #[serde(default)]
     pub kind: ToolKind,
     /// Current execution status of the tool call.
-    #[serde(default, skip_serializing_if = "ToolCallStatus::is_default")]
+    #[serde(default)]
     pub status: ToolCallStatus,
     /// Content produced by the tool call.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -41,10 +41,10 @@ pub struct ToolCall {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub locations: Vec<ToolCallLocation>,
     /// Raw input parameters sent to the tool.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub raw_input: Option<serde_json::Value>,
     /// Raw output returned by the tool.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub raw_output: Option<serde_json::Value>,
     /// Extension point for implementations
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
@@ -109,25 +109,25 @@ pub struct ToolCallUpdate {
 #[serde(rename_all = "camelCase")]
 pub struct ToolCallUpdateFields {
     /// Update the tool kind.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub kind: Option<ToolKind>,
     /// Update the execution status.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<ToolCallStatus>,
     /// Update the human-readable title.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
     /// Replace the content collection.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub content: Option<Vec<ToolCallContent>>,
     /// Replace the locations collection.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub locations: Option<Vec<ToolCallLocation>>,
     /// Update the raw input.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub raw_input: Option<serde_json::Value>,
     /// Update the raw output.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub raw_output: Option<serde_json::Value>,
 }
 
@@ -237,12 +237,6 @@ pub enum ToolKind {
     Other,
 }
 
-impl ToolKind {
-    fn is_default(&self) -> bool {
-        matches!(self, ToolKind::Other)
-    }
-}
-
 /// Execution status of a tool call.
 ///
 /// Tool calls progress through different statuses during their lifecycle.
@@ -261,12 +255,6 @@ pub enum ToolCallStatus {
     Completed,
     /// The tool call failed with an error.
     Failed,
-}
-
-impl ToolCallStatus {
-    fn is_default(&self) -> bool {
-        matches!(self, ToolCallStatus::Pending)
-    }
 }
 
 /// Content produced by a tool call.
