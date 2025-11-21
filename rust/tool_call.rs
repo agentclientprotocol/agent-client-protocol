@@ -10,7 +10,7 @@ use derive_more::{Display, From};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{ContentBlock, Error};
+use crate::{ContentBlock, Error, TerminalId};
 
 /// Represents a tool call that the language model has requested.
 ///
@@ -20,6 +20,7 @@ use crate::{ContentBlock, Error};
 /// See protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/tool-calls)
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct ToolCall {
     /// Unique identifier for this tool call within the session.
     pub tool_call_id: ToolCallId,
@@ -51,6 +52,64 @@ pub struct ToolCall {
 }
 
 impl ToolCall {
+    pub fn new(tool_call_id: ToolCallId, title: impl Into<String>) -> Self {
+        Self {
+            tool_call_id,
+            title: title.into(),
+            kind: Default::default(),
+            status: Default::default(),
+            content: Default::default(),
+            locations: Default::default(),
+            raw_input: None,
+            raw_output: None,
+            meta: None,
+        }
+    }
+
+    /// The category of tool being invoked.
+    /// Helps clients choose appropriate icons and UI treatment.
+    pub fn kind(mut self, kind: ToolKind) -> Self {
+        self.kind = kind;
+        self
+    }
+
+    /// Current execution status of the tool call.
+    pub fn status(mut self, status: ToolCallStatus) -> Self {
+        self.status = status;
+        self
+    }
+
+    /// Content produced by the tool call.
+    pub fn content(mut self, content: Vec<ToolCallContent>) -> Self {
+        self.content = content;
+        self
+    }
+
+    /// File locations affected by this tool call.
+    /// Enables "follow-along" features in clients.
+    pub fn locations(mut self, locations: Vec<ToolCallLocation>) -> Self {
+        self.locations = locations;
+        self
+    }
+
+    /// Raw input parameters sent to the tool.
+    pub fn raw_input(mut self, raw_input: serde_json::Value) -> Self {
+        self.raw_input = Some(raw_input);
+        self
+    }
+
+    /// Raw output returned by the tool.
+    pub fn raw_output(mut self, raw_output: serde_json::Value) -> Self {
+        self.raw_output = Some(raw_output);
+        self
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
+    }
+
     /// Update an existing tool call with the values in the provided update
     /// fields. Fields with collections of values are overwritten, not extended.
     pub fn update(&mut self, fields: ToolCallUpdateFields) {
@@ -86,6 +145,7 @@ impl ToolCall {
 /// See protocol docs: [Updating](https://agentclientprotocol.com/protocol/tool-calls#updating)
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct ToolCallUpdate {
     /// The ID of the tool call being updated.
     pub tool_call_id: ToolCallId,
@@ -97,6 +157,22 @@ pub struct ToolCallUpdate {
     pub meta: Option<serde_json::Value>,
 }
 
+impl ToolCallUpdate {
+    pub fn new(tool_call_id: ToolCallId, fields: ToolCallUpdateFields) -> Self {
+        Self {
+            tool_call_id,
+            fields,
+            meta: None,
+        }
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
+    }
+}
+
 /// Optional fields that can be updated in a tool call.
 ///
 /// All fields are optional - only include the ones being changed.
@@ -105,6 +181,7 @@ pub struct ToolCallUpdate {
 /// See protocol docs: [Updating](https://agentclientprotocol.com/protocol/tool-calls#updating)
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct ToolCallUpdateFields {
     /// Update the tool kind.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -127,6 +204,54 @@ pub struct ToolCallUpdateFields {
     /// Update the raw output.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub raw_output: Option<serde_json::Value>,
+}
+
+impl ToolCallUpdateFields {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Update the tool kind.
+    pub fn kind(mut self, kind: ToolKind) -> Self {
+        self.kind = Some(kind);
+        self
+    }
+
+    /// Update the execution status.
+    pub fn status(mut self, status: ToolCallStatus) -> Self {
+        self.status = Some(status);
+        self
+    }
+
+    /// Update the human-readable title.
+    pub fn title(mut self, title: impl Into<String>) -> Self {
+        self.title = Some(title.into());
+        self
+    }
+
+    /// Replace the content collection.
+    pub fn content(mut self, content: Vec<ToolCallContent>) -> Self {
+        self.content = Some(content);
+        self
+    }
+
+    /// Replace the locations collection.
+    pub fn locations(mut self, locations: Vec<ToolCallLocation>) -> Self {
+        self.locations = Some(locations);
+        self
+    }
+
+    /// Update the raw input.
+    pub fn raw_input(mut self, raw_input: serde_json::Value) -> Self {
+        self.raw_input = Some(raw_input);
+        self
+    }
+
+    /// Update the raw output.
+    pub fn raw_output(mut self, raw_output: serde_json::Value) -> Self {
+        self.raw_output = Some(raw_output);
+        self
+    }
 }
 
 /// If a given tool call doesn't exist yet, allows for attempting to construct
@@ -153,8 +278,7 @@ impl TryFrom<ToolCallUpdate> for ToolCall {
         Ok(Self {
             tool_call_id,
             title: title.ok_or_else(|| {
-                Error::invalid_params()
-                    .with_data(serde_json::json!("title is required for a tool call"))
+                Error::invalid_params().data(serde_json::json!("title is required for a tool call"))
             })?,
             kind: kind.unwrap_or_default(),
             status: status.unwrap_or_default(),
@@ -210,6 +334,7 @@ pub struct ToolCallId(pub Arc<str>);
 /// See protocol docs: [Creating](https://agentclientprotocol.com/protocol/tool-calls#creating)
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
+#[non_exhaustive]
 pub enum ToolKind {
     /// Reading files or data.
     Read,
@@ -248,6 +373,7 @@ impl ToolKind {
 /// See protocol docs: [Status](https://agentclientprotocol.com/protocol/tool-calls#status)
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
+#[non_exhaustive]
 pub enum ToolCallStatus {
     /// The tool call hasn't started running yet because the input is either
     /// streaming or we're awaiting approval.
@@ -276,38 +402,64 @@ impl ToolCallStatus {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(tag = "type", rename_all = "snake_case")]
 #[schemars(extend("discriminator" = {"propertyName": "type"}))]
+#[non_exhaustive]
 pub enum ToolCallContent {
     /// Standard content block (text, images, resources).
-    Content {
-        /// The actual content block.
-        content: ContentBlock,
-    },
+    Content(Content),
     /// File modification shown as a diff.
-    Diff {
-        /// The diff details.
-        #[serde(flatten)]
-        diff: Diff,
-    },
+    Diff(Diff),
     /// Embed a terminal created with `terminal/create` by its id.
     ///
     /// The terminal must be added before calling `terminal/release`.
     ///
     /// See protocol docs: [Terminal](https://agentclientprotocol.com/protocol/terminals)
-    #[serde(rename_all = "camelCase")]
-    Terminal { terminal_id: crate::TerminalId },
+    Terminal(Terminal),
 }
 
 impl<T: Into<ContentBlock>> From<T> for ToolCallContent {
     fn from(content: T) -> Self {
-        ToolCallContent::Content {
-            content: content.into(),
-        }
+        ToolCallContent::Content(Content::new(content))
     }
 }
 
 impl From<Diff> for ToolCallContent {
     fn from(diff: Diff) -> Self {
-        ToolCallContent::Diff { diff }
+        ToolCallContent::Diff(diff)
+    }
+}
+
+/// Standard content block (text, images, resources).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct Content {
+    /// The actual content block.
+    pub content: ContentBlock,
+}
+
+impl Content {
+    pub fn new(content: impl Into<ContentBlock>) -> Self {
+        Self {
+            content: content.into(),
+        }
+    }
+}
+
+/// Embed a terminal created with `terminal/create` by its id.
+///
+/// The terminal must be added before calling `terminal/release`.
+///
+/// See protocol docs: [Terminal](https://agentclientprotocol.com/protocol/terminals)
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct Terminal {
+    pub terminal_id: TerminalId,
+}
+
+impl Terminal {
+    pub fn new(terminal_id: TerminalId) -> Self {
+        Self { terminal_id }
     }
 }
 
@@ -318,6 +470,7 @@ impl From<Diff> for ToolCallContent {
 /// See protocol docs: [Content](https://agentclientprotocol.com/protocol/tool-calls#content)
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct Diff {
     /// The file path being modified.
     pub path: PathBuf,
@@ -330,6 +483,29 @@ pub struct Diff {
     pub meta: Option<serde_json::Value>,
 }
 
+impl Diff {
+    pub fn new(path: impl Into<PathBuf>, new_text: impl Into<String>) -> Self {
+        Self {
+            path: path.into(),
+            old_text: None,
+            new_text: new_text.into(),
+            meta: None,
+        }
+    }
+
+    /// The original content (None for new files).
+    pub fn old_text(mut self, old_text: impl Into<String>) -> Self {
+        self.old_text = Some(old_text.into());
+        self
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
+    }
+}
+
 /// A file location being accessed or modified by a tool.
 ///
 /// Enables clients to implement "follow-along" features that track
@@ -338,6 +514,7 @@ pub struct Diff {
 /// See protocol docs: [Following the Agent](https://agentclientprotocol.com/protocol/tool-calls#following-the-agent)
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct ToolCallLocation {
     /// The file path being accessed or modified.
     pub path: PathBuf,
@@ -347,4 +524,26 @@ pub struct ToolCallLocation {
     /// Extension point for implementations
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<serde_json::Value>,
+}
+
+impl ToolCallLocation {
+    pub fn new(path: impl Into<PathBuf>) -> Self {
+        Self {
+            path: path.into(),
+            line: None,
+            meta: None,
+        }
+    }
+
+    /// Optional line number within the file.
+    pub fn line(mut self, line: u32) -> Self {
+        self.line = Some(line);
+        self
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
+    }
 }

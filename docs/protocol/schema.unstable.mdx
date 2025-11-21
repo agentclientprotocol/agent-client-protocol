@@ -1250,6 +1250,22 @@ Determines which file operations the agent can request.
 
 </ResponseField>
 
+## <span class="font-mono">Content</span>
+
+Standard content block (text, images, resources).
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField
+  name="content"
+  type={<a href="#contentblock">ContentBlock</a>}
+  required
+>
+  The actual content block.
+</ResponseField>
+
 ## <span class="font-mono">ContentBlock</span>
 
 Content blocks represent displayable information in the Agent Client Protocol.
@@ -1458,6 +1474,31 @@ See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/sess
   required
 >
   The ID of the current mode
+</ResponseField>
+
+## <span class="font-mono">Diff</span>
+
+A diff representing file modifications.
+
+Shows changes to files in a format suitable for display in the client UI.
+
+See protocol docs: [Content](https://agentclientprotocol.com/protocol/tool-calls#content)
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object"}>
+  Extension point for implementations
+</ResponseField>
+<ResponseField name="newText" type={"string"} required>
+  The new content after modification.
+</ResponseField>
+<ResponseField name="oldText" type={"string | null"}>
+  The original content (None for new files).
+</ResponseField>
+<ResponseField name="path" type={"string"} required>
+  The file path being modified.
 </ResponseField>
 
 ## <span class="font-mono">EmbeddedResource</span>
@@ -2673,6 +2714,20 @@ Agents should catch these exceptions and return this semantically meaningful
 response to confirm successful cancellation.
 
 </ResponseField>
+
+## <span class="font-mono">Terminal</span>
+
+Embed a terminal created with `terminal/create` by its id.
+
+The terminal must be added before calling `terminal/release`.
+
+See protocol docs: [Terminal](https://agentclientprotocol.com/protocol/terminals)
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="terminalId" type={"string"} required></ResponseField>
 
 ## <span class="font-mono">TerminalExitStatus</span>
 

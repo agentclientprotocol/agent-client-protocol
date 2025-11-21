@@ -696,6 +696,21 @@
       "description": "All possible responses that a client can send to an agent.\n\nThis enum is used internally for routing RPC responses. You typically won't need\nto use this directly - the responses are handled automatically by the connection.\n\nThese are responses to the corresponding `AgentRequest` variants.",
       "x-docs-ignore": true
     },
+    "Content": {
+      "description": "Standard content block (text, images, resources).",
+      "properties": {
+        "content": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ContentBlock"
+            }
+          ],
+          "description": "The actual content block."
+        }
+      },
+      "required": ["content"],
+      "type": "object"
+    },
     "ContentBlock": {
       "description": "Content blocks represent displayable information in the Agent Client Protocol.\n\nThey provide a structured way to handle various types of user-facing content—whether\nit's text from language models, images for analysis, or embedded resources for context.\n\nContent blocks appear in:\n- User prompts sent via `session/prompt`\n- Language model output streamed through `session/update` notifications\n- Progress updates and results from tool calls\n\nThis structure is compatible with the Model Context Protocol (MCP), enabling\nagents to seamlessly forward content from MCP tool outputs without transformation.\n\nSee protocol docs: [Content](https://agentclientprotocol.com/protocol/content)",
       "discriminator": {
@@ -882,6 +897,28 @@
         }
       },
       "required": ["currentModeId"],
+      "type": "object"
+    },
+    "Diff": {
+      "description": "A diff representing file modifications.\n\nShows changes to files in a format suitable for display in the client UI.\n\nSee protocol docs: [Content](https://agentclientprotocol.com/protocol/tool-calls#content)",
+      "properties": {
+        "_meta": {
+          "description": "Extension point for implementations"
+        },
+        "newText": {
+          "description": "The new content after modification.",
+          "type": "string"
+        },
+        "oldText": {
+          "description": "The original content (None for new files).",
+          "type": ["string", "null"]
+        },
+        "path": {
+          "description": "The file path being modified.",
+          "type": "string"
+        }
+      },
+      "required": ["path", "newText"],
       "type": "object"
     },
     "EmbeddedResource": {
@@ -2169,6 +2206,16 @@
         }
       ]
     },
+    "Terminal": {
+      "description": "Embed a terminal created with `terminal/create` by its id.\n\nThe terminal must be added before calling `terminal/release`.\n\nSee protocol docs: [Terminal](https://agentclientprotocol.com/protocol/terminals)",
+      "properties": {
+        "terminalId": {
+          "type": "string"
+        }
+      },
+      "required": ["terminalId"],
+      "type": "object"
+    },
     "TerminalExitStatus": {
       "description": "Exit status of a terminal command.",
       "properties": {
@@ -2350,62 +2397,51 @@
       },
       "oneOf": [
         {
+          "allOf": [
+            {
+              "$ref": "#/$defs/Content"
+            }
+          ],
           "description": "Standard content block (text, images, resources).",
           "properties": {
-            "content": {
-              "allOf": [
-                {
-                  "$ref": "#/$defs/ContentBlock"
-                }
-              ],
-              "description": "The actual content block."
-            },
             "type": {
               "const": "content",
               "type": "string"
             }
           },
-          "required": ["type", "content"],
+          "required": ["type"],
           "type": "object"
         },
         {
+          "allOf": [
+            {
+              "$ref": "#/$defs/Diff"
+            }
+          ],
           "description": "File modification shown as a diff.",
           "properties": {
-            "_meta": {
-              "description": "Extension point for implementations"
-            },
-            "newText": {
-              "description": "The new content after modification.",
-              "type": "string"
-            },
-            "oldText": {
-              "description": "The original content (None for new files).",
-              "type": ["string", "null"]
-            },
-            "path": {
-              "description": "The file path being modified.",
-              "type": "string"
-            },
             "type": {
               "const": "diff",
               "type": "string"
             }
           },
-          "required": ["type", "path", "newText"],
+          "required": ["type"],
           "type": "object"
         },
         {
+          "allOf": [
+            {
+              "$ref": "#/$defs/Terminal"
+            }
+          ],
           "description": "Embed a terminal created with `terminal/create` by its id.\n\nThe terminal must be added before calling `terminal/release`.\n\nSee protocol docs: [Terminal](https://agentclientprotocol.com/protocol/terminals)",
           "properties": {
-            "terminalId": {
-              "type": "string"
-            },
             "type": {
               "const": "terminal",
               "type": "string"
             }
           },
-          "required": ["type", "terminalId"],
+          "required": ["type"],
           "type": "object"
         }
       ]
