@@ -45,19 +45,23 @@ fn main() {
     // Convert to serde_json::Value for post-processing
     let schema_value = serde_json::to_value(&schema).unwrap();
 
-    let root_arg = env::args().nth(1);
-    let root = root_arg.as_deref().unwrap_or(env!("CARGO_MANIFEST_DIR"));
+    let root = env!("CARGO_MANIFEST_DIR");
     let schema_dir = Path::new(root).join("schema");
     let docs_protocol_dir = Path::new(root).join("docs").join("protocol");
 
     fs::create_dir_all(schema_dir.clone()).unwrap();
     fs::create_dir_all(docs_protocol_dir.clone()).unwrap();
 
+    let schema_file = if cfg!(feature = "unstable") {
+        "schema.unstable.json"
+    } else {
+        "schema.json"
+    };
     fs::write(
-        schema_dir.join("schema.json"),
+        schema_dir.join(schema_file),
         serde_json::to_string_pretty(&schema_value).unwrap(),
     )
-    .expect("Failed to write schema.json");
+    .expect("Failed to write {schema_file}");
 
     // Create a combined metadata object
     let metadata = serde_json::json!({
@@ -66,22 +70,32 @@ fn main() {
         "clientMethods": CLIENT_METHOD_NAMES,
     });
 
+    let meta_file = if cfg!(feature = "unstable") {
+        "meta.unstable.json"
+    } else {
+        "meta.json"
+    };
     fs::write(
-        schema_dir.join("meta.json"),
+        schema_dir.join(meta_file),
         serde_json::to_string_pretty(&metadata).unwrap(),
     )
-    .expect("Failed to write meta.json");
+    .expect("Failed to write {meta_file}");
 
     // Generate markdown documentation
     let mut markdown_gen = MarkdownGenerator::new();
     let markdown_doc = markdown_gen.generate(&schema_value);
 
-    fs::write(docs_protocol_dir.join("schema.mdx"), markdown_doc)
-        .expect("Failed to write schema.mdx");
+    let doc_file = if cfg!(feature = "unstable") {
+        "schema.unstable.mdx"
+    } else {
+        "schema.mdx"
+    };
 
-    println!("✓ Generated schema.json");
-    println!("✓ Generated meta.json");
-    println!("✓ Generated schema.mdx");
+    fs::write(docs_protocol_dir.join(doc_file), markdown_doc).expect("Failed to write {doc_file}");
+
+    println!("✓ Generated {schema_file}");
+    println!("✓ Generated {meta_file}");
+    println!("✓ Generated {doc_file}");
 }
 
 mod markdown_generator {
