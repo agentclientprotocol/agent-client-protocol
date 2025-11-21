@@ -35,18 +35,14 @@ Specifies which authentication method to use.
 <ResponseField name="_meta" type={"object"}>
   Extension point for implementations
 </ResponseField>
-<ResponseField
-  name="methodId"
-  type={<a href="#authmethodid">AuthMethodId</a>}
-  required
->
+<ResponseField name="methodId" type={"string"} required>
   The ID of the authentication method to use. Must be one of the methods
   advertised in the initialize response.
 </ResponseField>
 
 #### <span class="font-mono">AuthenticateResponse</span>
 
-Response to authenticate method
+Response to the `authenticate` method.
 
 **Type:** Object
 
@@ -103,7 +99,7 @@ Note: in future versions of the protocol, this will be required.
 
 #### <span class="font-mono">InitializeResponse</span>
 
-Response from the initialize method.
+Response to the `initialize` method.
 
 Contains the negotiated protocol version and agent capabilities.
 
@@ -1060,22 +1056,12 @@ Describes an available authentication method.
 <ResponseField name="description" type={"string | null"}>
   Optional description providing more details about this authentication method.
 </ResponseField>
-<ResponseField
-  name="id"
-  type={<a href="#authmethodid">AuthMethodId</a>}
-  required
->
+<ResponseField name="id" type={"string"} required>
   Unique identifier for this authentication method.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
   Human-readable name of the authentication method.
 </ResponseField>
-
-## <span class="font-mono">AuthMethodId</span>
-
-Unique identifier for an authentication method.
-
-**Type:** `string`
 
 ## <span class="font-mono">AvailableCommand</span>
 
@@ -1518,6 +1504,7 @@ See protocol docs: [JSON-RPC Error Object](https://www.jsonrpc.org/specification
 
 ## <span class="font-mono">FileSystemCapability</span>
 
+Filesystem capabilities supported by the client.
 File system capabilities that a client may support.
 
 See protocol docs: [FileSystem](https://agentclientprotocol.com/protocol/initialization#filesystem)
@@ -1588,6 +1575,7 @@ An image provided to or from an LLM.
 
 ## <span class="font-mono">Implementation</span>
 
+Metadata about the implementation of the client or agent.
 Describes the name and version of an MCP implementation, with an optional
 title for UI representation.
 
@@ -1608,7 +1596,7 @@ If not provided, the name should be used for display.
 </ResponseField>
 <ResponseField name="version" type={"string"} required>
   Version of the implementation. Can be displayed to the user or used
-for debugging or metrics purposes.
+for debugging or metrics purposes. (e.g. "1.0.0").
 </ResponseField>
 
 ## <span class="font-mono">McpCapabilities</span>

@@ -324,12 +324,8 @@
           "type": ["string", "null"]
         },
         "id": {
-          "allOf": [
-            {
-              "$ref": "#/$defs/AuthMethodId"
-            }
-          ],
-          "description": "Unique identifier for this authentication method."
+          "description": "Unique identifier for this authentication method.",
+          "type": "string"
         },
         "name": {
           "description": "Human-readable name of the authentication method.",
@@ -339,10 +335,6 @@
       "required": ["id", "name"],
       "type": "object"
     },
-    "AuthMethodId": {
-      "description": "Unique identifier for an authentication method.",
-      "type": "string"
-    },
     "AuthenticateRequest": {
       "description": "Request parameters for the authenticate method.\n\nSpecifies which authentication method to use.",
       "properties": {
@@ -350,12 +342,8 @@
           "description": "Extension point for implementations"
         },
         "methodId": {
-          "allOf": [
-            {
-              "$ref": "#/$defs/AuthMethodId"
-            }
-          ],
-          "description": "The ID of the authentication method to use.\nMust be one of the methods advertised in the initialize response."
+          "description": "The ID of the authentication method to use.\nMust be one of the methods advertised in the initialize response.",
+          "type": "string"
         }
       },
       "required": ["methodId"],
@@ -364,7 +352,7 @@
       "x-side": "agent"
     },
     "AuthenticateResponse": {
-      "description": "Response to authenticate method",
+      "description": "Response to the `authenticate` method.",
       "properties": {
         "_meta": {
           "description": "Extension point for implementations"
@@ -982,7 +970,7 @@
       "type": "object"
     },
     "FileSystemCapability": {
-      "description": "File system capabilities that a client may support.\n\nSee protocol docs: [FileSystem](https://agentclientprotocol.com/protocol/initialization#filesystem)",
+      "description": "Filesystem capabilities supported by the client.\nFile system capabilities that a client may support.\n\nSee protocol docs: [FileSystem](https://agentclientprotocol.com/protocol/initialization#filesystem)",
       "properties": {
         "_meta": {
           "description": "Extension point for implementations"
@@ -1048,7 +1036,7 @@
       "type": "object"
     },
     "Implementation": {
-      "description": "Describes the name and version of an MCP implementation, with an optional\ntitle for UI representation.",
+      "description": "Metadata about the implementation of the client or agent.\nDescribes the name and version of an MCP implementation, with an optional\ntitle for UI representation.",
       "properties": {
         "name": {
           "description": "Intended for programmatic or logical use, but can be used as a display\nname fallback if title isn’t present.",
@@ -1059,7 +1047,7 @@
           "type": ["string", "null"]
         },
         "version": {
-          "description": "Version of the implementation. Can be displayed to the user or used\nfor debugging or metrics purposes.",
+          "description": "Version of the implementation. Can be displayed to the user or used\nfor debugging or metrics purposes. (e.g. \"1.0.0\").",
           "type": "string"
         }
       },
@@ -1113,7 +1101,7 @@
       "x-side": "agent"
     },
     "InitializeResponse": {
-      "description": "Response from the initialize method.\n\nContains the negotiated protocol version and agent capabilities.\n\nSee protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)",
+      "description": "Response to the `initialize` method.\n\nContains the negotiated protocol version and agent capabilities.\n\nSee protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)",
       "properties": {
         "_meta": {
           "description": "Extension point for implementations"
