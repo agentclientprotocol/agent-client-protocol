@@ -1225,6 +1225,21 @@ Clients SHOULD render this text as Markdown.
 
 <Expandable title="Properties">
 
+<ResponseField name="_meta" type={"object"}>
+  Extension point for implementations
+</ResponseField>
+<ResponseField
+  name="annotations"
+  type={
+    <>
+      <span>
+        <a href="#annotations">Annotations</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+></ResponseField>
+<ResponseField name="text" type={"string"} required></ResponseField>
 <ResponseField name="type" type={"string"} required></ResponseField>
 
 </Expandable>
@@ -1237,7 +1252,24 @@ Requires the `image` prompt capability when included in prompts.
 
 <Expandable title="Properties">
 
+<ResponseField name="_meta" type={"object"}>
+  Extension point for implementations
+</ResponseField>
+<ResponseField
+  name="annotations"
+  type={
+    <>
+      <span>
+        <a href="#annotations">Annotations</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+></ResponseField>
+<ResponseField name="data" type={"string"} required></ResponseField>
+<ResponseField name="mimeType" type={"string"} required></ResponseField>
 <ResponseField name="type" type={"string"} required></ResponseField>
+<ResponseField name="uri" type={"string | null"}></ResponseField>
 
 </Expandable>
 </ResponseField>
@@ -1249,6 +1281,22 @@ Requires the `audio` prompt capability when included in prompts.
 
 <Expandable title="Properties">
 
+<ResponseField name="_meta" type={"object"}>
+  Extension point for implementations
+</ResponseField>
+<ResponseField
+  name="annotations"
+  type={
+    <>
+      <span>
+        <a href="#annotations">Annotations</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+></ResponseField>
+<ResponseField name="data" type={"string"} required></ResponseField>
+<ResponseField name="mimeType" type={"string"} required></ResponseField>
 <ResponseField name="type" type={"string"} required></ResponseField>
 
 </Expandable>
@@ -1261,7 +1309,27 @@ All agents MUST support resource links in prompts.
 
 <Expandable title="Properties">
 
+<ResponseField name="_meta" type={"object"}>
+  Extension point for implementations
+</ResponseField>
+<ResponseField
+  name="annotations"
+  type={
+    <>
+      <span>
+        <a href="#annotations">Annotations</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+></ResponseField>
+<ResponseField name="description" type={"string | null"}></ResponseField>
+<ResponseField name="mimeType" type={"string | null"}></ResponseField>
+<ResponseField name="name" type={"string"} required></ResponseField>
+<ResponseField name="size" type={"integer | null"}></ResponseField>
+<ResponseField name="title" type={"string | null"}></ResponseField>
 <ResponseField name="type" type={"string"} required></ResponseField>
+<ResponseField name="uri" type={"string"} required></ResponseField>
 
 </Expandable>
 </ResponseField>
@@ -1275,6 +1343,25 @@ Requires the `embeddedContext` prompt capability when included in prompts.
 
 <Expandable title="Properties">
 
+<ResponseField name="_meta" type={"object"}>
+  Extension point for implementations
+</ResponseField>
+<ResponseField
+  name="annotations"
+  type={
+    <>
+      <span>
+        <a href="#annotations">Annotations</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+></ResponseField>
+<ResponseField
+  name="resource"
+  type={<a href="#embeddedresourceresource">EmbeddedResourceResource</a>}
+  required
+></ResponseField>
 <ResponseField name="type" type={"string"} required></ResponseField>
 
 </Expandable>
@@ -2057,6 +2144,16 @@ A chunk of the user's message being streamed.
 
 <Expandable title="Properties">
 
+<ResponseField name="_meta" type={"object"}>
+  Extension point for implementations
+</ResponseField>
+<ResponseField
+  name="content"
+  type={<a href="#contentblock">ContentBlock</a>}
+  required
+>
+  A single item of content
+</ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required></ResponseField>
 
 </Expandable>
@@ -2067,6 +2164,16 @@ A chunk of the agent's response being streamed.
 
 <Expandable title="Properties">
 
+<ResponseField name="_meta" type={"object"}>
+  Extension point for implementations
+</ResponseField>
+<ResponseField
+  name="content"
+  type={<a href="#contentblock">ContentBlock</a>}
+  required
+>
+  A single item of content
+</ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required></ResponseField>
 
 </Expandable>
@@ -2077,6 +2184,16 @@ A chunk of the agent's internal reasoning being streamed.
 
 <Expandable title="Properties">
 
+<ResponseField name="_meta" type={"object"}>
+  Extension point for implementations
+</ResponseField>
+<ResponseField
+  name="content"
+  type={<a href="#contentblock">ContentBlock</a>}
+  required
+>
+  A single item of content
+</ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required></ResponseField>
 
 </Expandable>
@@ -2087,7 +2204,63 @@ Notification that a new tool call has been initiated.
 
 <Expandable title="Properties">
 
+<ResponseField name="_meta" type={"object"}>
+  Extension point for implementations
+</ResponseField>
+<ResponseField
+  name="content"
+  type={
+    <>
+      <span>
+        <a href="#toolcallcontent">ToolCallContent</a>
+      </span>
+      <span>[]</span>
+    </>
+  }
+>
+  Content produced by the tool call.
+</ResponseField>
+<ResponseField name="kind" type={<a href="#toolkind">ToolKind</a>}>
+  The category of tool being invoked. Helps clients choose appropriate icons and
+  UI treatment.
+</ResponseField>
+<ResponseField
+  name="locations"
+  type={
+    <>
+      <span>
+        <a href="#toolcalllocation">ToolCallLocation</a>
+      </span>
+      <span>[]</span>
+    </>
+  }
+>
+  File locations affected by this tool call. Enables "follow-along" features in
+  clients.
+</ResponseField>
+<ResponseField name="rawInput" type={"object"}>
+  Raw input parameters sent to the tool.
+</ResponseField>
+<ResponseField name="rawOutput" type={"object"}>
+  Raw output returned by the tool.
+</ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required></ResponseField>
+<ResponseField
+  name="status"
+  type={<a href="#toolcallstatus">ToolCallStatus</a>}
+>
+  Current execution status of the tool call.
+</ResponseField>
+<ResponseField name="title" type={"string"} required>
+  Human-readable title describing what the tool is doing.
+</ResponseField>
+<ResponseField
+  name="toolCallId"
+  type={<a href="#toolcallid">ToolCallId</a>}
+  required
+>
+  Unique identifier for this tool call within the session.
+</ResponseField>
 
 </Expandable>
 </ResponseField>
@@ -2097,7 +2270,58 @@ Update on the status or results of a tool call.
 
 <Expandable title="Properties">
 
+<ResponseField name="_meta" type={"object"}>
+  Extension point for implementations
+</ResponseField>
+<ResponseField name="content" type={"array | null"}>
+  Replace the content collection.
+</ResponseField>
+<ResponseField
+  name="kind"
+  type={
+    <>
+      <span>
+        <a href="#toolkind">ToolKind</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Update the tool kind.
+</ResponseField>
+<ResponseField name="locations" type={"array | null"}>
+  Replace the locations collection.
+</ResponseField>
+<ResponseField name="rawInput" type={"object"}>
+  Update the raw input.
+</ResponseField>
+<ResponseField name="rawOutput" type={"object"}>
+  Update the raw output.
+</ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required></ResponseField>
+<ResponseField
+  name="status"
+  type={
+    <>
+      <span>
+        <a href="#toolcallstatus">ToolCallStatus</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Update the execution status.
+</ResponseField>
+<ResponseField name="title" type={"string | null"}>
+  Update the human-readable title.
+</ResponseField>
+<ResponseField
+  name="toolCallId"
+  type={<a href="#toolcallid">ToolCallId</a>}
+  required
+>
+  The ID of the tool call being updated.
+</ResponseField>
 
 </Expandable>
 </ResponseField>
@@ -2108,7 +2332,18 @@ See protocol docs: [Agent Plan](https://agentclientprotocol.com/protocol/agent-p
 
 <Expandable title="Properties">
 
-<ResponseField name="sessionUpdate" type={"string"} required></ResponseField>
+<ResponseField name="_meta" type={"object"} >
+  Extension point for implementations
+</ResponseField>
+<ResponseField name="entries" type={<><span><a href="#planentry">PlanEntry</a></span><span>[]</span></>} required>
+  The list of tasks to be accomplished.
+
+When updating a plan, the agent must send a complete list of all entries
+with their current status. The client replaces the entire plan with each update.
+
+</ResponseField>
+<ResponseField name="sessionUpdate" type={"string"} required>
+</ResponseField>
 
 </Expandable>
 </ResponseField>
@@ -2118,6 +2353,23 @@ Available commands are ready or have changed
 
 <Expandable title="Properties">
 
+<ResponseField name="_meta" type={"object"}>
+  Extension point for implementations
+</ResponseField>
+<ResponseField
+  name="availableCommands"
+  type={
+    <>
+      <span>
+        <a href="#availablecommand">AvailableCommand</a>
+      </span>
+      <span>[]</span>
+    </>
+  }
+  required
+>
+  Commands the agent can execute
+</ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required></ResponseField>
 
 </Expandable>
@@ -2130,6 +2382,16 @@ See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/sess
 
 <Expandable title="Properties">
 
+<ResponseField name="_meta" type={"object"}>
+  Extension point for implementations
+</ResponseField>
+<ResponseField
+  name="currentModeId"
+  type={<a href="#sessionmodeid">SessionModeId</a>}
+  required
+>
+  The ID of the current mode
+</ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required></ResponseField>
 
 </Expandable>
