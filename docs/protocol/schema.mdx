@@ -2143,34 +2143,48 @@ See protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/tool-ca
 
 **Properties:**
 
-<ResponseField name="_meta" type={"object"} >
+<ResponseField name="_meta" type={"object"}>
   Extension point for implementations
 </ResponseField>
-<ResponseField name="content" type={<><span><a href="#toolcallcontent">ToolCallContent</a></span><span>[]</span></>} >
+<ResponseField
+  name="content"
+  type={
+    <>
+      <span>
+        <a href="#toolcallcontent">ToolCallContent</a>
+      </span>
+      <span>[]</span>
+    </>
+  }
+>
   Content produced by the tool call.
 </ResponseField>
-<ResponseField name="kind" type={"object"} >
-  The category of tool being invoked.
-Helps clients choose appropriate icons and UI treatment.
-
-    - Default: `"other"`
-
+<ResponseField name="kind" type={"object"}>
+  The category of tool being invoked. Helps clients choose appropriate icons and
+  UI treatment.
 </ResponseField>
-<ResponseField name="locations" type={<><span><a href="#toolcalllocation">ToolCallLocation</a></span><span>[]</span></>} >
-  File locations affected by this tool call.
-Enables "follow-along" features in clients.
+<ResponseField
+  name="locations"
+  type={
+    <>
+      <span>
+        <a href="#toolcalllocation">ToolCallLocation</a>
+      </span>
+      <span>[]</span>
+    </>
+  }
+>
+  File locations affected by this tool call. Enables "follow-along" features in
+  clients.
 </ResponseField>
-<ResponseField name="rawInput" type={"object"} >
+<ResponseField name="rawInput" type={"object"}>
   Raw input parameters sent to the tool.
 </ResponseField>
-<ResponseField name="rawOutput" type={"object"} >
+<ResponseField name="rawOutput" type={"object"}>
   Raw output returned by the tool.
 </ResponseField>
-<ResponseField name="status" type={"object"} >
+<ResponseField name="status" type={"object"}>
   Current execution status of the tool call.
-
-    - Default: `"pending"`
-
 </ResponseField>
 <ResponseField name="title" type={"string"} required>
   Human-readable title describing what the tool is doing.

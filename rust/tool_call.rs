@@ -27,10 +27,10 @@ pub struct ToolCall {
     pub title: String,
     /// The category of tool being invoked.
     /// Helps clients choose appropriate icons and UI treatment.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "ToolKind::is_default")]
     pub kind: ToolKind,
     /// Current execution status of the tool call.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "ToolCallStatus::is_default")]
     pub status: ToolCallStatus,
     /// Content produced by the tool call.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -235,6 +235,12 @@ pub enum ToolKind {
     Other,
 }
 
+impl ToolKind {
+    fn is_default(&self) -> bool {
+        matches!(self, ToolKind::Other)
+    }
+}
+
 /// Execution status of a tool call.
 ///
 /// Tool calls progress through different statuses during their lifecycle.
@@ -253,6 +259,12 @@ pub enum ToolCallStatus {
     Completed,
     /// The tool call failed with an error.
     Failed,
+}
+
+impl ToolCallStatus {
+    fn is_default(&self) -> bool {
+        matches!(self, ToolCallStatus::Pending)
+    }
 }
 
 /// Content produced by a tool call.
