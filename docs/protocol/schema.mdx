@@ -1100,7 +1100,7 @@ The input specification for a command.
 
 **Type:** Union
 
-<ResponseField name="Object">
+<ResponseField name="Variant">
 All text that was typed after the command name is provided as input.
 
 <Expandable title="Properties">
@@ -2136,6 +2136,22 @@ The sender or recipient of messages and data in a conversation.
 | `"assistant"` |
 | `"user"`      |
 
+## <span class="font-mono">SelectedPermissionOutcome</span>
+
+The user selected one of the provided options.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField
+  name="optionId"
+  type={<a href="#permissionoptionid">PermissionOptionId</a>}
+  required
+>
+  The ID of the option the user selected.
+</ResponseField>
+
 ## <span class="font-mono">SessionId</span>
 
 A unique identifier for a conversation session between a client and agent.
@@ -2868,3 +2884,15 @@ See protocol docs: [Creating](https://agentclientprotocol.com/protocol/tool-call
 </ResponseField>
 
 <ResponseField name="other">Other tool types (default).</ResponseField>
+
+## <span class="font-mono">UnstructuredCommandInput</span>
+
+All text that was typed after the command name is provided as input.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="hint" type={"string"} required>
+  A hint to display when the input hasn't been provided yet
+</ResponseField>
