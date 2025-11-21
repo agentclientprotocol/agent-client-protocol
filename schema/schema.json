@@ -257,7 +257,7 @@
         {
           "$ref": "#/$defs/PromptResponse"
         },
-        true
+        {}
       ],
       "description": "All possible responses that an agent can send to a client.\n\nThis enum is used internally for routing RPC responses. You typically won't need\nto use this directly - the responses are handled automatically by the connection.\n\nThese are responses to the corresponding `ClientRequest` variants.",
       "x-docs-ignore": true
@@ -706,7 +706,7 @@
         {
           "$ref": "#/$defs/KillTerminalCommandResponse"
         },
-        true
+        {}
       ],
       "description": "All possible responses that a client can send to an agent.\n\nThis enum is used internally for routing RPC responses. You typically won't need\nto use this directly - the responses are handled automatically by the connection.\n\nThese are responses to the corresponding `AgentRequest` variants.",
       "x-docs-ignore": true
@@ -2104,7 +2104,7 @@
     "SetSessionModeResponse": {
       "description": "Response to `session/set_mode` method.",
       "properties": {
-        "_meta": true
+        "_meta": {}
       },
       "type": "object",
       "x-method": "session/set_mode",

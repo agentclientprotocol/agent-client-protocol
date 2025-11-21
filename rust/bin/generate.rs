@@ -2,7 +2,11 @@ use agent_client_protocol_schema::{
     AGENT_METHOD_NAMES, AgentSide, CLIENT_METHOD_NAMES, ClientSide, JsonRpcMessage,
     OutgoingMessage, VERSION,
 };
-use schemars::{JsonSchema, generate::SchemaSettings, transform::RemoveRefSiblings};
+use schemars::{
+    JsonSchema,
+    generate::SchemaSettings,
+    transform::{RemoveRefSiblings, ReplaceBoolSchemas},
+};
 use std::{env, fs, path::Path};
 
 use markdown_generator::MarkdownGenerator;
@@ -27,7 +31,9 @@ enum AcpTypes {
 
 fn main() {
     let mut settings = SchemaSettings::draft2020_12();
-    settings = settings.with_transform(RemoveRefSiblings::default());
+    settings = settings
+        .with_transform(RemoveRefSiblings::default())
+        .with_transform(ReplaceBoolSchemas::default());
 
     let generator = settings.into_generator();
     let mut schema = generator.into_root_schema_for::<AcpTypes>();
