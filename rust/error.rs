@@ -24,6 +24,7 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 ///
 /// See protocol docs: [JSON-RPC Error Object](https://www.jsonrpc.org/specification#error_object)
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct Error {
     /// A number indicating the error type that occurred.
     /// This must be an integer as defined in the JSON-RPC specification.
@@ -41,11 +42,10 @@ impl Error {
     /// Creates a new error with the given code and message.
     ///
     /// The code parameter can be an `ErrorCode` constant or a tuple of (code, message).
-    pub fn new(code: impl Into<(i32, String)>) -> Self {
-        let (code, message) = code.into();
+    pub fn new(code: i32, message: impl Into<String>) -> Self {
         Error {
             code,
-            message,
+            message: message.into(),
             data: None,
         }
     }
@@ -55,7 +55,7 @@ impl Error {
     /// This method is chainable and allows attaching context-specific information
     /// to help with debugging or provide more details about the error.
     #[must_use]
-    pub fn with_data(mut self, data: impl Into<serde_json::Value>) -> Self {
+    pub fn data(mut self, data: impl Into<serde_json::Value>) -> Self {
         self.data = Some(data.into());
         self
     }
@@ -63,45 +63,45 @@ impl Error {
     /// Invalid JSON was received by the server. An error occurred on the server while parsing the JSON text.
     #[must_use]
     pub fn parse_error() -> Self {
-        Error::new(ErrorCode::PARSE_ERROR)
+        ErrorCode::PARSE_ERROR.into()
     }
 
     /// The JSON sent is not a valid Request object.
     #[must_use]
     pub fn invalid_request() -> Self {
-        Error::new(ErrorCode::INVALID_REQUEST)
+        ErrorCode::INVALID_REQUEST.into()
     }
 
     /// The method does not exist / is not available.
     #[must_use]
     pub fn method_not_found() -> Self {
-        Error::new(ErrorCode::METHOD_NOT_FOUND)
+        ErrorCode::METHOD_NOT_FOUND.into()
     }
 
     /// Invalid method parameter(s).
     #[must_use]
     pub fn invalid_params() -> Self {
-        Error::new(ErrorCode::INVALID_PARAMS)
+        ErrorCode::INVALID_PARAMS.into()
     }
 
     /// Internal JSON-RPC error.
     #[must_use]
     pub fn internal_error() -> Self {
-        Error::new(ErrorCode::INTERNAL_ERROR)
+        ErrorCode::INTERNAL_ERROR.into()
     }
 
     /// Authentication required.
     #[must_use]
     pub fn auth_required() -> Self {
-        Error::new(ErrorCode::AUTH_REQUIRED)
+        ErrorCode::AUTH_REQUIRED.into()
     }
 
     /// A given resource, such as a file, was not found.
     #[must_use]
     pub fn resource_not_found(uri: Option<String>) -> Self {
-        let err = Error::new(ErrorCode::RESOURCE_NOT_FOUND);
+        let err: Self = ErrorCode::RESOURCE_NOT_FOUND.into();
         if let Some(uri) = uri {
-            err.with_data(serde_json::json!({ "uri": uri }))
+            err.data(serde_json::json!({ "uri": uri }))
         } else {
             err
         }
@@ -111,7 +111,7 @@ impl Error {
     ///
     /// The error's string representation is included as additional data.
     pub fn into_internal_error(err: impl std::error::Error) -> Self {
-        Error::internal_error().with_data(err.to_string())
+        Error::internal_error().data(err.to_string())
     }
 }
 
@@ -175,15 +175,9 @@ impl ErrorCode {
     };
 }
 
-impl From<ErrorCode> for (i32, String) {
-    fn from(error_code: ErrorCode) -> Self {
-        (error_code.code, error_code.message.to_string())
-    }
-}
-
 impl From<ErrorCode> for Error {
     fn from(error_code: ErrorCode) -> Self {
-        Error::new(error_code)
+        Error::new(error_code.code, error_code.message)
     }
 }
 
@@ -217,6 +211,6 @@ impl From<anyhow::Error> for Error {
 
 impl From<serde_json::Error> for Error {
     fn from(error: serde_json::Error) -> Self {
-        Error::invalid_params().with_data(error.to_string())
+        Error::invalid_params().data(error.to_string())
     }
 }

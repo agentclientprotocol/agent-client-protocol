@@ -29,6 +29,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
 #[serde(tag = "type", rename_all = "snake_case")]
 #[schemars(extend("discriminator" = {"propertyName": "type"}))]
+#[non_exhaustive]
 pub enum ContentBlock {
     /// Text content. May be plain text or formatted with Markdown.
     ///
@@ -57,6 +58,7 @@ pub enum ContentBlock {
 
 /// Text provided to or from an LLM.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
+#[non_exhaustive]
 pub struct TextContent {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub annotations: Option<Annotations>,
@@ -66,19 +68,37 @@ pub struct TextContent {
     pub meta: Option<serde_json::Value>,
 }
 
+impl TextContent {
+    pub fn new(text: impl Into<String>) -> Self {
+        Self {
+            annotations: None,
+            text: text.into(),
+            meta: None,
+        }
+    }
+
+    pub fn annotations(mut self, annotations: Annotations) -> Self {
+        self.annotations = Some(annotations);
+        self
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
+    }
+}
+
 impl<T: Into<String>> From<T> for ContentBlock {
     fn from(value: T) -> Self {
-        Self::Text(TextContent {
-            annotations: None,
-            text: value.into(),
-            meta: None,
-        })
+        Self::Text(TextContent::new(value))
     }
 }
 
 /// An image provided to or from an LLM.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct ImageContent {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub annotations: Option<Annotations>,
@@ -91,9 +111,38 @@ pub struct ImageContent {
     pub meta: Option<serde_json::Value>,
 }
 
+impl ImageContent {
+    pub fn new(data: impl Into<String>, mime_type: impl Into<String>) -> Self {
+        Self {
+            annotations: None,
+            data: data.into(),
+            mime_type: mime_type.into(),
+            uri: None,
+            meta: None,
+        }
+    }
+
+    pub fn annotations(mut self, annotations: Annotations) -> Self {
+        self.annotations = Some(annotations);
+        self
+    }
+
+    pub fn uri(mut self, uri: impl Into<String>) -> Self {
+        self.uri = Some(uri.into());
+        self
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
+    }
+}
+
 /// Audio provided to or from an LLM.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct AudioContent {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub annotations: Option<Annotations>,
@@ -104,8 +153,31 @@ pub struct AudioContent {
     pub meta: Option<serde_json::Value>,
 }
 
+impl AudioContent {
+    pub fn new(data: impl Into<String>, mime_type: impl Into<String>) -> Self {
+        Self {
+            annotations: None,
+            data: data.into(),
+            mime_type: mime_type.into(),
+            meta: None,
+        }
+    }
+
+    pub fn annotations(mut self, annotations: Annotations) -> Self {
+        self.annotations = Some(annotations);
+        self
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
+    }
+}
+
 /// The contents of a resource, embedded into a prompt or tool call result.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
+#[non_exhaustive]
 pub struct EmbeddedResource {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub annotations: Option<Annotations>,
@@ -115,9 +187,31 @@ pub struct EmbeddedResource {
     pub meta: Option<serde_json::Value>,
 }
 
+impl EmbeddedResource {
+    pub fn new(resource: EmbeddedResourceResource) -> Self {
+        Self {
+            annotations: None,
+            resource,
+            meta: None,
+        }
+    }
+
+    pub fn annotations(mut self, annotations: Annotations) -> Self {
+        self.annotations = Some(annotations);
+        self
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
+    }
+}
+
 /// Resource content that can be embedded in a message.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
 #[serde(untagged)]
+#[non_exhaustive]
 pub enum EmbeddedResourceResource {
     TextResourceContents(TextResourceContents),
     BlobResourceContents(BlobResourceContents),
@@ -126,6 +220,7 @@ pub enum EmbeddedResourceResource {
 /// Text-based resource contents.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct TextResourceContents {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mime_type: Option<String>,
@@ -136,9 +231,32 @@ pub struct TextResourceContents {
     pub meta: Option<serde_json::Value>,
 }
 
+impl TextResourceContents {
+    pub fn new(text: impl Into<String>, uri: impl Into<String>) -> Self {
+        Self {
+            mime_type: None,
+            text: text.into(),
+            uri: uri.into(),
+            meta: None,
+        }
+    }
+
+    pub fn mime_type(mut self, mime_type: impl Into<String>) -> Self {
+        self.mime_type = Some(mime_type.into());
+        self
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
+    }
+}
+
 /// Binary resource contents.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct BlobResourceContents {
     pub blob: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -149,9 +267,32 @@ pub struct BlobResourceContents {
     pub meta: Option<serde_json::Value>,
 }
 
+impl BlobResourceContents {
+    pub fn new(blob: impl Into<String>, uri: impl Into<String>) -> Self {
+        Self {
+            blob: blob.into(),
+            mime_type: None,
+            uri: uri.into(),
+            meta: None,
+        }
+    }
+
+    pub fn mime_type(mut self, mime_type: impl Into<String>) -> Self {
+        self.mime_type = Some(mime_type.into());
+        self
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
+    }
+}
+
 /// A resource that the server is capable of reading, included in a prompt or tool call result.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct ResourceLink {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub annotations: Option<Annotations>,
@@ -170,9 +311,56 @@ pub struct ResourceLink {
     pub meta: Option<serde_json::Value>,
 }
 
+impl ResourceLink {
+    pub fn new(name: impl Into<String>, uri: impl Into<String>) -> Self {
+        Self {
+            annotations: None,
+            description: None,
+            mime_type: None,
+            name: name.into(),
+            size: None,
+            title: None,
+            uri: uri.into(),
+            meta: None,
+        }
+    }
+
+    pub fn annotations(mut self, annotations: Annotations) -> Self {
+        self.annotations = Some(annotations);
+        self
+    }
+
+    pub fn description(mut self, description: impl Into<String>) -> Self {
+        self.description = Some(description.into());
+        self
+    }
+
+    pub fn mime_type(mut self, mime_type: impl Into<String>) -> Self {
+        self.mime_type = Some(mime_type.into());
+        self
+    }
+
+    pub fn size(mut self, size: i64) -> Self {
+        self.size = Some(size);
+        self
+    }
+
+    pub fn title(mut self, title: impl Into<String>) -> Self {
+        self.title = Some(title.into());
+        self
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
+    }
+}
+
 /// Optional annotations for the client. The client can use annotations to inform how objects are used or displayed
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema, Default)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct Annotations {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub audience: Option<Vec<Role>>,
@@ -185,9 +373,37 @@ pub struct Annotations {
     pub meta: Option<serde_json::Value>,
 }
 
+impl Annotations {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn audience(mut self, audience: Vec<Role>) -> Self {
+        self.audience = Some(audience);
+        self
+    }
+
+    pub fn last_modified(mut self, last_modified: impl Into<String>) -> Self {
+        self.last_modified = Some(last_modified.into());
+        self
+    }
+
+    pub fn priority(mut self, priority: f64) -> Self {
+        self.priority = Some(priority);
+        self
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
+    }
+}
+
 /// The sender or recipient of messages and data in a conversation.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub enum Role {
     Assistant,
     User,

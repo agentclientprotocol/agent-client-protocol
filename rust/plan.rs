@@ -17,6 +17,7 @@ use serde::{Deserialize, Serialize};
 /// See protocol docs: [Agent Plan](https://agentclientprotocol.com/protocol/agent-plan)
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct Plan {
     /// The list of tasks to be accomplished.
     ///
@@ -28,6 +29,21 @@ pub struct Plan {
     pub meta: Option<serde_json::Value>,
 }
 
+impl Plan {
+    pub fn new(entries: Vec<PlanEntry>) -> Self {
+        Self {
+            entries,
+            meta: None,
+        }
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
+    }
+}
+
 /// A single entry in the execution plan.
 ///
 /// Represents a task or goal that the assistant intends to accomplish
@@ -35,6 +51,7 @@ pub struct Plan {
 /// See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/agent-plan#plan-entries)
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct PlanEntry {
     /// Human-readable description of what this task aims to accomplish.
     pub content: String,
@@ -48,6 +65,27 @@ pub struct PlanEntry {
     pub meta: Option<serde_json::Value>,
 }
 
+impl PlanEntry {
+    pub fn new(
+        content: impl Into<String>,
+        priority: PlanEntryPriority,
+        status: PlanEntryStatus,
+    ) -> Self {
+        Self {
+            content: content.into(),
+            priority,
+            status,
+            meta: None,
+        }
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
+    }
+}
+
 /// Priority levels for plan entries.
 ///
 /// Used to indicate the relative importance or urgency of different
@@ -55,6 +93,7 @@ pub struct PlanEntry {
 /// See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/agent-plan#plan-entries)
 #[derive(Deserialize, Serialize, JsonSchema, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
+#[non_exhaustive]
 pub enum PlanEntryPriority {
     /// High priority task - critical to the overall goal.
     High,
@@ -70,6 +109,7 @@ pub enum PlanEntryPriority {
 /// See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/agent-plan#plan-entries)
 #[derive(Deserialize, Serialize, JsonSchema, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
+#[non_exhaustive]
 pub enum PlanEntryStatus {
     /// The task has not started yet.
     Pending,

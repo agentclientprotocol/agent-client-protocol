@@ -25,6 +25,7 @@ use crate::{
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[schemars(extend("x-side" = "client", "x-method" = SESSION_UPDATE_NOTIFICATION))]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct SessionNotification {
     /// The ID of the session this update pertains to.
     pub session_id: SessionId,
@@ -35,6 +36,22 @@ pub struct SessionNotification {
     pub meta: Option<serde_json::Value>,
 }
 
+impl SessionNotification {
+    pub fn new(session_id: SessionId, update: SessionUpdate) -> Self {
+        Self {
+            session_id,
+            update,
+            meta: None,
+        }
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
+    }
+}
+
 /// Different types of updates that can be sent during session processing.
 ///
 /// These updates provide real-time feedback about the agent's progress.
@@ -43,6 +60,7 @@ pub struct SessionNotification {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[serde(tag = "sessionUpdate", rename_all = "snake_case")]
 #[schemars(extend("discriminator" = {"propertyName": "sessionUpdate"}))]
+#[non_exhaustive]
 pub enum SessionUpdate {
     /// A chunk of the user's message being streamed.
     UserMessageChunk(ContentChunk),
@@ -70,6 +88,7 @@ pub enum SessionUpdate {
 /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct CurrentModeUpdate {
     /// The ID of the current mode
     pub current_mode_id: SessionModeId,
@@ -78,9 +97,25 @@ pub struct CurrentModeUpdate {
     pub meta: Option<serde_json::Value>,
 }
 
+impl CurrentModeUpdate {
+    pub fn new(current_mode_id: SessionModeId) -> Self {
+        Self {
+            current_mode_id,
+            meta: None,
+        }
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
+    }
+}
+
 /// A streamed item of content
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct ContentChunk {
     /// A single item of content
     pub content: ContentBlock,
@@ -89,9 +124,25 @@ pub struct ContentChunk {
     pub meta: Option<serde_json::Value>,
 }
 
+impl ContentChunk {
+    pub fn new(content: ContentBlock) -> Self {
+        Self {
+            content,
+            meta: None,
+        }
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
+    }
+}
+
 /// Available commands are ready or have changed
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct AvailableCommandsUpdate {
     /// Commands the agent can execute
     pub available_commands: Vec<AvailableCommand>,
@@ -100,9 +151,25 @@ pub struct AvailableCommandsUpdate {
     pub meta: Option<serde_json::Value>,
 }
 
+impl AvailableCommandsUpdate {
+    pub fn new(available_commands: Vec<AvailableCommand>) -> Self {
+        Self {
+            available_commands,
+            meta: None,
+        }
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
+    }
+}
+
 /// Information about a command.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct AvailableCommand {
     /// Command name (e.g., `create_plan`, `research_codebase`).
     pub name: String,
@@ -115,15 +182,51 @@ pub struct AvailableCommand {
     pub meta: Option<serde_json::Value>,
 }
 
+impl AvailableCommand {
+    pub fn new(name: impl Into<String>, description: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            description: description.into(),
+            input: None,
+            meta: None,
+        }
+    }
+
+    /// Input for the command if required
+    pub fn input(mut self, input: AvailableCommandInput) -> Self {
+        self.input = Some(input);
+        self
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
+    }
+}
+
 /// The input specification for a command.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(untagged, rename_all = "camelCase")]
+#[non_exhaustive]
 pub enum AvailableCommandInput {
     /// All text that was typed after the command name is provided as input.
-    Unstructured {
-        /// A hint to display when the input hasn't been provided yet
-        hint: String,
-    },
+    Unstructured(UnstructuredCommandInput),
+}
+
+/// All text that was typed after the command name is provided as input.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct UnstructuredCommandInput {
+    /// A hint to display when the input hasn't been provided yet
+    pub hint: String,
+}
+
+impl UnstructuredCommandInput {
+    pub fn new(hint: impl Into<String>) -> Self {
+        Self { hint: hint.into() }
+    }
 }
 
 // Permission
@@ -136,6 +239,7 @@ pub enum AvailableCommandInput {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[schemars(extend("x-side" = "client", "x-method" = SESSION_REQUEST_PERMISSION_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct RequestPermissionRequest {
     /// The session ID for this request.
     pub session_id: SessionId,
@@ -148,9 +252,31 @@ pub struct RequestPermissionRequest {
     pub meta: Option<serde_json::Value>,
 }
 
+impl RequestPermissionRequest {
+    pub fn new(
+        session_id: SessionId,
+        tool_call: ToolCallUpdate,
+        options: Vec<PermissionOption>,
+    ) -> Self {
+        Self {
+            session_id,
+            tool_call,
+            options,
+            meta: None,
+        }
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
+    }
+}
+
 /// An option presented to the user when requesting permission.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct PermissionOption {
     /// Unique identifier for this permission option.
     pub option_id: PermissionOptionId,
@@ -161,6 +287,27 @@ pub struct PermissionOption {
     /// Extension point for implementations
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<serde_json::Value>,
+}
+
+impl PermissionOption {
+    pub fn new(
+        option_id: PermissionOptionId,
+        name: impl Into<String>,
+        kind: PermissionOptionKind,
+    ) -> Self {
+        Self {
+            option_id,
+            name: name.into(),
+            kind,
+            meta: None,
+        }
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
+    }
 }
 
 /// Unique identifier for a permission option.
@@ -174,6 +321,7 @@ pub struct PermissionOptionId(pub Arc<str>);
 /// Helps clients choose appropriate icons and UI treatment.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
+#[non_exhaustive]
 pub enum PermissionOptionKind {
     /// Allow this operation only this time.
     AllowOnce,
@@ -189,6 +337,7 @@ pub enum PermissionOptionKind {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "client", "x-method" = SESSION_REQUEST_PERMISSION_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct RequestPermissionResponse {
     /// The user's decision on the permission request.
     // This extra-level is unfortunately needed because the output must be an object
@@ -198,10 +347,26 @@ pub struct RequestPermissionResponse {
     pub meta: Option<serde_json::Value>,
 }
 
+impl RequestPermissionResponse {
+    pub fn new(outcome: RequestPermissionOutcome) -> Self {
+        Self {
+            outcome,
+            meta: None,
+        }
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
+    }
+}
+
 /// The outcome of a permission request.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(tag = "outcome", rename_all = "snake_case")]
 #[schemars(extend("discriminator" = {"propertyName": "outcome"}))]
+#[non_exhaustive]
 pub enum RequestPermissionOutcome {
     /// The prompt turn was cancelled before the user responded.
     ///
@@ -213,10 +378,22 @@ pub enum RequestPermissionOutcome {
     Cancelled,
     /// The user selected one of the provided options.
     #[serde(rename_all = "camelCase")]
-    Selected {
-        /// The ID of the option the user selected.
-        option_id: PermissionOptionId,
-    },
+    Selected(SelectedPermissionOutcome),
+}
+
+/// The user selected one of the provided options.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct SelectedPermissionOutcome {
+    /// The ID of the option the user selected.
+    pub option_id: PermissionOptionId,
+}
+
+impl SelectedPermissionOutcome {
+    pub fn new(option_id: PermissionOptionId) -> Self {
+        Self { option_id }
+    }
 }
 
 // Write text file
@@ -227,6 +404,7 @@ pub enum RequestPermissionOutcome {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "client", "x-method" = FS_WRITE_TEXT_FILE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct WriteTextFileRequest {
     /// The session ID for this request.
     pub session_id: SessionId,
@@ -239,15 +417,48 @@ pub struct WriteTextFileRequest {
     pub meta: Option<serde_json::Value>,
 }
 
+impl WriteTextFileRequest {
+    pub fn new(
+        session_id: SessionId,
+        path: impl Into<PathBuf>,
+        content: impl Into<String>,
+    ) -> Self {
+        Self {
+            session_id,
+            path: path.into(),
+            content: content.into(),
+            meta: None,
+        }
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
+    }
+}
+
 /// Response to `fs/write_text_file`
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
+#[serde(default, rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = FS_WRITE_TEXT_FILE_METHOD_NAME))]
-#[serde(default)]
+#[non_exhaustive]
 pub struct WriteTextFileResponse {
     /// Extension point for implementations
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<serde_json::Value>,
+}
+
+impl WriteTextFileResponse {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
+    }
 }
 
 // Read text file
@@ -258,6 +469,7 @@ pub struct WriteTextFileResponse {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "client", "x-method" = FS_READ_TEXT_FILE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct ReadTextFileRequest {
     /// The session ID for this request.
     pub session_id: SessionId,
@@ -274,15 +486,61 @@ pub struct ReadTextFileRequest {
     pub meta: Option<serde_json::Value>,
 }
 
+impl ReadTextFileRequest {
+    pub fn new(session_id: SessionId, path: impl Into<PathBuf>) -> Self {
+        Self {
+            session_id,
+            path: path.into(),
+            line: None,
+            limit: None,
+            meta: None,
+        }
+    }
+
+    /// Line number to start reading from (1-based).
+    pub fn line(mut self, line: u32) -> Self {
+        self.line = Some(line);
+        self
+    }
+
+    /// Maximum number of lines to read.
+    pub fn limit(mut self, limit: u32) -> Self {
+        self.limit = Some(limit);
+        self
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
+    }
+}
+
 /// Response containing the contents of a text file.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "client", "x-method" = FS_READ_TEXT_FILE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct ReadTextFileResponse {
     pub content: String,
     /// Extension point for implementations
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<serde_json::Value>,
+}
+
+impl ReadTextFileResponse {
+    pub fn new(content: impl Into<String>) -> Self {
+        Self {
+            content: content.into(),
+            meta: None,
+        }
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
+    }
 }
 
 // Terminals
@@ -296,6 +554,7 @@ pub struct TerminalId(pub Arc<str>);
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_CREATE_METHOD_NAME))]
+#[non_exhaustive]
 pub struct CreateTerminalRequest {
     /// The session ID for this request.
     pub session_id: SessionId,
@@ -325,10 +584,62 @@ pub struct CreateTerminalRequest {
     pub meta: Option<serde_json::Value>,
 }
 
+impl CreateTerminalRequest {
+    pub fn new(session_id: SessionId, command: impl Into<String>) -> Self {
+        Self {
+            session_id,
+            command: command.into(),
+            args: Vec::new(),
+            env: Vec::new(),
+            cwd: None,
+            output_byte_limit: None,
+            meta: None,
+        }
+    }
+
+    /// Array of command arguments.
+    pub fn args(mut self, args: Vec<String>) -> Self {
+        self.args = args;
+        self
+    }
+
+    /// Environment variables for the command.
+    pub fn env(mut self, env: Vec<crate::EnvVariable>) -> Self {
+        self.env = env;
+        self
+    }
+
+    /// Working directory for the command (absolute path).
+    pub fn cwd(mut self, cwd: impl Into<PathBuf>) -> Self {
+        self.cwd = Some(cwd.into());
+        self
+    }
+
+    /// Maximum number of output bytes to retain.
+    ///
+    /// When the limit is exceeded, the Client truncates from the beginning of the output
+    /// to stay within the limit.
+    ///
+    /// The Client MUST ensure truncation happens at a character boundary to maintain valid
+    /// string output, even if this means the retained output is slightly less than the
+    /// specified limit.
+    pub fn output_byte_limit(mut self, output_byte_limit: u64) -> Self {
+        self.output_byte_limit = Some(output_byte_limit);
+        self
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
+    }
+}
+
 /// Response containing the ID of the created terminal.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_CREATE_METHOD_NAME))]
+#[non_exhaustive]
 pub struct CreateTerminalResponse {
     /// The unique identifier for the created terminal.
     pub terminal_id: TerminalId,
@@ -337,10 +648,26 @@ pub struct CreateTerminalResponse {
     pub meta: Option<serde_json::Value>,
 }
 
+impl CreateTerminalResponse {
+    pub fn new(terminal_id: TerminalId) -> Self {
+        Self {
+            terminal_id,
+            meta: None,
+        }
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
+    }
+}
+
 /// Request to get the current output and status of a terminal.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_OUTPUT_METHOD_NAME))]
+#[non_exhaustive]
 pub struct TerminalOutputRequest {
     /// The session ID for this request.
     pub session_id: SessionId,
@@ -351,10 +678,27 @@ pub struct TerminalOutputRequest {
     pub meta: Option<serde_json::Value>,
 }
 
+impl TerminalOutputRequest {
+    pub fn new(session_id: SessionId, terminal_id: TerminalId) -> Self {
+        Self {
+            session_id,
+            terminal_id,
+            meta: None,
+        }
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
+    }
+}
+
 /// Response containing the terminal output and exit status.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_OUTPUT_METHOD_NAME))]
+#[non_exhaustive]
 pub struct TerminalOutputResponse {
     /// The terminal output captured so far.
     pub output: String,
@@ -367,10 +711,34 @@ pub struct TerminalOutputResponse {
     pub meta: Option<serde_json::Value>,
 }
 
+impl TerminalOutputResponse {
+    pub fn new(output: impl Into<String>, truncated: bool) -> Self {
+        Self {
+            output: output.into(),
+            truncated,
+            exit_status: None,
+            meta: None,
+        }
+    }
+
+    /// Exit status if the command has completed.
+    pub fn exit_status(mut self, exit_status: TerminalExitStatus) -> Self {
+        self.exit_status = Some(exit_status);
+        self
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
+    }
+}
+
 /// Request to release a terminal and free its resources.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_RELEASE_METHOD_NAME))]
+#[non_exhaustive]
 pub struct ReleaseTerminalRequest {
     /// The session ID for this request.
     pub session_id: SessionId,
@@ -381,20 +749,50 @@ pub struct ReleaseTerminalRequest {
     pub meta: Option<serde_json::Value>,
 }
 
+impl ReleaseTerminalRequest {
+    pub fn new(session_id: SessionId, terminal_id: TerminalId) -> Self {
+        Self {
+            session_id,
+            terminal_id,
+            meta: None,
+        }
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
+    }
+}
+
 /// Response to terminal/release method
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_RELEASE_METHOD_NAME))]
+#[non_exhaustive]
 pub struct ReleaseTerminalResponse {
     /// Extension point for implementations
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<serde_json::Value>,
 }
 
+impl ReleaseTerminalResponse {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
+    }
+}
+
 /// Request to kill a terminal command without releasing the terminal.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_KILL_METHOD_NAME))]
+#[non_exhaustive]
 pub struct KillTerminalCommandRequest {
     /// The session ID for this request.
     pub session_id: SessionId,
@@ -405,20 +803,50 @@ pub struct KillTerminalCommandRequest {
     pub meta: Option<serde_json::Value>,
 }
 
+impl KillTerminalCommandRequest {
+    pub fn new(session_id: SessionId, terminal_id: TerminalId) -> Self {
+        Self {
+            session_id,
+            terminal_id,
+            meta: None,
+        }
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
+    }
+}
+
 /// Response to terminal/kill command method
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_KILL_METHOD_NAME))]
+#[non_exhaustive]
 pub struct KillTerminalCommandResponse {
     /// Extension point for implementations
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<serde_json::Value>,
 }
 
+impl KillTerminalCommandResponse {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
+    }
+}
+
 /// Request to wait for a terminal command to exit.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_WAIT_FOR_EXIT_METHOD_NAME))]
+#[non_exhaustive]
 pub struct WaitForTerminalExitRequest {
     /// The session ID for this request.
     pub session_id: SessionId,
@@ -429,10 +857,27 @@ pub struct WaitForTerminalExitRequest {
     pub meta: Option<serde_json::Value>,
 }
 
+impl WaitForTerminalExitRequest {
+    pub fn new(session_id: SessionId, terminal_id: TerminalId) -> Self {
+        Self {
+            session_id,
+            terminal_id,
+            meta: None,
+        }
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
+    }
+}
+
 /// Response containing the exit status of a terminal command.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_WAIT_FOR_EXIT_METHOD_NAME))]
+#[non_exhaustive]
 pub struct WaitForTerminalExitResponse {
     /// The exit status of the terminal command.
     #[serde(flatten)]
@@ -442,9 +887,25 @@ pub struct WaitForTerminalExitResponse {
     pub meta: Option<serde_json::Value>,
 }
 
+impl WaitForTerminalExitResponse {
+    pub fn new(exit_status: TerminalExitStatus) -> Self {
+        Self {
+            exit_status,
+            meta: None,
+        }
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
+    }
+}
+
 /// Exit status of a terminal command.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct TerminalExitStatus {
     /// The process exit code (may be null if terminated by signal).
     pub exit_code: Option<u32>,
@@ -453,6 +914,30 @@ pub struct TerminalExitStatus {
     /// Extension point for implementations
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<serde_json::Value>,
+}
+
+impl TerminalExitStatus {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The process exit code (may be null if terminated by signal).
+    pub fn exit_code(mut self, exit_code: u32) -> Self {
+        self.exit_code = Some(exit_code);
+        self
+    }
+
+    /// The signal that terminated the process (may be null if exited normally).
+    pub fn signal(mut self, signal: impl Into<String>) -> Self {
+        self.signal = Some(signal.into());
+        self
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
+    }
 }
 
 // Capabilities
@@ -465,6 +950,7 @@ pub struct TerminalExitStatus {
 /// See protocol docs: [Client Capabilities](https://agentclientprotocol.com/protocol/initialization#client-capabilities)
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct ClientCapabilities {
     /// File system capabilities supported by the client.
     /// Determines which file operations the agent can request.
@@ -478,11 +964,38 @@ pub struct ClientCapabilities {
     pub meta: Option<serde_json::Value>,
 }
 
+impl ClientCapabilities {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// File system capabilities supported by the client.
+    /// Determines which file operations the agent can request.
+    pub fn fs(mut self, fs: FileSystemCapability) -> Self {
+        self.fs = fs;
+        self
+    }
+
+    /// Whether the Client support all `terminal/*` methods.
+    pub fn terminal(mut self, terminal: bool) -> Self {
+        self.terminal = terminal;
+        self
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
+    }
+}
+
+/// Filesystem capabilities supported by the client.
 /// File system capabilities that a client may support.
 ///
 /// See protocol docs: [FileSystem](https://agentclientprotocol.com/protocol/initialization#filesystem)
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct FileSystemCapability {
     /// Whether the Client supports `fs/read_text_file` requests.
     #[serde(default)]
@@ -495,12 +1008,37 @@ pub struct FileSystemCapability {
     pub meta: Option<serde_json::Value>,
 }
 
+impl FileSystemCapability {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Whether the Client supports `fs/read_text_file` requests.
+    pub fn read_text_file(mut self, read_text_file: bool) -> Self {
+        self.read_text_file = read_text_file;
+        self
+    }
+
+    /// Whether the Client supports `fs/write_text_file` requests.
+    pub fn write_text_file(mut self, write_text_file: bool) -> Self {
+        self.write_text_file = write_text_file;
+        self
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
+    }
+}
+
 // Method schema
 
 /// Names of all methods that clients handle.
 ///
 /// Provides a centralized definition of method names used in the protocol.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct ClientMethodNames {
     /// Method for requesting permission from the user.
     pub session_request_permission: &'static str,
@@ -563,6 +1101,7 @@ pub(crate) const TERMINAL_KILL_METHOD_NAME: &str = "terminal/kill";
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(untagged)]
 #[schemars(extend("x-docs-ignore" = true))]
+#[non_exhaustive]
 pub enum AgentRequest {
     /// Writes content to a text file in the client's file system.
     ///
@@ -660,6 +1199,7 @@ pub enum AgentRequest {
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(untagged)]
 #[schemars(extend("x-docs-ignore" = true))]
+#[non_exhaustive]
 pub enum ClientResponse {
     WriteTextFileResponse(#[serde(default)] WriteTextFileResponse),
     ReadTextFileResponse(ReadTextFileResponse),
@@ -682,6 +1222,7 @@ pub enum ClientResponse {
 #[serde(untagged)]
 #[allow(clippy::large_enum_variant)]
 #[schemars(extend("x-docs-ignore" = true))]
+#[non_exhaustive]
 pub enum AgentNotification {
     /// Handles session update notifications from the agent.
     ///
