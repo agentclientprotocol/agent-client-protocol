@@ -629,41 +629,112 @@ pub enum McpServer {
     /// HTTP transport configuration
     ///
     /// Only available when the Agent capabilities indicate `mcp_capabilities.http` is `true`.
-    #[serde(rename_all = "camelCase")]
-    Http {
-        /// Human-readable name identifying this MCP server.
-        name: String,
-        /// URL to the MCP server.
-        url: String,
-        /// HTTP headers to set when making requests to the MCP server.
-        headers: Vec<HttpHeader>,
-    },
+    Http(McpServerHttp),
     /// SSE transport configuration
     ///
     /// Only available when the Agent capabilities indicate `mcp_capabilities.sse` is `true`.
-    #[serde(rename_all = "camelCase")]
-    Sse {
-        /// Human-readable name identifying this MCP server.
-        name: String,
-        /// URL to the MCP server.
-        url: String,
-        /// HTTP headers to set when making requests to the MCP server.
-        headers: Vec<HttpHeader>,
-    },
+    Sse(McpServerSse),
     /// Stdio transport configuration
     ///
     /// All Agents MUST support this transport.
-    #[serde(untagged, rename_all = "camelCase")]
-    Stdio {
-        /// Human-readable name identifying this MCP server.
-        name: String,
-        /// Path to the MCP server executable.
-        command: PathBuf,
-        /// Command-line arguments to pass to the MCP server.
-        args: Vec<String>,
-        /// Environment variables to set when launching the MCP server.
-        env: Vec<EnvVariable>,
-    },
+    #[serde(untagged)]
+    Stdio(McpServerStdio),
+}
+
+/// HTTP transport configuration for MCP.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct McpServerHttp {
+    /// Human-readable name identifying this MCP server.
+    pub name: String,
+    /// URL to the MCP server.
+    pub url: String,
+    /// HTTP headers to set when making requests to the MCP server.
+    pub headers: Vec<HttpHeader>,
+}
+
+impl McpServerHttp {
+    pub fn new(name: impl Into<String>, url: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            url: url.into(),
+            headers: Vec::new(),
+        }
+    }
+
+    /// HTTP headers to set when making requests to the MCP server.
+    pub fn headers(mut self, headers: Vec<HttpHeader>) -> Self {
+        self.headers = headers;
+        self
+    }
+}
+
+/// SSE transport configuration for MCP.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct McpServerSse {
+    /// Human-readable name identifying this MCP server.
+    pub name: String,
+    /// URL to the MCP server.
+    pub url: String,
+    /// HTTP headers to set when making requests to the MCP server.
+    pub headers: Vec<HttpHeader>,
+}
+
+impl McpServerSse {
+    pub fn new(name: impl Into<String>, url: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            url: url.into(),
+            headers: Vec::new(),
+        }
+    }
+
+    /// HTTP headers to set when making requests to the MCP server.
+    pub fn headers(mut self, headers: Vec<HttpHeader>) -> Self {
+        self.headers = headers;
+        self
+    }
+}
+
+/// Stdio transport configuration for MCP.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct McpServerStdio {
+    /// Human-readable name identifying this MCP server.
+    pub name: String,
+    /// Path to the MCP server executable.
+    pub command: PathBuf,
+    /// Command-line arguments to pass to the MCP server.
+    pub args: Vec<String>,
+    /// Environment variables to set when launching the MCP server.
+    pub env: Vec<EnvVariable>,
+}
+
+impl McpServerStdio {
+    pub fn new(name: impl Into<String>, command: impl Into<PathBuf>) -> Self {
+        Self {
+            name: name.into(),
+            command: command.into(),
+            args: Vec::new(),
+            env: Vec::new(),
+        }
+    }
+
+    /// Command-line arguments to pass to the MCP server.
+    pub fn args(mut self, args: Vec<String>) -> Self {
+        self.args = args;
+        self
+    }
+
+    /// Environment variables to set when launching the MCP server.
+    pub fn env(mut self, env: Vec<EnvVariable>) -> Self {
+        self.env = env;
+        self
+    }
 }
 
 /// An environment variable to set when launching an MCP server.
@@ -1402,16 +1473,11 @@ mod test_serialization {
 
     #[test]
     fn test_mcp_server_stdio_serialization() {
-        let server = McpServer::Stdio {
-            name: "test-server".to_string(),
-            command: PathBuf::from("/usr/bin/server"),
-            args: vec!["--port".to_string(), "3000".to_string()],
-            env: vec![EnvVariable {
-                name: "API_KEY".to_string(),
-                value: "secret123".to_string(),
-                meta: None,
-            }],
-        };
+        let server = McpServer::Stdio(
+            McpServerStdio::new("test-server", "/usr/bin/server")
+                .args(vec!["--port".to_string(), "3000".to_string()])
+                .env(vec![EnvVariable::new("API_KEY", "secret123")]),
+        );
 
         let json = serde_json::to_value(&server).unwrap();
         assert_eq!(
@@ -1431,12 +1497,12 @@ mod test_serialization {
 
         let deserialized: McpServer = serde_json::from_value(json).unwrap();
         match deserialized {
-            McpServer::Stdio {
+            McpServer::Stdio(McpServerStdio {
                 name,
                 command,
                 args,
                 env,
-            } => {
+            }) => {
                 assert_eq!(name, "test-server");
                 assert_eq!(command, PathBuf::from("/usr/bin/server"));
                 assert_eq!(args, vec!["--port", "3000"]);
@@ -1450,22 +1516,12 @@ mod test_serialization {
 
     #[test]
     fn test_mcp_server_http_serialization() {
-        let server = McpServer::Http {
-            name: "http-server".to_string(),
-            url: "https://api.example.com".to_string(),
-            headers: vec![
-                HttpHeader {
-                    name: "Authorization".to_string(),
-                    value: "Bearer token123".to_string(),
-                    meta: None,
-                },
-                HttpHeader {
-                    name: "Content-Type".to_string(),
-                    value: "application/json".to_string(),
-                    meta: None,
-                },
-            ],
-        };
+        let server = McpServer::Http(
+            McpServerHttp::new("http-server", "https://api.example.com").headers(vec![
+                HttpHeader::new("Authorization", "Bearer token123"),
+                HttpHeader::new("Content-Type", "application/json"),
+            ]),
+        );
 
         let json = serde_json::to_value(&server).unwrap();
         assert_eq!(
@@ -1489,7 +1545,7 @@ mod test_serialization {
 
         let deserialized: McpServer = serde_json::from_value(json).unwrap();
         match deserialized {
-            McpServer::Http { name, url, headers } => {
+            McpServer::Http(McpServerHttp { name, url, headers }) => {
                 assert_eq!(name, "http-server");
                 assert_eq!(url, "https://api.example.com");
                 assert_eq!(headers.len(), 2);
@@ -1504,15 +1560,10 @@ mod test_serialization {
 
     #[test]
     fn test_mcp_server_sse_serialization() {
-        let server = McpServer::Sse {
-            name: "sse-server".to_string(),
-            url: "https://sse.example.com/events".to_string(),
-            headers: vec![HttpHeader {
-                name: "X-API-Key".to_string(),
-                value: "apikey456".to_string(),
-                meta: None,
-            }],
-        };
+        let server = McpServer::Sse(
+            McpServerSse::new("sse-server", "https://sse.example.com/events")
+                .headers(vec![HttpHeader::new("X-API-Key", "apikey456")]),
+        );
 
         let json = serde_json::to_value(&server).unwrap();
         assert_eq!(
@@ -1532,7 +1583,7 @@ mod test_serialization {
 
         let deserialized: McpServer = serde_json::from_value(json).unwrap();
         match deserialized {
-            McpServer::Sse { name, url, headers } => {
+            McpServer::Sse(McpServerSse { name, url, headers }) => {
                 assert_eq!(name, "sse-server");
                 assert_eq!(url, "https://sse.example.com/events");
                 assert_eq!(headers.len(), 1);

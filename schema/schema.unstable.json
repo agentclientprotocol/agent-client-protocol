@@ -1280,91 +1280,123 @@
     "McpServer": {
       "anyOf": [
         {
+          "allOf": [
+            {
+              "$ref": "#/$defs/McpServerHttp"
+            }
+          ],
           "description": "HTTP transport configuration\n\nOnly available when the Agent capabilities indicate `mcp_capabilities.http` is `true`.",
           "properties": {
-            "headers": {
-              "description": "HTTP headers to set when making requests to the MCP server.",
-              "items": {
-                "$ref": "#/$defs/HttpHeader"
-              },
-              "type": "array"
-            },
-            "name": {
-              "description": "Human-readable name identifying this MCP server.",
-              "type": "string"
-            },
             "type": {
               "const": "http",
               "type": "string"
-            },
-            "url": {
-              "description": "URL to the MCP server.",
-              "type": "string"
             }
           },
-          "required": ["type", "name", "url", "headers"],
+          "required": ["type"],
           "type": "object"
         },
         {
+          "allOf": [
+            {
+              "$ref": "#/$defs/McpServerSse"
+            }
+          ],
           "description": "SSE transport configuration\n\nOnly available when the Agent capabilities indicate `mcp_capabilities.sse` is `true`.",
           "properties": {
-            "headers": {
-              "description": "HTTP headers to set when making requests to the MCP server.",
-              "items": {
-                "$ref": "#/$defs/HttpHeader"
-              },
-              "type": "array"
-            },
-            "name": {
-              "description": "Human-readable name identifying this MCP server.",
-              "type": "string"
-            },
             "type": {
               "const": "sse",
               "type": "string"
-            },
-            "url": {
-              "description": "URL to the MCP server.",
-              "type": "string"
             }
           },
-          "required": ["type", "name", "url", "headers"],
+          "required": ["type"],
           "type": "object"
         },
         {
-          "description": "Stdio transport configuration\n\nAll Agents MUST support this transport.",
-          "properties": {
-            "args": {
-              "description": "Command-line arguments to pass to the MCP server.",
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            },
-            "command": {
-              "description": "Path to the MCP server executable.",
-              "type": "string"
-            },
-            "env": {
-              "description": "Environment variables to set when launching the MCP server.",
-              "items": {
-                "$ref": "#/$defs/EnvVariable"
-              },
-              "type": "array"
-            },
-            "name": {
-              "description": "Human-readable name identifying this MCP server.",
-              "type": "string"
+          "allOf": [
+            {
+              "$ref": "#/$defs/McpServerStdio"
             }
-          },
-          "required": ["name", "command", "args", "env"],
-          "type": "object"
+          ],
+          "description": "Stdio transport configuration\n\nAll Agents MUST support this transport."
         }
       ],
       "description": "Configuration for connecting to an MCP (Model Context Protocol) server.\n\nMCP servers provide tools and context that the agent can use when\nprocessing prompts.\n\nSee protocol docs: [MCP Servers](https://agentclientprotocol.com/protocol/session-setup#mcp-servers)",
       "discriminator": {
         "propertyName": "type"
       }
+    },
+    "McpServerHttp": {
+      "description": "HTTP transport configuration for MCP.",
+      "properties": {
+        "headers": {
+          "description": "HTTP headers to set when making requests to the MCP server.",
+          "items": {
+            "$ref": "#/$defs/HttpHeader"
+          },
+          "type": "array"
+        },
+        "name": {
+          "description": "Human-readable name identifying this MCP server.",
+          "type": "string"
+        },
+        "url": {
+          "description": "URL to the MCP server.",
+          "type": "string"
+        }
+      },
+      "required": ["name", "url", "headers"],
+      "type": "object"
+    },
+    "McpServerSse": {
+      "description": "SSE transport configuration for MCP.",
+      "properties": {
+        "headers": {
+          "description": "HTTP headers to set when making requests to the MCP server.",
+          "items": {
+            "$ref": "#/$defs/HttpHeader"
+          },
+          "type": "array"
+        },
+        "name": {
+          "description": "Human-readable name identifying this MCP server.",
+          "type": "string"
+        },
+        "url": {
+          "description": "URL to the MCP server.",
+          "type": "string"
+        }
+      },
+      "required": ["name", "url", "headers"],
+      "type": "object"
+    },
+    "McpServerStdio": {
+      "description": "Stdio transport configuration for MCP.",
+      "properties": {
+        "args": {
+          "description": "Command-line arguments to pass to the MCP server.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "command": {
+          "description": "Path to the MCP server executable.",
+          "type": "string"
+        },
+        "env": {
+          "description": "Environment variables to set when launching the MCP server.",
+          "items": {
+            "$ref": "#/$defs/EnvVariable"
+          },
+          "type": "array"
+        },
+        "name": {
+          "description": "Human-readable name identifying this MCP server.",
+          "type": "string"
+        }
+      },
+      "required": ["name", "command", "args", "env"],
+      "type": "object"
     },
     "ModelId": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA unique identifier for a model.",

@@ -1698,7 +1698,7 @@ Only available when the Agent capabilities indicate `mcp_capabilities.sse` is `t
 </Expandable>
 </ResponseField>
 
-<ResponseField name="Object">
+<ResponseField name="Variant">
 Stdio transport configuration
 
 All Agents MUST support this transport.
@@ -1739,6 +1739,105 @@ All Agents MUST support this transport.
 </ResponseField>
 
 </Expandable>
+</ResponseField>
+
+## <span class="font-mono">McpServerHttp</span>
+
+HTTP transport configuration for MCP.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField
+  name="headers"
+  type={
+    <>
+      <span>
+        <a href="#httpheader">HttpHeader</a>
+      </span>
+      <span>[]</span>
+    </>
+  }
+  required
+>
+  HTTP headers to set when making requests to the MCP server.
+</ResponseField>
+<ResponseField name="name" type={"string"} required>
+  Human-readable name identifying this MCP server.
+</ResponseField>
+<ResponseField name="url" type={"string"} required>
+  URL to the MCP server.
+</ResponseField>
+
+## <span class="font-mono">McpServerSse</span>
+
+SSE transport configuration for MCP.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField
+  name="headers"
+  type={
+    <>
+      <span>
+        <a href="#httpheader">HttpHeader</a>
+      </span>
+      <span>[]</span>
+    </>
+  }
+  required
+>
+  HTTP headers to set when making requests to the MCP server.
+</ResponseField>
+<ResponseField name="name" type={"string"} required>
+  Human-readable name identifying this MCP server.
+</ResponseField>
+<ResponseField name="url" type={"string"} required>
+  URL to the MCP server.
+</ResponseField>
+
+## <span class="font-mono">McpServerStdio</span>
+
+Stdio transport configuration for MCP.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField
+  name="args"
+  type={
+    <>
+      <span>"string"</span>
+      <span>[]</span>
+    </>
+  }
+  required
+>
+  Command-line arguments to pass to the MCP server.
+</ResponseField>
+<ResponseField name="command" type={"string"} required>
+  Path to the MCP server executable.
+</ResponseField>
+<ResponseField
+  name="env"
+  type={
+    <>
+      <span>
+        <a href="#envvariable">EnvVariable</a>
+      </span>
+      <span>[]</span>
+    </>
+  }
+  required
+>
+  Environment variables to set when launching the MCP server.
+</ResponseField>
+<ResponseField name="name" type={"string"} required>
+  Human-readable name identifying this MCP server.
 </ResponseField>
 
 ## <span class="font-mono">PermissionOption</span>
