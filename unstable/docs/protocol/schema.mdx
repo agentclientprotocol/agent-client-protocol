@@ -35,7 +35,11 @@ Specifies which authentication method to use.
 <ResponseField name="_meta" type={"object"}>
   Extension point for implementations
 </ResponseField>
-<ResponseField name="methodId" type={"object"} required>
+<ResponseField
+  name="methodId"
+  type={<a href="#authmethodid">AuthMethodId</a>}
+  required
+>
   The ID of the authentication method to use. Must be one of the methods
   advertised in the initialize response.
 </ResponseField>
@@ -81,7 +85,7 @@ See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/ini
 <ResponseField name="_meta" type={"object"} >
   Extension point for implementations
 </ResponseField>
-<ResponseField name="clientCapabilities" type={"object"} >
+<ResponseField name="clientCapabilities" type={<a href="#clientcapabilities">ClientCapabilities</a>} >
   Capabilities supported by the client.
 
     - Default: `{"fs":{"readTextFile":false,"writeTextFile":false},"terminal":false}`
@@ -93,7 +97,7 @@ See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/ini
 Note: in future versions of the protocol, this will be required.
 
 </ResponseField>
-<ResponseField name="protocolVersion" type={"object"} required>
+<ResponseField name="protocolVersion" type={<a href="#protocolversion">ProtocolVersion</a>} required>
   The latest protocol version supported by the client.
 </ResponseField>
 
@@ -112,7 +116,7 @@ See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/ini
 <ResponseField name="_meta" type={"object"} >
   Extension point for implementations
 </ResponseField>
-<ResponseField name="agentCapabilities" type={"object"} >
+<ResponseField name="agentCapabilities" type={<a href="#agentcapabilities">AgentCapabilities</a>} >
   Capabilities supported by the agent.
 
     - Default: `{"loadSession":false,"mcpCapabilities":{"http":false,"sse":false},"promptCapabilities":{"audio":false,"embeddedContext":false,"image":false}}`
@@ -130,7 +134,7 @@ Note: in future versions of the protocol, this will be required.
     - Default: `[]`
 
 </ResponseField>
-<ResponseField name="protocolVersion" type={"object"} required>
+<ResponseField name="protocolVersion" type={<a href="#protocolversion">ProtocolVersion</a>} required>
   The protocol version the client specified if supported by the agent,
 or the latest protocol version supported by the agent.
 
@@ -167,7 +171,11 @@ See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/promp
 <ResponseField name="_meta" type={"object"}>
   Extension point for implementations
 </ResponseField>
-<ResponseField name="sessionId" type={"object"} required>
+<ResponseField
+  name="sessionId"
+  type={<a href="#sessionid">SessionId</a>}
+  required
+>
   The ID of the session to cancel operations for.
 </ResponseField>
 
@@ -218,7 +226,11 @@ See protocol docs: [Loading Sessions](https://agentclientprotocol.com/protocol/s
 >
   List of MCP servers to connect to for this session.
 </ResponseField>
-<ResponseField name="sessionId" type={"object"} required>
+<ResponseField
+  name="sessionId"
+  type={<a href="#sessionid">SessionId</a>}
+  required
+>
   The ID of the session to load.
 </ResponseField>
 
@@ -323,7 +335,7 @@ Initial model state if supported by the Agent
 See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
 
 </ResponseField>
-<ResponseField name="sessionId" type={"object"} required>
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
   Unique identifier for the created session.
 
 Used in all subsequent requests for this conversation.
@@ -377,7 +389,7 @@ as it avoids extra round-trips and allows the message to include
 pieces of context from sources the agent may not have access to.
 
 </ResponseField>
-<ResponseField name="sessionId" type={"object"} required>
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
   The ID of the session to send this user message to
 </ResponseField>
 
@@ -394,7 +406,11 @@ See protocol docs: [Check for Completion](https://agentclientprotocol.com/protoc
 <ResponseField name="_meta" type={"object"}>
   Extension point for implementations
 </ResponseField>
-<ResponseField name="stopReason" type={"object"} required>
+<ResponseField
+  name="stopReason"
+  type={<a href="#stopreason">StopReason</a>}
+  required
+>
   Indicates why the agent stopped processing the turn.
 </ResponseField>
 
@@ -426,10 +442,18 @@ Request parameters for setting a session mode.
 <ResponseField name="_meta" type={"object"}>
   Extension point for implementations
 </ResponseField>
-<ResponseField name="modeId" type={"object"} required>
+<ResponseField
+  name="modeId"
+  type={<a href="#sessionmodeid">SessionModeId</a>}
+  required
+>
   The ID of the mode to set.
 </ResponseField>
-<ResponseField name="sessionId" type={"object"} required>
+<ResponseField
+  name="sessionId"
+  type={<a href="#sessionid">SessionId</a>}
+  required
+>
   The ID of the session to set the mode for.
 </ResponseField>
 
@@ -467,10 +491,14 @@ Request parameters for setting a session model.
 <ResponseField name="_meta" type={"object"}>
   Extension point for implementations
 </ResponseField>
-<ResponseField name="modelId" type={"object"} required>
+<ResponseField name="modelId" type={<a href="#modelid">ModelId</a>} required>
   The ID of the model to set.
 </ResponseField>
-<ResponseField name="sessionId" type={"object"} required>
+<ResponseField
+  name="sessionId"
+  type={<a href="#sessionid">SessionId</a>}
+  required
+>
   The ID of the session to set the model for.
 </ResponseField>
 
@@ -536,7 +564,7 @@ Only available if the client supports the `fs.readTextFile` capability.
 <ResponseField name="path" type={"string"} required>
   Absolute path to the file to read.
 </ResponseField>
-<ResponseField name="sessionId" type={"object"} required>
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
   The session ID for this request.
 </ResponseField>
 
@@ -582,7 +610,11 @@ Only available if the client supports the `fs.writeTextFile` capability.
 <ResponseField name="path" type={"string"} required>
   Absolute path to the file to write.
 </ResponseField>
-<ResponseField name="sessionId" type={"object"} required>
+<ResponseField
+  name="sessionId"
+  type={<a href="#sessionid">SessionId</a>}
+  required
+>
   The session ID for this request.
 </ResponseField>
 
@@ -641,10 +673,18 @@ See protocol docs: [Requesting Permission](https://agentclientprotocol.com/proto
 >
   Available permission options for the user to choose from.
 </ResponseField>
-<ResponseField name="sessionId" type={"object"} required>
+<ResponseField
+  name="sessionId"
+  type={<a href="#sessionid">SessionId</a>}
+  required
+>
   The session ID for this request.
 </ResponseField>
-<ResponseField name="toolCall" type={"object"} required>
+<ResponseField
+  name="toolCall"
+  type={<a href="#toolcallupdate">ToolCallUpdate</a>}
+  required
+>
   Details about the tool call requiring permission.
 </ResponseField>
 
@@ -659,7 +699,11 @@ Response to a permission request.
 <ResponseField name="_meta" type={"object"}>
   Extension point for implementations
 </ResponseField>
-<ResponseField name="outcome" type={"object"} required>
+<ResponseField
+  name="outcome"
+  type={<a href="#requestpermissionoutcome">RequestPermissionOutcome</a>}
+  required
+>
   The user's decision on the permission request.
 </ResponseField>
 
@@ -693,10 +737,18 @@ See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protoc
 <ResponseField name="_meta" type={"object"}>
   Extension point for implementations
 </ResponseField>
-<ResponseField name="sessionId" type={"object"} required>
+<ResponseField
+  name="sessionId"
+  type={<a href="#sessionid">SessionId</a>}
+  required
+>
   The ID of the session this update pertains to.
 </ResponseField>
-<ResponseField name="update" type={"object"} required>
+<ResponseField
+  name="update"
+  type={<a href="#sessionupdate">SessionUpdate</a>}
+  required
+>
   The actual update content.
 </ResponseField>
 
@@ -754,7 +806,7 @@ specified limit.
     - Minimum: `0`
 
 </ResponseField>
-<ResponseField name="sessionId" type={"object"} required>
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
   The session ID for this request.
 </ResponseField>
 
@@ -800,7 +852,11 @@ Request to kill a terminal command without releasing the terminal.
 <ResponseField name="_meta" type={"object"}>
   Extension point for implementations
 </ResponseField>
-<ResponseField name="sessionId" type={"object"} required>
+<ResponseField
+  name="sessionId"
+  type={<a href="#sessionid">SessionId</a>}
+  required
+>
   The session ID for this request.
 </ResponseField>
 <ResponseField name="terminalId" type={"string"} required>
@@ -840,7 +896,11 @@ Request to get the current output and status of a terminal.
 <ResponseField name="_meta" type={"object"}>
   Extension point for implementations
 </ResponseField>
-<ResponseField name="sessionId" type={"object"} required>
+<ResponseField
+  name="sessionId"
+  type={<a href="#sessionid">SessionId</a>}
+  required
+>
   The session ID for this request.
 </ResponseField>
 <ResponseField name="terminalId" type={"string"} required>
@@ -905,7 +965,11 @@ Request to release a terminal and free its resources.
 <ResponseField name="_meta" type={"object"}>
   Extension point for implementations
 </ResponseField>
-<ResponseField name="sessionId" type={"object"} required>
+<ResponseField
+  name="sessionId"
+  type={<a href="#sessionid">SessionId</a>}
+  required
+>
   The session ID for this request.
 </ResponseField>
 <ResponseField name="terminalId" type={"string"} required>
@@ -942,7 +1006,11 @@ Request to wait for a terminal command to exit.
 <ResponseField name="_meta" type={"object"}>
   Extension point for implementations
 </ResponseField>
-<ResponseField name="sessionId" type={"object"} required>
+<ResponseField
+  name="sessionId"
+  type={<a href="#sessionid">SessionId</a>}
+  required
+>
   The session ID for this request.
 </ResponseField>
 <ResponseField name="terminalId" type={"string"} required>
@@ -992,13 +1060,13 @@ See protocol docs: [Agent Capabilities](https://agentclientprotocol.com/protocol
     - Default: `false`
 
 </ResponseField>
-<ResponseField name="mcpCapabilities" type={"object"} >
+<ResponseField name="mcpCapabilities" type={<a href="#mcpcapabilities">McpCapabilities</a>} >
   MCP capabilities supported by the agent.
 
     - Default: `{"http":false,"sse":false}`
 
 </ResponseField>
-<ResponseField name="promptCapabilities" type={"object"} >
+<ResponseField name="promptCapabilities" type={<a href="#promptcapabilities">PromptCapabilities</a>} >
   Prompt capabilities supported by the agent.
 
     - Default: `{"audio":false,"embeddedContext":false,"image":false}`
@@ -1059,7 +1127,11 @@ Describes an available authentication method.
 <ResponseField name="description" type={"string | null"}>
   Optional description providing more details about this authentication method.
 </ResponseField>
-<ResponseField name="id" type={"object"} required>
+<ResponseField
+  name="id"
+  type={<a href="#authmethodid">AuthMethodId</a>}
+  required
+>
   Unique identifier for this authentication method.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
@@ -1178,7 +1250,7 @@ See protocol docs: [Client Capabilities](https://agentclientprotocol.com/protoco
 <ResponseField name="_meta" type={"object"} >
   Extension point for implementations
 </ResponseField>
-<ResponseField name="fs" type={"object"} >
+<ResponseField name="fs" type={<a href="#filesystemcapability">FileSystemCapability</a>} >
   File system capabilities supported by the client.
 Determines which file operations the agent can request.
 
@@ -1286,7 +1358,11 @@ A streamed item of content
 <ResponseField name="_meta" type={"object"}>
   Extension point for implementations
 </ResponseField>
-<ResponseField name="content" type={"object"} required>
+<ResponseField
+  name="content"
+  type={<a href="#contentblock">ContentBlock</a>}
+  required
+>
   A single item of content
 </ResponseField>
 
@@ -1303,7 +1379,11 @@ See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/sess
 <ResponseField name="_meta" type={"object"}>
   Extension point for implementations
 </ResponseField>
-<ResponseField name="currentModeId" type={"object"} required>
+<ResponseField
+  name="currentModeId"
+  type={<a href="#sessionmodeid">SessionModeId</a>}
+  required
+>
   The ID of the current mode
 </ResponseField>
 
@@ -1681,7 +1761,7 @@ Information about a selectable model.
 <ResponseField name="description" type={"string | null"}>
   Optional description of the model.
 </ResponseField>
-<ResponseField name="modelId" type={"object"} required>
+<ResponseField name="modelId" type={<a href="#modelid">ModelId</a>} required>
   Unique identifier for the model.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
@@ -1699,13 +1779,21 @@ An option presented to the user when requesting permission.
 <ResponseField name="_meta" type={"object"}>
   Extension point for implementations
 </ResponseField>
-<ResponseField name="kind" type={"object"} required>
+<ResponseField
+  name="kind"
+  type={<a href="#permissionoptionkind">PermissionOptionKind</a>}
+  required
+>
   Hint about the nature of this permission option.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
   Human-readable label to display to the user.
 </ResponseField>
-<ResponseField name="optionId" type={"object"} required>
+<ResponseField
+  name="optionId"
+  type={<a href="#permissionoptionid">PermissionOptionId</a>}
+  required
+>
   Unique identifier for this permission option.
 </ResponseField>
 
@@ -1782,11 +1870,19 @@ See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/agent
 <ResponseField name="content" type={"string"} required>
   Human-readable description of what this task aims to accomplish.
 </ResponseField>
-<ResponseField name="priority" type={"object"} required>
+<ResponseField
+  name="priority"
+  type={<a href="#planentrypriority">PlanEntryPriority</a>}
+  required
+>
   The relative importance of this task. Used to indicate which tasks are most
   critical to the overall goal.
 </ResponseField>
-<ResponseField name="status" type={"object"} required>
+<ResponseField
+  name="status"
+  type={<a href="#planentrystatus">PlanEntryStatus</a>}
+  required
+>
   Current execution status of this task.
 </ResponseField>
 
@@ -1916,7 +2012,11 @@ The user selected one of the provided options.
 
 <Expandable title="Properties">
 
-<ResponseField name="optionId" type={"object"} required>
+<ResponseField
+  name="optionId"
+  type={<a href="#permissionoptionid">PermissionOptionId</a>}
+  required
+>
   The ID of the option the user selected.
 </ResponseField>
 <ResponseField name="outcome" type={"string"} required></ResponseField>
@@ -2036,7 +2136,11 @@ The set of modes and the one currently active.
 >
   The set of modes that the Agent can operate in
 </ResponseField>
-<ResponseField name="currentModeId" type={"object"} required>
+<ResponseField
+  name="currentModeId"
+  type={<a href="#sessionmodeid">SessionModeId</a>}
+  required
+>
   The current mode the Agent is in.
 </ResponseField>
 
@@ -2069,7 +2173,11 @@ The set of models and the one currently active.
 >
   The set of models that the Agent can use
 </ResponseField>
-<ResponseField name="currentModelId" type={"object"} required>
+<ResponseField
+  name="currentModelId"
+  type={<a href="#modelid">ModelId</a>}
+  required
+>
   The current model the Agent is in.
 </ResponseField>
 
@@ -2290,7 +2398,7 @@ See protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/tool-ca
 >
   Content produced by the tool call.
 </ResponseField>
-<ResponseField name="kind" type={"object"}>
+<ResponseField name="kind" type={<a href="#toolkind">ToolKind</a>}>
   The category of tool being invoked. Helps clients choose appropriate icons and
   UI treatment.
 </ResponseField>
@@ -2314,13 +2422,20 @@ See protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/tool-ca
 <ResponseField name="rawOutput" type={"object"}>
   Raw output returned by the tool.
 </ResponseField>
-<ResponseField name="status" type={"object"}>
+<ResponseField
+  name="status"
+  type={<a href="#toolcallstatus">ToolCallStatus</a>}
+>
   Current execution status of the tool call.
 </ResponseField>
 <ResponseField name="title" type={"string"} required>
   Human-readable title describing what the tool is doing.
 </ResponseField>
-<ResponseField name="toolCallId" type={"object"} required>
+<ResponseField
+  name="toolCallId"
+  type={<a href="#toolcallid">ToolCallId</a>}
+  required
+>
   Unique identifier for this tool call within the session.
 </ResponseField>
 
@@ -2340,7 +2455,11 @@ Standard content block (text, images, resources).
 
 <Expandable title="Properties">
 
-<ResponseField name="content" type={"object"} required>
+<ResponseField
+  name="content"
+  type={<a href="#contentblock">ContentBlock</a>}
+  required
+>
   The actual content block.
 </ResponseField>
 <ResponseField name="type" type={"string"} required></ResponseField>
@@ -2499,7 +2618,11 @@ See protocol docs: [Updating](https://agentclientprotocol.com/protocol/tool-call
 <ResponseField name="title" type={"string | null"}>
   Update the human-readable title.
 </ResponseField>
-<ResponseField name="toolCallId" type={"object"} required>
+<ResponseField
+  name="toolCallId"
+  type={<a href="#toolcallid">ToolCallId</a>}
+  required
+>
   The ID of the tool call being updated.
 </ResponseField>
 

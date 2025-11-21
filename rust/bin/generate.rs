@@ -590,6 +590,15 @@ and control access to resources."
                 );
             }
 
+            // Check for single-item allOf/anyOf/oneOf wrappers (often used for $ref with sibling properties)
+            for key in ["allOf", "anyOf", "oneOf"] {
+                if let Some(arr) = schema.get(key).and_then(|v| v.as_array())
+                    && arr.len() == 1
+                {
+                    return Self::get_type_string(&arr[0]);
+                }
+            }
+
             // Check for type
             if let Some(type_val) = schema.get("type") {
                 if let Some(type_str) = type_val.as_str() {
