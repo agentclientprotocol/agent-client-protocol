@@ -244,9 +244,6 @@ pub struct ListSessionsRequest {
     /// Filter sessions by working directory
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cwd: Option<PathBuf>,
-    /// Maximum number of results to return (default: 50, max: 1000)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub limit: Option<u32>,
     /// Opaque cursor token from a previous response's nextCursor field for cursor-based pagination
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cursor: Option<String>,
@@ -285,9 +282,11 @@ pub struct SessionInfo {
     /// Unique identifier for the session
     pub session_id: SessionId,
     /// ISO 8601 timestamp when session was created
-    pub created_at: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub created_at: Option<String>,
     /// ISO 8601 timestamp of last activity
-    pub updated_at: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub updated_at: Option<String>,
     /// Working directory for the session
     pub cwd: PathBuf,
     /// Human-readable title (may be auto-generated from first prompt)

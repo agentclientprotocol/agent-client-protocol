@@ -255,6 +255,9 @@
           "$ref": "#/$defs/LoadSessionResponse"
         },
         {
+          "$ref": "#/$defs/ListSessionsResponse"
+        },
+        {
           "$ref": "#/$defs/SetSessionModeResponse"
         },
         {
@@ -662,6 +665,14 @@
             }
           ],
           "description": "Loads an existing session to resume a previous conversation.\n\nThis method is only available if the agent advertises the `loadSession` capability.\n\nThe agent should:\n- Restore the session context and conversation history\n- Connect to the specified MCP servers\n- Stream the entire conversation history back to the client via notifications\n\nSee protocol docs: [Loading Sessions](https://agentclientprotocol.com/protocol/session-setup#loading-sessions)"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ListSessionsRequest"
+            }
+          ],
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nLists existing sessions known to the agent.\n\nThis method is only available if the agent advertises the `listSessions` capability.\n\nThe agent should return metadata about sessions with optional filtering and pagination support."
         },
         {
           "allOf": [
@@ -1219,12 +1230,6 @@
         "cwd": {
           "description": "Filter sessions by working directory",
           "type": ["string", "null"]
-        },
-        "limit": {
-          "description": "Maximum number of results to return (default: 50, max: 1000)",
-          "format": "uint32",
-          "minimum": 0,
-          "type": ["integer", "null"]
         }
       },
       "type": "object",
@@ -1980,14 +1985,18 @@
         },
         "createdAt": {
           "description": "ISO 8601 timestamp when session was created",
-          "type": "string"
+          "type": ["string", "null"]
         },
         "cwd": {
           "description": "Working directory for the session",
           "type": "string"
         },
         "sessionId": {
-          "$ref": "#/$defs/SessionId",
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ],
           "description": "Unique identifier for the session"
         },
         "title": {
@@ -1996,10 +2005,10 @@
         },
         "updatedAt": {
           "description": "ISO 8601 timestamp of last activity",
-          "type": "string"
+          "type": ["string", "null"]
         }
       },
-      "required": ["sessionId", "createdAt", "updatedAt", "cwd"],
+      "required": ["sessionId", "cwd"],
       "type": "object"
     },
     "SessionMode": {
