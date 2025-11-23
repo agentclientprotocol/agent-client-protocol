@@ -64,7 +64,6 @@ The client calls `session/list` with optional filtering and pagination parameter
   "method": "session/list",
   "params": {
     "cwd": "/home/user/project",
-    "limit": 20,
     "cursor": "eyJwYWdlIjogMn0="
   }
 }
@@ -75,7 +74,6 @@ The client calls `session/list` with optional filtering and pagination parameter
 All parameters are optional:
 
 - `cwd` (string) - Filter sessions by working directory
-- `limit` (number) - Maximum number of results to return
 - `cursor` (string) - Opaque cursor token from a previous response's `nextCursor` field for cursor-based pagination
 
 #### Minimal Request Example
@@ -141,8 +139,8 @@ The agent responds with a list of sessions and cursor pagination metadata:
 **SessionInfo object:**
 
 - `sessionId` (string, required) - Unique identifier for the session
-- `createdAt` (string, required) - ISO 8601 timestamp when session was created
-- `updatedAt` (string, required) - ISO 8601 timestamp of last activity
+- `createdAt` (string, optional) - ISO 8601 timestamp when session was created
+- `updatedAt` (string, optional) - ISO 8601 timestamp of last activity
 - `cwd` (string, required) - Working directory for the session
 - `title` (string, optional) - Human-readable title (may be auto-generated from first prompt)
 - `_meta` (object, optional) - Agent-specific metadata (e.g., message count, error status, tags)
@@ -224,7 +222,7 @@ Agents that implement this feature gain:
 ### Security Considerations
 
 - **Session isolation**: Agents must ensure sessions are only listed for the authenticated client
-- **Resource limits**: Agents should enforce reasonable limits on pagination to prevent abuse
+- **Resource limits**: Agents should enforce reasonable page sizes internally to prevent abuse
 
 ## Frequently asked questions
 
@@ -306,7 +304,6 @@ Good request example:
   "params": {
     "cwd": "/home/user/project",
     "createdAfter": "2025-10-20T00:00:00Z",
-    "limit": 20,
     "cursor": "eyJwYWdlIjogMn0=",
     "search": "auth"
   }
@@ -339,3 +336,4 @@ Corresponding response example:
 - **2025-10-30**: Replace `sortBy`/`sortOrder` with `search` parameter; remove `total` count from response
 - **2025-10-31**: Update pagination: `continuationToken` → `cursor`, `nextContinuationToken` → `nextCursor`, remove `hasMore`
 - **2025-11-11**: Remove `createdAt`, `updatedAt`, and `search` filters from the request parameters
+- **2025-11-23**: Remove `limit` parameter from request; make `createdAt` and `updatedAt` optional in SessionInfo
