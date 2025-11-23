@@ -27,11 +27,8 @@ use crate::{
 #[schemars(inline)]
 pub enum RequestId {
     #[display("null")]
-    #[schemars(title = "null")]
     Null,
-    #[schemars(title = "number")]
     Number(i64),
-    #[schemars(title = "string")]
     Str(String),
 }
 
@@ -232,7 +229,7 @@ impl Side for AgentSide {
             m if m == AGENT_METHOD_NAMES.session_set_mode => serde_json::from_str(params.get())
                 .map(ClientRequest::SetSessionModeRequest)
                 .map_err(Into::into),
-            #[cfg(feature = "unstable")]
+            #[cfg(feature = "unstable_session_model")]
             m if m == AGENT_METHOD_NAMES.session_set_model => serde_json::from_str(params.get())
                 .map(ClientRequest::SetSessionModelRequest)
                 .map_err(Into::into),

@@ -70,7 +70,6 @@ pub enum SessionUpdate {
 /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-#[schemars(inline)]
 pub struct CurrentModeUpdate {
     /// The ID of the current mode
     pub current_mode_id: SessionModeId,
@@ -82,7 +81,6 @@ pub struct CurrentModeUpdate {
 /// A streamed item of content
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
-#[schemars(inline)]
 pub struct ContentChunk {
     /// A single item of content
     pub content: ContentBlock,
@@ -94,7 +92,6 @@ pub struct ContentChunk {
 /// Available commands are ready or have changed
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-#[schemars(inline)]
 pub struct AvailableCommandsUpdate {
     /// Commands the agent can execute
     pub available_commands: Vec<AvailableCommand>,
@@ -123,7 +120,6 @@ pub struct AvailableCommand {
 #[serde(untagged, rename_all = "camelCase")]
 pub enum AvailableCommandInput {
     /// All text that was typed after the command name is provided as input.
-    #[schemars(rename = "UnstructuredCommandInput")]
     Unstructured {
         /// A hint to display when the input hasn't been provided yet
         hint: String,
@@ -154,10 +150,10 @@ pub struct RequestPermissionRequest {
 
 /// An option presented to the user when requesting permission.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct PermissionOption {
     /// Unique identifier for this permission option.
-    #[serde(rename = "optionId")]
-    pub id: PermissionOptionId,
+    pub option_id: PermissionOptionId,
     /// Human-readable label to display to the user.
     pub name: String,
     /// Hint about the nature of this permission option.
@@ -268,10 +264,10 @@ pub struct ReadTextFileRequest {
     /// Absolute path to the file to read.
     pub path: PathBuf,
     /// Line number to start reading from (1-based).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub line: Option<u32>,
     /// Maximum number of lines to read.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub limit: Option<u32>,
     /// Extension point for implementations
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
@@ -312,7 +308,7 @@ pub struct CreateTerminalRequest {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub env: Vec<crate::EnvVariable>,
     /// Working directory for the command (absolute path).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub cwd: Option<PathBuf>,
     /// Maximum number of output bytes to retain.
     ///
@@ -322,7 +318,7 @@ pub struct CreateTerminalRequest {
     /// The Client MUST ensure truncation happens at a character boundary to maintain valid
     /// string output, even if this means the retained output is slightly less than the
     /// specified limit.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub output_byte_limit: Option<u64>,
     /// Extension point for implementations
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]

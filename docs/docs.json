@@ -94,7 +94,8 @@
             "pages": [
               "rfds/session-list",
               "rfds/session-config-options",
-              "rfds/session-fork"
+              "rfds/session-fork",
+              "rfds/request-cancellation"
             ]
           },
           { "group": "Preview", "pages": [] },
@@ -104,9 +105,10 @@
       {
         "tab": "Community",
         "pages": [
-          "community/governance",
           "community/communication",
           "community/code-of-conduct",
+          "community/governance",
+          "community/working-interest-groups",
           "community/contributing"
         ]
       },

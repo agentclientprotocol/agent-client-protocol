@@ -57,9 +57,8 @@ pub enum ContentBlock {
 
 /// Text provided to or from an LLM.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
-#[schemars(inline)]
 pub struct TextContent {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub annotations: Option<Annotations>,
     pub text: String,
     /// Extension point for implementations
@@ -79,14 +78,13 @@ impl<T: Into<String>> From<T> for ContentBlock {
 
 /// An image provided to or from an LLM.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
-#[schemars(inline)]
+#[serde(rename_all = "camelCase")]
 pub struct ImageContent {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub annotations: Option<Annotations>,
     pub data: String,
-    #[serde(rename = "mimeType")]
     pub mime_type: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub uri: Option<String>,
     /// Extension point for implementations
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
@@ -95,12 +93,11 @@ pub struct ImageContent {
 
 /// Audio provided to or from an LLM.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
-#[schemars(inline)]
+#[serde(rename_all = "camelCase")]
 pub struct AudioContent {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub annotations: Option<Annotations>,
     pub data: String,
-    #[serde(rename = "mimeType")]
     pub mime_type: String,
     /// Extension point for implementations
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
@@ -109,9 +106,8 @@ pub struct AudioContent {
 
 /// The contents of a resource, embedded into a prompt or tool call result.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
-#[schemars(inline)]
 pub struct EmbeddedResource {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub annotations: Option<Annotations>,
     pub resource: EmbeddedResourceResource,
     /// Extension point for implementations
@@ -129,8 +125,9 @@ pub enum EmbeddedResourceResource {
 
 /// Text-based resource contents.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct TextResourceContents {
-    #[serde(rename = "mimeType", default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub mime_type: Option<String>,
     pub text: String,
     pub uri: String,
@@ -141,9 +138,10 @@ pub struct TextResourceContents {
 
 /// Binary resource contents.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct BlobResourceContents {
     pub blob: String,
-    #[serde(rename = "mimeType", default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub mime_type: Option<String>,
     pub uri: String,
     /// Extension point for implementations
@@ -153,18 +151,18 @@ pub struct BlobResourceContents {
 
 /// A resource that the server is capable of reading, included in a prompt or tool call result.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
-#[schemars(inline)]
+#[serde(rename_all = "camelCase")]
 pub struct ResourceLink {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub annotations: Option<Annotations>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
-    #[serde(rename = "mimeType", default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub mime_type: Option<String>,
     pub name: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub size: Option<i64>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
     pub uri: String,
     /// Extension point for implementations
@@ -174,16 +172,13 @@ pub struct ResourceLink {
 
 /// Optional annotations for the client. The client can use annotations to inform how objects are used or displayed
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct Annotations {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub audience: Option<Vec<Role>>,
-    #[serde(
-        rename = "lastModified",
-        default,
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub last_modified: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub priority: Option<f64>,
     /// Extension point for implementations
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
@@ -192,9 +187,8 @@ pub struct Annotations {
 
 /// The sender or recipient of messages and data in a conversation.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub enum Role {
-    #[serde(rename = "assistant")]
     Assistant,
-    #[serde(rename = "user")]
     User,
 }

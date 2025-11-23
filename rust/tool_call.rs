@@ -20,11 +20,9 @@ use crate::{ContentBlock, Error};
 /// See protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/tool-calls)
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
-#[schemars(inline)]
 pub struct ToolCall {
     /// Unique identifier for this tool call within the session.
-    #[serde(rename = "toolCallId")]
-    pub id: ToolCallId,
+    pub tool_call_id: ToolCallId,
     /// Human-readable title describing what the tool is doing.
     pub title: String,
     /// The category of tool being invoked.
@@ -42,10 +40,10 @@ pub struct ToolCall {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub locations: Vec<ToolCallLocation>,
     /// Raw input parameters sent to the tool.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub raw_input: Option<serde_json::Value>,
     /// Raw output returned by the tool.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub raw_output: Option<serde_json::Value>,
     /// Extension point for implementations
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
@@ -88,11 +86,9 @@ impl ToolCall {
 /// See protocol docs: [Updating](https://agentclientprotocol.com/protocol/tool-calls#updating)
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
-#[schemars(inline)]
 pub struct ToolCallUpdate {
     /// The ID of the tool call being updated.
-    #[serde(rename = "toolCallId")]
-    pub id: ToolCallId,
+    pub tool_call_id: ToolCallId,
     /// Fields being updated.
     #[serde(flatten)]
     pub fields: ToolCallUpdateFields,
@@ -111,25 +107,25 @@ pub struct ToolCallUpdate {
 #[serde(rename_all = "camelCase")]
 pub struct ToolCallUpdateFields {
     /// Update the tool kind.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub kind: Option<ToolKind>,
     /// Update the execution status.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<ToolCallStatus>,
     /// Update the human-readable title.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
     /// Replace the content collection.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub content: Option<Vec<ToolCallContent>>,
     /// Replace the locations collection.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub locations: Option<Vec<ToolCallLocation>>,
     /// Update the raw input.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub raw_input: Option<serde_json::Value>,
     /// Update the raw output.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub raw_output: Option<serde_json::Value>,
 }
 
@@ -140,7 +136,7 @@ impl TryFrom<ToolCallUpdate> for ToolCall {
 
     fn try_from(update: ToolCallUpdate) -> Result<Self, Self::Error> {
         let ToolCallUpdate {
-            id,
+            tool_call_id,
             fields:
                 ToolCallUpdateFields {
                     kind,
@@ -151,11 +147,11 @@ impl TryFrom<ToolCallUpdate> for ToolCall {
                     raw_input,
                     raw_output,
                 },
-            meta: _,
+            meta,
         } = update;
 
         Ok(Self {
-            id,
+            tool_call_id,
             title: title.ok_or_else(|| {
                 Error::invalid_params()
                     .with_data(serde_json::json!("title is required for a tool call"))
@@ -166,7 +162,7 @@ impl TryFrom<ToolCallUpdate> for ToolCall {
             locations: locations.unwrap_or_default(),
             raw_input,
             raw_output,
-            meta: None,
+            meta,
         })
     }
 }
@@ -174,7 +170,7 @@ impl TryFrom<ToolCallUpdate> for ToolCall {
 impl From<ToolCall> for ToolCallUpdate {
     fn from(value: ToolCall) -> Self {
         let ToolCall {
-            id,
+            tool_call_id,
             title,
             kind,
             status,
@@ -182,10 +178,10 @@ impl From<ToolCall> for ToolCallUpdate {
             locations,
             raw_input,
             raw_output,
-            meta: _,
+            meta,
         } = value;
         Self {
-            id,
+            tool_call_id,
             fields: ToolCallUpdateFields {
                 kind: Some(kind),
                 status: Some(status),
@@ -195,7 +191,7 @@ impl From<ToolCall> for ToolCallUpdate {
                 raw_input,
                 raw_output,
             },
-            meta: None,
+            meta,
         }
     }
 }
