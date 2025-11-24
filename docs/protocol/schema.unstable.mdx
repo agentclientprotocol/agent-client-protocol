@@ -211,7 +211,7 @@ Only available if the Agent supports the `listSessions` capability.
   cursor-based pagination
 </ResponseField>
 <ResponseField name="cwd" type={"string | null"}>
-  Filter sessions by working directory
+  Filter sessions by working directory. Must be an absolute path.
 </ResponseField>
 
 #### <span class="font-mono">ListSessionsResponse</span>
@@ -2261,13 +2261,13 @@ Information about a session returned by session/list
 **Properties:**
 
 <ResponseField name="_meta" type={"object"}>
-  Agent-specific metadata (e.g., message count, error status, tags)
+  Extension point for implementations
 </ResponseField>
 <ResponseField name="createdAt" type={"string | null"}>
   ISO 8601 timestamp when session was created
 </ResponseField>
 <ResponseField name="cwd" type={"string"} required>
-  Working directory for the session
+  The working directory for this session. Must be an absolute path.
 </ResponseField>
 <ResponseField
   name="sessionId"
@@ -2277,7 +2277,7 @@ Information about a session returned by session/list
   Unique identifier for the session
 </ResponseField>
 <ResponseField name="title" type={"string | null"}>
-  Human-readable title (may be auto-generated from first prompt)
+  Human-readable title for the session
 </ResponseField>
 <ResponseField name="updatedAt" type={"string | null"}>
   ISO 8601 timestamp of last activity

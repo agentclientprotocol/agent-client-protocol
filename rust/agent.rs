@@ -241,7 +241,7 @@ pub struct LoadSessionResponse {
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_LIST_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 pub struct ListSessionsRequest {
-    /// Filter sessions by working directory
+    /// Filter sessions by working directory. Must be an absolute path.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cwd: Option<PathBuf>,
     /// Opaque cursor token from a previous response's nextCursor field for cursor-based pagination
@@ -281,18 +281,18 @@ pub struct ListSessionsResponse {
 pub struct SessionInfo {
     /// Unique identifier for the session
     pub session_id: SessionId,
+    /// The working directory for this session. Must be an absolute path.
+    pub cwd: PathBuf,
+    /// Human-readable title for the session
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
     /// ISO 8601 timestamp when session was created
     #[serde(skip_serializing_if = "Option::is_none")]
     pub created_at: Option<String>,
     /// ISO 8601 timestamp of last activity
     #[serde(skip_serializing_if = "Option::is_none")]
     pub updated_at: Option<String>,
-    /// Working directory for the session
-    pub cwd: PathBuf,
-    /// Human-readable title (may be auto-generated from first prompt)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub title: Option<String>,
-    /// Agent-specific metadata (e.g., message count, error status, tags)
+    /// Extension point for implementations
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<serde_json::Value>,
 }

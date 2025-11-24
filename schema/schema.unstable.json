@@ -1228,7 +1228,7 @@
           "type": ["string", "null"]
         },
         "cwd": {
-          "description": "Filter sessions by working directory",
+          "description": "Filter sessions by working directory. Must be an absolute path.",
           "type": ["string", "null"]
         }
       },
@@ -1981,14 +1981,14 @@
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nInformation about a session returned by session/list",
       "properties": {
         "_meta": {
-          "description": "Agent-specific metadata (e.g., message count, error status, tags)"
+          "description": "Extension point for implementations"
         },
         "createdAt": {
           "description": "ISO 8601 timestamp when session was created",
           "type": ["string", "null"]
         },
         "cwd": {
-          "description": "Working directory for the session",
+          "description": "The working directory for this session. Must be an absolute path.",
           "type": "string"
         },
         "sessionId": {
@@ -2000,7 +2000,7 @@
           "description": "Unique identifier for the session"
         },
         "title": {
-          "description": "Human-readable title (may be auto-generated from first prompt)",
+          "description": "Human-readable title for the session",
           "type": ["string", "null"]
         },
         "updatedAt": {
