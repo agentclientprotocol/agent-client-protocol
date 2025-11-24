@@ -155,12 +155,12 @@ mod markdown_generator {
                         agent_types
                             .entry(method.to_string())
                             .or_default()
-                            .push((name.to_string(), def.clone()));
+                            .push((name.clone(), def.clone()));
                     } else {
                         client_types
                             .entry(method.to_string())
                             .or_default()
-                            .push((name.to_string(), def.clone()));
+                            .push((name.clone(), def.clone()));
                     }
                 } else {
                     referenced_types.push((name.clone(), def.clone()));

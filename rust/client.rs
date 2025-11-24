@@ -37,6 +37,7 @@ pub struct SessionNotification {
 }
 
 impl SessionNotification {
+    #[must_use]
     pub fn new(session_id: SessionId, update: SessionUpdate) -> Self {
         Self {
             session_id,
@@ -46,6 +47,7 @@ impl SessionNotification {
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -98,6 +100,7 @@ pub struct CurrentModeUpdate {
 }
 
 impl CurrentModeUpdate {
+    #[must_use]
     pub fn new(current_mode_id: SessionModeId) -> Self {
         Self {
             current_mode_id,
@@ -106,6 +109,7 @@ impl CurrentModeUpdate {
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -125,6 +129,7 @@ pub struct ContentChunk {
 }
 
 impl ContentChunk {
+    #[must_use]
     pub fn new(content: ContentBlock) -> Self {
         Self {
             content,
@@ -133,6 +138,7 @@ impl ContentChunk {
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -152,6 +158,7 @@ pub struct AvailableCommandsUpdate {
 }
 
 impl AvailableCommandsUpdate {
+    #[must_use]
     pub fn new(available_commands: Vec<AvailableCommand>) -> Self {
         Self {
             available_commands,
@@ -160,6 +167,7 @@ impl AvailableCommandsUpdate {
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -193,12 +201,14 @@ impl AvailableCommand {
     }
 
     /// Input for the command if required
+    #[must_use]
     pub fn input(mut self, input: AvailableCommandInput) -> Self {
         self.input = Some(input);
         self
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -235,6 +245,7 @@ impl UnstructuredCommandInput {
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -265,6 +276,7 @@ pub struct RequestPermissionRequest {
 }
 
 impl RequestPermissionRequest {
+    #[must_use]
     pub fn new(
         session_id: SessionId,
         tool_call: ToolCallUpdate,
@@ -279,6 +291,7 @@ impl RequestPermissionRequest {
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -316,6 +329,7 @@ impl PermissionOption {
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -326,7 +340,14 @@ impl PermissionOption {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
 #[from(Arc<str>, String, &'static str)]
+#[non_exhaustive]
 pub struct PermissionOptionId(pub Arc<str>);
+
+impl PermissionOptionId {
+    pub fn new(id: impl Into<Arc<str>>) -> Self {
+        Self(id.into())
+    }
+}
 
 /// The type of permission option being presented to the user.
 ///
@@ -360,6 +381,7 @@ pub struct RequestPermissionResponse {
 }
 
 impl RequestPermissionResponse {
+    #[must_use]
     pub fn new(outcome: RequestPermissionOutcome) -> Self {
         Self {
             outcome,
@@ -368,6 +390,7 @@ impl RequestPermissionResponse {
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -406,6 +429,7 @@ pub struct SelectedPermissionOutcome {
 }
 
 impl SelectedPermissionOutcome {
+    #[must_use]
     pub fn new(option_id: PermissionOptionId) -> Self {
         Self {
             option_id,
@@ -414,6 +438,7 @@ impl SelectedPermissionOutcome {
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -456,6 +481,7 @@ impl WriteTextFileRequest {
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -474,11 +500,13 @@ pub struct WriteTextFileResponse {
 }
 
 impl WriteTextFileResponse {
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -522,18 +550,21 @@ impl ReadTextFileRequest {
     }
 
     /// Line number to start reading from (1-based).
+    #[must_use]
     pub fn line(mut self, line: u32) -> Self {
         self.line = Some(line);
         self
     }
 
     /// Maximum number of lines to read.
+    #[must_use]
     pub fn limit(mut self, limit: u32) -> Self {
         self.limit = Some(limit);
         self
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -561,6 +592,7 @@ impl ReadTextFileResponse {
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -572,7 +604,14 @@ impl ReadTextFileResponse {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
 #[from(Arc<str>, String, &'static str)]
+#[non_exhaustive]
 pub struct TerminalId(pub Arc<str>);
+
+impl TerminalId {
+    pub fn new(id: impl Into<Arc<str>>) -> Self {
+        Self(id.into())
+    }
+}
 
 /// Request to create a new terminal and execute a command.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -622,18 +661,21 @@ impl CreateTerminalRequest {
     }
 
     /// Array of command arguments.
+    #[must_use]
     pub fn args(mut self, args: Vec<String>) -> Self {
         self.args = args;
         self
     }
 
     /// Environment variables for the command.
+    #[must_use]
     pub fn env(mut self, env: Vec<crate::EnvVariable>) -> Self {
         self.env = env;
         self
     }
 
     /// Working directory for the command (absolute path).
+    #[must_use]
     pub fn cwd(mut self, cwd: impl Into<PathBuf>) -> Self {
         self.cwd = Some(cwd.into());
         self
@@ -647,12 +689,14 @@ impl CreateTerminalRequest {
     /// The Client MUST ensure truncation happens at a character boundary to maintain valid
     /// string output, even if this means the retained output is slightly less than the
     /// specified limit.
+    #[must_use]
     pub fn output_byte_limit(mut self, output_byte_limit: u64) -> Self {
         self.output_byte_limit = Some(output_byte_limit);
         self
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -673,6 +717,7 @@ pub struct CreateTerminalResponse {
 }
 
 impl CreateTerminalResponse {
+    #[must_use]
     pub fn new(terminal_id: TerminalId) -> Self {
         Self {
             terminal_id,
@@ -681,6 +726,7 @@ impl CreateTerminalResponse {
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -703,6 +749,7 @@ pub struct TerminalOutputRequest {
 }
 
 impl TerminalOutputRequest {
+    #[must_use]
     pub fn new(session_id: SessionId, terminal_id: TerminalId) -> Self {
         Self {
             session_id,
@@ -712,6 +759,7 @@ impl TerminalOutputRequest {
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -746,12 +794,14 @@ impl TerminalOutputResponse {
     }
 
     /// Exit status if the command has completed.
+    #[must_use]
     pub fn exit_status(mut self, exit_status: TerminalExitStatus) -> Self {
         self.exit_status = Some(exit_status);
         self
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -774,6 +824,7 @@ pub struct ReleaseTerminalRequest {
 }
 
 impl ReleaseTerminalRequest {
+    #[must_use]
     pub fn new(session_id: SessionId, terminal_id: TerminalId) -> Self {
         Self {
             session_id,
@@ -783,6 +834,7 @@ impl ReleaseTerminalRequest {
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -801,11 +853,13 @@ pub struct ReleaseTerminalResponse {
 }
 
 impl ReleaseTerminalResponse {
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -828,6 +882,7 @@ pub struct KillTerminalCommandRequest {
 }
 
 impl KillTerminalCommandRequest {
+    #[must_use]
     pub fn new(session_id: SessionId, terminal_id: TerminalId) -> Self {
         Self {
             session_id,
@@ -837,6 +892,7 @@ impl KillTerminalCommandRequest {
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -855,11 +911,13 @@ pub struct KillTerminalCommandResponse {
 }
 
 impl KillTerminalCommandResponse {
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -882,6 +940,7 @@ pub struct WaitForTerminalExitRequest {
 }
 
 impl WaitForTerminalExitRequest {
+    #[must_use]
     pub fn new(session_id: SessionId, terminal_id: TerminalId) -> Self {
         Self {
             session_id,
@@ -891,6 +950,7 @@ impl WaitForTerminalExitRequest {
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -912,6 +972,7 @@ pub struct WaitForTerminalExitResponse {
 }
 
 impl WaitForTerminalExitResponse {
+    #[must_use]
     pub fn new(exit_status: TerminalExitStatus) -> Self {
         Self {
             exit_status,
@@ -920,6 +981,7 @@ impl WaitForTerminalExitResponse {
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -941,23 +1003,27 @@ pub struct TerminalExitStatus {
 }
 
 impl TerminalExitStatus {
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// The process exit code (may be null if terminated by signal).
+    #[must_use]
     pub fn exit_code(mut self, exit_code: u32) -> Self {
         self.exit_code = Some(exit_code);
         self
     }
 
     /// The signal that terminated the process (may be null if exited normally).
+    #[must_use]
     pub fn signal(mut self, signal: impl Into<String>) -> Self {
         self.signal = Some(signal.into());
         self
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -989,24 +1055,28 @@ pub struct ClientCapabilities {
 }
 
 impl ClientCapabilities {
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// File system capabilities supported by the client.
     /// Determines which file operations the agent can request.
+    #[must_use]
     pub fn fs(mut self, fs: FileSystemCapability) -> Self {
         self.fs = fs;
         self
     }
 
     /// Whether the Client support all `terminal/*` methods.
+    #[must_use]
     pub fn terminal(mut self, terminal: bool) -> Self {
         self.terminal = terminal;
         self
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -1033,23 +1103,27 @@ pub struct FileSystemCapability {
 }
 
 impl FileSystemCapability {
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Whether the Client supports `fs/read_text_file` requests.
+    #[must_use]
     pub fn read_text_file(mut self, read_text_file: bool) -> Self {
         self.read_text_file = read_text_file;
         self
     }
 
     /// Whether the Client supports `fs/write_text_file` requests.
+    #[must_use]
     pub fn write_text_file(mut self, write_text_file: bool) -> Self {
         self.write_text_file = write_text_file;
         self
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self

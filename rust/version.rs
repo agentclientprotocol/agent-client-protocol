@@ -38,7 +38,7 @@ impl<'de> Deserialize<'de> for ProtocolVersion {
         impl Visitor<'_> for ProtocolVersionVisitor {
             type Value = ProtocolVersion;
 
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str("a protocol version number or string")
             }
 

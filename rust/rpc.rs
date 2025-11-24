@@ -22,9 +22,12 @@ use crate::{
 #[derive(
     Debug, PartialEq, Clone, Hash, Eq, Deserialize, Serialize, PartialOrd, Ord, Display, JsonSchema,
 )]
-#[serde(deny_unknown_fields)]
 #[serde(untagged)]
 #[schemars(inline)]
+#[allow(
+    clippy::exhaustive_enums,
+    reason = "This comes from the JSON-RPC specification itself"
+)]
 pub enum RequestId {
     #[display("null")]
     Null,
@@ -32,9 +35,10 @@ pub enum RequestId {
     Str(String),
 }
 
-#[derive(Serialize, Deserialize, Clone, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
 #[serde(untagged)]
 #[schemars(inline)]
+#[non_exhaustive]
 pub enum OutgoingMessage<Local: Side, Remote: Side> {
     Request {
         id: RequestId,
@@ -87,6 +91,7 @@ impl<M> JsonRpcMessage<M> {
 
 #[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
 #[serde(rename_all = "snake_case")]
+#[non_exhaustive]
 pub enum ResponseResult<Res> {
     Result(Res),
     Error(Error),
@@ -106,8 +111,22 @@ pub trait Side: Clone {
     type InNotification: Clone + Serialize + DeserializeOwned + JsonSchema + 'static;
     type OutResponse: Clone + Serialize + DeserializeOwned + JsonSchema + 'static;
 
+    /// Decode a request for a given method. This will encapsulate the knowledge of mapping which
+    /// serialization struct to use for each method.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if the method is not recognized or if the parameters
+    /// cannot be deserialized into the expected type.
     fn decode_request(method: &str, params: Option<&RawValue>) -> Result<Self::InRequest>;
 
+    /// Decode a notification for a given method. This will encapsulate the knowledge of mapping which
+    /// serialization struct to use for each method.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if the method is not recognized or if the parameters
+    /// cannot be deserialized into the expected type.
     fn decode_notification(method: &str, params: Option<&RawValue>)
     -> Result<Self::InNotification>;
 }
@@ -118,7 +137,8 @@ pub trait Side: Clone {
 /// are incoming vs outgoing from the client's perspective.
 ///
 /// See protocol docs: [Communication Model](https://agentclientprotocol.com/protocol/overview#communication-model)
-#[derive(Clone, JsonSchema)]
+#[derive(Clone, Default, Debug, JsonSchema)]
+#[non_exhaustive]
 pub struct ClientSide;
 
 impl Side for ClientSide {
@@ -198,7 +218,8 @@ impl Side for ClientSide {
 /// are incoming vs outgoing from the agent's perspective.
 ///
 /// See protocol docs: [Communication Model](https://agentclientprotocol.com/protocol/overview#communication-model)
-#[derive(Clone, JsonSchema)]
+#[derive(Clone, Default, Debug, JsonSchema)]
+#[non_exhaustive]
 pub struct AgentSide;
 
 impl Side for AgentSide {

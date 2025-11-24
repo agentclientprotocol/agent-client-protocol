@@ -77,12 +77,14 @@ impl TextContent {
         }
     }
 
+    #[must_use]
     pub fn annotations(mut self, annotations: Annotations) -> Self {
         self.annotations = Some(annotations);
         self
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -122,17 +124,20 @@ impl ImageContent {
         }
     }
 
+    #[must_use]
     pub fn annotations(mut self, annotations: Annotations) -> Self {
         self.annotations = Some(annotations);
         self
     }
 
+    #[must_use]
     pub fn uri(mut self, uri: impl Into<String>) -> Self {
         self.uri = Some(uri.into());
         self
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -163,12 +168,14 @@ impl AudioContent {
         }
     }
 
+    #[must_use]
     pub fn annotations(mut self, annotations: Annotations) -> Self {
         self.annotations = Some(annotations);
         self
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -188,6 +195,7 @@ pub struct EmbeddedResource {
 }
 
 impl EmbeddedResource {
+    #[must_use]
     pub fn new(resource: EmbeddedResourceResource) -> Self {
         Self {
             annotations: None,
@@ -196,12 +204,14 @@ impl EmbeddedResource {
         }
     }
 
+    #[must_use]
     pub fn annotations(mut self, annotations: Annotations) -> Self {
         self.annotations = Some(annotations);
         self
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -241,12 +251,14 @@ impl TextResourceContents {
         }
     }
 
+    #[must_use]
     pub fn mime_type(mut self, mime_type: impl Into<String>) -> Self {
         self.mime_type = Some(mime_type.into());
         self
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -277,12 +289,14 @@ impl BlobResourceContents {
         }
     }
 
+    #[must_use]
     pub fn mime_type(mut self, mime_type: impl Into<String>) -> Self {
         self.mime_type = Some(mime_type.into());
         self
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -325,32 +339,38 @@ impl ResourceLink {
         }
     }
 
+    #[must_use]
     pub fn annotations(mut self, annotations: Annotations) -> Self {
         self.annotations = Some(annotations);
         self
     }
 
+    #[must_use]
     pub fn description(mut self, description: impl Into<String>) -> Self {
         self.description = Some(description.into());
         self
     }
 
+    #[must_use]
     pub fn mime_type(mut self, mime_type: impl Into<String>) -> Self {
         self.mime_type = Some(mime_type.into());
         self
     }
 
+    #[must_use]
     pub fn size(mut self, size: i64) -> Self {
         self.size = Some(size);
         self
     }
 
+    #[must_use]
     pub fn title(mut self, title: impl Into<String>) -> Self {
         self.title = Some(title.into());
         self
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -374,26 +394,31 @@ pub struct Annotations {
 }
 
 impl Annotations {
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
+    #[must_use]
     pub fn audience(mut self, audience: Vec<Role>) -> Self {
         self.audience = Some(audience);
         self
     }
 
+    #[must_use]
     pub fn last_modified(mut self, last_modified: impl Into<String>) -> Self {
         self.last_modified = Some(last_modified.into());
         self
     }
 
+    #[must_use]
     pub fn priority(mut self, priority: f64) -> Self {
         self.priority = Some(priority);
         self
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self

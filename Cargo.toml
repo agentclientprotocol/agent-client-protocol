@@ -32,3 +32,18 @@ derive_more = { version = "2", features = ["from", "display"] }
 schemars = { version = "1" }
 serde = { version = "1", features = ["derive", "rc"] }
 serde_json = { version = "1", features = ["raw_value"] }
+
+[lints.rust]
+future_incompatible = { level = "warn", priority = -1 }
+let-underscore = "warn"
+missing_debug_implementations = "warn"
+# missing_docs = "warn"
+nonstandard_style = { level = "warn", priority = -1 }
+rust_2018_idioms = { level = "warn", priority = -1 }
+unused = { level = "warn", priority = -1 }
+
+[lints.clippy]
+cargo = "warn"
+exhaustive_enums = "warn"
+exhaustive_structs = "warn"
+pedantic = "warn"
