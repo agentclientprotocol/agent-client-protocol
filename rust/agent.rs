@@ -129,6 +129,7 @@ impl InitializeResponse {
         self
     }
 
+    /// Extension point for implementations
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -153,6 +154,9 @@ pub struct Implementation {
     /// Version of the implementation. Can be displayed to the user or used
     /// for debugging or metrics purposes. (e.g. "1.0.0").
     pub version: String,
+    /// Extension point for implementations
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<serde_json::Value>,
 }
 
 impl Implementation {
@@ -161,6 +165,7 @@ impl Implementation {
             name: name.into(),
             title: None,
             version: version.into(),
+            meta: None,
         }
     }
 
@@ -170,6 +175,12 @@ impl Implementation {
     /// If not provided, the name should be used for display.
     pub fn title(mut self, title: impl Into<String>) -> Self {
         self.title = Some(title.into());
+        self
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
         self
     }
 }
@@ -652,6 +663,9 @@ pub struct McpServerHttp {
     pub url: String,
     /// HTTP headers to set when making requests to the MCP server.
     pub headers: Vec<HttpHeader>,
+    /// Extension point for implementations
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<serde_json::Value>,
 }
 
 impl McpServerHttp {
@@ -660,12 +674,19 @@ impl McpServerHttp {
             name: name.into(),
             url: url.into(),
             headers: Vec::new(),
+            meta: None,
         }
     }
 
     /// HTTP headers to set when making requests to the MCP server.
     pub fn headers(mut self, headers: Vec<HttpHeader>) -> Self {
         self.headers = headers;
+        self
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
         self
     }
 }
@@ -681,6 +702,9 @@ pub struct McpServerSse {
     pub url: String,
     /// HTTP headers to set when making requests to the MCP server.
     pub headers: Vec<HttpHeader>,
+    /// Extension point for implementations
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<serde_json::Value>,
 }
 
 impl McpServerSse {
@@ -689,12 +713,19 @@ impl McpServerSse {
             name: name.into(),
             url: url.into(),
             headers: Vec::new(),
+            meta: None,
         }
     }
 
     /// HTTP headers to set when making requests to the MCP server.
     pub fn headers(mut self, headers: Vec<HttpHeader>) -> Self {
         self.headers = headers;
+        self
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
         self
     }
 }
@@ -712,6 +743,9 @@ pub struct McpServerStdio {
     pub args: Vec<String>,
     /// Environment variables to set when launching the MCP server.
     pub env: Vec<EnvVariable>,
+    /// Extension point for implementations
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<serde_json::Value>,
 }
 
 impl McpServerStdio {
@@ -721,6 +755,7 @@ impl McpServerStdio {
             command: command.into(),
             args: Vec::new(),
             env: Vec::new(),
+            meta: None,
         }
     }
 
@@ -733,6 +768,12 @@ impl McpServerStdio {
     /// Environment variables to set when launching the MCP server.
     pub fn env(mut self, env: Vec<EnvVariable>) -> Self {
         self.env = env;
+        self
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
         self
     }
 }
@@ -1502,6 +1543,7 @@ mod test_serialization {
                 command,
                 args,
                 env,
+                meta: _,
             }) => {
                 assert_eq!(name, "test-server");
                 assert_eq!(command, PathBuf::from("/usr/bin/server"));
@@ -1545,7 +1587,12 @@ mod test_serialization {
 
         let deserialized: McpServer = serde_json::from_value(json).unwrap();
         match deserialized {
-            McpServer::Http(McpServerHttp { name, url, headers }) => {
+            McpServer::Http(McpServerHttp {
+                name,
+                url,
+                headers,
+                meta: _,
+            }) => {
                 assert_eq!(name, "http-server");
                 assert_eq!(url, "https://api.example.com");
                 assert_eq!(headers.len(), 2);
@@ -1583,7 +1630,12 @@ mod test_serialization {
 
         let deserialized: McpServer = serde_json::from_value(json).unwrap();
         match deserialized {
-            McpServer::Sse(McpServerSse { name, url, headers }) => {
+            McpServer::Sse(McpServerSse {
+                name,
+                url,
+                headers,
+                meta: _,
+            }) => {
                 assert_eq!(name, "sse-server");
                 assert_eq!(url, "https://sse.example.com/events");
                 assert_eq!(headers.len(), 1);

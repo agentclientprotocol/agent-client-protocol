@@ -435,13 +435,23 @@ impl From<Diff> for ToolCallContent {
 pub struct Content {
     /// The actual content block.
     pub content: ContentBlock,
+    /// Extension point for implementations
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<serde_json::Value>,
 }
 
 impl Content {
     pub fn new(content: impl Into<ContentBlock>) -> Self {
         Self {
             content: content.into(),
+            meta: None,
         }
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
     }
 }
 
@@ -455,11 +465,23 @@ impl Content {
 #[non_exhaustive]
 pub struct Terminal {
     pub terminal_id: TerminalId,
+    /// Extension point for implementations
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<serde_json::Value>,
 }
 
 impl Terminal {
     pub fn new(terminal_id: TerminalId) -> Self {
-        Self { terminal_id }
+        Self {
+            terminal_id,
+            meta: None,
+        }
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
     }
 }
 

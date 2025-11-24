@@ -699,6 +699,9 @@
     "Content": {
       "description": "Standard content block (text, images, resources).",
       "properties": {
+        "_meta": {
+          "description": "Extension point for implementations"
+        },
         "content": {
           "allOf": [
             {
@@ -1061,6 +1064,9 @@
     "Implementation": {
       "description": "Metadata about the implementation of the client or agent.\nDescribes the name and version of an MCP implementation, with an optional\ntitle for UI representation.",
       "properties": {
+        "_meta": {
+          "description": "Extension point for implementations"
+        },
         "name": {
           "description": "Intended for programmatic or logical use, but can be used as a display\nname fallback if title isn’t present.",
           "type": "string"
@@ -1340,6 +1346,9 @@
     "McpServerHttp": {
       "description": "HTTP transport configuration for MCP.",
       "properties": {
+        "_meta": {
+          "description": "Extension point for implementations"
+        },
         "headers": {
           "description": "HTTP headers to set when making requests to the MCP server.",
           "items": {
@@ -1362,6 +1371,9 @@
     "McpServerSse": {
       "description": "SSE transport configuration for MCP.",
       "properties": {
+        "_meta": {
+          "description": "Extension point for implementations"
+        },
         "headers": {
           "description": "HTTP headers to set when making requests to the MCP server.",
           "items": {
@@ -1384,6 +1396,9 @@
     "McpServerStdio": {
       "description": "Stdio transport configuration for MCP.",
       "properties": {
+        "_meta": {
+          "description": "Extension point for implementations"
+        },
         "args": {
           "description": "Command-line arguments to pass to the MCP server.",
           "items": {
@@ -1911,6 +1926,9 @@
     "SelectedPermissionOutcome": {
       "description": "The user selected one of the provided options.",
       "properties": {
+        "_meta": {
+          "description": "Extension point for implementations"
+        },
         "optionId": {
           "allOf": [
             {
@@ -2209,6 +2227,9 @@
     "Terminal": {
       "description": "Embed a terminal created with `terminal/create` by its id.\n\nThe terminal must be added before calling `terminal/release`.\n\nSee protocol docs: [Terminal](https://agentclientprotocol.com/protocol/terminals)",
       "properties": {
+        "_meta": {
+          "description": "Extension point for implementations"
+        },
         "terminalId": {
           "type": "string"
         }
@@ -2617,6 +2638,9 @@
     "UnstructuredCommandInput": {
       "description": "All text that was typed after the command name is provided as input.",
       "properties": {
+        "_meta": {
+          "description": "Extension point for implementations"
+        },
         "hint": {
           "description": "A hint to display when the input hasn't been provided yet",
           "type": "string"

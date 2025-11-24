@@ -221,11 +221,23 @@ pub enum AvailableCommandInput {
 pub struct UnstructuredCommandInput {
     /// A hint to display when the input hasn't been provided yet
     pub hint: String,
+    /// Extension point for implementations
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<serde_json::Value>,
 }
 
 impl UnstructuredCommandInput {
     pub fn new(hint: impl Into<String>) -> Self {
-        Self { hint: hint.into() }
+        Self {
+            hint: hint.into(),
+            meta: None,
+        }
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
     }
 }
 
@@ -388,11 +400,23 @@ pub enum RequestPermissionOutcome {
 pub struct SelectedPermissionOutcome {
     /// The ID of the option the user selected.
     pub option_id: PermissionOptionId,
+    /// Extension point for implementations
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<serde_json::Value>,
 }
 
 impl SelectedPermissionOutcome {
     pub fn new(option_id: PermissionOptionId) -> Self {
-        Self { option_id }
+        Self {
+            option_id,
+            meta: None,
+        }
+    }
+
+    /// Extension point for implementations
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
     }
 }
 

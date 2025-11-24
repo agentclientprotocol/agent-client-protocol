@@ -1172,6 +1172,9 @@ All text that was typed after the command name is provided as input.
 
 <Expandable title="Properties">
 
+<ResponseField name="_meta" type={"object"}>
+  Extension point for implementations
+</ResponseField>
 <ResponseField name="hint" type={"string"} required>
   A hint to display when the input hasn't been provided yet
 </ResponseField>
@@ -1258,6 +1261,9 @@ Standard content block (text, images, resources).
 
 **Properties:**
 
+<ResponseField name="_meta" type={"object"}>
+  Extension point for implementations
+</ResponseField>
 <ResponseField
   name="content"
   type={<a href="#contentblock">ContentBlock</a>}
@@ -1691,6 +1697,9 @@ title for UI representation.
 
 **Properties:**
 
+<ResponseField name="_meta" type={"object"} >
+  Extension point for implementations
+</ResponseField>
 <ResponseField name="name" type={"string"} required>
   Intended for programmatic or logical use, but can be used as a display
 name fallback if title isn’t present.
@@ -1749,6 +1758,9 @@ Only available when the Agent capabilities indicate `mcp_capabilities.http` is `
 
 <Expandable title="Properties">
 
+<ResponseField name="_meta" type={"object"}>
+  Extension point for implementations
+</ResponseField>
 <ResponseField
   name="headers"
   type={
@@ -1781,6 +1793,9 @@ Only available when the Agent capabilities indicate `mcp_capabilities.sse` is `t
 
 <Expandable title="Properties">
 
+<ResponseField name="_meta" type={"object"}>
+  Extension point for implementations
+</ResponseField>
 <ResponseField
   name="headers"
   type={
@@ -1813,6 +1828,9 @@ All Agents MUST support this transport.
 
 <Expandable title="Properties">
 
+<ResponseField name="_meta" type={"object"}>
+  Extension point for implementations
+</ResponseField>
 <ResponseField
   name="args"
   type={
@@ -1857,6 +1875,9 @@ HTTP transport configuration for MCP.
 
 **Properties:**
 
+<ResponseField name="_meta" type={"object"}>
+  Extension point for implementations
+</ResponseField>
 <ResponseField
   name="headers"
   type={
@@ -1886,6 +1907,9 @@ SSE transport configuration for MCP.
 
 **Properties:**
 
+<ResponseField name="_meta" type={"object"}>
+  Extension point for implementations
+</ResponseField>
 <ResponseField
   name="headers"
   type={
@@ -1915,6 +1939,9 @@ Stdio transport configuration for MCP.
 
 **Properties:**
 
+<ResponseField name="_meta" type={"object"}>
+  Extension point for implementations
+</ResponseField>
 <ResponseField
   name="args"
   type={
@@ -2227,6 +2254,9 @@ The user selected one of the provided options.
 
 <Expandable title="Properties">
 
+<ResponseField name="_meta" type={"object"}>
+  Extension point for implementations
+</ResponseField>
 <ResponseField
   name="optionId"
   type={<a href="#permissionoptionid">PermissionOptionId</a>}
@@ -2287,6 +2317,9 @@ The user selected one of the provided options.
 
 **Properties:**
 
+<ResponseField name="_meta" type={"object"}>
+  Extension point for implementations
+</ResponseField>
 <ResponseField
   name="optionId"
   type={<a href="#permissionoptionid">PermissionOptionId</a>}
@@ -2727,6 +2760,9 @@ See protocol docs: [Terminal](https://agentclientprotocol.com/protocol/terminals
 
 **Properties:**
 
+<ResponseField name="_meta" type={"object"}>
+  Extension point for implementations
+</ResponseField>
 <ResponseField name="terminalId" type={"string"} required></ResponseField>
 
 ## <span class="font-mono">TerminalExitStatus</span>
@@ -2875,6 +2911,9 @@ Standard content block (text, images, resources).
 
 <Expandable title="Properties">
 
+<ResponseField name="_meta" type={"object"}>
+  Extension point for implementations
+</ResponseField>
 <ResponseField
   name="content"
   type={<a href="#contentblock">ContentBlock</a>}
@@ -2918,6 +2957,9 @@ See protocol docs: [Terminal](https://agentclientprotocol.com/protocol/terminals
 
 <Expandable title="Properties">
 
+<ResponseField name="_meta" type={"object"}>
+  Extension point for implementations
+</ResponseField>
 <ResponseField name="terminalId" type={"string"} required></ResponseField>
 <ResponseField name="type" type={"string"} required></ResponseField>
 
@@ -3087,6 +3129,9 @@ All text that was typed after the command name is provided as input.
 
 **Properties:**
 
+<ResponseField name="_meta" type={"object"}>
+  Extension point for implementations
+</ResponseField>
 <ResponseField name="hint" type={"string"} required>
   A hint to display when the input hasn't been provided yet
 </ResponseField>
