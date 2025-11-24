@@ -39,7 +39,6 @@ Add a new `session/list` JSON-RPC method to the protocol that returns metadata a
    - `sessionId` - Unique identifier
    - `cwd` - Working directory for the session
    - `title` - Optional human-readable title (could be auto-generated from first prompt)
-   - `createdAt` - Timestamp when session was created
    - `updatedAt` - Timestamp of last update to the session
    - `_meta` - Optional agent-specific metadata
 2. **Support filtering and pagination**:
@@ -98,7 +97,6 @@ The agent responds with a list of sessions and cursor pagination metadata:
     "sessions": [
       {
         "sessionId": "sess_abc123def456",
-        "createdAt": "2025-10-29T10:30:00Z",
         "updatedAt": "2025-10-29T14:22:15Z",
         "cwd": "/home/user/project",
         "title": "Implement session list API",
@@ -109,14 +107,12 @@ The agent responds with a list of sessions and cursor pagination metadata:
       },
       {
         "sessionId": "sess_xyz789ghi012",
-        "createdAt": "2025-10-28T09:15:00Z",
         "updatedAt": "2025-10-28T16:45:30Z",
         "cwd": "/home/user/another-project",
         "title": "Debug authentication flow"
       },
       {
         "sessionId": "sess_uvw345rst678",
-        "createdAt": "2025-10-27T14:00:00Z",
         "updatedAt": "2025-10-27T15:30:00Z",
         "cwd": "/home/user/project"
       }
@@ -138,7 +134,6 @@ The agent responds with a list of sessions and cursor pagination metadata:
 - `sessionId` (string, required) - Unique identifier for the session
 - `cwd` (string, required) - Working directory for the session
 - `title` (string, optional) - Human-readable title (may be auto-generated from first prompt)
-- `createdAt` (string, optional) - ISO 8601 timestamp when session was created
 - `updatedAt` (string, optional) - ISO 8601 timestamp of last activity
 - `_meta` (object, optional) - Agent-specific metadata (e.g., message count, error status, tags)
 
@@ -334,4 +329,4 @@ Corresponding response example:
 - **2025-10-31**: Update pagination: `continuationToken` → `cursor`, `nextContinuationToken` → `nextCursor`, remove `hasMore`
 - **2025-11-11**: Remove `createdAt`, `updatedAt`, and `search` filters from the request parameters
 - **2025-11-23**: Remove `limit` parameter from request; make `createdAt` and `updatedAt` optional in SessionInfo
-- **2025-11-24**: Update capabilities schema
+- **2025-11-24**: Update capabilities schema, consolidate to single `updatedAt` timestamp

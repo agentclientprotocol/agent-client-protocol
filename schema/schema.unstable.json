@@ -1257,6 +1257,9 @@
     "ListSessionsRequest": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for listing existing sessions.\n\nOnly available if the Agent supports the `listSessions` capability.",
       "properties": {
+        "_meta": {
+          "description": "Extension point for implementations"
+        },
         "cursor": {
           "description": "Opaque cursor token from a previous response's nextCursor field for cursor-based pagination",
           "type": ["string", "null"]
@@ -2092,10 +2095,6 @@
       "properties": {
         "_meta": {
           "description": "Extension point for implementations"
-        },
-        "createdAt": {
-          "description": "ISO 8601 timestamp when session was created",
-          "type": ["string", "null"]
         },
         "cwd": {
           "description": "The working directory for this session. Must be an absolute path.",

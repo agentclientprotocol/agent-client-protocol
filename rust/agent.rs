@@ -647,9 +647,6 @@ pub struct SessionInfo {
     /// Human-readable title for the session
     #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
-    /// ISO 8601 timestamp when session was created
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub created_at: Option<String>,
     /// ISO 8601 timestamp of last activity
     #[serde(skip_serializing_if = "Option::is_none")]
     pub updated_at: Option<String>,
@@ -665,7 +662,6 @@ impl SessionInfo {
             session_id,
             cwd: cwd.into(),
             title: None,
-            created_at: None,
             updated_at: None,
             meta: None,
         }
@@ -675,13 +671,6 @@ impl SessionInfo {
     #[must_use]
     pub fn title(mut self, title: impl Into<String>) -> Self {
         self.title = Some(title.into());
-        self
-    }
-
-    /// ISO 8601 timestamp when session was created
-    #[must_use]
-    pub fn created_at(mut self, created_at: impl Into<String>) -> Self {
-        self.created_at = Some(created_at.into());
         self
     }
 

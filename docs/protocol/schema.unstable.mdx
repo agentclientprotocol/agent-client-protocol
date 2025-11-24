@@ -202,6 +202,9 @@ Only available if the Agent supports the `listSessions` capability.
 
 **Properties:**
 
+<ResponseField name="_meta" type={"object"}>
+  Extension point for implementations
+</ResponseField>
 <ResponseField name="cursor" type={"string | null"}>
   Opaque cursor token from a previous response's nextCursor field for
   cursor-based pagination
@@ -2464,9 +2467,6 @@ Information about a session returned by session/list
 
 <ResponseField name="_meta" type={"object"}>
   Extension point for implementations
-</ResponseField>
-<ResponseField name="createdAt" type={"string | null"}>
-  ISO 8601 timestamp when session was created
 </ResponseField>
 <ResponseField name="cwd" type={"string"} required>
   The working directory for this session. Must be an absolute path.
