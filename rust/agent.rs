@@ -617,6 +617,15 @@ pub struct AgentCapabilities {
     /// MCP capabilities supported by the agent.
     #[serde(default)]
     pub mcp_capabilities: McpCapabilities,
+    #[serde(default)]
+    pub session_capabilities: SessionCapabilities,
+    /// Extension point for implementations
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<serde_json::Value>,
+}
+
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+pub struct SessionCapabilities {
     /// **UNSTABLE**
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -624,7 +633,15 @@ pub struct AgentCapabilities {
     /// Whether the agent supports `session/list`.
     #[cfg(feature = "unstable_session_list")]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub list_sessions: Option<serde_json::Value>,
+    pub list: Option<SessionListCapabilities>,
+    /// Extension point for implementations
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<serde_json::Value>,
+}
+
+#[cfg(feature = "unstable_session_list")]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+pub struct SessionListCapabilities {
     /// Extension point for implementations
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<serde_json::Value>,

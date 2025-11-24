@@ -119,7 +119,7 @@ See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/ini
 <ResponseField name="agentCapabilities" type={<a href="#agentcapabilities">AgentCapabilities</a>} >
   Capabilities supported by the agent.
 
-    - Default: `{"loadSession":false,"mcpCapabilities":{"http":false,"sse":false},"promptCapabilities":{"audio":false,"embeddedContext":false,"image":false}}`
+    - Default: `{"loadSession":false,"mcpCapabilities":{"http":false,"sse":false},"promptCapabilities":{"audio":false,"embeddedContext":false,"image":false},"sessionCapabilities":{}}`
 
 </ResponseField>
 <ResponseField name="agentInfo" type={<><span><a href="#implementation">Implementation</a></span><span> | null</span></>} >
@@ -1003,6 +1003,11 @@ See protocol docs: [Agent Capabilities](https://agentclientprotocol.com/protocol
   Prompt capabilities supported by the agent.
 
     - Default: `{"audio":false,"embeddedContext":false,"image":false}`
+
+</ResponseField>
+<ResponseField name="sessionCapabilities" type={<a href="#sessioncapabilities">SessionCapabilities</a>} >
+
+    - Default: `{}`
 
 </ResponseField>
 
@@ -2048,6 +2053,16 @@ The sender or recipient of messages and data in a conversation.
 | ------------- |
 | `"assistant"` |
 | `"user"`      |
+
+## <span class="font-mono">SessionCapabilities</span>
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object"}>
+  Extension point for implementations
+</ResponseField>
 
 ## <span class="font-mono">SessionId</span>
 
