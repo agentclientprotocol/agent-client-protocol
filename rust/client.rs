@@ -1220,7 +1220,7 @@ pub enum ClientResponse {
 /// Notifications do not expect a response.
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(untagged)]
-#[allow(clippy::large_enum_variant)]
+#[expect(clippy::large_enum_variant)]
 #[schemars(extend("x-docs-ignore" = true))]
 #[non_exhaustive]
 pub enum AgentNotification {
