@@ -556,23 +556,27 @@ pub struct ListSessionsRequest {
 
 #[cfg(feature = "unstable_session_list")]
 impl ListSessionsRequest {
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Filter sessions by working directory. Must be an absolute path.
+    #[must_use]
     pub fn cwd(mut self, cwd: impl Into<PathBuf>) -> Self {
         self.cwd = Some(cwd.into());
         self
     }
 
     /// Opaque cursor token from a previous response's nextCursor field for cursor-based pagination
+    #[must_use]
     pub fn cursor(mut self, cursor: impl Into<String>) -> Self {
         self.cursor = Some(cursor.into());
         self
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -603,6 +607,7 @@ pub struct ListSessionsResponse {
 
 #[cfg(feature = "unstable_session_list")]
 impl ListSessionsResponse {
+    #[must_use]
     pub fn new(sessions: Vec<SessionInfo>) -> Self {
         Self {
             sessions,
@@ -611,12 +616,14 @@ impl ListSessionsResponse {
         }
     }
 
+    #[must_use]
     pub fn next_cursor(mut self, next_cursor: impl Into<String>) -> Self {
         self.next_cursor = Some(next_cursor.into());
         self
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -665,24 +672,28 @@ impl SessionInfo {
     }
 
     /// Human-readable title for the session
+    #[must_use]
     pub fn title(mut self, title: impl Into<String>) -> Self {
         self.title = Some(title.into());
         self
     }
 
     /// ISO 8601 timestamp when session was created
+    #[must_use]
     pub fn created_at(mut self, created_at: impl Into<String>) -> Self {
         self.created_at = Some(created_at.into());
         self
     }
 
     /// ISO 8601 timestamp of last activity
+    #[must_use]
     pub fn updated_at(mut self, updated_at: impl Into<String>) -> Self {
         self.updated_at = Some(updated_at.into());
         self
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -1430,18 +1441,21 @@ pub struct SessionCapabilities {
 }
 
 impl SessionCapabilities {
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     #[cfg(feature = "unstable_session_list")]
     /// Whether the agent supports `session/list`.
+    #[must_use]
     pub fn list(mut self, list: SessionListCapabilities) -> Self {
         self.list = Some(list);
         self
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -1464,10 +1478,12 @@ pub struct SessionListCapabilities {
 
 #[cfg(feature = "unstable_session_list")]
 impl SessionListCapabilities {
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
