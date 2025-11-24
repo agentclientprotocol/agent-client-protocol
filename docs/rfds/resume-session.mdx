@@ -15,25 +15,19 @@ except it does not return previous messages.
 
 > How do things work today and what problems does this cause? Why would we change things?
 
-While the spec provides a "session/load" command, most coding agents do not implement it.
+While the spec provides a "session/load" command, not all coding agents implement it.
 This means that, once you close your editor, browser, etc, you can't resume the conversation.
 
-Given resuming an existing conversation is already a capability in some agents and genereally
-easier to implement in practice, we hope it will be better adopted. Not only that, resuming
+This is particularly a problem for agents that do not directly implement ACP and the
+functionality is implemented via a wrapper. In such cases, they may provide the ability
+to resume (without history), which we would like to hook into. Not only that, resuming
 could be used as a mechanism for proxies and adapter libraries to emulate "session/load". 
 
 ## What we propose to do about it
 
 > What are you proposing to improve the situation?
 
-Two possible options:
-
-* Add a "session/resume" command
-* Add an option to "session/load" which allows us to continue even if
-  it doesn't return the previous conversation
-
-In the rest of the document, I will refer to the solution as "session/resume",
-but it implies any of the solutions above.
+Add a "session/resume" command and a capability `resumeSession: true`.
 
 ## Shiny future
 
@@ -68,7 +62,7 @@ the stored messages.
 ### What alternative approaches did you consider, and why did you settle on this one?
 
 The biggest question is if it makes sense to support both "session/load" and
-"session/resume". However, I do wonder: how portable "session/load" is in practice?
+"session/resume".
 
 When we start a new session over ACP, we introduce custom MCP tools and configuration.
 This means that, while we could use "session/load" to load our own chats, loading
@@ -83,6 +77,18 @@ mechanics. If an agent implements "session/load", then it can be used directly, 
 doesn't, a proxy or adapter can provide a reasonable fallback on top of "session/resume".
 This argues "session/resume" is the basic primitive which "session/load" builds on top of.
 
+### Should we introduce a new operation (session/resume) or add an option to (session/load)?
+
+A separate method provides a few benefits:
+
+* for clients that for whatever reason don't want the history, they can just resume
+
+* for agents that can only supply resume, a proxy on top could provide load on top of it,
+  but the agent is still clear on what it supports
+
+* for agents who support both, it should be trivial to use the same resume functionality,
+  they just either replay events or do not
+
 ## Revision history
 
-<!-- If there have been major updates to this RFD, you can include the git revisions and a summary of the changes. -->
+* 2025-11-24: Update FAQ to mention session/resume vs session/load
