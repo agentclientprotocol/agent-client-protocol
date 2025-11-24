@@ -624,6 +624,11 @@ pub struct AgentCapabilities {
     pub meta: Option<serde_json::Value>,
 }
 
+/// Session capabilities supported by the agent.
+///
+/// Baseline agent functionality requires support for `session/new`, `session/prompt`, `session/cancel`, and `session/update`.
+///
+/// Other methods must be explicitly opted in to.
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 pub struct SessionCapabilities {
     /// **UNSTABLE**
@@ -639,6 +644,11 @@ pub struct SessionCapabilities {
     pub meta: Option<serde_json::Value>,
 }
 
+/// Capabilities for the `session/list` method.
+///
+/// By supplying `{}` it means that the agent supports listing of sessions.
+///
+/// Further capabilities can be added in the future for other means of filtering or searching the list.
 #[cfg(feature = "unstable_session_list")]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 pub struct SessionListCapabilities {

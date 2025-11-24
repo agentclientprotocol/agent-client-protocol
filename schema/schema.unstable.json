@@ -1980,6 +1980,7 @@
       "type": "string"
     },
     "SessionCapabilities": {
+      "description": "Session capabilities supported by the agent.\n\nBaseline agent functionality requires support for `session/new`, `session/prompt`, `session/cancel`, and `session/update`.\n\nOther methods must be explicitly opted in to.",
       "properties": {
         "_meta": {
           "description": "Extension point for implementations"
@@ -2037,6 +2038,7 @@
       "type": "object"
     },
     "SessionListCapabilities": {
+      "description": "Capabilities for the `session/list` method.\n\nBy supplying `{}` it means that the agent supports listing of sessions.\n\nFurther capabilities can be added in the future for other means of filtering or searching the list.",
       "properties": {
         "_meta": {
           "description": "Extension point for implementations"

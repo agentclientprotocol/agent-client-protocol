@@ -2227,6 +2227,12 @@ The sender or recipient of messages and data in a conversation.
 
 ## <span class="font-mono">SessionCapabilities</span>
 
+Session capabilities supported by the agent.
+
+Baseline agent functionality requires support for `session/new`, `session/prompt`, `session/cancel`, and `session/update`.
+
+Other methods must be explicitly opted in to.
+
 **Type:** Object
 
 **Properties:**
@@ -2299,6 +2305,12 @@ Information about a session returned by session/list
 </ResponseField>
 
 ## <span class="font-mono">SessionListCapabilities</span>
+
+Capabilities for the `session/list` method.
+
+By supplying `\{\}` it means that the agent supports listing of sessions.
+
+Further capabilities can be added in the future for other means of filtering or searching the list.
 
 **Type:** Object
 
