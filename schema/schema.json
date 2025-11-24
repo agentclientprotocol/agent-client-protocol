@@ -1867,7 +1867,7 @@
       "type": "string"
     },
     "SessionCapabilities": {
-      "description": "Session capabilities supported by the agent.\n\nBaseline agent functionality requires support for `session/new`, `session/prompt`, `session/cancel`, and `session/update`.\n\nOther methods must be explicitly opted in to.",
+      "description": "Session capabilities supported by the agent.\n\nAs a baseline, all Agents **MUST** support `session/new`, `session/prompt`, `session/cancel`, and `session/update`.\n\nOptionally, they **MAY** support other session methods and notifications by specifying additional capabilities.\n\nNote: `session/load` is still handled by the top-level `load_session` capability. This will be unified in future versions of the protocol.\n\nSee protocol docs: [Session Capabilities](https://agentclientprotocol.com/protocol/initialization#session-capabilities)",
       "properties": {
         "_meta": {
           "description": "Extension point for implementations"

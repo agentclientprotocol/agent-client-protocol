@@ -186,6 +186,17 @@ Note: This transport has been deprecated by the MCP spec.
 
 </ResponseField>
 
+#### Session Capabilities
+
+As a baseline, all Agents **MUST** support `session/new`, `session/prompt`, `session/cancel`, and `session/update`.
+
+Optionally, they **MAY** support other session methods and notifications by specifying additional capabilities.
+
+<Note>
+  `session/load` is still handled by the top-level `load_session` capability.
+  This will be unified in future versions of the protocol.
+</Note>
+
 ## Implementation Information
 
 Both Clients and Agents **SHOULD** provide information about their implementation in the `clientInfo` and `agentInfo` fields respectively. Both take the following three fields:

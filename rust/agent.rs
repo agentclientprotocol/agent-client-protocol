@@ -626,9 +626,13 @@ pub struct AgentCapabilities {
 
 /// Session capabilities supported by the agent.
 ///
-/// Baseline agent functionality requires support for `session/new`, `session/prompt`, `session/cancel`, and `session/update`.
+/// As a baseline, all Agents **MUST** support `session/new`, `session/prompt`, `session/cancel`, and `session/update`.
 ///
-/// Other methods must be explicitly opted in to.
+/// Optionally, they **MAY** support other session methods and notifications by specifying additional capabilities.
+///
+/// Note: `session/load` is still handled by the top-level `load_session` capability. This will be unified in future versions of the protocol.
+///
+/// See protocol docs: [Session Capabilities](https://agentclientprotocol.com/protocol/initialization#session-capabilities)
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 pub struct SessionCapabilities {
     /// **UNSTABLE**
