@@ -37,19 +37,16 @@ Add a new `session/list` JSON-RPC method to the protocol that returns metadata a
 
 1. **Return a list of sessions** with essential metadata:
    - `sessionId` - Unique identifier
-   - `createdAt` - Timestamp when session was created
-   - `updatedAt` - Timestamp of last update to the session
    - `cwd` - Working directory for the session
    - `title` - Optional human-readable title (could be auto-generated from first prompt)
+   - `createdAt` - Timestamp when session was created
+   - `updatedAt` - Timestamp of last update to the session
    - `_meta` - Optional agent-specific metadata
-
 2. **Support filtering and pagination**:
-   - Filter by creation date, last accessed date, or working directory
-   - Limit the number of results returned
-   - Search by title or agent-provided metadata
-
+   - Filter by working directory
+   - Agent provides an optional cursor for retrieving the next page of results
 3. **Be an optional capability**:
-   - Agents advertise `listSessions: {}` in initialization if they support this feature
+   - Agents advertise `sessionCapabilities: { list: {} }` in initialization if they support this feature
    - Clients check for this capability before attempting to call `session/list`
    - Agents without persistent session storage don't need to implement this
 
@@ -139,10 +136,10 @@ The agent responds with a list of sessions and cursor pagination metadata:
 **SessionInfo object:**
 
 - `sessionId` (string, required) - Unique identifier for the session
-- `createdAt` (string, optional) - ISO 8601 timestamp when session was created
-- `updatedAt` (string, optional) - ISO 8601 timestamp of last activity
 - `cwd` (string, required) - Working directory for the session
 - `title` (string, optional) - Human-readable title (may be auto-generated from first prompt)
+- `createdAt` (string, optional) - ISO 8601 timestamp when session was created
+- `updatedAt` (string, optional) - ISO 8601 timestamp of last activity
 - `_meta` (object, optional) - Agent-specific metadata (e.g., message count, error status, tags)
 
 #### Empty Result Example
@@ -187,7 +184,7 @@ Agents that implement this feature gain:
    - `session/list` method definition
    - `ListSessionsRequest` and `ListSessionsResponse` types
    - `SessionInfo` type
-   - `listSessions` capability flag
+   - `sessionCapabilities/list` capability flag
 
 2. **Update protocol documentation** in `/docs/protocol/session-setup.mdx`:
    - Document the new endpoint
@@ -337,3 +334,4 @@ Corresponding response example:
 - **2025-10-31**: Update pagination: `continuationToken` → `cursor`, `nextContinuationToken` → `nextCursor`, remove `hasMore`
 - **2025-11-11**: Remove `createdAt`, `updatedAt`, and `search` filters from the request parameters
 - **2025-11-23**: Remove `limit` parameter from request; make `createdAt` and `updatedAt` optional in SessionInfo
+- **2025-11-24**: Update capabilities schema
