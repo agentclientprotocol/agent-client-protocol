@@ -335,12 +335,8 @@
           "type": ["string", "null"]
         },
         "id": {
-          "allOf": [
-            {
-              "$ref": "#/$defs/AuthMethodId"
-            }
-          ],
-          "description": "Unique identifier for this authentication method."
+          "description": "Unique identifier for this authentication method.",
+          "type": "string"
         },
         "name": {
           "description": "Human-readable name of the authentication method.",
@@ -350,10 +346,6 @@
       "required": ["id", "name"],
       "type": "object"
     },
-    "AuthMethodId": {
-      "description": "Unique identifier for an authentication method.",
-      "type": "string"
-    },
     "AuthenticateRequest": {
       "description": "Request parameters for the authenticate method.\n\nSpecifies which authentication method to use.",
       "properties": {
@@ -361,12 +353,8 @@
           "description": "Extension point for implementations"
         },
         "methodId": {
-          "allOf": [
-            {
-              "$ref": "#/$defs/AuthMethodId"
-            }
-          ],
-          "description": "The ID of the authentication method to use.\nMust be one of the methods advertised in the initialize response."
+          "description": "The ID of the authentication method to use.\nMust be one of the methods advertised in the initialize response.",
+          "type": "string"
         }
       },
       "required": ["methodId"],
@@ -375,7 +363,7 @@
       "x-side": "agent"
     },
     "AuthenticateResponse": {
-      "description": "Response to authenticate method",
+      "description": "Response to the `authenticate` method.",
       "properties": {
         "_meta": {
           "description": "Extension point for implementations"
@@ -417,15 +405,12 @@
     "AvailableCommandInput": {
       "anyOf": [
         {
-          "description": "All text that was typed after the command name is provided as input.",
-          "properties": {
-            "hint": {
-              "description": "A hint to display when the input hasn't been provided yet",
-              "type": "string"
+          "allOf": [
+            {
+              "$ref": "#/$defs/UnstructuredCommandInput"
             }
-          },
-          "required": ["hint"],
-          "type": "object"
+          ],
+          "description": "All text that was typed after the command name is provided as input."
         }
       ],
       "description": "The input specification for a command."
@@ -741,6 +726,24 @@
       "description": "All possible responses that a client can send to an agent.\n\nThis enum is used internally for routing RPC responses. You typically won't need\nto use this directly - the responses are handled automatically by the connection.\n\nThese are responses to the corresponding `AgentRequest` variants.",
       "x-docs-ignore": true
     },
+    "Content": {
+      "description": "Standard content block (text, images, resources).",
+      "properties": {
+        "_meta": {
+          "description": "Extension point for implementations"
+        },
+        "content": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ContentBlock"
+            }
+          ],
+          "description": "The actual content block."
+        }
+      },
+      "required": ["content"],
+      "type": "object"
+    },
     "ContentBlock": {
       "description": "Content blocks represent displayable information in the Agent Client Protocol.\n\nThey provide a structured way to handle various types of user-facing content—whether\nit's text from language models, images for analysis, or embedded resources for context.\n\nContent blocks appear in:\n- User prompts sent via `session/prompt`\n- Language model output streamed through `session/update` notifications\n- Progress updates and results from tool calls\n\nThis structure is compatible with the Model Context Protocol (MCP), enabling\nagents to seamlessly forward content from MCP tool outputs without transformation.\n\nSee protocol docs: [Content](https://agentclientprotocol.com/protocol/content)",
       "discriminator": {
@@ -929,6 +932,28 @@
       "required": ["currentModeId"],
       "type": "object"
     },
+    "Diff": {
+      "description": "A diff representing file modifications.\n\nShows changes to files in a format suitable for display in the client UI.\n\nSee protocol docs: [Content](https://agentclientprotocol.com/protocol/tool-calls#content)",
+      "properties": {
+        "_meta": {
+          "description": "Extension point for implementations"
+        },
+        "newText": {
+          "description": "The new content after modification.",
+          "type": "string"
+        },
+        "oldText": {
+          "description": "The original content (None for new files).",
+          "type": ["string", "null"]
+        },
+        "path": {
+          "description": "The file path being modified.",
+          "type": "string"
+        }
+      },
+      "required": ["path", "newText"],
+      "type": "object"
+    },
     "EmbeddedResource": {
       "description": "The contents of a resource, embedded into a prompt or tool call result.",
       "properties": {
@@ -1001,7 +1026,7 @@
       "type": "object"
     },
     "FileSystemCapability": {
-      "description": "File system capabilities that a client may support.\n\nSee protocol docs: [FileSystem](https://agentclientprotocol.com/protocol/initialization#filesystem)",
+      "description": "Filesystem capabilities supported by the client.\nFile system capabilities that a client may support.\n\nSee protocol docs: [FileSystem](https://agentclientprotocol.com/protocol/initialization#filesystem)",
       "properties": {
         "_meta": {
           "description": "Extension point for implementations"
@@ -1067,8 +1092,11 @@
       "type": "object"
     },
     "Implementation": {
-      "description": "Describes the name and version of an MCP implementation, with an optional\ntitle for UI representation.",
+      "description": "Metadata about the implementation of the client or agent.\nDescribes the name and version of an MCP implementation, with an optional\ntitle for UI representation.",
       "properties": {
+        "_meta": {
+          "description": "Extension point for implementations"
+        },
         "name": {
           "description": "Intended for programmatic or logical use, but can be used as a display\nname fallback if title isn’t present.",
           "type": "string"
@@ -1078,7 +1106,7 @@
           "type": ["string", "null"]
         },
         "version": {
-          "description": "Version of the implementation. Can be displayed to the user or used\nfor debugging or metrics purposes.",
+          "description": "Version of the implementation. Can be displayed to the user or used\nfor debugging or metrics purposes. (e.g. \"1.0.0\").",
           "type": "string"
         }
       },
@@ -1132,7 +1160,7 @@
       "x-side": "agent"
     },
     "InitializeResponse": {
-      "description": "Response from the initialize method.\n\nContains the negotiated protocol version and agent capabilities.\n\nSee protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)",
+      "description": "Response to the `initialize` method.\n\nContains the negotiated protocol version and agent capabilities.\n\nSee protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)",
       "properties": {
         "_meta": {
           "description": "Extension point for implementations"
@@ -1351,91 +1379,132 @@
     "McpServer": {
       "anyOf": [
         {
+          "allOf": [
+            {
+              "$ref": "#/$defs/McpServerHttp"
+            }
+          ],
           "description": "HTTP transport configuration\n\nOnly available when the Agent capabilities indicate `mcp_capabilities.http` is `true`.",
           "properties": {
-            "headers": {
-              "description": "HTTP headers to set when making requests to the MCP server.",
-              "items": {
-                "$ref": "#/$defs/HttpHeader"
-              },
-              "type": "array"
-            },
-            "name": {
-              "description": "Human-readable name identifying this MCP server.",
-              "type": "string"
-            },
             "type": {
               "const": "http",
               "type": "string"
-            },
-            "url": {
-              "description": "URL to the MCP server.",
-              "type": "string"
             }
           },
-          "required": ["type", "name", "url", "headers"],
+          "required": ["type"],
           "type": "object"
         },
         {
+          "allOf": [
+            {
+              "$ref": "#/$defs/McpServerSse"
+            }
+          ],
           "description": "SSE transport configuration\n\nOnly available when the Agent capabilities indicate `mcp_capabilities.sse` is `true`.",
           "properties": {
-            "headers": {
-              "description": "HTTP headers to set when making requests to the MCP server.",
-              "items": {
-                "$ref": "#/$defs/HttpHeader"
-              },
-              "type": "array"
-            },
-            "name": {
-              "description": "Human-readable name identifying this MCP server.",
-              "type": "string"
-            },
             "type": {
               "const": "sse",
               "type": "string"
-            },
-            "url": {
-              "description": "URL to the MCP server.",
-              "type": "string"
             }
           },
-          "required": ["type", "name", "url", "headers"],
+          "required": ["type"],
           "type": "object"
         },
         {
-          "description": "Stdio transport configuration\n\nAll Agents MUST support this transport.",
-          "properties": {
-            "args": {
-              "description": "Command-line arguments to pass to the MCP server.",
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            },
-            "command": {
-              "description": "Path to the MCP server executable.",
-              "type": "string"
-            },
-            "env": {
-              "description": "Environment variables to set when launching the MCP server.",
-              "items": {
-                "$ref": "#/$defs/EnvVariable"
-              },
-              "type": "array"
-            },
-            "name": {
-              "description": "Human-readable name identifying this MCP server.",
-              "type": "string"
+          "allOf": [
+            {
+              "$ref": "#/$defs/McpServerStdio"
             }
-          },
-          "required": ["name", "command", "args", "env"],
-          "type": "object"
+          ],
+          "description": "Stdio transport configuration\n\nAll Agents MUST support this transport."
         }
       ],
       "description": "Configuration for connecting to an MCP (Model Context Protocol) server.\n\nMCP servers provide tools and context that the agent can use when\nprocessing prompts.\n\nSee protocol docs: [MCP Servers](https://agentclientprotocol.com/protocol/session-setup#mcp-servers)",
       "discriminator": {
         "propertyName": "type"
       }
+    },
+    "McpServerHttp": {
+      "description": "HTTP transport configuration for MCP.",
+      "properties": {
+        "_meta": {
+          "description": "Extension point for implementations"
+        },
+        "headers": {
+          "description": "HTTP headers to set when making requests to the MCP server.",
+          "items": {
+            "$ref": "#/$defs/HttpHeader"
+          },
+          "type": "array"
+        },
+        "name": {
+          "description": "Human-readable name identifying this MCP server.",
+          "type": "string"
+        },
+        "url": {
+          "description": "URL to the MCP server.",
+          "type": "string"
+        }
+      },
+      "required": ["name", "url", "headers"],
+      "type": "object"
+    },
+    "McpServerSse": {
+      "description": "SSE transport configuration for MCP.",
+      "properties": {
+        "_meta": {
+          "description": "Extension point for implementations"
+        },
+        "headers": {
+          "description": "HTTP headers to set when making requests to the MCP server.",
+          "items": {
+            "$ref": "#/$defs/HttpHeader"
+          },
+          "type": "array"
+        },
+        "name": {
+          "description": "Human-readable name identifying this MCP server.",
+          "type": "string"
+        },
+        "url": {
+          "description": "URL to the MCP server.",
+          "type": "string"
+        }
+      },
+      "required": ["name", "url", "headers"],
+      "type": "object"
+    },
+    "McpServerStdio": {
+      "description": "Stdio transport configuration for MCP.",
+      "properties": {
+        "_meta": {
+          "description": "Extension point for implementations"
+        },
+        "args": {
+          "description": "Command-line arguments to pass to the MCP server.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "command": {
+          "description": "Path to the MCP server executable.",
+          "type": "string"
+        },
+        "env": {
+          "description": "Environment variables to set when launching the MCP server.",
+          "items": {
+            "$ref": "#/$defs/EnvVariable"
+          },
+          "type": "array"
+        },
+        "name": {
+          "description": "Human-readable name identifying this MCP server.",
+          "type": "string"
+        }
+      },
+      "required": ["name", "command", "args", "env"],
+      "type": "object"
     },
     "ModelId": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA unique identifier for a model.",
@@ -1860,22 +1929,19 @@
           "type": "object"
         },
         {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SelectedPermissionOutcome"
+            }
+          ],
           "description": "The user selected one of the provided options.",
           "properties": {
-            "optionId": {
-              "allOf": [
-                {
-                  "$ref": "#/$defs/PermissionOptionId"
-                }
-              ],
-              "description": "The ID of the option the user selected."
-            },
             "outcome": {
               "const": "selected",
               "type": "string"
             }
           },
-          "required": ["outcome", "optionId"],
+          "required": ["outcome"],
           "type": "object"
         }
       ]
@@ -1978,6 +2044,24 @@
       "description": "The sender or recipient of messages and data in a conversation.",
       "enum": ["assistant", "user"],
       "type": "string"
+    },
+    "SelectedPermissionOutcome": {
+      "description": "The user selected one of the provided options.",
+      "properties": {
+        "_meta": {
+          "description": "Extension point for implementations"
+        },
+        "optionId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/PermissionOptionId"
+            }
+          ],
+          "description": "The ID of the option the user selected."
+        }
+      },
+      "required": ["optionId"],
+      "type": "object"
     },
     "SessionCapabilities": {
       "description": "Session capabilities supported by the agent.\n\nAs a baseline, all Agents **MUST** support `session/new`, `session/prompt`, `session/cancel`, and `session/update`.\n\nOptionally, they **MAY** support other session methods and notifications by specifying additional capabilities.\n\nNote: `session/load` is still handled by the top-level `load_session` capability. This will be unified in future versions of the protocol.\n\nSee protocol docs: [Session Capabilities](https://agentclientprotocol.com/protocol/initialization#session-capabilities)",
@@ -2389,6 +2473,19 @@
         }
       ]
     },
+    "Terminal": {
+      "description": "Embed a terminal created with `terminal/create` by its id.\n\nThe terminal must be added before calling `terminal/release`.\n\nSee protocol docs: [Terminal](https://agentclientprotocol.com/protocol/terminals)",
+      "properties": {
+        "_meta": {
+          "description": "Extension point for implementations"
+        },
+        "terminalId": {
+          "type": "string"
+        }
+      },
+      "required": ["terminalId"],
+      "type": "object"
+    },
     "TerminalExitStatus": {
       "description": "Exit status of a terminal command.",
       "properties": {
@@ -2570,62 +2667,51 @@
       },
       "oneOf": [
         {
+          "allOf": [
+            {
+              "$ref": "#/$defs/Content"
+            }
+          ],
           "description": "Standard content block (text, images, resources).",
           "properties": {
-            "content": {
-              "allOf": [
-                {
-                  "$ref": "#/$defs/ContentBlock"
-                }
-              ],
-              "description": "The actual content block."
-            },
             "type": {
               "const": "content",
               "type": "string"
             }
           },
-          "required": ["type", "content"],
+          "required": ["type"],
           "type": "object"
         },
         {
+          "allOf": [
+            {
+              "$ref": "#/$defs/Diff"
+            }
+          ],
           "description": "File modification shown as a diff.",
           "properties": {
-            "_meta": {
-              "description": "Extension point for implementations"
-            },
-            "newText": {
-              "description": "The new content after modification.",
-              "type": "string"
-            },
-            "oldText": {
-              "description": "The original content (None for new files).",
-              "type": ["string", "null"]
-            },
-            "path": {
-              "description": "The file path being modified.",
-              "type": "string"
-            },
             "type": {
               "const": "diff",
               "type": "string"
             }
           },
-          "required": ["type", "path", "newText"],
+          "required": ["type"],
           "type": "object"
         },
         {
+          "allOf": [
+            {
+              "$ref": "#/$defs/Terminal"
+            }
+          ],
           "description": "Embed a terminal created with `terminal/create` by its id.\n\nThe terminal must be added before calling `terminal/release`.\n\nSee protocol docs: [Terminal](https://agentclientprotocol.com/protocol/terminals)",
           "properties": {
-            "terminalId": {
-              "type": "string"
-            },
             "type": {
               "const": "terminal",
               "type": "string"
             }
           },
-          "required": ["type", "terminalId"],
+          "required": ["type"],
           "type": "object"
         }
       ]
@@ -2797,6 +2883,20 @@
           "type": "string"
         }
       ]
+    },
+    "UnstructuredCommandInput": {
+      "description": "All text that was typed after the command name is provided as input.",
+      "properties": {
+        "_meta": {
+          "description": "Extension point for implementations"
+        },
+        "hint": {
+          "description": "A hint to display when the input hasn't been provided yet",
+          "type": "string"
+        }
+      },
+      "required": ["hint"],
+      "type": "object"
     },
     "WaitForTerminalExitRequest": {
       "description": "Request to wait for a terminal command to exit.",
