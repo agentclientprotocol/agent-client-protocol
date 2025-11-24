@@ -41,6 +41,7 @@ pub struct InitializeRequest {
 }
 
 impl InitializeRequest {
+    #[must_use]
     pub fn new(protocol_version: ProtocolVersion) -> Self {
         Self {
             protocol_version,
@@ -51,18 +52,21 @@ impl InitializeRequest {
     }
 
     /// Capabilities supported by the client.
+    #[must_use]
     pub fn client_capabilities(mut self, client_capabilities: ClientCapabilities) -> Self {
         self.client_capabilities = client_capabilities;
         self
     }
 
     /// Information about the Client name and version sent to the Agent.
+    #[must_use]
     pub fn client_info(mut self, client_info: Implementation) -> Self {
         self.client_info = Some(client_info);
         self
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -101,6 +105,7 @@ pub struct InitializeResponse {
 }
 
 impl InitializeResponse {
+    #[must_use]
     pub fn new(protocol_version: ProtocolVersion) -> Self {
         Self {
             protocol_version,
@@ -112,24 +117,28 @@ impl InitializeResponse {
     }
 
     /// Capabilities supported by the agent.
+    #[must_use]
     pub fn agent_capabilities(mut self, agent_capabilities: AgentCapabilities) -> Self {
         self.agent_capabilities = agent_capabilities;
         self
     }
 
     /// Authentication methods supported by the agent.
+    #[must_use]
     pub fn auth_methods(mut self, auth_methods: Vec<AuthMethod>) -> Self {
         self.auth_methods = auth_methods;
         self
     }
 
     /// Information about the Agent name and version sent to the Client.
+    #[must_use]
     pub fn agent_info(mut self, agent_info: Implementation) -> Self {
         self.agent_info = Some(agent_info);
         self
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -173,12 +182,14 @@ impl Implementation {
     /// and easily understood.
     ///
     /// If not provided, the name should be used for display.
+    #[must_use]
     pub fn title(mut self, title: impl Into<String>) -> Self {
         self.title = Some(title.into());
         self
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -204,6 +215,7 @@ pub struct AuthenticateRequest {
 }
 
 impl AuthenticateRequest {
+    #[must_use]
     pub fn new(method_id: AuthMethodId) -> Self {
         Self {
             method_id,
@@ -211,6 +223,7 @@ impl AuthenticateRequest {
         }
     }
 
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -229,10 +242,12 @@ pub struct AuthenticateResponse {
 }
 
 impl AuthenticateResponse {
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -278,12 +293,14 @@ impl AuthMethod {
     }
 
     /// Optional description providing more details about this authentication method.
+    #[must_use]
     pub fn description(mut self, description: impl Into<String>) -> Self {
         self.description = Some(description.into());
         self
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -319,12 +336,14 @@ impl NewSessionRequest {
     }
 
     /// List of MCP (Model Context Protocol) servers the agent should connect to.
+    #[must_use]
     pub fn mcp_servers(mut self, mcp_servers: Vec<McpServer>) -> Self {
         self.mcp_servers = mcp_servers;
         self
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -362,6 +381,7 @@ pub struct NewSessionResponse {
 }
 
 impl NewSessionResponse {
+    #[must_use]
     pub fn new(session_id: SessionId) -> Self {
         Self {
             session_id,
@@ -375,6 +395,7 @@ impl NewSessionResponse {
     /// Initial mode state if supported by the Agent
     ///
     /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
+    #[must_use]
     pub fn modes(mut self, modes: SessionModeState) -> Self {
         self.modes = Some(modes);
         self
@@ -386,12 +407,14 @@ impl NewSessionResponse {
     ///
     /// Initial model state if supported by the Agent
     #[cfg(feature = "unstable_session_model")]
+    #[must_use]
     pub fn models(mut self, models: SessionModelState) -> Self {
         self.models = Some(models);
         self
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -432,12 +455,14 @@ impl LoadSessionRequest {
     }
 
     /// List of MCP servers to connect to for this session.
+    #[must_use]
     pub fn mcp_servers(mut self, mcp_servers: Vec<McpServer>) -> Self {
         self.mcp_servers = mcp_servers;
         self
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -469,6 +494,7 @@ pub struct LoadSessionResponse {
 }
 
 impl LoadSessionResponse {
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
@@ -476,6 +502,7 @@ impl LoadSessionResponse {
     /// Initial mode state if supported by the Agent
     ///
     /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
+    #[must_use]
     pub fn modes(mut self, modes: SessionModeState) -> Self {
         self.modes = Some(modes);
         self
@@ -487,12 +514,14 @@ impl LoadSessionResponse {
     ///
     /// Initial model state if supported by the Agent
     #[cfg(feature = "unstable_session_model")]
+    #[must_use]
     pub fn models(mut self, models: SessionModelState) -> Self {
         self.models = Some(models);
         self
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -516,6 +545,7 @@ pub struct SessionModeState {
 }
 
 impl SessionModeState {
+    #[must_use]
     pub fn new(current_mode_id: SessionModeId, available_modes: Vec<SessionMode>) -> Self {
         Self {
             current_mode_id,
@@ -525,6 +555,7 @@ impl SessionModeState {
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -557,12 +588,14 @@ impl SessionMode {
         }
     }
 
+    #[must_use]
     pub fn description(mut self, description: impl Into<String>) -> Self {
         self.description = Some(description.into());
         self
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -598,6 +631,7 @@ pub struct SetSessionModeRequest {
 }
 
 impl SetSessionModeRequest {
+    #[must_use]
     pub fn new(session_id: SessionId, mode_id: SessionModeId) -> Self {
         Self {
             session_id,
@@ -606,6 +640,7 @@ impl SetSessionModeRequest {
         }
     }
 
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -623,10 +658,12 @@ pub struct SetSessionModeResponse {
 }
 
 impl SetSessionModeResponse {
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -688,12 +725,14 @@ impl McpServerHttp {
     }
 
     /// HTTP headers to set when making requests to the MCP server.
+    #[must_use]
     pub fn headers(mut self, headers: Vec<HttpHeader>) -> Self {
         self.headers = headers;
         self
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -727,12 +766,14 @@ impl McpServerSse {
     }
 
     /// HTTP headers to set when making requests to the MCP server.
+    #[must_use]
     pub fn headers(mut self, headers: Vec<HttpHeader>) -> Self {
         self.headers = headers;
         self
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -769,18 +810,21 @@ impl McpServerStdio {
     }
 
     /// Command-line arguments to pass to the MCP server.
+    #[must_use]
     pub fn args(mut self, args: Vec<String>) -> Self {
         self.args = args;
         self
     }
 
     /// Environment variables to set when launching the MCP server.
+    #[must_use]
     pub fn env(mut self, env: Vec<EnvVariable>) -> Self {
         self.env = env;
         self
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -811,6 +855,7 @@ impl EnvVariable {
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -841,6 +886,7 @@ impl HttpHeader {
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -881,6 +927,7 @@ pub struct PromptRequest {
 }
 
 impl PromptRequest {
+    #[must_use]
     pub fn new(session_id: SessionId, prompt: Vec<ContentBlock>) -> Self {
         Self {
             session_id,
@@ -890,6 +937,7 @@ impl PromptRequest {
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -912,6 +960,7 @@ pub struct PromptResponse {
 }
 
 impl PromptResponse {
+    #[must_use]
     pub fn new(stop_reason: StopReason) -> Self {
         Self {
             stop_reason,
@@ -920,6 +969,7 @@ impl PromptResponse {
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -976,6 +1026,7 @@ pub struct SessionModelState {
 
 #[cfg(feature = "unstable_session_model")]
 impl SessionModelState {
+    #[must_use]
     pub fn new(current_model_id: ModelId, available_models: Vec<ModelInfo>) -> Self {
         Self {
             current_model_id,
@@ -985,6 +1036,7 @@ impl SessionModelState {
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -1044,12 +1096,14 @@ impl ModelInfo {
     }
 
     /// Optional description of the model.
+    #[must_use]
     pub fn description(mut self, description: impl Into<String>) -> Self {
         self.description = Some(description.into());
         self
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -1078,6 +1132,7 @@ pub struct SetSessionModelRequest {
 
 #[cfg(feature = "unstable_session_model")]
 impl SetSessionModelRequest {
+    #[must_use]
     pub fn new(session_id: SessionId, model_id: ModelId) -> Self {
         Self {
             session_id,
@@ -1087,6 +1142,7 @@ impl SetSessionModelRequest {
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -1111,11 +1167,13 @@ pub struct SetSessionModelResponse {
 
 #[cfg(feature = "unstable_session_model")]
 impl SetSessionModelResponse {
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -1149,29 +1207,34 @@ pub struct AgentCapabilities {
 }
 
 impl AgentCapabilities {
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Whether the agent supports `session/load`.
+    #[must_use]
     pub fn load_session(mut self, load_session: bool) -> Self {
         self.load_session = load_session;
         self
     }
 
     /// Prompt capabilities supported by the agent.
+    #[must_use]
     pub fn prompt_capabilities(mut self, prompt_capabilities: PromptCapabilities) -> Self {
         self.prompt_capabilities = prompt_capabilities;
         self
     }
 
     /// MCP capabilities supported by the agent.
+    #[must_use]
     pub fn mcp_capabilities(mut self, mcp_capabilities: McpCapabilities) -> Self {
         self.mcp_capabilities = mcp_capabilities;
         self
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -1212,17 +1275,20 @@ pub struct PromptCapabilities {
 }
 
 impl PromptCapabilities {
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Agent supports [`ContentBlock::Image`].
+    #[must_use]
     pub fn image(mut self, image: bool) -> Self {
         self.image = image;
         self
     }
 
     /// Agent supports [`ContentBlock::Audio`].
+    #[must_use]
     pub fn audio(mut self, audio: bool) -> Self {
         self.audio = audio;
         self
@@ -1232,12 +1298,14 @@ impl PromptCapabilities {
     ///
     /// When enabled, the Client is allowed to include [`ContentBlock::Resource`]
     /// in prompt requests for pieces of context that are referenced in the message.
+    #[must_use]
     pub fn embedded_context(mut self, embedded_context: bool) -> Self {
         self.embedded_context = embedded_context;
         self
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -1261,23 +1329,27 @@ pub struct McpCapabilities {
 }
 
 impl McpCapabilities {
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Agent supports [`McpServer::Http`].
+    #[must_use]
     pub fn http(mut self, http: bool) -> Self {
         self.http = http;
         self
     }
 
     /// Agent supports [`McpServer::Sse`].
+    #[must_use]
     pub fn sse(mut self, sse: bool) -> Self {
         self.sse = sse;
         self
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -1510,6 +1582,7 @@ pub struct CancelNotification {
 }
 
 impl CancelNotification {
+    #[must_use]
     pub fn new(session_id: SessionId) -> Self {
         Self {
             session_id,
@@ -1518,6 +1591,7 @@ impl CancelNotification {
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self

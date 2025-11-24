@@ -35,7 +35,7 @@ pub enum RequestId {
     Str(String),
 }
 
-#[derive(Serialize, Deserialize, Clone, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
 #[serde(untagged)]
 #[schemars(inline)]
 #[non_exhaustive]
@@ -111,8 +111,22 @@ pub trait Side: Clone {
     type InNotification: Clone + Serialize + DeserializeOwned + JsonSchema + 'static;
     type OutResponse: Clone + Serialize + DeserializeOwned + JsonSchema + 'static;
 
+    /// Decode a request for a given method. This will encapsulate the knowledge of mapping which
+    /// serialization struct to use for each method.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if the method is not recognized or if the parameters
+    /// cannot be deserialized into the expected type.
     fn decode_request(method: &str, params: Option<&RawValue>) -> Result<Self::InRequest>;
 
+    /// Decode a notification for a given method. This will encapsulate the knowledge of mapping which
+    /// serialization struct to use for each method.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if the method is not recognized or if the parameters
+    /// cannot be deserialized into the expected type.
     fn decode_notification(method: &str, params: Option<&RawValue>)
     -> Result<Self::InNotification>;
 }
@@ -123,7 +137,7 @@ pub trait Side: Clone {
 /// are incoming vs outgoing from the client's perspective.
 ///
 /// See protocol docs: [Communication Model](https://agentclientprotocol.com/protocol/overview#communication-model)
-#[derive(Clone, Default, JsonSchema)]
+#[derive(Clone, Default, Debug, JsonSchema)]
 #[non_exhaustive]
 pub struct ClientSide;
 
@@ -204,7 +218,7 @@ impl Side for ClientSide {
 /// are incoming vs outgoing from the agent's perspective.
 ///
 /// See protocol docs: [Communication Model](https://agentclientprotocol.com/protocol/overview#communication-model)
-#[derive(Clone, Default, JsonSchema)]
+#[derive(Clone, Default, Debug, JsonSchema)]
 #[non_exhaustive]
 pub struct AgentSide;
 

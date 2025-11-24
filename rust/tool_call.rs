@@ -56,10 +56,10 @@ impl ToolCall {
         Self {
             tool_call_id,
             title: title.into(),
-            kind: Default::default(),
-            status: Default::default(),
-            content: Default::default(),
-            locations: Default::default(),
+            kind: ToolKind::default(),
+            status: ToolCallStatus::default(),
+            content: Vec::default(),
+            locations: Vec::default(),
             raw_input: None,
             raw_output: None,
             meta: None,
@@ -68,18 +68,21 @@ impl ToolCall {
 
     /// The category of tool being invoked.
     /// Helps clients choose appropriate icons and UI treatment.
+    #[must_use]
     pub fn kind(mut self, kind: ToolKind) -> Self {
         self.kind = kind;
         self
     }
 
     /// Current execution status of the tool call.
+    #[must_use]
     pub fn status(mut self, status: ToolCallStatus) -> Self {
         self.status = status;
         self
     }
 
     /// Content produced by the tool call.
+    #[must_use]
     pub fn content(mut self, content: Vec<ToolCallContent>) -> Self {
         self.content = content;
         self
@@ -87,24 +90,28 @@ impl ToolCall {
 
     /// File locations affected by this tool call.
     /// Enables "follow-along" features in clients.
+    #[must_use]
     pub fn locations(mut self, locations: Vec<ToolCallLocation>) -> Self {
         self.locations = locations;
         self
     }
 
     /// Raw input parameters sent to the tool.
+    #[must_use]
     pub fn raw_input(mut self, raw_input: serde_json::Value) -> Self {
         self.raw_input = Some(raw_input);
         self
     }
 
     /// Raw output returned by the tool.
+    #[must_use]
     pub fn raw_output(mut self, raw_output: serde_json::Value) -> Self {
         self.raw_output = Some(raw_output);
         self
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -158,6 +165,7 @@ pub struct ToolCallUpdate {
 }
 
 impl ToolCallUpdate {
+    #[must_use]
     pub fn new(tool_call_id: ToolCallId, fields: ToolCallUpdateFields) -> Self {
         Self {
             tool_call_id,
@@ -167,6 +175,7 @@ impl ToolCallUpdate {
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -207,47 +216,55 @@ pub struct ToolCallUpdateFields {
 }
 
 impl ToolCallUpdateFields {
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Update the tool kind.
+    #[must_use]
     pub fn kind(mut self, kind: ToolKind) -> Self {
         self.kind = Some(kind);
         self
     }
 
     /// Update the execution status.
+    #[must_use]
     pub fn status(mut self, status: ToolCallStatus) -> Self {
         self.status = Some(status);
         self
     }
 
     /// Update the human-readable title.
+    #[must_use]
     pub fn title(mut self, title: impl Into<String>) -> Self {
         self.title = Some(title.into());
         self
     }
 
     /// Replace the content collection.
+    #[must_use]
     pub fn content(mut self, content: Vec<ToolCallContent>) -> Self {
         self.content = Some(content);
         self
     }
 
     /// Replace the locations collection.
+    #[must_use]
     pub fn locations(mut self, locations: Vec<ToolCallLocation>) -> Self {
         self.locations = Some(locations);
         self
     }
 
     /// Update the raw input.
+    #[must_use]
     pub fn raw_input(mut self, raw_input: serde_json::Value) -> Self {
         self.raw_input = Some(raw_input);
         self
     }
 
     /// Update the raw output.
+    #[must_use]
     pub fn raw_output(mut self, raw_output: serde_json::Value) -> Self {
         self.raw_output = Some(raw_output);
         self
@@ -368,6 +385,7 @@ pub enum ToolKind {
 }
 
 impl ToolKind {
+    #[expect(clippy::trivially_copy_pass_by_ref, reason = "Required by serde")]
     fn is_default(&self) -> bool {
         matches!(self, ToolKind::Other)
     }
@@ -395,6 +413,7 @@ pub enum ToolCallStatus {
 }
 
 impl ToolCallStatus {
+    #[expect(clippy::trivially_copy_pass_by_ref, reason = "Required by serde")]
     fn is_default(&self) -> bool {
         matches!(self, ToolCallStatus::Pending)
     }
@@ -456,6 +475,7 @@ impl Content {
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -478,6 +498,7 @@ pub struct Terminal {
 }
 
 impl Terminal {
+    #[must_use]
     pub fn new(terminal_id: TerminalId) -> Self {
         Self {
             terminal_id,
@@ -486,6 +507,7 @@ impl Terminal {
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -523,12 +545,14 @@ impl Diff {
     }
 
     /// The original content (None for new files).
+    #[must_use]
     pub fn old_text(mut self, old_text: impl Into<String>) -> Self {
         self.old_text = Some(old_text.into());
         self
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -565,12 +589,14 @@ impl ToolCallLocation {
     }
 
     /// Optional line number within the file.
+    #[must_use]
     pub fn line(mut self, line: u32) -> Self {
         self.line = Some(line);
         self
     }
 
     /// Extension point for implementations
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
