@@ -242,7 +242,14 @@ impl AuthenticateResponse {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
 #[from(Arc<str>, String, &'static str)]
+#[non_exhaustive]
 pub struct AuthMethodId(pub Arc<str>);
+
+impl AuthMethodId {
+    pub fn new(id: impl Into<Arc<str>>) -> Self {
+        Self(id.into())
+    }
+}
 
 /// Describes an available authentication method.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -563,13 +570,15 @@ impl SessionMode {
 }
 
 /// Unique identifier for a Session Mode.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, From, Display)]
 #[serde(transparent)]
+#[from(Arc<str>, String, &'static str)]
+#[non_exhaustive]
 pub struct SessionModeId(pub Arc<str>);
 
-impl std::fmt::Display for SessionModeId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
+impl SessionModeId {
+    pub fn new(id: impl Into<Arc<str>>) -> Self {
+        Self(id.into())
     }
 }
 
@@ -991,7 +1000,15 @@ impl SessionModelState {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
 #[from(Arc<str>, String, &'static str)]
+#[non_exhaustive]
 pub struct ModelId(pub Arc<str>);
+
+#[cfg(feature = "unstable_session_model")]
+impl ModelId {
+    pub fn new(id: impl Into<Arc<str>>) -> Self {
+        Self(id.into())
+    }
+}
 
 /// **UNSTABLE**
 ///

@@ -22,9 +22,12 @@ use crate::{
 #[derive(
     Debug, PartialEq, Clone, Hash, Eq, Deserialize, Serialize, PartialOrd, Ord, Display, JsonSchema,
 )]
-#[serde(deny_unknown_fields)]
 #[serde(untagged)]
 #[schemars(inline)]
+#[allow(
+    clippy::exhaustive_enums,
+    reason = "This comes from the JSON-RPC specification itself"
+)]
 pub enum RequestId {
     #[display("null")]
     Null,
@@ -35,6 +38,7 @@ pub enum RequestId {
 #[derive(Serialize, Deserialize, Clone, JsonSchema)]
 #[serde(untagged)]
 #[schemars(inline)]
+#[non_exhaustive]
 pub enum OutgoingMessage<Local: Side, Remote: Side> {
     Request {
         id: RequestId,
@@ -87,6 +91,7 @@ impl<M> JsonRpcMessage<M> {
 
 #[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
 #[serde(rename_all = "snake_case")]
+#[non_exhaustive]
 pub enum ResponseResult<Res> {
     Result(Res),
     Error(Error),
@@ -118,7 +123,8 @@ pub trait Side: Clone {
 /// are incoming vs outgoing from the client's perspective.
 ///
 /// See protocol docs: [Communication Model](https://agentclientprotocol.com/protocol/overview#communication-model)
-#[derive(Clone, JsonSchema)]
+#[derive(Clone, Default, JsonSchema)]
+#[non_exhaustive]
 pub struct ClientSide;
 
 impl Side for ClientSide {
@@ -198,7 +204,8 @@ impl Side for ClientSide {
 /// are incoming vs outgoing from the agent's perspective.
 ///
 /// See protocol docs: [Communication Model](https://agentclientprotocol.com/protocol/overview#communication-model)
-#[derive(Clone, JsonSchema)]
+#[derive(Clone, Default, JsonSchema)]
+#[non_exhaustive]
 pub struct AgentSide;
 
 impl Side for AgentSide {

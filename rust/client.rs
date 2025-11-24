@@ -326,7 +326,14 @@ impl PermissionOption {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
 #[from(Arc<str>, String, &'static str)]
+#[non_exhaustive]
 pub struct PermissionOptionId(pub Arc<str>);
+
+impl PermissionOptionId {
+    pub fn new(id: impl Into<Arc<str>>) -> Self {
+        Self(id.into())
+    }
+}
 
 /// The type of permission option being presented to the user.
 ///
@@ -572,7 +579,14 @@ impl ReadTextFileResponse {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
 #[from(Arc<str>, String, &'static str)]
+#[non_exhaustive]
 pub struct TerminalId(pub Arc<str>);
+
+impl TerminalId {
+    pub fn new(id: impl Into<Arc<str>>) -> Self {
+        Self(id.into())
+    }
+}
 
 /// Request to create a new terminal and execute a command.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]

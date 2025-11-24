@@ -120,6 +120,7 @@ impl Error {
 /// These codes follow the JSON-RPC 2.0 specification for standard errors
 /// and use the reserved range (-32000 to -32099) for protocol-specific errors.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct ErrorCode {
     /// The numeric error code.
     pub code: i32,

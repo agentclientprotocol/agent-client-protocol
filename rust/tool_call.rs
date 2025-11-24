@@ -324,7 +324,14 @@ impl From<ToolCall> for ToolCallUpdate {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
 #[from(Arc<str>, String, &'static str)]
+#[non_exhaustive]
 pub struct ToolCallId(pub Arc<str>);
+
+impl ToolCallId {
+    pub fn new(id: impl Into<Arc<str>>) -> Self {
+        Self(id.into())
+    }
+}
 
 /// Categories of tools that can be invoked.
 ///

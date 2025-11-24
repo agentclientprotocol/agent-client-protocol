@@ -31,3 +31,7 @@ derive_more = { version = "2", features = ["from", "display"] }
 schemars = { version = "1" }
 serde = { version = "1", features = ["derive", "rc"] }
 serde_json = { version = "1", features = ["raw_value"] }
+
+[lints.clippy]
+exhaustive_enums = "warn"
+exhaustive_structs = "warn"
