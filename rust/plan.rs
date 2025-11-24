@@ -30,7 +30,7 @@ pub struct Plan {
 }
 
 impl Plan {
-    #[must_use] 
+    #[must_use]
     pub fn new(entries: Vec<PlanEntry>) -> Self {
         Self {
             entries,
@@ -39,7 +39,7 @@ impl Plan {
     }
 
     /// Extension point for implementations
-    #[must_use] 
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
@@ -82,7 +82,7 @@ impl PlanEntry {
     }
 
     /// Extension point for implementations
-    #[must_use] 
+    #[must_use]
     pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
