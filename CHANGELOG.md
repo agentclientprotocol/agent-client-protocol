@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.7.0 (2025-11-25)
+
+This is a big release as we move towards a v1.0 release of the JSON Schema.
+
+This should be the final form, we just want to go through the motions of upgrading all of the SDKs to verify no further changes are needed.
+
+**NOTE: The Protocol version is already, and remains, `1`. This is just for the JSON Schema itself.** There are no breaking changes to the protocol, we just reworked the schema representation to be more compliant with code generation tooling for the various SDKs.
+
+We also now have two variants of the schema attached to the release:
+
+**Stable**
+
+- schema.json
+- meta.json
+
+**Unstable**
+
+- schema.unstable.json
+- meta.unstable.json
+
+As we have more [RFD](https://agentclientprotocol.com/rfds/about) implementations in progress, this will allow us to iterate on the schema without requiring SDKs to churn through the changes.
+
+For SDK authors, it is important if you use the unstable version, to make sure the unstable features are behind a flag of some kind with clear direction to your users about the state of these features. But this will also allow teams to start testing the unstable features and provide feedback to the RFD authors.
+
+### Rust
+
+The Rust crate, `agent-client-protocol-schema` has major breaking changes. All exported type are now marked as `#[non_exhaustive]`. Since the schema itself is JSON, and we can introduce new fields and variants in a non-breaking way, we wanted to allow for the same behavior in the Rust library.
+
+All enum variants are also tuple variants now, with their own structs. This made it nicer to represent in the JSON Schema, and also made sure we have `_meta` fields on all variants.
+
+This upgrade will likely come with a lot of compilation errors, but ideally upgrading will be more painless in the future.
+
 ## 0.6.3 (2025-10-30)
 
 ### Protocol
