@@ -10,9 +10,7 @@ pub const VERSION: ProtocolVersion = V1;
 ///
 /// This version is only bumped for breaking changes.
 /// Non-breaking changes should be introduced via capabilities.
-#[derive(
-    Default, Debug, Clone, Serialize, JsonSchema, PartialEq, Eq, PartialOrd, Ord, From, Display,
-)]
+#[derive(Debug, Clone, Serialize, JsonSchema, PartialEq, Eq, PartialOrd, Ord, From, Display)]
 pub struct ProtocolVersion(u16);
 
 impl ProtocolVersion {
