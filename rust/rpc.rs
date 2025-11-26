@@ -38,7 +38,10 @@ pub enum RequestId {
 #[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
 #[serde(untagged)]
 #[schemars(inline)]
-#[non_exhaustive]
+#[allow(
+    clippy::exhaustive_enums,
+    reason = "This comes from the JSON-RPC specification itself"
+)]
 pub enum OutgoingMessage<Local: Side, Remote: Side> {
     Request {
         id: RequestId,
@@ -91,7 +94,10 @@ impl<M> JsonRpcMessage<M> {
 
 #[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-#[non_exhaustive]
+#[allow(
+    clippy::exhaustive_enums,
+    reason = "This comes from the JSON-RPC specification itself"
+)]
 pub enum ResponseResult<Res> {
     Result(Res),
     Error(Error),
