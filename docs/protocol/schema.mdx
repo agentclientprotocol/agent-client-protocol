@@ -2258,15 +2258,6 @@ A unique identifier for a conversation session between a client and agent.
 Sessions maintain their own context, conversation history, and state,
 allowing multiple independent interactions with the same agent.
 
-\# Example
-
-```
-use agent_client_protocol::SessionId;
-use std::sync::Arc;
-
-let session_id = SessionId(Arc::from("sess_abc123def456"));
-```
-
 See protocol docs: [Session ID](https://agentclientprotocol.com/protocol/session-setup#session-id)
 
 **Type:** `string`

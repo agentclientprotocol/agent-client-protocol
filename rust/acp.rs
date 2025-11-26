@@ -81,15 +81,6 @@ use std::sync::Arc;
 /// Sessions maintain their own context, conversation history, and state,
 /// allowing multiple independent interactions with the same agent.
 ///
-/// # Example
-///
-/// ```
-/// use agent_client_protocol_schema::SessionId;
-/// use std::sync::Arc;
-///
-/// let session_id = SessionId::new("sess_abc123def456");
-/// ```
-///
 /// See protocol docs: [Session ID](https://agentclientprotocol.com/protocol/session-setup#session-id)
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
