@@ -52,9 +52,9 @@ pub struct ToolCall {
 }
 
 impl ToolCall {
-    pub fn new(tool_call_id: ToolCallId, title: impl Into<String>) -> Self {
+    pub fn new(tool_call_id: impl Into<ToolCallId>, title: impl Into<String>) -> Self {
         Self {
-            tool_call_id,
+            tool_call_id: tool_call_id.into(),
             title: title.into(),
             kind: ToolKind::default(),
             status: ToolCallStatus::default(),
@@ -166,9 +166,9 @@ pub struct ToolCallUpdate {
 
 impl ToolCallUpdate {
     #[must_use]
-    pub fn new(tool_call_id: ToolCallId, fields: ToolCallUpdateFields) -> Self {
+    pub fn new(tool_call_id: impl Into<ToolCallId>, fields: ToolCallUpdateFields) -> Self {
         Self {
-            tool_call_id,
+            tool_call_id: tool_call_id.into(),
             fields,
             meta: None,
         }
@@ -499,9 +499,9 @@ pub struct Terminal {
 
 impl Terminal {
     #[must_use]
-    pub fn new(terminal_id: TerminalId) -> Self {
+    pub fn new(terminal_id: impl Into<TerminalId>) -> Self {
         Self {
-            terminal_id,
+            terminal_id: terminal_id.into(),
             meta: None,
         }
     }

@@ -38,9 +38,9 @@ pub struct SessionNotification {
 
 impl SessionNotification {
     #[must_use]
-    pub fn new(session_id: SessionId, update: SessionUpdate) -> Self {
+    pub fn new(session_id: impl Into<SessionId>, update: SessionUpdate) -> Self {
         Self {
-            session_id,
+            session_id: session_id.into(),
             update,
             meta: None,
         }
@@ -101,9 +101,9 @@ pub struct CurrentModeUpdate {
 
 impl CurrentModeUpdate {
     #[must_use]
-    pub fn new(current_mode_id: SessionModeId) -> Self {
+    pub fn new(current_mode_id: impl Into<SessionModeId>) -> Self {
         Self {
-            current_mode_id,
+            current_mode_id: current_mode_id.into(),
             meta: None,
         }
     }
@@ -430,9 +430,9 @@ pub struct SelectedPermissionOutcome {
 
 impl SelectedPermissionOutcome {
     #[must_use]
-    pub fn new(option_id: PermissionOptionId) -> Self {
+    pub fn new(option_id: impl Into<PermissionOptionId>) -> Self {
         Self {
-            option_id,
+            option_id: option_id.into(),
             meta: None,
         }
     }
@@ -539,9 +539,9 @@ pub struct ReadTextFileRequest {
 }
 
 impl ReadTextFileRequest {
-    pub fn new(session_id: SessionId, path: impl Into<PathBuf>) -> Self {
+    pub fn new(session_id: impl Into<SessionId>, path: impl Into<PathBuf>) -> Self {
         Self {
-            session_id,
+            session_id: session_id.into(),
             path: path.into(),
             line: None,
             limit: None,
@@ -648,9 +648,9 @@ pub struct CreateTerminalRequest {
 }
 
 impl CreateTerminalRequest {
-    pub fn new(session_id: SessionId, command: impl Into<String>) -> Self {
+    pub fn new(session_id: impl Into<SessionId>, command: impl Into<String>) -> Self {
         Self {
-            session_id,
+            session_id: session_id.into(),
             command: command.into(),
             args: Vec::new(),
             env: Vec::new(),
@@ -718,9 +718,9 @@ pub struct CreateTerminalResponse {
 
 impl CreateTerminalResponse {
     #[must_use]
-    pub fn new(terminal_id: TerminalId) -> Self {
+    pub fn new(terminal_id: impl Into<TerminalId>) -> Self {
         Self {
-            terminal_id,
+            terminal_id: terminal_id.into(),
             meta: None,
         }
     }
@@ -750,10 +750,10 @@ pub struct TerminalOutputRequest {
 
 impl TerminalOutputRequest {
     #[must_use]
-    pub fn new(session_id: SessionId, terminal_id: TerminalId) -> Self {
+    pub fn new(session_id: impl Into<SessionId>, terminal_id: impl Into<TerminalId>) -> Self {
         Self {
-            session_id,
-            terminal_id,
+            session_id: session_id.into(),
+            terminal_id: terminal_id.into(),
             meta: None,
         }
     }
@@ -825,10 +825,10 @@ pub struct ReleaseTerminalRequest {
 
 impl ReleaseTerminalRequest {
     #[must_use]
-    pub fn new(session_id: SessionId, terminal_id: TerminalId) -> Self {
+    pub fn new(session_id: impl Into<SessionId>, terminal_id: impl Into<TerminalId>) -> Self {
         Self {
-            session_id,
-            terminal_id,
+            session_id: session_id.into(),
+            terminal_id: terminal_id.into(),
             meta: None,
         }
     }
@@ -883,10 +883,10 @@ pub struct KillTerminalCommandRequest {
 
 impl KillTerminalCommandRequest {
     #[must_use]
-    pub fn new(session_id: SessionId, terminal_id: TerminalId) -> Self {
+    pub fn new(session_id: impl Into<SessionId>, terminal_id: impl Into<TerminalId>) -> Self {
         Self {
-            session_id,
-            terminal_id,
+            session_id: session_id.into(),
+            terminal_id: terminal_id.into(),
             meta: None,
         }
     }
@@ -941,10 +941,10 @@ pub struct WaitForTerminalExitRequest {
 
 impl WaitForTerminalExitRequest {
     #[must_use]
-    pub fn new(session_id: SessionId, terminal_id: TerminalId) -> Self {
+    pub fn new(session_id: impl Into<SessionId>, terminal_id: impl Into<TerminalId>) -> Self {
         Self {
-            session_id,
-            terminal_id,
+            session_id: session_id.into(),
+            terminal_id: terminal_id.into(),
             meta: None,
         }
     }

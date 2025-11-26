@@ -216,9 +216,9 @@ pub struct AuthenticateRequest {
 
 impl AuthenticateRequest {
     #[must_use]
-    pub fn new(method_id: AuthMethodId) -> Self {
+    pub fn new(method_id: impl Into<AuthMethodId>) -> Self {
         Self {
-            method_id,
+            method_id: method_id.into(),
             meta: None,
         }
     }
@@ -283,9 +283,9 @@ pub struct AuthMethod {
 }
 
 impl AuthMethod {
-    pub fn new(id: AuthMethodId, name: impl Into<String>) -> Self {
+    pub fn new(id: impl Into<AuthMethodId>, name: impl Into<String>) -> Self {
         Self {
-            id,
+            id: id.into(),
             name: name.into(),
             description: None,
             meta: None,
@@ -382,9 +382,9 @@ pub struct NewSessionResponse {
 
 impl NewSessionResponse {
     #[must_use]
-    pub fn new(session_id: SessionId) -> Self {
+    pub fn new(session_id: impl Into<SessionId>) -> Self {
         Self {
-            session_id,
+            session_id: session_id.into(),
             modes: None,
             #[cfg(feature = "unstable_session_model")]
             models: None,
@@ -445,11 +445,11 @@ pub struct LoadSessionRequest {
 }
 
 impl LoadSessionRequest {
-    pub fn new(session_id: SessionId, cwd: impl Into<PathBuf>) -> Self {
+    pub fn new(session_id: impl Into<SessionId>, cwd: impl Into<PathBuf>) -> Self {
         Self {
             mcp_servers: vec![],
             cwd: cwd.into(),
-            session_id,
+            session_id: session_id.into(),
             meta: None,
         }
     }
@@ -657,9 +657,9 @@ pub struct SessionInfo {
 
 #[cfg(feature = "unstable_session_list")]
 impl SessionInfo {
-    pub fn new(session_id: SessionId, cwd: impl Into<PathBuf>) -> Self {
+    pub fn new(session_id: impl Into<SessionId>, cwd: impl Into<PathBuf>) -> Self {
         Self {
-            session_id,
+            session_id: session_id.into(),
             cwd: cwd.into(),
             title: None,
             updated_at: None,
@@ -707,9 +707,12 @@ pub struct SessionModeState {
 
 impl SessionModeState {
     #[must_use]
-    pub fn new(current_mode_id: SessionModeId, available_modes: Vec<SessionMode>) -> Self {
+    pub fn new(
+        current_mode_id: impl Into<SessionModeId>,
+        available_modes: Vec<SessionMode>,
+    ) -> Self {
         Self {
-            current_mode_id,
+            current_mode_id: current_mode_id.into(),
             available_modes,
             meta: None,
         }
@@ -740,9 +743,9 @@ pub struct SessionMode {
 }
 
 impl SessionMode {
-    pub fn new(id: SessionModeId, name: impl Into<String>) -> Self {
+    pub fn new(id: impl Into<SessionModeId>, name: impl Into<String>) -> Self {
         Self {
-            id,
+            id: id.into(),
             name: name.into(),
             description: None,
             meta: None,
@@ -793,10 +796,10 @@ pub struct SetSessionModeRequest {
 
 impl SetSessionModeRequest {
     #[must_use]
-    pub fn new(session_id: SessionId, mode_id: SessionModeId) -> Self {
+    pub fn new(session_id: impl Into<SessionId>, mode_id: impl Into<SessionModeId>) -> Self {
         Self {
-            session_id,
-            mode_id,
+            session_id: session_id.into(),
+            mode_id: mode_id.into(),
             meta: None,
         }
     }
@@ -1089,9 +1092,9 @@ pub struct PromptRequest {
 
 impl PromptRequest {
     #[must_use]
-    pub fn new(session_id: SessionId, prompt: Vec<ContentBlock>) -> Self {
+    pub fn new(session_id: impl Into<SessionId>, prompt: Vec<ContentBlock>) -> Self {
         Self {
-            session_id,
+            session_id: session_id.into(),
             prompt,
             meta: None,
         }
@@ -1188,9 +1191,9 @@ pub struct SessionModelState {
 #[cfg(feature = "unstable_session_model")]
 impl SessionModelState {
     #[must_use]
-    pub fn new(current_model_id: ModelId, available_models: Vec<ModelInfo>) -> Self {
+    pub fn new(current_model_id: impl Into<ModelId>, available_models: Vec<ModelInfo>) -> Self {
         Self {
-            current_model_id,
+            current_model_id: current_model_id.into(),
             available_models,
             meta: None,
         }
@@ -1247,9 +1250,9 @@ pub struct ModelInfo {
 
 #[cfg(feature = "unstable_session_model")]
 impl ModelInfo {
-    pub fn new(model_id: ModelId, name: impl Into<String>) -> Self {
+    pub fn new(model_id: impl Into<ModelId>, name: impl Into<String>) -> Self {
         Self {
-            model_id,
+            model_id: model_id.into(),
             name: name.into(),
             description: None,
             meta: None,
@@ -1294,10 +1297,10 @@ pub struct SetSessionModelRequest {
 #[cfg(feature = "unstable_session_model")]
 impl SetSessionModelRequest {
     #[must_use]
-    pub fn new(session_id: SessionId, model_id: ModelId) -> Self {
+    pub fn new(session_id: impl Into<SessionId>, model_id: impl Into<ModelId>) -> Self {
         Self {
-            session_id,
-            model_id,
+            session_id: session_id.into(),
+            model_id: model_id.into(),
             meta: None,
         }
     }
@@ -1873,9 +1876,9 @@ pub struct CancelNotification {
 
 impl CancelNotification {
     #[must_use]
-    pub fn new(session_id: SessionId) -> Self {
+    pub fn new(session_id: impl Into<SessionId>) -> Self {
         Self {
-            session_id,
+            session_id: session_id.into(),
             meta: None,
         }
     }
