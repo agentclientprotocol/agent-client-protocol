@@ -84,10 +84,10 @@ use std::sync::Arc;
 /// # Example
 ///
 /// ```
-/// use agent_client_protocol::SessionId;
+/// use agent_client_protocol_schema::SessionId;
 /// use std::sync::Arc;
 ///
-/// let session_id = SessionId(Arc::from("sess_abc123def456"));
+/// let session_id = SessionId::new("sess_abc123def456");
 /// ```
 ///
 /// See protocol docs: [Session ID](https://agentclientprotocol.com/protocol/session-setup#session-id)
