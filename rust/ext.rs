@@ -16,10 +16,10 @@ pub struct ExtRequest {
 }
 
 impl ExtRequest {
-    pub fn new(method: impl Into<Arc<str>>, params: impl Into<Arc<RawValue>>) -> Self {
+    pub fn new(method: impl Into<Arc<str>>, params: Arc<RawValue>) -> Self {
         Self {
             method: method.into(),
-            params: params.into(),
+            params,
         }
     }
 }
@@ -37,10 +37,10 @@ pub struct ExtNotification {
 }
 
 impl ExtNotification {
-    pub fn new(method: impl Into<Arc<str>>, params: impl Into<Arc<RawValue>>) -> Self {
+    pub fn new(method: impl Into<Arc<str>>, params: Arc<RawValue>) -> Self {
         Self {
             method: method.into(),
-            params: params.into(),
+            params,
         }
     }
 }
