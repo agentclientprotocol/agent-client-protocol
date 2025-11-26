@@ -2,10 +2,6 @@ use derive_more::{Display, From};
 use schemars::JsonSchema;
 use serde::Serialize;
 
-pub const V0: ProtocolVersion = ProtocolVersion(0);
-pub const V1: ProtocolVersion = ProtocolVersion(1);
-pub const VERSION: ProtocolVersion = V1;
-
 /// Protocol version identifier.
 ///
 /// This version is only bumped for breaking changes.
@@ -14,6 +10,21 @@ pub const VERSION: ProtocolVersion = V1;
 pub struct ProtocolVersion(u16);
 
 impl ProtocolVersion {
+    /// Version `0` of the protocol.
+    ///
+    /// This was a pre-release version that shouldn't be used in production.
+    /// It is used as a fallback for any request whose version cannot be parsed
+    /// as a valid version, and should likely be treated as unsupported.
+    pub const V0: Self = Self(0);
+    /// Version `1` of the protocol.
+    ///
+    /// <https://agentclientprotocol.com/protocol/overview>
+    pub const V1: Self = Self(1);
+    /// The latest supported version of the protocol.
+    ///
+    /// Currently, this is version `1`.
+    pub const LATEST: Self = Self::V1;
+
     #[cfg(test)]
     #[must_use]
     pub const fn new(version: u16) -> Self {
@@ -55,7 +66,7 @@ impl<'de> Deserialize<'de> for ProtocolVersion {
                 E: de::Error,
             {
                 // Old versions used strings, we consider all of those version 0
-                Ok(ProtocolVersion(0))
+                Ok(ProtocolVersion::V0)
             }
 
             fn visit_string<E>(self, _value: String) -> Result<Self::Value, E>
@@ -63,7 +74,7 @@ impl<'de> Deserialize<'de> for ProtocolVersion {
                 E: de::Error,
             {
                 // Old versions used strings, we consider all of those version 0
-                Ok(ProtocolVersion(0))
+                Ok(ProtocolVersion::V0)
             }
         }
 

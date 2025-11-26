@@ -1,6 +1,6 @@
 use agent_client_protocol_schema::{
     AGENT_METHOD_NAMES, AgentSide, CLIENT_METHOD_NAMES, ClientSide, JsonRpcMessage,
-    OutgoingMessage, VERSION,
+    OutgoingMessage, ProtocolVersion,
 };
 use schemars::{
     JsonSchema,
@@ -65,7 +65,7 @@ fn main() {
 
     // Create a combined metadata object
     let metadata = serde_json::json!({
-        "version": VERSION,
+        "version": ProtocolVersion::LATEST,
         "agentMethods": AGENT_METHOD_NAMES,
         "clientMethods": CLIENT_METHOD_NAMES,
     });
