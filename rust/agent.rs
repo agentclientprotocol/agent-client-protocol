@@ -1769,6 +1769,26 @@ pub enum ClientRequest {
     ExtMethodRequest(ExtRequest),
 }
 
+impl ClientRequest {
+    /// Returns the corresponding method name of the request.
+    #[must_use]
+    pub fn method(&self) -> &str {
+        match self {
+            Self::InitializeRequest(_) => AGENT_METHOD_NAMES.initialize,
+            Self::AuthenticateRequest(_) => AGENT_METHOD_NAMES.authenticate,
+            Self::NewSessionRequest(_) => AGENT_METHOD_NAMES.session_new,
+            Self::LoadSessionRequest(_) => AGENT_METHOD_NAMES.session_load,
+            #[cfg(feature = "unstable_session_list")]
+            Self::ListSessionsRequest(_) => AGENT_METHOD_NAMES.session_list,
+            Self::SetSessionModeRequest(_) => AGENT_METHOD_NAMES.session_set_mode,
+            Self::PromptRequest(_) => AGENT_METHOD_NAMES.session_prompt,
+            #[cfg(feature = "unstable_session_model")]
+            Self::SetSessionModelRequest(_) => AGENT_METHOD_NAMES.session_set_model,
+            Self::ExtMethodRequest(ext_request) => &ext_request.method,
+        }
+    }
+}
+
 /// All possible responses that an agent can send to a client.
 ///
 /// This enum is used internally for routing RPC responses. You typically won't need
@@ -1823,6 +1843,17 @@ pub enum ClientNotification {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     ExtNotification(ExtNotification),
+}
+
+impl ClientNotification {
+    /// Returns the corresponding method name of the notification.
+    #[must_use]
+    pub fn method(&self) -> &str {
+        match self {
+            Self::CancelNotification(_) => AGENT_METHOD_NAMES.session_cancel,
+            Self::ExtNotification(ext_notification) => &ext_notification.method,
+        }
+    }
 }
 
 /// Notification to cancel ongoing operations for a session.

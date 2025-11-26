@@ -1288,6 +1288,24 @@ pub enum AgentRequest {
     ExtMethodRequest(ExtRequest),
 }
 
+impl AgentRequest {
+    /// Returns the corresponding method name of the request.
+    #[must_use]
+    pub fn method(&self) -> &str {
+        match self {
+            Self::WriteTextFileRequest(_) => CLIENT_METHOD_NAMES.fs_write_text_file,
+            Self::ReadTextFileRequest(_) => CLIENT_METHOD_NAMES.fs_read_text_file,
+            Self::RequestPermissionRequest(_) => CLIENT_METHOD_NAMES.session_request_permission,
+            Self::CreateTerminalRequest(_) => CLIENT_METHOD_NAMES.terminal_create,
+            Self::TerminalOutputRequest(_) => CLIENT_METHOD_NAMES.terminal_output,
+            Self::ReleaseTerminalRequest(_) => CLIENT_METHOD_NAMES.terminal_release,
+            Self::WaitForTerminalExitRequest(_) => CLIENT_METHOD_NAMES.terminal_wait_for_exit,
+            Self::KillTerminalCommandRequest(_) => CLIENT_METHOD_NAMES.terminal_kill,
+            Self::ExtMethodRequest(ext_request) => &ext_request.method,
+        }
+    }
+}
+
 /// All possible responses that a client can send to an agent.
 ///
 /// This enum is used internally for routing RPC responses. You typically won't need
@@ -1342,4 +1360,15 @@ pub enum AgentNotification {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     ExtNotification(ExtNotification),
+}
+
+impl AgentNotification {
+    /// Returns the corresponding method name of the notification.
+    #[must_use]
+    pub fn method(&self) -> &str {
+        match self {
+            Self::SessionNotification(_) => CLIENT_METHOD_NAMES.session_update,
+            Self::ExtNotification(ext_notification) => &ext_notification.method,
+        }
+    }
 }
