@@ -8,6 +8,7 @@ on:
 jobs:
   release-plz-release:
     name: Release-plz release
+    environment: release # Optional: for enhanced security
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'agentclientprotocol' }}
     permissions:
