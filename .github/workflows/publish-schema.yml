@@ -24,4 +24,4 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload "${{ github.event.release.name }}" schema.json meta.json schema.unstable.json meta.unstable.json
+          gh release upload "${{ github.event.release.name }}" schema/schema.json schema/meta.json schema/schema.unstable.json schema/meta.unstable.json
