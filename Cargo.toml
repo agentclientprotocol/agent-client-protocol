@@ -14,9 +14,10 @@ categories = ["development-tools", "api-bindings"]
 include = ["/src/**/*.rs", "/README.md", "/LICENSE", "/Cargo.toml"]
 
 [features]
-unstable = ["unstable_session_model", "unstable_session_list"]
+unstable = ["unstable_session_model", "unstable_session_list", "unstable_session_fork"]
 unstable_session_model = []
 unstable_session_list = []
+unstable_session_fork = []
 
 [[bin]]
 name = "generate"

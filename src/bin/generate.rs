@@ -816,6 +816,7 @@ and control access to resources."
                 "session/new" => self.agent_methods.get("NewSessionRequest").unwrap(),
                 "session/load" => self.agent_methods.get("LoadSessionRequest").unwrap(),
                 "session/list" => self.agent_methods.get("ListSessionsRequest").unwrap(),
+                "session/fork" => self.agent_methods.get("ForkSessionRequest").unwrap(),
                 "session/set_mode" => self.agent_methods.get("SetSessionModeRequest").unwrap(),
                 "session/prompt" => self.agent_methods.get("PromptRequest").unwrap(),
                 "session/cancel" => self.agent_methods.get("CancelNotification").unwrap(),

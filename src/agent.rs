@@ -601,6 +601,137 @@ impl LoadSessionResponse {
     }
 }
 
+// Fork session
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Request parameters for forking an existing session.
+///
+/// Creates a new session based on the context of an existing one, allowing
+/// operations like generating summaries without affecting the original session's history.
+///
+/// Only available if the Agent supports the `session.fork` capability.
+#[cfg(feature = "unstable_session_fork")]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[schemars(extend("x-side" = "agent", "x-method" = SESSION_FORK_METHOD_NAME))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct ForkSessionRequest {
+    /// The ID of the session to fork.
+    pub session_id: SessionId,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<serde_json::Value>,
+}
+
+#[cfg(feature = "unstable_session_fork")]
+impl ForkSessionRequest {
+    pub fn new(session_id: impl Into<SessionId>) -> Self {
+        Self {
+            session_id: session_id.into(),
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Response from forking an existing session.
+#[cfg(feature = "unstable_session_fork")]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[schemars(extend("x-side" = "agent", "x-method" = SESSION_FORK_METHOD_NAME))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct ForkSessionResponse {
+    /// Unique identifier for the newly created forked session.
+    pub session_id: SessionId,
+    /// Initial mode state if supported by the Agent
+    ///
+    /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub modes: Option<SessionModeState>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Initial model state if supported by the Agent
+    #[cfg(feature = "unstable_session_model")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub models: Option<SessionModelState>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<serde_json::Value>,
+}
+
+#[cfg(feature = "unstable_session_fork")]
+impl ForkSessionResponse {
+    #[must_use]
+    pub fn new(session_id: impl Into<SessionId>) -> Self {
+        Self {
+            session_id: session_id.into(),
+            modes: None,
+            #[cfg(feature = "unstable_session_model")]
+            models: None,
+            meta: None,
+        }
+    }
+
+    /// Initial mode state if supported by the Agent
+    ///
+    /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
+    #[must_use]
+    pub fn modes(mut self, modes: SessionModeState) -> Self {
+        self.modes = Some(modes);
+        self
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Initial model state if supported by the Agent
+    #[cfg(feature = "unstable_session_model")]
+    #[must_use]
+    pub fn models(mut self, models: SessionModelState) -> Self {
+        self.models = Some(models);
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+        self.meta = Some(meta);
+        self
+    }
+}
+
 // List sessions
 
 /// **UNSTABLE**
@@ -1639,6 +1770,14 @@ pub struct SessionCapabilities {
     #[cfg(feature = "unstable_session_list")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub list: Option<SessionListCapabilities>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Whether the agent supports `session/fork`.
+    #[cfg(feature = "unstable_session_fork")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fork: Option<SessionForkCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -1659,6 +1798,14 @@ impl SessionCapabilities {
     #[must_use]
     pub fn list(mut self, list: SessionListCapabilities) -> Self {
         self.list = Some(list);
+        self
+    }
+
+    #[cfg(feature = "unstable_session_fork")]
+    /// Whether the agent supports `session/fork`.
+    #[must_use]
+    pub fn fork(mut self, fork: SessionForkCapabilities) -> Self {
+        self.fork = Some(fork);
         self
     }
 
@@ -1705,6 +1852,45 @@ impl SessionListCapabilities {
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: Meta) -> Self {
+        self.meta = Some(meta);
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Capabilities for the `session/fork` method.
+///
+/// By supplying `{}` it means that the agent supports forking of sessions.
+#[cfg(feature = "unstable_session_fork")]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct SessionForkCapabilities {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<serde_json::Value>,
+}
+
+#[cfg(feature = "unstable_session_fork")]
+impl SessionForkCapabilities {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: serde_json::Value) -> Self {
         self.meta = Some(meta);
         self
     }
@@ -1869,6 +2055,9 @@ pub struct AgentMethodNames {
     /// Method for listing existing sessions.
     #[cfg(feature = "unstable_session_list")]
     pub session_list: &'static str,
+    /// Method for forking an existing session.
+    #[cfg(feature = "unstable_session_fork")]
+    pub session_fork: &'static str,
 }
 
 /// Constant containing all agent method names.
@@ -1884,6 +2073,8 @@ pub const AGENT_METHOD_NAMES: AgentMethodNames = AgentMethodNames {
     session_set_model: SESSION_SET_MODEL_METHOD_NAME,
     #[cfg(feature = "unstable_session_list")]
     session_list: SESSION_LIST_METHOD_NAME,
+    #[cfg(feature = "unstable_session_fork")]
+    session_fork: SESSION_FORK_METHOD_NAME,
 };
 
 /// Method name for the initialize request.
@@ -1906,6 +2097,9 @@ pub(crate) const SESSION_SET_MODEL_METHOD_NAME: &str = "session/set_model";
 /// Method name for listing existing sessions.
 #[cfg(feature = "unstable_session_list")]
 pub(crate) const SESSION_LIST_METHOD_NAME: &str = "session/list";
+/// Method name for forking an existing session.
+#[cfg(feature = "unstable_session_fork")]
+pub(crate) const SESSION_FORK_METHOD_NAME: &str = "session/fork";
 
 /// All possible requests that a client can send to an agent.
 ///
@@ -1974,6 +2168,19 @@ pub enum ClientRequest {
     ///
     /// The agent should return metadata about sessions with optional filtering and pagination support.
     ListSessionsRequest(ListSessionsRequest),
+    #[cfg(feature = "unstable_session_fork")]
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Forks an existing session to create a new independent session.
+    ///
+    /// This method is only available if the agent advertises the `session.fork` capability.
+    ///
+    /// The agent should create a new session with the same conversation context as the
+    /// original, allowing operations like generating summaries without affecting the
+    /// original session's history.
+    ForkSessionRequest(ForkSessionRequest),
     /// Sets the current mode for a session.
     ///
     /// Allows switching between different agent modes (e.g., "ask", "architect", "code")
@@ -2027,6 +2234,8 @@ impl ClientRequest {
             Self::LoadSessionRequest(_) => AGENT_METHOD_NAMES.session_load,
             #[cfg(feature = "unstable_session_list")]
             Self::ListSessionsRequest(_) => AGENT_METHOD_NAMES.session_list,
+            #[cfg(feature = "unstable_session_fork")]
+            Self::ForkSessionRequest(_) => AGENT_METHOD_NAMES.session_fork,
             Self::SetSessionModeRequest(_) => AGENT_METHOD_NAMES.session_set_mode,
             Self::PromptRequest(_) => AGENT_METHOD_NAMES.session_prompt,
             #[cfg(feature = "unstable_session_model")]
@@ -2053,6 +2262,8 @@ pub enum AgentResponse {
     LoadSessionResponse(#[serde(default)] LoadSessionResponse),
     #[cfg(feature = "unstable_session_list")]
     ListSessionsResponse(ListSessionsResponse),
+    #[cfg(feature = "unstable_session_fork")]
+    ForkSessionResponse(ForkSessionResponse),
     SetSessionModeResponse(#[serde(default)] SetSessionModeResponse),
     PromptResponse(PromptResponse),
     #[cfg(feature = "unstable_session_model")]

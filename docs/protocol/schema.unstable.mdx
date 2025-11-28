@@ -196,6 +196,88 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
   The ID of the session to cancel operations for.
 </ResponseField>
 
+<a id="session-fork"></a>
+### <span class="font-mono">session/fork</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Forks an existing session to create a new independent session.
+
+This method is only available if the agent advertises the `session.fork` capability.
+
+The agent should create a new session with the same conversation context as the
+original, allowing operations like generating summaries without affecting the
+original session's history.
+
+#### <span class="font-mono">ForkSessionRequest</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Request parameters for forking an existing session.
+
+Creates a new session based on the context of an existing one, allowing
+operations like generating summaries without affecting the original session's history.
+
+Only available if the Agent supports the `session.fork` capability.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The ID of the session to fork.
+</ResponseField>
+
+#### <span class="font-mono">ForkSessionResponse</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Response from forking an existing session.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="models" type={<><span><a href="#sessionmodelstate">SessionModelState</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Initial model state if supported by the Agent
+
+</ResponseField>
+<ResponseField name="modes" type={<><span><a href="#sessionmodestate">SessionModeState</a></span><span> | null</span></>} >
+  Initial mode state if supported by the Agent
+
+See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
+
+</ResponseField>
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  Unique identifier for the newly created forked session.
+</ResponseField>
+
 <a id="session-list"></a>
 ### <span class="font-mono">session/list</span>
 
@@ -2592,12 +2674,43 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
 </ResponseField>
+<ResponseField name="fork" type={<><span><a href="#sessionforkcapabilities">SessionForkCapabilities</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Whether the agent supports `session/fork`.
+
+</ResponseField>
 <ResponseField name="list" type={<><span><a href="#sessionlistcapabilities">SessionListCapabilities</a></span><span> | null</span></>} >
   **UNSTABLE**
 
 This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Whether the agent supports `session/list`.
+
+</ResponseField>
+
+## <span class="font-mono">SessionForkCapabilities</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Capabilities for the `session/fork` method.
+
+By supplying `\{\}` it means that the agent supports forking of sessions.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
 </ResponseField>
 
