@@ -253,6 +253,10 @@ impl Side for AgentSide {
             m if m == AGENT_METHOD_NAMES.session_list => serde_json::from_str(params.get())
                 .map(ClientRequest::ListSessionsRequest)
                 .map_err(Into::into),
+            #[cfg(feature = "unstable_session_fork")]
+            m if m == AGENT_METHOD_NAMES.session_fork => serde_json::from_str(params.get())
+                .map(ClientRequest::ForkSessionRequest)
+                .map_err(Into::into),
             m if m == AGENT_METHOD_NAMES.session_set_mode => serde_json::from_str(params.get())
                 .map(ClientRequest::SetSessionModeRequest)
                 .map_err(Into::into),
