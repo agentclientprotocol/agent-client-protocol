@@ -1,0 +1,372 @@
+---
+title: "Session Info Update"
+---
+
+- Author(s): [@ignatov](https://github.com/ignatov)
+- Champion: [@benbrandt](https://github.com/benbrandt)
+
+## Elevator pitch
+
+Add a `session_info_update` variant to the existing `SessionUpdate` notification type that allows agents to update session metadata (particularly title/name), enabling dynamic session identification in client UIs without requiring a new endpoint.
+
+## Status quo
+
+Currently, the ACP protocol provides session management through `session/new`, `session/load`, and `session/list` (unstable). The `session/list` endpoint returns `SessionInfo` objects that include an optional `title` field for displaying session names in client UIs.
+
+However, there are several problems:
+
+1. **No way to communicate title updates** - The `title` field in `SessionInfo` is static in the list response. Agents cannot dynamically update it as the session evolves.
+
+2. **No mechanism for real-time metadata updates** - Unlike commands (`available_commands_update`) or modes (`current_mode_update`), there's no way for agents to:
+   - Auto-generate titles after the first meaningful exchange
+   - Update titles as conversation context shifts
+   - Provide custom metadata that reflects session state
+
+3. **Inconsistent with protocol patterns** - Other dynamic session properties use `session/update` notifications (commands, modes, plans), but metadata has no equivalent mechanism.
+
+The current workaround is for clients to:
+
+- Maintain their own title mapping (doesn't persist or sync)
+- Only show static metadata from `session/list`
+- Have no way to receive agent-generated titles in real-time
+
+## What we propose to do about it
+
+Add a new `session_info_update` variant to the existing `SessionUpdate` discriminated union that allows agents to notify clients about metadata changes. This update would:
+
+1. **Follow the existing `SessionUpdate` pattern**:
+   - Uses the same notification mechanism as `available_commands_update`, `current_mode_update`, etc.
+   - Sent via `session/update` method
+   - Agent-initiated, no request/response needed
+
+2. **Align with `SessionInfo` structure**:
+   - Contains the same fields as `SessionInfo` from `session/list`
+   - All fields are optional (partial updates)
+   - Enables incremental metadata updates
+   - **Important**: `SessionInfoUpdate` must stay aligned with `SessionInfo` - when new fields are added to `SessionInfo`, they should also be added to `SessionInfoUpdate` as optional fields
+
+3. **Support common use cases**:
+   - Agent auto-generates title after first prompt
+   - Agent updates title as conversation context shifts
+   - Agent provides custom metadata for client features (tags, status, etc.)
+   - User explicitly requests title change (agent responds with update notification)
+
+4. **Integrate seamlessly**:
+   - No new capability required (uses existing `session/update` mechanism)
+   - Compatible with `session/list` - metadata should persist and be reflected in list responses
+   - Works during active sessions
+
+### Notification Structure
+
+The agent sends a `session/update` notification with `sessionUpdate: "session_info_update"`:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "session_info_update",
+      "title": "Implement user authentication",
+      "_meta": {
+        "tags": ["feature", "auth"],
+        "priority": "high"
+      }
+    }
+  }
+}
+```
+
+### SessionInfoUpdate Type
+
+The update type mirrors `SessionInfo` but with all fields optional:
+
+```typescript
+{
+  sessionUpdate: "session_info_update",
+  title?: string | null,           // Update or clear the title
+  updatedAt?: string | null,        // ISO 8601 timestamp (usually agent sets this)
+  _meta?: object | null             // Custom metadata (merged with existing)
+}
+```
+
+**Note:** `sessionId` and `cwd` are NOT included since:
+
+- `sessionId` is already in the notification's `params`
+- `cwd` is immutable and set during `session/new`
+
+### Examples
+
+#### Update title and working directory metadata
+
+After the user sends their first meaningful prompt, the agent can generate and send a title along with metadata about the working directory:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "session_info_update",
+      "title": "Debug authentication timeout",
+      "_meta": {
+        "projectName": "api-server",
+        "branch": "main"
+      }
+    }
+  }
+}
+```
+
+#### Update title as conversation evolves
+
+As the conversation shifts focus:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "session_info_update",
+      "title": "Debug authentication timeout → Add retry logic"
+    }
+  }
+}
+```
+
+## Shiny future
+
+Once this feature exists:
+
+1. **Dynamic session identification** - Agents can:
+   - Auto-generate meaningful titles from conversation content
+   - Update titles as conversations evolve
+   - Provide rich metadata for better organization
+
+2. **Improved client UIs** - Clients can:
+   - Show real-time title updates in session lists
+   - Display session status, tags, or other metadata
+   - Update UI immediately without polling `session/list`
+
+3. **Consistent protocol patterns** - Session metadata updates work like other dynamic session properties (commands, modes), creating a unified model
+
+4. **Bidirectional workflows** - Combined with a potential future request method:
+   - User renames session → client sends request → agent acknowledges with `session_info_update` notification
+   - Agent auto-generates title → sends `session_info_update` notification → client displays it
+
+5. **Enhanced use cases**:
+   - Session templates that auto-set titles and tags
+   - Progress indicators via `_meta`
+   - Integration with external tools via metadata
+   - Rich session browsing and filtering
+
+## Implementation details and plan
+
+### Phase 1: Schema Changes
+
+1. **Update `schema.unstable.json`**:
+   - Add `SessionInfoUpdate` type definition
+   - Add new variant to `SessionUpdate` oneOf array
+   - Align fields with `SessionInfo` but make all optional
+
+```json
+{
+  "SessionInfoUpdate": {
+    "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nUpdate to session metadata. All fields are optional to support partial updates.",
+    "properties": {
+      "_meta": {
+        "description": "Extension point for implementations"
+      },
+      "title": {
+        "description": "Human-readable title for the session",
+        "type": ["string", "null"]
+      },
+      "updatedAt": {
+        "description": "ISO 8601 timestamp of last activity",
+        "type": ["string", "null"]
+      }
+    },
+    "type": "object"
+  }
+}
+```
+
+Add to `SessionUpdate` oneOf:
+
+```json
+{
+  "allOf": [
+    {
+      "$ref": "#/$defs/SessionInfoUpdate"
+    }
+  ],
+  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nUpdate to session metadata",
+  "properties": {
+    "sessionUpdate": {
+      "const": "session_info_update",
+      "type": "string"
+    }
+  },
+  "required": ["sessionUpdate"],
+  "type": "object"
+}
+```
+
+### Phase 2: Protocol Documentation
+
+2. **Create documentation** in `/docs/protocol/session-metadata.mdx`:
+   - Explain the notification mechanism
+   - Provide examples of common patterns
+   - Document merge semantics for `_meta`
+   - Clarify relationship with `session/list`
+
+3. **Update existing docs**:
+   - Reference in `/docs/protocol/session-setup.mdx`
+   - Add to `/docs/protocol/prompt-turn.mdx` session update section
+
+### Phase 3: SDK Implementation
+
+4. **Implement in Rust SDK**:
+   - Add `SessionInfoUpdate` struct
+   - Add variant to `SessionUpdate` enum
+   - Update notification handling in agent and client traits
+   - Add helper methods for common patterns
+
+5. **Implement in TypeScript SDK** (if applicable):
+   - Add TypeScript types
+   - Update notification handlers
+   - Add helper methods
+
+### Phase 4: Example Implementation
+
+6. **Update example agents**:
+   - Demonstrate auto-generating title from first prompt
+   - Show updating metadata during session
+   - Example of using `_meta` for custom fields
+
+### Compatibility Considerations
+
+- **Fully backward compatible**: This adds a new notification variant to an existing mechanism
+- **No breaking changes**: Existing agents and clients continue working
+- **Graceful degradation**: Clients that don't handle this notification simply ignore it
+- **No new capability needed**: Uses existing `session/update` infrastructure
+
+### Design Decisions
+
+**Why notification instead of request/response?**
+
+- Consistent with existing `SessionUpdate` patterns (`available_commands_update`, `current_mode_update`)
+- Agents initiate updates based on conversation state
+- Simpler than bidirectional request/response
+- Enables real-time updates without polling
+
+**Why make all fields optional?**
+
+- Allows partial updates (only update what changed)
+- More efficient - don't resend unchanged data
+- Flexible for different use cases
+- Mirrors partial update patterns in other protocols
+
+**Why not include `sessionId` and `cwd` in the update?**
+
+- `sessionId` is already in the notification params
+- `cwd` is immutable (set in `session/new`, never changes)
+- Keeps update focused on mutable metadata
+
+**How do `_meta` updates work?**
+
+- **Merge semantics**: New `_meta` fields are merged with existing ones
+- To clear a specific field: `"_meta": { "fieldName": null }`
+- To clear all custom metadata: `"_meta": null`
+
+### Security Considerations
+
+- **No additional security concerns**: Uses existing session authentication
+- **Input validation**:
+  - Agents should validate title length (recommend 500 chars max)
+  - Sanitize metadata to prevent injection
+  - Validate `_meta` structure based on agent requirements
+- **Resource limits**: Agents should limit update frequency and metadata size
+
+## Frequently asked questions
+
+### Why not create a new endpoint like `session/update-metadata`?
+
+The notification pattern is more appropriate because:
+
+1. **Consistency**: Other dynamic session properties (commands, modes) use notifications
+2. **Agent-initiated**: Agents typically generate titles from conversation context
+3. **Real-time**: No request/response overhead, updates flow naturally
+4. **Simpler**: Reuses existing `session/update` infrastructure
+
+### How does this work with `session/list`?
+
+The updated metadata should persist and be reflected in subsequent `session/list` calls. The notification provides real-time updates to connected clients, while `session/list` provides the current state for discovery.
+
+### Can clients trigger title updates?
+
+This RFD covers agent-initiated updates. Client-initiated updates could work by:
+
+1. Client sends a prompt asking to rename session
+2. Agent updates its internal state
+3. Agent sends `session_info_update` notification
+4. Client receives and displays the update
+
+A future RFD could add explicit request/response for this if needed.
+
+### What if multiple updates are sent in quick succession?
+
+Clients should apply updates incrementally in order. Each notification represents a delta, not a full replacement (except for fields explicitly set to `null`).
+
+### Should `updatedAt` be automatically set by the agent?
+
+Yes, typically the agent should update this timestamp when any session activity occurs, not just when metadata changes. However, including it in `session_info_update` allows agents to explicitly control it if needed.
+
+### Do agents need a new capability for this?
+
+No. All agents that support `session/update` notifications can send this variant. Clients that don't recognize it will ignore it (standard JSON-RPC behavior).
+
+### How does this interact with `session/fork`?
+
+When forking, the parent session's metadata could be copied (implementation choice). The forked session would have its own `sessionId` and could receive separate `session_info_update` notifications.
+
+### What happens if title is too long?
+
+This is an implementation choice. Agents MAY:
+
+- Truncate long titles
+- Reject updates (though this is a notification, so no error response)
+- Set a reasonable limit (e.g., 500 characters)
+
+Clients SHOULD handle long titles gracefully (truncate in UI, show tooltip, etc.).
+
+### Can `_meta` have nested objects?
+
+Yes, `_meta` is an arbitrary object. Agents define its structure. The merge semantics apply recursively - nested objects are merged, not replaced entirely.
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+Several alternatives were considered:
+
+1. **Add a new request/response endpoint (`session/update-metadata`)** - This would be inconsistent with how other dynamic session properties (commands, modes) are handled. The notification pattern is more appropriate for agent-initiated updates.
+
+2. **Add title parameter to `session/new`** - Only allows setting title at creation time, doesn't support dynamic updates as the conversation evolves.
+
+3. **Client-side only metadata tracking** - Doesn't work across devices, can get out of sync, and duplicates storage. This is the current workaround and has significant limitations.
+
+4. **Generic `session/update` request for all properties** - Could conflict with immutable properties (sessionId, cwd) and has unclear semantics about what can be updated.
+
+The proposed notification-based approach:
+
+- **Consistent** with existing protocol patterns
+- **Flexible** for both agent-initiated and user-initiated updates
+- **Simple** to implement and understand
+- **Extensible** via `_meta` field
+
+## Revision history
+
+- **2025-11-28**: Initial draft proposal
