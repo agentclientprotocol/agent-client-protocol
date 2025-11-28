@@ -2,6 +2,16 @@
 
 ## [0.8.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.7.0...v0.8.0) - 2025-11-28
 
+Some follow-up changes from 0.7.0. Most of the changes were in the Rust schema to make things a bit easier to work with.
+
+However, there were some further cleanups to the JSON schema to remove some $ref indirection where possible to have the schema be a bit flatter.
+
+There are also some fixes that were causing issues with code generators related to Extension methods, these now have concrete types in the schema as well.
+
+**Rust**: There are some breaking changes to the `OutgoingMessage` types and other low-level RPC types to make them generate clearer JSON schema representations. Likely these are only used by SDKs, but they moved to tuple enum variants.
+
+Also, rather than having free-floating `V0` and `V1` constants, these are now associated constants on the `ProtocolVersion` type itself.
+
 ### Fixed
 
 - Broken doctest and test in CI ([#267](https://github.com/agentclientprotocol/agent-client-protocol/pull/267))
