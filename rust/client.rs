@@ -8,11 +8,10 @@ use std::{path::PathBuf, sync::Arc};
 use derive_more::{Display, From};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use serde_json::value::RawValue;
 
 use crate::{
-    ContentBlock, ExtNotification, Plan, SessionId, SessionModeId, ToolCall, ToolCallUpdate,
-    ext::ExtRequest,
+    ContentBlock, ExtNotification, ExtResponse, Plan, SessionId, SessionModeId, ToolCall,
+    ToolCallUpdate, ext::ExtRequest,
 };
 
 // Session updates
@@ -1198,7 +1197,7 @@ pub(crate) const TERMINAL_KILL_METHOD_NAME: &str = "terminal/kill";
 /// This enum encompasses all method calls from agent to client.
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(untagged)]
-#[schemars(extend("x-docs-ignore" = true))]
+#[schemars(inline)]
 #[non_exhaustive]
 pub enum AgentRequest {
     /// Writes content to a text file in the client's file system.
@@ -1314,7 +1313,7 @@ impl AgentRequest {
 /// These are responses to the corresponding `AgentRequest` variants.
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(untagged)]
-#[schemars(extend("x-docs-ignore" = true))]
+#[schemars(inline)]
 #[non_exhaustive]
 pub enum ClientResponse {
     WriteTextFileResponse(#[serde(default)] WriteTextFileResponse),
@@ -1325,7 +1324,7 @@ pub enum ClientResponse {
     ReleaseTerminalResponse(#[serde(default)] ReleaseTerminalResponse),
     WaitForTerminalExitResponse(WaitForTerminalExitResponse),
     KillTerminalResponse(#[serde(default)] KillTerminalCommandResponse),
-    ExtMethodResponse(#[schemars(with = "serde_json::Value")] Arc<RawValue>),
+    ExtMethodResponse(ExtResponse),
 }
 
 /// All possible notifications that an agent can send to a client.
@@ -1337,7 +1336,7 @@ pub enum ClientResponse {
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(untagged)]
 #[expect(clippy::large_enum_variant)]
-#[schemars(extend("x-docs-ignore" = true))]
+#[schemars(inline)]
 #[non_exhaustive]
 pub enum AgentNotification {
     /// Handles session update notifications from the agent.

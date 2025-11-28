@@ -8,10 +8,11 @@ use std::{path::PathBuf, sync::Arc};
 use derive_more::{Display, From};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use serde_json::value::RawValue;
 
 use crate::ext::ExtRequest;
-use crate::{ClientCapabilities, ContentBlock, ExtNotification, ProtocolVersion, SessionId};
+use crate::{
+    ClientCapabilities, ContentBlock, ExtNotification, ExtResponse, ProtocolVersion, SessionId,
+};
 
 // Initialize
 
@@ -1671,7 +1672,7 @@ pub(crate) const SESSION_LIST_METHOD_NAME: &str = "session/list";
 /// This enum encompasses all method calls from client to agent.
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(untagged)]
-#[schemars(extend("x-docs-ignore" = true))]
+#[schemars(inline)]
 #[non_exhaustive]
 pub enum ClientRequest {
     /// Establishes the connection with a client and negotiates protocol capabilities.
@@ -1800,7 +1801,7 @@ impl ClientRequest {
 /// These are responses to the corresponding `ClientRequest` variants.
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(untagged)]
-#[schemars(extend("x-docs-ignore" = true))]
+#[schemars(inline)]
 #[non_exhaustive]
 pub enum AgentResponse {
     InitializeResponse(InitializeResponse),
@@ -1813,7 +1814,7 @@ pub enum AgentResponse {
     PromptResponse(PromptResponse),
     #[cfg(feature = "unstable_session_model")]
     SetSessionModelResponse(SetSessionModelResponse),
-    ExtMethodResponse(#[schemars(with = "serde_json::Value")] Arc<RawValue>),
+    ExtMethodResponse(ExtResponse),
 }
 
 /// All possible notifications that a client can send to an agent.
@@ -1824,7 +1825,7 @@ pub enum AgentResponse {
 /// Notifications do not expect a response.
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(untagged)]
-#[schemars(extend("x-docs-ignore" = true))]
+#[schemars(inline)]
 #[non_exhaustive]
 pub enum ClientNotification {
     /// Cancels ongoing operations for a session.

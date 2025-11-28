@@ -48,232 +48,196 @@
       "type": "object"
     },
     "AgentNotification": {
-      "anyOf": [
-        {
-          "allOf": [
-            {
-              "$ref": "#/$defs/SessionNotification"
-            }
-          ],
-          "description": "Handles session update notifications from the agent.\n\nThis is a notification endpoint (no response expected) that receives\nreal-time updates about session progress, including message chunks,\ntool calls, and execution plans.\n\nNote: Clients SHOULD continue accepting tool call updates even after\nsending a `session/cancel` notification, as the agent may send final\nupdates before responding with the cancelled stop reason.\n\nSee protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-turn#3-agent-reports-output)"
-        },
-        {
-          "description": "Handles extension notifications from the agent.\n\nAllows the Agent to send an arbitrary notification that is not part of the ACP spec.\nExtension notifications provide a way to send one-way messages for custom functionality\nwhile maintaining protocol compatibility.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)"
-        }
-      ],
-      "description": "All possible notifications that an agent can send to a client.\n\nThis enum is used internally for routing RPC notifications. You typically won't need\nto use this directly - use the notification methods on the [`Client`] trait instead.\n\nNotifications do not expect a response.",
-      "x-docs-ignore": true
-    },
-    "AgentOutgoingMessage": {
-      "anyOf": [
-        {
-          "properties": {
-            "id": {
-              "anyOf": [
-                {
-                  "type": "null"
-                },
-                {
-                  "format": "int64",
-                  "type": "integer"
-                },
-                {
-                  "type": "string"
-                }
-              ],
-              "description": "JSON RPC Request Id\n\nAn identifier established by the Client that MUST contain a String, Number, or NULL value if included. If it is not included it is assumed to be a notification. The value SHOULD normally not be Null [1] and Numbers SHOULD NOT contain fractional parts [2]\n\nThe Server MUST reply with the same value in the Response object if included. This member is used to correlate the context between the two objects.\n\n[1] The use of Null as a value for the id member in a Request object is discouraged, because this specification uses a value of Null for Responses with an unknown id. Also, because JSON-RPC 1.0 uses an id value of Null for Notifications this could cause confusion in handling.\n\n[2] Fractional parts may be problematic, since many decimal fractions cannot be represented exactly as binary fractions."
-            },
-            "method": {
-              "type": "string"
-            },
-            "params": {
-              "anyOf": [
-                {
-                  "$ref": "#/$defs/AgentRequest"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            }
-          },
-          "required": ["id", "method"],
-          "type": "object"
-        },
-        {
-          "oneOf": [
-            {
-              "properties": {
-                "result": {
-                  "$ref": "#/$defs/AgentResponse"
-                }
-              },
-              "required": ["result"],
-              "type": "object"
-            },
-            {
-              "properties": {
-                "error": {
-                  "$ref": "#/$defs/Error"
-                }
-              },
-              "required": ["error"],
-              "type": "object"
-            }
-          ],
-          "properties": {
-            "id": {
-              "anyOf": [
-                {
-                  "type": "null"
-                },
-                {
-                  "format": "int64",
-                  "type": "integer"
-                },
-                {
-                  "type": "string"
-                }
-              ],
-              "description": "JSON RPC Request Id\n\nAn identifier established by the Client that MUST contain a String, Number, or NULL value if included. If it is not included it is assumed to be a notification. The value SHOULD normally not be Null [1] and Numbers SHOULD NOT contain fractional parts [2]\n\nThe Server MUST reply with the same value in the Response object if included. This member is used to correlate the context between the two objects.\n\n[1] The use of Null as a value for the id member in a Request object is discouraged, because this specification uses a value of Null for Responses with an unknown id. Also, because JSON-RPC 1.0 uses an id value of Null for Notifications this could cause confusion in handling.\n\n[2] Fractional parts may be problematic, since many decimal fractions cannot be represented exactly as binary fractions."
-            }
-          },
-          "required": ["id"],
-          "type": "object"
-        },
-        {
-          "properties": {
-            "method": {
-              "type": "string"
-            },
-            "params": {
-              "anyOf": [
-                {
-                  "$ref": "#/$defs/AgentNotification"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            }
-          },
-          "required": ["method"],
-          "type": "object"
-        }
-      ],
-      "description": "A message (request, response, or notification) with `\"jsonrpc\": \"2.0\"` specified as\n[required by JSON-RPC 2.0 Specification][1].\n\n[1]: https://www.jsonrpc.org/specification#compatibility",
       "properties": {
-        "jsonrpc": {
-          "enum": ["2.0"],
+        "method": {
           "type": "string"
+        },
+        "params": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/SessionNotification"
+                    }
+                  ],
+                  "description": "Handles session update notifications from the agent.\n\nThis is a notification endpoint (no response expected) that receives\nreal-time updates about session progress, including message chunks,\ntool calls, and execution plans.\n\nNote: Clients SHOULD continue accepting tool call updates even after\nsending a `session/cancel` notification, as the agent may send final\nupdates before responding with the cancelled stop reason.\n\nSee protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-turn#3-agent-reports-output)"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/ExtNotification"
+                    }
+                  ],
+                  "description": "Handles extension notifications from the agent.\n\nAllows the Agent to send an arbitrary notification that is not part of the ACP spec.\nExtension notifications provide a way to send one-way messages for custom functionality\nwhile maintaining protocol compatibility.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)"
+                }
+              ],
+              "description": "All possible notifications that an agent can send to a client.\n\nThis enum is used internally for routing RPC notifications. You typically won't need\nto use this directly - use the notification methods on the [`Client`] trait instead.\n\nNotifications do not expect a response."
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
-      "required": ["jsonrpc"],
+      "required": ["method"],
       "type": "object",
       "x-docs-ignore": true
     },
     "AgentRequest": {
-      "anyOf": [
-        {
-          "allOf": [
-            {
-              "$ref": "#/$defs/WriteTextFileRequest"
-            }
-          ],
-          "description": "Writes content to a text file in the client's file system.\n\nOnly available if the client advertises the `fs.writeTextFile` capability.\nAllows the agent to create or modify files within the client's environment.\n\nSee protocol docs: [Client](https://agentclientprotocol.com/protocol/overview#client)"
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/RequestId"
         },
-        {
-          "allOf": [
-            {
-              "$ref": "#/$defs/ReadTextFileRequest"
-            }
-          ],
-          "description": "Reads content from a text file in the client's file system.\n\nOnly available if the client advertises the `fs.readTextFile` capability.\nAllows the agent to access file contents within the client's environment.\n\nSee protocol docs: [Client](https://agentclientprotocol.com/protocol/overview#client)"
+        "method": {
+          "type": "string"
         },
-        {
-          "allOf": [
+        "params": {
+          "anyOf": [
             {
-              "$ref": "#/$defs/RequestPermissionRequest"
-            }
-          ],
-          "description": "Requests permission from the user for a tool call operation.\n\nCalled by the agent when it needs user authorization before executing\na potentially sensitive operation. The client should present the options\nto the user and return their decision.\n\nIf the client cancels the prompt turn via `session/cancel`, it MUST\nrespond to this request with `RequestPermissionOutcome::Cancelled`.\n\nSee protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/tool-calls#requesting-permission)"
-        },
-        {
-          "allOf": [
+              "anyOf": [
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/WriteTextFileRequest"
+                    }
+                  ],
+                  "description": "Writes content to a text file in the client's file system.\n\nOnly available if the client advertises the `fs.writeTextFile` capability.\nAllows the agent to create or modify files within the client's environment.\n\nSee protocol docs: [Client](https://agentclientprotocol.com/protocol/overview#client)"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/ReadTextFileRequest"
+                    }
+                  ],
+                  "description": "Reads content from a text file in the client's file system.\n\nOnly available if the client advertises the `fs.readTextFile` capability.\nAllows the agent to access file contents within the client's environment.\n\nSee protocol docs: [Client](https://agentclientprotocol.com/protocol/overview#client)"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/RequestPermissionRequest"
+                    }
+                  ],
+                  "description": "Requests permission from the user for a tool call operation.\n\nCalled by the agent when it needs user authorization before executing\na potentially sensitive operation. The client should present the options\nto the user and return their decision.\n\nIf the client cancels the prompt turn via `session/cancel`, it MUST\nrespond to this request with `RequestPermissionOutcome::Cancelled`.\n\nSee protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/tool-calls#requesting-permission)"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/CreateTerminalRequest"
+                    }
+                  ],
+                  "description": "Executes a command in a new terminal\n\nOnly available if the `terminal` Client capability is set to `true`.\n\nReturns a `TerminalId` that can be used with other terminal methods\nto get the current output, wait for exit, and kill the command.\n\nThe `TerminalId` can also be used to embed the terminal in a tool call\nby using the `ToolCallContent::Terminal` variant.\n\nThe Agent is responsible for releasing the terminal by using the `terminal/release`\nmethod.\n\nSee protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/TerminalOutputRequest"
+                    }
+                  ],
+                  "description": "Gets the terminal output and exit status\n\nReturns the current content in the terminal without waiting for the command to exit.\nIf the command has already exited, the exit status is included.\n\nSee protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/ReleaseTerminalRequest"
+                    }
+                  ],
+                  "description": "Releases a terminal\n\nThe command is killed if it hasn't exited yet. Use `terminal/wait_for_exit`\nto wait for the command to exit before releasing the terminal.\n\nAfter release, the `TerminalId` can no longer be used with other `terminal/*` methods,\nbut tool calls that already contain it, continue to display its output.\n\nThe `terminal/kill` method can be used to terminate the command without releasing\nthe terminal, allowing the Agent to call `terminal/output` and other methods.\n\nSee protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/WaitForTerminalExitRequest"
+                    }
+                  ],
+                  "description": "Waits for the terminal command to exit and return its exit status\n\nSee protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/KillTerminalCommandRequest"
+                    }
+                  ],
+                  "description": "Kills the terminal command without releasing the terminal\n\nWhile `terminal/release` will also kill the command, this method will keep\nthe `TerminalId` valid so it can be used with other methods.\n\nThis method can be helpful when implementing command timeouts which terminate\nthe command as soon as elapsed, and then get the final output so it can be sent\nto the model.\n\nNote: `terminal/release` when `TerminalId` is no longer needed.\n\nSee protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/ExtRequest"
+                    }
+                  ],
+                  "description": "Handles extension method requests from the agent.\n\nAllows the Agent to send an arbitrary request that is not part of the ACP spec.\nExtension methods provide a way to add custom functionality while maintaining\nprotocol compatibility.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)"
+                }
+              ],
+              "description": "All possible requests that an agent can send to a client.\n\nThis enum is used internally for routing RPC requests. You typically won't need\nto use this directly - instead, use the methods on the [`Client`] trait.\n\nThis enum encompasses all method calls from agent to client."
+            },
             {
-              "$ref": "#/$defs/CreateTerminalRequest"
+              "type": "null"
             }
-          ],
-          "description": "Executes a command in a new terminal\n\nOnly available if the `terminal` Client capability is set to `true`.\n\nReturns a `TerminalId` that can be used with other terminal methods\nto get the current output, wait for exit, and kill the command.\n\nThe `TerminalId` can also be used to embed the terminal in a tool call\nby using the `ToolCallContent::Terminal` variant.\n\nThe Agent is responsible for releasing the terminal by using the `terminal/release`\nmethod.\n\nSee protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)"
-        },
-        {
-          "allOf": [
-            {
-              "$ref": "#/$defs/TerminalOutputRequest"
-            }
-          ],
-          "description": "Gets the terminal output and exit status\n\nReturns the current content in the terminal without waiting for the command to exit.\nIf the command has already exited, the exit status is included.\n\nSee protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)"
-        },
-        {
-          "allOf": [
-            {
-              "$ref": "#/$defs/ReleaseTerminalRequest"
-            }
-          ],
-          "description": "Releases a terminal\n\nThe command is killed if it hasn't exited yet. Use `terminal/wait_for_exit`\nto wait for the command to exit before releasing the terminal.\n\nAfter release, the `TerminalId` can no longer be used with other `terminal/*` methods,\nbut tool calls that already contain it, continue to display its output.\n\nThe `terminal/kill` method can be used to terminate the command without releasing\nthe terminal, allowing the Agent to call `terminal/output` and other methods.\n\nSee protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)"
-        },
-        {
-          "allOf": [
-            {
-              "$ref": "#/$defs/WaitForTerminalExitRequest"
-            }
-          ],
-          "description": "Waits for the terminal command to exit and return its exit status\n\nSee protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)"
-        },
-        {
-          "allOf": [
-            {
-              "$ref": "#/$defs/KillTerminalCommandRequest"
-            }
-          ],
-          "description": "Kills the terminal command without releasing the terminal\n\nWhile `terminal/release` will also kill the command, this method will keep\nthe `TerminalId` valid so it can be used with other methods.\n\nThis method can be helpful when implementing command timeouts which terminate\nthe command as soon as elapsed, and then get the final output so it can be sent\nto the model.\n\nNote: `terminal/release` when `TerminalId` is no longer needed.\n\nSee protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)"
-        },
-        {
-          "description": "Handles extension method requests from the agent.\n\nAllows the Agent to send an arbitrary request that is not part of the ACP spec.\nExtension methods provide a way to add custom functionality while maintaining\nprotocol compatibility.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)"
+          ]
         }
-      ],
-      "description": "All possible requests that an agent can send to a client.\n\nThis enum is used internally for routing RPC requests. You typically won't need\nto use this directly - instead, use the methods on the [`Client`] trait.\n\nThis enum encompasses all method calls from agent to client.",
+      },
+      "required": ["id", "method"],
+      "type": "object",
       "x-docs-ignore": true
     },
     "AgentResponse": {
       "anyOf": [
         {
-          "$ref": "#/$defs/InitializeResponse"
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/RequestId"
+            },
+            "result": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/InitializeResponse"
+                },
+                {
+                  "$ref": "#/$defs/AuthenticateResponse"
+                },
+                {
+                  "$ref": "#/$defs/NewSessionResponse"
+                },
+                {
+                  "$ref": "#/$defs/LoadSessionResponse"
+                },
+                {
+                  "$ref": "#/$defs/ListSessionsResponse"
+                },
+                {
+                  "$ref": "#/$defs/SetSessionModeResponse"
+                },
+                {
+                  "$ref": "#/$defs/PromptResponse"
+                },
+                {
+                  "$ref": "#/$defs/SetSessionModelResponse"
+                },
+                {
+                  "$ref": "#/$defs/ExtResponse"
+                }
+              ],
+              "description": "All possible responses that an agent can send to a client.\n\nThis enum is used internally for routing RPC responses. You typically won't need\nto use this directly - the responses are handled automatically by the connection.\n\nThese are responses to the corresponding `ClientRequest` variants."
+            }
+          },
+          "required": ["id", "result"],
+          "type": "object"
         },
         {
-          "$ref": "#/$defs/AuthenticateResponse"
-        },
-        {
-          "$ref": "#/$defs/NewSessionResponse"
-        },
-        {
-          "$ref": "#/$defs/LoadSessionResponse"
-        },
-        {
-          "$ref": "#/$defs/ListSessionsResponse"
-        },
-        {
-          "$ref": "#/$defs/SetSessionModeResponse"
-        },
-        {
-          "$ref": "#/$defs/PromptResponse"
-        },
-        {
-          "$ref": "#/$defs/SetSessionModelResponse"
-        },
-        {}
+          "properties": {
+            "error": {
+              "$ref": "#/$defs/Error"
+            },
+            "id": {
+              "$ref": "#/$defs/RequestId"
+            }
+          },
+          "required": ["id", "error"],
+          "type": "object"
+        }
       ],
-      "description": "All possible responses that an agent can send to a client.\n\nThis enum is used internally for routing RPC responses. You typically won't need\nto use this directly - the responses are handled automatically by the connection.\n\nThese are responses to the corresponding `ClientRequest` variants.",
       "x-docs-ignore": true
     },
     "Annotations": {
@@ -498,232 +462,196 @@
       "type": "object"
     },
     "ClientNotification": {
-      "anyOf": [
-        {
-          "allOf": [
-            {
-              "$ref": "#/$defs/CancelNotification"
-            }
-          ],
-          "description": "Cancels ongoing operations for a session.\n\nThis is a notification sent by the client to cancel an ongoing prompt turn.\n\nUpon receiving this notification, the Agent SHOULD:\n- Stop all language model requests as soon as possible\n- Abort all tool call invocations in progress\n- Send any pending `session/update` notifications\n- Respond to the original `session/prompt` request with `StopReason::Cancelled`\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-turn#cancellation)"
-        },
-        {
-          "description": "Handles extension notifications from the client.\n\nExtension notifications provide a way to send one-way messages for custom functionality\nwhile maintaining protocol compatibility.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)"
-        }
-      ],
-      "description": "All possible notifications that a client can send to an agent.\n\nThis enum is used internally for routing RPC notifications. You typically won't need\nto use this directly - use the notification methods on the [`Agent`] trait instead.\n\nNotifications do not expect a response.",
-      "x-docs-ignore": true
-    },
-    "ClientOutgoingMessage": {
-      "anyOf": [
-        {
-          "properties": {
-            "id": {
-              "anyOf": [
-                {
-                  "type": "null"
-                },
-                {
-                  "format": "int64",
-                  "type": "integer"
-                },
-                {
-                  "type": "string"
-                }
-              ],
-              "description": "JSON RPC Request Id\n\nAn identifier established by the Client that MUST contain a String, Number, or NULL value if included. If it is not included it is assumed to be a notification. The value SHOULD normally not be Null [1] and Numbers SHOULD NOT contain fractional parts [2]\n\nThe Server MUST reply with the same value in the Response object if included. This member is used to correlate the context between the two objects.\n\n[1] The use of Null as a value for the id member in a Request object is discouraged, because this specification uses a value of Null for Responses with an unknown id. Also, because JSON-RPC 1.0 uses an id value of Null for Notifications this could cause confusion in handling.\n\n[2] Fractional parts may be problematic, since many decimal fractions cannot be represented exactly as binary fractions."
-            },
-            "method": {
-              "type": "string"
-            },
-            "params": {
-              "anyOf": [
-                {
-                  "$ref": "#/$defs/ClientRequest"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            }
-          },
-          "required": ["id", "method"],
-          "type": "object"
-        },
-        {
-          "oneOf": [
-            {
-              "properties": {
-                "result": {
-                  "$ref": "#/$defs/ClientResponse"
-                }
-              },
-              "required": ["result"],
-              "type": "object"
-            },
-            {
-              "properties": {
-                "error": {
-                  "$ref": "#/$defs/Error"
-                }
-              },
-              "required": ["error"],
-              "type": "object"
-            }
-          ],
-          "properties": {
-            "id": {
-              "anyOf": [
-                {
-                  "type": "null"
-                },
-                {
-                  "format": "int64",
-                  "type": "integer"
-                },
-                {
-                  "type": "string"
-                }
-              ],
-              "description": "JSON RPC Request Id\n\nAn identifier established by the Client that MUST contain a String, Number, or NULL value if included. If it is not included it is assumed to be a notification. The value SHOULD normally not be Null [1] and Numbers SHOULD NOT contain fractional parts [2]\n\nThe Server MUST reply with the same value in the Response object if included. This member is used to correlate the context between the two objects.\n\n[1] The use of Null as a value for the id member in a Request object is discouraged, because this specification uses a value of Null for Responses with an unknown id. Also, because JSON-RPC 1.0 uses an id value of Null for Notifications this could cause confusion in handling.\n\n[2] Fractional parts may be problematic, since many decimal fractions cannot be represented exactly as binary fractions."
-            }
-          },
-          "required": ["id"],
-          "type": "object"
-        },
-        {
-          "properties": {
-            "method": {
-              "type": "string"
-            },
-            "params": {
-              "anyOf": [
-                {
-                  "$ref": "#/$defs/ClientNotification"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            }
-          },
-          "required": ["method"],
-          "type": "object"
-        }
-      ],
-      "description": "A message (request, response, or notification) with `\"jsonrpc\": \"2.0\"` specified as\n[required by JSON-RPC 2.0 Specification][1].\n\n[1]: https://www.jsonrpc.org/specification#compatibility",
       "properties": {
-        "jsonrpc": {
-          "enum": ["2.0"],
+        "method": {
           "type": "string"
+        },
+        "params": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/CancelNotification"
+                    }
+                  ],
+                  "description": "Cancels ongoing operations for a session.\n\nThis is a notification sent by the client to cancel an ongoing prompt turn.\n\nUpon receiving this notification, the Agent SHOULD:\n- Stop all language model requests as soon as possible\n- Abort all tool call invocations in progress\n- Send any pending `session/update` notifications\n- Respond to the original `session/prompt` request with `StopReason::Cancelled`\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-turn#cancellation)"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/ExtNotification"
+                    }
+                  ],
+                  "description": "Handles extension notifications from the client.\n\nExtension notifications provide a way to send one-way messages for custom functionality\nwhile maintaining protocol compatibility.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)"
+                }
+              ],
+              "description": "All possible notifications that a client can send to an agent.\n\nThis enum is used internally for routing RPC notifications. You typically won't need\nto use this directly - use the notification methods on the [`Agent`] trait instead.\n\nNotifications do not expect a response."
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
-      "required": ["jsonrpc"],
+      "required": ["method"],
       "type": "object",
       "x-docs-ignore": true
     },
     "ClientRequest": {
-      "anyOf": [
-        {
-          "allOf": [
-            {
-              "$ref": "#/$defs/InitializeRequest"
-            }
-          ],
-          "description": "Establishes the connection with a client and negotiates protocol capabilities.\n\nThis method is called once at the beginning of the connection to:\n- Negotiate the protocol version to use\n- Exchange capability information between client and agent\n- Determine available authentication methods\n\nThe agent should respond with its supported protocol version and capabilities.\n\nSee protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)"
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/RequestId"
         },
-        {
-          "allOf": [
-            {
-              "$ref": "#/$defs/AuthenticateRequest"
-            }
-          ],
-          "description": "Authenticates the client using the specified authentication method.\n\nCalled when the agent requires authentication before allowing session creation.\nThe client provides the authentication method ID that was advertised during initialization.\n\nAfter successful authentication, the client can proceed to create sessions with\n`new_session` without receiving an `auth_required` error.\n\nSee protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)"
+        "method": {
+          "type": "string"
         },
-        {
-          "allOf": [
+        "params": {
+          "anyOf": [
             {
-              "$ref": "#/$defs/NewSessionRequest"
-            }
-          ],
-          "description": "Creates a new conversation session with the agent.\n\nSessions represent independent conversation contexts with their own history and state.\n\nThe agent should:\n- Create a new session context\n- Connect to any specified MCP servers\n- Return a unique session ID for future requests\n\nMay return an `auth_required` error if the agent requires authentication.\n\nSee protocol docs: [Session Setup](https://agentclientprotocol.com/protocol/session-setup)"
-        },
-        {
-          "allOf": [
+              "anyOf": [
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/InitializeRequest"
+                    }
+                  ],
+                  "description": "Establishes the connection with a client and negotiates protocol capabilities.\n\nThis method is called once at the beginning of the connection to:\n- Negotiate the protocol version to use\n- Exchange capability information between client and agent\n- Determine available authentication methods\n\nThe agent should respond with its supported protocol version and capabilities.\n\nSee protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/AuthenticateRequest"
+                    }
+                  ],
+                  "description": "Authenticates the client using the specified authentication method.\n\nCalled when the agent requires authentication before allowing session creation.\nThe client provides the authentication method ID that was advertised during initialization.\n\nAfter successful authentication, the client can proceed to create sessions with\n`new_session` without receiving an `auth_required` error.\n\nSee protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/NewSessionRequest"
+                    }
+                  ],
+                  "description": "Creates a new conversation session with the agent.\n\nSessions represent independent conversation contexts with their own history and state.\n\nThe agent should:\n- Create a new session context\n- Connect to any specified MCP servers\n- Return a unique session ID for future requests\n\nMay return an `auth_required` error if the agent requires authentication.\n\nSee protocol docs: [Session Setup](https://agentclientprotocol.com/protocol/session-setup)"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/LoadSessionRequest"
+                    }
+                  ],
+                  "description": "Loads an existing session to resume a previous conversation.\n\nThis method is only available if the agent advertises the `loadSession` capability.\n\nThe agent should:\n- Restore the session context and conversation history\n- Connect to the specified MCP servers\n- Stream the entire conversation history back to the client via notifications\n\nSee protocol docs: [Loading Sessions](https://agentclientprotocol.com/protocol/session-setup#loading-sessions)"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/ListSessionsRequest"
+                    }
+                  ],
+                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nLists existing sessions known to the agent.\n\nThis method is only available if the agent advertises the `listSessions` capability.\n\nThe agent should return metadata about sessions with optional filtering and pagination support."
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/SetSessionModeRequest"
+                    }
+                  ],
+                  "description": "Sets the current mode for a session.\n\nAllows switching between different agent modes (e.g., \"ask\", \"architect\", \"code\")\nthat affect system prompts, tool availability, and permission behaviors.\n\nThe mode must be one of the modes advertised in `availableModes` during session\ncreation or loading. Agents may also change modes autonomously and notify the\nclient via `current_mode_update` notifications.\n\nThis method can be called at any time during a session, whether the Agent is\nidle or actively generating a response.\n\nSee protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/PromptRequest"
+                    }
+                  ],
+                  "description": "Processes a user prompt within a session.\n\nThis method handles the whole lifecycle of a prompt:\n- Receives user messages with optional context (files, images, etc.)\n- Processes the prompt using language models\n- Reports language model content and tool calls to the Clients\n- Requests permission to run tools\n- Executes any requested tool calls\n- Returns when the turn is complete with a stop reason\n\nSee protocol docs: [Prompt Turn](https://agentclientprotocol.com/protocol/prompt-turn)"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/SetSessionModelRequest"
+                    }
+                  ],
+                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSelect a model for a given session."
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/ExtRequest"
+                    }
+                  ],
+                  "description": "Handles extension method requests from the client.\n\nExtension methods provide a way to add custom functionality while maintaining\nprotocol compatibility.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)"
+                }
+              ],
+              "description": "All possible requests that a client can send to an agent.\n\nThis enum is used internally for routing RPC requests. You typically won't need\nto use this directly - instead, use the methods on the [`Agent`] trait.\n\nThis enum encompasses all method calls from client to agent."
+            },
             {
-              "$ref": "#/$defs/LoadSessionRequest"
+              "type": "null"
             }
-          ],
-          "description": "Loads an existing session to resume a previous conversation.\n\nThis method is only available if the agent advertises the `loadSession` capability.\n\nThe agent should:\n- Restore the session context and conversation history\n- Connect to the specified MCP servers\n- Stream the entire conversation history back to the client via notifications\n\nSee protocol docs: [Loading Sessions](https://agentclientprotocol.com/protocol/session-setup#loading-sessions)"
-        },
-        {
-          "allOf": [
-            {
-              "$ref": "#/$defs/ListSessionsRequest"
-            }
-          ],
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nLists existing sessions known to the agent.\n\nThis method is only available if the agent advertises the `listSessions` capability.\n\nThe agent should return metadata about sessions with optional filtering and pagination support."
-        },
-        {
-          "allOf": [
-            {
-              "$ref": "#/$defs/SetSessionModeRequest"
-            }
-          ],
-          "description": "Sets the current mode for a session.\n\nAllows switching between different agent modes (e.g., \"ask\", \"architect\", \"code\")\nthat affect system prompts, tool availability, and permission behaviors.\n\nThe mode must be one of the modes advertised in `availableModes` during session\ncreation or loading. Agents may also change modes autonomously and notify the\nclient via `current_mode_update` notifications.\n\nThis method can be called at any time during a session, whether the Agent is\nidle or actively generating a response.\n\nSee protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)"
-        },
-        {
-          "allOf": [
-            {
-              "$ref": "#/$defs/PromptRequest"
-            }
-          ],
-          "description": "Processes a user prompt within a session.\n\nThis method handles the whole lifecycle of a prompt:\n- Receives user messages with optional context (files, images, etc.)\n- Processes the prompt using language models\n- Reports language model content and tool calls to the Clients\n- Requests permission to run tools\n- Executes any requested tool calls\n- Returns when the turn is complete with a stop reason\n\nSee protocol docs: [Prompt Turn](https://agentclientprotocol.com/protocol/prompt-turn)"
-        },
-        {
-          "allOf": [
-            {
-              "$ref": "#/$defs/SetSessionModelRequest"
-            }
-          ],
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSelect a model for a given session."
-        },
-        {
-          "description": "Handles extension method requests from the client.\n\nExtension methods provide a way to add custom functionality while maintaining\nprotocol compatibility.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)"
+          ]
         }
-      ],
-      "description": "All possible requests that a client can send to an agent.\n\nThis enum is used internally for routing RPC requests. You typically won't need\nto use this directly - instead, use the methods on the [`Agent`] trait.\n\nThis enum encompasses all method calls from client to agent.",
+      },
+      "required": ["id", "method"],
+      "type": "object",
       "x-docs-ignore": true
     },
     "ClientResponse": {
       "anyOf": [
         {
-          "$ref": "#/$defs/WriteTextFileResponse"
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/RequestId"
+            },
+            "result": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/WriteTextFileResponse"
+                },
+                {
+                  "$ref": "#/$defs/ReadTextFileResponse"
+                },
+                {
+                  "$ref": "#/$defs/RequestPermissionResponse"
+                },
+                {
+                  "$ref": "#/$defs/CreateTerminalResponse"
+                },
+                {
+                  "$ref": "#/$defs/TerminalOutputResponse"
+                },
+                {
+                  "$ref": "#/$defs/ReleaseTerminalResponse"
+                },
+                {
+                  "$ref": "#/$defs/WaitForTerminalExitResponse"
+                },
+                {
+                  "$ref": "#/$defs/KillTerminalCommandResponse"
+                },
+                {
+                  "$ref": "#/$defs/ExtResponse"
+                }
+              ],
+              "description": "All possible responses that a client can send to an agent.\n\nThis enum is used internally for routing RPC responses. You typically won't need\nto use this directly - the responses are handled automatically by the connection.\n\nThese are responses to the corresponding `AgentRequest` variants."
+            }
+          },
+          "required": ["id", "result"],
+          "type": "object"
         },
         {
-          "$ref": "#/$defs/ReadTextFileResponse"
-        },
-        {
-          "$ref": "#/$defs/RequestPermissionResponse"
-        },
-        {
-          "$ref": "#/$defs/CreateTerminalResponse"
-        },
-        {
-          "$ref": "#/$defs/TerminalOutputResponse"
-        },
-        {
-          "$ref": "#/$defs/ReleaseTerminalResponse"
-        },
-        {
-          "$ref": "#/$defs/WaitForTerminalExitResponse"
-        },
-        {
-          "$ref": "#/$defs/KillTerminalCommandResponse"
-        },
-        {}
+          "properties": {
+            "error": {
+              "$ref": "#/$defs/Error"
+            },
+            "id": {
+              "$ref": "#/$defs/RequestId"
+            }
+          },
+          "required": ["id", "error"],
+          "type": "object"
+        }
       ],
-      "description": "All possible responses that a client can send to an agent.\n\nThis enum is used internally for routing RPC responses. You typically won't need\nto use this directly - the responses are handled automatically by the connection.\n\nThese are responses to the corresponding `AgentRequest` variants.",
       "x-docs-ignore": true
     },
     "Content": {
@@ -1024,6 +952,15 @@
       },
       "required": ["code", "message"],
       "type": "object"
+    },
+    "ExtNotification": {
+      "description": "Allows the Agent to send an arbitrary notification that is not part of the ACP spec.\nExtension notifications provide a way to send one-way messages for custom functionality\nwhile maintaining protocol compatibility.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)"
+    },
+    "ExtRequest": {
+      "description": "Allows for sending an arbitrary request that is not part of the ACP spec.\nExtension methods provide a way to add custom functionality while maintaining\nprotocol compatibility.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)"
+    },
+    "ExtResponse": {
+      "description": "Allows for sending an arbitrary response to an [`ExtRequest`] that is not part of the ACP spec.\nExtension methods provide a way to add custom functionality while maintaining\nprotocol compatibility.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)"
     },
     "FileSystemCapability": {
       "description": "Filesystem capabilities supported by the client.\nFile system capabilities that a client may support.\n\nSee protocol docs: [FileSystem](https://agentclientprotocol.com/protocol/initialization#filesystem)",
@@ -1913,6 +1850,21 @@
       "type": "object",
       "x-method": "terminal/release",
       "x-side": "client"
+    },
+    "RequestId": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "format": "int64",
+          "type": "integer"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "description": "JSON RPC Request Id\n\nAn identifier established by the Client that MUST contain a String, Number, or NULL value if included. If it is not included it is assumed to be a notification. The value SHOULD normally not be Null [1] and Numbers SHOULD NOT contain fractional parts [2]\n\nThe Server MUST reply with the same value in the Response object if included. This member is used to correlate the context between the two objects.\n\n[1] The use of Null as a value for the id member in a Request object is discouraged, because this specification uses a value of Null for Responses with an unknown id. Also, because JSON-RPC 1.0 uses an id value of Null for Notifications this could cause confusion in handling.\n\n[2] Fractional parts may be problematic, since many decimal fractions cannot be represented exactly as binary fractions."
     },
     "RequestPermissionOutcome": {
       "description": "The outcome of a permission request.",
@@ -2985,10 +2937,48 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "anyOf": [
     {
-      "$ref": "#/$defs/AgentOutgoingMessage"
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AgentRequest"
+        },
+        {
+          "$ref": "#/$defs/AgentResponse"
+        },
+        {
+          "$ref": "#/$defs/AgentNotification"
+        }
+      ],
+      "description": "A message (request, response, or notification) with `\"jsonrpc\": \"2.0\"` specified as\n[required by JSON-RPC 2.0 Specification][1].\n\n[1]: https://www.jsonrpc.org/specification#compatibility",
+      "properties": {
+        "jsonrpc": {
+          "enum": ["2.0"],
+          "type": "string"
+        }
+      },
+      "required": ["jsonrpc"],
+      "type": "object"
     },
     {
-      "$ref": "#/$defs/ClientOutgoingMessage"
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ClientRequest"
+        },
+        {
+          "$ref": "#/$defs/ClientResponse"
+        },
+        {
+          "$ref": "#/$defs/ClientNotification"
+        }
+      ],
+      "description": "A message (request, response, or notification) with `\"jsonrpc\": \"2.0\"` specified as\n[required by JSON-RPC 2.0 Specification][1].\n\n[1]: https://www.jsonrpc.org/specification#compatibility",
+      "properties": {
+        "jsonrpc": {
+          "enum": ["2.0"],
+          "type": "string"
+        }
+      },
+      "required": ["jsonrpc"],
+      "type": "object"
     }
   ]
 }
