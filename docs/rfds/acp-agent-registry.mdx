@@ -1,0 +1,125 @@
+---
+title: "ACP Agent Registry"
+---
+
+**Author:** [@ignatov](https://github.com/ignatov)
+**Champion:** [@benbrandt](https://github.com/benbrandt)
+
+## Elevator pitch
+
+ACP needs a single, trusted registry of agents so clients can discover integrations, understand their capabilities, and configure them automatically. This RFD proposes (1) a canonical manifest format that every agent must publish, (2) a dedicated `agentclientprotocol/registry` repo where maintainers contribute those manifests, and (3) tooling that aggregates and publishes a searchable catalog for editors and other clients.
+
+## Status quo
+
+There is no canonical listing of ACP-compatible agents. Information lives in scattered READMEs or proprietary feeds, which makes it hard to:
+
+- Let users discover agents directly inside ACP-aware clients.
+- Ensure protocol-version compatibility or capability coverage.
+- Keep metadata consistent (auth requirements, hosting model, license, etc.).
+
+Every editor builds bespoke manifests or scrapes GitHub, leading to duplication and stale data.
+
+## Agent manifest format (core proposal)
+
+Each agent advertises itself via `agent.json` stored under `<id>/` in the registry repo. JSONC keeps things close to ACP’s JSON-centric schemas while remaining human-friendly during authoring. Fields (required unless noted):
+
+| Field            | Description                                                                                                                                                                                                                                                                                                                                                        |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `id`             | Lowercase slug, unique across registry (also the folder name).                                                                                                                                                                                                                                                                                                     |
+| `name`           | Human-readable label.                                                                                                                                                                                                                                                                                                                                              |
+| `version`        | Agent release version surfaced to users.                                                                                                                                                                                                                                                                                                                           |
+| `schema_version` | Semver of the manifest schema. Allows future breaking changes.                                                                                                                                                                                                                                                                                                     |
+| `description`    | Description of the agent's functionality and purpose.                                                                                                                                                                                                                                                                                                              |
+| `homepage`       | URL for docs/marketing.                                                                                                                                                                                                                                                                                                                                            |
+| `repository`     | Source repository URL.                                                                                                                                                                                                                                                                                                                                             |
+| `authors`        | Array of author/organization names (mirrors `authors` in the TOML example).                                                                                                                                                                                                                                                                                        |
+| `license`        | SPDX identifier or `"proprietary"`.                                                                                                                                                                                                                                                                                                                                |
+| `capabilities`   | Array of ACP method names implemented (e.g. `["terminal/new","files/read"]`).                                                                                                                                                                                                                                                                                      |
+| `auth`           | Array of auth options for authentication. This is the trickiest part of the schema.                                                                                                                                                                                                                                                                                |
+| `distribution`   | _Optional._ Object mapping target platforms to download/execution info. Each target key follows `<os>-<arch>` format (e.g., `darwin-aarch64`, `linux-x86_64`, `windows-x86_64`). Each target specifies `archive` (download URL), `cmd` (executable path), optional `args` (array of command-line arguments), and optional `env` (object of environment variables). |
+
+Example skeleton:
+
+```jsonc
+{
+  "id": "someagent",
+  "name": "SomeAgent",
+  "version": "1.0.0",
+  "schema_version": "1",
+  "description": "Agent for code editing",
+  "homepage": "https://github.com/example/someagent",
+  "repository": "https://github.com/example/someagent",
+  "authors": ["Example Team"],
+  "license": "MIT",
+  "capabilities": ["terminal", "fs/read", "fs/write"],
+  "auth": [
+    {
+      "type": "api_key",
+    },
+  ],
+  "distribution": {
+    "darwin-aarch64": {
+      "archive": "https://github.com/example/someagent/releases/latest/download/someagent-darwin-arm64.zip",
+      "cmd": "./someagent",
+      "args": ["acp"],
+    },
+    "darwin-x86_64": {
+      "archive": "https://github.com/example/someagent/releases/latest/download/someagent-darwin-x64.zip",
+      "cmd": "./someagent",
+      "args": ["acp"],
+    },
+    "linux-aarch64": {
+      "archive": "https://github.com/example/someagent/releases/latest/download/someagent-linux-arm64.zip",
+      "cmd": "./someagent",
+      "args": ["acp"],
+    },
+    "linux-x86_64": {
+      "archive": "https://github.com/example/someagent/releases/latest/download/someagent-linux-x64.zip",
+      "cmd": "./someagent",
+      "args": ["acp"],
+    },
+    "windows-x86_64": {
+      "archive": "https://github.com/example/someagent/releases/latest/download/someagent-windows-x64.zip",
+      "cmd": "./someagent.exe",
+      "args": ["acp"],
+      "env": {
+        "SOMEAGENT_MODE_KEY": "",
+      },
+    },
+  },
+}
+```
+
+## What we propose to do about it
+
+1. **Manifest spec** (above) becomes normative; we publish the JSON Schema and validator script so maintainers can lint locally.
+2. **Registry repository** `github.com/agentclientprotocol/registry`:
+   - Structure: `<id>/agent.json`, optional `icon.svg` (or `icon-light.svg` and `icon-dark.svg` for theme-specific variants), optional `README.md`.
+   - Icons should be SVG format for scalability. If providing theme-specific icons, both light and dark variants must be included.
+   - CI: validate manifests, enforce slug uniqueness, check asset sizes, generate aggregate artifacts.
+3. **Aggregated outputs**:
+   - `registry.json`: deterministic list of all agents with JSONC stripped.
+4. **Distribution & search**:
+   - Clients fetch `registry.json` from a pinned release or `https://agentclientprotocol.com/registry.json` or `https://registry.agentclientprotocol.com`.
+   - Static site offers filters for capability, protocol version, deployment, auth model, and tags.
+
+## Shiny future
+
+- Agent maintainers make PRs to update their manifests; CI keeps data clean.
+- Editors/clients can bootstrap ACP support by fetching one JSON file and filtering locally.
+- The ACP website displays the same data for humans, ensuring consistency.
+- Protocol-version mismatches are visible immediately; clients can warn or hide incompatible agents.
+
+## Implementation details and plan
+
+**Phase 1 – Spec & repo bootstrap**
+
+- Think about the auth options.
+- Finalize JSON Schema and documentation.
+- Ask agent developers to contribute their thoughts on the spec.
+- Create registry repo with CI (GitHub Actions) that runs validation on PRs.
+- Seed with a few reference agents to prove the workflow.
+
+## Revision history
+
+- 2025-01-XX: Initial draft.
