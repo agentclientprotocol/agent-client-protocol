@@ -8,6 +8,8 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::Meta;
+
 /// An execution plan for accomplishing complex tasks.
 ///
 /// Plans consist of multiple entries representing individual tasks or goals.
@@ -24,9 +26,13 @@ pub struct Plan {
     /// When updating a plan, the agent must send a complete list of all entries
     /// with their current status. The client replaces the entire plan with each update.
     pub entries: Vec<PlanEntry>,
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
-    pub meta: Option<serde_json::Value>,
+    pub meta: Option<Meta>,
 }
 
 impl Plan {
@@ -38,9 +44,13 @@ impl Plan {
         }
     }
 
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+    pub fn meta(mut self, meta: Meta) -> Self {
         self.meta = Some(meta);
         self
     }
@@ -62,9 +72,13 @@ pub struct PlanEntry {
     pub priority: PlanEntryPriority,
     /// Current execution status of this task.
     pub status: PlanEntryStatus,
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
-    pub meta: Option<serde_json::Value>,
+    pub meta: Option<Meta>,
 }
 
 impl PlanEntry {
@@ -81,9 +95,13 @@ impl PlanEntry {
         }
     }
 
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+    pub fn meta(mut self, meta: Meta) -> Self {
         self.meta = Some(meta);
         self
     }

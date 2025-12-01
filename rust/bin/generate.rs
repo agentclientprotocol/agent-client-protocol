@@ -31,9 +31,11 @@ enum AcpTypes {
 
 fn main() {
     let mut settings = SchemaSettings::draft2020_12();
+    let mut bool_schemas = ReplaceBoolSchemas::default();
+    bool_schemas.skip_additional_properties = true;
     settings = settings
         .with_transform(RemoveRefSiblings::default())
-        .with_transform(ReplaceBoolSchemas::default());
+        .with_transform(bool_schemas);
 
     let generator = settings.into_generator();
     let mut schema = generator.into_root_schema_for::<AcpTypes>();

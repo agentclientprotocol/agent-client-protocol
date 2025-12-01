@@ -10,8 +10,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ContentBlock, ExtNotification, ExtResponse, Plan, SessionId, SessionModeId, ToolCall,
-    ToolCallUpdate, ext::ExtRequest,
+    ContentBlock, ExtNotification, ExtRequest, ExtResponse, Meta, Plan, SessionId, SessionModeId,
+    ToolCall, ToolCallUpdate,
 };
 
 // Session updates
@@ -30,9 +30,13 @@ pub struct SessionNotification {
     pub session_id: SessionId,
     /// The actual update content.
     pub update: SessionUpdate,
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
-    pub meta: Option<serde_json::Value>,
+    pub meta: Option<Meta>,
 }
 
 impl SessionNotification {
@@ -45,9 +49,13 @@ impl SessionNotification {
         }
     }
 
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+    pub fn meta(mut self, meta: Meta) -> Self {
         self.meta = Some(meta);
         self
     }
@@ -93,9 +101,13 @@ pub enum SessionUpdate {
 pub struct CurrentModeUpdate {
     /// The ID of the current mode
     pub current_mode_id: SessionModeId,
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
-    pub meta: Option<serde_json::Value>,
+    pub meta: Option<Meta>,
 }
 
 impl CurrentModeUpdate {
@@ -107,9 +119,13 @@ impl CurrentModeUpdate {
         }
     }
 
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+    pub fn meta(mut self, meta: Meta) -> Self {
         self.meta = Some(meta);
         self
     }
@@ -122,9 +138,13 @@ impl CurrentModeUpdate {
 pub struct ContentChunk {
     /// A single item of content
     pub content: ContentBlock,
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
-    pub meta: Option<serde_json::Value>,
+    pub meta: Option<Meta>,
 }
 
 impl ContentChunk {
@@ -136,9 +156,13 @@ impl ContentChunk {
         }
     }
 
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+    pub fn meta(mut self, meta: Meta) -> Self {
         self.meta = Some(meta);
         self
     }
@@ -151,9 +175,13 @@ impl ContentChunk {
 pub struct AvailableCommandsUpdate {
     /// Commands the agent can execute
     pub available_commands: Vec<AvailableCommand>,
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
-    pub meta: Option<serde_json::Value>,
+    pub meta: Option<Meta>,
 }
 
 impl AvailableCommandsUpdate {
@@ -165,9 +193,13 @@ impl AvailableCommandsUpdate {
         }
     }
 
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+    pub fn meta(mut self, meta: Meta) -> Self {
         self.meta = Some(meta);
         self
     }
@@ -184,9 +216,13 @@ pub struct AvailableCommand {
     pub description: String,
     /// Input for the command if required
     pub input: Option<AvailableCommandInput>,
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
-    pub meta: Option<serde_json::Value>,
+    pub meta: Option<Meta>,
 }
 
 impl AvailableCommand {
@@ -206,9 +242,13 @@ impl AvailableCommand {
         self
     }
 
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+    pub fn meta(mut self, meta: Meta) -> Self {
         self.meta = Some(meta);
         self
     }
@@ -230,9 +270,13 @@ pub enum AvailableCommandInput {
 pub struct UnstructuredCommandInput {
     /// A hint to display when the input hasn't been provided yet
     pub hint: String,
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
-    pub meta: Option<serde_json::Value>,
+    pub meta: Option<Meta>,
 }
 
 impl UnstructuredCommandInput {
@@ -243,9 +287,13 @@ impl UnstructuredCommandInput {
         }
     }
 
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+    pub fn meta(mut self, meta: Meta) -> Self {
         self.meta = Some(meta);
         self
     }
@@ -269,9 +317,13 @@ pub struct RequestPermissionRequest {
     pub tool_call: ToolCallUpdate,
     /// Available permission options for the user to choose from.
     pub options: Vec<PermissionOption>,
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
-    pub meta: Option<serde_json::Value>,
+    pub meta: Option<Meta>,
 }
 
 impl RequestPermissionRequest {
@@ -289,9 +341,13 @@ impl RequestPermissionRequest {
         }
     }
 
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+    pub fn meta(mut self, meta: Meta) -> Self {
         self.meta = Some(meta);
         self
     }
@@ -308,9 +364,13 @@ pub struct PermissionOption {
     pub name: String,
     /// Hint about the nature of this permission option.
     pub kind: PermissionOptionKind,
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
-    pub meta: Option<serde_json::Value>,
+    pub meta: Option<Meta>,
 }
 
 impl PermissionOption {
@@ -327,9 +387,13 @@ impl PermissionOption {
         }
     }
 
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+    pub fn meta(mut self, meta: Meta) -> Self {
         self.meta = Some(meta);
         self
     }
@@ -374,9 +438,13 @@ pub struct RequestPermissionResponse {
     /// The user's decision on the permission request.
     // This extra-level is unfortunately needed because the output must be an object
     pub outcome: RequestPermissionOutcome,
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
-    pub meta: Option<serde_json::Value>,
+    pub meta: Option<Meta>,
 }
 
 impl RequestPermissionResponse {
@@ -388,9 +456,13 @@ impl RequestPermissionResponse {
         }
     }
 
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+    pub fn meta(mut self, meta: Meta) -> Self {
         self.meta = Some(meta);
         self
     }
@@ -422,9 +494,13 @@ pub enum RequestPermissionOutcome {
 pub struct SelectedPermissionOutcome {
     /// The ID of the option the user selected.
     pub option_id: PermissionOptionId,
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
-    pub meta: Option<serde_json::Value>,
+    pub meta: Option<Meta>,
 }
 
 impl SelectedPermissionOutcome {
@@ -436,9 +512,13 @@ impl SelectedPermissionOutcome {
         }
     }
 
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+    pub fn meta(mut self, meta: Meta) -> Self {
         self.meta = Some(meta);
         self
     }
@@ -460,9 +540,13 @@ pub struct WriteTextFileRequest {
     pub path: PathBuf,
     /// The text content to write to the file.
     pub content: String,
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
-    pub meta: Option<serde_json::Value>,
+    pub meta: Option<Meta>,
 }
 
 impl WriteTextFileRequest {
@@ -479,9 +563,13 @@ impl WriteTextFileRequest {
         }
     }
 
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+    pub fn meta(mut self, meta: Meta) -> Self {
         self.meta = Some(meta);
         self
     }
@@ -493,9 +581,13 @@ impl WriteTextFileRequest {
 #[schemars(extend("x-side" = "client", "x-method" = FS_WRITE_TEXT_FILE_METHOD_NAME))]
 #[non_exhaustive]
 pub struct WriteTextFileResponse {
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
-    pub meta: Option<serde_json::Value>,
+    pub meta: Option<Meta>,
 }
 
 impl WriteTextFileResponse {
@@ -504,9 +596,13 @@ impl WriteTextFileResponse {
         Self::default()
     }
 
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+    pub fn meta(mut self, meta: Meta) -> Self {
         self.meta = Some(meta);
         self
     }
@@ -532,9 +628,13 @@ pub struct ReadTextFileRequest {
     /// Maximum number of lines to read.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub limit: Option<u32>,
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
-    pub meta: Option<serde_json::Value>,
+    pub meta: Option<Meta>,
 }
 
 impl ReadTextFileRequest {
@@ -562,9 +662,13 @@ impl ReadTextFileRequest {
         self
     }
 
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+    pub fn meta(mut self, meta: Meta) -> Self {
         self.meta = Some(meta);
         self
     }
@@ -577,9 +681,13 @@ impl ReadTextFileRequest {
 #[non_exhaustive]
 pub struct ReadTextFileResponse {
     pub content: String,
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
-    pub meta: Option<serde_json::Value>,
+    pub meta: Option<Meta>,
 }
 
 impl ReadTextFileResponse {
@@ -590,9 +698,13 @@ impl ReadTextFileResponse {
         }
     }
 
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+    pub fn meta(mut self, meta: Meta) -> Self {
         self.meta = Some(meta);
         self
     }
@@ -641,9 +753,13 @@ pub struct CreateTerminalRequest {
     /// specified limit.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub output_byte_limit: Option<u64>,
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
-    pub meta: Option<serde_json::Value>,
+    pub meta: Option<Meta>,
 }
 
 impl CreateTerminalRequest {
@@ -694,9 +810,13 @@ impl CreateTerminalRequest {
         self
     }
 
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+    pub fn meta(mut self, meta: Meta) -> Self {
         self.meta = Some(meta);
         self
     }
@@ -710,9 +830,13 @@ impl CreateTerminalRequest {
 pub struct CreateTerminalResponse {
     /// The unique identifier for the created terminal.
     pub terminal_id: TerminalId,
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
-    pub meta: Option<serde_json::Value>,
+    pub meta: Option<Meta>,
 }
 
 impl CreateTerminalResponse {
@@ -724,9 +848,13 @@ impl CreateTerminalResponse {
         }
     }
 
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+    pub fn meta(mut self, meta: Meta) -> Self {
         self.meta = Some(meta);
         self
     }
@@ -742,9 +870,13 @@ pub struct TerminalOutputRequest {
     pub session_id: SessionId,
     /// The ID of the terminal to get output from.
     pub terminal_id: TerminalId,
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
-    pub meta: Option<serde_json::Value>,
+    pub meta: Option<Meta>,
 }
 
 impl TerminalOutputRequest {
@@ -757,9 +889,13 @@ impl TerminalOutputRequest {
         }
     }
 
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+    pub fn meta(mut self, meta: Meta) -> Self {
         self.meta = Some(meta);
         self
     }
@@ -777,9 +913,13 @@ pub struct TerminalOutputResponse {
     pub truncated: bool,
     /// Exit status if the command has completed.
     pub exit_status: Option<TerminalExitStatus>,
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
-    pub meta: Option<serde_json::Value>,
+    pub meta: Option<Meta>,
 }
 
 impl TerminalOutputResponse {
@@ -799,9 +939,13 @@ impl TerminalOutputResponse {
         self
     }
 
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+    pub fn meta(mut self, meta: Meta) -> Self {
         self.meta = Some(meta);
         self
     }
@@ -817,9 +961,13 @@ pub struct ReleaseTerminalRequest {
     pub session_id: SessionId,
     /// The ID of the terminal to release.
     pub terminal_id: TerminalId,
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
-    pub meta: Option<serde_json::Value>,
+    pub meta: Option<Meta>,
 }
 
 impl ReleaseTerminalRequest {
@@ -832,9 +980,13 @@ impl ReleaseTerminalRequest {
         }
     }
 
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+    pub fn meta(mut self, meta: Meta) -> Self {
         self.meta = Some(meta);
         self
     }
@@ -846,9 +998,13 @@ impl ReleaseTerminalRequest {
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_RELEASE_METHOD_NAME))]
 #[non_exhaustive]
 pub struct ReleaseTerminalResponse {
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
-    pub meta: Option<serde_json::Value>,
+    pub meta: Option<Meta>,
 }
 
 impl ReleaseTerminalResponse {
@@ -857,9 +1013,13 @@ impl ReleaseTerminalResponse {
         Self::default()
     }
 
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+    pub fn meta(mut self, meta: Meta) -> Self {
         self.meta = Some(meta);
         self
     }
@@ -875,9 +1035,13 @@ pub struct KillTerminalCommandRequest {
     pub session_id: SessionId,
     /// The ID of the terminal to kill.
     pub terminal_id: TerminalId,
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
-    pub meta: Option<serde_json::Value>,
+    pub meta: Option<Meta>,
 }
 
 impl KillTerminalCommandRequest {
@@ -890,9 +1054,13 @@ impl KillTerminalCommandRequest {
         }
     }
 
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+    pub fn meta(mut self, meta: Meta) -> Self {
         self.meta = Some(meta);
         self
     }
@@ -904,9 +1072,13 @@ impl KillTerminalCommandRequest {
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_KILL_METHOD_NAME))]
 #[non_exhaustive]
 pub struct KillTerminalCommandResponse {
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
-    pub meta: Option<serde_json::Value>,
+    pub meta: Option<Meta>,
 }
 
 impl KillTerminalCommandResponse {
@@ -915,9 +1087,13 @@ impl KillTerminalCommandResponse {
         Self::default()
     }
 
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+    pub fn meta(mut self, meta: Meta) -> Self {
         self.meta = Some(meta);
         self
     }
@@ -933,9 +1109,13 @@ pub struct WaitForTerminalExitRequest {
     pub session_id: SessionId,
     /// The ID of the terminal to wait for.
     pub terminal_id: TerminalId,
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
-    pub meta: Option<serde_json::Value>,
+    pub meta: Option<Meta>,
 }
 
 impl WaitForTerminalExitRequest {
@@ -948,9 +1128,13 @@ impl WaitForTerminalExitRequest {
         }
     }
 
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+    pub fn meta(mut self, meta: Meta) -> Self {
         self.meta = Some(meta);
         self
     }
@@ -965,9 +1149,13 @@ pub struct WaitForTerminalExitResponse {
     /// The exit status of the terminal command.
     #[serde(flatten)]
     pub exit_status: TerminalExitStatus,
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
-    pub meta: Option<serde_json::Value>,
+    pub meta: Option<Meta>,
 }
 
 impl WaitForTerminalExitResponse {
@@ -979,9 +1167,13 @@ impl WaitForTerminalExitResponse {
         }
     }
 
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+    pub fn meta(mut self, meta: Meta) -> Self {
         self.meta = Some(meta);
         self
     }
@@ -996,9 +1188,13 @@ pub struct TerminalExitStatus {
     pub exit_code: Option<u32>,
     /// The signal that terminated the process (may be null if exited normally).
     pub signal: Option<String>,
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
-    pub meta: Option<serde_json::Value>,
+    pub meta: Option<Meta>,
 }
 
 impl TerminalExitStatus {
@@ -1021,9 +1217,13 @@ impl TerminalExitStatus {
         self
     }
 
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+    pub fn meta(mut self, meta: Meta) -> Self {
         self.meta = Some(meta);
         self
     }
@@ -1048,9 +1248,13 @@ pub struct ClientCapabilities {
     /// Whether the Client support all `terminal/*` methods.
     #[serde(default)]
     pub terminal: bool,
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
-    pub meta: Option<serde_json::Value>,
+    pub meta: Option<Meta>,
 }
 
 impl ClientCapabilities {
@@ -1074,9 +1278,13 @@ impl ClientCapabilities {
         self
     }
 
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+    pub fn meta(mut self, meta: Meta) -> Self {
         self.meta = Some(meta);
         self
     }
@@ -1096,9 +1304,13 @@ pub struct FileSystemCapability {
     /// Whether the Client supports `fs/write_text_file` requests.
     #[serde(default)]
     pub write_text_file: bool,
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
-    pub meta: Option<serde_json::Value>,
+    pub meta: Option<Meta>,
 }
 
 impl FileSystemCapability {
@@ -1121,9 +1333,13 @@ impl FileSystemCapability {
         self
     }
 
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: serde_json::Value) -> Self {
+    pub fn meta(mut self, meta: Meta) -> Self {
         self.meta = Some(meta);
         self
     }

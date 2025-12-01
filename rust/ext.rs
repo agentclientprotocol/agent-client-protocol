@@ -5,6 +5,15 @@ use serde::{Deserialize, Serialize};
 use serde_json::value::RawValue;
 use std::sync::Arc;
 
+/// Value attached to a given ACP type on the `_meta` field.
+///
+/// The _meta property is reserved by ACP to allow clients and agents to attach
+/// additional metadata to their interactions. Implementations MUST NOT make assumptions about
+/// values at these keys.
+///
+/// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+pub type Meta = serde_json::Map<String, serde_json::Value>;
+
 /// Allows for sending an arbitrary request that is not part of the ACP spec.
 /// Extension methods provide a way to add custom functionality while maintaining
 /// protocol compatibility.
