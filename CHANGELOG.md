@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.9.1](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.9.0...v0.9.1) - 2025-12-01
+
+### Fixed
+
+- Remove incorrect discriminator on `McpServer` type ([#292](https://github.com/agentclientprotocol/agent-client-protocol/pull/292))
+
 ## [0.9.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.8.0...v0.9.0) - 2025-12-01
 
 This release defines the `_meta` properties in the schema as intended and currently used, which is always an object of key/value pairs, with string keys and arbitrary values.
