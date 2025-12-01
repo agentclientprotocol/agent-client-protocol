@@ -1423,10 +1423,7 @@
           "description": "Stdio transport configuration\n\nAll Agents MUST support this transport."
         }
       ],
-      "description": "Configuration for connecting to an MCP (Model Context Protocol) server.\n\nMCP servers provide tools and context that the agent can use when\nprocessing prompts.\n\nSee protocol docs: [MCP Servers](https://agentclientprotocol.com/protocol/session-setup#mcp-servers)",
-      "discriminator": {
-        "propertyName": "type"
-      }
+      "description": "Configuration for connecting to an MCP (Model Context Protocol) server.\n\nMCP servers provide tools and context that the agent can use when\nprocessing prompts.\n\nSee protocol docs: [MCP Servers](https://agentclientprotocol.com/protocol/session-setup#mcp-servers)"
     },
     "McpServerHttp": {
       "description": "HTTP transport configuration for MCP.",
