@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.9.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.8.0...v0.9.0) - 2025-12-01
+
+### Added
+
+- [**breaking**] Provide clearer schema for _meta properties ([#290](https://github.com/agentclientprotocol/agent-client-protocol/pull/290))
+
 ## [0.8.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.7.0...v0.8.0) - 2025-11-28
 
 Some follow-up changes from 0.7.0. Most of the changes were in the Rust schema to make things a bit easier to work with.
