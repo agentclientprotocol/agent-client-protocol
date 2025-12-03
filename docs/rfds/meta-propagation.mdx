@@ -35,9 +35,13 @@ Update the [extensibility](../protocol/extensibility#the-_meta-field) documentat
 +All types in the protocol include a `_meta` field with type `{ [key: string]: unknown }` that implementations can use to attach custom information.
 ```
 
-**Change 2**: After the JSON example, before "Implementations **MUST NOT**", add this paragraph:
+**Change 2**: After the JSON example, before "Implementations **MUST NOT**", add:
 
-> Clients may propagate fields to the agent for correlation purposes, such as `requestId`. [OpenTelemetry SDKs](https://opentelemetry.io/docs/languages/sdk-configuration/general/#otel_propagators) default to propagating W3C `traceparent`, `tracestate`, and `baggage` fields as root keys in `_meta`.
+> Clients may propagate fields to the agent for correlation purposes, such as `requestId`. The following root-level keys in `_meta` **SHOULD** be reserved for [W3C trace context](https://www.w3.org/TR/trace-context/) to guarantee interop with existing MCP implementations and OpenTelemetry tooling:
+>
+> - `traceparent`
+> - `tracestate`
+> - `baggage`
 
 ## FAQ
 
