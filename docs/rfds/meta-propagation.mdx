@@ -2,7 +2,8 @@
 title: "Meta Field Propagation Conventions"
 ---
 
-Author(s): [Adrian Cole](https://github.com/codefromthecrypt)
+- Author(s): [Adrian Cole](https://github.com/codefromthecrypt)
+- Champion: [@benbrandt](https://github.com/benbrandt)
 
 ## Elevator pitch
 
@@ -54,6 +55,7 @@ Clients already propagate context via `_meta`. Documenting prevents incompatible
 ACP and MCP are the two core agentic protocols, both using stdio JSON-RPC. Where `_meta` types are compatible, instrumentation code can be abstracted and reused for both:
 
 Here are several MCP SDKs that propagate W3C trace-context in `_meta`:
+
 - [MCP C# SDK](https://github.com/modelcontextprotocol/csharp-sdk) - native W3C trace-context propagation
 - [OpenInference](https://github.com/Arize-ai/openinference) - Python and TypeScript MCP instrumentation (collaboration between Arize and Elastic)
 - [curioswitch/mcp-go-sdk-otel](https://github.com/curioswitch/mcp-go-sdk-otel) - Go MCP instrumentation
