@@ -1,0 +1,70 @@
+---
+title: "Addition of Metrics for Agents"
+---
+
+Author(s): [forsythetony](https://github.com/forsythetony)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+The addition of configuring collection of OpenTelemetry (OTEL) metrics over ACP. Metrics could be collected by the editor over ACP from agents that support exporting of those metrics.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+ACP does not currently have a way of establishing the export of OTEL metrics which agents like Gemini and Claude Code currently support:
+
+- [Observability with OpenTelemetry | Gemini CLI](https://geminicli.com/docs/cli/telemetry/#_top)
+- [Monitoring - Claude Code Docs](https://code.claude.com/docs/en/monitoring-usage)
+
+Users of agents (especially when using multiple agents) would benifit from having greater insight into the cost and performance of agents as they're running them. Allowing them to make more informed decisions when choosing agents for tasks.
+
+
+> What are you proposing to improve the situation?
+
+_Note: These thoughts are just brainstorming while a larger conversation is started_
+
+We could add support in the protocol for establishing the export of OTEL metrics back to the editor/IDE for agents that support the feature. It could be as simple as passing along some extra setup instructions during initiation for supported agents.
+
+"Please start up agent `A` and configure exporting of metrics to the listener I've configured at `x.x.x.x:XXXX`."
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+<!--
+    Use this section to describe the "status quo" as it will play out once
+    we have made these changes.
+
+    Note: This section is OPTIONAL when RFDs are first opened.
+-->
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+<!--
+    Use this section to add details that were not covered in the "What we propose to do about it" section and also include an implementation plan with phases.
+
+    Note: This section is OPTIONAL and NOT RECOMMENDED when RFDs are first opened. It can distract from the discussion of the problem.
+-->
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+<!--
+    Keep this section up-to-date as discussion proceeds. The goal is to capture major points that came up on a PR or in a discussion forum -- and if they reoccur, to point people to the FAQ so that we can start the dialog from a more informed place.
+-->
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+None. The idea came to me fully formed, like Athena springing from Zeus's head.
+
+<!-- You...may want to adjust this. -->
+
+## Revision history
+
+<!-- If there have been major updates to this RFD, you can include the git revisions and a summary of the changes. -->
