@@ -96,7 +96,8 @@
               "rfds/session-config-options",
               "rfds/session-fork",
               "rfds/request-cancellation",
-              "rfds/session-resume"
+              "rfds/session-resume",
+              "rfds/meta-propagation"
             ]
           },
           { "group": "Preview", "pages": [] },
