@@ -954,9 +954,12 @@
       "description": "JSON-RPC error object.\n\nRepresents an error that occurred during method execution, following the\nJSON-RPC 2.0 error object specification with optional additional data.\n\nSee protocol docs: [JSON-RPC Error Object](https://www.jsonrpc.org/specification#error_object)",
       "properties": {
         "code": {
-          "description": "A number indicating the error type that occurred.\nThis must be an integer as defined in the JSON-RPC specification.",
-          "format": "int32",
-          "type": "integer"
+          "allOf": [
+            {
+              "$ref": "#/$defs/ErrorCode"
+            }
+          ],
+          "description": "A number indicating the error type that occurred.\nThis must be an integer as defined in the JSON-RPC specification."
         },
         "data": {
           "description": "Optional primitive or structured value that contains additional information about the error.\nThis may include debugging information or context-specific details."
@@ -968,6 +971,58 @@
       },
       "required": ["code", "message"],
       "type": "object"
+    },
+    "ErrorCode": {
+      "anyOf": [
+        {
+          "const": -32700,
+          "description": "**Parse error**: Invalid JSON was received by the server.\nAn error occurred on the server while parsing the JSON text.",
+          "format": "int32",
+          "type": "integer"
+        },
+        {
+          "const": -32600,
+          "description": "**Invalid request**: The JSON sent is not a valid Request object.",
+          "format": "int32",
+          "type": "integer"
+        },
+        {
+          "const": -32601,
+          "description": "**Method not found**: The method does not exist or is not available.",
+          "format": "int32",
+          "type": "integer"
+        },
+        {
+          "const": -32602,
+          "description": "**Invalid params**: Invalid method parameter(s).",
+          "format": "int32",
+          "type": "integer"
+        },
+        {
+          "const": -32603,
+          "description": "**Internal error**: Internal JSON-RPC error.\nReserved for implementation-defined server errors.",
+          "format": "int32",
+          "type": "integer"
+        },
+        {
+          "const": -32000,
+          "description": "**Authentication required**: Authentication is required before this operation can be performed.",
+          "format": "int32",
+          "type": "integer"
+        },
+        {
+          "const": -32002,
+          "description": "**Resource not found**: A given resource, such as a file, was not found.",
+          "format": "int32",
+          "type": "integer"
+        },
+        {
+          "description": "Other undefined error code.",
+          "format": "int32",
+          "type": "integer"
+        }
+      ],
+      "description": "Predefined error codes for common JSON-RPC and ACP-specific errors.\n\nThese codes follow the JSON-RPC 2.0 specification for standard errors\nand use the reserved range (-32000 to -32099) for protocol-specific errors."
     },
     "ExtNotification": {
       "description": "Allows the Agent to send an arbitrary notification that is not part of the ACP spec.\nExtension notifications provide a way to send one-way messages for custom functionality\nwhile maintaining protocol compatibility.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)"

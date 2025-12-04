@@ -10,9 +10,9 @@
 //!
 //! See: [Error Handling](https://agentclientprotocol.com/protocol/overview#error-handling)
 
-use std::fmt::Display;
+use std::{fmt::Display, str};
 
-use schemars::JsonSchema;
+use schemars::{JsonSchema, Schema};
 use serde::{Deserialize, Serialize};
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
@@ -28,7 +28,7 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 pub struct Error {
     /// A number indicating the error type that occurred.
     /// This must be an integer as defined in the JSON-RPC specification.
-    pub code: i32,
+    pub code: ErrorCode,
     /// A string providing a short description of the error.
     /// The message should be limited to a concise single sentence.
     pub message: String,
@@ -44,7 +44,7 @@ impl Error {
     /// The code parameter can be an `ErrorCode` constant or a tuple of (code, message).
     pub fn new(code: i32, message: impl Into<String>) -> Self {
         Error {
-            code,
+            code: code.into(),
             message: message.into(),
             data: None,
         }
@@ -63,43 +63,43 @@ impl Error {
     /// Invalid JSON was received by the server. An error occurred on the server while parsing the JSON text.
     #[must_use]
     pub fn parse_error() -> Self {
-        ErrorCode::PARSE_ERROR.into()
+        ErrorCode::ParseError.into()
     }
 
     /// The JSON sent is not a valid Request object.
     #[must_use]
     pub fn invalid_request() -> Self {
-        ErrorCode::INVALID_REQUEST.into()
+        ErrorCode::InvalidRequest.into()
     }
 
     /// The method does not exist / is not available.
     #[must_use]
     pub fn method_not_found() -> Self {
-        ErrorCode::METHOD_NOT_FOUND.into()
+        ErrorCode::MethodNotFound.into()
     }
 
     /// Invalid method parameter(s).
     #[must_use]
     pub fn invalid_params() -> Self {
-        ErrorCode::INVALID_PARAMS.into()
+        ErrorCode::InvalidParams.into()
     }
 
     /// Internal JSON-RPC error.
     #[must_use]
     pub fn internal_error() -> Self {
-        ErrorCode::INTERNAL_ERROR.into()
+        ErrorCode::InternalError.into()
     }
 
     /// Authentication required.
     #[must_use]
     pub fn auth_required() -> Self {
-        ErrorCode::AUTH_REQUIRED.into()
+        ErrorCode::AuthRequired.into()
     }
 
     /// A given resource, such as a file, was not found.
     #[must_use]
     pub fn resource_not_found(uri: Option<String>) -> Self {
-        let err: Self = ErrorCode::RESOURCE_NOT_FOUND.into();
+        let err: Self = ErrorCode::ResourceNotFound.into();
         if let Some(uri) = uri {
             err.data(serde_json::json!({ "uri": uri }))
         } else {
@@ -119,66 +119,120 @@ impl Error {
 ///
 /// These codes follow the JSON-RPC 2.0 specification for standard errors
 /// and use the reserved range (-32000 to -32099) for protocol-specific errors.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[derive(Clone, Copy, Deserialize, Eq, JsonSchema, PartialEq, Serialize, strum::Display)]
+#[cfg_attr(test, derive(strum::EnumIter))]
+#[serde(from = "i32", into = "i32")]
+#[schemars(!from, !into)]
 #[non_exhaustive]
-pub struct ErrorCode {
-    /// The numeric error code.
-    pub code: i32,
-    /// The standard error message for this code.
-    pub message: &'static str,
-}
-
-impl ErrorCode {
+pub enum ErrorCode {
+    // Standard errors
     /// Invalid JSON was received by the server.
     /// An error occurred on the server while parsing the JSON text.
-    pub const PARSE_ERROR: ErrorCode = ErrorCode {
-        code: -32700,
-        message: "Parse error",
-    };
-
+    #[schemars(transform = error_code_transform)]
+    #[strum(to_string = "Parse error")]
+    ParseError, // -32700
     /// The JSON sent is not a valid Request object.
-    pub const INVALID_REQUEST: ErrorCode = ErrorCode {
-        code: -32600,
-        message: "Invalid Request",
-    };
-
+    #[schemars(transform = error_code_transform)]
+    #[strum(to_string = "Invalid request")]
+    InvalidRequest, // -32600
     /// The method does not exist or is not available.
-    pub const METHOD_NOT_FOUND: ErrorCode = ErrorCode {
-        code: -32601,
-        message: "Method not found",
-    };
-
+    #[schemars(transform = error_code_transform)]
+    #[strum(to_string = "Method not found")]
+    MethodNotFound, // -32601
     /// Invalid method parameter(s).
-    pub const INVALID_PARAMS: ErrorCode = ErrorCode {
-        code: -32602,
-        message: "Invalid params",
-    };
-
+    #[schemars(transform = error_code_transform)]
+    #[strum(to_string = "Invalid params")]
+    InvalidParams, // -32602
     /// Internal JSON-RPC error.
     /// Reserved for implementation-defined server errors.
-    pub const INTERNAL_ERROR: ErrorCode = ErrorCode {
-        code: -32603,
-        message: "Internal error",
-    };
+    #[schemars(transform = error_code_transform)]
+    #[strum(to_string = "Internal error")]
+    InternalError, // -32603
 
+    // Custom errors
     /// Authentication is required before this operation can be performed.
-    /// This is an ACP-specific error code in the reserved range.
-    pub const AUTH_REQUIRED: ErrorCode = ErrorCode {
-        code: -32000,
-        message: "Authentication required",
-    };
-
+    #[schemars(transform = error_code_transform)]
+    #[strum(to_string = "Authentication required")]
+    AuthRequired, // -32000
     /// A given resource, such as a file, was not found.
-    /// This is an ACP-specific error code in the reserved range.
-    pub const RESOURCE_NOT_FOUND: ErrorCode = ErrorCode {
-        code: -32002,
-        message: "Resource not found",
+    #[schemars(transform = error_code_transform)]
+    #[strum(to_string = "Resource not found")]
+    ResourceNotFound, // -32002
+
+    /// Other undefined error code.
+    #[schemars(untagged)]
+    #[strum(to_string = "Unknown error")]
+    Other(i32),
+}
+
+impl From<i32> for ErrorCode {
+    fn from(value: i32) -> Self {
+        match value {
+            -32700 => ErrorCode::ParseError,
+            -32600 => ErrorCode::InvalidRequest,
+            -32601 => ErrorCode::MethodNotFound,
+            -32602 => ErrorCode::InvalidParams,
+            -32603 => ErrorCode::InternalError,
+            -32000 => ErrorCode::AuthRequired,
+            -32002 => ErrorCode::ResourceNotFound,
+            _ => ErrorCode::Other(value),
+        }
+    }
+}
+
+impl From<ErrorCode> for i32 {
+    fn from(value: ErrorCode) -> Self {
+        match value {
+            ErrorCode::ParseError => -32700,
+            ErrorCode::InvalidRequest => -32600,
+            ErrorCode::MethodNotFound => -32601,
+            ErrorCode::InvalidParams => -32602,
+            ErrorCode::InternalError => -32603,
+            ErrorCode::AuthRequired => -32000,
+            ErrorCode::ResourceNotFound => -32002,
+            ErrorCode::Other(value) => value,
+        }
+    }
+}
+
+impl std::fmt::Debug for ErrorCode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}: {self}", i32::from(*self))
+    }
+}
+
+fn error_code_transform(schema: &mut Schema) {
+    let name = schema
+        .get("const")
+        .expect("Unexpected schema for ErrorCode")
+        .as_str()
+        .expect("unexpected type for schema");
+    let code = match name {
+        "ParseError" => ErrorCode::ParseError,
+        "InvalidRequest" => ErrorCode::InvalidRequest,
+        "MethodNotFound" => ErrorCode::MethodNotFound,
+        "InvalidParams" => ErrorCode::InvalidParams,
+        "InternalError" => ErrorCode::InternalError,
+        "AuthRequired" => ErrorCode::AuthRequired,
+        "ResourceNotFound" => ErrorCode::ResourceNotFound,
+        _ => panic!("Unexpected error code name"),
     };
+    let mut description = schema
+        .get("description")
+        .expect("Missing description")
+        .as_str()
+        .expect("Unexpected type for description")
+        .to_owned();
+    description.insert_str(0, &format!("**{code}**: "));
+    schema.insert("description".into(), description.into());
+    schema.insert("const".into(), i32::from(code).into());
+    schema.insert("type".into(), "integer".into());
+    schema.insert("format".into(), "int32".into());
 }
 
 impl From<ErrorCode> for Error {
     fn from(error_code: ErrorCode) -> Self {
-        Error::new(error_code.code, error_code.message)
+        Error::new(error_code.into(), error_code.to_string())
     }
 }
 
@@ -187,7 +241,7 @@ impl std::error::Error for Error {}
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if self.message.is_empty() {
-            write!(f, "{}", self.code)?;
+            write!(f, "{}", i32::from(self.code))?;
         } else {
             write!(f, "{}", self.message)?;
         }
@@ -213,5 +267,43 @@ impl From<anyhow::Error> for Error {
 impl From<serde_json::Error> for Error {
     fn from(error: serde_json::Error) -> Self {
         Error::invalid_params().data(error.to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use strum::IntoEnumIterator;
+
+    use super::*;
+
+    #[test]
+    fn serialize_error_code() {
+        assert_eq!(
+            serde_json::from_value::<ErrorCode>(serde_json::json!(-32700)).unwrap(),
+            ErrorCode::ParseError
+        );
+        assert_eq!(
+            serde_json::to_value(ErrorCode::ParseError).unwrap(),
+            serde_json::json!(-32700)
+        );
+
+        assert_eq!(
+            serde_json::from_value::<ErrorCode>(serde_json::json!(1)).unwrap(),
+            ErrorCode::Other(1)
+        );
+        assert_eq!(
+            serde_json::to_value(ErrorCode::Other(1)).unwrap(),
+            serde_json::json!(1)
+        );
+    }
+
+    #[test]
+    fn serialize_error_code_equality() {
+        for error in ErrorCode::iter() {
+            assert_eq!(
+                error,
+                serde_json::from_value(serde_json::to_value(error).unwrap()).unwrap()
+            );
+        }
     }
 }

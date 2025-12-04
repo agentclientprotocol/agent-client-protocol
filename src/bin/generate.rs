@@ -289,6 +289,7 @@ and control access to resources."
             }
         }
 
+        #[expect(clippy::too_many_lines)]
         fn document_variant_table_row(&mut self, variant: &Value) {
             write!(&mut self.output, "<ResponseField name=\"").unwrap();
 
@@ -316,8 +317,34 @@ and control access to resources."
                 } else {
                     write!(&mut self.output, "Object").unwrap();
                 }
+            } else if let Some(title) = variant.get("title") {
+                if let Some(s) = title.as_str() {
+                    write!(&mut self.output, "{s}").unwrap();
+                } else {
+                    write!(&mut self.output, "{title}").unwrap();
+                }
+            } else if let Some(ty) = variant.get("type") {
+                if let Some(s) = ty.as_str() {
+                    write!(&mut self.output, "{s}").unwrap();
+                } else {
+                    write!(&mut self.output, "{ty}").unwrap();
+                }
             } else {
                 write!(&mut self.output, "Variant").unwrap();
+            }
+
+            if let Some(format) = variant.get("format") {
+                if let Some(s) = format.as_str() {
+                    write!(&mut self.output, "\" type=\"{s}").unwrap();
+                } else {
+                    write!(&mut self.output, "\" type=\"{format}").unwrap();
+                }
+            } else if let Some(ty) = variant.get("type") {
+                if let Some(s) = ty.as_str() {
+                    write!(&mut self.output, "\" type=\"{s}").unwrap();
+                } else {
+                    write!(&mut self.output, "\" type=\"{ty}").unwrap();
+                }
             }
 
             writeln!(&mut self.output, "\">").unwrap();
