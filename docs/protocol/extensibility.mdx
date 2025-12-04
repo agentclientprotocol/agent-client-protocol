@@ -7,7 +7,7 @@ The Agent Client Protocol provides built-in extension mechanisms that allow impl
 
 ## The `_meta` Field
 
-All types in the protocol include a `_meta` field that implementations can use to attach custom information. This includes requests, responses, notifications, and even nested types like content blocks, tool calls, plan entries, and capability objects.
+All types in the protocol include a `_meta` field with type `{ [key: string]: unknown }` that implementations can use to attach custom information. This includes requests, responses, notifications, and even nested types like content blocks, tool calls, plan entries, and capability objects.
 
 ```json
 {
@@ -23,11 +23,18 @@ All types in the protocol include a `_meta` field that implementations can use t
       }
     ],
     "_meta": {
+      "traceparent": "00-80e1afed08e019fc1110464cfa66635c-7a085853722dc6d2-01",
       "zed.dev/debugMode": true
     }
   }
 }
 ```
+
+Clients may propagate fields to the agent for correlation purposes, such as `requestId`. The following root-level keys in `_meta` **SHOULD** be reserved for [W3C trace context](https://www.w3.org/TR/trace-context/) to guarantee interop with existing MCP implementations and OpenTelemetry tooling:
+
+- `traceparent`
+- `tracestate`
+- `baggage`
 
 Implementations **MUST NOT** add any custom fields at the root of a type that's part of the specification. All possible names are reserved for future protocol versions.
 
