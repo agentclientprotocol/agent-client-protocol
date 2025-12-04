@@ -70,7 +70,12 @@
               "protocol/slash-commands",
               "protocol/extensibility",
               "protocol/transports",
-              "protocol/schema"
+              "protocol/schema",
+              {
+                "group": "Unstable",
+                "hidden": true,
+                "pages": ["protocol/schema.unstable"]
+              }
             ]
           },
           {
