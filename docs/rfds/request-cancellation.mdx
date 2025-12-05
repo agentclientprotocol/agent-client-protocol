@@ -53,9 +53,7 @@ The mechanism complements existing `session/cancel` for prompt turns while provi
 Cancellation support must be declared during the capabilities exchange. Add new optional capability fields:
 
 ```typescript
-interface CancellationCapabilities {
-  request?: boolean; // Default: false
-}
+interface CancellationCapabilities {}
 
 interface ClientCapabilities {
   // existing capabilities...
