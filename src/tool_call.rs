@@ -10,7 +10,7 @@ use derive_more::{Display, From};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{ContentBlock, Error, Meta, TerminalId};
+use crate::{ContentBlock, Error, IntoOption, Meta, TerminalId};
 
 /// Represents a tool call that the language model has requested.
 ///
@@ -102,15 +102,15 @@ impl ToolCall {
 
     /// Raw input parameters sent to the tool.
     #[must_use]
-    pub fn raw_input(mut self, raw_input: serde_json::Value) -> Self {
-        self.raw_input = Some(raw_input);
+    pub fn raw_input(mut self, raw_input: impl IntoOption<serde_json::Value>) -> Self {
+        self.raw_input = raw_input.into_option();
         self
     }
 
     /// Raw output returned by the tool.
     #[must_use]
-    pub fn raw_output(mut self, raw_output: serde_json::Value) -> Self {
-        self.raw_output = Some(raw_output);
+    pub fn raw_output(mut self, raw_output: impl IntoOption<serde_json::Value>) -> Self {
+        self.raw_output = raw_output.into_option();
         self
     }
 
@@ -120,8 +120,8 @@ impl ToolCall {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 
@@ -192,8 +192,8 @@ impl ToolCallUpdate {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -239,50 +239,50 @@ impl ToolCallUpdateFields {
 
     /// Update the tool kind.
     #[must_use]
-    pub fn kind(mut self, kind: ToolKind) -> Self {
-        self.kind = Some(kind);
+    pub fn kind(mut self, kind: impl IntoOption<ToolKind>) -> Self {
+        self.kind = kind.into_option();
         self
     }
 
     /// Update the execution status.
     #[must_use]
-    pub fn status(mut self, status: ToolCallStatus) -> Self {
-        self.status = Some(status);
+    pub fn status(mut self, status: impl IntoOption<ToolCallStatus>) -> Self {
+        self.status = status.into_option();
         self
     }
 
     /// Update the human-readable title.
     #[must_use]
-    pub fn title(mut self, title: impl Into<String>) -> Self {
-        self.title = Some(title.into());
+    pub fn title(mut self, title: impl IntoOption<String>) -> Self {
+        self.title = title.into_option();
         self
     }
 
     /// Replace the content collection.
     #[must_use]
-    pub fn content(mut self, content: Vec<ToolCallContent>) -> Self {
-        self.content = Some(content);
+    pub fn content(mut self, content: impl IntoOption<Vec<ToolCallContent>>) -> Self {
+        self.content = content.into_option();
         self
     }
 
     /// Replace the locations collection.
     #[must_use]
-    pub fn locations(mut self, locations: Vec<ToolCallLocation>) -> Self {
-        self.locations = Some(locations);
+    pub fn locations(mut self, locations: impl IntoOption<Vec<ToolCallLocation>>) -> Self {
+        self.locations = locations.into_option();
         self
     }
 
     /// Update the raw input.
     #[must_use]
-    pub fn raw_input(mut self, raw_input: serde_json::Value) -> Self {
-        self.raw_input = Some(raw_input);
+    pub fn raw_input(mut self, raw_input: impl IntoOption<serde_json::Value>) -> Self {
+        self.raw_input = raw_input.into_option();
         self
     }
 
     /// Update the raw output.
     #[must_use]
-    pub fn raw_output(mut self, raw_output: serde_json::Value) -> Self {
-        self.raw_output = Some(raw_output);
+    pub fn raw_output(mut self, raw_output: impl IntoOption<serde_json::Value>) -> Self {
+        self.raw_output = raw_output.into_option();
         self
     }
 }
@@ -500,8 +500,8 @@ impl Content {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -540,8 +540,8 @@ impl Terminal {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -582,8 +582,8 @@ impl Diff {
 
     /// The original content (None for new files).
     #[must_use]
-    pub fn old_text(mut self, old_text: impl Into<String>) -> Self {
-        self.old_text = Some(old_text.into());
+    pub fn old_text(mut self, old_text: impl IntoOption<String>) -> Self {
+        self.old_text = old_text.into_option();
         self
     }
 
@@ -593,8 +593,8 @@ impl Diff {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -634,8 +634,8 @@ impl ToolCallLocation {
 
     /// Optional line number within the file.
     #[must_use]
-    pub fn line(mut self, line: u32) -> Self {
-        self.line = Some(line);
+    pub fn line(mut self, line: impl IntoOption<u32>) -> Self {
+        self.line = line.into_option();
         self
     }
 
@@ -645,8 +645,8 @@ impl ToolCallLocation {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }

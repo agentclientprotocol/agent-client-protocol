@@ -74,7 +74,12 @@ pub use version::*;
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
+use std::{
+    borrow::Cow,
+    ffi::OsStr,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 /// A unique identifier for a conversation session between a client and agent.
 ///
@@ -91,5 +96,96 @@ pub struct SessionId(pub Arc<str>);
 impl SessionId {
     pub fn new(id: impl Into<Arc<str>>) -> Self {
         Self(id.into())
+    }
+}
+
+/// Utility trait for builder methods for optional values.
+/// This allows the caller to either pass in the value itself without wrapping it in `Some`,
+/// or to just pass in an Option if that is what they have.
+pub trait IntoOption<T> {
+    fn into_option(self) -> Option<T>;
+}
+
+impl<T> IntoOption<T> for Option<T> {
+    fn into_option(self) -> Option<T> {
+        self
+    }
+}
+
+impl<T> IntoOption<T> for T {
+    fn into_option(self) -> Option<T> {
+        Some(self)
+    }
+}
+
+impl IntoOption<String> for &str {
+    fn into_option(self) -> Option<String> {
+        Some(self.into())
+    }
+}
+
+impl IntoOption<String> for &mut str {
+    fn into_option(self) -> Option<String> {
+        Some(self.into())
+    }
+}
+
+impl IntoOption<String> for &String {
+    fn into_option(self) -> Option<String> {
+        Some(self.into())
+    }
+}
+
+impl IntoOption<String> for Box<str> {
+    fn into_option(self) -> Option<String> {
+        Some(self.into())
+    }
+}
+
+impl IntoOption<String> for Cow<'_, str> {
+    fn into_option(self) -> Option<String> {
+        Some(self.into())
+    }
+}
+
+impl IntoOption<String> for Arc<str> {
+    fn into_option(self) -> Option<String> {
+        Some(self.to_string())
+    }
+}
+
+impl<T: ?Sized + AsRef<OsStr>> IntoOption<PathBuf> for &T {
+    fn into_option(self) -> Option<PathBuf> {
+        Some(self.into())
+    }
+}
+
+impl IntoOption<PathBuf> for Box<Path> {
+    fn into_option(self) -> Option<PathBuf> {
+        Some(self.into())
+    }
+}
+
+impl IntoOption<PathBuf> for Cow<'_, Path> {
+    fn into_option(self) -> Option<PathBuf> {
+        Some(self.into())
+    }
+}
+
+impl IntoOption<serde_json::Value> for &str {
+    fn into_option(self) -> Option<serde_json::Value> {
+        Some(self.into())
+    }
+}
+
+impl IntoOption<serde_json::Value> for String {
+    fn into_option(self) -> Option<serde_json::Value> {
+        Some(self.into())
+    }
+}
+
+impl IntoOption<serde_json::Value> for Cow<'_, str> {
+    fn into_option(self) -> Option<serde_json::Value> {
+        Some(self.into())
     }
 }

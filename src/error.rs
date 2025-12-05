@@ -15,6 +15,8 @@ use std::{fmt::Display, str};
 use schemars::{JsonSchema, Schema};
 use serde::{Deserialize, Serialize};
 
+use crate::IntoOption;
+
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 
 /// JSON-RPC error object.
@@ -55,8 +57,8 @@ impl Error {
     /// This method is chainable and allows attaching context-specific information
     /// to help with debugging or provide more details about the error.
     #[must_use]
-    pub fn data(mut self, data: impl Into<serde_json::Value>) -> Self {
-        self.data = Some(data.into());
+    pub fn data(mut self, data: impl IntoOption<serde_json::Value>) -> Self {
+        self.data = data.into_option();
         self
     }
 

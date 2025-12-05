@@ -10,8 +10,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ContentBlock, ExtNotification, ExtRequest, ExtResponse, Meta, Plan, SessionId, SessionModeId,
-    ToolCall, ToolCallUpdate,
+    ContentBlock, ExtNotification, ExtRequest, ExtResponse, IntoOption, Meta, Plan, SessionId,
+    SessionModeId, ToolCall, ToolCallUpdate,
 };
 
 // Session updates
@@ -55,8 +55,8 @@ impl SessionNotification {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -125,8 +125,8 @@ impl CurrentModeUpdate {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -162,8 +162,8 @@ impl ContentChunk {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -199,8 +199,8 @@ impl AvailableCommandsUpdate {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -237,8 +237,8 @@ impl AvailableCommand {
 
     /// Input for the command if required
     #[must_use]
-    pub fn input(mut self, input: AvailableCommandInput) -> Self {
-        self.input = Some(input);
+    pub fn input(mut self, input: impl IntoOption<AvailableCommandInput>) -> Self {
+        self.input = input.into_option();
         self
     }
 
@@ -248,8 +248,8 @@ impl AvailableCommand {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -293,8 +293,8 @@ impl UnstructuredCommandInput {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -347,8 +347,8 @@ impl RequestPermissionRequest {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -393,8 +393,8 @@ impl PermissionOption {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -462,8 +462,8 @@ impl RequestPermissionResponse {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -518,8 +518,8 @@ impl SelectedPermissionOutcome {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -569,8 +569,8 @@ impl WriteTextFileRequest {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -602,8 +602,8 @@ impl WriteTextFileResponse {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -650,15 +650,15 @@ impl ReadTextFileRequest {
 
     /// Line number to start reading from (1-based).
     #[must_use]
-    pub fn line(mut self, line: u32) -> Self {
-        self.line = Some(line);
+    pub fn line(mut self, line: impl IntoOption<u32>) -> Self {
+        self.line = line.into_option();
         self
     }
 
     /// Maximum number of lines to read.
     #[must_use]
-    pub fn limit(mut self, limit: u32) -> Self {
-        self.limit = Some(limit);
+    pub fn limit(mut self, limit: impl IntoOption<u32>) -> Self {
+        self.limit = limit.into_option();
         self
     }
 
@@ -668,8 +668,8 @@ impl ReadTextFileRequest {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -704,8 +704,8 @@ impl ReadTextFileResponse {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -791,8 +791,8 @@ impl CreateTerminalRequest {
 
     /// Working directory for the command (absolute path).
     #[must_use]
-    pub fn cwd(mut self, cwd: impl Into<PathBuf>) -> Self {
-        self.cwd = Some(cwd.into());
+    pub fn cwd(mut self, cwd: impl IntoOption<PathBuf>) -> Self {
+        self.cwd = cwd.into_option();
         self
     }
 
@@ -805,8 +805,8 @@ impl CreateTerminalRequest {
     /// string output, even if this means the retained output is slightly less than the
     /// specified limit.
     #[must_use]
-    pub fn output_byte_limit(mut self, output_byte_limit: u64) -> Self {
-        self.output_byte_limit = Some(output_byte_limit);
+    pub fn output_byte_limit(mut self, output_byte_limit: impl IntoOption<u64>) -> Self {
+        self.output_byte_limit = output_byte_limit.into_option();
         self
     }
 
@@ -816,8 +816,8 @@ impl CreateTerminalRequest {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -854,8 +854,8 @@ impl CreateTerminalResponse {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -895,8 +895,8 @@ impl TerminalOutputRequest {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -934,8 +934,8 @@ impl TerminalOutputResponse {
 
     /// Exit status if the command has completed.
     #[must_use]
-    pub fn exit_status(mut self, exit_status: TerminalExitStatus) -> Self {
-        self.exit_status = Some(exit_status);
+    pub fn exit_status(mut self, exit_status: impl IntoOption<TerminalExitStatus>) -> Self {
+        self.exit_status = exit_status.into_option();
         self
     }
 
@@ -945,8 +945,8 @@ impl TerminalOutputResponse {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -986,8 +986,8 @@ impl ReleaseTerminalRequest {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -1019,8 +1019,8 @@ impl ReleaseTerminalResponse {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -1060,8 +1060,8 @@ impl KillTerminalCommandRequest {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -1093,8 +1093,8 @@ impl KillTerminalCommandResponse {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -1134,8 +1134,8 @@ impl WaitForTerminalExitRequest {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -1173,8 +1173,8 @@ impl WaitForTerminalExitResponse {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -1205,15 +1205,15 @@ impl TerminalExitStatus {
 
     /// The process exit code (may be null if terminated by signal).
     #[must_use]
-    pub fn exit_code(mut self, exit_code: u32) -> Self {
-        self.exit_code = Some(exit_code);
+    pub fn exit_code(mut self, exit_code: impl IntoOption<u32>) -> Self {
+        self.exit_code = exit_code.into_option();
         self
     }
 
     /// The signal that terminated the process (may be null if exited normally).
     #[must_use]
-    pub fn signal(mut self, signal: impl Into<String>) -> Self {
-        self.signal = Some(signal.into());
+    pub fn signal(mut self, signal: impl IntoOption<String>) -> Self {
+        self.signal = signal.into_option();
         self
     }
 
@@ -1223,8 +1223,8 @@ impl TerminalExitStatus {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -1284,8 +1284,8 @@ impl ClientCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -1339,8 +1339,8 @@ impl FileSystemCapability {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }

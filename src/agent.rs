@@ -10,7 +10,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ClientCapabilities, ContentBlock, ExtNotification, ExtRequest, ExtResponse, Meta,
+    ClientCapabilities, ContentBlock, ExtNotification, ExtRequest, ExtResponse, IntoOption, Meta,
     ProtocolVersion, SessionId,
 };
 
@@ -65,8 +65,8 @@ impl InitializeRequest {
 
     /// Information about the Client name and version sent to the Agent.
     #[must_use]
-    pub fn client_info(mut self, client_info: Implementation) -> Self {
-        self.client_info = Some(client_info);
+    pub fn client_info(mut self, client_info: impl IntoOption<Implementation>) -> Self {
+        self.client_info = client_info.into_option();
         self
     }
 
@@ -76,8 +76,8 @@ impl InitializeRequest {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -145,8 +145,8 @@ impl InitializeResponse {
 
     /// Information about the Agent name and version sent to the Client.
     #[must_use]
-    pub fn agent_info(mut self, agent_info: Implementation) -> Self {
-        self.agent_info = Some(agent_info);
+    pub fn agent_info(mut self, agent_info: impl IntoOption<Implementation>) -> Self {
+        self.agent_info = agent_info.into_option();
         self
     }
 
@@ -156,8 +156,8 @@ impl InitializeResponse {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -204,8 +204,8 @@ impl Implementation {
     ///
     /// If not provided, the name should be used for display.
     #[must_use]
-    pub fn title(mut self, title: impl Into<String>) -> Self {
-        self.title = Some(title.into());
+    pub fn title(mut self, title: impl IntoOption<String>) -> Self {
+        self.title = title.into_option();
         self
     }
 
@@ -215,8 +215,8 @@ impl Implementation {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -253,8 +253,8 @@ impl AuthenticateRequest {
     }
 
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -281,8 +281,8 @@ impl AuthenticateResponse {
     }
 
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -331,8 +331,8 @@ impl AuthMethod {
 
     /// Optional description providing more details about this authentication method.
     #[must_use]
-    pub fn description(mut self, description: impl Into<String>) -> Self {
-        self.description = Some(description.into());
+    pub fn description(mut self, description: impl IntoOption<String>) -> Self {
+        self.description = description.into_option();
         self
     }
 
@@ -342,8 +342,8 @@ impl AuthMethod {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -393,8 +393,8 @@ impl NewSessionRequest {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -449,8 +449,8 @@ impl NewSessionResponse {
     ///
     /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
     #[must_use]
-    pub fn modes(mut self, modes: SessionModeState) -> Self {
-        self.modes = Some(modes);
+    pub fn modes(mut self, modes: impl IntoOption<SessionModeState>) -> Self {
+        self.modes = modes.into_option();
         self
     }
 
@@ -461,8 +461,8 @@ impl NewSessionResponse {
     /// Initial model state if supported by the Agent
     #[cfg(feature = "unstable_session_model")]
     #[must_use]
-    pub fn models(mut self, models: SessionModelState) -> Self {
-        self.models = Some(models);
+    pub fn models(mut self, models: impl IntoOption<SessionModelState>) -> Self {
+        self.models = models.into_option();
         self
     }
 
@@ -472,8 +472,8 @@ impl NewSessionResponse {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -528,8 +528,8 @@ impl LoadSessionRequest {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -572,8 +572,8 @@ impl LoadSessionResponse {
     ///
     /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
     #[must_use]
-    pub fn modes(mut self, modes: SessionModeState) -> Self {
-        self.modes = Some(modes);
+    pub fn modes(mut self, modes: impl IntoOption<SessionModeState>) -> Self {
+        self.modes = modes.into_option();
         self
     }
 
@@ -584,8 +584,8 @@ impl LoadSessionResponse {
     /// Initial model state if supported by the Agent
     #[cfg(feature = "unstable_session_model")]
     #[must_use]
-    pub fn models(mut self, models: SessionModelState) -> Self {
-        self.models = Some(models);
+    pub fn models(mut self, models: impl IntoOption<SessionModelState>) -> Self {
+        self.models = models.into_option();
         self
     }
 
@@ -595,8 +595,8 @@ impl LoadSessionResponse {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -627,7 +627,7 @@ pub struct ForkSessionRequest {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
-    pub meta: Option<serde_json::Value>,
+    pub meta: Option<Meta>,
 }
 
 #[cfg(feature = "unstable_session_fork")]
@@ -645,8 +645,8 @@ impl ForkSessionRequest {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: serde_json::Value) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -683,7 +683,7 @@ pub struct ForkSessionResponse {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
-    pub meta: Option<serde_json::Value>,
+    pub meta: Option<Meta>,
 }
 
 #[cfg(feature = "unstable_session_fork")]
@@ -703,8 +703,8 @@ impl ForkSessionResponse {
     ///
     /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
     #[must_use]
-    pub fn modes(mut self, modes: SessionModeState) -> Self {
-        self.modes = Some(modes);
+    pub fn modes(mut self, modes: impl IntoOption<SessionModeState>) -> Self {
+        self.modes = modes.into_option();
         self
     }
 
@@ -715,8 +715,8 @@ impl ForkSessionResponse {
     /// Initial model state if supported by the Agent
     #[cfg(feature = "unstable_session_model")]
     #[must_use]
-    pub fn models(mut self, models: SessionModelState) -> Self {
-        self.models = Some(models);
+    pub fn models(mut self, models: impl IntoOption<SessionModelState>) -> Self {
+        self.models = models.into_option();
         self
     }
 
@@ -726,8 +726,8 @@ impl ForkSessionResponse {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: serde_json::Value) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -771,15 +771,15 @@ impl ListSessionsRequest {
 
     /// Filter sessions by working directory. Must be an absolute path.
     #[must_use]
-    pub fn cwd(mut self, cwd: impl Into<PathBuf>) -> Self {
-        self.cwd = Some(cwd.into());
+    pub fn cwd(mut self, cwd: impl IntoOption<PathBuf>) -> Self {
+        self.cwd = cwd.into_option();
         self
     }
 
     /// Opaque cursor token from a previous response's nextCursor field for cursor-based pagination
     #[must_use]
-    pub fn cursor(mut self, cursor: impl Into<String>) -> Self {
-        self.cursor = Some(cursor.into());
+    pub fn cursor(mut self, cursor: impl IntoOption<String>) -> Self {
+        self.cursor = cursor.into_option();
         self
     }
 
@@ -789,8 +789,8 @@ impl ListSessionsRequest {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -833,8 +833,8 @@ impl ListSessionsResponse {
     }
 
     #[must_use]
-    pub fn next_cursor(mut self, next_cursor: impl Into<String>) -> Self {
-        self.next_cursor = Some(next_cursor.into());
+    pub fn next_cursor(mut self, next_cursor: impl IntoOption<String>) -> Self {
+        self.next_cursor = next_cursor.into_option();
         self
     }
 
@@ -844,8 +844,8 @@ impl ListSessionsResponse {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -893,15 +893,15 @@ impl SessionInfo {
 
     /// Human-readable title for the session
     #[must_use]
-    pub fn title(mut self, title: impl Into<String>) -> Self {
-        self.title = Some(title.into());
+    pub fn title(mut self, title: impl IntoOption<String>) -> Self {
+        self.title = title.into_option();
         self
     }
 
     /// ISO 8601 timestamp of last activity
     #[must_use]
-    pub fn updated_at(mut self, updated_at: impl Into<String>) -> Self {
-        self.updated_at = Some(updated_at.into());
+    pub fn updated_at(mut self, updated_at: impl IntoOption<String>) -> Self {
+        self.updated_at = updated_at.into_option();
         self
     }
 
@@ -911,8 +911,8 @@ impl SessionInfo {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -956,8 +956,8 @@ impl SessionModeState {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -993,8 +993,8 @@ impl SessionMode {
     }
 
     #[must_use]
-    pub fn description(mut self, description: impl Into<String>) -> Self {
-        self.description = Some(description.into());
+    pub fn description(mut self, description: impl IntoOption<String>) -> Self {
+        self.description = description.into_option();
         self
     }
 
@@ -1004,8 +1004,8 @@ impl SessionMode {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -1053,8 +1053,8 @@ impl SetSessionModeRequest {
     }
 
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -1076,8 +1076,8 @@ impl SetSessionModeResponse {
     }
 
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -1152,8 +1152,8 @@ impl McpServerHttp {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -1201,8 +1201,8 @@ impl McpServerSse {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -1260,8 +1260,8 @@ impl McpServerStdio {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -1299,8 +1299,8 @@ impl EnvVariable {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -1338,8 +1338,8 @@ impl HttpHeader {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -1397,8 +1397,8 @@ impl PromptRequest {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -1437,8 +1437,8 @@ impl PromptResponse {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -1512,8 +1512,8 @@ impl SessionModelState {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -1576,8 +1576,8 @@ impl ModelInfo {
 
     /// Optional description of the model.
     #[must_use]
-    pub fn description(mut self, description: impl Into<String>) -> Self {
-        self.description = Some(description.into());
+    pub fn description(mut self, description: impl IntoOption<String>) -> Self {
+        self.description = description.into_option();
         self
     }
 
@@ -1587,8 +1587,8 @@ impl ModelInfo {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -1634,8 +1634,8 @@ impl SetSessionModelRequest {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -1673,8 +1673,8 @@ impl SetSessionModelResponse {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -1744,8 +1744,8 @@ impl AgentCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -1796,16 +1796,16 @@ impl SessionCapabilities {
     #[cfg(feature = "unstable_session_list")]
     /// Whether the agent supports `session/list`.
     #[must_use]
-    pub fn list(mut self, list: SessionListCapabilities) -> Self {
-        self.list = Some(list);
+    pub fn list(mut self, list: impl IntoOption<SessionListCapabilities>) -> Self {
+        self.list = list.into_option();
         self
     }
 
     #[cfg(feature = "unstable_session_fork")]
     /// Whether the agent supports `session/fork`.
     #[must_use]
-    pub fn fork(mut self, fork: SessionForkCapabilities) -> Self {
-        self.fork = Some(fork);
+    pub fn fork(mut self, fork: impl IntoOption<SessionForkCapabilities>) -> Self {
+        self.fork = fork.into_option();
         self
     }
 
@@ -1815,8 +1815,8 @@ impl SessionCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -1851,8 +1851,8 @@ impl SessionListCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -1874,7 +1874,7 @@ pub struct SessionForkCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
-    pub meta: Option<serde_json::Value>,
+    pub meta: Option<Meta>,
 }
 
 #[cfg(feature = "unstable_session_fork")]
@@ -1890,8 +1890,8 @@ impl SessionForkCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: serde_json::Value) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -1969,8 +1969,8 @@ impl PromptCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -2021,8 +2021,8 @@ impl McpCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -2348,8 +2348,8 @@ impl CancelNotification {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }

@@ -12,7 +12,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::Meta;
+use crate::{IntoOption, Meta};
 
 /// Content blocks represent displayable information in the Agent Client Protocol.
 ///
@@ -84,8 +84,8 @@ impl TextContent {
     }
 
     #[must_use]
-    pub fn annotations(mut self, annotations: Annotations) -> Self {
-        self.annotations = Some(annotations);
+    pub fn annotations(mut self, annotations: impl IntoOption<Annotations>) -> Self {
+        self.annotations = annotations.into_option();
         self
     }
 
@@ -95,8 +95,8 @@ impl TextContent {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -139,14 +139,14 @@ impl ImageContent {
     }
 
     #[must_use]
-    pub fn annotations(mut self, annotations: Annotations) -> Self {
-        self.annotations = Some(annotations);
+    pub fn annotations(mut self, annotations: impl IntoOption<Annotations>) -> Self {
+        self.annotations = annotations.into_option();
         self
     }
 
     #[must_use]
-    pub fn uri(mut self, uri: impl Into<String>) -> Self {
-        self.uri = Some(uri.into());
+    pub fn uri(mut self, uri: impl IntoOption<String>) -> Self {
+        self.uri = uri.into_option();
         self
     }
 
@@ -156,8 +156,8 @@ impl ImageContent {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -191,8 +191,8 @@ impl AudioContent {
     }
 
     #[must_use]
-    pub fn annotations(mut self, annotations: Annotations) -> Self {
-        self.annotations = Some(annotations);
+    pub fn annotations(mut self, annotations: impl IntoOption<Annotations>) -> Self {
+        self.annotations = annotations.into_option();
         self
     }
 
@@ -202,8 +202,8 @@ impl AudioContent {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -235,8 +235,8 @@ impl EmbeddedResource {
     }
 
     #[must_use]
-    pub fn annotations(mut self, annotations: Annotations) -> Self {
-        self.annotations = Some(annotations);
+    pub fn annotations(mut self, annotations: impl IntoOption<Annotations>) -> Self {
+        self.annotations = annotations.into_option();
         self
     }
 
@@ -246,8 +246,8 @@ impl EmbeddedResource {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -290,8 +290,8 @@ impl TextResourceContents {
     }
 
     #[must_use]
-    pub fn mime_type(mut self, mime_type: impl Into<String>) -> Self {
-        self.mime_type = Some(mime_type.into());
+    pub fn mime_type(mut self, mime_type: impl IntoOption<String>) -> Self {
+        self.mime_type = mime_type.into_option();
         self
     }
 
@@ -301,8 +301,8 @@ impl TextResourceContents {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -336,8 +336,8 @@ impl BlobResourceContents {
     }
 
     #[must_use]
-    pub fn mime_type(mut self, mime_type: impl Into<String>) -> Self {
-        self.mime_type = Some(mime_type.into());
+    pub fn mime_type(mut self, mime_type: impl IntoOption<String>) -> Self {
+        self.mime_type = mime_type.into_option();
         self
     }
 
@@ -347,8 +347,8 @@ impl BlobResourceContents {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -394,32 +394,32 @@ impl ResourceLink {
     }
 
     #[must_use]
-    pub fn annotations(mut self, annotations: Annotations) -> Self {
-        self.annotations = Some(annotations);
+    pub fn annotations(mut self, annotations: impl IntoOption<Annotations>) -> Self {
+        self.annotations = annotations.into_option();
         self
     }
 
     #[must_use]
-    pub fn description(mut self, description: impl Into<String>) -> Self {
-        self.description = Some(description.into());
+    pub fn description(mut self, description: impl IntoOption<String>) -> Self {
+        self.description = description.into_option();
         self
     }
 
     #[must_use]
-    pub fn mime_type(mut self, mime_type: impl Into<String>) -> Self {
-        self.mime_type = Some(mime_type.into());
+    pub fn mime_type(mut self, mime_type: impl IntoOption<String>) -> Self {
+        self.mime_type = mime_type.into_option();
         self
     }
 
     #[must_use]
-    pub fn size(mut self, size: i64) -> Self {
-        self.size = Some(size);
+    pub fn size(mut self, size: impl IntoOption<i64>) -> Self {
+        self.size = size.into_option();
         self
     }
 
     #[must_use]
-    pub fn title(mut self, title: impl Into<String>) -> Self {
-        self.title = Some(title.into());
+    pub fn title(mut self, title: impl IntoOption<String>) -> Self {
+        self.title = title.into_option();
         self
     }
 
@@ -429,8 +429,8 @@ impl ResourceLink {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -462,20 +462,20 @@ impl Annotations {
     }
 
     #[must_use]
-    pub fn audience(mut self, audience: Vec<Role>) -> Self {
-        self.audience = Some(audience);
+    pub fn audience(mut self, audience: impl IntoOption<Vec<Role>>) -> Self {
+        self.audience = audience.into_option();
         self
     }
 
     #[must_use]
-    pub fn last_modified(mut self, last_modified: impl Into<String>) -> Self {
-        self.last_modified = Some(last_modified.into());
+    pub fn last_modified(mut self, last_modified: impl IntoOption<String>) -> Self {
+        self.last_modified = last_modified.into_option();
         self
     }
 
     #[must_use]
-    pub fn priority(mut self, priority: f64) -> Self {
-        self.priority = Some(priority);
+    pub fn priority(mut self, priority: impl IntoOption<f64>) -> Self {
+        self.priority = priority.into_option();
         self
     }
 
@@ -485,8 +485,8 @@ impl Annotations {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
