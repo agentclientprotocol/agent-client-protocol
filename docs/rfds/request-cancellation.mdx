@@ -74,7 +74,7 @@ Add the `$/cancelRequest` notification method to the JSON-RPC protocol:
 interface CancelNotification {
   method: "$/cancelRequest";
   params: {
-    id: string | number; // ID of request to cancel
+    requestId: string | number; // ID of request to cancel
   };
 }
 ```
@@ -83,7 +83,7 @@ interface CancelNotification {
 
 #### Prerequisites
 
-- A party **MUST** declare `{ cancellation: { request: true } }` in their capabilities to handle `$/cancelRequest` notifications for their requests
+- A party **MUST** declare `{ cancellation: {} }` in their capabilities to handle `$/cancelRequest` notifications for their requests
 - The other party can send `$/cancelRequest` to cancel requests if the recipient declared support
 - Until capabilities are exchanged, **NO** requests can be cancelled
 - The `initialize` request **CANNOT** be cancelled as it occurs before capability exchange
@@ -94,7 +94,7 @@ interface CancelNotification {
 The **calling party** (sender of `$/cancelRequest`) **MUST**:
 
 - Check the recipient's capabilities before sending `$/cancelRequest`
-- Only send `$/cancelRequest` if the recipient declared `supportsRequestCancellation: true`
+- Only send `$/cancelRequest` if the recipient declared `cancellation: {}`
 - Not send `$/cancelRequest` notifications to parties that don't support them
 
 The **receiving party** is **NOT** required to:
