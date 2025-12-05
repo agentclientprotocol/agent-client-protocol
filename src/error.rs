@@ -151,6 +151,10 @@ pub enum ErrorCode {
     #[strum(to_string = "Internal error")]
     InternalError, // -32603
     #[cfg(feature = "unstable_cancel_request")]
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
     /// Execution of the method was aborted due to a cancellation request from the caller.
     #[schemars(transform = error_code_transform)]
     #[strum(to_string = "Request cancelled")]

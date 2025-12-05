@@ -9,6 +9,8 @@ use derive_more::{Display, From};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "unstable_cancel_request")]
+use crate::CancellationCapabilities;
 use crate::{
     ContentBlock, ExtNotification, ExtRequest, ExtResponse, IntoOption, Meta, Plan, SessionId,
     SessionModeId, ToolCall, ToolCallUpdate,
@@ -1248,6 +1250,14 @@ pub struct ClientCapabilities {
     /// Whether the Client support all `terminal/*` methods.
     #[serde(default)]
     pub terminal: bool,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Capabilities related to cancellation.
+    #[cfg(feature = "unstable_cancel_request")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cancellation_capabilities: Option<CancellationCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.

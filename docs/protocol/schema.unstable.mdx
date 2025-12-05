@@ -1256,6 +1256,14 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
 </ResponseField>
+<ResponseField name="cancellationCapabilities" type={<><span><a href="#cancellationcapabilities">CancellationCapabilities</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Capabilities related to cancellation.
+
+</ResponseField>
 <ResponseField name="loadSession" type={"boolean"} >
   Whether the agent supports `session/load`.
 
@@ -1447,6 +1455,31 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 <ResponseField name="uri" type={"string"} required>
 </ResponseField>
 
+## <span class="font-mono">CancellationCapabilities</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Capabilities related to cancellation.
+
+By supplying `\{\}` it means that general request cancellation is supported.
+
+Further capabilities can be added in the future if other types of cancellation is required in the protocol.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+
 ## <span class="font-mono">ClientCapabilities</span>
 
 Capabilities supported by the client.
@@ -1466,6 +1499,14 @@ metadata to their interactions. Implementations MUST NOT make assumptions about 
 these keys.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="cancellationCapabilities" type={<><span><a href="#cancellationcapabilities">CancellationCapabilities</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Capabilities related to cancellation.
 
 </ResponseField>
 <ResponseField name="fs" type={<a href="#filesystemcapability">FileSystemCapability</a>} >
@@ -1890,6 +1931,15 @@ and use the reserved range (-32000 to -32099) for protocol-specific errors.
 <ResponseField name="-32603" type="int32">
   **Internal error**: Internal JSON-RPC error. Reserved for
   implementation-defined server errors.
+</ResponseField>
+
+<ResponseField name="-32800" type="int32">
+**Request cancelled**: **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Execution of the method was aborted due to a cancellation request from the caller.
+
 </ResponseField>
 
 <ResponseField name="-32000" type="int32">
