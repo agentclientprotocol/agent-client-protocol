@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use derive_more::Display;
+use derive_more::{Display, From};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use serde_json::value::RawValue;
@@ -20,13 +20,25 @@ use crate::{
 ///
 /// [2] Fractional parts may be problematic, since many decimal fractions cannot be represented exactly as binary fractions.
 #[derive(
-    Debug, PartialEq, Clone, Hash, Eq, Deserialize, Serialize, PartialOrd, Ord, Display, JsonSchema,
+    Debug,
+    PartialEq,
+    Clone,
+    Hash,
+    Eq,
+    Deserialize,
+    Serialize,
+    PartialOrd,
+    Ord,
+    Display,
+    JsonSchema,
+    From,
 )]
 #[serde(untagged)]
 #[allow(
     clippy::exhaustive_enums,
     reason = "This comes from the JSON-RPC specification itself"
 )]
+#[from(String, i64)]
 pub enum RequestId {
     #[display("null")]
     Null,

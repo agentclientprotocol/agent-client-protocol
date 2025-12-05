@@ -51,6 +51,8 @@
 //! [https://agentclientprotocol.com](https://agentclientprotocol.com)
 
 mod agent;
+#[cfg(feature = "unstable_cancel_request")]
+mod cancellation;
 mod client;
 mod content;
 mod error;
@@ -61,6 +63,8 @@ mod tool_call;
 mod version;
 
 pub use agent::*;
+#[cfg(feature = "unstable_cancel_request")]
+pub use cancellation::*;
 pub use client::*;
 pub use content::*;
 use derive_more::{Display, From};

@@ -158,6 +158,54 @@ The client should disconnect, if it doesn't support this version.
 
 </ResponseField>
 
+<a id="request-cancel"></a>
+### <span class="font-mono">request/cancel</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Cancels an ongoing request.
+
+This is a notification sent by the agent to cancel any ongoing request.
+
+Upon receiving this notification, the Client:
+
+1. MUST cancel the corresponding request activity and all nested activities
+2. MAY send any pending notifications.
+3. MUST send one of these responses for the original request:
+
+- Valid response with appropriate data (partial results or cancellation marker)
+- Error response with code `-32800` (Cancelled)
+
+See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/cancellation)
+
+#### <span class="font-mono">CancelRequestNotification</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Notification to cancel an ongoing request.
+
+See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/cancellation)
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="requestId" type={<a href="#requestid">RequestId</a>} required>
+  The ID of the request to cancel.
+</ResponseField>
+
 <a id="session-cancel"></a>
 ### <span class="font-mono">session/cancel</span>
 
@@ -737,6 +785,54 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
 </ResponseField>
 
+<a id="request-cancel"></a>
+### <span class="font-mono">request/cancel</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Cancels an ongoing request.
+
+This is a notification sent by the agent to cancel any ongoing request.
+
+Upon receiving this notification, the Client:
+
+1. MUST cancel the corresponding request activity and all nested activities
+2. MAY send any pending notifications.
+3. MUST send one of these responses for the original request:
+
+- Valid response with appropriate data (partial results or cancellation marker)
+- Error response with code `-32800` (Cancelled)
+
+See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/cancellation)
+
+#### <span class="font-mono">CancelRequestNotification</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Notification to cancel an ongoing request.
+
+See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/cancellation)
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="requestId" type={<a href="#requestid">RequestId</a>} required>
+  The ID of the request to cancel.
+</ResponseField>
+
 <a id="session-request_permission"></a>
 ### <span class="font-mono">session/request_permission</span>
 
@@ -1174,6 +1270,14 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
 </ResponseField>
+<ResponseField name="cancellationCapabilities" type={<><span><a href="#cancellationcapabilities">CancellationCapabilities</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Capabilities related to cancellation.
+
+</ResponseField>
 <ResponseField name="loadSession" type={"boolean"} >
   Whether the agent supports `session/load`.
 
@@ -1365,6 +1469,31 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 <ResponseField name="uri" type={"string"} required>
 </ResponseField>
 
+## <span class="font-mono">CancellationCapabilities</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Capabilities related to cancellation.
+
+By supplying `\{\}` it means that general request cancellation is supported.
+
+Further capabilities can be added in the future if other types of cancellation is required in the protocol.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+
 ## <span class="font-mono">ClientCapabilities</span>
 
 Capabilities supported by the client.
@@ -1384,6 +1513,14 @@ metadata to their interactions. Implementations MUST NOT make assumptions about 
 these keys.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="cancellationCapabilities" type={<><span><a href="#cancellationcapabilities">CancellationCapabilities</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Capabilities related to cancellation.
 
 </ResponseField>
 <ResponseField name="fs" type={<a href="#filesystemcapability">FileSystemCapability</a>} >
@@ -1808,6 +1945,16 @@ and use the reserved range (-32000 to -32099) for protocol-specific errors.
 <ResponseField name="-32603" type="int32">
   **Internal error**: Internal JSON-RPC error. Reserved for
   implementation-defined server errors.
+</ResponseField>
+
+<ResponseField name="-32800" type="int32">
+**Request cancelled**: **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Execution of the method was aborted either due to a cancellation request from the caller or
+because of resource constraints or shutdown.
+
 </ResponseField>
 
 <ResponseField name="-32000" type="int32">
