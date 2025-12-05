@@ -329,12 +329,12 @@ pub struct RequestPermissionRequest {
 impl RequestPermissionRequest {
     #[must_use]
     pub fn new(
-        session_id: SessionId,
+        session_id: impl Into<SessionId>,
         tool_call: ToolCallUpdate,
         options: Vec<PermissionOption>,
     ) -> Self {
         Self {
-            session_id,
+            session_id: session_id.into(),
             tool_call,
             options,
             meta: None,
@@ -375,12 +375,12 @@ pub struct PermissionOption {
 
 impl PermissionOption {
     pub fn new(
-        option_id: PermissionOptionId,
+        option_id: impl Into<PermissionOptionId>,
         name: impl Into<String>,
         kind: PermissionOptionKind,
     ) -> Self {
         Self {
-            option_id,
+            option_id: option_id.into(),
             name: name.into(),
             kind,
             meta: None,
@@ -551,12 +551,12 @@ pub struct WriteTextFileRequest {
 
 impl WriteTextFileRequest {
     pub fn new(
-        session_id: SessionId,
+        session_id: impl Into<SessionId>,
         path: impl Into<PathBuf>,
         content: impl Into<String>,
     ) -> Self {
         Self {
-            session_id,
+            session_id: session_id.into(),
             path: path.into(),
             content: content.into(),
             meta: None,
