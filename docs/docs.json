@@ -76,9 +76,12 @@
               "protocol/transports",
               "protocol/schema",
               {
-                "group": "Unstable",
+                "group": "Draft: In Progress and May Change",
                 "hidden": true,
-                "pages": ["protocol/schema.unstable"]
+                "pages": [
+                  "protocol/draft/cancellation",
+                  "protocol/draft/schema"
+                ]
               }
             ]
           },

@@ -167,9 +167,9 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 Cancels an ongoing request.
 
-This is a notification sent by the client to cancel any ongoing request.
+This is a notification sent by the agent to cancel any ongoing request.
 
-Upon receiving this notification, the Agent:
+Upon receiving this notification, the Client:
 
 1. MUST cancel the corresponding request activity and all nested activities
 2. MAY send any pending notifications.
@@ -876,9 +876,9 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 Cancels an ongoing request.
 
-This is a notification sent by the client to cancel any ongoing request.
+This is a notification sent by the agent to cancel any ongoing request.
 
-Upon receiving this notification, the Agent:
+Upon receiving this notification, the Client:
 
 1. MUST cancel the corresponding request activity and all nested activities
 2. MAY send any pending notifications.
@@ -2034,7 +2034,8 @@ and use the reserved range (-32000 to -32099) for protocol-specific errors.
 
 This capability is not part of the spec yet, and may be removed or changed at any point.
 
-Execution of the method was aborted due to a cancellation request from the caller.
+Execution of the method was aborted either due to a cancellation request from the caller or
+because of resource constraints or shutdown.
 
 </ResponseField>
 

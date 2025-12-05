@@ -83,7 +83,7 @@
                       "$ref": "#/$defs/CancelRequestNotification"
                     }
                   ],
-                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCancels an ongoing request.\n\nThis is a notification sent by the client to cancel any ongoing request.\n\nUpon receiving this notification, the Agent:\n1. MUST cancel the corresponding request activity and all nested activities\n2. MAY send any pending notifications.\n3. MUST send one of these responses for the original request:\n - Valid response with appropriate data (partial results or cancellation marker)\n - Error response with code `-32800` (Cancelled)\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/cancellation)"
+                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCancels an ongoing request.\n\nThis is a notification sent by the agent to cancel any ongoing request.\n\nUpon receiving this notification, the Client:\n1. MUST cancel the corresponding request activity and all nested activities\n2. MAY send any pending notifications.\n3. MUST send one of these responses for the original request:\n - Valid response with appropriate data (partial results or cancellation marker)\n - Error response with code `-32800` (Cancelled)\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/cancellation)"
                 },
                 {
                   "allOf": [
@@ -1110,7 +1110,7 @@
         },
         {
           "const": -32800,
-          "description": "**Request cancelled**: **UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nExecution of the method was aborted due to a cancellation request from the caller.",
+          "description": "**Request cancelled**: **UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nExecution of the method was aborted either due to a cancellation request from the caller or\nbecause of resource constraints or shutdown.",
           "format": "int32",
           "type": "integer"
         },

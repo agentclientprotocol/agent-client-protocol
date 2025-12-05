@@ -85,7 +85,7 @@ fn main() {
     let markdown_doc = markdown_gen.generate(&schema_value);
 
     let doc_file = if cfg!(feature = "unstable") {
-        "schema.unstable.mdx"
+        "draft/schema.mdx"
     } else {
         "schema.mdx"
     };
