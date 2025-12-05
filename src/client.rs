@@ -1588,9 +1588,9 @@ pub enum AgentNotification {
     ///
     /// Cancels an ongoing request.
     ///
-    /// This is a notification sent by the client to cancel any ongoing request.
+    /// This is a notification sent by the agent to cancel any ongoing request.
     ///
-    /// Upon receiving this notification, the Agent:
+    /// Upon receiving this notification, the Client:
     /// 1. MUST cancel the corresponding request activity and all nested activities
     /// 2. MAY send any pending notifications.
     /// 3. MUST send one of these responses for the original request:

@@ -1,0 +1,75 @@
+---
+title: "Cancellation"
+description: "Mechanisms for request cancellation"
+---
+
+ACP uses JSON-RPC 2.0 for making requests and getting responses.
+
+The JSON-RPC specification doesn't define any standard mechanism for request cancellation and keeps it up to the implementation.
+
+## `request/cancel` Notification
+
+In order to provide a consistent approach to cancellation, ACP defines a `request/cancel` notification that can be sent to cancel requests if the recipient declared support.
+
+- A party **MAY** declare `{ cancellationCapabilities: {} }` in their capabilities to handle `request/cancel` notifications for their requests.
+- If an implementation declares support, it **MUST** handle `request/cancel` notifications for its requests.
+- The other party **MAY** send `request/cancel` to cancel requests if the recipient declared support.
+- If an implementation does not declare support, `request/cancel` notifications **SHOULD** be ignored.
+- Either party **MAY** send `request/cancel` regardless of if they declare support themselves, as long as the recipient supports cancellation.
+- Until capabilities are exchanged, requests **MUST NOT** be cancelled. The `initialize` request cannot be cancelled as it occurs before capability exchange.
+
+Cancellation will remain optional as it might not be implementable in all clients or servers. For example if the implementation uses a single threaded synchronous programming language then there is little it can do to react to a `request/cancel` notification.
+
+When a `request/cancel` notification is received by a supporting implementation, the implementation:
+
+- **MUST** cancel the corresponding request activity and all nested activities
+- **MAY** choose how quickly to honor cancellation requests. For example, they may finish sending any pending notifications before responding
+- **MUST** send one of these responses for the original request:
+  - A valid response with appropriate data (such as partial results or cancellation marker)
+  - An error response with code [`-32800` (Request Cancelled)](./schema#errorcode)
+
+The calling side **MAY** implement graceful cancellation processing by waiting for the response from the remote side.
+
+Cancellation **MAY** also be done explicitly on a per-feature basis within the protocol to cover specific scenarios (e.g., cancellation of a [prompt turn](./prompt-turn#cancellation))
+
+## Internal Cancellation
+
+Requests can also be cancelled internally by the executing party without receiving `request/cancel`:
+
+- **Client-side examples**: User closes IDE, switches to different project, file becomes unavailable
+- **Agent-side examples**: LLM context limit reached, internal timeout, resource constraints
+
+When internal cancellation occurs, the executing party **MUST**:
+
+- Send the same `-32800` (Cancelled) error response as if `request/cancel` was received
+- Ensure consistent behavior regardless of cancellation source
+
+## Example: Cascading Cancellation Flow
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Agent
+
+    Note over Client,Agent: 1. Session prompt in progress
+    Client->>Agent: session/prompt (id=1, "Analyze file X")
+    Agent-->>Client: session/update (agent started processing)
+
+    Note over Client,Agent: 2. Agent makes concurrent requests
+    Agent->>Client: terminal/create (id=2, "grep pattern file.txt")
+    Agent->>Client: session/request_permission (id=3, "read sensitive file")
+
+    Note over Client,Agent: 3. Client cancels the prompt turn
+    Client->>Agent: session/cancel (sessionId)
+
+    Note over Client,Agent: 4. Agent cascades cancellation internally
+    Agent->>Client: request/cancel (id=2) [terminal request]
+    Agent->>Client: request/cancel (id=3) [permission request]
+
+    Note over Client,Agent: 5. Client confirms individual cancellations
+    Client->>Agent: response to id=2 (error -32800 "Cancelled")
+    Client->>Agent: response to id=3 (error -32800 "Cancelled")
+
+    Note over Client,Agent: 6. Agent completes prompt cancellation
+    Agent->>Client: response to id=1 (stopReason: "cancelled")
+```

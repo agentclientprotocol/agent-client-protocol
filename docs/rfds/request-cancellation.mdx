@@ -20,7 +20,7 @@ This creates the following inconveniences:
 
 ## What we propose to do about it
 
-Implement an **optional** `$/cancelRequest` notification method (inspired by the Language Server Protocol) that uses JSON-RPC 2.0 notification format, allowing either party (client or agent) to cancel any outstanding request by its ID.
+Implement an **optional** `request/cancel` notification method (inspired by the Language Server Protocol) to both Agent and Client that uses JSON-RPC 2.0 notification format, allowing either party (client or agent) to cancel any outstanding request by its ID.
 
 The mechanism will be:
 
@@ -39,10 +39,10 @@ Once implemented, this enables:
 - **SDK integration layer**: Default mechanism that ACP SDKs can automatically wire to native language cancellation (C# CancellationToken, Kotlin Job, Go context.Context, JavaScript AbortController, etc.)
 - Individual JSON-RPC request cancellation without affecting other concurrent requests
 - Universal fallback for any request when feature-specific cancellation methods don't exist
-- Consistent cancellation behavior from both external `$/cancelRequest` and internal cancellation triggers
+- Consistent cancellation behavior from both external `request/cancel` and internal cancellation triggers
 - Standard error response (`-32800`) or partial results when requests are cancelled regardless of cancellation source
 
-The mechanism complements existing `session/cancel` for prompt turns while providing granular per-request control.
+In a future version, we could potentially deprecate the `session/cancel` notification in favor of the more general approach, as it would still provide the same functionality but with more flexibility and consistency.
 
 ## Implementation details and plan
 
@@ -57,22 +57,24 @@ interface CancellationCapabilities {}
 
 interface ClientCapabilities {
   // existing capabilities...
-  cancellation?: CancellationCapabilities;
+  cancellationCapabilities?: CancellationCapabilities;
 }
 
 interface AgentCapabilities {
   // existing capabilities...
-  cancellation?: CancellationCapabilities;
+  cancellationCapabilities?: CancellationCapabilities;
 }
 ```
 
+Supplying `{}` will indicate that cancellation is supported, while following the same pattern elsewhere for allowing more granular capabilities in the future.
+
 #### Cancellation Method
 
-Add the `$/cancelRequest` notification method to the JSON-RPC protocol:
+Add the `request/cancel` notification method to the JSON-RPC protocol:
 
 ```typescript
 interface CancelNotification {
-  method: "$/cancelRequest";
+  method: "request/cancel";
   params: {
     requestId: string | number; // ID of request to cancel
   };
@@ -83,54 +85,55 @@ interface CancelNotification {
 
 #### Prerequisites
 
-- A party **MUST** declare `{ cancellation: {} }` in their capabilities to handle `$/cancelRequest` notifications for their requests
-- The other party can send `$/cancelRequest` to cancel requests if the recipient declared support
+- A party **MAY** declare `{ cancellationCapabilities: {} }` in their capabilities to handle `request/cancel` notifications for their requests
+- The other party can send `request/cancel` to cancel requests if the recipient declared support
 - Until capabilities are exchanged, **NO** requests can be cancelled
 - The `initialize` request **CANNOT** be cancelled as it occurs before capability exchange
 - Any requests after `initialize` (which performs capability negotiation) **CAN** be cancelled if the recipient declared support
 
 #### Responsibility for Support Checking
 
-The **calling party** (sender of `$/cancelRequest`) **MUST**:
+The **calling party** (sender of `request/cancel`) **MUST**:
 
-- Check the recipient's capabilities before sending `$/cancelRequest`
-- Only send `$/cancelRequest` if the recipient declared `cancellation: {}`
-- Not send `$/cancelRequest` notifications to parties that don't support them
+- Check the recipient's capabilities before sending `request/cancel`
+- Only send `request/cancel` if the recipient declared `cancellationCapabilities: {}`
+- Not send `request/cancel` notifications to parties that don't support them
 
 The **receiving party** is **NOT** required to:
 
 - Perform special handling for unsupported cancellation requests
-- Return custom errors for unsupported `$/cancelRequest` notifications
+- Return custom errors for unsupported `request/cancel` notifications
 
 #### Cancellation Processing
 
-When a `$/cancelRequest` notification is received by a supporting implementation:
+When a `request/cancel` notification is received by a supporting implementation:
 
-1. **MUST** cancel the corresponding request activity and all nested activities
-2. **MUST** send one of these responses for the original request:
-   - Error response with code `-32800` (Cancelled)
-   - Valid response with appropriate data (partial results or cancellation marker)
+1. MUST cancel the corresponding request activity and all nested activities
+2. MAY send any pending notifications.
+3. MUST send one of these responses for the original request:
+
+- Valid response with appropriate data (partial results or cancellation marker)
+- Error response with code `-32800` (Cancelled)
 
 #### Internal Cancellation
 
-Requests can also be cancelled internally by the executing party without receiving `$/cancelRequest`:
+Requests can also be cancelled internally by the executing party without receiving `request/cancel`:
 
 - **Client-side examples**: User closes IDE, switches to different project, file becomes unavailable
 - **Agent-side examples**: LLM context limit reached, internal timeout, resource constraints
 
 When internal cancellation occurs, the executing party **SHOULD**:
 
-1. Stop the request processing immediately
-2. Send the same `-32800` (Cancelled) error response as if `$/cancelRequest` was received
-3. Ensure consistent behavior regardless of cancellation source
+1. Send the same `-32800` (Cancelled) error response as if `request/cancel` was received
+2. Ensure consistent behavior regardless of cancellation source
 
 ### Error Code
 
 Add standard JSON-RPC error code `-32800` for cancelled requests:
 
 - Code: `-32800`
-- Message: "Cancelled"
-- Meaning: The request was cancelled
+- Message: "Request cancelled"
+- Meaning: Execution of the method was aborted either due to a cancellation request from the caller or because of resource constraints or shutdown.
 
 ## Frequently asked questions
 
@@ -138,7 +141,7 @@ Add standard JSON-RPC error code `-32800` for cancelled requests:
 
 The core need is to add **granular cancellation** as a general mechanism for individual JSON-RPC requests, while **feature-specific cancellation methods** (like `session/cancel`) remain useful for cases requiring additional domain semantics.
 
-We selected the **LSP-style `$/cancelRequest`** approach because:
+We selected the **LSP-style `request/cancel`** approach because:
 
 - Serves as a **default cancellation layer** that SDK implementations can easily map to native language cancellation mechanisms
 - Proven pattern familiar to developers from LSP ecosystem
@@ -148,9 +151,9 @@ We selected the **LSP-style `$/cancelRequest`** approach because:
 
 ### How does this relate to existing cancellation mechanisms like `session/cancel`?
 
-The `$/cancelRequest` mechanism is complementary to feature-specific cancellation:
+The `request/cancel` mechanism is complementary to feature-specific cancellation:
 
-- `$/cancelRequest`: Generic cancellation for any JSON-RPC request by ID
+- `request/cancel`: Generic cancellation for any JSON-RPC request by ID
 - `session/cancel`: Feature-specific cancellation with additional semantics (e.g., cancels entire prompt turn context, triggers specific cleanup logic)
 
 Both mechanisms serve different purposes:
@@ -161,16 +164,16 @@ Both mechanisms serve different purposes:
 - Structured cleanup for complex operations
 - Context-aware cancellation logic
 
-**Generic `$/cancelRequest`** provides:
+**Generic `request/cancel`** provides:
 
 - Default cancellation layer that bridges programming language cancellation mechanisms (C# CancellationToken, Kotlin Job, Go context.Context, etc.) with ACP
 - Universal fallback for any request when no feature-specific method exists
 - Simple ID-based targeting for SDK convenience
 - Standardized error responses
 
-Implementations can use both: feature-specific methods for rich semantics, and `$/cancelRequest` for simple per-request cancellation.
+Implementations can use both: feature-specific methods for rich semantics, and `request/cancel` for simple per-request cancellation.
 
-Note: it is possible that `session/cancel` could be replaced by the more generic `$/cancelRequest` in future versions of the protocol.
+Note: it is possible that `session/cancel` could be replaced by the more generic `request/cancel` in future versions of the protocol.
 
 #### Example: Cascading Cancellation Flow
 
@@ -191,8 +194,8 @@ sequenceDiagram
     Client->>Agent: session/cancel (sessionId)
 
     Note over Client,Agent: 4. Agent cascades cancellation internally
-    Agent->>Client: $/cancelRequest (id=2) [terminal request]
-    Agent->>Client: $/cancelRequest (id=3) [permission request]
+    Agent->>Client: request/cancel (id=2) [terminal request]
+    Agent->>Client: request/cancel (id=3) [permission request]
 
     Note over Client,Agent: 5. Client confirms individual cancellations
     Client->>Agent: response to id=2 (error -32800 "Cancelled")
@@ -226,10 +229,10 @@ This ensures complete cleanup and prevents resource leaks.
 
 Cancellation support is **optional** in the current protocol version and declared through capabilities:
 
-- Implementations **MAY** support handling cancellation by declaring `supportsRequestCancellation: true`
-- If an implementation declares support, it **MUST** handle `$/cancelRequest` notifications for its requests
-- If an implementation does not declare support, `$/cancelRequest` notifications should be ignored
-- The other party can send `$/cancelRequest` regardless of their own declared support
+- Implementations **MAY** support handling cancellation by declaring `cancellationCapabilities: {}`
+- If an implementation declares support, it **MUST** handle `request/cancel` notifications for its requests
+- If an implementation does not declare support, `request/cancel` notifications should be ignored
+- The other party can send `request/cancel` regardless of their own declared support
 - The `initialize` request **CANNOT** be cancelled regardless of capability support
 - Any requests after `initialize` **CAN** be cancelled if the recipient declared support
 
@@ -239,20 +242,21 @@ When cancellation is supported:
 - Implementations **MAY** choose how quickly to honor cancellation requests
 - Implementations **MAY** return partial results instead of errors when appropriate
 
-**Future consideration**: There is a proposal to make basic `$/cancelRequest` support **mandatory** in the next major protocol version to ensure consistent cancellation behavior across all ACP implementations and improve SDK developer experience.
+Cancellation will remain optional as it might not be implementable in all clients or servers. For example if the implementation uses a single threaded synchronous programming language then there is little it can do to react to a `request/cancel` notification.
 
 ### Example scenarios:
 
 1. **Client-to-Agent cancellation only**: Client declares support=false, Agent declares support=true
-   - Client can send `$/cancelRequest` to cancel agent's requests
-   - Agent cannot send `$/cancelRequest` to client (client will ignore)
+   - Client can send `request/cancel` to cancel agent's requests
+     - Agent cannot send `request/cancel` to client (client will ignore)
 
 2. **Bidirectional cancellation**: Both declare support=true
    - Both parties can cancel each other's requests
 
 3. **No cancellation**: Both declare support=false (or omit the capability)
-   - No `$/cancelRequest` notifications are processed
+   - No `request/cancel` notifications are processed
 
 ## Revision history
 
 - 2025-11-13: Initial version converted from PR #183
+- 2025-12-05: Updated with current implementation.
