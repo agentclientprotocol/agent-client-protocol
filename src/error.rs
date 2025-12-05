@@ -148,6 +148,11 @@ pub enum ErrorCode {
     #[schemars(transform = error_code_transform)]
     #[strum(to_string = "Internal error")]
     InternalError, // -32603
+    #[cfg(feature = "unstable_cancel_request")]
+    /// Execution of the method was aborted due to a cancellation request from the caller.
+    #[schemars(transform = error_code_transform)]
+    #[strum(to_string = "Request cancelled")]
+    RequestCancelled, // -32800
 
     // Custom errors
     /// Authentication is required before this operation can be performed.
@@ -173,6 +178,8 @@ impl From<i32> for ErrorCode {
             -32601 => ErrorCode::MethodNotFound,
             -32602 => ErrorCode::InvalidParams,
             -32603 => ErrorCode::InternalError,
+            #[cfg(feature = "unstable_cancel_request")]
+            -32800 => ErrorCode::RequestCancelled,
             -32000 => ErrorCode::AuthRequired,
             -32002 => ErrorCode::ResourceNotFound,
             _ => ErrorCode::Other(value),
@@ -188,6 +195,8 @@ impl From<ErrorCode> for i32 {
             ErrorCode::MethodNotFound => -32601,
             ErrorCode::InvalidParams => -32602,
             ErrorCode::InternalError => -32603,
+            #[cfg(feature = "unstable_cancel_request")]
+            ErrorCode::RequestCancelled => -32800,
             ErrorCode::AuthRequired => -32000,
             ErrorCode::ResourceNotFound => -32002,
             ErrorCode::Other(value) => value,
@@ -213,9 +222,11 @@ fn error_code_transform(schema: &mut Schema) {
         "MethodNotFound" => ErrorCode::MethodNotFound,
         "InvalidParams" => ErrorCode::InvalidParams,
         "InternalError" => ErrorCode::InternalError,
+        #[cfg(feature = "unstable_cancel_request")]
+        "RequestCancelled" => ErrorCode::RequestCancelled,
         "AuthRequired" => ErrorCode::AuthRequired,
         "ResourceNotFound" => ErrorCode::ResourceNotFound,
-        _ => panic!("Unexpected error code name"),
+        _ => panic!("Unexpected error code name {name}"),
     };
     let mut description = schema
         .get("description")
@@ -299,6 +310,8 @@ mod tests {
 
     #[test]
     fn serialize_error_code_equality() {
+        // Make sure this doesn't panic
+        let _schema = schemars::schema_for!(ErrorCode);
         for error in ErrorCode::iter() {
             assert_eq!(
                 error,
