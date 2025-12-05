@@ -158,6 +158,54 @@ The client should disconnect, if it doesn't support this version.
 
 </ResponseField>
 
+<a id="request-cancel"></a>
+### <span class="font-mono">request/cancel</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Cancels an ongoing request.
+
+This is a notification sent by the client to cancel any ongoing request.
+
+Upon receiving this notification, the Agent:
+
+1. MUST cancel the corresponding request activity and all nested activities
+2. MAY send any pending notifications.
+3. MUST send one of these responses for the original request:
+
+- Valid response with appropriate data (partial results or cancellation marker)
+- Error response with code `-32800` (Cancelled)
+
+See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/cancellation)
+
+#### <span class="font-mono">CancelRequestNotification</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Notification to cancel an ongoing request.
+
+See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/cancellation)
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="requestId" type={<a href="#requestid">RequestId</a>} required>
+  The ID of the request to cancel.
+</ResponseField>
+
 <a id="session-cancel"></a>
 ### <span class="font-mono">session/cancel</span>
 
@@ -817,6 +865,54 @@ these keys.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
+</ResponseField>
+
+<a id="request-cancel"></a>
+### <span class="font-mono">request/cancel</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Cancels an ongoing request.
+
+This is a notification sent by the client to cancel any ongoing request.
+
+Upon receiving this notification, the Agent:
+
+1. MUST cancel the corresponding request activity and all nested activities
+2. MAY send any pending notifications.
+3. MUST send one of these responses for the original request:
+
+- Valid response with appropriate data (partial results or cancellation marker)
+- Error response with code `-32800` (Cancelled)
+
+See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/cancellation)
+
+#### <span class="font-mono">CancelRequestNotification</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Notification to cancel an ongoing request.
+
+See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/cancellation)
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="requestId" type={<a href="#requestid">RequestId</a>} required>
+  The ID of the request to cancel.
 </ResponseField>
 
 <a id="session-request_permission"></a>

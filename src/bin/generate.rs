@@ -150,12 +150,13 @@ mod markdown_generator {
                 if let Some(side) = def.get("x-side").and_then(|v| v.as_str()) {
                     let method = def.get("x-method").unwrap().as_str().unwrap();
 
-                    if side == "agent" {
+                    if let "agent" | "all" = side {
                         agent_types
                             .entry(method.to_string())
                             .or_default()
                             .push((name.clone(), def.clone()));
-                    } else {
+                    }
+                    if let "client" | "all" = side {
                         client_types
                             .entry(method.to_string())
                             .or_default()
@@ -818,6 +819,10 @@ and control access to resources."
                 "session/prompt" => self.agent_methods.get("PromptRequest").unwrap(),
                 "session/cancel" => self.agent_methods.get("CancelNotification").unwrap(),
                 "session/set_model" => self.agent_methods.get("SetSessionModelRequest").unwrap(),
+                "request/cancel" => self
+                    .client_methods
+                    .get("CancelRequestNotification")
+                    .unwrap(),
                 _ => panic!("Introduced a method? Add it here :)"),
             }
         }
@@ -840,6 +845,10 @@ and control access to resources."
                 "terminal/kill" => self
                     .client_methods
                     .get("KillTerminalCommandRequest")
+                    .unwrap(),
+                "request/cancel" => self
+                    .client_methods
+                    .get("CancelRequestNotification")
                     .unwrap(),
                 _ => panic!("Introduced a method? Add it here :)"),
             }

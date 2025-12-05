@@ -10,7 +10,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "unstable_cancel_request")]
-use crate::CancellationCapabilities;
+use crate::{CancelRequestNotification, CancellationCapabilities, REQUEST_CANCEL_METHOD_NAME};
 use crate::{
     ContentBlock, ExtNotification, ExtRequest, ExtResponse, IntoOption, Meta, Plan, SessionId,
     SessionModeId, ToolCall, ToolCallUpdate,
@@ -1381,6 +1381,9 @@ pub struct ClientMethodNames {
     pub terminal_wait_for_exit: &'static str,
     /// Method for killing a terminal.
     pub terminal_kill: &'static str,
+    /// Method for cancelling a request
+    #[cfg(feature = "unstable_cancel_request")]
+    pub cancel_request: &'static str,
 }
 
 /// Constant containing all client method names.
@@ -1394,6 +1397,8 @@ pub const CLIENT_METHOD_NAMES: ClientMethodNames = ClientMethodNames {
     terminal_release: TERMINAL_RELEASE_METHOD_NAME,
     terminal_wait_for_exit: TERMINAL_WAIT_FOR_EXIT_METHOD_NAME,
     terminal_kill: TERMINAL_KILL_METHOD_NAME,
+    #[cfg(feature = "unstable_cancel_request")]
+    cancel_request: REQUEST_CANCEL_METHOD_NAME,
 };
 
 /// Notification name for session updates.
@@ -1577,6 +1582,24 @@ pub enum AgentNotification {
     ///
     /// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-turn#3-agent-reports-output)
     SessionNotification(SessionNotification),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Cancels an ongoing request.
+    ///
+    /// This is a notification sent by the client to cancel any ongoing request.
+    ///
+    /// Upon receiving this notification, the Agent:
+    /// 1. MUST cancel the corresponding request activity and all nested activities
+    /// 2. MAY send any pending notifications.
+    /// 3. MUST send one of these responses for the original request:
+    ///  - Valid response with appropriate data (partial results or cancellation marker)
+    ///  - Error response with code `-32800` (Cancelled)
+    ///
+    /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/cancellation)
+    #[cfg(feature = "unstable_cancel_request")]
+    CancelRequestNotification(CancelRequestNotification),
     /// Handles extension notifications from the agent.
     ///
     /// Allows the Agent to send an arbitrary notification that is not part of the ACP spec.
@@ -1593,6 +1616,8 @@ impl AgentNotification {
     pub fn method(&self) -> &str {
         match self {
             Self::SessionNotification(_) => CLIENT_METHOD_NAMES.session_update,
+            #[cfg(feature = "unstable_cancel_request")]
+            Self::CancelRequestNotification(_) => CLIENT_METHOD_NAMES.cancel_request,
             Self::ExtNotification(ext_notification) => &ext_notification.method,
         }
     }

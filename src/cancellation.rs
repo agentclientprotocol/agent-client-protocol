@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{Meta, RequestId};
 
-pub(crate) const REQUEST_CANCEL_METHOD_NAME: &str = "$/cancelRequest";
+pub(crate) const REQUEST_CANCEL_METHOD_NAME: &str = "request/cancel";
 
 /// **UNSTABLE**
 ///

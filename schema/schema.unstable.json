@@ -80,6 +80,14 @@
                 {
                   "allOf": [
                     {
+                      "$ref": "#/$defs/CancelRequestNotification"
+                    }
+                  ],
+                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCancels an ongoing request.\n\nThis is a notification sent by the client to cancel any ongoing request.\n\nUpon receiving this notification, the Agent:\n1. MUST cancel the corresponding request activity and all nested activities\n2. MAY send any pending notifications.\n3. MUST send one of these responses for the original request:\n - Valid response with appropriate data (partial results or cancellation marker)\n - Error response with code `-32800` (Cancelled)\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/cancellation)"
+                },
+                {
+                  "allOf": [
+                    {
                       "$ref": "#/$defs/ExtNotification"
                     }
                   ],
@@ -469,6 +477,28 @@
       "x-method": "session/cancel",
       "x-side": "agent"
     },
+    "CancelRequestNotification": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNotification to cancel an ongoing request.\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/cancellation)",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "requestId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/RequestId"
+            }
+          ],
+          "description": "The ID of the request to cancel."
+        }
+      },
+      "required": ["requestId"],
+      "type": "object",
+      "x-method": "request/cancel",
+      "x-side": "all"
+    },
     "CancellationCapabilities": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapabilities related to cancellation.\n\nBy supplying `{}` it means that general request cancellation is supported.\n\nFurther capabilities can be added in the future if other types of cancellation is required in the protocol.",
       "properties": {
@@ -535,6 +565,14 @@
                     }
                   ],
                   "description": "Cancels ongoing operations for a session.\n\nThis is a notification sent by the client to cancel an ongoing prompt turn.\n\nUpon receiving this notification, the Agent SHOULD:\n- Stop all language model requests as soon as possible\n- Abort all tool call invocations in progress\n- Send any pending `session/update` notifications\n- Respond to the original `session/prompt` request with `StopReason::Cancelled`\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-turn#cancellation)"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/CancelRequestNotification"
+                    }
+                  ],
+                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCancels an ongoing request.\n\nThis is a notification sent by the client to cancel any ongoing request.\n\nUpon receiving this notification, the Agent:\n1. MUST cancel the corresponding request activity and all nested activities\n2. MAY send any pending notifications.\n3. MUST send one of these responses for the original request:\n - Valid response with appropriate data (partial results or cancellation marker)\n - Error response with code `-32800` (Cancelled)\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/cancellation)"
                 },
                 {
                   "allOf": [
