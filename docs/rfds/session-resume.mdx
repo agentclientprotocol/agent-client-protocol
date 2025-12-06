@@ -46,6 +46,48 @@ the stored messages.
 
 > Tell me more about your implementation. What is your detailed implementation plan?
 
+We propose to add a new "session/resume" method. Agents must declare this option is
+available by including `sessionCapabilities: { resume : {} }` in its capabilities.
+The object is reserved to declare future capabilities.
+
+To make implementation in existing and future agents easier, we propose to have a separate
+token for resuming, which the agent can use to map to an internal session:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "session/resume",
+  "params": {
+    "resumeToken": "opaque-token"
+  }
+}
+```
+
+And the agent would respond with optional data such as config options, the same as `session/load`.
+
+When implementing `session/resume`, the agent sends a `session/update` notification with the token:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_123",
+    "update": {
+      "sessionUpdate": "resumeToken",
+      "resumeToken": "opaque-token"
+    },
+  }
+}
+```
+
+Agents may update the `resumptionToken` at any time if necessary. Clients should use the latest
+token received to continue the chat from where they left off.
+
+Agents may only support resuming chats in some cases. Therefore, an agent may not send a `resumeToken`,
+even if it declares the capability.
+
 ## Frequently asked questions
 
 > What questions have arisen over the course of authoring this document or during subsequent discussions?
