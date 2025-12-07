@@ -1,0 +1,288 @@
+---
+title: "Session Usage and Context Status"
+---
+
+- Author(s): [@ahmedhesham6](https://github.com/ahmedhesham6)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Add standardized usage and context window tracking to the Agent Client Protocol, enabling agents to report token consumption, cost estimates, and context window utilization in a consistent way across implementations.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+Currently, the ACP protocol has no standardized way for agents to communicate:
+
+1. **Token usage** - How many tokens were consumed in a turn or cumulatively
+2. **Context window status** - How much of the model's context window is being used
+3. **Cost information** - Estimated costs for API usage
+4. **Prompt caching metrics** - Cache hits/misses for models that support caching
+
+This creates several problems:
+
+- **No visibility into resource consumption** - Clients can't show users how much of their context budget is being used
+- **No cost transparency** - Users can't track spending or estimate costs before operations
+- **No context management** - Clients can't warn users when approaching context limits or suggest compaction
+- **Inconsistent implementations** - Each agent implements usage tracking differently (if at all)
+
+Industry research shows common patterns across AI coding tools:
+
+- LLM providers return cumulative token counts in API responses
+- IDE extensions display context percentage prominently (e.g., radial progress showing "19%")
+- Clients show absolute numbers on hover/detail (e.g., "31.4K of 200K tokens")
+- Tools warn users at threshold percentages (75%, 90%, 95%)
+- Auto-compaction features trigger when approaching context limits
+- Cost tracking focuses on cumulative session totals rather than per-turn breakdowns
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+We propose separating usage tracking into two distinct concerns:
+
+1. **Token usage** - Reported in `PromptResponse` after each turn (per-turn data)
+2. **Context window and cost** - Reported in `session/status` for on-demand queries (session state)
+
+This separation reflects how users consume this information:
+- Token counts are tied to specific turns and useful immediately after a prompt
+- Context window and cost are cumulative session state that users may want to check at any time
+
+### Token Usage in `PromptResponse`
+
+Add a `usage` field to `PromptResponse` for token consumption tracking:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "sessionId": "sess_abc123",
+    "stopReason": "end_turn",
+    "usage": {
+      "total_tokens": 53000,
+      "input_tokens": 35000,
+      "output_tokens": 12000,
+      "reasoning_tokens": 5000,
+      "cached_read_tokens": 5000,
+      "cached_write_tokens": 1000
+    }
+  }
+}
+```
+
+#### Usage Fields
+
+- `total_tokens` (number, required) - Sum of all token types across session
+- `input_tokens` (number, required) - Total input tokens across all turns
+- `output_tokens` (number, required) - Total output tokens across all turns
+- `reasoning_tokens` (number, optional) - Total reasoning tokens (for o1/o3 models)
+- `cached_read_tokens` (number, optional) - Total cache read tokens
+- `cached_write_tokens` (number, optional) - Total cache write tokens
+
+### Context Window and Cost in `session/status`
+
+Add `context_window` and `cost` fields to `session/status` response:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "session/status",
+  "params": {
+    "sessionId": "sess_abc123"
+  }
+}
+```
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "sessionId": "sess_abc123",
+    "status": "idle",
+    "context_window": {
+      "size": 200000,
+      "used": 53000,
+      "percentage": 26.5,
+      "remaining": 147000
+    },
+    "cost": {
+      "amount": 0.045,
+      "currency": "USD"
+    }
+  }
+}
+```
+
+#### Context Window Fields (optional)
+
+- `size` (number, required) - Total context window size in tokens
+- `used` (number, required) - Tokens currently in context
+- `percentage` (number, required) - Percentage used (0-100)
+- `remaining` (number, required) - Tokens remaining
+
+#### Cost Fields (optional)
+
+- `amount` (number, required) - Total cumulative cost for session
+- `currency` (string, required) - ISO 4217 currency code (e.g., "USD", "EUR")
+
+### Design Principles
+
+1. **Separation of concerns** - Token usage is per-turn data, context window and cost are session state
+2. **Agent calculates, client can verify** - Agent knows its model best and provides calculations, but includes raw data for client verification
+3. **Flexible cost reporting** - Support any currency, don't assume USD
+4. **Prompt caching support** - Include cache read/write tokens for models that support it
+5. **Optional but recommended** - Usage tracking is optional to maintain backward compatibility
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+**For Users:**
+
+- **Visibility**: Users see real-time context window usage with percentage indicators
+- **Cost awareness**: Users can track spending and check cumulative cost at any time
+- **Better planning**: Users know when to start new sessions or compact context
+- **Transparency**: Clear understanding of resource consumption
+
+**For Client Implementations:**
+
+- **Consistent UI**: All clients can show usage in a standard way (progress bars, percentages, warnings)
+- **Smart warnings**: Clients can warn users at 75%, 90% context usage
+- **Cost controls**: Clients can implement budget limits and alerts
+- **Analytics**: Clients can track usage patterns and optimize
+- **On-demand checks**: Clients can poll `session/status` to update context and cost indicators without issuing prompts
+
+**For Agent Implementations:**
+
+- **Standard reporting**: Clear contract for what to report and when
+- **Flexibility**: Optional fields allow agents to report what they can calculate
+- **Model diversity**: Works with any model (GPT, Claude, Llama, etc.)
+- **Caching support**: First-class support for prompt caching
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+1. **Update schema.json** to add:
+   - `Usage` type with token fields
+   - `ContextWindow` type with `size`, `used`, `percentage`, `remaining` fields
+   - `Cost` type with `amount` and `currency` fields
+   - Add optional `usage` field to `PromptResponse`
+   - Add optional `context_window` and `cost` fields to `SessionStatusResponse`
+
+2. **Update protocol documentation**:
+   - Document `usage` field in `/docs/protocol/prompt-turn.mdx`
+   - Document `context_window` and `cost` fields in session status documentation
+   - Add examples showing typical usage patterns
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Why separate token usage from context window and cost?
+
+Different users care about different things at different times:
+
+- **Token counts**: Relevant immediately after a turn completes to understand the breakdown
+- **Context window remaining**: Relevant at any time, especially before issuing a large prompt. "Do I need to handoff or compact?"
+- **Cumulative cost**: Session-level state users want to check without issuing new prompts
+
+Separating them allows:
+- Clients to poll context and cost status without issuing prompts
+- Cleaner data model where per-turn data stays in turn responses
+- Users to check session state (context, cost) before deciding on actions
+
+### Why is cost in session/status instead of PromptResponse?
+
+Cost is cumulative session state, similar to context window:
+- Users want to check total spending at any time, not just after turns
+- Keeps `PromptResponse` focused on per-turn token breakdown
+- Both cost and context window are session-level metrics that belong together
+
+### How do users know when to handoff or compact the context?
+
+The `context_window` object in `session/status` provides everything needed:
+
+- `used` and `remaining` give absolute numbers for precise tracking
+- `percentage` enables simple threshold-based warnings
+- `size` lets clients understand the total budget
+
+**Recommended client behavior:**
+
+| Percentage | Action |
+|------------|--------|
+| < 75% | Normal operation |
+| 75-90% | Yellow indicator, suggest "Context filling up" |
+| 90-95% | Orange indicator, recommend "Start new session or summarize" |
+| > 95% | Red indicator, warn "Next prompt may fail - handoff recommended" |
+
+Clients can also:
+- Offer "Compact context" or "Summarize conversation" actions
+- Auto-suggest starting a new session
+- Implement automatic handoff when approaching limits
+
+### Why does the agent calculate percentage instead of the client?
+
+Agent knows its model best:
+
+- Agent knows exact context window size (varies by model)
+- Agent knows how it counts tokens (different tokenizers)
+- Agent knows about special tokens, system messages, etc.
+- Client can still recalculate if needed (all raw data provided)
+
+### Why not assume USD for cost?
+
+Agents may bill in different currencies:
+
+- European agents might bill in EUR
+- Asian agents might bill in JPY or CNY
+- Some agents might use credits or points
+- Currency conversion rates change
+
+Better to report actual billing currency and let clients convert if needed.
+
+### What if the agent can't calculate some fields?
+
+All fields except the basic token counts are optional. Agents report what they can calculate. Clients handle missing fields gracefully.
+
+### How does this work with streaming responses?
+
+- During streaming: Send progressive updates via `session/update` notifications
+- Final response: Include complete token usage in `PromptResponse`
+- Context window and cost: Always available via `session/status`
+
+### What about models without fixed context windows?
+
+- Report effective context window size
+- For models with dynamic windows, report current limit
+- Update size if it changes
+- Set to `null` if truly unlimited (rare)
+
+### What about rate limits and quotas?
+
+This RFD focuses on token usage and context windows. Rate limits and quotas are a separate concern that could be addressed in a future RFD. However, the cost tracking here helps users understand their usage against quota limits.
+
+### Should cached tokens count toward context window?
+
+Yes, cached tokens still occupy context window space. They're just cheaper to process. The context window usage should include all tokens (regular + cached).
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+**Alternatives considered:**
+
+1. **Everything in PromptResponse** - Simpler, but context window and cost are session state that users may want to check independently of turns.
+
+2. **Everything in session/status** - Requires extra round-trip after every prompt to get token usage. Inconsistent with how LLM APIs work.
+
+3. **Client calculates everything** - Rejected because client doesn't know model's tokenizer, exact context window size, or pricing.
+
+4. **Only percentage, no raw tokens** - Rejected because users want absolute numbers, clients can't verify calculations, and it's less transparent.
+
+## Revision history
+
+- 2025-12-07: Initial draft
