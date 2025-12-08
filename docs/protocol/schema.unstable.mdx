@@ -228,7 +228,7 @@ Only available if the Agent supports the `session.fork` capability.
 
 **Properties:**
 
-<ResponseField name="_meta" type={"object"} >
+<ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
 metadata to their interactions. Implementations MUST NOT make assumptions about values at
 these keys.
@@ -252,7 +252,7 @@ Response from forking an existing session.
 
 **Properties:**
 
-<ResponseField name="_meta" type={"object"} >
+<ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
 metadata to their interactions. Implementations MUST NOT make assumptions about values at
 these keys.
@@ -2705,7 +2705,7 @@ By supplying `\{\}` it means that the agent supports forking of sessions.
 
 **Properties:**
 
-<ResponseField name="_meta" type={"object"} >
+<ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
 metadata to their interactions. Implementations MUST NOT make assumptions about values at
 these keys.
