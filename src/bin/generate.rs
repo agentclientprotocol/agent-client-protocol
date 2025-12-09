@@ -67,15 +67,19 @@ fn main() {
     .expect("Failed to write {schema_file}");
 
     // Create a combined metadata object
-    let mut metadata = serde_json::json!({
+    #[cfg(not(feature = "unstable_cancel_request"))]
+    let metadata = serde_json::json!({
         "version": ProtocolVersion::LATEST,
         "agentMethods": AGENT_METHOD_NAMES,
         "clientMethods": CLIENT_METHOD_NAMES,
     });
     #[cfg(feature = "unstable_cancel_request")]
-    {
-        metadata["protocolMethods"] = serde_json::json!(PROTOCOL_LEVEL_METHOD_NAMES);
-    }
+    let metadata = serde_json::json!({
+        "version": ProtocolVersion::LATEST,
+        "agentMethods": AGENT_METHOD_NAMES,
+        "clientMethods": CLIENT_METHOD_NAMES,
+        "protocolMethods": PROTOCOL_LEVEL_METHOD_NAMES,
+    });
 
     let meta_file = if cfg!(feature = "unstable") {
         "meta.unstable.json"
