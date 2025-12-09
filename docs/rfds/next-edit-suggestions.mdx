@@ -9,14 +9,20 @@ title: "Next Edit Suggestions"
 
 > What are you proposing to change?
 
-We propose adding support for **next edit suggestions** (also known as tab-completions or predictive edits) to ACP. This feature allows agents to proactively suggest edits the user might want to make next, based on recent changes, cursor context, and codebase understanding.
+We propose adding support for **next edit suggestions** (also known as tab-completions, predictive edits, or next action prediction) to ACP. This feature allows agents to proactively suggest:
 
-Unlike traditional LSP completions (which suggest tokens at the cursor) or full agentic responses (which require explicit prompts), next edit suggestions occupy a middle ground: lightweight, contextual edit predictions that users can accept with a single keystroke.
+1. **Edits** the user might want to make next
+2. **Navigation targets** (cursor jumps) to where the next edit will occur
+3. **Chained sequences** of edits that flow naturally from one to the next
+
+Unlike traditional LSP completions (which suggest tokens at the cursor) or full agentic responses (which require explicit prompts), next edit suggestions occupy a middle ground: lightweight, sub-second, contextual predictions that users can accept with a single keystroke.
 
 Key characteristics:
-- **Proactive**: Agent suggests edits without explicit user prompts
-- **Lightweight**: Quick, focused suggestions rather than full agentic workflows
-- **Contextual**: Based on recent edits, cursor position, and file state
+- **Proactive**: Agent suggests without explicit user prompts
+- **Low-latency**: Sub-second responses (target: <500ms)
+- **Streaming**: Suggestions can stream token-by-token for ghost text UX
+- **Contextual**: Based on recent edits, cursor position, open files, and codebase understanding
+- **Chainable**: Accepting one suggestion can trigger the next (tab-tab-tab flow)
 - **Non-blocking**: Suggestions are advisory and easily dismissable
 
 ## Status quo
@@ -29,23 +35,34 @@ Currently, ACP supports two primary interaction modes:
 
 2. **Slash commands**: Users can invoke predefined commands, but these still require explicit user action.
 
-Neither mode supports the increasingly common UX pattern where AI assistants proactively suggest the "next edit" based on context. Modern AI-powered editors (Cursor, Copilot, Supermaven, etc.) have popularized this pattern:
+Neither mode supports the increasingly common UX pattern where AI assistants proactively suggest the "next edit" based on context. Modern AI-powered editors have popularized this pattern:
 
+| Tool | Key Innovation |
+|------|----------------|
+| **Cursor Tab** | Predicts edits AND cursor jumps; "Next Action Prediction" vision |
+| **GitHub Copilot NES** | Low-latency task-specific model; insertions, deletions, or mixed |
+| **Supermaven** | 250ms latency; sees code as edit diffs, not file sequences |
+| **Cody** | Four-phase pipeline; retention tracking; partial acceptance |
+
+Common use cases these tools enable:
 - After writing a function signature, suggest the implementation
-- After fixing a bug in one location, suggest the same fix in similar locations
-- After adding an import statement, suggest code that uses the import
-- After renaming a variable, suggest updating related documentation
-- After modifying a test, suggest updating the corresponding implementation
+- After fixing a bug in one location, suggest the same fix elsewhere
+- After adding an import, suggest code that uses it
+- After renaming a variable, suggest updating documentation
+- After modifying a test, suggest updating the implementation
+- **Predict where the cursor should jump next** (navigation)
 
 **Problems with the status quo:**
 
-1. **No standardized mechanism**: Agents wanting to provide predictive suggestions must use proprietary extensions or work outside the protocol entirely.
+1. **No standardized mechanism**: Agents must use proprietary extensions or work outside the protocol.
 
-2. **Lost context opportunity**: Agents observe edits via file system events but cannot act on patterns they recognize without user prompting.
+2. **Lost context opportunity**: Agents observe edits but cannot act on patterns without user prompting.
 
-3. **UX friction**: Users must context-switch from editing to prompting when the agent could anticipate their needs.
+3. **UX friction**: Users must context-switch from editing to prompting.
 
-4. **Inconsistent implementations**: Each agent/client pair implements this differently (if at all), fragmenting the ecosystem.
+4. **Inconsistent implementations**: Each agent/client pair implements this differently, fragmenting the ecosystem.
+
+5. **No streaming support**: Current ACP response patterns don't support the token-by-token streaming needed for ghost text UX.
 
 ## What we propose to do about it
 
@@ -55,119 +72,306 @@ We propose adding a new subsystem to ACP for next edit suggestions with the foll
 
 ### 1. Edit Context Notifications (Client → Agent)
 
-Clients notify agents about edit context changes:
+Clients notify agents about edit context changes. This is the primary signal agents use to generate suggestions.
 
 ```typescript
+// Notification: editContext/didChange
+interface EditContextDidChangeParams {
+  /** Current editing context */
+  context: EditContext;
+}
+
 interface EditContext {
-  /** Active file URI */
+  /** Active document URI */
   uri: string;
+
+  /** Language identifier (e.g., "typescript", "python") */
+  languageId: string;
+
+  /** Document version for cache invalidation */
+  documentVersion: number;
+
   /** Cursor position(s) in the active file */
   selections: Selection[];
-  /** Recent edits made by the user (optional, for pattern detection) */
-  recentEdits?: RecentEdit[];
-  /** Visible range in the editor (optional) */
+
+  /** Currently selected text, if any */
+  selectedText?: string;
+
+  /** Visible range in the editor viewport */
   visibleRange?: Range;
+
+  /** Recently modified files (URIs), ordered by recency */
+  recentFiles?: string[];
+
+  /** Recent edits made by the user (for pattern detection) */
+  recentEdits?: RecentEdit[];
+}
+
+interface Selection {
+  /** Cursor/anchor position */
+  anchor: Position;
+  /** Active/head position (may differ from anchor if text selected) */
+  active: Position;
 }
 
 interface RecentEdit {
+  /** File that was edited */
   uri: string;
+  /** Range that was replaced */
   range: Range;
+  /** New text that was inserted */
   newText: string;
+  /** Text that was replaced (for understanding intent) */
+  oldText?: string;
+  /** Timestamp of the edit */
   timestamp: number;
 }
 ```
 
 ### 2. Suggestion Requests (Client → Agent)
 
-Clients can request suggestions for the current context:
+Clients can explicitly request suggestions for the current context:
 
 ```typescript
 // Method: suggestions/request
 interface SuggestionsRequestParams {
   /** Current edit context */
   context: EditContext;
+
   /** Maximum number of suggestions to return */
   maxSuggestions?: number;
-  /** Timeout in milliseconds */
+
+  /** Timeout in milliseconds (agents SHOULD return partial results if exceeded) */
   timeout?: number;
+
+  /** Whether to include navigation suggestions */
+  includeNavigation?: boolean;
+
+  /** Trigger kind indicating what prompted this request */
+  triggerKind?: SuggestionTriggerKind;
 }
+
+type SuggestionTriggerKind =
+  | "automatic"    // Triggered by typing/editing
+  | "manual"       // Explicitly requested by user (e.g., keyboard shortcut)
+  | "continuation" // Triggered after accepting a previous suggestion
 ```
 
 ### 3. Suggestion Responses (Agent → Client)
 
-Agents respond with zero or more edit suggestions:
+Agents respond with suggestions, which can be **edits** or **navigation targets**:
 
 ```typescript
-interface EditSuggestion {
-  /** Unique identifier for this suggestion */
-  id: string;
-  /** Human-readable label for the suggestion */
-  label: string;
-  /** Optional description explaining the suggestion */
-  description?: string;
-  /** The proposed edits */
-  edits: TextEdit[];
-  /** Confidence score (0.0 - 1.0) */
-  confidence?: number;
-  /** Category of suggestion for UI grouping */
-  kind?: SuggestionKind;
+// Response to suggestions/request
+interface SuggestionsResponse {
+  /** Edit suggestions */
+  suggestions: Suggestion[];
+
+  /** Whether more suggestions may be available (for pagination) */
+  isIncomplete?: boolean;
 }
 
-type SuggestionKind =
-  | "completion"      // Complete partial code
-  | "continuation"    // Continue a pattern
-  | "fix"             // Fix an issue
-  | "refactor"        // Improve existing code
-  | "related"         // Edit related code elsewhere
+type Suggestion = EditSuggestion | NavigationSuggestion;
+
+interface EditSuggestion {
+  type: "edit";
+
+  /** Unique identifier for this suggestion */
+  id: string;
+
+  /** Human-readable label (shown in UI) */
+  label: string;
+
+  /** Longer description explaining the suggestion */
+  description?: string;
+
+  /** The proposed text edits */
+  edits: TextEdit[];
+
+  /** Where to place cursor after applying edits */
+  cursorPosition?: Position;
+
+  /** Confidence score (0.0 - 1.0) */
+  confidence?: number;
+
+  /** Category of suggestion for UI grouping/filtering */
+  kind?: EditSuggestionKind;
+
+  /** Priority for ordering (higher = more prominent) */
+  priority?: number;
+
+  /** If true, this edit is part of a sequence; more suggestions follow */
+  hasFollowUp?: boolean;
+}
+
+type EditSuggestionKind =
+  | "completion"      // Complete partial/incomplete code
+  | "continuation"    // Continue an established pattern
+  | "insertion"       // Insert new code
+  | "deletion"        // Remove code
+  | "replacement"     // Replace existing code
+  | "fix"             // Fix an error or issue
+  | "refactor"        // Improve/restructure code
+  | "related"         // Edit related code elsewhere in codebase
+  | "documentation"   // Add/update comments or docs
+  | "test"            // Add/update tests
   | "other";
 
-interface TextEdit {
+interface NavigationSuggestion {
+  type: "navigation";
+
+  /** Unique identifier */
+  id: string;
+
+  /** Human-readable label */
+  label: string;
+
+  /** Target location to navigate to */
+  target: Location;
+
+  /** Why this navigation is suggested */
+  reason?: string;
+
+  /** Confidence score (0.0 - 1.0) */
+  confidence?: number;
+
+  /** Priority for ordering */
+  priority?: number;
+}
+
+interface Location {
   uri: string;
   range: Range;
+}
+
+interface TextEdit {
+  /** Target file URI */
+  uri: string;
+  /** Range to replace (empty range = insertion) */
+  range: Range;
+  /** New text to insert */
   newText: string;
 }
 ```
 
-### 4. Suggestion Actions (Client → Agent)
+### 4. Streaming Suggestions (Agent → Client)
 
-Clients notify agents when users interact with suggestions:
+For ghost text UX, agents can stream suggestion content incrementally:
 
 ```typescript
-// Method: suggestions/accept
-interface SuggestionsAcceptParams {
-  /** ID of the accepted suggestion */
+// Notification: suggestions/stream
+interface SuggestionsStreamParams {
+  /** ID of the suggestion being streamed */
   suggestionId: string;
+
+  /** Index of the edit within the suggestion being updated */
+  editIndex: number;
+
+  /** Incremental text to append */
+  delta: string;
+
+  /** Whether this is the final chunk for this edit */
+  isComplete: boolean;
 }
 
-// Method: suggestions/reject
-interface SuggestionsRejectParams {
-  /** ID of the rejected suggestion */
+// Notification: suggestions/streamEnd
+interface SuggestionsStreamEndParams {
+  /** ID of the suggestion that finished streaming */
   suggestionId: string;
-  /** Optional reason for rejection */
-  reason?: "wrong" | "irrelevant" | "timing" | "other";
-}
 
-// Method: suggestions/dismiss
-interface SuggestionsDismissParams {
-  /** IDs of dismissed suggestions (e.g., user moved on) */
-  suggestionIds: string[];
+  /** Final suggestion state (in case client missed chunks) */
+  suggestion: Suggestion;
 }
 ```
 
-### 5. Proactive Suggestions (Agent → Client)
+### 5. Suggestion Actions (Client → Agent)
 
-Optionally, agents can push suggestions without explicit requests:
+Clients notify agents of user interactions with suggestions:
+
+```typescript
+// Notification: suggestions/accept
+interface SuggestionsAcceptParams {
+  /** ID of the accepted suggestion */
+  suggestionId: string;
+
+  /** For partial accepts: the range that was accepted */
+  acceptedRange?: Range;
+
+  /** For partial accepts: how much was accepted */
+  acceptKind?: "full" | "word" | "line" | "custom";
+}
+
+// Notification: suggestions/reject
+interface SuggestionsRejectParams {
+  /** ID of the rejected suggestion */
+  suggestionId: string;
+
+  /** Reason for rejection (for learning) */
+  reason?: "wrong" | "irrelevant" | "timing" | "style" | "other";
+}
+
+// Notification: suggestions/dismiss
+interface SuggestionsDismissParams {
+  /** IDs of dismissed suggestions (user moved on without explicit action) */
+  suggestionIds: string[];
+
+  /** Why suggestions were dismissed */
+  reason?: "context_changed" | "timeout" | "user_continued" | "other";
+}
+
+// Notification: suggestions/retained
+interface SuggestionsRetainedParams {
+  /** ID of a previously accepted suggestion */
+  suggestionId: string;
+
+  /** How the suggestion was treated after acceptance */
+  retention: "kept" | "modified" | "deleted";
+
+  /** If modified, how much changed (0.0 = completely rewritten, 1.0 = kept as-is) */
+  similarity?: number;
+
+  /** Time in ms between acceptance and this report */
+  elapsedMs: number;
+}
+```
+
+### 6. Proactive Suggestions (Agent → Client)
+
+Agents can push suggestions without explicit requests:
 
 ```typescript
 // Notification: suggestions/offer
 interface SuggestionsOfferParams {
   /** The suggestions being offered */
-  suggestions: EditSuggestion[];
+  suggestions: Suggestion[];
+
   /** Context these suggestions apply to */
   context: EditContext;
+
   /** TTL in milliseconds before suggestions expire */
   ttl?: number;
+
+  /** If set, these suggestions replace previously offered ones */
+  replacesPreviousOffer?: boolean;
 }
+
+// Notification: suggestions/invalidate
+interface SuggestionsInvalidateParams {
+  /** IDs of suggestions that are no longer valid */
+  suggestionIds: string[];
+
+  /** Reason for invalidation */
+  reason: "context_changed" | "expired" | "superseded" | "other";
+}
+```
+
+### 7. Request Lifecycle
+
+Clients can cancel in-flight suggestion requests:
+
+```typescript
+// Uses ACP's $/cancel_request notification
+// Agents SHOULD stop processing and return partial results if available
 ```
 
 ## Shiny future
@@ -176,17 +380,23 @@ interface SuggestionsOfferParams {
 
 Once next edit suggestions are part of ACP:
 
-1. **Seamless editing flow**: Users can code with an AI partner that anticipates their needs. After making an edit, relevant follow-up suggestions appear naturally, accepted with Tab or a click.
+1. **Seamless editing flow**: Users code with an AI partner that anticipates their needs. After making an edit, relevant follow-up suggestions appear naturally, accepted with Tab.
 
-2. **Pattern-aware assistance**: Agents can detect repetitive edits (like fixing the same issue in multiple files) and proactively suggest completing the pattern.
+2. **Tab-tab-tab sequences**: Accepting one suggestion immediately surfaces the next. Users can flow through a series of related edits without pausing.
 
-3. **Cross-file intelligence**: Unlike LSP completions confined to the current file, agent suggestions can span the codebase - updating tests when implementations change, keeping documentation in sync, etc.
+3. **Intelligent navigation**: Agents predict not just what to edit, but where to go next. After completing a function, jump to its test file. After fixing a bug, jump to similar occurrences.
 
-4. **Learning from feedback**: The accept/reject/dismiss feedback loop allows agents to improve suggestion quality over time, learning user preferences and coding patterns.
+4. **Pattern-aware assistance**: Agents detect repetitive edits and proactively suggest completing the pattern across files.
 
-5. **Standardized UX**: Clients can implement consistent suggestion UI knowing all ACP-compatible agents speak the same language.
+5. **Ghost text streaming**: Suggestions appear character-by-character as they're generated, feeling responsive even for complex predictions.
 
-6. **Composable with existing features**: Suggestions can reference agent plans, integrate with session modes, and respect permission models already in ACP.
+6. **Learning from feedback**: The accept/reject/dismiss/retain feedback loop allows agents to improve over time, learning user preferences and coding patterns.
+
+7. **Cross-file intelligence**: Unlike LSP completions confined to the current file, agent suggestions span the codebase—updating tests, documentation, and related code.
+
+8. **Standardized UX**: Clients implement consistent suggestion UI knowing all ACP-compatible agents speak the same protocol.
+
+9. **Composable with ACP features**: Suggestions integrate with session modes, permissions, and agent plans.
 
 ## Implementation details and plan
 
@@ -200,10 +410,12 @@ Agents advertise suggestion support in initialization:
 {
   "capabilities": {
     "suggestions": {
-      "contextNotifications": true,
-      "proactiveOffers": true,
-      "maxConcurrentRequests": 3,
-      "supportedKinds": ["completion", "continuation", "fix", "refactor", "related"]
+      "supportedTriggerKinds": ["automatic", "manual", "continuation"],
+      "supportedEditKinds": ["completion", "continuation", "fix", "refactor", "related"],
+      "supportsNavigation": true,
+      "supportsStreaming": true,
+      "supportsProactiveOffers": true,
+      "maxConcurrentRequests": 3
     }
   }
 }
@@ -215,6 +427,9 @@ Clients advertise their support:
 {
   "capabilities": {
     "suggestions": {
+      "supportsStreaming": true,
+      "supportsPartialAccept": true,
+      "supportsRetentionTracking": true,
       "acceptsProactiveOffers": true,
       "maxDisplayedSuggestions": 5
     }
@@ -222,74 +437,125 @@ Clients advertise their support:
 }
 ```
 
-### Protocol Flow
+### Protocol Flows
 
-**Request-based flow:**
+**Basic request-response flow:**
 
 ```
 Client                              Agent
   |                                   |
-  |--[editContext/update]------------>|  (cursor moved, file changed)
+  |--[editContext/didChange]--------->|  (user edited/moved cursor)
   |                                   |
   |--[suggestions/request]----------->|  (client wants suggestions)
   |                                   |
   |<-[suggestions/request response]---|  (agent returns suggestions)
   |                                   |
-  |--[suggestions/accept]------------>|  (user accepted suggestion)
+  |--[suggestions/accept]------------>|  (user pressed Tab)
   |                                   |
 ```
 
-**Proactive flow (optional):**
+**Streaming flow:**
 
 ```
 Client                              Agent
   |                                   |
-  |--[editContext/update]------------>|  (user made an edit)
+  |--[suggestions/request]----------->|
   |                                   |
-  |<-[suggestions/offer]--------------|  (agent proactively suggests)
+  |<-[response: {suggestions:[{id}]}]-|  (initial structure)
   |                                   |
-  |--[suggestions/dismiss]----------->|  (user ignored/moved on)
+  |<-[suggestions/stream]-------------|  (delta: "func")
+  |<-[suggestions/stream]-------------|  (delta: "tion ")
+  |<-[suggestions/stream]-------------|  (delta: "foo()")
+  |<-[suggestions/streamEnd]----------|  (complete)
   |                                   |
 ```
 
-### Debouncing and Rate Limiting
+**Chained suggestions (tab-tab-tab):**
 
-To prevent overwhelming the agent or client:
+```
+Client                              Agent
+  |                                   |
+  |--[suggestions/accept]------------>|  (user accepted suggestion)
+  |                                   |
+  |<-[suggestions/offer]--------------|  (agent offers follow-up)
+  |                                   |
+  |--[suggestions/accept]------------>|  (user accepts again)
+  |                                   |
+  |<-[suggestions/offer]--------------|  (another follow-up)
+  |                                   |
+```
 
-1. Clients SHOULD debounce `editContext/update` notifications (recommended: 100-300ms)
-2. Clients SHOULD NOT send `suggestions/request` while a previous request is pending
-3. Agents SHOULD respect the `timeout` parameter and return partial results if needed
-4. Proactive `suggestions/offer` notifications SHOULD be rate-limited by agents
+**Proactive flow with invalidation:**
 
-### Integration with Existing Features
+```
+Client                              Agent
+  |                                   |
+  |--[editContext/didChange]--------->|  (user made an edit)
+  |                                   |
+  |<-[suggestions/offer]--------------|  (agent proactively suggests)
+  |                                   |
+  |--[editContext/didChange]--------->|  (user continued typing)
+  |                                   |
+  |<-[suggestions/invalidate]---------|  (previous suggestions invalid)
+  |<-[suggestions/offer]--------------|  (new suggestions)
+  |                                   |
+```
+
+### Latency and Performance Guidelines
+
+| Metric | Target | Notes |
+|--------|--------|-------|
+| Request to first token | <200ms | For streaming ghost text |
+| Request to complete response | <500ms | For good UX |
+| Context notification debounce | 50-150ms | Client-side |
+| Suggestion TTL | 5-30s | Agent-configurable |
+
+Recommendations:
+1. Clients SHOULD debounce `editContext/didChange` (50-150ms recommended)
+2. Clients SHOULD cancel pending requests when context changes significantly
+3. Agents SHOULD use streaming for suggestions >50 characters
+4. Agents SHOULD respect timeout and return partial results
+5. Agents SHOULD invalidate proactive suggestions when context changes
+6. Clients SHOULD track retention asynchronously (e.g., 5-30s after acceptance)
+
+### Integration with Existing ACP Features
 
 **Session Modes**: Suggestions can be mode-aware. An agent in "architect" mode might suggest documentation edits, while "code" mode suggests implementations.
 
-**Tool Calls**: Accepting a complex suggestion could trigger a tool call flow for edits requiring additional context or confirmation.
+**Tool Calls**: Complex suggestions could trigger tool call flows for edits requiring additional context or confirmation.
 
-**Permissions**: Suggestions are advisory; actual edits still go through normal permission flows when applied.
+**Permissions**: Suggestions are advisory; actual file writes still go through normal `fs/writeTextFile` permission flows.
+
+**Request Cancellation**: Uses the existing `$/cancel_request` notification from the unstable cancellation RFD.
 
 ### Implementation Phases
 
 **Phase 1 - Core Protocol (Draft)**
-- Define schema types for suggestions, context, and actions
+- Define schema types for suggestions, context, and basic actions
+- Implement `editContext/didChange` notification
 - Implement `suggestions/request` and response
 - Implement `suggestions/accept`, `suggestions/reject`, `suggestions/dismiss`
 - Add capability advertisement
 
-**Phase 2 - Context Notifications (Draft)**
-- Add `editContext/update` notification
-- Define debouncing recommendations
+**Phase 2 - Streaming (Draft)**
+- Add `suggestions/stream` and `suggestions/streamEnd`
+- Define streaming semantics and error handling
 - Implement in reference SDKs
 
-**Phase 3 - Proactive Suggestions (Preview)**
-- Add `suggestions/offer` notification
-- Define TTL and expiration semantics
-- Implement rate limiting guidelines
+**Phase 3 - Navigation & Chaining (Preview)**
+- Add `NavigationSuggestion` type
+- Implement `hasFollowUp` and chained suggestion flow
+- Add `suggestions/offer` for proactive suggestions
+- Add `suggestions/invalidate` for stale suggestions
 
-**Phase 4 - Refinements (Preview → Completed)**
+**Phase 4 - Analytics & Learning (Preview)**
+- Add `suggestions/retained` notification
+- Define retention tracking semantics
+- Implement partial accept tracking
+
+**Phase 5 - Refinements (Preview → Completed)**
 - Gather feedback from implementations
-- Refine types based on real-world usage
+- Performance optimization guidelines
 - Stabilize and document best practices
 
 ## Frequently asked questions
@@ -298,73 +564,132 @@ To prevent overwhelming the agent or client:
 
 ### How does this differ from LSP completions?
 
-LSP completions are syntax-driven, cursor-local, and typically provided by language servers. Next edit suggestions are:
-- **Semantically-driven**: Based on understanding intent, not just syntax
-- **Multi-location**: Can suggest edits anywhere in the codebase
-- **Context-aware**: Consider recent edits, not just current cursor position
-- **AI-powered**: Leverage LLM capabilities for pattern recognition
+| Aspect | LSP Completions | ACP Edit Suggestions |
+|--------|-----------------|----------------------|
+| Scope | Current cursor position | Anywhere in codebase |
+| Trigger | Typing specific characters | Any context change |
+| Content | Token/snippet completion | Full edits, deletions, multi-file |
+| Intelligence | Syntax/type-driven | Semantic, intent-driven |
+| Navigation | No | Yes (cursor jumps) |
+| Streaming | No | Yes |
 
-The two are complementary. Clients can show LSP completions for immediate token completion and agent suggestions for higher-level edit predictions.
+The two are complementary. Clients show LSP completions for immediate token completion and agent suggestions for higher-level edit predictions.
+
+### Why include navigation suggestions?
+
+Cursor's research shows that predicting "where to edit next" is as valuable as predicting "what to edit." After completing a function, users often need to:
+- Jump to write a test
+- Navigate to update documentation
+- Move to similar code elsewhere
+
+Navigation suggestions reduce the cognitive load of figuring out where to go next.
+
+### How do chained suggestions (tab-tab-tab) work?
+
+When a suggestion has `hasFollowUp: true`, the agent signals that accepting it will likely produce another suggestion. After the client sends `suggestions/accept`, the agent can immediately send `suggestions/offer` with the next suggestion in the sequence.
+
+This creates a fluid flow where users can Tab through a series of related edits without waiting or requesting.
+
+### Why streaming for suggestions?
+
+Ghost text UX (showing suggested code inline as dimmed text) feels most responsive when text appears character-by-character. Without streaming:
+- Users see nothing, then suddenly a full suggestion
+- Perceived latency is the total generation time
+
+With streaming:
+- Users see suggestion building in real-time
+- Perceived latency is time-to-first-token
+- Users can start reading/evaluating immediately
+
+### How should clients handle partial acceptance?
+
+The protocol supports partial accept via `acceptedRange` and `acceptKind`:
+
+- **Word-by-word**: User presses Ctrl+Right to accept one word
+- **Line-by-line**: User presses a key to accept one line
+- **Custom range**: User selects specific portion to accept
+
+Clients should send partial accept notifications so agents can learn user preferences.
+
+### What about retention tracking?
+
+After a user accepts a suggestion, they might:
+- Keep it exactly as suggested
+- Modify it slightly
+- Delete it entirely
+
+Tracking this (via `suggestions/retained`) helps agents understand suggestion quality beyond simple accept rates. A suggestion accepted but immediately deleted is worse than one that's kept.
 
 ### Should this be part of ACP or a separate protocol?
 
 This belongs in ACP because:
-1. Suggestions benefit from session context (recent prompts, agent plans, tool history)
+1. Suggestions benefit from session context (prompts, plans, tool history)
 2. Accepting suggestions may trigger ACP tool calls
-3. Agent capabilities and permissions apply to suggestions
+3. Agent capabilities and permissions apply
 4. Unified protocol reduces integration complexity
-
-### Why not use `session/prompt` with a special flag?
-
-`session/prompt` is designed for conversational interactions with potentially long-running responses. Suggestions need:
-- Sub-second latency
-- Multiple concurrent requests
-- No conversation history pollution
-- Lightweight request/response semantics
-
-A dedicated subsystem better serves these requirements.
-
-### How should clients display suggestions?
-
-This RFD intentionally does not prescribe UI. Common patterns include:
-- Ghost text (inline preview of suggested edit)
-- Sidebar panels with suggestion lists
-- Floating suggestion widgets
-- Tab-completion style (single suggestion, Tab to accept)
-
-Clients should choose appropriate UI based on their design language and `SuggestionKind`.
-
-### What about multi-cursor and multi-file suggestions?
-
-The `TextEdit[]` array in suggestions supports both:
-- Multiple edits in one file (multi-cursor)
-- Edits across multiple files (via different `uri` values)
-
-Clients may choose to preview/apply these atomically or let users cherry-pick.
+5. Shares infrastructure (transports, auth, capabilities)
 
 ### How do agents decide what to suggest?
 
-This is implementation-specific. Agents might:
-- Use recent edit patterns to predict continuations
-- Analyze cursor context and incomplete code
-- Consider conversation history and stated user intent
-- Apply codebase-wide understanding for related edits
+Implementation-specific. Common approaches:
+- **Edit patterns**: Detect repetitive edits, suggest continuing the pattern
+- **Cursor context**: Analyze incomplete code at cursor position
+- **Conversation history**: Consider recent prompts and stated intent
+- **Codebase analysis**: Suggest related edits based on dependencies
+- **Error detection**: Suggest fixes for detected issues
 
-The protocol provides the communication mechanism; suggestion intelligence is the agent's responsibility.
+The protocol provides communication; suggestion intelligence is the agent's responsibility.
 
-### What alternative approaches did you consider, and why did you settle on this one?
+### What about multi-file and multi-cursor edits?
 
-1. **Extending `session/prompt`**: Rejected due to different latency requirements and avoiding history pollution.
+The `TextEdit[]` array supports:
+- **Multi-cursor**: Multiple edits in one file
+- **Multi-file**: Edits across different URIs
 
-2. **MCP-style resources**: Suggestions are ephemeral and context-dependent, not static resources.
+Clients may preview these atomically or let users cherry-pick.
 
-3. **Pure notification-based**: Rejected because request/response allows clients to control when they want suggestions.
+### How does invalidation work?
 
-4. **Client-side suggestion generation**: Would duplicate AI capabilities and miss agent context.
+Suggestions become stale when:
+- User continues typing (context changed)
+- Document version changes
+- TTL expires
+- Agent generates better suggestions
 
-The proposed hybrid approach (request-based + optional proactive) balances client control with agent intelligence.
+Agents send `suggestions/invalidate` to tell clients to discard stale suggestions. Clients can also self-invalidate based on `documentVersion` changes.
+
+### What alternative approaches did you consider?
+
+1. **Extending `session/prompt`**: Rejected—different latency requirements, avoid history pollution
+
+2. **MCP-style resources**: Suggestions are ephemeral and context-dependent, not static resources
+
+3. **Pure notification-based**: Rejected—request/response allows client control over when to request
+
+4. **Separate protocol**: Rejected—loses session context, duplicates infrastructure
+
+5. **Only edit suggestions (no navigation)**: Rejected—navigation is a key part of modern tab-completion UX
+
+### What about "Next Action Prediction" beyond edits?
+
+Cursor's vision includes predicting terminal commands, file operations, etc. This RFD focuses on edit and navigation suggestions as the core use case. Future RFDs could extend to:
+- Terminal command suggestions
+- File creation/deletion suggestions
+- Git operation suggestions
+
+The architecture supports extension via new `Suggestion` type variants.
 
 ## Revision history
 
 - 2025-12-09: Initial draft
+- 2025-12-09: Major revision based on industry research
+  - Added navigation suggestions (cursor jumps)
+  - Added streaming support for ghost text UX
+  - Added partial acceptance tracking
+  - Added retention tracking for learning
+  - Added suggestion invalidation
+  - Expanded EditContext with languageId, documentVersion, selectedText, recentFiles
+  - Added chained suggestions (hasFollowUp) for tab-tab-tab flow
+  - Added latency guidelines
+  - Comprehensive FAQ additions
 
