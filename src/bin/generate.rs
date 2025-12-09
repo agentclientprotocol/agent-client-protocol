@@ -875,6 +875,7 @@ starting with '$/' it is free to ignore the notification."
             }
         }
 
+        #[cfg(feature = "unstable_cancel_request")]
         fn protocol_method_doc(&self, method_name: &str) -> &String {
             match method_name {
                 "$/cancel_request" => self.protocol.get("CancelRequestNotification").unwrap(),
