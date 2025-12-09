@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.10.1](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.10.0...v0.10.1) - 2025-12-09
+
+### Added
+
+- *(unstable)* Draft implementation of `$/cancel_request` notification ([#303](https://github.com/agentclientprotocol/agent-client-protocol/pull/303))
+
+### Fixed
+
+- *(schema)* Add title field back ([#321](https://github.com/agentclientprotocol/agent-client-protocol/pull/321))
+
 ## [0.10.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.9.1...v0.10.0) - 2025-12-06
 
 This release mostly contains several nice quality-of-life improvements for the Rust version of the schema, as well as an unstable draft implementation of session/fork for people to start trying out.
