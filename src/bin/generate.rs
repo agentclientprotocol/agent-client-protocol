@@ -24,6 +24,7 @@ struct ClientOutgoingMessage(JsonRpcMessage<OutgoingMessage<ClientSide, AgentSid
 #[expect(dead_code)]
 #[derive(JsonSchema)]
 #[serde(untagged)]
+#[schemars(title = "Agent Client Protocol")]
 enum AcpTypes {
     AgentOutgoingMessage(AgentOutgoingMessage),
     ClientOutgoingMessage(ClientOutgoingMessage),
@@ -38,11 +39,7 @@ fn main() {
         .with_transform(bool_schemas);
 
     let generator = settings.into_generator();
-    let mut schema = generator.into_root_schema_for::<AcpTypes>();
-    {
-        let schema = schema.as_object_mut().unwrap();
-        schema.remove("title");
-    }
+    let schema = generator.into_root_schema_for::<AcpTypes>();
 
     // Convert to serde_json::Value for post-processing
     let schema_value = serde_json::to_value(&schema).unwrap();

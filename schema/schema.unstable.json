@@ -3286,5 +3286,6 @@
       "required": ["jsonrpc"],
       "type": "object"
     }
-  ]
+  ],
+  "title": "Agent Client Protocol"
 }
