@@ -24,8 +24,7 @@ Implement an **optional** `$/cancel_request` notification method (inspired by th
 
 The mechanism will be:
 
-- **Optional**: Declared through capabilities exchange during initialization
-- **Unavailable** for `initialize` request (which happens before capabilities exchange)
+- **Optional**: Not all implementations may support this feature, but it is recommended for those that do.
 - **Flexible**: Provides two response options when cancellation is received:
   1. An error response with the standard cancellation error code (-32800)
   2. A valid response with partial or cancelled data (when meaningful partial results exist)
@@ -48,26 +47,6 @@ In a future version, we could potentially deprecate the `session/cancel` notific
 
 ### Protocol Changes
 
-#### Capability Declaration
-
-Cancellation support must be declared during the capabilities exchange. Add new optional capability fields:
-
-```typescript
-interface CancellationCapabilities {}
-
-interface ClientCapabilities {
-  // existing capabilities...
-  cancellationCapabilities?: CancellationCapabilities;
-}
-
-interface AgentCapabilities {
-  // existing capabilities...
-  cancellationCapabilities?: CancellationCapabilities;
-}
-```
-
-Supplying `{}` will indicate that cancellation is supported, while following the same pattern elsewhere for allowing more granular capabilities in the future.
-
 #### Cancellation Method
 
 Add the `$/cancel_request` notification method to the JSON-RPC protocol:
@@ -83,21 +62,7 @@ interface CancelNotification {
 
 ### Cancellation Behavior
 
-#### Prerequisites
-
-- A party **MAY** declare `{ cancellationCapabilities: {} }` in their capabilities to handle `$/cancel_request` notifications for their requests
-- The other party can send `$/cancel_request` to cancel requests if the recipient declared support
-- Until capabilities are exchanged, **NO** requests can be cancelled
-- The `initialize` request **CANNOT** be cancelled as it occurs before capability exchange
-- Any requests after `initialize` (which performs capability negotiation) **CAN** be cancelled if the recipient declared support
-
-#### Responsibility for Support Checking
-
-The **calling party** (sender of `$/cancel_request`) **MUST**:
-
-- Check the recipient's capabilities before sending `$/cancel_request`
-- Only send `$/cancel_request` if the recipient declared `cancellationCapabilities: {}`
-- Not send `$/cancel_request` notifications to parties that don't support them
+Either party can send `$/cancel_request` to cancel requests. Notifications whose methods start with '$/' are messages which are protocol implementation dependent and might not be implementable in all clients or agents. For example if the implementation uses a single threaded synchronous programming language then there is little it can do to react to a `$/cancel_request` notification. If an agent or client receives notifications starting with '$/' it is free to ignore the notification.
 
 The **receiving party** is **NOT** required to:
 
@@ -106,14 +71,13 @@ The **receiving party** is **NOT** required to:
 
 #### Cancellation Processing
 
-When a `$/cancel_request` notification is received by a supporting implementation:
+When a `$/cancel_request` notification is received by a supporting implementation, it:
 
-1. MUST cancel the corresponding request activity and all nested activities
-2. MAY send any pending notifications.
-3. MUST send one of these responses for the original request:
-
-- Valid response with appropriate data (partial results or cancellation marker)
-- Error response with code `-32800` (Cancelled)
+- **MUST** cancel the corresponding request activity and all nested activities related to that request
+- **MAY** finish sending any pending notifications before responding
+- **MUST** send one of these responses for the original request:
+  - A valid response with appropriate data (such as partial results or cancellation marker)
+  - An error response with code [`-32800` (Request Cancelled)](./schema#errorcode)
 
 #### Internal Cancellation
 
@@ -225,38 +189,8 @@ When a request is cancelled, implementations should:
 
 This ensures complete cleanup and prevents resource leaks.
 
-### Is cancellation mandatory or optional?
-
-Cancellation support is **optional** in the current protocol version and declared through capabilities:
-
-- Implementations **MAY** support handling cancellation by declaring `cancellationCapabilities: {}`
-- If an implementation declares support, it **MUST** handle `$/cancel_request` notifications for its requests
-- If an implementation does not declare support, `$/cancel_request` notifications should be ignored
-- The other party can send `$/cancel_request` regardless of their own declared support
-- The `initialize` request **CANNOT** be cancelled regardless of capability support
-- Any requests after `initialize` **CAN** be cancelled if the recipient declared support
-
-When cancellation is supported:
-
-- Implementations **MUST** respond with either an error or valid response
-- Implementations **MAY** choose how quickly to honor cancellation requests
-- Implementations **MAY** return partial results instead of errors when appropriate
-
-Cancellation will remain optional as it might not be implementable in all clients or servers. For example if the implementation uses a single threaded synchronous programming language then there is little it can do to react to a `$/cancel_request` notification.
-
-### Example scenarios:
-
-1. **Client-to-Agent cancellation only**: Client declares support=false, Agent declares support=true
-   - Client can send `$/cancel_request` to cancel agent's requests
-   - Agent cannot send `$/cancel_request` to client (client will ignore)
-
-2. **Bidirectional cancellation**: Both declare support=true
-   - Both parties can cancel each other's requests
-
-3. **No cancellation**: Both declare support=false (or omit the capability)
-   - No `$/cancel_request` notifications are processed
-
 ## Revision history
 
 - 2025-11-13: Initial version converted from PR #183
 - 2025-12-05: Updated with current implementation.
+- 2025-12-09: Mirror LSP behavior.
