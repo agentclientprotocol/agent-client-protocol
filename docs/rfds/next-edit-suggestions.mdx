@@ -1,0 +1,370 @@
+---
+title: "Next Edit Suggestions"
+---
+
+- Author(s): [@scotteveritt](https://github.com/scotteveritt)
+- Champion: <!-- To be assigned -->
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+We propose adding support for **next edit suggestions** (also known as tab-completions or predictive edits) to ACP. This feature allows agents to proactively suggest edits the user might want to make next, based on recent changes, cursor context, and codebase understanding.
+
+Unlike traditional LSP completions (which suggest tokens at the cursor) or full agentic responses (which require explicit prompts), next edit suggestions occupy a middle ground: lightweight, contextual edit predictions that users can accept with a single keystroke.
+
+Key characteristics:
+- **Proactive**: Agent suggests edits without explicit user prompts
+- **Lightweight**: Quick, focused suggestions rather than full agentic workflows
+- **Contextual**: Based on recent edits, cursor position, and file state
+- **Non-blocking**: Suggestions are advisory and easily dismissable
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+Currently, ACP supports two primary interaction modes:
+
+1. **Reactive prompts**: Users explicitly send messages via `session/prompt`, and agents respond with tool calls, diffs, and content. This is powerful but requires user initiation.
+
+2. **Slash commands**: Users can invoke predefined commands, but these still require explicit user action.
+
+Neither mode supports the increasingly common UX pattern where AI assistants proactively suggest the "next edit" based on context. Modern AI-powered editors (Cursor, Copilot, Supermaven, etc.) have popularized this pattern:
+
+- After writing a function signature, suggest the implementation
+- After fixing a bug in one location, suggest the same fix in similar locations
+- After adding an import statement, suggest code that uses the import
+- After renaming a variable, suggest updating related documentation
+- After modifying a test, suggest updating the corresponding implementation
+
+**Problems with the status quo:**
+
+1. **No standardized mechanism**: Agents wanting to provide predictive suggestions must use proprietary extensions or work outside the protocol entirely.
+
+2. **Lost context opportunity**: Agents observe edits via file system events but cannot act on patterns they recognize without user prompting.
+
+3. **UX friction**: Users must context-switch from editing to prompting when the agent could anticipate their needs.
+
+4. **Inconsistent implementations**: Each agent/client pair implements this differently (if at all), fragmenting the ecosystem.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+We propose adding a new subsystem to ACP for next edit suggestions with the following components:
+
+### 1. Edit Context Notifications (Client → Agent)
+
+Clients notify agents about edit context changes:
+
+```typescript
+interface EditContext {
+  /** Active file URI */
+  uri: string;
+  /** Cursor position(s) in the active file */
+  selections: Selection[];
+  /** Recent edits made by the user (optional, for pattern detection) */
+  recentEdits?: RecentEdit[];
+  /** Visible range in the editor (optional) */
+  visibleRange?: Range;
+}
+
+interface RecentEdit {
+  uri: string;
+  range: Range;
+  newText: string;
+  timestamp: number;
+}
+```
+
+### 2. Suggestion Requests (Client → Agent)
+
+Clients can request suggestions for the current context:
+
+```typescript
+// Method: suggestions/request
+interface SuggestionsRequestParams {
+  /** Current edit context */
+  context: EditContext;
+  /** Maximum number of suggestions to return */
+  maxSuggestions?: number;
+  /** Timeout in milliseconds */
+  timeout?: number;
+}
+```
+
+### 3. Suggestion Responses (Agent → Client)
+
+Agents respond with zero or more edit suggestions:
+
+```typescript
+interface EditSuggestion {
+  /** Unique identifier for this suggestion */
+  id: string;
+  /** Human-readable label for the suggestion */
+  label: string;
+  /** Optional description explaining the suggestion */
+  description?: string;
+  /** The proposed edits */
+  edits: TextEdit[];
+  /** Confidence score (0.0 - 1.0) */
+  confidence?: number;
+  /** Category of suggestion for UI grouping */
+  kind?: SuggestionKind;
+}
+
+type SuggestionKind =
+  | "completion"      // Complete partial code
+  | "continuation"    // Continue a pattern
+  | "fix"             // Fix an issue
+  | "refactor"        // Improve existing code
+  | "related"         // Edit related code elsewhere
+  | "other";
+
+interface TextEdit {
+  uri: string;
+  range: Range;
+  newText: string;
+}
+```
+
+### 4. Suggestion Actions (Client → Agent)
+
+Clients notify agents when users interact with suggestions:
+
+```typescript
+// Method: suggestions/accept
+interface SuggestionsAcceptParams {
+  /** ID of the accepted suggestion */
+  suggestionId: string;
+}
+
+// Method: suggestions/reject
+interface SuggestionsRejectParams {
+  /** ID of the rejected suggestion */
+  suggestionId: string;
+  /** Optional reason for rejection */
+  reason?: "wrong" | "irrelevant" | "timing" | "other";
+}
+
+// Method: suggestions/dismiss
+interface SuggestionsDismissParams {
+  /** IDs of dismissed suggestions (e.g., user moved on) */
+  suggestionIds: string[];
+}
+```
+
+### 5. Proactive Suggestions (Agent → Client)
+
+Optionally, agents can push suggestions without explicit requests:
+
+```typescript
+// Notification: suggestions/offer
+interface SuggestionsOfferParams {
+  /** The suggestions being offered */
+  suggestions: EditSuggestion[];
+  /** Context these suggestions apply to */
+  context: EditContext;
+  /** TTL in milliseconds before suggestions expire */
+  ttl?: number;
+}
+```
+
+## Shiny future
+
+> How will things play out once this feature exists?
+
+Once next edit suggestions are part of ACP:
+
+1. **Seamless editing flow**: Users can code with an AI partner that anticipates their needs. After making an edit, relevant follow-up suggestions appear naturally, accepted with Tab or a click.
+
+2. **Pattern-aware assistance**: Agents can detect repetitive edits (like fixing the same issue in multiple files) and proactively suggest completing the pattern.
+
+3. **Cross-file intelligence**: Unlike LSP completions confined to the current file, agent suggestions can span the codebase - updating tests when implementations change, keeping documentation in sync, etc.
+
+4. **Learning from feedback**: The accept/reject/dismiss feedback loop allows agents to improve suggestion quality over time, learning user preferences and coding patterns.
+
+5. **Standardized UX**: Clients can implement consistent suggestion UI knowing all ACP-compatible agents speak the same language.
+
+6. **Composable with existing features**: Suggestions can reference agent plans, integrate with session modes, and respect permission models already in ACP.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+### Capability Advertisement
+
+Agents advertise suggestion support in initialization:
+
+```json
+{
+  "capabilities": {
+    "suggestions": {
+      "contextNotifications": true,
+      "proactiveOffers": true,
+      "maxConcurrentRequests": 3,
+      "supportedKinds": ["completion", "continuation", "fix", "refactor", "related"]
+    }
+  }
+}
+```
+
+Clients advertise their support:
+
+```json
+{
+  "capabilities": {
+    "suggestions": {
+      "acceptsProactiveOffers": true,
+      "maxDisplayedSuggestions": 5
+    }
+  }
+}
+```
+
+### Protocol Flow
+
+**Request-based flow:**
+
+```
+Client                              Agent
+  |                                   |
+  |--[editContext/update]------------>|  (cursor moved, file changed)
+  |                                   |
+  |--[suggestions/request]----------->|  (client wants suggestions)
+  |                                   |
+  |<-[suggestions/request response]---|  (agent returns suggestions)
+  |                                   |
+  |--[suggestions/accept]------------>|  (user accepted suggestion)
+  |                                   |
+```
+
+**Proactive flow (optional):**
+
+```
+Client                              Agent
+  |                                   |
+  |--[editContext/update]------------>|  (user made an edit)
+  |                                   |
+  |<-[suggestions/offer]--------------|  (agent proactively suggests)
+  |                                   |
+  |--[suggestions/dismiss]----------->|  (user ignored/moved on)
+  |                                   |
+```
+
+### Debouncing and Rate Limiting
+
+To prevent overwhelming the agent or client:
+
+1. Clients SHOULD debounce `editContext/update` notifications (recommended: 100-300ms)
+2. Clients SHOULD NOT send `suggestions/request` while a previous request is pending
+3. Agents SHOULD respect the `timeout` parameter and return partial results if needed
+4. Proactive `suggestions/offer` notifications SHOULD be rate-limited by agents
+
+### Integration with Existing Features
+
+**Session Modes**: Suggestions can be mode-aware. An agent in "architect" mode might suggest documentation edits, while "code" mode suggests implementations.
+
+**Tool Calls**: Accepting a complex suggestion could trigger a tool call flow for edits requiring additional context or confirmation.
+
+**Permissions**: Suggestions are advisory; actual edits still go through normal permission flows when applied.
+
+### Implementation Phases
+
+**Phase 1 - Core Protocol (Draft)**
+- Define schema types for suggestions, context, and actions
+- Implement `suggestions/request` and response
+- Implement `suggestions/accept`, `suggestions/reject`, `suggestions/dismiss`
+- Add capability advertisement
+
+**Phase 2 - Context Notifications (Draft)**
+- Add `editContext/update` notification
+- Define debouncing recommendations
+- Implement in reference SDKs
+
+**Phase 3 - Proactive Suggestions (Preview)**
+- Add `suggestions/offer` notification
+- Define TTL and expiration semantics
+- Implement rate limiting guidelines
+
+**Phase 4 - Refinements (Preview → Completed)**
+- Gather feedback from implementations
+- Refine types based on real-world usage
+- Stabilize and document best practices
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### How does this differ from LSP completions?
+
+LSP completions are syntax-driven, cursor-local, and typically provided by language servers. Next edit suggestions are:
+- **Semantically-driven**: Based on understanding intent, not just syntax
+- **Multi-location**: Can suggest edits anywhere in the codebase
+- **Context-aware**: Consider recent edits, not just current cursor position
+- **AI-powered**: Leverage LLM capabilities for pattern recognition
+
+The two are complementary. Clients can show LSP completions for immediate token completion and agent suggestions for higher-level edit predictions.
+
+### Should this be part of ACP or a separate protocol?
+
+This belongs in ACP because:
+1. Suggestions benefit from session context (recent prompts, agent plans, tool history)
+2. Accepting suggestions may trigger ACP tool calls
+3. Agent capabilities and permissions apply to suggestions
+4. Unified protocol reduces integration complexity
+
+### Why not use `session/prompt` with a special flag?
+
+`session/prompt` is designed for conversational interactions with potentially long-running responses. Suggestions need:
+- Sub-second latency
+- Multiple concurrent requests
+- No conversation history pollution
+- Lightweight request/response semantics
+
+A dedicated subsystem better serves these requirements.
+
+### How should clients display suggestions?
+
+This RFD intentionally does not prescribe UI. Common patterns include:
+- Ghost text (inline preview of suggested edit)
+- Sidebar panels with suggestion lists
+- Floating suggestion widgets
+- Tab-completion style (single suggestion, Tab to accept)
+
+Clients should choose appropriate UI based on their design language and `SuggestionKind`.
+
+### What about multi-cursor and multi-file suggestions?
+
+The `TextEdit[]` array in suggestions supports both:
+- Multiple edits in one file (multi-cursor)
+- Edits across multiple files (via different `uri` values)
+
+Clients may choose to preview/apply these atomically or let users cherry-pick.
+
+### How do agents decide what to suggest?
+
+This is implementation-specific. Agents might:
+- Use recent edit patterns to predict continuations
+- Analyze cursor context and incomplete code
+- Consider conversation history and stated user intent
+- Apply codebase-wide understanding for related edits
+
+The protocol provides the communication mechanism; suggestion intelligence is the agent's responsibility.
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+1. **Extending `session/prompt`**: Rejected due to different latency requirements and avoiding history pollution.
+
+2. **MCP-style resources**: Suggestions are ephemeral and context-dependent, not static resources.
+
+3. **Pure notification-based**: Rejected because request/response allows clients to control when they want suggestions.
+
+4. **Client-side suggestion generation**: Would duplicate AI capabilities and miss agent context.
+
+The proposed hybrid approach (request-based + optional proactive) balances client control with agent intelligence.
+
+## Revision history
+
+- 2025-12-09: Initial draft
+
