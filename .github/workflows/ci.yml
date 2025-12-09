@@ -49,7 +49,7 @@ jobs:
           config: ./typos.toml
 
       - name: Lint
-        run: cargo clippy
+        run: cargo clippy --all-features
 
       - name: Build
         run: cargo build --all-targets --all-features

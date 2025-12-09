@@ -2,6 +2,8 @@ use agent_client_protocol_schema::{
     AGENT_METHOD_NAMES, AgentSide, CLIENT_METHOD_NAMES, ClientSide, JsonRpcMessage,
     OutgoingMessage, ProtocolVersion,
 };
+#[cfg(feature = "unstable_cancel_request")]
+use agent_client_protocol_schema::{PROTOCOL_LEVEL_METHOD_NAMES, ProtocolLevelNotification};
 use schemars::{
     JsonSchema,
     generate::SchemaSettings,
@@ -26,8 +28,10 @@ struct ClientOutgoingMessage(JsonRpcMessage<OutgoingMessage<ClientSide, AgentSid
 #[serde(untagged)]
 #[schemars(title = "Agent Client Protocol")]
 enum AcpTypes {
-    AgentOutgoingMessage(AgentOutgoingMessage),
-    ClientOutgoingMessage(ClientOutgoingMessage),
+    Agent(AgentOutgoingMessage),
+    Client(ClientOutgoingMessage),
+    #[cfg(feature = "unstable_cancel_request")]
+    ProtocolLevel(ProtocolLevelNotification),
 }
 
 fn main() {
@@ -63,11 +67,15 @@ fn main() {
     .expect("Failed to write {schema_file}");
 
     // Create a combined metadata object
-    let metadata = serde_json::json!({
+    let mut metadata = serde_json::json!({
         "version": ProtocolVersion::LATEST,
         "agentMethods": AGENT_METHOD_NAMES,
         "clientMethods": CLIENT_METHOD_NAMES,
     });
+    #[cfg(feature = "unstable_cancel_request")]
+    {
+        metadata["protocolMethods"] = serde_json::json!(PROTOCOL_LEVEL_METHOD_NAMES);
+    }
 
     let meta_file = if cfg!(feature = "unstable") {
         "meta.unstable.json"
@@ -136,6 +144,7 @@ mod markdown_generator {
 
             let mut agent_types: BTreeMap<String, Vec<(String, Value)>> = BTreeMap::new();
             let mut client_types: BTreeMap<String, Vec<(String, Value)>> = BTreeMap::new();
+            let mut protocol_types: BTreeMap<String, Vec<(String, Value)>> = BTreeMap::new();
             let mut referenced_types: Vec<(String, Value)> = Vec::new();
 
             for (name, def) in &self.definitions {
@@ -150,18 +159,17 @@ mod markdown_generator {
                 if let Some(side) = def.get("x-side").and_then(|v| v.as_str()) {
                     let method = def.get("x-method").unwrap().as_str().unwrap();
 
-                    if let "agent" | "all" = side {
-                        agent_types
-                            .entry(method.to_string())
-                            .or_default()
-                            .push((name.clone(), def.clone()));
-                    }
-                    if let "client" | "all" = side {
-                        client_types
-                            .entry(method.to_string())
-                            .or_default()
-                            .push((name.clone(), def.clone()));
-                    }
+                    let types = match side {
+                        "agent" => &mut agent_types,
+                        "client" => &mut client_types,
+                        "protocol" => &mut protocol_types,
+                        _ => unimplemented!("Unexpected side {side}"),
+                    };
+
+                    types
+                        .entry(method.to_string())
+                        .or_default()
+                        .push((name.clone(), def.clone()));
                 } else {
                     referenced_types.push((name.clone(), def.clone()));
                 }
@@ -199,6 +207,27 @@ and control access to resources."
 
             for (method, types) in client_types {
                 self.generate_method(&method, side_docs.client_method_doc(&method), types);
+            }
+            #[cfg(feature = "unstable_cancel_request")]
+            {
+                writeln!(&mut self.output, "## Protocol Level").unwrap();
+                writeln!(&mut self.output).unwrap();
+                writeln!(
+            &mut self.output,
+            "Defines the interface that ACP-compliant agents and clients must both implement.
+
+Notifications whose methods start with '$/' are messages which are protocol
+implementation dependent and might not be implementable in all clients or
+agents. For example if the implementation uses a single threaded synchronous
+programming language then there is little it can do to react to a
+`$/cancel_request` notification. If an agent or client receives notifications
+starting with '$/' it is free to ignore the notification."
+        )
+                .unwrap();
+
+                for (method, types) in protocol_types {
+                    self.generate_method(&method, side_docs.protocol_method_doc(&method), types);
+                }
             }
 
             referenced_types.sort_by_key(|(name, _)| name.clone());
@@ -801,25 +830,26 @@ and control access to resources."
         }
     }
 
+    #[derive(Default)]
     struct SideDocs {
-        agent_methods: HashMap<String, String>,
-        client_methods: HashMap<String, String>,
+        agent: HashMap<String, String>,
+        client: HashMap<String, String>,
+        protocol: HashMap<String, String>,
     }
 
     impl SideDocs {
         fn agent_method_doc(&self, method_name: &str) -> &String {
             match method_name {
-                "initialize" => self.agent_methods.get("InitializeRequest").unwrap(),
-                "authenticate" => self.agent_methods.get("AuthenticateRequest").unwrap(),
-                "session/new" => self.agent_methods.get("NewSessionRequest").unwrap(),
-                "session/load" => self.agent_methods.get("LoadSessionRequest").unwrap(),
-                "session/list" => self.agent_methods.get("ListSessionsRequest").unwrap(),
-                "session/fork" => self.agent_methods.get("ForkSessionRequest").unwrap(),
-                "session/set_mode" => self.agent_methods.get("SetSessionModeRequest").unwrap(),
-                "session/prompt" => self.agent_methods.get("PromptRequest").unwrap(),
-                "session/cancel" => self.agent_methods.get("CancelNotification").unwrap(),
-                "session/set_model" => self.agent_methods.get("SetSessionModelRequest").unwrap(),
-                "$/cancel_request" => self.agent_methods.get("CancelRequestNotification").unwrap(),
+                "initialize" => self.agent.get("InitializeRequest").unwrap(),
+                "authenticate" => self.agent.get("AuthenticateRequest").unwrap(),
+                "session/new" => self.agent.get("NewSessionRequest").unwrap(),
+                "session/load" => self.agent.get("LoadSessionRequest").unwrap(),
+                "session/list" => self.agent.get("ListSessionsRequest").unwrap(),
+                "session/fork" => self.agent.get("ForkSessionRequest").unwrap(),
+                "session/set_mode" => self.agent.get("SetSessionModeRequest").unwrap(),
+                "session/prompt" => self.agent.get("PromptRequest").unwrap(),
+                "session/cancel" => self.agent.get("CancelNotification").unwrap(),
+                "session/set_model" => self.agent.get("SetSessionModelRequest").unwrap(),
                 _ => panic!("Introduced a method? Add it here :)"),
             }
         }
@@ -827,26 +857,23 @@ and control access to resources."
         fn client_method_doc(&self, method_name: &str) -> &String {
             match method_name {
                 "session/request_permission" => {
-                    self.client_methods.get("RequestPermissionRequest").unwrap()
+                    self.client.get("RequestPermissionRequest").unwrap()
                 }
-                "fs/write_text_file" => self.client_methods.get("WriteTextFileRequest").unwrap(),
-                "fs/read_text_file" => self.client_methods.get("ReadTextFileRequest").unwrap(),
-                "session/update" => self.client_methods.get("SessionNotification").unwrap(),
-                "terminal/create" => self.client_methods.get("CreateTerminalRequest").unwrap(),
-                "terminal/output" => self.client_methods.get("TerminalOutputRequest").unwrap(),
-                "terminal/release" => self.client_methods.get("ReleaseTerminalRequest").unwrap(),
-                "terminal/wait_for_exit" => self
-                    .client_methods
-                    .get("WaitForTerminalExitRequest")
-                    .unwrap(),
-                "terminal/kill" => self
-                    .client_methods
-                    .get("KillTerminalCommandRequest")
-                    .unwrap(),
-                "$/cancel_request" => self
-                    .client_methods
-                    .get("CancelRequestNotification")
-                    .unwrap(),
+                "fs/write_text_file" => self.client.get("WriteTextFileRequest").unwrap(),
+                "fs/read_text_file" => self.client.get("ReadTextFileRequest").unwrap(),
+                "session/update" => self.client.get("SessionNotification").unwrap(),
+                "terminal/create" => self.client.get("CreateTerminalRequest").unwrap(),
+                "terminal/output" => self.client.get("TerminalOutputRequest").unwrap(),
+                "terminal/release" => self.client.get("ReleaseTerminalRequest").unwrap(),
+                "terminal/wait_for_exit" => self.client.get("WaitForTerminalExitRequest").unwrap(),
+                "terminal/kill" => self.client.get("KillTerminalCommandRequest").unwrap(),
+                _ => panic!("Introduced a method? Add it here :)"),
+            }
+        }
+
+        fn protocol_method_doc(&self, method_name: &str) -> &String {
+            match method_name {
+                "$/cancel_request" => self.protocol.get("CancelRequestNotification").unwrap(),
                 _ => panic!("Introduced a method? Add it here :)"),
             }
         }
@@ -880,10 +907,7 @@ and control access to resources."
         let json_content = fs::read_to_string(json_path).unwrap();
         let doc: Value = serde_json::from_str(&json_content).unwrap();
 
-        let mut side_docs = SideDocs {
-            agent_methods: HashMap::new(),
-            client_methods: HashMap::new(),
-        };
+        let mut side_docs = SideDocs::default();
 
         if let Some(index) = doc["index"].as_object() {
             for (_, item) in index {
@@ -894,7 +918,7 @@ and control access to resources."
                         if let Some(variant) = doc["index"][variant_id.to_string()].as_object()
                             && let Some(name) = variant["name"].as_str()
                         {
-                            side_docs.agent_methods.insert(
+                            side_docs.agent.insert(
                                 name.to_string(),
                                 variant["docs"].as_str().unwrap_or_default().to_string(),
                             );
@@ -909,7 +933,7 @@ and control access to resources."
                         if let Some(variant) = doc["index"][variant_id.to_string()].as_object()
                             && let Some(name) = variant["name"].as_str()
                         {
-                            side_docs.agent_methods.insert(
+                            side_docs.agent.insert(
                                 name.to_string(),
                                 variant["docs"].as_str().unwrap_or_default().to_string(),
                             );
@@ -924,7 +948,7 @@ and control access to resources."
                         if let Some(variant) = doc["index"][variant_id.to_string()].as_object()
                             && let Some(name) = variant["name"].as_str()
                         {
-                            side_docs.client_methods.insert(
+                            side_docs.client.insert(
                                 name.to_string(),
                                 variant["docs"].as_str().unwrap_or_default().to_string(),
                             );
@@ -939,7 +963,22 @@ and control access to resources."
                         if let Some(variant) = doc["index"][variant_id.to_string()].as_object()
                             && let Some(name) = variant["name"].as_str()
                         {
-                            side_docs.client_methods.insert(
+                            side_docs.client.insert(
+                                name.to_string(),
+                                variant["docs"].as_str().unwrap_or_default().to_string(),
+                            );
+                        }
+                    }
+                }
+
+                if item["name"].as_str() == Some("ProtocolLevelNotification")
+                    && let Some(variants) = item["inner"]["enum"]["variants"].as_array()
+                {
+                    for variant_id in variants {
+                        if let Some(variant) = doc["index"][variant_id.to_string()].as_object()
+                            && let Some(name) = variant["name"].as_str()
+                        {
+                            side_docs.protocol.insert(
                                 name.to_string(),
                                 variant["docs"].as_str().unwrap_or_default().to_string(),
                             );

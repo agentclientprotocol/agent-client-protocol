@@ -1,7 +1,6 @@
 {
   "agentMethods": {
     "authenticate": "authenticate",
-    "cancel_request": "$/cancel_request",
     "initialize": "initialize",
     "session_cancel": "session/cancel",
     "session_fork": "session/fork",
@@ -13,7 +12,6 @@
     "session_set_model": "session/set_model"
   },
   "clientMethods": {
-    "cancel_request": "$/cancel_request",
     "fs_read_text_file": "fs/read_text_file",
     "fs_write_text_file": "fs/write_text_file",
     "session_request_permission": "session/request_permission",
@@ -23,6 +21,9 @@
     "terminal_output": "terminal/output",
     "terminal_release": "terminal/release",
     "terminal_wait_for_exit": "terminal/wait_for_exit"
+  },
+  "protocolMethods": {
+    "cancel_request": "$/cancel_request"
   },
   "version": 1
 }

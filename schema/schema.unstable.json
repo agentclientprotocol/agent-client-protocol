@@ -8,17 +8,6 @@
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
         },
-        "cancellationCapabilities": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/CancellationCapabilities"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapabilities related to cancellation."
-        },
         "loadSession": {
           "default": false,
           "description": "Whether the agent supports `session/load`.",
@@ -76,14 +65,6 @@
                     }
                   ],
                   "description": "Handles session update notifications from the agent.\n\nThis is a notification endpoint (no response expected) that receives\nreal-time updates about session progress, including message chunks,\ntool calls, and execution plans.\n\nNote: Clients SHOULD continue accepting tool call updates even after\nsending a `session/cancel` notification, as the agent may send final\nupdates before responding with the cancelled stop reason.\n\nSee protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-turn#3-agent-reports-output)"
-                },
-                {
-                  "allOf": [
-                    {
-                      "$ref": "#/$defs/CancelRequestNotification"
-                    }
-                  ],
-                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCancels an ongoing request.\n\nThis is a notification sent by the agent to cancel any ongoing request.\n\nUpon receiving this notification, the Client:\n1. MUST cancel the corresponding request activity and all nested activities\n2. MAY send any pending notifications.\n3. MUST send one of these responses for the original request:\n - Valid response with appropriate data (partial results or cancellation marker)\n - Error response with code `-32800` (Cancelled)\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/cancellation)"
                 },
                 {
                   "allOf": [
@@ -497,18 +478,7 @@
       "required": ["requestId"],
       "type": "object",
       "x-method": "$/cancel_request",
-      "x-side": "all"
-    },
-    "CancellationCapabilities": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapabilities related to cancellation.\n\nBy supplying `{}` it means that general request cancellation is supported.\n\nFurther capabilities can be added in the future if other types of cancellation is required in the protocol.",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"]
-        }
-      },
-      "type": "object"
+      "x-side": "protocol"
     },
     "ClientCapabilities": {
       "description": "Capabilities supported by the client.\n\nAdvertised during initialization to inform the agent about\navailable features and methods.\n\nSee protocol docs: [Client Capabilities](https://agentclientprotocol.com/protocol/initialization#client-capabilities)",
@@ -517,17 +487,6 @@
           "additionalProperties": true,
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
-        },
-        "cancellationCapabilities": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/CancellationCapabilities"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapabilities related to cancellation."
         },
         "fs": {
           "allOf": [
@@ -565,14 +524,6 @@
                     }
                   ],
                   "description": "Cancels ongoing operations for a session.\n\nThis is a notification sent by the client to cancel an ongoing prompt turn.\n\nUpon receiving this notification, the Agent SHOULD:\n- Stop all language model requests as soon as possible\n- Abort all tool call invocations in progress\n- Send any pending `session/update` notifications\n- Respond to the original `session/prompt` request with `StopReason::Cancelled`\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-turn#cancellation)"
-                },
-                {
-                  "allOf": [
-                    {
-                      "$ref": "#/$defs/CancelRequestNotification"
-                    }
-                  ],
-                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCancels an ongoing request.\n\nThis is a notification sent by the client to cancel any ongoing request.\n\nUpon receiving this notification, the Agent:\n1. MUST cancel the corresponding request activity and all nested activities\n2. MAY send any pending notifications.\n3. MUST send one of these responses for the original request:\n - Valid response with appropriate data (partial results or cancellation marker)\n - Error response with code `-32800` (Cancelled)\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/cancellation)"
                 },
                 {
                   "allOf": [
@@ -3362,6 +3313,19 @@
       },
       "required": ["jsonrpc"],
       "type": "object"
+    },
+    {
+      "anyOf": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/CancelRequestNotification"
+            }
+          ],
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or\nchanged at any point.\n\nCancels an ongoing request.\n\nThis is a notification sent by the the side that sent a request to cancel that request.\n\nUpon receiving this notification, the receiver:\n\n1. MUST cancel the corresponding request activity and all nested activities\n2. MAY send any pending notifications.\n3. MUST send one of these responses for the original request:\n  - Valid response with appropriate data (partial results or cancellation marker)\n  - Error response with code `-32800` (Cancelled)\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/cancellation)"
+        }
+      ],
+      "description": "General protocol-level notifications that all sides are expected to\nimplement.\n\nNotifications whose methods start with '$/' are messages which\nare protocol implementation dependent and might not be implementable in all\nclients or agents. For example if the implementation uses a single threaded\nsynchronous programming language then there is little it can do to react to\na `$/cancel_request` notification. If an agent or client receives\nnotifications starting with '$/' it is free to ignore the notification.\n\nNotifications do not expect a response."
     }
   ],
   "title": "Agent Client Protocol"
