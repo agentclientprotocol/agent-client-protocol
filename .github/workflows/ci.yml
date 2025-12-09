@@ -56,3 +56,8 @@ jobs:
 
       - name: Run tests
         run: cargo test --all-features
+
+      - name: Check generated files are up to date
+        run: |
+          npm run generate
+          git diff --exit-code || (echo "Generated files are out of date. Run 'npm run generate' and commit the changes." && exit 1)
