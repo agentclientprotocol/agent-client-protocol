@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{Meta, RequestId};
 
-pub(crate) const REQUEST_CANCEL_METHOD_NAME: &str = "request/cancel";
+pub(crate) const CANCEL_REQUEST_METHOD_NAME: &str = "$/cancel_request";
 
 /// **UNSTABLE**
 ///
@@ -14,7 +14,7 @@ pub(crate) const REQUEST_CANCEL_METHOD_NAME: &str = "request/cancel";
 /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/cancellation)
 #[cfg(feature = "unstable_cancel_request")]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "all", "x-method" = REQUEST_CANCEL_METHOD_NAME))]
+#[schemars(extend("x-side" = "all", "x-method" = CANCEL_REQUEST_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct CancelRequestNotification {

@@ -10,7 +10,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "unstable_cancel_request")]
-use crate::{CancelRequestNotification, CancellationCapabilities, REQUEST_CANCEL_METHOD_NAME};
+use crate::{CANCEL_REQUEST_METHOD_NAME, CancelRequestNotification, CancellationCapabilities};
 use crate::{
     ContentBlock, ExtNotification, ExtRequest, ExtResponse, IntoOption, Meta, Plan, SessionId,
     SessionModeId, ToolCall, ToolCallUpdate,
@@ -1398,7 +1398,7 @@ pub const CLIENT_METHOD_NAMES: ClientMethodNames = ClientMethodNames {
     terminal_wait_for_exit: TERMINAL_WAIT_FOR_EXIT_METHOD_NAME,
     terminal_kill: TERMINAL_KILL_METHOD_NAME,
     #[cfg(feature = "unstable_cancel_request")]
-    cancel_request: REQUEST_CANCEL_METHOD_NAME,
+    cancel_request: CANCEL_REQUEST_METHOD_NAME,
 };
 
 /// Notification name for session updates.

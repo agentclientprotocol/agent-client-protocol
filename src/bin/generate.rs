@@ -819,7 +819,7 @@ and control access to resources."
                 "session/prompt" => self.agent_methods.get("PromptRequest").unwrap(),
                 "session/cancel" => self.agent_methods.get("CancelNotification").unwrap(),
                 "session/set_model" => self.agent_methods.get("SetSessionModelRequest").unwrap(),
-                "request/cancel" => self.agent_methods.get("CancelRequestNotification").unwrap(),
+                "$/cancel_request" => self.agent_methods.get("CancelRequestNotification").unwrap(),
                 _ => panic!("Introduced a method? Add it here :)"),
             }
         }
@@ -843,7 +843,7 @@ and control access to resources."
                     .client_methods
                     .get("KillTerminalCommandRequest")
                     .unwrap(),
-                "request/cancel" => self
+                "$/cancel_request" => self
                     .client_methods
                     .get("CancelRequestNotification")
                     .unwrap(),

@@ -7,20 +7,20 @@ ACP uses JSON-RPC 2.0 for making requests and getting responses.
 
 The JSON-RPC specification doesn't define any standard mechanism for request cancellation and keeps it up to the implementation.
 
-## `request/cancel` Notification
+## `$/cancel_request` Notification
 
-In order to provide a consistent approach to cancellation, ACP defines a `request/cancel` notification that can be sent to cancel requests if the recipient declared support.
+In order to provide a consistent approach to cancellation, ACP defines a `$/cancel_request` notification that can be sent to cancel requests if the recipient declared support.
 
-- A party **MAY** declare `{ cancellationCapabilities: {} }` in their capabilities to handle `request/cancel` notifications for their requests.
-- If an implementation declares support, it **MUST** handle `request/cancel` notifications for its requests.
-- The other party **MAY** send `request/cancel` to cancel requests if the recipient declared support.
-- If an implementation does not declare support, `request/cancel` notifications **SHOULD** be ignored.
-- Either party **MAY** send `request/cancel` regardless of if they declare support themselves, as long as the recipient supports cancellation.
+- A party **MAY** declare `{ cancellationCapabilities: {} }` in their capabilities to handle `$/cancel_request` notifications for their requests.
+- If an implementation declares support, it **MUST** handle `$/cancel_request` notifications for its requests.
+- The other party **MAY** send `$/cancel_request` to cancel requests if the recipient declared support.
+- If an implementation does not declare support, `$/cancel_request` notifications **SHOULD** be ignored.
+- Either party **MAY** send `$/cancel_request` regardless of if they declare support themselves, as long as the recipient supports cancellation.
 - Until capabilities are exchanged, requests **MUST NOT** be cancelled. The `initialize` request cannot be cancelled as it occurs before capability exchange.
 
-Cancellation will remain optional as it might not be implementable in all clients or servers. For example if the implementation uses a single threaded synchronous programming language then there is little it can do to react to a `request/cancel` notification.
+Cancellation will remain optional as it might not be implementable in all clients or servers. For example if the implementation uses a single threaded synchronous programming language then there is little it can do to react to a `$/cancel_request` notification.
 
-When a `request/cancel` notification is received by a supporting implementation, the implementation:
+When a `$/cancel_request` notification is received by a supporting implementation, the implementation:
 
 - **MUST** cancel the corresponding request activity and all nested activities
 - **MAY** choose how quickly to honor cancellation requests. For example, they may finish sending any pending notifications before responding
@@ -34,14 +34,14 @@ Cancellation **MAY** also be done explicitly on a per-feature basis within the p
 
 ## Internal Cancellation
 
-Requests can also be cancelled internally by the executing party without receiving `request/cancel`:
+Requests can also be cancelled internally by the executing party without receiving `$/cancel_request`:
 
 - **Client-side examples**: User closes IDE, switches to different project, file becomes unavailable
 - **Agent-side examples**: LLM context limit reached, internal timeout, resource constraints
 
 When internal cancellation occurs, the executing party **MUST**:
 
-- Send the same `-32800` (Cancelled) error response as if `request/cancel` was received
+- Send the same `-32800` (Cancelled) error response as if `$/cancel_request` was received
 - Ensure consistent behavior regardless of cancellation source
 
 ## Example: Cascading Cancellation Flow
@@ -63,8 +63,8 @@ sequenceDiagram
     Client->>Agent: session/cancel (sessionId)
 
     Note over Client,Agent: 4. Agent cascades cancellation internally
-    Agent->>Client: request/cancel (id=2) [terminal request]
-    Agent->>Client: request/cancel (id=3) [permission request]
+    Agent->>Client: $/cancel_request (id=2) [terminal request]
+  Agent->>Client: $/cancel_request (id=3) [permission request]
 
     Note over Client,Agent: 5. Client confirms individual cancellations
     Client->>Agent: response to id=2 (error -32800 "Cancelled")

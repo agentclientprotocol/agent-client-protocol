@@ -10,7 +10,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "unstable_cancel_request")]
-use crate::{CancelRequestNotification, CancellationCapabilities, REQUEST_CANCEL_METHOD_NAME};
+use crate::{CANCEL_REQUEST_METHOD_NAME, CancelRequestNotification, CancellationCapabilities};
 use crate::{
     ClientCapabilities, ContentBlock, ExtNotification, ExtRequest, ExtResponse, IntoOption, Meta,
     ProtocolVersion, SessionId,
@@ -2089,7 +2089,7 @@ pub const AGENT_METHOD_NAMES: AgentMethodNames = AgentMethodNames {
     #[cfg(feature = "unstable_session_fork")]
     session_fork: SESSION_FORK_METHOD_NAME,
     #[cfg(feature = "unstable_cancel_request")]
-    cancel_request: REQUEST_CANCEL_METHOD_NAME,
+    cancel_request: CANCEL_REQUEST_METHOD_NAME,
 };
 
 /// Method name for the initialize request.

@@ -496,7 +496,7 @@
       },
       "required": ["requestId"],
       "type": "object",
-      "x-method": "request/cancel",
+      "x-method": "$/cancel_request",
       "x-side": "all"
     },
     "CancellationCapabilities": {
