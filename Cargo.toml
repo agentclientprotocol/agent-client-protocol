@@ -14,11 +14,12 @@ categories = ["development-tools", "api-bindings"]
 include = ["/src/**/*.rs", "/README.md", "/LICENSE", "/Cargo.toml"]
 
 [features]
-unstable = ["unstable_session_model", "unstable_session_list", "unstable_session_fork", "unstable_cancel_request"]
+unstable = ["unstable_session_model", "unstable_session_list", "unstable_session_fork", "unstable_session_resume", "unstable_cancel_request"]
 unstable_cancel_request = []
 unstable_session_model = []
 unstable_session_list = []
 unstable_session_fork = []
+unstable_session_resume = []
 
 [[bin]]
 name = "generate"

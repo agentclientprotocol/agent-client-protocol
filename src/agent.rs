@@ -732,6 +732,142 @@ impl ForkSessionResponse {
     }
 }
 
+// Resume session
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Request parameters for resuming an existing session.
+///
+/// Resumes an existing session without returning previous messages (unlike `session/load`).
+/// This is useful for agents that can resume sessions but don't implement full session loading.
+///
+/// Only available if the Agent supports the `session.resume` capability.
+#[cfg(feature = "unstable_session_resume")]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[schemars(extend("x-side" = "agent", "x-method" = SESSION_RESUME_METHOD_NAME))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct ResumeSessionRequest {
+    /// The ID of the session to resume.
+    pub session_id: SessionId,
+    /// The working directory for this session.
+    pub cwd: PathBuf,
+    /// List of MCP servers to connect to for this session.
+    pub mcp_servers: Vec<McpServer>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_resume")]
+impl ResumeSessionRequest {
+    pub fn new(session_id: impl Into<SessionId>, cwd: impl Into<PathBuf>) -> Self {
+        Self {
+            session_id: session_id.into(),
+            cwd: cwd.into(),
+            mcp_servers: vec![],
+            meta: None,
+        }
+    }
+
+    /// List of MCP servers to connect to for this session.
+    #[must_use]
+    pub fn mcp_servers(mut self, mcp_servers: Vec<McpServer>) -> Self {
+        self.mcp_servers = mcp_servers;
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Response from resuming an existing session.
+#[cfg(feature = "unstable_session_resume")]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[schemars(extend("x-side" = "agent", "x-method" = SESSION_RESUME_METHOD_NAME))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct ResumeSessionResponse {
+    /// Initial mode state if supported by the Agent
+    ///
+    /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub modes: Option<SessionModeState>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Initial model state if supported by the Agent
+    #[cfg(feature = "unstable_session_model")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub models: Option<SessionModelState>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_resume")]
+impl ResumeSessionResponse {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Initial mode state if supported by the Agent
+    ///
+    /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
+    #[must_use]
+    pub fn modes(mut self, modes: impl IntoOption<SessionModeState>) -> Self {
+        self.modes = modes.into_option();
+        self
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Initial model state if supported by the Agent
+    #[cfg(feature = "unstable_session_model")]
+    #[must_use]
+    pub fn models(mut self, models: impl IntoOption<SessionModelState>) -> Self {
+        self.models = models.into_option();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
 // List sessions
 
 /// **UNSTABLE**
@@ -1778,6 +1914,14 @@ pub struct SessionCapabilities {
     #[cfg(feature = "unstable_session_fork")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fork: Option<SessionForkCapabilities>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Whether the agent supports `session/resume`.
+    #[cfg(feature = "unstable_session_resume")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub resume: Option<SessionResumeCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -1806,6 +1950,14 @@ impl SessionCapabilities {
     #[must_use]
     pub fn fork(mut self, fork: impl IntoOption<SessionForkCapabilities>) -> Self {
         self.fork = fork.into_option();
+        self
+    }
+
+    #[cfg(feature = "unstable_session_resume")]
+    /// Whether the agent supports `session/resume`.
+    #[must_use]
+    pub fn resume(mut self, resume: impl IntoOption<SessionResumeCapabilities>) -> Self {
+        self.resume = resume.into_option();
         self
     }
 
@@ -1879,6 +2031,45 @@ pub struct SessionForkCapabilities {
 
 #[cfg(feature = "unstable_session_fork")]
 impl SessionForkCapabilities {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Capabilities for the `session/resume` method.
+///
+/// By supplying `{}` it means that the agent supports resuming of sessions.
+#[cfg(feature = "unstable_session_resume")]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct SessionResumeCapabilities {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_resume")]
+impl SessionResumeCapabilities {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -2058,6 +2249,9 @@ pub struct AgentMethodNames {
     /// Method for forking an existing session.
     #[cfg(feature = "unstable_session_fork")]
     pub session_fork: &'static str,
+    /// Method for resuming an existing session.
+    #[cfg(feature = "unstable_session_resume")]
+    pub session_resume: &'static str,
 }
 
 /// Constant containing all agent method names.
@@ -2075,6 +2269,8 @@ pub const AGENT_METHOD_NAMES: AgentMethodNames = AgentMethodNames {
     session_list: SESSION_LIST_METHOD_NAME,
     #[cfg(feature = "unstable_session_fork")]
     session_fork: SESSION_FORK_METHOD_NAME,
+    #[cfg(feature = "unstable_session_resume")]
+    session_resume: SESSION_RESUME_METHOD_NAME,
 };
 
 /// Method name for the initialize request.
@@ -2100,6 +2296,9 @@ pub(crate) const SESSION_LIST_METHOD_NAME: &str = "session/list";
 /// Method name for forking an existing session.
 #[cfg(feature = "unstable_session_fork")]
 pub(crate) const SESSION_FORK_METHOD_NAME: &str = "session/fork";
+/// Method name for resuming an existing session.
+#[cfg(feature = "unstable_session_resume")]
+pub(crate) const SESSION_RESUME_METHOD_NAME: &str = "session/resume";
 
 /// All possible requests that a client can send to an agent.
 ///
@@ -2181,6 +2380,18 @@ pub enum ClientRequest {
     /// original, allowing operations like generating summaries without affecting the
     /// original session's history.
     ForkSessionRequest(ForkSessionRequest),
+    #[cfg(feature = "unstable_session_resume")]
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Resumes an existing session without returning previous messages.
+    ///
+    /// This method is only available if the agent advertises the `session.resume` capability.
+    ///
+    /// The agent should resume the session context, allowing the conversation to continue
+    /// without replaying the message history (unlike `session/load`).
+    ResumeSessionRequest(ResumeSessionRequest),
     /// Sets the current mode for a session.
     ///
     /// Allows switching between different agent modes (e.g., "ask", "architect", "code")
@@ -2236,6 +2447,8 @@ impl ClientRequest {
             Self::ListSessionsRequest(_) => AGENT_METHOD_NAMES.session_list,
             #[cfg(feature = "unstable_session_fork")]
             Self::ForkSessionRequest(_) => AGENT_METHOD_NAMES.session_fork,
+            #[cfg(feature = "unstable_session_resume")]
+            Self::ResumeSessionRequest(_) => AGENT_METHOD_NAMES.session_resume,
             Self::SetSessionModeRequest(_) => AGENT_METHOD_NAMES.session_set_mode,
             Self::PromptRequest(_) => AGENT_METHOD_NAMES.session_prompt,
             #[cfg(feature = "unstable_session_model")]
@@ -2264,6 +2477,8 @@ pub enum AgentResponse {
     ListSessionsResponse(ListSessionsResponse),
     #[cfg(feature = "unstable_session_fork")]
     ForkSessionResponse(ForkSessionResponse),
+    #[cfg(feature = "unstable_session_resume")]
+    ResumeSessionResponse(#[serde(default)] ResumeSessionResponse),
     SetSessionModeResponse(#[serde(default)] SetSessionModeResponse),
     PromptResponse(PromptResponse),
     #[cfg(feature = "unstable_session_model")]
