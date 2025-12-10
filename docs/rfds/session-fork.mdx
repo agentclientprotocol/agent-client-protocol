@@ -46,7 +46,7 @@ We propose to add a new "session/fork" method. Agents must declare this option i
 available by returning `session: { fork : {} }` in its capabilities. The object is reserved
 to declare future capabilities, such as forking from a specific message, a tool call, or similar.
 
-Then the client would be able to request a fork of the current session:
+Then the client would be able to request a fork of the given session:
 
 ```json
 {
@@ -54,14 +54,19 @@ Then the client would be able to request a fork of the current session:
   "id": 1,
   "method": "session/fork",
   "params": {
-    "sessionId": "sess_789xyz"
+    "sessionId": "sess_789xyz",
+    "cwd": "...",
+    "mcpServers": [...]
   }
 }
 ```
 
-And the agent would respond with optional data such as config options, the same as `session/load`.
+The request accepts the same same options as `session/load`, such as `cwd` and `mcpServers`.
 
-A proof of concept is available here: https://github.com/zed-industries/claude-code-acp/pull/145
+Similarly, the agent would respond with optional data such as config options, the same as `session/load`.
+
+Agents may reply with an error if forking of that specific session or with the given options is not supported,
+for example if the agent does not support forking with a different working directory than the initial session.
 
 ## Frequently asked questions
 
@@ -74,6 +79,16 @@ For example, "session/new" has options such as capabilities and MCP which are no
 recommended to be set when forking, as the context being forked was built with other
 tools, and forking may accept a messageId for checkpoints.
 
+**Q: Should fork only accept the `sessionId` or also other options, similar to `session/load`?**
+
+Initially, we proposed to only accept the `sessionId`, but this would make it more difficult to
+allow forking of inactive sessions in agents like `claude-code-acp`, as Claude does not retain the
+configured MCP servers of a session. Limiting fork to only already active sessions would limit its usefulness.
+
+Moreover, allowing to pass different options also allows features like dynamically adding MCP servers
+to existing sessions to work by forking them with the new options, if the agent supports it. If it
+does not, the client can still show an appropriate error message.
+
 ### What alternative approaches did you consider, and why did you settle on this one?
 
 None. This proposal is inspired by the abilities exposed in Claude Agent SDK. It must be validated against other agents too.
@@ -82,3 +97,4 @@ None. This proposal is inspired by the abilities exposed in Claude Agent SDK. It
 
 - 2025-11-17: Mentioned capabilities format, updated FAQ.
 - 2025-11-20: Added request format and updated capabilities format.
+- 2025-12-10: Adjust fork options to align with `session/load`.
