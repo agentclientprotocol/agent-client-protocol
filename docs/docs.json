@@ -110,7 +110,8 @@
               "rfds/request-cancellation",
               "rfds/session-resume",
               "rfds/meta-propagation",
-              "rfds/session-info-update"
+              "rfds/session-info-update",
+              "rfds/agent-telemetry-export"
             ]
           },
           { "group": "Preview", "pages": [] },
