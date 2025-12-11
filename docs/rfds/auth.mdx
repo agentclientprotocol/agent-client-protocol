@@ -22,6 +22,7 @@ Agents have different ways of authenticating users: env vars with api keys, runn
 > What are you proposing to improve the situation?
 
 We can add different types of AuthMethods, so that clients can show some UI for them. For example, this auth method
+
 ```json
 {
   "id": "123",
@@ -31,6 +32,7 @@ We can add different types of AuthMethods, so that clients can show some UI for 
   "varName": "OPEN_AI_KEY"
 }
 ```
+
 would allow client to prompt user to enter a key, then client can provide this key to an agent via `OPEN_AI_KEY` env variable.
 
 ## Shiny future
@@ -55,7 +57,7 @@ A user can enter a key and a client will pass it to the agent as an env variable
   "name": "OpenAI api key",
   "description": "Provide your key",
   "type": "envVar",
-  "varName": "OPEN_AI_KEY" ,
+  "varName": "OPEN_AI_KEY",
   "link": "OPTIONAL link to a page where user can get their key"
 }
 ```
@@ -70,7 +72,7 @@ A user can enter a key and a client will pass it to the agent as a start paramet
   "name": "OpenAI api key",
   "description": "Provide your key",
   "type": "startParam",
-  "paramName": "OPEN_AI_KEY" ,
+  "paramName": "OPEN_AI_KEY",
   "link": "OPTIONAL link to a page where user can get their key"
 }
 ```
