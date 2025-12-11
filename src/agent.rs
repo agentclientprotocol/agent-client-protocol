@@ -2469,6 +2469,7 @@ impl ClientRequest {
 #[serde(untagged)]
 #[schemars(inline)]
 #[non_exhaustive]
+#[expect(clippy::large_enum_variant)]
 pub enum AgentResponse {
     InitializeResponse(InitializeResponse),
     AuthenticateResponse(#[serde(default)] AuthenticateResponse),
