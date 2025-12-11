@@ -1134,6 +1134,17 @@
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
         },
+        "cwd": {
+          "description": "The working directory for this session.",
+          "type": "string"
+        },
+        "mcpServers": {
+          "description": "List of MCP servers to connect to for this session.",
+          "items": {
+            "$ref": "#/$defs/McpServer"
+          },
+          "type": "array"
+        },
         "sessionId": {
           "allOf": [
             {
@@ -1143,7 +1154,7 @@
           "description": "The ID of the session to fork."
         }
       },
-      "required": ["sessionId"],
+      "required": ["sessionId", "cwd"],
       "type": "object",
       "x-method": "session/fork",
       "x-side": "agent"

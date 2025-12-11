@@ -236,6 +236,12 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
 </ResponseField>
+<ResponseField name="cwd" type={"string"} required>
+  The working directory for this session.
+</ResponseField>
+<ResponseField name="mcpServers" type={<><span><a href="#mcpserver">McpServer</a></span><span>[]</span></>} >
+  List of MCP servers to connect to for this session.
+</ResponseField>
 <ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
   The ID of the session to fork.
 </ResponseField>
