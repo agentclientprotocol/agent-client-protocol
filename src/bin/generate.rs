@@ -759,11 +759,8 @@ starting with '$/' it is free to ignore the notification."
                             other_type = Some(t);
                         }
                     }
-                    if has_null && other_type.is_some() {
-                        return format!(
-                            "<><span>{}</span><span> | null</span></>",
-                            other_type.unwrap()
-                        );
+                    if has_null && let Some(other_type) = other_type {
+                        return format!("<><span>{other_type}</span><span> | null</span></>");
                     }
                 }
                 return "union".to_string();
