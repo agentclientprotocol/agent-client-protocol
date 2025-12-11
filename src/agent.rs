@@ -755,6 +755,7 @@ pub struct ResumeSessionRequest {
     /// The working directory for this session.
     pub cwd: PathBuf,
     /// List of MCP servers to connect to for this session.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mcp_servers: Vec<McpServer>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
