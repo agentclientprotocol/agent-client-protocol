@@ -99,12 +99,14 @@ Environment variables must be set before launching the subprocess, but ACP capab
 Add a new protocol documentation page covering observability practices for ACP. This page will describe:
 
 **For Clients/Editors:**
+
 - Running an OTLP receiver to collect agent telemetry
 - Injecting `OTEL_EXPORTER_*` environment variables when launching agent subprocesses
 - Respecting user-configured `OTEL_*` variables (do not override if already set)
 - Forwarding telemetry to configured backends with client credentials
 
 **For Agent Authors:**
+
 - Using OpenTelemetry SDKs with standard auto-configuration
 - Recommended spans, metrics, and log patterns for agent operations
 - How telemetry flows when `OTEL_*` variables are present vs absent
@@ -153,6 +155,7 @@ This RFD focuses on the stdio transport where clients launch agents. For other t
 3. **File-based telemetry** - Rejected because it doesn't support real-time display and adds complexity
 
 The environment variable approach:
+
 - Uses existing standards (OTLP, OpenTelemetry SDK conventions)
 - Keeps telemetry out-of-band from ACP messages
 - Lets clients control where telemetry goes without exposing credentials
