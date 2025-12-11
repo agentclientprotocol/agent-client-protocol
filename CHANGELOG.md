@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.2](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.10.1...v0.10.2) - 2025-12-11
+
+### Added
+
+- *(unstable)* add cwd and mcp_servers to session/fork ([#333](https://github.com/agentclientprotocol/agent-client-protocol/pull/333))
+- *(unstable)* Draft implementation of session/resume ([#324](https://github.com/agentclientprotocol/agent-client-protocol/pull/324))
+
 ## [0.10.1](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.10.0...v0.10.1) - 2025-12-09
 
 ### Added
