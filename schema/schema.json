@@ -2067,6 +2067,25 @@
       "description": "A unique identifier for a conversation session between a client and agent.\n\nSessions maintain their own context, conversation history, and state,\nallowing multiple independent interactions with the same agent.\n\nSee protocol docs: [Session ID](https://agentclientprotocol.com/protocol/session-setup#session-id)",
       "type": "string"
     },
+    "SessionInfoUpdate": {
+      "description": "Update to session metadata. All fields are optional to support partial updates.\n\nAgents send this notification to update session information like title or custom metadata.\nThis allows clients to display dynamic session names and track session state changes.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "title": {
+          "description": "Human-readable title for the session. Set to null to clear.",
+          "type": ["string", "null"]
+        },
+        "updatedAt": {
+          "description": "ISO 8601 timestamp of last activity. Set to null to clear.",
+          "type": ["string", "null"]
+        }
+      },
+      "type": "object"
+    },
     "SessionMode": {
       "description": "A mode the agent can operate in.\n\nSee protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)",
       "properties": {
@@ -2277,6 +2296,22 @@
           "properties": {
             "sessionUpdate": {
               "const": "current_mode_update",
+              "type": "string"
+            }
+          },
+          "required": ["sessionUpdate"],
+          "type": "object"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionInfoUpdate"
+            }
+          ],
+          "description": "Session metadata has been updated (title, timestamps, custom metadata)",
+          "properties": {
+            "sessionUpdate": {
+              "const": "session_info_update",
               "type": "string"
             }
           },

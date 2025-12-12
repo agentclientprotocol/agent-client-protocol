@@ -90,6 +90,8 @@ pub enum SessionUpdate {
     ///
     /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
     CurrentModeUpdate(CurrentModeUpdate),
+    /// Session metadata has been updated (title, timestamps, custom metadata)
+    SessionInfoUpdate(SessionInfoUpdate),
 }
 
 /// The current mode of the session has changed
@@ -117,6 +119,61 @@ impl CurrentModeUpdate {
             current_mode_id: current_mode_id.into(),
             meta: None,
         }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// Update to session metadata. All fields are optional to support partial updates.
+///
+/// Agents send this notification to update session information like title or custom metadata.
+/// This allows clients to display dynamic session names and track session state changes.
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct SessionInfoUpdate {
+    /// Human-readable title for the session. Set to null to clear.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    /// ISO 8601 timestamp of last activity. Set to null to clear.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub updated_at: Option<String>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl SessionInfoUpdate {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Human-readable title for the session. Set to null to clear.
+    #[must_use]
+    pub fn title(mut self, title: impl IntoOption<String>) -> Self {
+        self.title = title.into_option();
+        self
+    }
+
+    /// ISO 8601 timestamp of last activity. Set to null to clear.
+    #[must_use]
+    pub fn updated_at(mut self, updated_at: impl IntoOption<String>) -> Self {
+        self.updated_at = updated_at.into_option();
+        self
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional

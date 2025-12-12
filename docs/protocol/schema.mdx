@@ -2421,6 +2421,32 @@ See protocol docs: [Session ID](https://agentclientprotocol.com/protocol/session
 
 **Type:** `string`
 
+## <span class="font-mono">SessionInfoUpdate</span>
+
+Update to session metadata. All fields are optional to support partial updates.
+
+Agents send this notification to update session information like title or custom metadata.
+This allows clients to display dynamic session names and track session state changes.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="title" type={"string | null"} >
+  Human-readable title for the session. Set to null to clear.
+</ResponseField>
+<ResponseField name="updatedAt" type={"string | null"} >
+  ISO 8601 timestamp of last activity. Set to null to clear.
+</ResponseField>
+
 ## <span class="font-mono">SessionMode</span>
 
 A mode the agent can operate in.
@@ -2707,6 +2733,31 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
   The ID of the current mode
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="session_info_update" type="object">
+Session metadata has been updated (title, timestamps, custom metadata)
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="sessionUpdate" type={"string"} required>
+</ResponseField>
+<ResponseField name="title" type={"string | null"} >
+  Human-readable title for the session. Set to null to clear.
+</ResponseField>
+<ResponseField name="updatedAt" type={"string | null"} >
+  ISO 8601 timestamp of last activity. Set to null to clear.
 </ResponseField>
 
 </Expandable>
