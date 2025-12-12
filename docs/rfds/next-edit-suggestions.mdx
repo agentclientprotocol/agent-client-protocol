@@ -20,7 +20,6 @@ Unlike traditional LSP completions (which suggest tokens at the cursor) or full 
 Key characteristics:
 - **Proactive**: Agent suggests without explicit user prompts
 - **Low-latency**: Sub-second responses (target: <500ms)
-- **Streaming**: Suggestions can stream token-by-token for ghost text UX
 - **Contextual**: Based on recent edits, cursor position, open files, and codebase understanding
 - **Chainable**: Accepting one suggestion can trigger the next (tab-tab-tab flow)
 - **Non-blocking**: Suggestions are advisory and easily dismissable
@@ -62,8 +61,6 @@ Common use cases these tools enable:
 
 4. **Inconsistent implementations**: Each agent/client pair implements this differently, fragmenting the ecosystem.
 
-5. **No streaming support**: Current ACP response patterns don't support the token-by-token streaming needed for ghost text UX.
-
 ## What we propose to do about it
 
 > What are you proposing to improve the situation?
@@ -82,17 +79,21 @@ interface EditContextDidChangeParams {
 }
 
 interface EditContext {
+  // Note: Only uri, documentVersion, and selections are required.
+  // All other fields are OPTIONAL and agents MAY ignore unsupported fields.
+  // Agents SHOULD advertise which context fields they utilize via capabilities.
+
   /** Active document URI */
   uri: string;
-
-  /** Language identifier (e.g., "typescript", "python") */
-  languageId: string;
 
   /** Document version for cache invalidation */
   documentVersion: number;
 
   /** Cursor position(s) in the active file */
   selections: Selection[];
+
+  /** Language identifier (e.g., "typescript", "python") */
+  languageId?: string;
 
   /** Currently selected text, if any */
   selectedText?: string;
@@ -105,6 +106,9 @@ interface EditContext {
 
   /** Recent edits made by the user (for pattern detection) */
   recentEdits?: RecentEdit[];
+
+  /** Agent-specific context extensions */
+  extensions?: Record<string, unknown>;
 }
 
 interface Selection {
@@ -202,6 +206,12 @@ interface EditSuggestion {
 
   /** If true, this edit is part of a sequence; more suggestions follow */
   hasFollowUp?: boolean;
+
+  /** Document version this suggestion is valid for. Client SHOULD discard if version changes */
+  validForDocumentVersion?: number;
+
+  /** Agent-specific metadata */
+  metadata?: Record<string, unknown>;
 }
 
 type EditSuggestionKind =
@@ -215,7 +225,8 @@ type EditSuggestionKind =
   | "related"         // Edit related code elsewhere in codebase
   | "documentation"   // Add/update comments or docs
   | "test"            // Add/update tests
-  | "other";
+  | "other"
+  | `x-${string}`;    // Custom agent-specific kinds
 
 interface NavigationSuggestion {
   type: "navigation";
@@ -254,37 +265,7 @@ interface TextEdit {
 }
 ```
 
-### 4. Streaming Suggestions (Agent → Client)
-
-For ghost text UX, agents can stream suggestion content incrementally:
-
-```typescript
-// Notification: suggestions/stream
-interface SuggestionsStreamParams {
-  /** ID of the suggestion being streamed */
-  suggestionId: string;
-
-  /** Index of the edit within the suggestion being updated */
-  editIndex: number;
-
-  /** Incremental text to append */
-  delta: string;
-
-  /** Whether this is the final chunk for this edit */
-  isComplete: boolean;
-}
-
-// Notification: suggestions/streamEnd
-interface SuggestionsStreamEndParams {
-  /** ID of the suggestion that finished streaming */
-  suggestionId: string;
-
-  /** Final suggestion state (in case client missed chunks) */
-  suggestion: Suggestion;
-}
-```
-
-### 5. Suggestion Actions (Client → Agent)
+### 4. Suggestion Actions (Client → Agent)
 
 Clients notify agents of user interactions with suggestions:
 
@@ -335,7 +316,7 @@ interface SuggestionsRetainedParams {
 }
 ```
 
-### 6. Proactive Suggestions (Agent → Client)
+### 5. Proactive Suggestions (Agent → Client)
 
 Agents can push suggestions without explicit requests:
 
@@ -356,6 +337,9 @@ interface SuggestionsOfferParams {
 }
 
 // Notification: suggestions/invalidate
+// Note: This notification is OPTIONAL and advisory. Clients own suggestion
+// validity via documentVersion and SHOULD self-invalidate when it changes.
+// Agents MAY send invalidation hints, but clients MUST NOT depend on receiving them.
 interface SuggestionsInvalidateParams {
   /** IDs of suggestions that are no longer valid */
   suggestionIds: string[];
@@ -365,7 +349,7 @@ interface SuggestionsInvalidateParams {
 }
 ```
 
-### 7. Request Lifecycle
+### 6. Request Lifecycle
 
 Clients can cancel in-flight suggestion requests:
 
@@ -388,15 +372,13 @@ Once next edit suggestions are part of ACP:
 
 4. **Pattern-aware assistance**: Agents detect repetitive edits and proactively suggest completing the pattern across files.
 
-5. **Ghost text streaming**: Suggestions appear character-by-character as they're generated, feeling responsive even for complex predictions.
+5. **Learning from feedback**: The accept/reject/dismiss/retain feedback loop allows agents to improve over time, learning user preferences and coding patterns.
 
-6. **Learning from feedback**: The accept/reject/dismiss/retain feedback loop allows agents to improve over time, learning user preferences and coding patterns.
+6. **Cross-file intelligence**: Unlike LSP completions confined to the current file, agent suggestions span the codebase—updating tests, documentation, and related code.
 
-7. **Cross-file intelligence**: Unlike LSP completions confined to the current file, agent suggestions span the codebase—updating tests, documentation, and related code.
+7. **Standardized UX**: Clients implement consistent suggestion UI knowing all ACP-compatible agents speak the same protocol.
 
-8. **Standardized UX**: Clients implement consistent suggestion UI knowing all ACP-compatible agents speak the same protocol.
-
-9. **Composable with ACP features**: Suggestions integrate with session modes, permissions, and agent plans.
+8. **Composable with ACP features**: Suggestions integrate with session modes, permissions, and agent plans.
 
 ## Implementation details and plan
 
@@ -413,7 +395,6 @@ Agents advertise suggestion support in initialization:
       "supportedTriggerKinds": ["automatic", "manual", "continuation"],
       "supportedEditKinds": ["completion", "continuation", "fix", "refactor", "related"],
       "supportsNavigation": true,
-      "supportsStreaming": true,
       "supportsProactiveOffers": true,
       "maxConcurrentRequests": 3
     }
@@ -427,7 +408,6 @@ Clients advertise their support:
 {
   "capabilities": {
     "suggestions": {
-      "supportsStreaming": true,
       "supportsPartialAccept": true,
       "supportsRetentionTracking": true,
       "acceptsProactiveOffers": true,
@@ -451,22 +431,6 @@ Client                              Agent
   |<-[suggestions/request response]---|  (agent returns suggestions)
   |                                   |
   |--[suggestions/accept]------------>|  (user pressed Tab)
-  |                                   |
-```
-
-**Streaming flow:**
-
-```
-Client                              Agent
-  |                                   |
-  |--[suggestions/request]----------->|
-  |                                   |
-  |<-[response: {suggestions:[{id}]}]-|  (initial structure)
-  |                                   |
-  |<-[suggestions/stream]-------------|  (delta: "func")
-  |<-[suggestions/stream]-------------|  (delta: "tion ")
-  |<-[suggestions/stream]-------------|  (delta: "foo()")
-  |<-[suggestions/streamEnd]----------|  (complete)
   |                                   |
 ```
 
@@ -505,7 +469,6 @@ Client                              Agent
 
 | Metric | Target | Notes |
 |--------|--------|-------|
-| Request to first token | <200ms | For streaming ghost text |
 | Request to complete response | <500ms | For good UX |
 | Context notification debounce | 50-150ms | Client-side |
 | Suggestion TTL | 5-30s | Agent-configurable |
@@ -513,10 +476,9 @@ Client                              Agent
 Recommendations:
 1. Clients SHOULD debounce `editContext/didChange` (50-150ms recommended)
 2. Clients SHOULD cancel pending requests when context changes significantly
-3. Agents SHOULD use streaming for suggestions >50 characters
-4. Agents SHOULD respect timeout and return partial results
-5. Agents SHOULD invalidate proactive suggestions when context changes
-6. Clients SHOULD track retention asynchronously (e.g., 5-30s after acceptance)
+3. Agents SHOULD respect timeout and return partial results if available
+4. Clients SHOULD track retention asynchronously (e.g., 5-30s after acceptance)
+5. Clients own suggestion validity via `documentVersion` and SHOULD self-invalidate
 
 ### Integration with Existing ACP Features
 
@@ -537,23 +499,18 @@ Recommendations:
 - Implement `suggestions/accept`, `suggestions/reject`, `suggestions/dismiss`
 - Add capability advertisement
 
-**Phase 2 - Streaming (Draft)**
-- Add `suggestions/stream` and `suggestions/streamEnd`
-- Define streaming semantics and error handling
-- Implement in reference SDKs
-
-**Phase 3 - Navigation & Chaining (Preview)**
+**Phase 2 - Navigation & Chaining (Preview)**
 - Add `NavigationSuggestion` type
 - Implement `hasFollowUp` and chained suggestion flow
 - Add `suggestions/offer` for proactive suggestions
 - Add `suggestions/invalidate` for stale suggestions
 
-**Phase 4 - Analytics & Learning (Preview)**
+**Phase 3 - Analytics & Learning (Preview)**
 - Add `suggestions/retained` notification
 - Define retention tracking semantics
 - Implement partial accept tracking
 
-**Phase 5 - Refinements (Preview → Completed)**
+**Phase 4 - Refinements (Preview → Completed)**
 - Gather feedback from implementations
 - Performance optimization guidelines
 - Stabilize and document best practices
@@ -571,7 +528,6 @@ Recommendations:
 | Content | Token/snippet completion | Full edits, deletions, multi-file |
 | Intelligence | Syntax/type-driven | Semantic, intent-driven |
 | Navigation | No | Yes (cursor jumps) |
-| Streaming | No | Yes |
 
 The two are complementary. Clients show LSP completions for immediate token completion and agent suggestions for higher-level edit predictions.
 
@@ -590,16 +546,16 @@ When a suggestion has `hasFollowUp: true`, the agent signals that accepting it w
 
 This creates a fluid flow where users can Tab through a series of related edits without waiting or requesting.
 
-### Why streaming for suggestions?
+### Why not stream suggestions character-by-character?
 
-Ghost text UX (showing suggested code inline as dimmed text) feels most responsive when text appears character-by-character. Without streaming:
-- Users see nothing, then suddenly a full suggestion
-- Perceived latency is the total generation time
+We considered streaming but decided against it:
 
-With streaming:
-- Users see suggestion building in real-time
-- Perceived latency is time-to-first-token
-- Users can start reading/evaluating immediately
+1. **No production precedent**: Major NES implementations (GitHub Copilot, Cursor Tab, Supermaven) return complete suggestions rather than streaming character-by-character
+2. **UX concerns**: Character-by-character updates can be distracting during editing, breaking the user's flow
+3. **Semantic complexity**: Streaming deletions or multi-edit replacements is unclear—what does it mean to "stream" a deletion?
+4. **Simplicity**: Batch responses simplify both protocol and implementation
+
+Latency is better addressed through small, task-specific models optimized for fast inference rather than streaming partial results.
 
 ### How should clients handle partial acceptance?
 
@@ -656,7 +612,9 @@ Suggestions become stale when:
 - TTL expires
 - Agent generates better suggestions
 
-Agents send `suggestions/invalidate` to tell clients to discard stale suggestions. Clients can also self-invalidate based on `documentVersion` changes.
+**Clients own suggestion validity** via `documentVersion`. When the document version changes, clients SHOULD self-invalidate stale suggestions without waiting for agent notification. Suggestions include a `validForDocumentVersion` field to make this explicit.
+
+Agents MAY send `suggestions/invalidate` as an optimization hint, but this notification is advisory—clients MUST NOT depend on receiving it. This approach simplifies agent implementations by removing the requirement to track and notify about stale suggestions.
 
 ### What alternative approaches did you consider?
 
@@ -692,4 +650,12 @@ The architecture supports extension via new `Suggestion` type variants.
   - Added chained suggestions (hasFollowUp) for tab-tab-tab flow
   - Added latency guidelines
   - Comprehensive FAQ additions
+- 2025-12-11: Major revision based on community feedback (@olegtaratuhin)
+  - Removed streaming support (not aligned with production implementations)
+  - Made EditContext fields more optional/flexible (only uri, documentVersion, selections required)
+  - Added `extensions` field to EditContext for agent-specific context
+  - Clarified client-owned invalidation model via `validForDocumentVersion`
+  - Made `suggestions/invalidate` notification advisory, not required
+  - Added extensibility patterns (`x-` prefix for custom kinds, `metadata` field)
+  - Updated FAQ to explain streaming removal rationale
 
