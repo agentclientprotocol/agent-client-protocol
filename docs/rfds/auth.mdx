@@ -15,7 +15,7 @@ I suggest adding more information about auth methods that agent supports, which 
 > How do things work today and what problems does this cause? Why would we change things?
 
 Agents have different ways of authenticating users: env vars with api keys, running a command like `<agent_name> login`, some just open a browser and use oauth.
-[AuthMethod](https://agentclientprotocol.com/protocol/schema#authmethod) does not really tell the client what should be done to authenticate. This means we can't show user a control for entering key if an aggent support auth through env var.
+[AuthMethod](https://agentclientprotocol.com/protocol/schema#authmethod) does not really tell the client what should be done to authenticate. This means we can't show the user a control for entering key if an aggent support auth through env var.
 
 ## What we propose to do about it
 
@@ -64,7 +64,7 @@ A user can enter a key and a client will pass it to the agent as an env variable
 
 2. Start argument
 
-A user can enter a key and a client will pass it to the agent as a start parameter
+A user can enter a key, and a client will pass it to the agent as a start parameter
 
 ```json
 {
@@ -79,7 +79,7 @@ A user can enter a key and a client will pass it to the agent as a start paramet
 
 3. Agent auth
 
-Same as what there is now -- agent handles the auth itself, this should be default type if no type is provided for backward compatibility
+Same as what there is now – agent handles the auth itself, this should be a default type if no type is provided for backward compatibility
 
 ```json
 {
@@ -90,9 +90,40 @@ Same as what there is now -- agent handles the auth itself, this should be defau
 }
 ```
 
+To better handle oauth scenarios, we can add a mechanism like (MCP-elicitation)[https://modelcontextprotocol.io/specification/2025-11-25/client/elicitation]
+User sends authenticate request with method id; then server calls an `elicitation/create` method on a client, that includes a link to an oauth provider and `authenticateRequestId` so that we can clearly link the request with the auth request.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "elicitation/create",
+  "params": {
+    "authenticateRequestId": "123",
+    "url": "https://mcp.example.com/ui/set_api_key",
+    "message": "Please provide your API key to continue."
+  }
+}
+```
+
+Client then allows user to open a browser and authenticate themselves. Agent then responds to an elicitation request with a key:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "result": {
+    "action": "accept"
+  }
+}
+```
+
+and then responds to the original `authenticate` request.
+
+
 4. Provided key
 
-User can enter the key and client should pass it to the agent via [AuthenticateRequest](https://agentclientprotocol.com/protocol/schema#authenticaterequest)
+User can enter the key and a client should pass it to the agent via [AuthenticateRequest](https://agentclientprotocol.com/protocol/schema#authenticaterequest)
 
 ```json
 {
@@ -104,7 +135,7 @@ User can enter the key and client should pass it to the agent via [AuthenticateR
 }
 ```
 
-for this case [AuthenticateRequest](https://agentclientprotocol.com/protocol/schema#authenticaterequest) should also be updated. I suggest adding optional authParams property
+in this case [AuthenticateRequest](https://agentclientprotocol.com/protocol/schema#authenticaterequest) should also be updated. I suggest adding an optional authParams property
 
 ```json
 {
@@ -114,6 +145,8 @@ for this case [AuthenticateRequest](https://agentclientprotocol.com/protocol/sch
   }
 }
 ```
+
+This approach also requires adding a new `elicitation` client capability. If the client does not support this capability, agent MUST NOT return such an authMethod in the `initialize` response.
 
 ### AuthErrors
 
@@ -126,7 +159,9 @@ All supported auth methods are shared during `initialize`. When user starts a se
 
 ### What alternative approaches did you consider, and why did you settle on this one?
 
-Alternative approach would be to include this information to an agent's declaration making it more static, see [Registry RFD](https://github.com/agentclientprotocol/agent-client-protocol/pull/289)
+An alternative approach would be to include this information to an agent's declaration making it more static, see [Registry RFD](https://github.com/agentclientprotocol/agent-client-protocol/pull/289)
+
+There is also an alternative to adding a separate `elicitation` capability, which is to create a separate auth type for this. Then the client can decide themselves if they support it or not.
 
 ## Revision history
 
