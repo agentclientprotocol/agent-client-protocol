@@ -44,11 +44,21 @@ Industry research shows common patterns across AI coding tools:
 We propose separating usage tracking into two distinct concerns:
 
 1. **Token usage** - Reported in `PromptResponse` after each turn (per-turn data)
-2. **Context window and cost** - Reported in `session/status` for on-demand queries (session state)
+2. **Context window and cost** - Reported via `session/update` notifications with `sessionUpdate: "context_update"` (session state)
 
 This separation reflects how users consume this information:
 - Token counts are tied to specific turns and useful immediately after a prompt
-- Context window and cost are cumulative session state that users may want to check at any time
+- Context window and cost are cumulative session state that agents push proactively when available
+
+Agents send context updates at appropriate times:
+- On `session/new` response (if agent can query usage immediately)
+- On `session/load` / `session/resume` (for resumed/forked sessions)
+- After each `session/prompt` response (when usage data becomes available)
+- Anytime context window state changes significantly
+
+This approach provides flexibility for different agent implementations:
+- Agents that support getting current usage without a prompt can immediately send updates when creating, resuming, or forking chats
+- Agents that only provide usage when actively prompting can send updates after sending a new prompt
 
 ### Token Usage in `PromptResponse`
 
@@ -82,61 +92,71 @@ Add a `usage` field to `PromptResponse` for token consumption tracking:
 - `cached_read_tokens` (number, optional) - Total cache read tokens
 - `cached_write_tokens` (number, optional) - Total cache write tokens
 
-### Context Window and Cost in `session/status`
+### Context Window and Cost via `session/update`
 
-Add `context_window` and `cost` fields to `session/status` response:
+Agents send context window and cost information via `session/update` notifications with `sessionUpdate: "context_update"`:
 
 ```json
 {
   "jsonrpc": "2.0",
-  "id": 2,
-  "method": "session/status",
+  "method": "session/update",
   "params": {
-    "sessionId": "sess_abc123"
-  }
-}
-```
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 2,
-  "result": {
     "sessionId": "sess_abc123",
-    "status": "idle",
-    "context_window": {
-      "size": 200000,
+    "update": {
+      "sessionUpdate": "context_update",
       "used": 53000,
-      "percentage": 26.5,
-      "remaining": 147000
-    },
-    "cost": {
-      "amount": 0.045,
-      "currency": "USD"
+      "size": 200000,
+      "percentage": 26.5
     }
   }
 }
 ```
 
-#### Context Window Fields (optional)
+#### Context Window Fields (required)
 
-- `size` (number, required) - Total context window size in tokens
 - `used` (number, required) - Tokens currently in context
+- `size` (number, required) - Total context window size in tokens
 - `percentage` (number, required) - Percentage used (0-100)
-- `remaining` (number, required) - Tokens remaining
+
+Note: Clients can compute `remaining` as `size - used` if needed.
 
 #### Cost Fields (optional)
 
-- `amount` (number, required) - Total cumulative cost for session
-- `currency` (string, required) - ISO 4217 currency code (e.g., "USD", "EUR")
+- `cost` (object, optional) - Cumulative session cost
+  - `amount` (number, required) - Total cumulative cost for session
+  - `currency` (string, required) - ISO 4217 currency code (e.g., "USD", "EUR")
+
+Example with optional cost:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123",
+    "update": {
+      "sessionUpdate": "context_update",
+      "used": 53000,
+      "size": 200000,
+      "percentage": 26.5,
+      "cost": {
+        "amount": 0.045,
+        "currency": "USD"
+      }
+    }
+  }
+}
+```
 
 ### Design Principles
 
 1. **Separation of concerns** - Token usage is per-turn data, context window and cost are session state
-2. **Agent calculates, client can verify** - Agent knows its model best and provides calculations, but includes raw data for client verification
-3. **Flexible cost reporting** - Support any currency, don't assume USD
-4. **Prompt caching support** - Include cache read/write tokens for models that support it
-5. **Optional but recommended** - Usage tracking is optional to maintain backward compatibility
+2. **Agent-pushed notifications** - Agents proactively send context updates when data becomes available, following the same pattern as other dynamic session properties (`available_commands_update`, `current_mode_update`, `session_info_update`)
+3. **Agent calculates, client can verify** - Agent knows its model best and provides calculations, but includes raw data for client verification
+4. **Flexible cost reporting** - Cost is optional since not all agents track it. Support any currency, don't assume USD
+5. **Prompt caching support** - Include cache read/write tokens for models that support it
+6. **Optional but recommended** - Usage tracking is optional to maintain backward compatibility
+7. **Flexible timing** - Agents send updates when they can: immediately for agents with on-demand APIs, or after prompts for agents that only provide usage during active prompting
 
 ## Shiny future
 
@@ -155,7 +175,8 @@ Add `context_window` and `cost` fields to `session/status` response:
 - **Smart warnings**: Clients can warn users at 75%, 90% context usage
 - **Cost controls**: Clients can implement budget limits and alerts
 - **Analytics**: Clients can track usage patterns and optimize
-- **On-demand checks**: Clients can poll `session/status` to update context and cost indicators without issuing prompts
+- **Reactive updates**: Clients receive context updates reactively via notifications, updating UI immediately when agents push new data
+- **No polling needed**: Updates arrive automatically when agents have new information, eliminating the need for clients to poll
 
 **For Agent Implementations:**
 
@@ -170,15 +191,15 @@ Add `context_window` and `cost` fields to `session/status` response:
 
 1. **Update schema.json** to add:
    - `Usage` type with token fields
-   - `ContextWindow` type with `size`, `used`, `percentage`, `remaining` fields
    - `Cost` type with `amount` and `currency` fields
+   - `ContextUpdate` type with `used`, `size`, `percentage` (required) and optional `cost` field
    - Add optional `usage` field to `PromptResponse`
-   - Add optional `context_window` and `cost` fields to `SessionStatusResponse`
+   - Add `ContextUpdate` variant to `SessionUpdate` oneOf array (with `sessionUpdate: "context_update"`)
 
 2. **Update protocol documentation**:
    - Document `usage` field in `/docs/protocol/prompt-turn.mdx`
-   - Document `context_window` and `cost` fields in session status documentation
-   - Add examples showing typical usage patterns
+   - Document `session/update` notification with `sessionUpdate: "context_update"` variant
+   - Add examples showing typical usage patterns and when agents send context updates
 
 ## Frequently asked questions
 
@@ -190,25 +211,26 @@ Different users care about different things at different times:
 
 - **Token counts**: Relevant immediately after a turn completes to understand the breakdown
 - **Context window remaining**: Relevant at any time, especially before issuing a large prompt. "Do I need to handoff or compact?"
-- **Cumulative cost**: Session-level state users want to check without issuing new prompts
+- **Cumulative cost**: Session-level state that agents push when available
 
 Separating them allows:
-- Clients to poll context and cost status without issuing prompts
 - Cleaner data model where per-turn data stays in turn responses
-- Users to check session state (context, cost) before deciding on actions
+- Agents to push context updates proactively when data becomes available
+- Clients to receive updates reactively without needing to poll
 
-### Why is cost in session/status instead of PromptResponse?
+### Why is cost in session/update instead of PromptResponse?
 
 Cost is cumulative session state, similar to context window:
-- Users want to check total spending at any time, not just after turns
+- Users want to track total spending, not just per-turn costs
 - Keeps `PromptResponse` focused on per-turn token breakdown
 - Both cost and context window are session-level metrics that belong together
+- Cost is optional since not all agents track it
 
 ### How do users know when to handoff or compact the context?
 
-The `context_window` object in `session/status` provides everything needed:
+The context update notification provides everything needed:
 
-- `used` and `remaining` give absolute numbers for precise tracking
+- `used` and `size` give absolute numbers for precise tracking (clients can compute `remaining` as `size - used`)
 - `percentage` enables simple threshold-based warnings
 - `size` lets clients understand the total budget
 
@@ -252,9 +274,9 @@ All fields except the basic token counts are optional. Agents report what they c
 
 ### How does this work with streaming responses?
 
-- During streaming: Send progressive updates via `session/update` notifications
+- During streaming: Agents may send progressive context updates via `session/update` notifications as usage changes
 - Final response: Include complete token usage in `PromptResponse`
-- Context window and cost: Always available via `session/status`
+- Context window and cost: Agents send `session/update` notifications with `sessionUpdate: "context_update"` when data becomes available (after prompt completion, on session creation/resume, or when context state changes significantly)
 
 ### What about models without fixed context windows?
 
@@ -271,13 +293,28 @@ This RFD focuses on token usage and context windows. Rate limits and quotas are 
 
 Yes, cached tokens still occupy context window space. They're just cheaper to process. The context window usage should include all tokens (regular + cached).
 
+### Why notification instead of request?
+
+Using `session/update` notifications instead of a `session/status` request provides several benefits:
+
+1. **Consistency**: Follows the same pattern as other dynamic session properties (`available_commands_update`, `current_mode_update`, `session_info_update`)
+2. **Agent flexibility**: Agents can send updates when they have data available, whether that's immediately (for agents with on-demand APIs) or after prompts (for agents that only provide usage during active prompting)
+3. **No polling**: Clients receive updates reactively without needing to poll
+4. **Real-time updates**: Updates flow naturally as part of the session lifecycle
+
+### What if the client connects mid-session?
+
+When a client connects to an existing session (via `session/load` or `session/resume`), agents **SHOULD** send a context update notification if they have current usage data available. This ensures the client UI can immediately display accurate context window and cost information.
+
+For agents that only provide usage during active prompting, the client UI may not show usage until after the first prompt is sent, which is acceptable given the agent's capabilities.
+
 ### What alternative approaches did you consider, and why did you settle on this one?
 
 **Alternatives considered:**
 
-1. **Everything in PromptResponse** - Simpler, but context window and cost are session state that users may want to check independently of turns.
+1. **Everything in PromptResponse** - Simpler, but context window and cost are session state that users may want to track independently of turns.
 
-2. **Everything in session/status** - Requires extra round-trip after every prompt to get token usage. Inconsistent with how LLM APIs work.
+2. **Request/response (`session/status`)** - Requires clients to poll, and some agents don't have APIs to query current status without a prompt. The notification approach is more flexible and consistent with other dynamic session properties.
 
 3. **Client calculates everything** - Rejected because client doesn't know model's tokenizer, exact context window size, or pricing.
 
@@ -286,3 +323,4 @@ Yes, cached tokens still occupy context window space. They're just cheaper to pr
 ## Revision history
 
 - 2025-12-07: Initial draft
+- 2025-12-13: Changed from `session/status` request method to `session/update` notification with `sessionUpdate: "context_update"`. Made `cost` optional and removed `remaining` field (clients can compute as `size - used`). This approach provides more flexibility for agents and follows the same pattern as other dynamic session properties.
