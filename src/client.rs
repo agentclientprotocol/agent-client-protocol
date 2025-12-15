@@ -13,6 +13,8 @@ use crate::{
     ContentBlock, ExtNotification, ExtRequest, ExtResponse, IntoOption, Meta, Plan, SessionId,
     SessionModeId, ToolCall, ToolCallUpdate,
 };
+#[cfg(feature = "unstable_session_info_update")]
+use crate::{IntoMaybeUndefined, MaybeUndefined};
 
 // Session updates
 
@@ -144,11 +146,11 @@ impl CurrentModeUpdate {
 #[non_exhaustive]
 pub struct SessionInfoUpdate {
     /// Human-readable title for the session. Set to null to clear.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub title: Option<String>,
+    #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
+    pub title: MaybeUndefined<String>,
     /// ISO 8601 timestamp of last activity. Set to null to clear.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub updated_at: Option<String>,
+    #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
+    pub updated_at: MaybeUndefined<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -167,15 +169,15 @@ impl SessionInfoUpdate {
 
     /// Human-readable title for the session. Set to null to clear.
     #[must_use]
-    pub fn title(mut self, title: impl IntoOption<String>) -> Self {
-        self.title = title.into_option();
+    pub fn title(mut self, title: impl IntoMaybeUndefined<String>) -> Self {
+        self.title = title.into_maybe_undefined();
         self
     }
 
     /// ISO 8601 timestamp of last activity. Set to null to clear.
     #[must_use]
-    pub fn updated_at(mut self, updated_at: impl IntoOption<String>) -> Self {
-        self.updated_at = updated_at.into_option();
+    pub fn updated_at(mut self, updated_at: impl IntoMaybeUndefined<String>) -> Self {
+        self.updated_at = updated_at.into_maybe_undefined();
         self
     }
 
@@ -1645,5 +1647,67 @@ impl AgentNotification {
             Self::SessionNotification(_) => CLIENT_METHOD_NAMES.session_update,
             Self::ExtNotification(ext_notification) => &ext_notification.method,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[cfg(feature = "unstable_session_info_update")]
+    #[test]
+    fn test_serialization_behavior() {
+        use serde_json::json;
+
+        assert_eq!(
+            serde_json::from_value::<SessionInfoUpdate>(json!({})).unwrap(),
+            SessionInfoUpdate {
+                title: MaybeUndefined::Undefined,
+                updated_at: MaybeUndefined::Undefined,
+                meta: None
+            }
+        );
+        assert_eq!(
+            serde_json::from_value::<SessionInfoUpdate>(json!({"title": null, "updatedAt": null}))
+                .unwrap(),
+            SessionInfoUpdate {
+                title: MaybeUndefined::Null,
+                updated_at: MaybeUndefined::Null,
+                meta: None
+            }
+        );
+        assert_eq!(
+            serde_json::from_value::<SessionInfoUpdate>(
+                json!({"title": "title", "updatedAt": "timestamp"})
+            )
+            .unwrap(),
+            SessionInfoUpdate {
+                title: MaybeUndefined::Value("title".to_string()),
+                updated_at: MaybeUndefined::Value("timestamp".to_string()),
+                meta: None
+            }
+        );
+
+        assert_eq!(
+            serde_json::to_value(SessionInfoUpdate::new()).unwrap(),
+            json!({})
+        );
+        assert_eq!(
+            serde_json::to_value(SessionInfoUpdate::new().title("title")).unwrap(),
+            json!({"title": "title"})
+        );
+        assert_eq!(
+            serde_json::to_value(SessionInfoUpdate::new().title(None)).unwrap(),
+            json!({"title": null})
+        );
+        assert_eq!(
+            serde_json::to_value(
+                SessionInfoUpdate::new()
+                    .title("title")
+                    .title(MaybeUndefined::Undefined)
+            )
+            .unwrap(),
+            json!({})
+        );
     }
 }
