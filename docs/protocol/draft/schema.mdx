@@ -266,6 +266,14 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
 </ResponseField>
+<ResponseField name="configOptions" type={"array | null"} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Initial session configuration options if supported by the Agent.
+
+</ResponseField>
 <ResponseField name="models" type={<><span><a href="#sessionmodelstate">SessionModelState</a></span><span> | null</span></>} >
   **UNSTABLE**
 
@@ -415,6 +423,14 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
 </ResponseField>
+<ResponseField name="configOptions" type={"array | null"} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Initial session configuration options if supported by the Agent.
+
+</ResponseField>
 <ResponseField name="models" type={<><span><a href="#sessionmodelstate">SessionModelState</a></span><span> | null</span></>} >
   **UNSTABLE**
 
@@ -488,6 +504,14 @@ metadata to their interactions. Implementations MUST NOT make assumptions about 
 these keys.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="configOptions" type={"array | null"} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Initial session configuration options if supported by the Agent.
 
 </ResponseField>
 <ResponseField name="models" type={<><span><a href="#sessionmodelstate">SessionModelState</a></span><span> | null</span></>} >
@@ -658,6 +682,14 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
 </ResponseField>
+<ResponseField name="configOptions" type={"array | null"} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Initial session configuration options if supported by the Agent.
+
+</ResponseField>
 <ResponseField name="models" type={<><span><a href="#sessionmodelstate">SessionModelState</a></span><span> | null</span></>} >
   **UNSTABLE**
 
@@ -671,6 +703,69 @@ Initial model state if supported by the Agent
 
 See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
 
+</ResponseField>
+
+<a id="session-set_config_option"></a>
+### <span class="font-mono">session/set_config_option</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Sets the current value for a session configuration option.
+
+#### <span class="font-mono">SetSessionConfigOptionRequest</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Request parameters for setting a session configuration option.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="configId" type={<a href="#sessionconfigid">SessionConfigId</a>} required>
+  The ID of the configuration option to set.
+</ResponseField>
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The ID of the session to set the configuration option for.
+</ResponseField>
+<ResponseField name="value" type={<a href="#sessionconfigvalueid">SessionConfigValueId</a>} required>
+  The ID of the configuration option value to set.
+</ResponseField>
+
+#### <span class="font-mono">SetSessionConfigOptionResponse</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Response to `session/set_config_option` method.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="configOptions" type={<><span><a href="#sessionconfigoption">SessionConfigOption</a></span><span>[]</span></>} required>
+  The full set of configuration options and their current values.
 </ResponseField>
 
 <a id="session-set_mode"></a>
@@ -1630,6 +1725,30 @@ Determines which file operations the agent can request.
 
     - Default: `false`
 
+</ResponseField>
+
+## <span class="font-mono">ConfigOptionUpdate</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Session configuration options have been updated.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="configOptions" type={<><span><a href="#sessionconfigoption">SessionConfigOption</a></span><span>[]</span></>} required>
+  The full set of configuration options and their current values.
 </ResponseField>
 
 ## <span class="font-mono">Content</span>
@@ -2859,6 +2978,175 @@ Whether the agent supports `session/resume`.
 
 </ResponseField>
 
+## <span class="font-mono">SessionConfigGroupId</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Unique identifier for a session configuration option value group.
+
+**Type:** `string`
+
+## <span class="font-mono">SessionConfigId</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Unique identifier for a session configuration option.
+
+**Type:** `string`
+
+## <span class="font-mono">SessionConfigOption</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+A session configuration option selector and its current state.
+
+**Type:** Union
+
+<ResponseField name="select" type="object">
+Single-value selector (dropdown).
+
+<Expandable title="Properties">
+
+<ResponseField
+  name="currentValue"
+  type={<a href="#sessionconfigvalueid">SessionConfigValueId</a>}
+  required
+>
+  The currently selected value.
+</ResponseField>
+<ResponseField
+  name="options"
+  type={<a href="#sessionconfigselectoptions">SessionConfigSelectOptions</a>}
+  required
+>
+  The set of selectable options.
+</ResponseField>
+<ResponseField name="type" type={"string"} required></ResponseField>
+
+</Expandable>
+</ResponseField>
+
+## <span class="font-mono">SessionConfigSelect</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+A single-value selector (dropdown) session configuration option payload.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField
+  name="currentValue"
+  type={<a href="#sessionconfigvalueid">SessionConfigValueId</a>}
+  required
+>
+  The currently selected value.
+</ResponseField>
+<ResponseField
+  name="options"
+  type={<a href="#sessionconfigselectoptions">SessionConfigSelectOptions</a>}
+  required
+>
+  The set of selectable options.
+</ResponseField>
+
+## <span class="font-mono">SessionConfigSelectGroup</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+A group of possible values for a session configuration option.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="group" type={<a href="#sessionconfiggroupid">SessionConfigGroupId</a>} required>
+  Unique identifier for this group.
+</ResponseField>
+<ResponseField name="name" type={"string"} required>
+  Human-readable label for this group.
+</ResponseField>
+<ResponseField name="options" type={<><span><a href="#sessionconfigselectoption">SessionConfigSelectOption</a></span><span>[]</span></>} required>
+  The set of option values in this group.
+</ResponseField>
+
+## <span class="font-mono">SessionConfigSelectOption</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+A possible value for a session configuration option.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="description" type={"string | null"} >
+  Optional description for this option value.
+</ResponseField>
+<ResponseField name="name" type={"string"} required>
+  Human-readable label for this option value.
+</ResponseField>
+<ResponseField name="value" type={<a href="#sessionconfigvalueid">SessionConfigValueId</a>} required>
+  Unique identifier for this option value.
+</ResponseField>
+
+## <span class="font-mono">SessionConfigSelectOptions</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Possible values for a session configuration option.
+
+**Type:** Union
+
+<ResponseField name="array" type="array">
+  A flat list of options with no grouping.
+</ResponseField>
+
+<ResponseField name="array" type="array">
+  A list of options grouped under headers.
+</ResponseField>
+
+## <span class="font-mono">SessionConfigValueId</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Unique identifier for a session configuration option value.
+
+**Type:** `string`
+
 ## <span class="font-mono">SessionForkCapabilities</span>
 
 **UNSTABLE**
@@ -3307,6 +3595,32 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 </ResponseField>
 <ResponseField name="currentModeId" type={<a href="#sessionmodeid">SessionModeId</a>} required>
   The ID of the current mode
+</ResponseField>
+<ResponseField name="sessionUpdate" type={"string"} required>
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="config_option_update" type="object">
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Session configuration options have been updated.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="configOptions" type={<><span><a href="#sessionconfigoption">SessionConfigOption</a></span><span>[]</span></>} required>
+  The full set of configuration options and their current values.
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
 </ResponseField>

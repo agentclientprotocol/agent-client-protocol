@@ -849,6 +849,9 @@ starting with '$/' it is free to ignore the notification."
                 "session/fork" => self.agent.get("ForkSessionRequest").unwrap(),
                 "session/resume" => self.agent.get("ResumeSessionRequest").unwrap(),
                 "session/set_mode" => self.agent.get("SetSessionModeRequest").unwrap(),
+                "session/set_config_option" => {
+                    self.agent.get("SetSessionConfigOptionRequest").unwrap()
+                }
                 "session/prompt" => self.agent.get("PromptRequest").unwrap(),
                 "session/cancel" => self.agent.get("CancelNotification").unwrap(),
                 "session/set_model" => self.agent.get("SetSessionModelRequest").unwrap(),

@@ -9,6 +9,8 @@ use derive_more::{Display, From};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "unstable_session_config_options")]
+use crate::SessionConfigOption;
 use crate::{
     ContentBlock, ExtNotification, ExtRequest, ExtResponse, IntoOption, Meta, Plan, SessionId,
     SessionModeId, ToolCall, ToolCallUpdate,
@@ -92,6 +94,13 @@ pub enum SessionUpdate {
     ///
     /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
     CurrentModeUpdate(CurrentModeUpdate),
+    #[cfg(feature = "unstable_session_config_options")]
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Session configuration options have been updated.
+    ConfigOptionUpdate(ConfigOptionUpdate),
     #[cfg(feature = "unstable_session_info_update")]
     /// Session metadata has been updated (title, timestamps, custom metadata)
     SessionInfoUpdate(SessionInfoUpdate),
@@ -120,6 +129,49 @@ impl CurrentModeUpdate {
     pub fn new(current_mode_id: impl Into<SessionModeId>) -> Self {
         Self {
             current_mode_id: current_mode_id.into(),
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Session configuration options have been updated.
+#[cfg(feature = "unstable_session_config_options")]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct ConfigOptionUpdate {
+    /// The full set of configuration options and their current values.
+    pub config_options: Vec<SessionConfigOption>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_config_options")]
+impl ConfigOptionUpdate {
+    #[must_use]
+    pub fn new(config_options: Vec<SessionConfigOption>) -> Self {
+        Self {
+            config_options,
             meta: None,
         }
     }
