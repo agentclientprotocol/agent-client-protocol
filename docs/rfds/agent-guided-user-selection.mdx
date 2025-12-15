@@ -1,0 +1,259 @@
+---
+title: "Agent-Guided User Selection"
+---
+
+Author(s): [akhil-vempali](https://github.com/akhil-vempali)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Allow agents to dynamically present interactive menus to users during a session. These menus consist of a prompt (question) and a set of markdown-renderable options, enabling agents to guide users through workflows, gather structured input, and expose agent-specific actions in a discoverable way.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+Currently, agents have limited mechanisms for soliciting structured input from users:
+
+1. **Free-form prompts only**: Agents must rely on natural language responses, which can be ambiguous and require additional parsing/validation.
+
+2. **No discoverability**: Users don't know what options or capabilities an agent supports unless explicitly told through conversation. There's no standardized way to present available actions.
+
+3. **Guided workflows are cumbersome**: Multi-step processes require agents to describe options in prose and hope users respond with recognizable input. This leads to friction and error-prone interactions.
+
+4. **Agent-specific actions are hidden**: Agents with specialized capabilities (e.g., deployment options, code generation styles, environment configurations) have no structured way to expose these to users.
+
+5. **Context-dependent options require explanation**: When available actions change based on project state, file type, or session context, agents must repeatedly explain what's possible.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+Introduce a new agent-to-client request that allows agents to present interactive menus to users. Key characteristics:
+
+- **Agent-initiated**: The agent sends a request to the client with a prompt and options
+- **Markdown-renderable options**: Each option can include rich markdown content for clear presentation
+- **Configurable selection mode**: Agent specifies whether single-select or multi-select is allowed
+- **Optional free-text input**: Agent can enable an "other" option allowing users to provide custom input
+- **Callback-based response**: The client returns the user's selection(s) back to the agent via a dedicated response mechanism
+- **Dynamic timing**: Menus can be presented at session start, during conversations, or based on context changes
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+Once implemented, agents can create rich, guided experiences:
+
+- **Onboarding flows**: New users are presented with setup options rather than needing to know what to ask
+- **Workflow wizards**: Multi-step processes become intuitive click-through experiences
+- **Context-aware suggestions**: As users work, agents surface relevant actions ("I noticed you're in a test file - would you like to: Run tests / Generate test cases / View coverage")
+- **Configuration dialogs**: Complex agent settings can be presented as structured choices rather than requiring users to remember syntax
+- **Domain-specific actions**: Specialized agents (CI/CD, database, cloud deployment) can expose their unique capabilities in discoverable menus
+
+Users get a more guided, less error-prone experience. Agents get structured, unambiguous input. Clients can render these menus in ways that fit their UI paradigm (dropdowns, modal dialogs, inline buttons, etc.).
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+<!--
+    Note: This section is OPTIONAL when RFDs are first opened. 
+    The following is a strawman proposal to seed discussion.
+-->
+
+### Protocol Changes
+
+This proposal follows the same pattern as `session/request_permission`, providing a consistent interaction model for agent-initiated user input.
+
+#### New Request: `session/select`
+
+The agent sends this request to the client to present a selection menu and await user response:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 5,
+  "method": "session/select",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "prompt": "How would you like to proceed with the refactoring?",
+    "options": [
+      {
+        "optionId": "inline",
+        "name": "Inline refactor",
+        "description": "Refactor in place, modifying existing files"
+      },
+      {
+        "optionId": "new-files",
+        "name": "Create new files",
+        "description": "Generate refactored code in new files, preserving originals"
+      },
+      {
+        "optionId": "dry-run",
+        "name": "Dry run",
+        "description": "Show what would change without making modifications"
+      }
+    ],
+    "selectionMode": "single",
+    "allowFreeText": true,
+    "freeTextPlaceholder": "Or describe a different approach..."
+  }
+}
+```
+
+**Request Parameters:**
+
+- `sessionId` *(SessionId, required)*: The session ID for this request.
+- `prompt` *(string, required)*: The question or instruction to display to the user. Supports markdown.
+- `options` *(SelectionOption[], required)*: Available [selection options](#selection-options) for the user to choose from.
+- `selectionMode` *(SelectionMode, required)*: Whether the user can select one option (`single`) or multiple options (`multiple`).
+- `allowFreeText` *(boolean, optional)*: If `true`, the client should provide a free-text input field in addition to the options.
+- `freeTextPlaceholder` *(string, optional)*: Placeholder text to display in the free-text input field (if enabled).
+
+#### Response
+
+The client responds with the user's selection, following the same outcome pattern as `session/request_permission`:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 5,
+  "result": {
+    "outcome": {
+      "outcome": "selected",
+      "optionIds": ["inline"],
+      "freeText": null
+    }
+  }
+}
+```
+
+If the prompt turn is cancelled before the user responds, the client **MUST** respond with the `cancelled` outcome:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 5,
+  "result": {
+    "outcome": {
+      "outcome": "cancelled"
+    }
+  }
+}
+```
+
+**Response Fields:**
+
+- `outcome` *(SelectionOutcome, required)*: The user's decision, either:
+  - `cancelled` - The [prompt turn was cancelled](./prompt-turn#cancellation)
+  - `selected` with `optionIds` - The IDs of the selected option(s)
+  - `selected` with `freeText` - Custom text provided by the user (if `allowFreeText` was enabled)
+
+### Selection Options
+
+Each selection option provided to the Client contains:
+
+- `optionId` *(string, required)*: Unique identifier for this option.
+- `name` *(string, required)*: Human-readable label to display to the user.
+- `description` *(string, optional)*: Extended description of this option. Supports markdown for rich formatting.
+
+### Selection Mode
+
+Controls how many options the user can select:
+
+- `single` - User must select exactly one option
+- `multiple` - User can select one or more options (checkboxes)
+
+### Example: Multi-Select with Free Text
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 6,
+  "method": "session/select",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "prompt": "Which files should I include in the review?",
+    "options": [
+      {
+        "optionId": "modified",
+        "name": "Modified files",
+        "description": "Files changed in this branch"
+      },
+      {
+        "optionId": "tests",
+        "name": "Test files",
+        "description": "Include related test files"
+      },
+      {
+        "optionId": "deps",
+        "name": "Dependencies",
+        "description": "Include files that depend on modified files"
+      }
+    ],
+    "selectionMode": "multiple",
+    "allowFreeText": true,
+    "freeTextPlaceholder": "Or specify file paths..."
+  }
+}
+```
+
+Response with multiple selections:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 6,
+  "result": {
+    "outcome": {
+      "outcome": "selected",
+      "optionIds": ["modified", "tests"],
+      "freeText": null
+    }
+  }
+}
+```
+
+### Considerations
+
+- **Default selection**: Should agents be able to pre-select an option? Could add an optional `defaultOptionIds` field.
+- **Validation**: For multi-select, should there be min/max selection constraints?
+- **Grouping**: Should options support grouping/categories for complex menus?
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+1. **Extending slash commands**: We considered making slash commands more dynamic, but this doesn't solve the "agent needs to ask a question" use case - slash commands are user-initiated.
+
+2. **Structured content blocks**: We considered adding menu-like content to `session/update` messages, but this conflates display with interaction. A dedicated request/response pattern provides clearer semantics for "agent needs input."
+
+3. **Form-based approach**: A full form system (text fields, checkboxes, etc.) was considered but adds significant complexity. Menus with optional free-text cover the 80% case while remaining simple.
+
+### Why not extend `session/request_permission` for this?
+
+While `session/select` follows a similar interaction pattern to `session/request_permission`, the permission system is tightly coupled to tool calls via the required `toolCallId` field. This makes it unsuitable for general-purpose user input gathering where no tool call is involved.
+
+`session/select` provides a standalone mechanism for agents to gather structured input at any point during a session—whether for onboarding, workflow decisions, or configuration—without requiring a tool call context.
+
+### What if the client doesn't support rich rendering?
+
+Clients should gracefully degrade. At minimum, options can be rendered as a numbered list in plain text. The `description` field is optional, so basic implementations can show just labels.
+
+### How is cancellation handled?
+
+Following the same pattern as `session/request_permission`:
+
+- If the client sends a `session/cancel` notification to cancel an ongoing prompt turn, it **MUST** respond to all pending `session/select` requests with the `cancelled` outcome.
+- The agent should handle cancellation gracefully, typically by aborting the current workflow or falling back to a default behavior.
+
+### Can the user dismiss the menu without selecting?
+
+If the user dismisses the menu (e.g., clicks outside, presses Escape), the client **SHOULD** treat this as a cancellation and return the `cancelled` outcome. This provides consistent behavior and allows agents to handle the case explicitly.
+
+## Revision history
+
+<!-- If there have been major updates to this RFD, you can include the git revisions and a summary of the changes. -->
