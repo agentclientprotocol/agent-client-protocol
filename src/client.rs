@@ -90,6 +90,7 @@ pub enum SessionUpdate {
     ///
     /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
     CurrentModeUpdate(CurrentModeUpdate),
+    #[cfg(feature = "unstable_session_info_update")]
     /// Session metadata has been updated (title, timestamps, custom metadata)
     SessionInfoUpdate(SessionInfoUpdate),
 }
@@ -137,6 +138,7 @@ impl CurrentModeUpdate {
 ///
 /// Agents send this notification to update session information like title or custom metadata.
 /// This allows clients to display dynamic session names and track session state changes.
+#[cfg(feature = "unstable_session_info_update")]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -156,6 +158,7 @@ pub struct SessionInfoUpdate {
     pub meta: Option<Meta>,
 }
 
+#[cfg(feature = "unstable_session_info_update")]
 impl SessionInfoUpdate {
     #[must_use]
     pub fn new() -> Self {
