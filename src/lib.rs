@@ -55,6 +55,7 @@ mod client;
 mod content;
 mod error;
 mod ext;
+mod maybe_undefined;
 mod plan;
 #[cfg(feature = "unstable_cancel_request")]
 mod protocol_level;
@@ -68,6 +69,7 @@ pub use content::*;
 use derive_more::{Display, From};
 pub use error::*;
 pub use ext::*;
+pub use maybe_undefined::*;
 pub use plan::*;
 #[cfg(feature = "unstable_cancel_request")]
 pub use protocol_level::*;
