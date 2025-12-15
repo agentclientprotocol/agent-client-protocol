@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.3](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.10.2...v0.10.3) - 2025-12-15
+
+### Added
+
+- *(unstable)* add SessionInfoUpdate to SessionUpdate enum ([#334](https://github.com/agentclientprotocol/agent-client-protocol/pull/334))
+- *(rust-only)* Introduce MaybeUndefined type to allow for distinguishing between null and undefined ([#337](https://github.com/agentclientprotocol/agent-client-protocol/pull/337))
+
 ## [0.10.2](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.10.1...v0.10.2) - 2025-12-11
 
 ### Added
