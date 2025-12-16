@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.10.4](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.10.3...v0.10.4) - 2025-12-16
+
+### Added
+
+- *(unstable)* Draft implementation of session config options ([#339](https://github.com/agentclientprotocol/agent-client-protocol/pull/339))
+
 ## [0.10.3](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.10.2...v0.10.3) - 2025-12-15
 
 ### Added
