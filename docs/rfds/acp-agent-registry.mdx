@@ -33,10 +33,10 @@ Each agent advertises itself via `agent.json` stored under `<id>/` in the regist
 | `homepage`       | URL for docs/marketing.                                                                                                                                                                                                                                                                                                                                            |
 | `repository`     | Source repository URL.                                                                                                                                                                                                                                                                                                                                             |
 | `authors`        | Array of author/organization names (mirrors `authors` in the TOML example).                                                                                                                                                                                                                                                                                        |
-| `license`        | SPDX identifier or `"proprietary"`.                                                                                                                                                                                                                                                                                                                                |
+| `license`        | Licence (string).                                                                                                                                                                                                                                                                                                                                 |
 | `capabilities`   | Array of ACP method names implemented (e.g. `["terminal/new","files/read"]`).                                                                                                                                                                                                                                                                                      |
 | `auth`           | Array of auth options for authentication. This is the trickiest part of the schema.                                                                                                                                                                                                                                                                                |
-| `distribution`   | _Optional._ Object mapping target platforms to download/execution info. Each target key follows `<os>-<arch>` format (e.g., `darwin-aarch64`, `linux-x86_64`, `windows-x86_64`). Each target specifies `archive` (download URL), `cmd` (executable path), optional `args` (array of command-line arguments), and optional `env` (object of environment variables). |
+| `distribution`   | Object mapping target platforms to download/execution info. Each target key follows `<os>-<arch>` format (e.g., `darwin-aarch64`, `linux-x86_64`, `windows-x86_64`). Each target specifies `archive` (download URL), `cmd` (executable path), optional `args` (array of command-line arguments), and optional `env` (object of environment variables). |
 
 Example skeleton:
 
@@ -122,4 +122,5 @@ Example skeleton:
 
 ## Revision history
 
-- 2025-01-XX: Initial draft.
+- 2025-11-28: Initial draft.
+- 2025-12-16: Minors.
