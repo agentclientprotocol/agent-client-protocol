@@ -144,7 +144,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 Note: in future versions of the protocol, this will be required.
 
 </ResponseField>
-<ResponseField name="authMethods" type={<><span><a href="#authmethod">AuthMethod</a></span><span>[]</span></>} >
+<ResponseField name="authMethods" type={<a href="#authmethod">AuthMethod[]</a>} >
   Authentication methods supported by the agent.
 
     - Default: `[]`
@@ -234,7 +234,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 <ResponseField name="cwd" type={"string"} required>
   The working directory for this session.
 </ResponseField>
-<ResponseField name="mcpServers" type={<><span><a href="#mcpserver">McpServer</a></span><span>[]</span></>} required>
+<ResponseField name="mcpServers" type={<a href="#mcpserver">McpServer[]</a>} required>
   List of MCP servers to connect to for this session.
 </ResponseField>
 <ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
@@ -302,7 +302,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 <ResponseField name="cwd" type={"string"} required>
   The working directory for this session. Must be an absolute path.
 </ResponseField>
-<ResponseField name="mcpServers" type={<><span><a href="#mcpserver">McpServer</a></span><span>[]</span></>} required>
+<ResponseField name="mcpServers" type={<a href="#mcpserver">McpServer[]</a>} required>
   List of MCP (Model Context Protocol) servers the agent should connect to.
 </ResponseField>
 
@@ -373,7 +373,7 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
 </ResponseField>
-<ResponseField name="prompt" type={<><span><a href="#contentblock">ContentBlock</a></span><span>[]</span></>} required>
+<ResponseField name="prompt" type={<a href="#contentblock">ContentBlock[]</a>} required>
   The blocks of content that compose the user's message.
 
 As a baseline, the Agent MUST support `ContentBlock::Text` and `ContentBlock::ResourceLink`,
@@ -628,7 +628,7 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
 </ResponseField>
-<ResponseField name="options" type={<><span><a href="#permissionoption">PermissionOption</a></span><span>[]</span></>} required>
+<ResponseField name="options" type={<a href="#permissionoption">PermissionOption[]</a>} required>
   Available permission options for the user to choose from.
 </ResponseField>
 <ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
@@ -743,7 +743,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 <ResponseField name="cwd" type={"string | null"} >
   Working directory for the command (absolute path).
 </ResponseField>
-<ResponseField name="env" type={<><span><a href="#envvariable">EnvVariable</a></span><span>[]</span></>} >
+<ResponseField name="env" type={<a href="#envvariable">EnvVariable[]</a>} >
   Environment variables for the command.
 </ResponseField>
 <ResponseField name="outputByteLimit" type={"integer | null"} >
@@ -1071,7 +1071,7 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
 </ResponseField>
-<ResponseField name="audience" type={"array | null"} >
+<ResponseField name="audience" type={<><span><a href="#role">Role[]</a></span><span> | null</span></>} >
 </ResponseField>
 <ResponseField name="lastModified" type={"string | null"} >
 </ResponseField>
@@ -1195,7 +1195,7 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
 </ResponseField>
-<ResponseField name="availableCommands" type={<><span><a href="#availablecommand">AvailableCommand</a></span><span>[]</span></>} required>
+<ResponseField name="availableCommands" type={<a href="#availablecommand">AvailableCommand[]</a>} required>
   Commands the agent can execute
 </ResponseField>
 
@@ -1873,7 +1873,7 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
 </ResponseField>
-<ResponseField name="headers" type={<><span><a href="#httpheader">HttpHeader</a></span><span>[]</span></>} required>
+<ResponseField name="headers" type={<a href="#httpheader">HttpHeader[]</a>} required>
   HTTP headers to set when making requests to the MCP server.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
@@ -1903,7 +1903,7 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
 </ResponseField>
-<ResponseField name="headers" type={<><span><a href="#httpheader">HttpHeader</a></span><span>[]</span></>} required>
+<ResponseField name="headers" type={<a href="#httpheader">HttpHeader[]</a>} required>
   HTTP headers to set when making requests to the MCP server.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
@@ -1939,7 +1939,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 <ResponseField name="command" type={"string"} required>
   Path to the MCP server executable.
 </ResponseField>
-<ResponseField name="env" type={<><span><a href="#envvariable">EnvVariable</a></span><span>[]</span></>} required>
+<ResponseField name="env" type={<a href="#envvariable">EnvVariable[]</a>} required>
   Environment variables to set when launching the MCP server.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
@@ -1965,7 +1965,7 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
 </ResponseField>
-<ResponseField name="headers" type={<><span><a href="#httpheader">HttpHeader</a></span><span>[]</span></>} required>
+<ResponseField name="headers" type={<a href="#httpheader">HttpHeader[]</a>} required>
   HTTP headers to set when making requests to the MCP server.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
@@ -1991,7 +1991,7 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
 </ResponseField>
-<ResponseField name="headers" type={<><span><a href="#httpheader">HttpHeader</a></span><span>[]</span></>} required>
+<ResponseField name="headers" type={<a href="#httpheader">HttpHeader[]</a>} required>
   HTTP headers to set when making requests to the MCP server.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
@@ -2023,7 +2023,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 <ResponseField name="command" type={"string"} required>
   Path to the MCP server executable.
 </ResponseField>
-<ResponseField name="env" type={<><span><a href="#envvariable">EnvVariable</a></span><span>[]</span></>} required>
+<ResponseField name="env" type={<a href="#envvariable">EnvVariable[]</a>} required>
   Environment variables to set when launching the MCP server.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
@@ -2108,7 +2108,7 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
 </ResponseField>
-<ResponseField name="entries" type={<><span><a href="#planentry">PlanEntry</a></span><span>[]</span></>} required>
+<ResponseField name="entries" type={<a href="#planentry">PlanEntry[]</a>} required>
   The list of tasks to be accomplished.
 
 When updating a plan, the agent must send a complete list of all entries
@@ -2468,7 +2468,7 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
 </ResponseField>
-<ResponseField name="availableModes" type={<><span><a href="#sessionmode">SessionMode</a></span><span>[]</span></>} required>
+<ResponseField name="availableModes" type={<a href="#sessionmode">SessionMode[]</a>} required>
   The set of modes that the Agent can operate in
 </ResponseField>
 <ResponseField name="currentModeId" type={<a href="#sessionmodeid">SessionModeId</a>} required>
@@ -2564,14 +2564,14 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
 </ResponseField>
-<ResponseField name="content" type={<><span><a href="#toolcallcontent">ToolCallContent</a></span><span>[]</span></>} >
+<ResponseField name="content" type={<a href="#toolcallcontent">ToolCallContent[]</a>} >
   Content produced by the tool call.
 </ResponseField>
 <ResponseField name="kind" type={<a href="#toolkind">ToolKind</a>} >
   The category of tool being invoked.
 Helps clients choose appropriate icons and UI treatment.
 </ResponseField>
-<ResponseField name="locations" type={<><span><a href="#toolcalllocation">ToolCallLocation</a></span><span>[]</span></>} >
+<ResponseField name="locations" type={<a href="#toolcalllocation">ToolCallLocation[]</a>} >
   File locations affected by this tool call.
 Enables "follow-along" features in clients.
 </ResponseField>
@@ -2609,13 +2609,13 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
 </ResponseField>
-<ResponseField name="content" type={"array | null"} >
+<ResponseField name="content" type={<><span><a href="#toolcallcontent">ToolCallContent[]</a></span><span> | null</span></>} >
   Replace the content collection.
 </ResponseField>
 <ResponseField name="kind" type={<><span><a href="#toolkind">ToolKind</a></span><span> | null</span></>} >
   Update the tool kind.
 </ResponseField>
-<ResponseField name="locations" type={"array | null"} >
+<ResponseField name="locations" type={<><span><a href="#toolcalllocation">ToolCallLocation[]</a></span><span> | null</span></>} >
   Replace the locations collection.
 </ResponseField>
 <ResponseField name="rawInput" type={"object"} >
@@ -2653,7 +2653,7 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
 </ResponseField>
-<ResponseField name="entries" type={<><span><a href="#planentry">PlanEntry</a></span><span>[]</span></>} required>
+<ResponseField name="entries" type={<a href="#planentry">PlanEntry[]</a>} required>
   The list of tasks to be accomplished.
 
 When updating a plan, the agent must send a complete list of all entries
@@ -2679,7 +2679,7 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
 </ResponseField>
-<ResponseField name="availableCommands" type={<><span><a href="#availablecommand">AvailableCommand</a></span><span>[]</span></>} required>
+<ResponseField name="availableCommands" type={<a href="#availablecommand">AvailableCommand[]</a>} required>
   Commands the agent can execute
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
@@ -2863,14 +2863,14 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
 </ResponseField>
-<ResponseField name="content" type={<><span><a href="#toolcallcontent">ToolCallContent</a></span><span>[]</span></>} >
+<ResponseField name="content" type={<a href="#toolcallcontent">ToolCallContent[]</a>} >
   Content produced by the tool call.
 </ResponseField>
 <ResponseField name="kind" type={<a href="#toolkind">ToolKind</a>} >
   The category of tool being invoked.
 Helps clients choose appropriate icons and UI treatment.
 </ResponseField>
-<ResponseField name="locations" type={<><span><a href="#toolcalllocation">ToolCallLocation</a></span><span>[]</span></>} >
+<ResponseField name="locations" type={<a href="#toolcalllocation">ToolCallLocation[]</a>} >
   File locations affected by this tool call.
 Enables "follow-along" features in clients.
 </ResponseField>
@@ -3061,13 +3061,13 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
 </ResponseField>
-<ResponseField name="content" type={"array | null"} >
+<ResponseField name="content" type={<><span><a href="#toolcallcontent">ToolCallContent[]</a></span><span> | null</span></>} >
   Replace the content collection.
 </ResponseField>
 <ResponseField name="kind" type={<><span><a href="#toolkind">ToolKind</a></span><span> | null</span></>} >
   Update the tool kind.
 </ResponseField>
-<ResponseField name="locations" type={"array | null"} >
+<ResponseField name="locations" type={<><span><a href="#toolcalllocation">ToolCallLocation[]</a></span><span> | null</span></>} >
   Replace the locations collection.
 </ResponseField>
 <ResponseField name="rawInput" type={"object"} >

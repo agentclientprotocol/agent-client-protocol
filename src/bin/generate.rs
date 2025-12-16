@@ -684,6 +684,41 @@ starting with '$/' it is free to ignore the notification."
             }
         }
 
+        fn get_ref_type_name(schema: &Value) -> Option<&str> {
+            if let Some(ref_val) = schema.get("$ref").and_then(|v| v.as_str()) {
+                return Some(ref_val.strip_prefix("#/$defs/").unwrap_or(ref_val));
+            }
+
+            // Check for single-item allOf/anyOf/oneOf wrappers (often used for $ref with sibling properties)
+            for key in ["allOf", "anyOf", "oneOf"] {
+                if let Some(arr) = schema.get(key).and_then(|v| v.as_array())
+                    && arr.len() == 1
+                    && let Some(type_name) = Self::get_ref_type_name(&arr[0])
+                {
+                    return Some(type_name);
+                }
+            }
+
+            None
+        }
+
+        fn get_array_type_string(schema: &Value) -> String {
+            if let Some(items) = schema.get("items") {
+                if let Some(type_name) = Self::get_ref_type_name(items) {
+                    return format!(
+                        "<a href=\"#{}\">{}[]</a>",
+                        MarkdownGenerator::anchor_text(type_name),
+                        type_name
+                    );
+                }
+
+                let item_type = MarkdownGenerator::get_type_string(items);
+                format!("<><span>{item_type}</span><span>[]</span></>")
+            } else {
+                "\"array\"".to_string()
+            }
+        }
+
         fn get_type_string(schema: &Value) -> String {
             // Check for $ref
             if let Some(ref_val) = schema.get("$ref").and_then(|v| v.as_str()) {
@@ -708,14 +743,7 @@ starting with '$/' it is free to ignore the notification."
             if let Some(type_val) = schema.get("type") {
                 if let Some(type_str) = type_val.as_str() {
                     return match type_str {
-                        "array" => {
-                            if let Some(items) = schema.get("items") {
-                                let item_type = Self::get_type_string(items);
-                                format!("<><span>{item_type}</span><span>[]</span></>")
-                            } else {
-                                "\"array\"".to_string()
-                            }
-                        }
+                        "array" => Self::get_array_type_string(schema),
                         "integer" => {
                             let type_str = if let Some(format) =
                                 schema.get("format").and_then(|v| v.as_str())
@@ -732,13 +760,26 @@ starting with '$/' it is free to ignore the notification."
 
                 // Handle multiple types (nullable)
                 if let Some(arr) = type_val.as_array() {
-                    let types: Vec<String> = arr
-                        .iter()
-                        .filter_map(|v| v.as_str().map(ToString::to_string))
-                        .collect();
-                    if !types.is_empty() {
-                        return format!("\"{}\"", types.join(" | "));
+                    let types: Vec<&str> = arr.iter().filter_map(|v| v.as_str()).collect();
+                    if types.is_empty() {
+                        return "\"object\"".to_string();
                     }
+
+                    // Special-case nullable arrays so we can still show the item type (and link to it).
+                    if types.contains(&"array") && schema.get("items").is_some() {
+                        let array_type = Self::get_array_type_string(schema);
+                        let rest: Vec<&str> =
+                            types.iter().copied().filter(|t| *t != "array").collect();
+                        if rest.is_empty() {
+                            return array_type;
+                        }
+                        let rest_text = rest.join(" | ");
+                        return format!(
+                            "<><span>{array_type}</span><span> | {rest_text}</span></>"
+                        );
+                    }
+
+                    return format!("\"{}\"", types.join(" | "));
                 }
             }
 
@@ -775,9 +816,13 @@ starting with '$/' it is free to ignore the notification."
         }
 
         fn get_inline_variant_type(variant: &Value) -> Option<String> {
+            if variant.get("oneOf").is_some() || variant.get("anyOf").is_some() {
+                return None;
+            }
+
             // Check for simple type
-            if let Some(type_str) = variant.get("type").and_then(|v| v.as_str()) {
-                return Some(format!("\"{type_str}\""));
+            if variant.get("type").and_then(|v| v.as_str()).is_some() {
+                return Some(Self::get_type_string(variant));
             }
             // Check for $ref
             if let Some(ref_val) = variant.get("$ref").and_then(|v| v.as_str()) {
