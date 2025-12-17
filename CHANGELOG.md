@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.10.5](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.10.4...v0.10.5) - 2025-12-17
+
+### Added
+
+- *(unstable)* Make constructing SessionConfigSelects on the Rust side nicer ([#343](https://github.com/agentclientprotocol/agent-client-protocol/pull/343))
+
 ## [0.10.4](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.10.3...v0.10.4) - 2025-12-16
 
 ### Added
