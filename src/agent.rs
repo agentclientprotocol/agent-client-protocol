@@ -1513,6 +1513,20 @@ pub enum SessionConfigSelectOptions {
     Grouped(Vec<SessionConfigSelectGroup>),
 }
 
+#[cfg(feature = "unstable_session_config_options")]
+impl From<Vec<SessionConfigSelectOption>> for SessionConfigSelectOptions {
+    fn from(options: Vec<SessionConfigSelectOption>) -> Self {
+        SessionConfigSelectOptions::Ungrouped(options)
+    }
+}
+
+#[cfg(feature = "unstable_session_config_options")]
+impl From<Vec<SessionConfigSelectGroup>> for SessionConfigSelectOptions {
+    fn from(groups: Vec<SessionConfigSelectGroup>) -> Self {
+        SessionConfigSelectOptions::Grouped(groups)
+    }
+}
+
 /// **UNSTABLE**
 ///
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -1534,11 +1548,11 @@ impl SessionConfigSelect {
     #[must_use]
     pub fn new(
         current_value: impl Into<SessionConfigValueId>,
-        options: SessionConfigSelectOptions,
+        options: impl Into<SessionConfigSelectOptions>,
     ) -> Self {
         Self {
             current_value: current_value.into(),
-            options,
+            options: options.into(),
         }
     }
 }
@@ -1609,7 +1623,7 @@ impl SessionConfigOption {
         id: impl Into<SessionConfigId>,
         name: impl Into<String>,
         current_value: impl Into<SessionConfigValueId>,
-        options: SessionConfigSelectOptions,
+        options: impl Into<SessionConfigSelectOptions>,
     ) -> Self {
         Self::new(
             id,
