@@ -75,7 +75,7 @@ Add a `usage` field to `PromptResponse` for token consumption tracking:
       "total_tokens": 53000,
       "input_tokens": 35000,
       "output_tokens": 12000,
-      "reasoning_tokens": 5000,
+      "thought_tokens": 5000,
       "cached_read_tokens": 5000,
       "cached_write_tokens": 1000
     }
@@ -88,7 +88,7 @@ Add a `usage` field to `PromptResponse` for token consumption tracking:
 - `total_tokens` (number, required) - Sum of all token types across session
 - `input_tokens` (number, required) - Total input tokens across all turns
 - `output_tokens` (number, required) - Total output tokens across all turns
-- `reasoning_tokens` (number, optional) - Total reasoning tokens (for o1/o3 models)
+- `thought_tokens` (number, optional) - Total thought/reasoning tokens (for o1/o3 models)
 - `cached_read_tokens` (number, optional) - Total cache read tokens
 - `cached_write_tokens` (number, optional) - Total cache write tokens
 
@@ -105,8 +105,7 @@ Agents send context window and cost information via `session/update` notificatio
     "update": {
       "sessionUpdate": "context_update",
       "used": 53000,
-      "size": 200000,
-      "percentage": 26.5
+      "size": 200000
     }
   }
 }
@@ -116,9 +115,8 @@ Agents send context window and cost information via `session/update` notificatio
 
 - `used` (number, required) - Tokens currently in context
 - `size` (number, required) - Total context window size in tokens
-- `percentage` (number, required) - Percentage used (0-100)
 
-Note: Clients can compute `remaining` as `size - used` if needed.
+Note: Clients can compute `remaining` as `size - used` and `percentage` as `used / size * 100` if needed.
 
 #### Cost Fields (optional)
 
@@ -138,7 +136,6 @@ Example with optional cost:
       "sessionUpdate": "context_update",
       "used": 53000,
       "size": 200000,
-      "percentage": 26.5,
       "cost": {
         "amount": 0.045,
         "currency": "USD"
@@ -192,7 +189,7 @@ Example with optional cost:
 1. **Update schema.json** to add:
    - `Usage` type with token fields
    - `Cost` type with `amount` and `currency` fields
-   - `ContextUpdate` type with `used`, `size`, `percentage` (required) and optional `cost` field
+   - `ContextUpdate` type with `used`, `size` (required) and optional `cost` field
    - Add optional `usage` field to `PromptResponse`
    - Add `ContextUpdate` variant to `SessionUpdate` oneOf array (with `sessionUpdate: "context_update"`)
 
@@ -230,8 +227,8 @@ Cost is cumulative session state, similar to context window:
 
 The context update notification provides everything needed:
 
-- `used` and `size` give absolute numbers for precise tracking (clients can compute `remaining` as `size - used`)
-- `percentage` enables simple threshold-based warnings
+- `used` and `size` give absolute numbers for precise tracking
+- Clients can compute `remaining` as `size - used` and `percentage` as `used / size * 100`
 - `size` lets clients understand the total budget
 
 **Recommended client behavior:**
@@ -247,15 +244,6 @@ Clients can also:
 - Offer "Compact context" or "Summarize conversation" actions
 - Auto-suggest starting a new session
 - Implement automatic handoff when approaching limits
-
-### Why does the agent calculate percentage instead of the client?
-
-Agent knows its model best:
-
-- Agent knows exact context window size (varies by model)
-- Agent knows how it counts tokens (different tokenizers)
-- Agent knows about special tokens, system messages, etc.
-- Client can still recalculate if needed (all raw data provided)
 
 ### Why not assume USD for cost?
 
@@ -324,3 +312,4 @@ For agents that only provide usage during active prompting, the client UI may no
 
 - 2025-12-07: Initial draft
 - 2025-12-13: Changed from `session/status` request method to `session/update` notification with `sessionUpdate: "context_update"`. Made `cost` optional and removed `remaining` field (clients can compute as `size - used`). This approach provides more flexibility for agents and follows the same pattern as other dynamic session properties.
+- 2025-12-17: Renamed `reasoning_tokens` to `thought_tokens` for consistency with ACP terminology. Removed `percentage` field (clients can compute as `used / size * 100`).
