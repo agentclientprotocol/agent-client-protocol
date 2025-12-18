@@ -92,6 +92,20 @@ impl Error {
         ErrorCode::InternalError.into()
     }
 
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Request was cancelled.
+    ///
+    /// Execution of the method was aborted either due to a cancellation request from the caller
+    /// or because of resource constraints or shutdown.
+    #[cfg(feature = "unstable_cancel_request")]
+    #[must_use]
+    pub fn request_cancelled() -> Self {
+        ErrorCode::RequestCancelled.into()
+    }
+
     /// Authentication required.
     #[must_use]
     pub fn auth_required() -> Self {
