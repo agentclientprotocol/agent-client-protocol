@@ -44,7 +44,7 @@ Industry research shows common patterns across AI coding tools:
 We propose separating usage tracking into two distinct concerns:
 
 1. **Token usage** - Reported in `PromptResponse` after each turn (per-turn data)
-2. **Context window and cost** - Reported via `session/update` notifications with `sessionUpdate: "context_update"` (session state)
+2. **Context window and cost** - Reported via `session/update` notifications with `sessionUpdate: "usage_update"` (session state)
 
 This separation reflects how users consume this information:
 - Token counts are tied to specific turns and useful immediately after a prompt
@@ -94,7 +94,7 @@ Add a `usage` field to `PromptResponse` for token consumption tracking:
 
 ### Context Window and Cost via `session/update`
 
-Agents send context window and cost information via `session/update` notifications with `sessionUpdate: "context_update"`:
+Agents send context window and cost information via `session/update` notifications with `sessionUpdate: "usage_update"`:
 
 ```json
 {
@@ -103,7 +103,7 @@ Agents send context window and cost information via `session/update` notificatio
   "params": {
     "sessionId": "sess_abc123",
     "update": {
-      "sessionUpdate": "context_update",
+      "sessionUpdate": "usage_update",
       "used": 53000,
       "size": 200000
     }
@@ -133,7 +133,7 @@ Example with optional cost:
   "params": {
     "sessionId": "sess_abc123",
     "update": {
-      "sessionUpdate": "context_update",
+      "sessionUpdate": "usage_update",
       "used": 53000,
       "size": 200000,
       "cost": {
@@ -191,11 +191,11 @@ Example with optional cost:
    - `Cost` type with `amount` and `currency` fields
    - `ContextUpdate` type with `used`, `size` (required) and optional `cost` field
    - Add optional `usage` field to `PromptResponse`
-   - Add `ContextUpdate` variant to `SessionUpdate` oneOf array (with `sessionUpdate: "context_update"`)
+   - Add `UsageUpdate` variant to `SessionUpdate` oneOf array (with `sessionUpdate: "usage_update"`)
 
 2. **Update protocol documentation**:
    - Document `usage` field in `/docs/protocol/prompt-turn.mdx`
-   - Document `session/update` notification with `sessionUpdate: "context_update"` variant
+   - Document `session/update` notification with `sessionUpdate: "usage_update"` variant
    - Add examples showing typical usage patterns and when agents send context updates
 
 ## Frequently asked questions
@@ -264,7 +264,7 @@ All fields except the basic token counts are optional. Agents report what they c
 
 - During streaming: Agents may send progressive context updates via `session/update` notifications as usage changes
 - Final response: Include complete token usage in `PromptResponse`
-- Context window and cost: Agents send `session/update` notifications with `sessionUpdate: "context_update"` when data becomes available (after prompt completion, on session creation/resume, or when context state changes significantly)
+- Context window and cost: Agents send `session/update` notifications with `sessionUpdate: "usage_update"` when data becomes available (after prompt completion, on session creation/resume, or when context state changes significantly)
 
 ### What about models without fixed context windows?
 
@@ -313,3 +313,4 @@ For agents that only provide usage during active prompting, the client UI may no
 - 2025-12-07: Initial draft
 - 2025-12-13: Changed from `session/status` request method to `session/update` notification with `sessionUpdate: "context_update"`. Made `cost` optional and removed `remaining` field (clients can compute as `size - used`). This approach provides more flexibility for agents and follows the same pattern as other dynamic session properties.
 - 2025-12-17: Renamed `reasoning_tokens` to `thought_tokens` for consistency with ACP terminology. Removed `percentage` field (clients can compute as `used / size * 100`).
+- 2025-12-19: Renamed `sessionUpdate: "context_update"` to `sessionUpdate: "usage_update"` to better reflect the payload semantics (includes both context window info and cumulative cost).
