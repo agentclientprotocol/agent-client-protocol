@@ -39,10 +39,11 @@ The current maintainers for ACP are:
 
 ### Python SDK
 
-| Name          | GitHub                    |
-| ------------- | ------------------------- |
-| Chojan Shang  | https://github.com/PsiACE |
-| Richard Chien | https://github.com/stdrc  |
+| Name          | GitHub                       |
+| ------------- | ---------------------------- |
+| Chojan Shang  | https://github.com/PsiACE    |
+| Richard Chien | https://github.com/stdrc     |
+| Frost Ming    | https://github.com/frostming |
 
 ### Rust SDK
 
