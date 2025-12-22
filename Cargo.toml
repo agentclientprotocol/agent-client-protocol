@@ -1,7 +1,7 @@
 [package]
 name = "agent-client-protocol-schema"
 authors = ["Zed <hi@zed.dev>"]
-version = "0.6.3"
+version = "0.10.5"
 edition = "2024"
 license = "Apache-2.0"
 description = "A protocol for standardizing communication between code editors and AI coding agents"
@@ -11,22 +11,49 @@ documentation = "https://docs.rs/agent-client-protocol-schema"
 readme = "README.md"
 keywords = ["agent", "client", "protocol", "ai", "editor"]
 categories = ["development-tools", "api-bindings"]
-include = ["/rust/**/*.rs", "/README.md", "/LICENSE", "/Cargo.toml"]
+include = ["/src/**/*.rs", "/README.md", "/LICENSE", "/Cargo.toml"]
 
 [features]
-unstable = []
-
-[lib]
-path = "rust/acp.rs"
-doctest = false
+unstable = [
+    "unstable_cancel_request",
+    "unstable_session_config_options",
+    "unstable_session_fork",
+    "unstable_session_info_update",
+    "unstable_session_list",
+    "unstable_session_model",
+    "unstable_session_resume",
+]
+unstable_cancel_request = []
+unstable_session_config_options = []
+unstable_session_fork = []
+unstable_session_info_update = []
+unstable_session_list = []
+unstable_session_model = []
+unstable_session_resume = []
 
 [[bin]]
 name = "generate"
-path = "rust/bin/generate.rs"
+path = "src/bin/generate.rs"
 
 [dependencies]
 anyhow = "1"
-derive_more = { version = "2.0.1", features = ["from", "display"] }
+derive_more = { version = "2", features = ["from", "display"] }
 schemars = { version = "1" }
 serde = { version = "1", features = ["derive", "rc"] }
 serde_json = { version = "1", features = ["raw_value"] }
+strum = { version = "0.27", features = ["derive"] }
+
+[lints.rust]
+future_incompatible = { level = "warn", priority = -1 }
+let-underscore = "warn"
+missing_debug_implementations = "warn"
+# missing_docs = "warn"
+nonstandard_style = { level = "warn", priority = -1 }
+rust_2018_idioms = { level = "warn", priority = -1 }
+unused = { level = "warn", priority = -1 }
+
+[lints.clippy]
+cargo = "warn"
+exhaustive_enums = "warn"
+exhaustive_structs = "warn"
+pedantic = "warn"

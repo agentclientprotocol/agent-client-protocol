@@ -1,0 +1,27 @@
+name: Upload Schema
+on:
+  release:
+    types: [published]
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  upload-schema:
+    permissions:
+      contents: write # to upload release assets
+    if: github.repository_owner == 'agentclientprotocol' && startsWith(github.event.release.name, 'v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
+      - name: Upload schema files to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ github.event.release.name }}" schema/schema.json schema/meta.json schema/schema.unstable.json schema/meta.unstable.json

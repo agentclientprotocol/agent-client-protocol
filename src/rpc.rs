@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use derive_more::Display;
+use derive_more::{Display, From};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use serde_json::value::RawValue;
@@ -20,41 +20,95 @@ use crate::{
 ///
 /// [2] Fractional parts may be problematic, since many decimal fractions cannot be represented exactly as binary fractions.
 #[derive(
-    Debug, PartialEq, Clone, Hash, Eq, Deserialize, Serialize, PartialOrd, Ord, Display, JsonSchema,
+    Debug,
+    PartialEq,
+    Clone,
+    Hash,
+    Eq,
+    Deserialize,
+    Serialize,
+    PartialOrd,
+    Ord,
+    Display,
+    JsonSchema,
+    From,
 )]
-#[serde(deny_unknown_fields)]
 #[serde(untagged)]
-#[schemars(inline)]
+#[allow(
+    clippy::exhaustive_enums,
+    reason = "This comes from the JSON-RPC specification itself"
+)]
+#[from(String, i64)]
 pub enum RequestId {
     #[display("null")]
-    #[schemars(title = "null")]
     Null,
-    #[schemars(title = "number")]
     Number(i64),
-    #[schemars(title = "string")]
     Str(String),
 }
 
-#[derive(Serialize, Deserialize, Clone, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
+#[allow(
+    clippy::exhaustive_structs,
+    reason = "This comes from the JSON-RPC specification itself"
+)]
+#[schemars(rename = "{Params}", extend("x-docs-ignore" = true))]
+pub struct Request<Params> {
+    pub id: RequestId,
+    pub method: Arc<str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub params: Option<Params>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
+#[allow(
+    clippy::exhaustive_enums,
+    reason = "This comes from the JSON-RPC specification itself"
+)]
+#[serde(untagged)]
+#[schemars(rename = "{Result}", extend("x-docs-ignore" = true))]
+pub enum Response<Result> {
+    Result { id: RequestId, result: Result },
+    Error { id: RequestId, error: Error },
+}
+
+impl<R> Response<R> {
+    pub fn new(id: impl Into<RequestId>, result: Result<R>) -> Self {
+        match result {
+            Ok(result) => Self::Result {
+                id: id.into(),
+                result,
+            },
+            Err(error) => Self::Error {
+                id: id.into(),
+                error,
+            },
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
+#[allow(
+    clippy::exhaustive_structs,
+    reason = "This comes from the JSON-RPC specification itself"
+)]
+#[schemars(rename = "{Params}", extend("x-docs-ignore" = true))]
+pub struct Notification<Params> {
+    pub method: Arc<str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub params: Option<Params>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
 #[serde(untagged)]
 #[schemars(inline)]
+#[allow(
+    clippy::exhaustive_enums,
+    reason = "This comes from the JSON-RPC specification itself"
+)]
 pub enum OutgoingMessage<Local: Side, Remote: Side> {
-    Request {
-        id: RequestId,
-        method: Arc<str>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        params: Option<Remote::InRequest>,
-    },
-    Response {
-        id: RequestId,
-        #[serde(flatten)]
-        result: ResponseResult<Local::OutResponse>,
-    },
-    Notification {
-        method: Arc<str>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        params: Option<Remote::InNotification>,
-    },
+    Request(Request<Remote::InRequest>),
+    Response(Response<Local::OutResponse>),
+    Notification(Notification<Remote::InNotification>),
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
@@ -88,29 +142,27 @@ impl<M> JsonRpcMessage<M> {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum ResponseResult<Res> {
-    Result(Res),
-    Error(Error),
-}
-
-impl<T> From<Result<T>> for ResponseResult<T> {
-    fn from(result: Result<T>) -> Self {
-        match result {
-            Ok(value) => ResponseResult::Result(value),
-            Err(error) => ResponseResult::Error(error),
-        }
-    }
-}
-
 pub trait Side: Clone {
     type InRequest: Clone + Serialize + DeserializeOwned + JsonSchema + 'static;
     type InNotification: Clone + Serialize + DeserializeOwned + JsonSchema + 'static;
     type OutResponse: Clone + Serialize + DeserializeOwned + JsonSchema + 'static;
 
+    /// Decode a request for a given method. This will encapsulate the knowledge of mapping which
+    /// serialization struct to use for each method.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if the method is not recognized or if the parameters
+    /// cannot be deserialized into the expected type.
     fn decode_request(method: &str, params: Option<&RawValue>) -> Result<Self::InRequest>;
 
+    /// Decode a notification for a given method. This will encapsulate the knowledge of mapping which
+    /// serialization struct to use for each method.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if the method is not recognized or if the parameters
+    /// cannot be deserialized into the expected type.
     fn decode_notification(method: &str, params: Option<&RawValue>)
     -> Result<Self::InNotification>;
 }
@@ -121,7 +173,8 @@ pub trait Side: Clone {
 /// are incoming vs outgoing from the client's perspective.
 ///
 /// See protocol docs: [Communication Model](https://agentclientprotocol.com/protocol/overview#communication-model)
-#[derive(Clone, JsonSchema)]
+#[derive(Clone, Default, Debug, JsonSchema)]
+#[non_exhaustive]
 pub struct ClientSide;
 
 impl Side for ClientSide {
@@ -201,7 +254,8 @@ impl Side for ClientSide {
 /// are incoming vs outgoing from the agent's perspective.
 ///
 /// See protocol docs: [Communication Model](https://agentclientprotocol.com/protocol/overview#communication-model)
-#[derive(Clone, JsonSchema)]
+#[derive(Clone, Default, Debug, JsonSchema)]
+#[non_exhaustive]
 pub struct AgentSide;
 
 impl Side for AgentSide {
@@ -225,10 +279,28 @@ impl Side for AgentSide {
             m if m == AGENT_METHOD_NAMES.session_load => serde_json::from_str(params.get())
                 .map(ClientRequest::LoadSessionRequest)
                 .map_err(Into::into),
+            #[cfg(feature = "unstable_session_list")]
+            m if m == AGENT_METHOD_NAMES.session_list => serde_json::from_str(params.get())
+                .map(ClientRequest::ListSessionsRequest)
+                .map_err(Into::into),
+            #[cfg(feature = "unstable_session_fork")]
+            m if m == AGENT_METHOD_NAMES.session_fork => serde_json::from_str(params.get())
+                .map(ClientRequest::ForkSessionRequest)
+                .map_err(Into::into),
+            #[cfg(feature = "unstable_session_resume")]
+            m if m == AGENT_METHOD_NAMES.session_resume => serde_json::from_str(params.get())
+                .map(ClientRequest::ResumeSessionRequest)
+                .map_err(Into::into),
             m if m == AGENT_METHOD_NAMES.session_set_mode => serde_json::from_str(params.get())
                 .map(ClientRequest::SetSessionModeRequest)
                 .map_err(Into::into),
-            #[cfg(feature = "unstable")]
+            #[cfg(feature = "unstable_session_config_options")]
+            m if m == AGENT_METHOD_NAMES.session_set_config_option => {
+                serde_json::from_str(params.get())
+                    .map(ClientRequest::SetSessionConfigOptionRequest)
+                    .map_err(Into::into)
+            }
+            #[cfg(feature = "unstable_session_model")]
             m if m == AGENT_METHOD_NAMES.session_set_model => serde_json::from_str(params.get())
                 .map(ClientRequest::SetSessionModelRequest)
                 .map_err(Into::into),
@@ -330,14 +402,15 @@ fn test_notification_wire_format() {
     use serde_json::{Value, json};
 
     // Test client -> agent notification wire format
-    let outgoing_msg =
-        JsonRpcMessage::wrap(OutgoingMessage::<ClientSide, AgentSide>::Notification {
+    let outgoing_msg = JsonRpcMessage::wrap(
+        OutgoingMessage::<ClientSide, AgentSide>::Notification(Notification {
             method: "cancel".into(),
             params: Some(ClientNotification::CancelNotification(CancelNotification {
                 session_id: SessionId("test-123".into()),
                 meta: None,
             })),
-        });
+        }),
+    );
 
     let serialized: Value = serde_json::to_value(&outgoing_msg).unwrap();
     assert_eq!(
@@ -352,8 +425,8 @@ fn test_notification_wire_format() {
     );
 
     // Test agent -> client notification wire format
-    let outgoing_msg =
-        JsonRpcMessage::wrap(OutgoingMessage::<AgentSide, ClientSide>::Notification {
+    let outgoing_msg = JsonRpcMessage::wrap(
+        OutgoingMessage::<AgentSide, ClientSide>::Notification(Notification {
             method: "sessionUpdate".into(),
             params: Some(AgentNotification::SessionNotification(
                 SessionNotification {
@@ -369,7 +442,8 @@ fn test_notification_wire_format() {
                     meta: None,
                 },
             )),
-        });
+        }),
+    );
 
     let serialized: Value = serde_json::to_value(&outgoing_msg).unwrap();
     assert_eq!(

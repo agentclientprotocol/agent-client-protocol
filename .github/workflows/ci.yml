@@ -23,10 +23,10 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8
 
       - name: Use Node.js
-        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f
         with:
           node-version: latest
           cache: "npm"
@@ -44,15 +44,20 @@ jobs:
         run: npm run format:check
 
       - name: Check for typos
-        uses: crate-ci/typos@80c8a4945eec0f6d464eaf9e65ed98ef085283d1
+        uses: crate-ci/typos@2d0ce569feab1f8752f1dde43cc2f2aa53236e06
         with:
           config: ./typos.toml
 
       - name: Lint
-        run: cargo clippy
+        run: cargo clippy --all-features
 
       - name: Build
         run: cargo build --all-targets --all-features
 
       - name: Run tests
         run: cargo test --all-features
+
+      - name: Check generated files are up to date
+        run: |
+          npm run generate
+          git diff --exit-code || (echo "Generated files are out of date. Run 'npm run generate' and commit the changes." && exit 1)

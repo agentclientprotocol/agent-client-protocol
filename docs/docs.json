@@ -37,6 +37,10 @@
       {
         "label": "Zed Industries",
         "href": "https://zed.dev"
+      },
+      {
+        "label": "JetBrains",
+        "href": "https://jetbrains.com"
       }
     ]
   },
@@ -70,7 +74,15 @@
               "protocol/slash-commands",
               "protocol/extensibility",
               "protocol/transports",
-              "protocol/schema"
+              "protocol/schema",
+              {
+                "group": "Draft: In Progress and May Change",
+                "hidden": true,
+                "pages": [
+                  "protocol/draft/cancellation",
+                  "protocol/draft/schema"
+                ]
+              }
             ]
           },
           {
@@ -92,9 +104,15 @@
           {
             "group": "Draft",
             "pages": [
+              "rfds/message-id",
               "rfds/session-list",
               "rfds/session-config-options",
-              "rfds/message-id"
+              "rfds/session-fork",
+              "rfds/request-cancellation",
+              "rfds/session-resume",
+              "rfds/meta-propagation",
+              "rfds/session-info-update",
+              "rfds/agent-telemetry-export"
             ]
           },
           { "group": "Preview", "pages": [] },
@@ -104,9 +122,10 @@
       {
         "tab": "Community",
         "pages": [
-          "community/governance",
           "community/communication",
           "community/code-of-conduct",
+          "community/governance",
+          "community/working-interest-groups",
           "community/contributing"
         ]
       },

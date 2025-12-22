@@ -8,6 +8,8 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::{IntoOption, Meta};
+
 /// An execution plan for accomplishing complex tasks.
 ///
 /// Plans consist of multiple entries representing individual tasks or goals.
@@ -17,16 +19,41 @@ use serde::{Deserialize, Serialize};
 /// See protocol docs: [Agent Plan](https://agentclientprotocol.com/protocol/agent-plan)
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-#[schemars(inline)]
+#[non_exhaustive]
 pub struct Plan {
     /// The list of tasks to be accomplished.
     ///
     /// When updating a plan, the agent must send a complete list of all entries
     /// with their current status. The client replaces the entire plan with each update.
     pub entries: Vec<PlanEntry>,
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
-    pub meta: Option<serde_json::Value>,
+    pub meta: Option<Meta>,
+}
+
+impl Plan {
+    #[must_use]
+    pub fn new(entries: Vec<PlanEntry>) -> Self {
+        Self {
+            entries,
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
 }
 
 /// A single entry in the execution plan.
@@ -36,6 +63,7 @@ pub struct Plan {
 /// See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/agent-plan#plan-entries)
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct PlanEntry {
     /// Human-readable description of what this task aims to accomplish.
     pub content: String,
@@ -44,9 +72,39 @@ pub struct PlanEntry {
     pub priority: PlanEntryPriority,
     /// Current execution status of this task.
     pub status: PlanEntryStatus,
-    /// Extension point for implementations
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
-    pub meta: Option<serde_json::Value>,
+    pub meta: Option<Meta>,
+}
+
+impl PlanEntry {
+    pub fn new(
+        content: impl Into<String>,
+        priority: PlanEntryPriority,
+        status: PlanEntryStatus,
+    ) -> Self {
+        Self {
+            content: content.into(),
+            priority,
+            status,
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
 }
 
 /// Priority levels for plan entries.
@@ -56,6 +114,7 @@ pub struct PlanEntry {
 /// See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/agent-plan#plan-entries)
 #[derive(Deserialize, Serialize, JsonSchema, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
+#[non_exhaustive]
 pub enum PlanEntryPriority {
     /// High priority task - critical to the overall goal.
     High,
@@ -71,6 +130,7 @@ pub enum PlanEntryPriority {
 /// See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/agent-plan#plan-entries)
 #[derive(Deserialize, Serialize, JsonSchema, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
+#[non_exhaustive]
 pub enum PlanEntryStatus {
     /// The task has not started yet.
     Pending,

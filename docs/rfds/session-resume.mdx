@@ -1,0 +1,85 @@
+---
+title: "Resuming of existing sessions"
+---
+
+- Author(s): [@josevalim](https://github.com/josevalim)
+- Champion: [@benbrandt](https://github.com/benbrandt)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+We propose adding the ability to resume existing sessions. This is similar to "session/load",
+except it does not return previous messages.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+While the spec provides a "session/load" command, not all coding agents implement it.
+This means that, once you close your editor, browser, etc, you can't resume the conversation.
+
+This is particularly a problem for agents that do not directly implement ACP and the
+functionality is implemented via a wrapper. In such cases, they may provide the ability
+to resume (without history), which we would like to hook into. Not only that, resuming
+could be used as a mechanism for proxies and adapter libraries to emulate "session/load".
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+Add a "session/resume" command and a capability `{ session: { resume: {} }`.
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+We will be able to resume existing conversations, providing a better user experience.
+
+Not only that, if an agent does not implement "session/load" but it does implement
+"session/resume", it is now possible to implement a proxy/adapter that intercepts
+the agents messages and writes them to disk. Now when the client issues a
+"session/load", the proxy/adapter converts it to a "session/resume", and then returns
+the stored messages.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Should we introduce a new operation (session/resume) or add an option to (session/load)?
+
+A separate method provides a few benefits:
+
+- for clients that for whatever reason don't want the history, they can just resume
+
+- for agents that can only supply resume, a proxy on top could provide load on top of it,
+  but the agent is still clear on what it supports
+
+- for agents who support both, it should be trivial to use the same resume functionality,
+  they just either replay events or do not
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+The biggest question is if it makes sense to support both "session/load" and
+"session/resume".
+
+When we start a new session over ACP, we introduce custom MCP tools and configuration.
+This means that, while we could use "session/load" to load our own chats, loading
+third-party chats would likely lead to a flawed user experience, as our tools would
+not be available. And depending on the ACP implementation, not even the capabilities
+would be respected (as loading a third-party session would not include our capabilities
+in its history, misleading the agent).
+
+Therefore, if we assume "session/load" is for loading conversations started by the client
+itself, "session/resume" is effectively a subset of "session/load", decoupled from storage
+mechanics. If an agent implements "session/load", then it can be used directly, but if it
+doesn't, a proxy or adapter can provide a reasonable fallback on top of "session/resume".
+This argues "session/resume" is the basic primitive which "session/load" builds on top of.
+
+## Revision history
+
+- 2025-11-24: Update FAQ to mention session/resume vs session/load

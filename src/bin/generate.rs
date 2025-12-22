@@ -1,40 +1,49 @@
 use agent_client_protocol_schema::{
     AGENT_METHOD_NAMES, AgentSide, CLIENT_METHOD_NAMES, ClientSide, JsonRpcMessage,
-    OutgoingMessage, VERSION,
+    OutgoingMessage, ProtocolVersion,
 };
-use schemars::{JsonSchema, generate::SchemaSettings};
-use std::{fs, path::Path};
+#[cfg(feature = "unstable_cancel_request")]
+use agent_client_protocol_schema::{PROTOCOL_LEVEL_METHOD_NAMES, ProtocolLevelNotification};
+use schemars::{
+    JsonSchema,
+    generate::SchemaSettings,
+    transform::{RemoveRefSiblings, ReplaceBoolSchemas},
+};
+use std::{env, fs, path::Path};
 
 use markdown_generator::MarkdownGenerator;
 
 #[expect(dead_code)]
 #[derive(JsonSchema)]
-#[schemars(extend("x-docs-ignore" = true))]
+#[schemars(inline)]
 struct AgentOutgoingMessage(JsonRpcMessage<OutgoingMessage<AgentSide, ClientSide>>);
 
 #[expect(dead_code)]
 #[derive(JsonSchema)]
-#[schemars(extend("x-docs-ignore" = true))]
+#[schemars(inline)]
 struct ClientOutgoingMessage(JsonRpcMessage<OutgoingMessage<ClientSide, AgentSide>>);
 
 #[expect(dead_code)]
 #[derive(JsonSchema)]
 #[serde(untagged)]
+#[schemars(title = "Agent Client Protocol")]
 enum AcpTypes {
-    AgentOutgoingMessage(AgentOutgoingMessage),
-    ClientOutgoingMessage(ClientOutgoingMessage),
+    Agent(AgentOutgoingMessage),
+    Client(ClientOutgoingMessage),
+    #[cfg(feature = "unstable_cancel_request")]
+    ProtocolLevel(ProtocolLevelNotification),
 }
 
 fn main() {
-    let mut settings = SchemaSettings::default();
-    settings.untagged_enum_variant_titles = true;
+    let mut settings = SchemaSettings::draft2020_12();
+    let mut bool_schemas = ReplaceBoolSchemas::default();
+    bool_schemas.skip_additional_properties = true;
+    settings = settings
+        .with_transform(RemoveRefSiblings::default())
+        .with_transform(bool_schemas);
 
     let generator = settings.into_generator();
-    let mut schema = generator.into_root_schema_for::<AcpTypes>();
-    {
-        let schema = schema.as_object_mut().unwrap();
-        schema.remove("title");
-    }
+    let schema = generator.into_root_schema_for::<AcpTypes>();
 
     // Convert to serde_json::Value for post-processing
     let schema_value = serde_json::to_value(&schema).unwrap();
@@ -46,35 +55,58 @@ fn main() {
     fs::create_dir_all(schema_dir.clone()).unwrap();
     fs::create_dir_all(docs_protocol_dir.clone()).unwrap();
 
+    let schema_file = if cfg!(feature = "unstable") {
+        "schema.unstable.json"
+    } else {
+        "schema.json"
+    };
     fs::write(
-        schema_dir.join("schema.json"),
+        schema_dir.join(schema_file),
         serde_json::to_string_pretty(&schema_value).unwrap(),
     )
-    .expect("Failed to write schema.json");
+    .expect("Failed to write {schema_file}");
 
     // Create a combined metadata object
+    #[cfg(not(feature = "unstable_cancel_request"))]
     let metadata = serde_json::json!({
-        "version": VERSION,
+        "version": ProtocolVersion::LATEST,
         "agentMethods": AGENT_METHOD_NAMES,
         "clientMethods": CLIENT_METHOD_NAMES,
     });
+    #[cfg(feature = "unstable_cancel_request")]
+    let metadata = serde_json::json!({
+        "version": ProtocolVersion::LATEST,
+        "agentMethods": AGENT_METHOD_NAMES,
+        "clientMethods": CLIENT_METHOD_NAMES,
+        "protocolMethods": PROTOCOL_LEVEL_METHOD_NAMES,
+    });
 
+    let meta_file = if cfg!(feature = "unstable") {
+        "meta.unstable.json"
+    } else {
+        "meta.json"
+    };
     fs::write(
-        schema_dir.join("meta.json"),
+        schema_dir.join(meta_file),
         serde_json::to_string_pretty(&metadata).unwrap(),
     )
-    .expect("Failed to write meta.json");
+    .expect("Failed to write {meta_file}");
 
     // Generate markdown documentation
     let mut markdown_gen = MarkdownGenerator::new();
     let markdown_doc = markdown_gen.generate(&schema_value);
 
-    fs::write(docs_protocol_dir.join("schema.mdx"), markdown_doc)
-        .expect("Failed to write schema.mdx");
+    let doc_file = if cfg!(feature = "unstable") {
+        "draft/schema.mdx"
+    } else {
+        "schema.mdx"
+    };
 
-    println!("✓ Generated schema.json");
-    println!("✓ Generated meta.json");
-    println!("✓ Generated schema.mdx");
+    fs::write(docs_protocol_dir.join(doc_file), markdown_doc).expect("Failed to write {doc_file}");
+
+    println!("✓ Generated {schema_file}");
+    println!("✓ Generated {meta_file}");
+    println!("✓ Generated {doc_file}");
 }
 
 mod markdown_generator {
@@ -116,6 +148,7 @@ mod markdown_generator {
 
             let mut agent_types: BTreeMap<String, Vec<(String, Value)>> = BTreeMap::new();
             let mut client_types: BTreeMap<String, Vec<(String, Value)>> = BTreeMap::new();
+            let mut protocol_types: BTreeMap<String, Vec<(String, Value)>> = BTreeMap::new();
             let mut referenced_types: Vec<(String, Value)> = Vec::new();
 
             for (name, def) in &self.definitions {
@@ -130,17 +163,17 @@ mod markdown_generator {
                 if let Some(side) = def.get("x-side").and_then(|v| v.as_str()) {
                     let method = def.get("x-method").unwrap().as_str().unwrap();
 
-                    if side == "agent" {
-                        agent_types
-                            .entry(method.to_string())
-                            .or_default()
-                            .push((name.to_string(), def.clone()));
-                    } else {
-                        client_types
-                            .entry(method.to_string())
-                            .or_default()
-                            .push((name.to_string(), def.clone()));
-                    }
+                    let types = match side {
+                        "agent" => &mut agent_types,
+                        "client" => &mut client_types,
+                        "protocol" => &mut protocol_types,
+                        _ => unimplemented!("Unexpected side {side}"),
+                    };
+
+                    types
+                        .entry(method.to_string())
+                        .or_default()
+                        .push((name.clone(), def.clone()));
                 } else {
                     referenced_types.push((name.clone(), def.clone()));
                 }
@@ -178,6 +211,27 @@ and control access to resources."
 
             for (method, types) in client_types {
                 self.generate_method(&method, side_docs.client_method_doc(&method), types);
+            }
+            #[cfg(feature = "unstable_cancel_request")]
+            {
+                writeln!(&mut self.output, "## Protocol Level").unwrap();
+                writeln!(&mut self.output).unwrap();
+                writeln!(
+            &mut self.output,
+            "Defines the interface that ACP-compliant agents and clients must both implement.
+
+Notifications whose methods start with '$/' are messages which are protocol
+implementation dependent and might not be implementable in all clients or
+agents. For example if the implementation uses a single threaded synchronous
+programming language then there is little it can do to react to a
+`$/cancel_request` notification. If an agent or client receives notifications
+starting with '$/' it is free to ignore the notification."
+        )
+                .unwrap();
+
+                for (method, types) in protocol_types {
+                    self.generate_method(&method, side_docs.protocol_method_doc(&method), types);
+                }
             }
 
             referenced_types.sort_by_key(|(name, _)| name.clone());
@@ -266,14 +320,13 @@ and control access to resources."
             }
         }
 
+        #[expect(clippy::too_many_lines)]
         fn document_variant_table_row(&mut self, variant: &Value) {
             write!(&mut self.output, "<ResponseField name=\"").unwrap();
 
             // Get variant name
-            let mut variant_name = String::new();
             if let Some(ref_val) = variant.get("$ref").and_then(|v| v.as_str()) {
                 let type_name = ref_val.strip_prefix("#/$defs/").unwrap_or(ref_val);
-                variant_name = type_name.to_string();
                 write!(&mut self.output, "{type_name}").unwrap();
             } else if let Some(const_val) = variant.get("const") {
                 if let Some(s) = const_val.as_str() {
@@ -295,8 +348,34 @@ and control access to resources."
                 } else {
                     write!(&mut self.output, "Object").unwrap();
                 }
+            } else if let Some(title) = variant.get("title") {
+                if let Some(s) = title.as_str() {
+                    write!(&mut self.output, "{s}").unwrap();
+                } else {
+                    write!(&mut self.output, "{title}").unwrap();
+                }
+            } else if let Some(ty) = variant.get("type") {
+                if let Some(s) = ty.as_str() {
+                    write!(&mut self.output, "{s}").unwrap();
+                } else {
+                    write!(&mut self.output, "{ty}").unwrap();
+                }
             } else {
                 write!(&mut self.output, "Variant").unwrap();
+            }
+
+            if let Some(format) = variant.get("format") {
+                if let Some(s) = format.as_str() {
+                    write!(&mut self.output, "\" type=\"{s}").unwrap();
+                } else {
+                    write!(&mut self.output, "\" type=\"{format}").unwrap();
+                }
+            } else if let Some(ty) = variant.get("type") {
+                if let Some(s) = ty.as_str() {
+                    write!(&mut self.output, "\" type=\"{s}").unwrap();
+                } else {
+                    write!(&mut self.output, "\" type=\"{ty}").unwrap();
+                }
             }
 
             writeln!(&mut self.output, "\">").unwrap();
@@ -308,29 +387,62 @@ and control access to resources."
                 writeln!(&mut self.output, "{{\"\"}}").unwrap();
             }
 
-            // Document properties if this variant has them
-            if let Some(props) = variant.get("properties").and_then(|v| v.as_object()) {
-                if !props.is_empty() {
-                    writeln!(&mut self.output).unwrap();
-                    writeln!(&mut self.output, "<Expandable title=\"Properties\">").unwrap();
-                    writeln!(&mut self.output).unwrap();
-                    self.document_properties_as_fields(props, variant, 0);
-                    writeln!(&mut self.output).unwrap();
-                    writeln!(&mut self.output, "</Expandable>").unwrap();
+            // Collect all properties and required fields
+            let mut merged_props = serde_json::Map::new();
+            let mut merged_required = Vec::new();
+
+            // Helper to merge from a definition
+            let mut merge_from = |def: &Value| {
+                if let Some(props) = def.get("properties").and_then(|v| v.as_object()) {
+                    for (k, v) in props {
+                        merged_props.insert(k.clone(), v.clone());
+                    }
                 }
-            } else if !variant_name.is_empty() {
-                // If this is a $ref, look up and document the referenced type's properties
-                if let Some(ref_def) = self.definitions.get(&variant_name).cloned()
-                    && let Some(props) = ref_def.get("properties").and_then(|v| v.as_object())
-                    && !props.is_empty()
-                {
-                    writeln!(&mut self.output).unwrap();
-                    writeln!(&mut self.output, "<Expandable title=\"Properties\">").unwrap();
-                    writeln!(&mut self.output).unwrap();
-                    self.document_properties_as_fields(props, &ref_def, 0);
-                    writeln!(&mut self.output).unwrap();
-                    writeln!(&mut self.output, "</Expandable>").unwrap();
+                if let Some(req) = def.get("required").and_then(|v| v.as_array()) {
+                    for r in req {
+                        if !merged_required.contains(r) {
+                            merged_required.push(r.clone());
+                        }
+                    }
                 }
+            };
+
+            // 1. Check for $ref (direct)
+            if let Some(ref_val) = variant.get("$ref").and_then(|v| v.as_str()) {
+                let type_name = ref_val.strip_prefix("#/$defs/").unwrap_or(ref_val);
+                if let Some(ref_def) = self.definitions.get(type_name) {
+                    merge_from(ref_def);
+                }
+            }
+
+            // 2. Check for allOf (often used for inheritance/composition)
+            if let Some(all_of) = variant.get("allOf").and_then(|v| v.as_array()) {
+                for item in all_of {
+                    if let Some(ref_val) = item.get("$ref").and_then(|v| v.as_str()) {
+                        let type_name = ref_val.strip_prefix("#/$defs/").unwrap_or(ref_val);
+                        if let Some(ref_def) = self.definitions.get(type_name) {
+                            merge_from(ref_def);
+                        }
+                    } else {
+                        merge_from(item);
+                    }
+                }
+            }
+
+            // 3. Local properties
+            merge_from(variant);
+
+            if !merged_props.is_empty() {
+                writeln!(&mut self.output).unwrap();
+                writeln!(&mut self.output, "<Expandable title=\"Properties\">").unwrap();
+                writeln!(&mut self.output).unwrap();
+
+                let mut synthetic_def = serde_json::Map::new();
+                synthetic_def.insert("required".to_string(), Value::Array(merged_required));
+
+                self.document_properties_as_fields(&merged_props, &Value::Object(synthetic_def), 0);
+                writeln!(&mut self.output).unwrap();
+                writeln!(&mut self.output, "</Expandable>").unwrap();
             }
 
             writeln!(&mut self.output, "</ResponseField>").unwrap();
@@ -572,6 +684,41 @@ and control access to resources."
             }
         }
 
+        fn get_ref_type_name(schema: &Value) -> Option<&str> {
+            if let Some(ref_val) = schema.get("$ref").and_then(|v| v.as_str()) {
+                return Some(ref_val.strip_prefix("#/$defs/").unwrap_or(ref_val));
+            }
+
+            // Check for single-item allOf/anyOf/oneOf wrappers (often used for $ref with sibling properties)
+            for key in ["allOf", "anyOf", "oneOf"] {
+                if let Some(arr) = schema.get(key).and_then(|v| v.as_array())
+                    && arr.len() == 1
+                    && let Some(type_name) = Self::get_ref_type_name(&arr[0])
+                {
+                    return Some(type_name);
+                }
+            }
+
+            None
+        }
+
+        fn get_array_type_string(schema: &Value) -> String {
+            if let Some(items) = schema.get("items") {
+                if let Some(type_name) = Self::get_ref_type_name(items) {
+                    return format!(
+                        "<a href=\"#{}\">{}[]</a>",
+                        MarkdownGenerator::anchor_text(type_name),
+                        type_name
+                    );
+                }
+
+                let item_type = MarkdownGenerator::get_type_string(items);
+                format!("<><span>{item_type}</span><span>[]</span></>")
+            } else {
+                "\"array\"".to_string()
+            }
+        }
+
         fn get_type_string(schema: &Value) -> String {
             // Check for $ref
             if let Some(ref_val) = schema.get("$ref").and_then(|v| v.as_str()) {
@@ -583,18 +730,20 @@ and control access to resources."
                 );
             }
 
+            // Check for single-item allOf/anyOf/oneOf wrappers (often used for $ref with sibling properties)
+            for key in ["allOf", "anyOf", "oneOf"] {
+                if let Some(arr) = schema.get(key).and_then(|v| v.as_array())
+                    && arr.len() == 1
+                {
+                    return Self::get_type_string(&arr[0]);
+                }
+            }
+
             // Check for type
             if let Some(type_val) = schema.get("type") {
                 if let Some(type_str) = type_val.as_str() {
                     return match type_str {
-                        "array" => {
-                            if let Some(items) = schema.get("items") {
-                                let item_type = Self::get_type_string(items);
-                                format!("<><span>{item_type}</span><span>[]</span></>")
-                            } else {
-                                "\"array\"".to_string()
-                            }
-                        }
+                        "array" => Self::get_array_type_string(schema),
                         "integer" => {
                             let type_str = if let Some(format) =
                                 schema.get("format").and_then(|v| v.as_str())
@@ -611,13 +760,26 @@ and control access to resources."
 
                 // Handle multiple types (nullable)
                 if let Some(arr) = type_val.as_array() {
-                    let types: Vec<String> = arr
-                        .iter()
-                        .filter_map(|v| v.as_str().map(ToString::to_string))
-                        .collect();
-                    if !types.is_empty() {
-                        return format!("\"{}\"", types.join(" | "));
+                    let types: Vec<&str> = arr.iter().filter_map(|v| v.as_str()).collect();
+                    if types.is_empty() {
+                        return "\"object\"".to_string();
                     }
+
+                    // Special-case nullable arrays so we can still show the item type (and link to it).
+                    if types.contains(&"array") && schema.get("items").is_some() {
+                        let array_type = Self::get_array_type_string(schema);
+                        let rest: Vec<&str> =
+                            types.iter().copied().filter(|t| *t != "array").collect();
+                        if rest.is_empty() {
+                            return array_type;
+                        }
+                        let rest_text = rest.join(" | ");
+                        return format!(
+                            "<><span>{array_type}</span><span> | {rest_text}</span></>"
+                        );
+                    }
+
+                    return format!("\"{}\"", types.join(" | "));
                 }
             }
 
@@ -638,11 +800,8 @@ and control access to resources."
                             other_type = Some(t);
                         }
                     }
-                    if has_null && other_type.is_some() {
-                        return format!(
-                            "<><span>{}</span><span> | null</span></>",
-                            other_type.unwrap()
-                        );
+                    if has_null && let Some(other_type) = other_type {
+                        return format!("<><span>{other_type}</span><span> | null</span></>");
                     }
                 }
                 return "union".to_string();
@@ -657,9 +816,13 @@ and control access to resources."
         }
 
         fn get_inline_variant_type(variant: &Value) -> Option<String> {
+            if variant.get("oneOf").is_some() || variant.get("anyOf").is_some() {
+                return None;
+            }
+
             // Check for simple type
-            if let Some(type_str) = variant.get("type").and_then(|v| v.as_str()) {
-                return Some(format!("\"{type_str}\""));
+            if variant.get("type").and_then(|v| v.as_str()).is_some() {
+                return Some(Self::get_type_string(variant));
             }
             // Check for $ref
             if let Some(ref_val) = variant.get("$ref").and_then(|v| v.as_str()) {
@@ -713,22 +876,30 @@ and control access to resources."
         }
     }
 
+    #[derive(Default)]
     struct SideDocs {
-        agent_methods: HashMap<String, String>,
-        client_methods: HashMap<String, String>,
+        agent: HashMap<String, String>,
+        client: HashMap<String, String>,
+        protocol: HashMap<String, String>,
     }
 
     impl SideDocs {
         fn agent_method_doc(&self, method_name: &str) -> &String {
             match method_name {
-                "initialize" => self.agent_methods.get("InitializeRequest").unwrap(),
-                "authenticate" => self.agent_methods.get("AuthenticateRequest").unwrap(),
-                "session/new" => self.agent_methods.get("NewSessionRequest").unwrap(),
-                "session/load" => self.agent_methods.get("LoadSessionRequest").unwrap(),
-                "session/set_mode" => self.agent_methods.get("SetSessionModeRequest").unwrap(),
-                "session/prompt" => self.agent_methods.get("PromptRequest").unwrap(),
-                "session/cancel" => self.agent_methods.get("CancelNotification").unwrap(),
-                "session/set_model" => self.agent_methods.get("SetSessionModelRequest").unwrap(),
+                "initialize" => self.agent.get("InitializeRequest").unwrap(),
+                "authenticate" => self.agent.get("AuthenticateRequest").unwrap(),
+                "session/new" => self.agent.get("NewSessionRequest").unwrap(),
+                "session/load" => self.agent.get("LoadSessionRequest").unwrap(),
+                "session/list" => self.agent.get("ListSessionsRequest").unwrap(),
+                "session/fork" => self.agent.get("ForkSessionRequest").unwrap(),
+                "session/resume" => self.agent.get("ResumeSessionRequest").unwrap(),
+                "session/set_mode" => self.agent.get("SetSessionModeRequest").unwrap(),
+                "session/set_config_option" => {
+                    self.agent.get("SetSessionConfigOptionRequest").unwrap()
+                }
+                "session/prompt" => self.agent.get("PromptRequest").unwrap(),
+                "session/cancel" => self.agent.get("CancelNotification").unwrap(),
+                "session/set_model" => self.agent.get("SetSessionModelRequest").unwrap(),
                 _ => panic!("Introduced a method? Add it here :)"),
             }
         }
@@ -736,22 +907,24 @@ and control access to resources."
         fn client_method_doc(&self, method_name: &str) -> &String {
             match method_name {
                 "session/request_permission" => {
-                    self.client_methods.get("RequestPermissionRequest").unwrap()
+                    self.client.get("RequestPermissionRequest").unwrap()
                 }
-                "fs/write_text_file" => self.client_methods.get("WriteTextFileRequest").unwrap(),
-                "fs/read_text_file" => self.client_methods.get("ReadTextFileRequest").unwrap(),
-                "session/update" => self.client_methods.get("SessionNotification").unwrap(),
-                "terminal/create" => self.client_methods.get("CreateTerminalRequest").unwrap(),
-                "terminal/output" => self.client_methods.get("TerminalOutputRequest").unwrap(),
-                "terminal/release" => self.client_methods.get("ReleaseTerminalRequest").unwrap(),
-                "terminal/wait_for_exit" => self
-                    .client_methods
-                    .get("WaitForTerminalExitRequest")
-                    .unwrap(),
-                "terminal/kill" => self
-                    .client_methods
-                    .get("KillTerminalCommandRequest")
-                    .unwrap(),
+                "fs/write_text_file" => self.client.get("WriteTextFileRequest").unwrap(),
+                "fs/read_text_file" => self.client.get("ReadTextFileRequest").unwrap(),
+                "session/update" => self.client.get("SessionNotification").unwrap(),
+                "terminal/create" => self.client.get("CreateTerminalRequest").unwrap(),
+                "terminal/output" => self.client.get("TerminalOutputRequest").unwrap(),
+                "terminal/release" => self.client.get("ReleaseTerminalRequest").unwrap(),
+                "terminal/wait_for_exit" => self.client.get("WaitForTerminalExitRequest").unwrap(),
+                "terminal/kill" => self.client.get("KillTerminalCommandRequest").unwrap(),
+                _ => panic!("Introduced a method? Add it here :)"),
+            }
+        }
+
+        #[cfg(feature = "unstable_cancel_request")]
+        fn protocol_method_doc(&self, method_name: &str) -> &String {
+            match method_name {
+                "$/cancel_request" => self.protocol.get("CancelRequestNotification").unwrap(),
                 _ => panic!("Introduced a method? Add it here :)"),
             }
         }
@@ -785,10 +958,7 @@ and control access to resources."
         let json_content = fs::read_to_string(json_path).unwrap();
         let doc: Value = serde_json::from_str(&json_content).unwrap();
 
-        let mut side_docs = SideDocs {
-            agent_methods: HashMap::new(),
-            client_methods: HashMap::new(),
-        };
+        let mut side_docs = SideDocs::default();
 
         if let Some(index) = doc["index"].as_object() {
             for (_, item) in index {
@@ -799,7 +969,7 @@ and control access to resources."
                         if let Some(variant) = doc["index"][variant_id.to_string()].as_object()
                             && let Some(name) = variant["name"].as_str()
                         {
-                            side_docs.agent_methods.insert(
+                            side_docs.agent.insert(
                                 name.to_string(),
                                 variant["docs"].as_str().unwrap_or_default().to_string(),
                             );
@@ -814,7 +984,7 @@ and control access to resources."
                         if let Some(variant) = doc["index"][variant_id.to_string()].as_object()
                             && let Some(name) = variant["name"].as_str()
                         {
-                            side_docs.agent_methods.insert(
+                            side_docs.agent.insert(
                                 name.to_string(),
                                 variant["docs"].as_str().unwrap_or_default().to_string(),
                             );
@@ -829,7 +999,7 @@ and control access to resources."
                         if let Some(variant) = doc["index"][variant_id.to_string()].as_object()
                             && let Some(name) = variant["name"].as_str()
                         {
-                            side_docs.client_methods.insert(
+                            side_docs.client.insert(
                                 name.to_string(),
                                 variant["docs"].as_str().unwrap_or_default().to_string(),
                             );
@@ -844,7 +1014,22 @@ and control access to resources."
                         if let Some(variant) = doc["index"][variant_id.to_string()].as_object()
                             && let Some(name) = variant["name"].as_str()
                         {
-                            side_docs.client_methods.insert(
+                            side_docs.client.insert(
+                                name.to_string(),
+                                variant["docs"].as_str().unwrap_or_default().to_string(),
+                            );
+                        }
+                    }
+                }
+
+                if item["name"].as_str() == Some("ProtocolLevelNotification")
+                    && let Some(variants) = item["inner"]["enum"]["variants"].as_array()
+                {
+                    for variant_id in variants {
+                        if let Some(variant) = doc["index"][variant_id.to_string()].as_object()
+                            && let Some(name) = variant["name"].as_str()
+                        {
+                            side_docs.protocol.insert(
                                 name.to_string(),
                                 variant["docs"].as_str().unwrap_or_default().to_string(),
                             );

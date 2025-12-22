@@ -2,7 +2,7 @@ All paths in the protocol should be absolute
 
 ## Adding new methods
 
-- Create empty params and output structs in rust/client.rs or rust/agent.rs under the corresponding section. I'll add the fields myself.
+- Create empty params and output structs in src/client.rs or src/agent.rs under the corresponding section. I'll add the fields myself.
 - If the protocol method name is `noun/verb`, use `verb_noun` for the user facing methods and structs.
 
   Example 1 (`noun/noun`):
@@ -20,7 +20,7 @@ All paths in the protocol should be absolute
 - Do not write any tests or docs at all!
 - Add constants for the method names
 - Add variants to {Agent|Client}{Request|Response} enums
-- Add the methods to the Client/Agent impl of {Agent|Client}SideConnection in rust/acp.rs
+- Add the methods to the Client/Agent impl of {Agent|Client}SideConnection in src/acp.rs
 - Handle the new method in the `Side::decode_request`/`Side::decode_notification` implementation
 - Handle the new request in the blanket impl of MessageHandler<{Agent|Client}Side>
 - Add the method to markdown_generator.rs SideDocs functions
