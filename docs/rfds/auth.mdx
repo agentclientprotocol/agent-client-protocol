@@ -58,7 +58,8 @@ A user can enter a key and a client will pass it to the agent as an env variable
   "description": "Provide your key",
   "type": "envVar",
   "varName": "OPEN_AI_KEY",
-  "link": "OPTIONAL link to a page where user can get their key"
+  "link": "OPTIONAL link to a page where user can get their key",
+  "requiresRestart": true // default
 }
 ```
 
@@ -73,7 +74,8 @@ A user can enter a key, and a client will pass it to the agent as a start parame
   "description": "Provide your key",
   "type": "startParam",
   "paramName": "OPEN_AI_KEY",
-  "link": "OPTIONAL link to a page where user can get their key"
+  "link": "OPTIONAL link to a page where user can get their key",
+  "requiresRestart": true // default
 }
 ```
 
@@ -86,71 +88,42 @@ Same as what there is now – agent handles the auth itself, this should be a de
   "id": "123",
   "name": "Agent",
   "description": "Authenticate through agent",
-  "type": "agent"
+  "type": "agent",
+  "requiresRestart": false // default, can be changed
 }
 ```
 
-To better handle oauth scenarios, we can add a mechanism like (MCP-elicitation)[https://modelcontextprotocol.io/specification/2025-11-25/client/elicitation]
-User sends authenticate request with method id; then server calls an `elicitation/create` method on a client, that includes a link to an oauth provider and `authenticateRequestId` so that we can clearly link the request with the auth request.
+4. Terminal auth
 
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 3,
-  "method": "elicitation/create",
-  "params": {
-    "authenticateRequestId": "123",
-    "url": "https://mcp.example.com/ui/set_api_key",
-    "message": "Please provide your API key to continue."
-  }
-}
-```
-
-Client then allows user to open a browser and authenticate themselves. Agent then responds to an elicitation request with a key:
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 3,
-  "result": {
-    "action": "accept"
-  }
-}
-```
-
-and then responds to the original `authenticate` request.
-
-4. Provided key
-
-User can enter the key and a client should pass it to the agent via [AuthenticateRequest](https://agentclientprotocol.com/protocol/schema#authenticaterequest)
+What's now done with `terminal-auth` capability and _meta field, for backward compatibility clients might want to read properties from both _meta and the object itself.
+This means that the client should run the provided command themselves in the terminal and let user interact with that terminal
 
 ```json
 {
   "id": "123",
-  "name": "OpenAI api key",
-  "description": "Provide your key",
-  "type": "enterKey",
-  "link": "OPTIONAL link to a page where user can get their key"
+  "name": "Run in terminal",
+  "type": "terminal",
+  "command": "/path/to/command",
+  "args": ["--setup"],
+  "env": {"VAR1": "value1", "VAR2": "value2"},
+  "label": "Setup Label",
+  "requiresRestart": true // default, can be changed
 }
+
 ```
-
-in this case [AuthenticateRequest](https://agentclientprotocol.com/protocol/schema#authenticaterequest) should also be updated. I suggest adding an optional authParams property
-
-```json
-{
-  "methodId": "123",
-  "authParams": {
-    "key": "...."
-  }
-}
-```
-
-This approach also requires adding a new `elicitation` client capability. If the client does not support this capability, agent MUST NOT return such an authMethod in the `initialize` response.
 
 ### AuthErrors
 
 It might be useful to include a list of AuthMethod ids to the AUTH_REQUIRED JsonRpc error. Why do we need this if they're already shared during `initialize`:
 All supported auth methods are shared during `initialize`. When user starts a session, they've already selected a model, which can narrow down a list of options.
+
+```json
+{
+  "jsonrpc":"2.0",
+  "id":2,
+  "error":{"code":-32000,"message":"Authentication required", "authMethods":[{"id":"chatgpt","name":"Login with ChatGPT","description":"Use your ChatGPT login with Codex CLI (requires a paid ChatGPT subscription)"}]}
+}
+```
 
 ## Frequently asked questions
 
@@ -165,3 +138,5 @@ There is also an alternative to adding a separate `elicitation` capability, whic
 ## Revision history
 
 <!-- If there have been major updates to this RFD, you can include the git revisions and a summary of the changes. -->
+
+There was a part about elicitations https://github.com/agentclientprotocol/agent-client-protocol/blob/939ef116a1b14016e4e3808b8764237250afa253/docs/rfds/auth.mdx removed it for now, will move to a separate rfd
