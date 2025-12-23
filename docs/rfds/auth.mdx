@@ -95,7 +95,7 @@ Same as what there is now – agent handles the auth itself, this should be a de
 
 4. Terminal auth
 
-What's now done with `terminal-auth` capability and _meta field, for backward compatibility clients might want to read properties from both _meta and the object itself.
+What's now done with `terminal-auth` capability and \_meta field, for backward compatibility clients might want to read properties from both \_meta and the object itself.
 This means that the client should run the provided command themselves in the terminal and let user interact with that terminal
 
 ```json
@@ -105,11 +105,10 @@ This means that the client should run the provided command themselves in the ter
   "type": "terminal",
   "command": "/path/to/command",
   "args": ["--setup"],
-  "env": {"VAR1": "value1", "VAR2": "value2"},
+  "env": { "VAR1": "value1", "VAR2": "value2" },
   "label": "Setup Label",
   "requiresRestart": true // default, can be changed
 }
-
 ```
 
 ### AuthErrors
@@ -119,9 +118,19 @@ All supported auth methods are shared during `initialize`. When user starts a se
 
 ```json
 {
-  "jsonrpc":"2.0",
-  "id":2,
-  "error":{"code":-32000,"message":"Authentication required", "authMethods":[{"id":"chatgpt","name":"Login with ChatGPT","description":"Use your ChatGPT login with Codex CLI (requires a paid ChatGPT subscription)"}]}
+  "jsonrpc": "2.0",
+  "id": 2,
+  "error": {
+    "code": -32000,
+    "message": "Authentication required",
+    "authMethods": [
+      {
+        "id": "chatgpt",
+        "name": "Login with ChatGPT",
+        "description": "Use your ChatGPT login with Codex CLI (requires a paid ChatGPT subscription)"
+      }
+    ]
+  }
 }
 ```
 
