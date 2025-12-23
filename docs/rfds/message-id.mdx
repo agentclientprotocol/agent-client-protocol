@@ -6,7 +6,7 @@ Author(s): [@michelTho](https://github.com/michelTho), [@nemtecl](https://github
 
 ## Elevator pitch
 
-Add a `messageId` field to `agent_message_chunk` and `user_message_chunk` session updates, and to `session/prompt` responses, to uniquely identify individual messages within a conversation. This enables clients to distinguish between different messages beyond changes in update type and lays the groundwork for future capabilities like message editing.
+Add a `messageId` field to `agent_message_chunk`, `user_message_chunk`, and `agent_thought_chunk` session updates, and to `session/prompt` responses, to uniquely identify individual messages within a conversation. This enables clients to distinguish between different messages beyond changes in update type and lays the groundwork for future capabilities like message editing.
 
 ## Status quo
 
@@ -59,7 +59,7 @@ As an example, consider this sequence where a Client cannot reliably determine m
 
 ## What we propose to do about it
 
-Add a `messageId` field to `AgentMessageChunk` and `UserMessageChunk` session updates, and to the `session/prompt` response. This field would:
+Add a `messageId` field to `AgentMessageChunk`, `UserMessageChunk`, and `AgentThoughtChunk` session updates, and to the `session/prompt` response. This field would:
 
 1. **Provide stable message identification** - Each message gets a unique identifier that remains constant across all chunks of that message.
 
@@ -143,8 +143,8 @@ If the Agent sends `user_message_chunk` updates, it uses the user message ID:
 
 The `messageId` field would be:
 
-- **Required** on `agent_message_chunk` and `user_message_chunk` updates
-- **Required** in `session/prompt` responses as `messageId`
+- **Optional** on `agent_message_chunk`, `user_message_chunk`, and `agent_thought_chunk` updates
+- **Optional** in `session/prompt` responses as `messageId`
 - **Unique per message** within a session
 - **Stable across chunks** - all chunks belonging to the same message share the same `messageId`
 - **Opaque** - Clients treat it as an identifier without parsing its structure
@@ -196,14 +196,15 @@ Example future editing capability:
 ### Phase 1: Core Protocol Changes
 
 1. **Update schema** (`schema/schema.json`):
-   - Add required `messageId` field (type: `string`) to `AgentMessageChunk`
-   - Add required `messageId` field (type: `string`) to `UserMessageChunk`
-   - Add required `messageId` field (type: `string`) to `PromptResponse`
+   - Add optional `messageId` field (type: `string`) to `AgentMessageChunk`
+   - Add optional `messageId` field (type: `string`) to `UserMessageChunk`
+   - Add optional `messageId` field (type: `string`) to `AgentThoughtChunk`
+   - Add optional `messageId` field (type: `string`) to `PromptResponse`
 
 2. **Update Rust SDK** (`rust/client.rs` and `rust/agent.rs`):
-   - Add `message_id: String` field to `ContentChunk` struct
-   - Add `message_id: String` field to `PromptResponse` struct
-   - Update serialization to include `messageId` in JSON output
+   - Add `message_id: Option<String>` field to `ContentChunk` struct
+   - Add `message_id: Option<String>` field to `PromptResponse` struct
+   - Update serialization to include `messageId` in JSON output when present
 
 3. **Update TypeScript SDK** (if applicable):
    - Add `messageId` field to corresponding types
@@ -229,13 +230,9 @@ Example future editing capability:
 
 ### Backward Compatibility
 
-Since this adds a **required** field, this would be a **breaking change** and should be part of a major version bump of the protocol. Agents and Clients will need to coordinate upgrades.
+The `messageId` field is **optional** to ensure this is a non-breaking change. Agents SHOULD include the `messageId` field, but it is not required for v1 compatibility. Features that rely on `messageId` (such as future message editing capabilities) will implicitly require the field to be present - Agents that don't provide it simply won't support those features.
 
-Alternatively, the field could initially be made **optional** to allow gradual adoption:
-
-- Agents that support it advertise a capability flag during initialization
-- Clients check for the capability before relying on `messageId`
-- After wide adoption, make it required in a future version
+Making this field required will be considered for a future v2 version of the protocol after wide adoption.
 
 ## Frequently asked questions
 
@@ -291,13 +288,9 @@ Benefits of this approach:
 
 ### Should this field be required or optional?
 
-While making it required provides the clearest semantics, it would be a breaking change. The recommendation is to:
+The field is **optional** for v1 to ensure backward compatibility. Agents SHOULD include `messageId`, but it is not required. Features that depend on `messageId` (such as message editing) will implicitly require it - if an Agent doesn't provide `messageId`, those features simply won't be available.
 
-1. Make it **optional** initially with a capability flag
-2. Strongly encourage adoption in the documentation
-3. Make it **required** in the next major protocol version
-
-This provides a migration path while moving toward a stronger protocol guarantee.
+Making this field required will be considered for a future v2 version of the protocol.
 
 ### How should Agents generate message IDs?
 
@@ -321,11 +314,11 @@ The protocol doesn't require message IDs to be stable across session loads, thou
 
 ### Does this apply to other session updates like tool calls or plan updates?
 
-This RFD specifically addresses `agent_message_chunk` and `user_message_chunk` updates. Other session update types (like `tool_call`, `agent_thought_chunk`, `plan`) already have their own identification mechanisms:
+This RFD addresses `agent_message_chunk`, `user_message_chunk`, and `agent_thought_chunk` updates.
+Other session update types (like `tool_call`, `plan`) already have their own identification mechanisms:
 
 - Tool calls use `toolCallId`
 - Plan entries can be tracked by their position in the `entries` array
-- Agent thoughts could benefit from message IDs if they're considered distinct messages
 
 Future RFDs may propose extending `messageId` to other update types if use cases emerge.
 
