@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.10.6](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.10.5...v0.10.6) - 2025-12-25
+
+### Added
+
+- *(unstable)* Add a request cancelled error constructor ([#347](https://github.com/agentclientprotocol/agent-client-protocol/pull/347))
+
 ## [0.10.5](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.10.4...v0.10.5) - 2025-12-17
 
 ### Added
