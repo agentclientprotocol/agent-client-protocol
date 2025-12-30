@@ -540,11 +540,27 @@ A prototype version of this proposal has been implemented and is available on cr
 
 The canonical sources for those crates is currently the [symposium-dev/symposium-acp] repository. However, copies have been upstreamed to the [agentclientprotocol/rust-sdk](https://github.com/agentclientprotocol/rust-sdk/tree/main/src/sacp-conductor) repository and, if and when this RFD is accepted, that will become the canonical home.
 
+### Why not just cascade ACP commands without protocol changes?
+
+One alternative is to make proxies be ordinary agents that internally create and manage their successors. This works (HTTP proxies operate this way) but requires each proxy to understand the full chain and know how to start its successors.
+
+This couples proxies to transport mechanisms, process management, and chain configuration. Changing transports, reordering the chain, or inserting a new proxy requires modifying predecessor configurations.
+
+The conductor design decouples proxies from their successors. Proxies send messages "to successor" and receive messages "from successor" without knowing who that successor is, how it's started, or what transport it uses. This enables:
+
+- Changing transport protocols or process management without recompiling proxies
+- Shipping proxies as low-capability WASM containers that need only a single communication channel
+- Reordering, adding, or removing proxies through configuration rather than code changes
+
+The tradeoff is protocol complexity, but this complexity lives in the conductor (implemented once) rather than being duplicated across proxy implementations.
+
 ### Why do all messages go through the conductor instead of direct proxy-to-proxy communication?
 
-This approach minimizes the responsibilities of a proxy to what can be covered by a single communication channel. We anticipate proxies being created by isolated WebAssembly components and we want to minimize the capabilities they need. It also removes what would be redundant logic wherein each proxy would have to know how to start its successors (and would know what its successors *are*, which they shouldn't know).
+Even with a conductor, proxies could communicate directly with their successors after the conductor sets up connections. Routing all messages through the conductor further minimizes proxy responsibilities to a single communication channel.
 
-The conductor handles all process management, capability negotiation, and message routing, allowing proxies to focus purely on their transformation logic.
+This supports running proxies as isolated WebAssembly components with minimal capabilities. It also removes redundant logic: without the conductor routing messages, each proxy would need to manage connections to its successor.
+
+The conductor handles process management, capability negotiation, and message routing, allowing proxies to focus on transformation logic.
 
 ### What about security concerns with proxy chains?
 
