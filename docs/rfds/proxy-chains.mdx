@@ -259,41 +259,56 @@ flowchart TB
 
 ### Capability Reference
 
-**Proxy Capability** (`"proxy": true`)
-- When offered by a client, indicates that the ACP server is to act as a proxy, not a final agent. It should expect to send/receive requests to its successor.
-- It is only legal to include in a server's initialization response if it was offered by the client. In that case, it indicates that the server agrees to act as a proxy, not as an agent.
-- When a component responds with proxy capability, it SHOULD forward requests it does not understand and it SHOULD preserve metadata fields when forwarding messages.
-
 **MCP-over-ACP Transport** (`"mcp_acp_transport": true`)
 - Indicates a component can handle MCP messages with `"transport": "acp"`
 - Must handle `mcp/client_to_server/request` and `mcp/server_to_client/request` messages
 - Enables seamless MCP server provision and tool callbacks
 
-### Proxy initialization Protocol
+### Proxy Initialization Protocol
 
-When an ACP server is started, it is sent an `InitializeRequest`:
+Components discover their role from the initialization method they receive:
 
-- **Terminal client ↔ terminal agent initialization**: `InitializeRequest` does not have proxy or has `"proxy": false`. The server MUST act as a terminal agent. The server MUST NOT respond with `"proxy": true` in the `InitializeResponse` - doing so is an error.
+- **Proxies** receive `proxy/initialize` - they have a successor and should forward messages
+- **Agents** receive `initialize` - they are terminal and process messages directly
 
-- **Conductor ↔ proxy initialization**: `InitializeRequest` contains `"proxy": true`. The server MUST respond with `"proxy": true` in the `InitializeResponse` to acknowledge it will act as a proxy. The conductor MUST error and terminate if the server responds without `"proxy": true`.
+The `proxy/initialize` request has the same parameters as `initialize` and expects a standard `InitializeResponse`. The only difference is the method name, which signals to the component that it should operate as a proxy.
 
-- **Proxy ↔ successor agent**: When a proxy receives an `InitializeRequest`, it MUST remove the `"proxy"` capability before forwarding via `proxy/successor/request`.
+**Conductor behavior:**
 
-Note: The conductor executable plays different roles depending on how it is used - it acts as a terminal agent when initialized by a terminal client, but as a proxy when initialized by another conductor (enabling nested proxy chains).
+- The conductor MUST send `proxy/initialize` to all proxy components
+- The conductor MUST send `initialize` to the final agent component
+- When a proxy forwards an `initialize` via `proxy/successor/request`, the conductor determines whether the successor is another proxy or the agent, and sends the appropriate method
+
+**Proxy behavior:**
+
+- A proxy that receives `proxy/initialize` knows it has a successor
+- The proxy SHOULD forward requests it does not understand
+- The proxy SHOULD preserve metadata fields when forwarding messages
+
+Note: A conductor can be configured to run in either terminal mode (expecting `initialize`) or proxy mode (expecting `proxy/initialize`), enabling nested proxy chains.
 
 ### MCP Transport Capability Initialization
 
 MCP transport capability negotiation follows different rules depending on the relationship:
 
-- **Conductor ↔ proxy initialization**: The conductor MUST offer `"mcp_acp_transport": true` in the `InitializeRequest`. The proxy MUST respond with `"mcp_acp_transport": true` in the `InitializeResponse` - all proxies are required to tolerate MCP servers that use ACP transport.
+- **Conductor ↔ proxy initialization**: The conductor MUST offer `"mcp_acp_transport": true` in the `proxy/initialize` request. The proxy MUST respond with `"mcp_acp_transport": true` - all proxies are required to support MCP servers that use ACP transport.
 
-- **Terminal client ↔ terminal agent initialization**: The client MAY offer `"mcp_acp_transport": true` in the `InitializeRequest`. The agent MAY respond with `"mcp_acp_transport": true` in the `InitializeResponse` if it supports native MCP-over-ACP transport.
+- **Terminal client ↔ terminal agent initialization**: The client MAY offer `"mcp_acp_transport": true` in the `initialize` request. The agent MAY respond with `"mcp_acp_transport": true` if it supports native MCP-over-ACP transport.
 
-- **Proxy ↔ successor agent**: When a proxy receives an `InitializeRequest`, it MUST remove the `"mcp_acp_transport"` capability before forwarding via `proxy/successor/request`.
-
-Note: Because a conductor MUST offer `"mcp_acp_transport"` to each proxy but terminal agents are not obligated to support `"mcp_acp_transport"`, this implies that a conductor MUST be able to offer a bridge between alternative MCP transport methods and ACP transport.
+Note: Because a conductor MUST offer `"mcp_acp_transport"` to each proxy but terminal agents are not obligated to support it, the conductor MUST bridge MCP servers using ACP transport to alternative transport methods (such as stdio) when the agent lacks native support.
 
 ### Message Reference
+
+**Initialization:**
+```json
+// Conductor initializes a proxy (proxy knows it has a successor)
+{"method": "proxy/initialize", "params": <INITIALIZE_REQUEST_PARAMS>}
+
+// Conductor initializes the agent (standard ACP)
+{"method": "initialize", "params": <INITIALIZE_REQUEST_PARAMS>}
+```
+
+Both methods use the same parameters as the standard ACP `InitializeRequest` and expect a standard `InitializeResponse`.
 
 **Proxy Messages:**
 ```json
@@ -301,7 +316,7 @@ Note: Because a conductor MUST offer `"mcp_acp_transport"` to each proxy but ter
 {"method": "proxy/successor/request", "params": {"message": <ACP_REQUEST>}}
 {"method": "proxy/successor/notification", "params": {"message": <ACP_NOTIFICATION>}}
 
-// Conductor delivers message from successor  
+// Conductor delivers message from successor
 {"method": "proxy/successor/receive/request", "params": {"message": <ACP_REQUEST>}}
 {"method": "proxy/successor/receive/notification", "params": {"message": <ACP_NOTIFICATION>}}
 ```
@@ -405,37 +420,35 @@ sequenceDiagram
     participant TA as Terminal Agent
 
     Note over TC,TA: === Initialization Phase ===
-    
-    TC->>C: InitializeRequest (no proxy capability)
-    
+
+    TC->>C: initialize
+
     Note over C: Conductor spawns proxy components
-    C->>P1: InitializeRequest (proxy: true, mcp_acp_transport: true)
-    
-    Note over P1: Proxy removes capabilities before forwarding
-    P1->>C: proxy/successor/request<br/>(InitializeRequest with capabilities removed)
-    
-    Note over C: Conductor re-adds capabilities for next proxy
-    C->>P2: InitializeRequest (proxy: true, mcp_acp_transport: true)
-    
-    Note over P2: Proxy removes capabilities before forwarding
-    P2->>C: proxy/successor/request<br/>(InitializeRequest with capabilities removed)
-    
-    Note over C: Conductor offers only MCP capability to final agent
-    C->>TA: InitializeRequest (mcp_acp_transport: true, no proxy)
-    
+    C->>P1: proxy/initialize (mcp_acp_transport: true)
+
+    Note over P1: Proxy forwards to successor
+    P1->>C: proxy/successor/request (initialize)
+
+    Note over C: Conductor sends proxy/initialize to next proxy
+    C->>P2: proxy/initialize (mcp_acp_transport: true)
+
+    Note over P2: Proxy forwards to successor
+    P2->>C: proxy/successor/request (initialize)
+
+    Note over C: Conductor sends initialize to final agent
+    C->>TA: initialize (mcp_acp_transport: true)
+
     TA-->>C: InitializeResponse (may include mcp_acp_transport: true)
     C-->>P2: proxy/successor response
-    
-    Note over P2: Proxy MUST respond with proxy capability
-    P2-->>C: InitializeResponse (proxy: true, mcp_acp_transport: true)
+
+    P2-->>C: InitializeResponse (mcp_acp_transport: true)
     C-->>P1: proxy/successor response
-    
-    Note over P1: Proxy MUST respond with proxy capability  
-    P1-->>C: InitializeResponse (proxy: true, mcp_acp_transport: true)
-    
+
+    P1-->>C: InitializeResponse (mcp_acp_transport: true)
+
     Note over C: Conductor acts as terminal agent to client
-    C-->>TC: InitializeResponse (no proxy capability)
-    
+    C-->>TC: InitializeResponse
+
     Note over TC,TA: Proxy chain initialized and ready
 ```
 
@@ -488,9 +501,11 @@ This demonstrates how proxies can run initialization sequences during session cr
 
 > What questions have arisen over the course of authoring this document or during subsequent discussions?
 
-### Why do proxies remove the proxy/MCP capabilities when forwarding to their successor?
+### Why use a separate `proxy/initialize` method instead of a capability?
 
-The conductor would always re-add these capabilities anyway, which shows that they are really specific to conductor↔proxy communication and so we decided to simply omit them. This makes it clear that these capabilities are part of the conductor's orchestration protocol rather than something proxies need to understand or manage.
+Earlier designs used a `"proxy": true` capability in the `InitializeRequest` and required proxies to echo it back in the response. This felt awkward because it wasn't really a capability negotiation - it was more of a "you must operate as a proxy" directive.
+
+Using a distinct method makes the contract clearer: if you receive `proxy/initialize`, you're a proxy with a successor; if you receive `initialize`, you're the terminal agent. There's no capability dance, no risk of misconfiguration, and components know their role immediately from the method name.
 
 ### How do proxies subsume existing agent extension mechanisms?
 
@@ -515,7 +530,7 @@ This is actually a feature - it ensures that proxy-based extensions remain porta
 
 ### How does the standard conductor implementation work?
 
-The `sacp-conductor` reference implementation can form trees of proxy chains. When offered the proxy capability, it expects to be given a list of components that are all proxies. When the last proxy in its managed chain sends a message to its successor, the conductor forwards that message to its own parent conductor.
+The `sacp-conductor` reference implementation can form trees of proxy chains. It can be configured to run in proxy mode (expecting `proxy/initialize`) or terminal mode (expecting `initialize`). When the last proxy in its managed chain sends a message to its successor, the conductor forwards that message to its own parent conductor (if in proxy mode) or to the final agent (if in terminal mode).
 
 This enables hierarchical structures like:
 ```
