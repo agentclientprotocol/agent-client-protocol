@@ -118,9 +118,9 @@ flowchart TB
     C <-->|ACP| A
 ```
 
-We add two new ACP methods for proxy communication, **`proxy/successor/request`** and **`proxy/successor/notification`**:
-- When sent **from proxy to conductor**: "please send this message to my successor"
-- When sent **from conductor to proxy**: "this message arrived from your successor"
+We add two ACP methods for proxy communication:
+- **`proxy/successor/message`**: Proxy sends a message to its successor via the conductor
+- **`proxy/successor/receive`**: Conductor delivers a message from the successor back to the proxy
 
 Here's how a single message flows through the system:
 
@@ -134,9 +134,9 @@ sequenceDiagram
 
     Client->>Conductor: prompt request
     Conductor->>P1: prompt request
-    P1->>Conductor: proxy/successor/request (enhanced prompt)
+    P1->>Conductor: proxy/successor/message (enhanced prompt)
     Conductor->>P2: enhanced prompt
-    P2->>Conductor: proxy/successor/request (filtered prompt)
+    P2->>Conductor: proxy/successor/message (filtered prompt)
     Conductor->>Agent: filtered prompt
     Agent-->>Conductor: response
     Conductor-->>P2: response
@@ -277,7 +277,7 @@ The `proxy/initialize` request has the same parameters as `initialize` and expec
 
 - The conductor MUST send `proxy/initialize` to all proxy components
 - The conductor MUST send `initialize` to the final agent component
-- When a proxy forwards an `initialize` via `proxy/successor/request`, the conductor determines whether the successor is another proxy or the agent, and sends the appropriate method
+- When a proxy forwards an `initialize` via `proxy/successor/message`, the conductor determines whether the successor is another proxy or the agent, and sends the appropriate method
 
 **Proxy behavior:**
 
@@ -312,14 +312,14 @@ Both methods use the same parameters as the standard ACP `InitializeRequest` and
 
 **Proxy Messages:**
 ```json
-// Proxy sends message to successor
-{"method": "proxy/successor/request", "params": {"message": <ACP_REQUEST>}}
-{"method": "proxy/successor/notification", "params": {"message": <ACP_NOTIFICATION>}}
+// Proxy sends message to successor (request or notification determined by presence of id)
+{"method": "proxy/successor/message", "params": <ACP_MESSAGE>}
 
 // Conductor delivers message from successor
-{"method": "proxy/successor/receive/request", "params": {"message": <ACP_REQUEST>}}
-{"method": "proxy/successor/receive/notification", "params": {"message": <ACP_NOTIFICATION>}}
+{"method": "proxy/successor/receive", "params": <ACP_MESSAGE>}
 ```
+
+Whether the wrapped message is a request or notification is determined by the presence of an `id` field in the ACP message, following JSON-RPC conventions.
 
 **MCP Messages:**
 ```json
@@ -427,22 +427,22 @@ sequenceDiagram
     C->>P1: proxy/initialize (mcp_acp_transport: true)
 
     Note over P1: Proxy forwards to successor
-    P1->>C: proxy/successor/request (initialize)
+    P1->>C: proxy/successor/message (initialize)
 
     Note over C: Conductor sends proxy/initialize to next proxy
     C->>P2: proxy/initialize (mcp_acp_transport: true)
 
     Note over P2: Proxy forwards to successor
-    P2->>C: proxy/successor/request (initialize)
+    P2->>C: proxy/successor/message (initialize)
 
     Note over C: Conductor sends initialize to final agent
     C->>TA: initialize (mcp_acp_transport: true)
 
     TA-->>C: InitializeResponse (may include mcp_acp_transport: true)
-    C-->>P2: proxy/successor response
+    C-->>P2: proxy/successor/receive (InitializeResponse)
 
     P2-->>C: InitializeResponse (mcp_acp_transport: true)
-    C-->>P1: proxy/successor response
+    C-->>P1: proxy/successor/receive (InitializeResponse)
 
     P1-->>C: InitializeResponse (mcp_acp_transport: true)
 
