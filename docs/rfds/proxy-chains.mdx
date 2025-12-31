@@ -507,6 +507,14 @@ Earlier designs used a `"proxy": true` capability in the `InitializeRequest` and
 
 Using a distinct method makes the contract clearer: if you receive `proxy/initialize`, you're a proxy with a successor; if you receive `initialize`, you're the terminal agent. There's no capability dance, no risk of misconfiguration, and components know their role immediately from the method name.
 
+### How do proxies correlate MCP requests with sessions?
+
+When a proxy adds an MCP server to a `session/new` request, it uses a fresh ACP-ID (the `uuid` field) that the proxy controls. When MCP-over-ACP messages arrive with that ACP-ID, the proxy can correlate them back to the originating session.
+
+This approach avoids a potential deadlock: some agents don't return the `session-id` until after MCP servers have been initialized. If proxies needed the `session-id` to handle MCP requests during initialization, they would be stuck waiting for a value that depends on their response.
+
+By using a fresh ACP-ID per session instead, proxies maintain full correlation capability without circular dependencies. The proxy knows which session spawned which ACP-ID, so it can always map MCP requests back to their originating session context.
+
 ### How do proxies subsume existing agent extension mechanisms?
 
 Because proxies sit between the client and agent, they can replicate the functionality of existing extension mechanisms:
