@@ -21,7 +21,7 @@ The popularity of MCP servers demonstrates a clear desire for portable extension
 However, MCP servers are fundamentally limited because they sit "behind" the agent. They can provide tools and respond to function calls, but they cannot:
 
 - **Inject or modify prompts** before they reach the agent
-- **Add global context** that persists across conversations  
+- **Add global context** that persists across conversations
 - **Transform responses** before they reach the user
 - **Respond to async events** outside the request-response cycle
 - **Coordinate between multiple agents** or manage conversation flow
@@ -34,7 +34,7 @@ Users end up choosing agents not just based on model quality, but on which speci
 
 > What are you proposing to improve the situation?
 
-We propose extending ACP to enable creating *proxies*, ACP components that sit between the client and the agent. Because proxies can do anything a client could do, they serve as a kind of "universal extension mechanism" that can subsume AGENTS.md, hooks, MCP servers, etc.
+We propose extending ACP to enable creating _proxies_, ACP components that sit between the client and the agent. Because proxies can do anything a client could do, they serve as a kind of "universal extension mechanism" that can subsume AGENTS.md, hooks, MCP servers, etc.
 
 Part of the proxy protocol includes the ability to send and receive MCP messages, enabling a single component to (1) add an MCP server to a session and then (2) handle those MCP tool requests. This effectively creates a way for agents to "callback" to a proxy, enabling rich bidirectional interactions beyond simple message transformation.
 
@@ -47,7 +47,7 @@ Conceptually, proxies work like a chain where messages flow through each compone
 ```mermaid
 flowchart LR
     Client[ACP Client] -->|messages| P1[Context Proxy]
-    P1 -->|enhanced| P2[Tool Filter Proxy] 
+    P1 -->|enhanced| P2[Tool Filter Proxy]
     P2 -->|filtered| A[Base Agent]
     A -->|responses| P2
     P2 -->|processed| P1
@@ -61,6 +61,7 @@ flowchart LR
 When proxing a `session/new` request, proxies can add MCP servers using a new transport type, `"acp"`. When agents invoke an MCP server that uses `"acp"` transport, the MCP requests are sent through the ACP channel. (To accommodate existing agents, our conductor will automatically bridge MCP servers using `"acp"` transport to use `"stdio"` transport.)
 
 Leveraging `"acp"` transport allows a single ACP proxy to do all of the following:
+
 1. **Add context** by analyzing the project and injecting relevant documentation
 2. **Provide tools** via MCP server that understand the injected context
 3. **Handle callbacks** when the agent uses those tools, with full awareness of the conversation state
@@ -71,28 +72,28 @@ Leveraging `"acp"` transport allows a single ACP proxy to do all of the followin
 sequenceDiagram
     participant Client
     participant P1 as Context Proxy
-    participant P2 as Filter Proxy  
+    participant P2 as Filter Proxy
     participant Agent
 
     Note over Client: User asks about project structure
     Client->>P1: prompt request
-    
+
     Note over P1: Analyzes project, adds context + filesystem MCP server
     P1->>P2: enhanced prompt + filesystem MCP server
-    
+
     Note over P2: Forwards enhanced prompt
     P2->>Agent: prompt with context + tools available
-    
+
     Note over Agent: Decides to explore project structure
     Agent->>P2: mcp/message (list files)
 
     Note over P2: Forwards tool call back to Context Proxy
     P2->>P1: mcp/message (list files)
-    
+
     Note over P1: Handles tool call with full project context
     P1-->>P2: file listing with relevant details
     P2-->>Agent: file listing with relevant details
-    
+
     Agent-->>P2: response using both context and tool results
     P2-->>P1: response (potentially filtered)
     P1-->>Client: final response
@@ -111,7 +112,7 @@ flowchart TB
     P1[Context Proxy]
     P2[Tool Filter Proxy]
     A[Agent]
-    
+
     Client <-->|ACP| C
     C <-->|ACP| P1
     C <-->|ACP| P2
@@ -119,6 +120,7 @@ flowchart TB
 ```
 
 We add one ACP method for proxy communication:
+
 - **`proxy/successor`**: Used bidirectionally - proxies send it to forward messages to their successor, and the conductor sends it to deliver messages from the successor back to the proxy
 
 Here's how a single message flows through the system:
@@ -172,18 +174,18 @@ flowchart LR
     Client[Client]
     Conductor[Conductor]
     Agent[Agent]
-    
+
     subgraph Symposium["symposium-acp proxy"]
         RustTools[Rust Language Tools]
         CrateA[tokio-acp proxy]
         CrateB[serde-acp proxy]
         CrateC[bevy-acp proxy]
-        
+
         RustTools --> CrateA
         CrateA --> CrateB
         CrateB --> CrateC
     end
-    
+
     Client --> Conductor
     Conductor --> Symposium
     Symposium --> Agent
@@ -203,33 +205,33 @@ classDiagram
         <<abstract>>
         +sends prompts
     }
-    
+
     class Agent {
         <<abstract>>
         +responds to prompts
     }
-    
+
     class TerminalClient {
         +receives direction from user
         +connects to terminal agent
     }
-    
+
     class Conductor {
         +manages proxy chain
         +sends successor/MCP messages
     }
-    
+
     class TerminalAgent {
         +embodies the LLM
         +final destination
         +no successor
     }
-    
+
     class Proxy {
         +forwards to successor
         +sends successor/MCP messages
     }
-    
+
     Client <|-- TerminalClient
     Client <|-- Conductor
     Agent <|-- TerminalAgent
@@ -249,7 +251,7 @@ flowchart TB
     P1[Context Proxy]
     P2[Tool Filter Proxy]
     TA[Terminal Agent]
-    
+
     TC -->|terminal client| C
     C -->|terminal agent| TC
     C -->|conductor| P1
@@ -263,6 +265,7 @@ flowchart TB
 ### Capability Reference
 
 **MCP-over-ACP Transport** (`"mcp_acp_transport": true`)
+
 - Indicates a component can handle MCP messages with `"transport": "acp"`
 - Must handle `mcp/connect`, `mcp/message`, and `mcp/disconnect` messages
 - Enables seamless MCP server provision and tool callbacks
@@ -303,6 +306,7 @@ Note: Because a conductor MUST offer `"mcp_acp_transport"` to each proxy but ter
 ### Message Reference
 
 **Initialization:**
+
 ```json
 // Conductor initializes a proxy (proxy knows it has a successor)
 {"method": "proxy/initialize", "params": <INITIALIZE_REQUEST_PARAMS>}
@@ -314,6 +318,7 @@ Note: Because a conductor MUST offer `"mcp_acp_transport"` to each proxy but ter
 Both methods use the same parameters as the standard ACP `InitializeRequest` and expect a standard `InitializeResponse`.
 
 **Proxy Messages:**
+
 ```json
 // Proxy sends message to successor, or conductor delivers message from successor
 // (same method, direction determined by sender)
@@ -330,6 +335,7 @@ Both methods use the same parameters as the standard ACP `InitializeRequest` and
 The inner message fields (`method`, `params`) are flattened into the params object. Whether the wrapped message is a request or notification is determined by the presence of an `id` field in the outer JSON-RPC envelope, following JSON-RPC conventions.
 
 **MCP Messages:**
+
 ```json
 // Establish MCP connection
 {"method": "mcp/connect", "params": {"acpUrl": "acp:<UUID>", "meta": {...}}}
@@ -357,6 +363,7 @@ The `connectionId` is obtained from the `mcp/connect` response. The inner MCP me
 We extend the MCP JSON schema to support ACP as a new transport type alongside existing stdio and HTTP transports.
 
 **Extended MCP Server Schema:**
+
 ```json
 {
   "type": "object",
@@ -397,7 +404,7 @@ We extend the MCP JSON schema to support ACP as a new transport type alongside e
       },
       "then": {
         "properties": {
-          "uuid": { 
+          "uuid": {
             "type": "string",
             "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
           }
@@ -410,6 +417,7 @@ We extend the MCP JSON schema to support ACP as a new transport type alongside e
 ```
 
 **Example ACP Transport Declaration:**
+
 ```json
 {
   "tools": {
@@ -484,34 +492,34 @@ sequenceDiagram
 
     Note over Client: Client creates new session
     Client->>Sparkle: session/new
-    
+
     Note over Sparkle: Adds Sparkle MCP server
     Sparkle->>Agent: session/new + sparkle tools
     Agent-->>Sparkle: session created (sessionId: S1)
     Sparkle-->>Client: session/new response (sessionId: S1)
-    
+
     Note over Client: Client sends first prompt (during embodiment)
     Client->>Sparkle: prompt ('Hello, can you help me?')
     activate Sparkle
-    
+
     Note over Sparkle: Delays client prompt, runs embodiment first
     Sparkle->>Agent: prompt ('you are sparkle...')
-    
+
     Note over Agent: Processes embodiment, sends notifications
     Agent->>Sparkle: session/update (S1: thinking...)
     Sparkle->>Client: session/update (S1: thinking...)
-    
+
     Agent->>Sparkle: session/update (S1: embodiment complete)
     Sparkle->>Client: session/update (S1: embodiment complete)
-    
+
     Agent-->>Sparkle: embodiment response
     Note over Sparkle: Discards embodiment response, now processes delayed prompt
-    
+
     Sparkle->>Agent: prompt ('Hello, can you help me?')
     deactivate Sparkle
     Agent-->>Sparkle: response to client
     Sparkle-->>Client: response to client
-    
+
     Note over Client,Agent: Session ready with Sparkle patterns active
 ```
 
@@ -561,11 +569,12 @@ This is actually a feature - it ensures that proxy-based extensions remain porta
 The `sacp-conductor` reference implementation can form trees of proxy chains. It can be configured to run in proxy mode (expecting `proxy/initialize`) or terminal mode (expecting `initialize`). When the last proxy in its managed chain sends a message to its successor, the conductor forwards that message to its own parent conductor (if in proxy mode) or to the final agent (if in terminal mode).
 
 This enables hierarchical structures like:
+
 ```
 client → conductor1 → final-agent
              ↓ manages
          proxy-a → conductor2 → proxy-d
-                      ↓ manages  
+                      ↓ manages
                   proxy-b → proxy-c
 ```
 
@@ -575,11 +584,11 @@ The conductor handles process management, capability negotiation, and message ro
 
 A prototype version of this proposal has been implemented and is available on crates.io as the crates
 
-* `sacp` -- base ACP protocol SDK
-  * `sacp-tokio` -- adds specific utilities for use with the `tokio` runtime
-* `sacp-proxy` -- extensions for implementing a proxy
-  * `sacp-rmcp` -- adds specific proxy extension traits for bridging to the rmcp crate
-* sacp-conductor -- reference conductor implementation
+- `sacp` -- base ACP protocol SDK
+  - `sacp-tokio` -- adds specific utilities for use with the `tokio` runtime
+- `sacp-proxy` -- extensions for implementing a proxy
+  - `sacp-rmcp` -- adds specific proxy extension traits for bridging to the rmcp crate
+- sacp-conductor -- reference conductor implementation
 
 The canonical sources for those crates is currently the [symposium-dev/symposium-acp] repository. However, copies have been upstreamed to the [agentclientprotocol/rust-sdk](https://github.com/agentclientprotocol/rust-sdk/tree/main/src/sacp-conductor) repository and, if and when this RFD is accepted, that will become the canonical home.
 
@@ -622,6 +631,7 @@ The benefits of composability typically outweigh the minimal latency costs for h
 ### What happens when proxy components crash or misbehave?
 
 The conductor manages component lifecycles:
+
 - Failed components are restarted automatically where possible
 - Component crashes don't affect the rest of the chain
 - Graceful degradation by bypassing failed components
