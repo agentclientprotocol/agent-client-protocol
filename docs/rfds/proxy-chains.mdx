@@ -84,10 +84,10 @@ sequenceDiagram
     P2->>Agent: prompt with context + tools available
     
     Note over Agent: Decides to explore project structure
-    Agent->>P2: mcp/client_to_server/request (list files)
-    
+    Agent->>P2: mcp/message (list files)
+
     Note over P2: Forwards tool call back to Context Proxy
-    P2->>P1: mcp/client_to_server/request (list files)
+    P2->>P1: mcp/message (list files)
     
     Note over P1: Handles tool call with full project context
     P1-->>P2: file listing with relevant details
@@ -118,9 +118,8 @@ flowchart TB
     C <-->|ACP| A
 ```
 
-We add two ACP methods for proxy communication:
-- **`proxy/successor/message`**: Proxy sends a message to its successor via the conductor
-- **`proxy/successor/receive`**: Conductor delivers a message from the successor back to the proxy
+We add one ACP method for proxy communication:
+- **`proxy/successor`**: Used bidirectionally - proxies send it to forward messages to their successor, and the conductor sends it to deliver messages from the successor back to the proxy
 
 Here's how a single message flows through the system:
 
@@ -134,9 +133,9 @@ sequenceDiagram
 
     Client->>Conductor: prompt request
     Conductor->>P1: prompt request
-    P1->>Conductor: proxy/successor/message (enhanced prompt)
+    P1->>Conductor: proxy/successor (enhanced prompt)
     Conductor->>P2: enhanced prompt
-    P2->>Conductor: proxy/successor/message (filtered prompt)
+    P2->>Conductor: proxy/successor (filtered prompt)
     Conductor->>Agent: filtered prompt
     Agent-->>Conductor: response
     Conductor-->>P2: response
@@ -163,6 +162,10 @@ The monolithic nature of agent development has meant that most of the "action" h
 The Symposium project is one example exploring this concept, with a focus on Rust. The idea is to give Rust users an automatic set of extensions based on the dependencies they are using. These extensions would be packaged up as SACP proxies using WebAssembly for portability and sandboxing.
 
 Symposium aims to become the standard "Rust ACP experience" by providing both core Rust tooling and a framework for Rust libraries to contribute their own proxy components.
+
+### Standardized IDE Capabilities
+
+Proxy infrastructure could also enable editors to expose standardized IDE capabilities (diagnostics, file system access, terminal APIs) to agents via MCP servers provided by proxies. This keeps the core ACP protocol focused on agent communication while allowing rich IDE integration through the proxy layer.
 
 ```mermaid
 flowchart LR
@@ -261,7 +264,7 @@ flowchart TB
 
 **MCP-over-ACP Transport** (`"mcp_acp_transport": true`)
 - Indicates a component can handle MCP messages with `"transport": "acp"`
-- Must handle `mcp/client_to_server/request` and `mcp/server_to_client/request` messages
+- Must handle `mcp/connect`, `mcp/message`, and `mcp/disconnect` messages
 - Enables seamless MCP server provision and tool callbacks
 
 ### Proxy Initialization Protocol
@@ -277,7 +280,7 @@ The `proxy/initialize` request has the same parameters as `initialize` and expec
 
 - The conductor MUST send `proxy/initialize` to all proxy components
 - The conductor MUST send `initialize` to the final agent component
-- When a proxy forwards an `initialize` via `proxy/successor/message`, the conductor determines whether the successor is another proxy or the agent, and sends the appropriate method
+- When a proxy forwards an `initialize` via `proxy/successor`, the conductor determines whether the successor is another proxy or the agent, and sends the appropriate method
 
 **Proxy behavior:**
 
@@ -312,25 +315,42 @@ Both methods use the same parameters as the standard ACP `InitializeRequest` and
 
 **Proxy Messages:**
 ```json
-// Proxy sends message to successor (request or notification determined by presence of id)
-{"method": "proxy/successor/message", "params": <ACP_MESSAGE>}
-
-// Conductor delivers message from successor
-{"method": "proxy/successor/receive", "params": <ACP_MESSAGE>}
+// Proxy sends message to successor, or conductor delivers message from successor
+// (same method, direction determined by sender)
+{
+  "method": "proxy/successor",
+  "params": {
+    "method": "<INNER_METHOD>",
+    "params": <INNER_PARAMS>,
+    "meta": { ... }            // optional metadata
+  }
+}
 ```
 
-Whether the wrapped message is a request or notification is determined by the presence of an `id` field in the ACP message, following JSON-RPC conventions.
+The inner message fields (`method`, `params`) are flattened into the params object. Whether the wrapped message is a request or notification is determined by the presence of an `id` field in the outer JSON-RPC envelope, following JSON-RPC conventions.
 
 **MCP Messages:**
 ```json
-// Agent calls MCP tool (flows backward to proxy)
-{"method": "mcp/client_to_server/request", "params": {"uuid": "...", "message": <MCP_REQUEST>}}
+// Establish MCP connection
+{"method": "mcp/connect", "params": {"acpUrl": "acp:<UUID>", "meta": {...}}}
+// Response: {"connectionId": "<CONNECTION_ID>", "meta": {...}}
 
-// MCP server callback (flows forward to agent)  
-{"method": "mcp/server_to_client/request", "params": {"uuid": "...", "message": <MCP_REQUEST>}}
+// Send MCP message (bidirectional - agent↔proxy)
+{
+  "method": "mcp/message",
+  "params": {
+    "connectionId": "<CONNECTION_ID>",
+    "method": "<MCP_METHOD>",
+    "params": <MCP_PARAMS>,
+    "meta": { ... }
+  }
+}
+
+// Close MCP connection
+{"method": "mcp/disconnect", "params": {"connectionId": "<CONNECTION_ID>", "meta": {...}}}
 ```
 
-The `uuid` parameter identifies which proxy component owns the MCP server - the conductor routes MCP messages to the component that declared the matching UUID in its MCP server specification.
+The `connectionId` is obtained from the `mcp/connect` response. The inner MCP message fields are flattened into the params object, similar to `proxy/successor`. The `acpUrl` in the connect request identifies which proxy component owns the MCP server.
 
 ### MCP Transport Extension
 
@@ -427,22 +447,22 @@ sequenceDiagram
     C->>P1: proxy/initialize (mcp_acp_transport: true)
 
     Note over P1: Proxy forwards to successor
-    P1->>C: proxy/successor/message (initialize)
+    P1->>C: proxy/successor (initialize)
 
     Note over C: Conductor sends proxy/initialize to next proxy
     C->>P2: proxy/initialize (mcp_acp_transport: true)
 
     Note over P2: Proxy forwards to successor
-    P2->>C: proxy/successor/message (initialize)
+    P2->>C: proxy/successor (initialize)
 
     Note over C: Conductor sends initialize to final agent
     C->>TA: initialize (mcp_acp_transport: true)
 
     TA-->>C: InitializeResponse (may include mcp_acp_transport: true)
-    C-->>P2: proxy/successor/receive (InitializeResponse)
+    C-->>P2: proxy/successor (InitializeResponse)
 
     P2-->>C: InitializeResponse (mcp_acp_transport: true)
-    C-->>P1: proxy/successor/receive (InitializeResponse)
+    C-->>P1: proxy/successor (InitializeResponse)
 
     P1-->>C: InitializeResponse (mcp_acp_transport: true)
 
@@ -613,11 +633,42 @@ Yes! The conductor can itself run in proxy mode, enabling hierarchical structure
 
 ```
 client → proxy1 → conductor (proxy mode) → final-agent
-                      ↓ manages  
+                      ↓ manages
                   p1 → p2 → p3
 ```
 
 This enables complex compositions while maintaining clean interfaces.
+
+### How could proxy chains support multi-agent scenarios in the future?
+
+The current design assumes a linear chain where each proxy has a single successor. To support M:N topologies where a proxy communicates with multiple peers (e.g., a research coordinator dispatching to multiple specialized agents), we could extend `proxy/successor` with an optional `peer` field:
+
+```json
+{
+  "method": "proxy/successor",
+  "params": {
+    "method": "prompt",
+    "params": { ... },
+    "peer": "research-agent"
+  }
+}
+```
+
+When `peer` is omitted, the message goes to the default successor (backwards compatible with the current linear chain model). When present, it specifies which peer the message is intended for. The `proxy/initialize` response could be extended to enumerate available peers, enabling proxies to discover and coordinate between multiple downstream components.
+
+### Why are MCP and proxy messages separate instead of unified as "peers"?
+
+The `mcp/*` messages and `proxy/successor` are structurally similar - both wrap an inner message and route it to a destination. A unified design might use `peer/connect`, `peer/message`, and `peer/disconnect` for everything, where the successor is just another peer (with `peer: "successor"`).
+
+We kept them separate because successors and MCP servers have different lifecycle semantics:
+
+- **Successors** are implicit and permanent. When a proxy receives `proxy/initialize`, its successor already exists and will exist for the proxy's entire lifetime. The proxy doesn't need to think about connecting or disconnecting - it just forwards messages. This simplicity is intentional: proxies shouldn't need to manage successor lifecycle, and the conductor doesn't need to handle dynamic successor creation.
+
+- **MCP servers** require explicit connection management. When the conductor bridges an MCP server via stdio, it spawns a new process. Multiple connections to the same MCP server are possible (different connection IDs). The `mcp/connect` and `mcp/disconnect` lifecycle is necessary because these connections are dynamic and multiplexed.
+
+A unified `peer/*` approach would require proxies to explicitly connect to their successor on startup, implying more generality than the current design intends. It would also require the conductor to support starting successors multiple times, which adds complexity for a capability we don't currently need.
+
+That said, if M:N topologies become common, revisiting this unification might make sense, and the MCP server protocol could be a model for more general "peers".
 
 ## Revision history
 
