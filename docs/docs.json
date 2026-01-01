@@ -113,7 +113,8 @@
               "rfds/session-info-update",
               "rfds/agent-telemetry-export",
               "rfds/proxy-chains",
-              "rfds/session-usage"
+              "rfds/session-usage",
+              "rfds/acp-agent-registry"
             ]
           },
           { "group": "Preview", "pages": [] },
