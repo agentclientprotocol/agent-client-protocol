@@ -3,6 +3,7 @@ title: "Session Usage and Context Status"
 ---
 
 - Author(s): [@ahmedhesham6](https://github.com/ahmedhesham6)
+- Champion: [@benbrandt](https://github.com/benbrandt)
 
 ## Elevator pitch
 
@@ -47,16 +48,19 @@ We propose separating usage tracking into two distinct concerns:
 2. **Context window and cost** - Reported via `session/update` notifications with `sessionUpdate: "usage_update"` (session state)
 
 This separation reflects how users consume this information:
+
 - Token counts are tied to specific turns and useful immediately after a prompt
 - Context window and cost are cumulative session state that agents push proactively when available
 
 Agents send context updates at appropriate times:
+
 - On `session/new` response (if agent can query usage immediately)
 - On `session/load` / `session/resume` (for resumed/forked sessions)
 - After each `session/prompt` response (when usage data becomes available)
 - Anytime context window state changes significantly
 
 This approach provides flexibility for different agent implementations:
+
 - Agents that support getting current usage without a prompt can immediately send updates when creating, resuming, or forking chats
 - Agents that only provide usage when actively prompting can send updates after sending a new prompt
 
@@ -211,6 +215,7 @@ Different users care about different things at different times:
 - **Cumulative cost**: Session-level state that agents push when available
 
 Separating them allows:
+
 - Cleaner data model where per-turn data stays in turn responses
 - Agents to push context updates proactively when data becomes available
 - Clients to receive updates reactively without needing to poll
@@ -218,6 +223,7 @@ Separating them allows:
 ### Why is cost in session/update instead of PromptResponse?
 
 Cost is cumulative session state, similar to context window:
+
 - Users want to track total spending, not just per-turn costs
 - Keeps `PromptResponse` focused on per-turn token breakdown
 - Both cost and context window are session-level metrics that belong together
@@ -233,14 +239,15 @@ The context update notification provides everything needed:
 
 **Recommended client behavior:**
 
-| Percentage | Action |
-|------------|--------|
-| < 75% | Normal operation |
-| 75-90% | Yellow indicator, suggest "Context filling up" |
-| 90-95% | Orange indicator, recommend "Start new session or summarize" |
-| > 95% | Red indicator, warn "Next prompt may fail - handoff recommended" |
+| Percentage | Action                                                           |
+| ---------- | ---------------------------------------------------------------- |
+| < 75%      | Normal operation                                                 |
+| 75-90%     | Yellow indicator, suggest "Context filling up"                   |
+| 90-95%     | Orange indicator, recommend "Start new session or summarize"     |
+| > 95%      | Red indicator, warn "Next prompt may fail - handoff recommended" |
 
 Clients can also:
+
 - Offer "Compact context" or "Summarize conversation" actions
 - Auto-suggest starting a new session
 - Implement automatic handoff when approaching limits
