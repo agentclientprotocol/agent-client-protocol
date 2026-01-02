@@ -1,0 +1,134 @@
+---
+title: "Symposium: Self-Integrating Library Ecosystems"
+---
+
+Author(s): [@nikomatsakis](https://github.com/nikomatsakis)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Bring the [Symposium project](https://github.com/symposium-dev/symposium) into the ACP organization. Built on ACP's proxy architecture, Symposium enables library ecosystems where packages come with their own agent integration, creating extensible agents that users can customize with domain-specific capabilities. Symposium currently focuses on Rust, but the vision applies to any language ecosystem. It will expand to other languages over time.
+
+Symposium currently consists of two things:
+
+1. An ACP proxy for Rust development. It orchestrates specialized sub-proxies and is expected to evolve to intelligently select them based on current dependencies, user chat contents, and other factors. The proxy can be used from any ACP-supported editor.
+2. A VSCode extension (available on the [VSCode](https://marketplace.visualstudio.com/items?itemName=symposium-dev.symposium) and [OpenVSIX](https://open-vsx.org/extension/symposium-dev/symposium) marketplaces) that provides a generic ACP front-end, allowing users to easily experiment with Symposium using any ACP agent found on the [ACP registry](https://github.com/agentclientprotocol/registry).
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+Agent vendors offer various means of extension, but they vary from agent to agent. Library authors are best positioned to help users work effectively with their libraries, but today they have to specialize to a particular agent in order to do so.
+
+The one portable abstraction is MCP servers and as a result they have proliferated quickly. But MCP servers don't cover the full range of functionality needed for deep library integration. They can provide tools and resources, but can't intercept and augment agent behavior, inject context based on project state, or coordinate complex multi-step workflows.
+
+The Symposium project pioneered ACP proxies as a compelling alternative. A proxy is a component that sits in the communication path between client and agent, allowing it to observe, augment, and extend agent capabilities in ways that MCP servers cannot. Proxies aim to be a portable abstraction covering all aspects of agent construction, up to and including interaction with users, making them well-suited for library authors who want to provide rich, integrated experiences.
+
+[RFD 243: Proxy Chains](https://github.com/agentclientprotocol/agent-client-protocol/pull/243/) proposes upstreaming proxies into the ACP protocol. This RFD proposes upstreaming the Symposium project itself into the ACP organization, so that future experiments take place under the auspices of ACP.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+Bring Symposium into the ACP Github organization. The VSCode extensions, Rust crates, and other published artifacts will be tagged as belonging to the Agent Client Protocol organization.
+
+Symposium will be governed by the ACP core team, with nikomatsakis (the current owner) acting as champion and driving development.
+
+## Shiny future
+
+> How will things play out once this feature exists?
+
+### Pioneering ACP extensions
+
+Part of the role of Symposium is to pioneer potential ACP extensions in pursuit of the vision of self-integrating libraries. This has already been playing out in practice, with [RFD 243](https://github.com/agentclientprotocol/agent-client-protocol/pull/243/) proposing standardization of Symposium's proxy architecture. Going forward, Symposium will continue to push ACP's boundaries by experimenting with extensions such as:
+
+- **Publishing proxies**: Allowing users to install ACP proxies published to registries like crates.io, npm, or the ACP registry itself.
+- **WebAssembly-based proxies**: Packaging proxies as WebAssembly components for easy, portable distribution with automatic sandboxing.
+- **Dependency-driven proxy selection**: Automatically installed proxies recommended by dependencies of the current crate.
+- **GUI components from proxies**: Allowing proxies to contribute visual interfaces (dashboards, charts, interactive forms) that appear in the editor alongside chat
+- **Multi-agent workflows**: Coordinating multiple agents working together on complex tasks
+
+The Symposium VSCode extension provides a testbed for these experiments. When extensions prove successful, we'll upstream the results into the ACP protocol itself, making them available to all ACP-compatible editors and agents.
+
+### Self-integrating libraries
+
+Library authors add metadata to their library definitions (e.g., `Cargo.toml`) that Symposium uses to provide custom support to agents. The precise form of this metadata might be as simple as additional markdown files or as complex as a custom ACP proxy. When a user works on a project using that library, the agent automatically gains the ability to:
+
+- Understand the library's idioms and best practices
+- Access library-specific tooling, diagnostics, and lints
+- Present rich interfaces that combine structured UI with natural language queries
+
+For example, a metrics library might:
+
+- Expose collected metrics through a visual dashboard
+- Let users query trends conversationally ("show me p99 latency over the last hour")
+- Use the agent to correlate metrics with code changes ("what changed before latency increased?")
+
+### Composable agents
+
+Beyond project dependencies, users can extend their agents by adding proxies that provide capabilities orthogonal to any particular codebase. Examples include:
+
+- **Collaboration patterns**: Proxies like [Sparkle](https://sparkle-ai-space.github.io/sparkle-mcp/) that shape how the agent collaborates with the user (the current Symposium packages Sparkle already)
+- **System context**: Proxies that integrate context from recent browser activity, calendar, or other system state
+- **Workflow automation**: Proxies that coordinate with external services or team processes
+
+The agent ecosystem becomes as composable as the package ecosystem - users assemble the capabilities they need from a growing library of proxies.
+
+### Expanding to other ecosystems
+
+As Symposium matures, we expect it to support similar patterns in other ecosystems, such as TypeScript and Python.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+**Phase 1: Transfer and establish**
+
+- Transfer Symposium repository to ACP organization
+- Determine how to organize repositories within the ACP org
+
+**Phase 2: Stabilize Rust support**
+
+- Build out examples demonstrating the self-integrating pattern
+- Experiment with other extensions, like GUI walkthroughs
+
+**Phase 3: Expand to other ecosystems**
+
+- Generalize patterns into reusable tooling
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Why does Symposium belong in the ACP org rather than as a separate project?
+
+Symposium is built on ACP's proxy architecture and pushes that architecture in new directions. Keeping it in the ACP org:
+
+- Maintains a tight feedback loop between protocol design and ecosystem tooling needs
+- Ensures patterns discovered in Symposium inform protocol evolution
+- Positions ACP as an ecosystem with real tooling, not just a protocol spec
+
+### Why start with Rust?
+
+Rust is where the Symposium developers have deep expertise, and the Rust ecosystem has strong conventions around tooling (cargo, rustdoc, clippy) that make it well-suited for exploring self-integrating library patterns. Starting with one ecosystem lets us focus on getting the patterns right before generalizing.
+
+### How does the VSCode extension relate to other ACP clients?
+
+The Symposium VSCode extension is not intended to replace editor-native ACP support. It serves as a testbed for experimenting with protocol extensions (GUI components, multi-agent workflows) before they're mature enough for mainstream editor adoption. It also provides a way for users to try Symposium today without waiting for their editor to add native ACP support.
+
+### Should we extract the VSCode extension as a standalone ACP front-end?
+
+Maybe! Something like that would clearly be useful. It is important however that Symposium has the freedom to experiment with UI extensions and other things that we may not wish to stabilize, which may mean that we wish to have Symposium maintain a fork or simply add useful extension hooks. Over the long term, the ACP org should probably not try to develop a full-featured Chat UI but instead encourage the VSCode team to integrate ACP-based agents (and proxies!) into their standard agentic chat system.
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+The alternative is keeping Symposium as a separate project that happens to use ACP. This would work, but misses the opportunity to:
+
+- Position ACP as an ecosystem, not just a protocol
+- Ensure tight feedback between tooling needs and protocol design
+- Demonstrate to other ecosystem builders what's possible with ACP
+
+## Revision history
+
+- 2025-12-31: Initial draft
