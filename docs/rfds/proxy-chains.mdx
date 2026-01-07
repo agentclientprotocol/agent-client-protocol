@@ -1,5 +1,5 @@
 ---
-title: "Proxy Chains: Composable Agent Architectures"
+title: "Agent Extensions via ACP Proxies"
 ---
 
 Author(s): [nikomatsakis](https://github.com/nikomatsakis)
@@ -8,33 +8,28 @@ Author(s): [nikomatsakis](https://github.com/nikomatsakis)
 
 > What are you proposing to change?
 
-Add proxy chain capabilities to ACP that allow components to intercept and transform messages between clients and agents, enabling composable agent architectures where techniques like context injection, tool coordination, and response filtering can be extracted into reusable components.
+Enable a universal agent extension mechanism via ACP proxies, components that sit between a client and an agent. Proxies can intercept and transform messages, enabling composable architectures where techniques like context injection, tool coordination, and response filtering can be extracted into reusable components.
 
 ## Status quo
 
 > How do things work today and what problems does this cause? Why would we change things?
 
-The AI agent ecosystem has developed a wide variety of extension mechanisms: AGENTS.md files, Claude Code plugins and skills, rules and steering files, hooks, MCP servers, etc. Of these, only MCP servers and AGENTS.md files have achieved any standardization across the ecosystem.
-
-The popularity of MCP servers demonstrates a clear desire for portable extensions that work across different clients and agents. Many MCP servers come with instructions like "add this text to your context to help the agent use the MCP server correctly," showing that developers want their tools to work seamlessly without manual configuration.
+The AI agent ecosystem has developed many extension mechanisms: AGENTS.md files, Claude Code plugins, rules files, hooks, MCP servers, etc. Of these, only MCP servers have achieved real standardization across the ecosystem.
 
 However, MCP servers are fundamentally limited because they sit "behind" the agent. They can provide tools and respond to function calls, but they cannot:
 
 - **Inject or modify prompts** before they reach the agent
 - **Add global context** that persists across conversations
 - **Transform responses** before they reach the user
-- **Respond to async events** outside the request-response cycle
 - **Coordinate between multiple agents** or manage conversation flow
 
-This creates a gap in the ecosystem. Developers want portable, composable extensions, but the only standardized mechanism (MCP) can't handle many common use cases. As a result, valuable techniques like context management, conversation orchestration, and response processing remain locked within individual agent implementations.
-
-Users end up choosing agents not just based on model quality, but on which specific extensions and capabilities are built in. There's no way to take the context injection from one system, the tool coordination from another, and the response filtering from a third, and combine them with your preferred base model.
+As a result, valuable techniques like context management and response processing remain locked within individual agent implementations, with no way to extract and reuse them across different agents.
 
 ## What we propose to do about it
 
 > What are you proposing to improve the situation?
 
-We propose extending ACP to enable creating _proxies_, ACP components that sit between the client and the agent. Because proxies can do anything a client could do, they serve as a kind of "universal extension mechanism" that can subsume AGENTS.md, hooks, MCP servers, etc.
+We propose implementing _agent extensions_ via ACP _proxies_, a new kind of component that sits between the client and the agent, forwarding (and potentially altering or introducing) messages. Because proxies can do anything a client could do, they serve as a universal extension mechanism that can subsume AGENTS.md, hooks, MCP servers, etc.
 
 Proxies are limited to the customizations exposed by ACP itself, so they would benefit from future ACP extensions like mechanisms to customize system prompts. However, they can already handle the majority of common extension use cases through message interception and transformation.
 
@@ -53,49 +48,6 @@ flowchart LR
 ```
 
 (As described in the "Proxying in Practice" section, proxies in our design do not actually communicate directly with their successor, but instead use a central conductor. For the purposes of explaining the protocol, however, this section will continue to show diagrams "as if" proxies were in direct communication with each other.)
-
-### Enhanced capabilities with MCP-over-ACP
-
-Proxies become even more powerful when combined with [MCP-over-ACP transport](./mcp-over-acp). A proxy can add MCP servers to sessions it forwards, then handle tool callbacks when the agent invokes those tools. This enables a single proxy to:
-
-1. **Add context** by analyzing the project and injecting relevant documentation
-2. **Provide tools** via MCP server that understand the injected context
-3. **Handle callbacks** when the agent uses those tools, with full awareness of the conversation state
-
-**Example Flow**: Context Proxy (with MCP server) → Filter Proxy → Agent
-
-```mermaid
-sequenceDiagram
-    participant Client
-    participant P1 as Context Proxy
-    participant P2 as Filter Proxy
-    participant Agent
-
-    Note over Client: User asks about project structure
-    Client->>P1: prompt request
-
-    Note over P1: Analyzes project, adds context + filesystem MCP server
-    P1->>P2: enhanced prompt + filesystem MCP server
-
-    Note over P2: Forwards enhanced prompt
-    P2->>Agent: prompt with context + tools available
-
-    Note over Agent: Decides to explore project structure
-    Agent->>P2: mcp/message (list files)
-
-    Note over P2: Forwards tool call back to Context Proxy
-    P2->>P1: mcp/message (list files)
-
-    Note over P1: Handles tool call with full project context
-    P1-->>P2: file listing with relevant details
-    P2-->>Agent: file listing with relevant details
-
-    Agent-->>P2: response using both context and tool results
-    P2-->>P1: response (potentially filtered)
-    P1-->>Client: final response
-```
-
-This demonstrates how proxy chains combined with MCP-over-ACP enable rich, context-aware tooling that would be difficult to achieve with traditional MCP servers alone.
 
 ### Proxying in practice: the role of the conductor
 
@@ -434,6 +386,45 @@ Because proxies sit between the client and agent, they can replicate the functio
 - **System prompt customization**: Proxies can switch between predefined session modes or prepend system messages to prompts
 
 The key advantage is that proxy-based extensions work with any ACP-compatible agent without requiring agent-specific integration or modification.
+
+### How do proxies work with MCP servers?
+
+Proxies can provide MCP servers via [MCP-over-ACP transport](./mcp-over-acp), enabling a single proxy to add context, provide tools, and handle callbacks with full awareness of the conversation state.
+
+The conductor always advertises `mcpCapabilities.acp: true` to proxies, regardless of whether the downstream agent supports it natively. When the agent doesn't support ACP transport, the conductor handles bridging transparently - spawning stdio shims or HTTP servers that the agent connects to normally, then relaying messages to/from the proxy's ACP channel.
+
+This means proxy authors don't need to worry about agent compatibility - they implement MCP-over-ACP, and the conductor handles the rest.
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant P1 as Context Proxy
+    participant P2 as Filter Proxy
+    participant Agent
+
+    Note over Client: User asks about project structure
+    Client->>P1: prompt request
+
+    Note over P1: Analyzes project, adds context + filesystem MCP server
+    P1->>P2: enhanced prompt + filesystem MCP server
+
+    Note over P2: Forwards enhanced prompt
+    P2->>Agent: prompt with context + tools available
+
+    Note over Agent: Decides to explore project structure
+    Agent->>P2: mcp/message (list files)
+
+    Note over P2: Forwards tool call back to Context Proxy
+    P2->>P1: mcp/message (list files)
+
+    Note over P1: Handles tool call with full project context
+    P1-->>P2: file listing with relevant details
+    P2-->>Agent: file listing with relevant details
+
+    Agent-->>P2: response using both context and tool results
+    P2-->>P1: response (potentially filtered)
+    P1-->>Client: final response
+```
 
 ### Are there any limitations to what proxies can do?
 
