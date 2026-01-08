@@ -47,11 +47,9 @@ flowchart LR
     P1 -->|final| Client
 ```
 
-(As described in the "Proxying in Practice" section, proxies in our design do not actually communicate directly with their successor, but instead use a central conductor. For the purposes of explaining the protocol, however, this section will continue to show diagrams "as if" proxies were in direct communication with each other.)
-
 ### Proxying in practice: the role of the conductor
 
-To allow for proxy isolation, our design does not have proxies communicate directly with their successor in the chain. Instead, there is a central conductor component that handles routing messages between components.
+To allow for proxy isolation, our design does not have proxies communicate directly with their successor in the chain. Instead, there is a central *conductor* component that orchestrates messages moving between components.
 
 ```mermaid
 flowchart TB
@@ -145,7 +143,31 @@ Proxy infrastructure could also enable editors to expose standardized IDE capabi
 
 ### Component roles
 
-ACP defines client and agent as superroles, each with two specializations:
+Each ACP proxy chain forms a sequence of components:
+
+```mermaid
+flowchart LR
+    Client --> Proxy0 --> Proxy1 --> ... --> ProxyN --> Agent
+```
+
+The **client** and **agent** are _terminal_ roles - the client has only a successor (no predecessor), and the agent has only a predecessor (no successor). Proxies are _non-terminal_ - they have both a predecessor and a successor, forwarding messages between them.
+
+The **conductor** is a special component that orchestrates proxy chains. It spawns and manages proxy components, routes messages between them, and handles initialization. From the client's perspective, the conductor appears to be an ordinary agent:
+
+```mermaid
+flowchart LR
+    Client -->|ACP| Conductor
+    
+    subgraph Managed["Managed by Conductor"]
+        Proxy0 --> Proxy1 --> ... --> Agent
+    end
+    
+    Conductor -.->|spawns & routes| Managed
+```
+
+We provide a canonical conductor implementation in Rust (`sacp-conductor`). Most editors would use this conductor directly to host proxies and agents, though they could also reimplement conductor functionality if needed.
+
+ACP defines client and agent as superroles, each with two specializations: 
 
 ```mermaid
 classDiagram
@@ -186,10 +208,6 @@ classDiagram
     Agent <|-- Proxy
 ```
 
-**Terminal roles**: Standard ACP behavior - direct client-to-agent communication.
-
-**Non-terminal roles**: Extended ACP behavior - clients manage proxy chains, agents forward to successors.
-
 **Example Architecture:**
 
 ```mermaid
@@ -215,15 +233,15 @@ flowchart TB
 Components discover their role from the initialization method they receive:
 
 - **Proxies** receive `proxy/initialize` - they have a successor and should forward messages
-- **Agents** receive `initialize` - they are terminal and process messages directly
+- **Agents** receive `initialize` - they are terminal (no successor) and process messages directly
 
 The `proxy/initialize` request has the same parameters as `initialize` and expects a standard `InitializeResponse`. The only difference is the method name, which signals to the component that it should operate as a proxy.
 
 **Conductor behavior:**
 
 - The conductor MUST send `proxy/initialize` to all proxy components
-- The conductor MUST send `initialize` to the final agent component
-- When a proxy forwards an `initialize` via `proxy/successor`, the conductor determines whether the successor is another proxy or the agent, and sends the appropriate method
+- The conductor MUST send `initialize` to the final agent component (if any)
+- When a proxy forwards an `initialize` via `proxy/successor`, the conductor determines whether the successor is another proxy or the agent, and sends `proxy/initialize` or `initialize` respectively.
 
 **Proxy behavior:**
 
@@ -237,7 +255,7 @@ Note: A conductor can be configured to run in either terminal mode (expecting `i
 
 Proxies that provide MCP servers use the [MCP-over-ACP transport](./mcp-over-acp) mechanism. The conductor always advertises `mcpCapabilities.acp: true` to proxies and handles bridging for agents that don't support native ACP transport.
 
-All proxies MUST support MCP-over-ACP. When the conductor sends `proxy/initialize`, proxies should be prepared to handle `mcp/connect`, `mcp/message`, and `mcp/disconnect` messages for any MCP servers they provide.
+All proxies MUST respond to `proxy/initialize` with the  MCP-over-ACP capability enabled. When the conductor sends `proxy/initialize`, proxies should be prepared to handle `mcp/connect`, `mcp/message`, and `mcp/disconnect` messages for any MCP servers they provide.
 
 ### Message reference
 
