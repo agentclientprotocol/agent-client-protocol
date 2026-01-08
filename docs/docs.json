@@ -113,6 +113,7 @@
               "rfds/session-info-update",
               "rfds/agent-telemetry-export",
               "rfds/proxy-chains",
+              "rfds/mcp-over-acp",
               "rfds/session-usage",
               "rfds/acp-agent-registry"
             ]
