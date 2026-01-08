@@ -49,7 +49,7 @@ flowchart LR
 
 ### Proxying in practice: the role of the conductor
 
-To allow for proxy isolation, our design does not have proxies communicate directly with their successor in the chain. Instead, there is a central *conductor* component that orchestrates messages moving between components.
+To allow for proxy isolation, our design does not have proxies communicate directly with their successor in the chain. Instead, there is a central _conductor_ component that orchestrates messages moving between components.
 
 ```mermaid
 flowchart TB
@@ -157,17 +157,17 @@ The **conductor** is a special component that orchestrates proxy chains. It spaw
 ```mermaid
 flowchart LR
     Client -->|ACP| Conductor
-    
+
     subgraph Managed["Managed by Conductor"]
         Proxy0 --> Proxy1 --> ... --> Agent
     end
-    
+
     Conductor -.->|spawns & routes| Managed
 ```
 
 We provide a canonical conductor implementation in Rust (`sacp-conductor`). Most editors would use this conductor directly to host proxies and agents, though they could also reimplement conductor functionality if needed.
 
-ACP defines client and agent as superroles, each with two specializations: 
+ACP defines client and agent as superroles, each with two specializations:
 
 ```mermaid
 classDiagram
@@ -255,7 +255,7 @@ Note: A conductor can be configured to run in either terminal mode (expecting `i
 
 Proxies that provide MCP servers use the [MCP-over-ACP transport](./mcp-over-acp) mechanism. The conductor always advertises `mcpCapabilities.acp: true` to proxies and handles bridging for agents that don't support native ACP transport.
 
-All proxies MUST respond to `proxy/initialize` with the  MCP-over-ACP capability enabled. When the conductor sends `proxy/initialize`, proxies should be prepared to handle `mcp/connect`, `mcp/message`, and `mcp/disconnect` messages for any MCP servers they provide.
+All proxies MUST respond to `proxy/initialize` with the MCP-over-ACP capability enabled. When the conductor sends `proxy/initialize`, proxies should be prepared to handle `mcp/connect`, `mcp/message`, and `mcp/disconnect` messages for any MCP servers they provide.
 
 ### Message reference
 

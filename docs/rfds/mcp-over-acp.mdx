@@ -70,16 +70,16 @@ sequenceDiagram
     Agent-->>Client: session created
 
     Client->>Agent: prompt ("analyze this codebase")
-    
+
     Note over Agent: Agent decides to use the tool
     Agent->>Client: mcp/connect (acpId: "<id>")
     Client-->>Agent: connectionId: "conn-1"
-    
+
     Agent->>Client: mcp/message (list_files tool call)
     Client-->>Agent: file listing results
-    
+
     Agent-->>Client: response using tool results
-    
+
     Agent->>Client: mcp/disconnect (connectionId: "conn-1")
 ```
 
