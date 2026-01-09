@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "agent-client-protocol-schema"
-version = "0.10.6"
+version = "0.10.7"
 dependencies = [
  "anyhow",
  "derive_more",
