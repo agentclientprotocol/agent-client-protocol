@@ -978,42 +978,49 @@
           "const": -32700,
           "description": "**Parse error**: Invalid JSON was received by the server.\nAn error occurred on the server while parsing the JSON text.",
           "format": "int32",
+          "title": "Parse error",
           "type": "integer"
         },
         {
           "const": -32600,
           "description": "**Invalid request**: The JSON sent is not a valid Request object.",
           "format": "int32",
+          "title": "Invalid request",
           "type": "integer"
         },
         {
           "const": -32601,
           "description": "**Method not found**: The method does not exist or is not available.",
           "format": "int32",
+          "title": "Method not found",
           "type": "integer"
         },
         {
           "const": -32602,
           "description": "**Invalid params**: Invalid method parameter(s).",
           "format": "int32",
+          "title": "Invalid params",
           "type": "integer"
         },
         {
           "const": -32603,
           "description": "**Internal error**: Internal JSON-RPC error.\nReserved for implementation-defined server errors.",
           "format": "int32",
+          "title": "Internal error",
           "type": "integer"
         },
         {
           "const": -32000,
           "description": "**Authentication required**: Authentication is required before this operation can be performed.",
           "format": "int32",
+          "title": "Authentication required",
           "type": "integer"
         },
         {
           "const": -32002,
           "description": "**Resource not found**: A given resource, such as a file, was not found.",
           "format": "int32",
+          "title": "Resource not found",
           "type": "integer"
         },
         {
