@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.10.7](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.10.6...v0.10.7) - 2026-01-09
+
+### Fixed
+
+- *(unstable)* Add copy to SessionConfigOptionCategory ([#368](https://github.com/agentclientprotocol/agent-client-protocol/pull/368))
+
 ## [0.10.6](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.10.5...v0.10.6) - 2026-01-09
 
 ### Added
