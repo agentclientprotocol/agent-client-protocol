@@ -1568,7 +1568,7 @@ impl SessionConfigSelect {
 /// placement). It MUST NOT be required for correctness. Clients MUST handle missing or unknown
 /// categories gracefully (treat as `Other`).
 #[cfg(feature = "unstable_session_config_options")]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum SessionConfigOptionCategory {

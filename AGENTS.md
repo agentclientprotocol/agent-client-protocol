@@ -17,7 +17,6 @@ All paths in the protocol should be absolute
   Request/Response structs: `NewTerminalRequest` / `NewTerminalResponse`
   Method names struct: `terminal_new: &'static str`
 
-- Do not write any tests or docs at all!
 - Add constants for the method names
 - Add variants to {Agent|Client}{Request|Response} enums
 - Add the methods to the Client/Agent impl of {Agent|Client}SideConnection in src/acp.rs
