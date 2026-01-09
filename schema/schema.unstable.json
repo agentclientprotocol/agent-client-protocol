@@ -2508,6 +2508,17 @@
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
         },
+        "category": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SessionConfigOptionCategory"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional semantic category for this option (UX only)."
+        },
         "description": {
           "description": "Optional description for the Client to display to the user.",
           "type": ["string", "null"]
@@ -2527,6 +2538,31 @@
       },
       "required": ["id", "name"],
       "type": "object"
+    },
+    "SessionConfigOptionCategory": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSemantic category for a session configuration option.\n\nThis is intended to help Clients distinguish broadly common selectors (e.g. model selector vs\nsession mode selector vs thought/reasoning level) for UX purposes (keyboard shortcuts, icons,\nplacement). It MUST NOT be required for correctness. Clients MUST handle missing or unknown\ncategories gracefully (treat as `Other`).",
+      "oneOf": [
+        {
+          "const": "mode",
+          "description": "Session mode selector.",
+          "type": "string"
+        },
+        {
+          "const": "model",
+          "description": "Model selector.",
+          "type": "string"
+        },
+        {
+          "const": "thought_level",
+          "description": "Thought/reasoning level selector.",
+          "type": "string"
+        },
+        {
+          "const": "other",
+          "description": "Unknown / uncategorized selector.",
+          "type": "string"
+        }
+      ]
     },
     "SessionConfigSelect": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA single-value selector (dropdown) session configuration option payload.",

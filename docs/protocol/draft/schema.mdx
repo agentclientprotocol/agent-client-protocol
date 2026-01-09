@@ -3032,6 +3032,37 @@ Single-value selector (dropdown).
 </Expandable>
 </ResponseField>
 
+## <span class="font-mono">SessionConfigOptionCategory</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Semantic category for a session configuration option.
+
+This is intended to help Clients distinguish broadly common selectors (e.g. model selector vs
+session mode selector vs thought/reasoning level) for UX purposes (keyboard shortcuts, icons,
+placement). It MUST NOT be required for correctness. Clients MUST handle missing or unknown
+categories gracefully (treat as `Other`).
+
+**Type:** Union
+
+<ResponseField name="mode" type="string">
+  Session mode selector.
+</ResponseField>
+
+<ResponseField name="model" type="string">
+  Model selector.
+</ResponseField>
+
+<ResponseField name="thought_level" type="string">
+  Thought/reasoning level selector.
+</ResponseField>
+
+<ResponseField name="other" type="string">
+  Unknown / uncategorized selector.
+</ResponseField>
+
 ## <span class="font-mono">SessionConfigSelect</span>
 
 **UNSTABLE**

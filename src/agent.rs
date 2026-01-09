@@ -1561,6 +1561,32 @@ impl SessionConfigSelect {
 ///
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
+/// Semantic category for a session configuration option.
+///
+/// This is intended to help Clients distinguish broadly common selectors (e.g. model selector vs
+/// session mode selector vs thought/reasoning level) for UX purposes (keyboard shortcuts, icons,
+/// placement). It MUST NOT be required for correctness. Clients MUST handle missing or unknown
+/// categories gracefully (treat as `Other`).
+#[cfg(feature = "unstable_session_config_options")]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum SessionConfigOptionCategory {
+    /// Session mode selector.
+    Mode,
+    /// Model selector.
+    Model,
+    /// Thought/reasoning level selector.
+    ThoughtLevel,
+    /// Unknown / uncategorized selector.
+    #[serde(other)]
+    Other,
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
 /// Type-specific session configuration option payload.
 #[cfg(feature = "unstable_session_config_options")]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -1589,6 +1615,9 @@ pub struct SessionConfigOption {
     /// Optional description for the Client to display to the user.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
+    /// Optional semantic category for this option (UX only).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub category: Option<SessionConfigOptionCategory>,
     /// Type-specific fields for this configuration option.
     #[serde(flatten)]
     pub kind: SessionConfigKind,
@@ -1613,6 +1642,7 @@ impl SessionConfigOption {
             id: id.into(),
             name: name.into(),
             description: None,
+            category: None,
             kind,
             meta: None,
         }
@@ -1635,6 +1665,12 @@ impl SessionConfigOption {
     #[must_use]
     pub fn description(mut self, description: impl IntoOption<String>) -> Self {
         self.description = description.into_option();
+        self
+    }
+
+    #[must_use]
+    pub fn category(mut self, category: impl IntoOption<SessionConfigOptionCategory>) -> Self {
+        self.category = category.into_option();
         self
     }
 
