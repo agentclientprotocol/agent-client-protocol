@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.10.6](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.10.5...v0.10.6) - 2026-01-09
+
+### Added
+
+- *(unstable)* Add a category to session config options ([#366](https://github.com/agentclientprotocol/agent-client-protocol/pull/366))
+- *(unstable)* Add a request cancelled error constructor ([#347](https://github.com/agentclientprotocol/agent-client-protocol/pull/347))
+
+### Fixed
+
+- *(error)* Add human readable titles for error code variants ([#367](https://github.com/agentclientprotocol/agent-client-protocol/pull/367))
+
+### Other
+
+- *(deps)* bump the minor group with 2 updates ([#362](https://github.com/agentclientprotocol/agent-client-protocol/pull/362))
+- *(deps)* bump the minor group across 1 directory with 7 updates ([#358](https://github.com/agentclientprotocol/agent-client-protocol/pull/358))
+
 ## [0.10.5](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.10.4...v0.10.5) - 2025-12-17
 
 ### Added
