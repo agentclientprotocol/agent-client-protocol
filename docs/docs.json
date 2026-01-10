@@ -104,6 +104,7 @@
           {
             "group": "Draft",
             "pages": [
+              "rfds/symposium",
               "rfds/session-list",
               "rfds/session-config-options",
               "rfds/session-fork",
