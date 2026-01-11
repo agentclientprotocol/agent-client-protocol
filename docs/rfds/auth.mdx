@@ -15,7 +15,7 @@ I suggest adding more information about auth methods that agent supports, which 
 > How do things work today and what problems does this cause? Why would we change things?
 
 Agents have different ways of authenticating users: env vars with api keys, running a command like `<agent_name> login`, some just open a browser and use oauth.
-[AuthMethod](https://agentclientprotocol.com/protocol/schema#authmethod) does not really tell the client what should be done to authenticate. This means we can't show the user a control for entering key if an aggent support auth through env var.
+[AuthMethod](https://agentclientprotocol.com/protocol/schema#authmethod) does not really tell the client what should be done to authenticate. This means we can't show the user a control for entering key if an agent supports auth through env var.
 
 ## What we propose to do about it
 
