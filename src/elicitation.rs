@@ -431,4 +431,123 @@ mod tests {
         assert_eq!(ElicitationType::Select.to_string(), "select");
         assert_eq!(ElicitationType::Multiselect.to_string(), "multiselect");
     }
+
+    #[test]
+    fn test_schema_with_constraints() {
+        let schema = ElicitationSchema::new("number", Some(json!(5)))
+            .minimum(0)
+            .maximum(100)
+            .description("Pick a number between 0 and 100");
+
+        assert_eq!(schema.minimum, Some(0));
+        assert_eq!(schema.maximum, Some(100));
+        assert!(schema.description.is_some());
+    }
+
+    #[test]
+    fn test_schema_with_enum_values() {
+        let schema = ElicitationSchema::new("string", Some(json!("red")))
+            .enum_values(vec![json!("red"), json!("green"), json!("blue")])
+            .description("Choose a color");
+
+        assert!(schema.r#enum.is_some());
+        assert_eq!(schema.r#enum.as_ref().unwrap().len(), 3);
+    }
+
+    #[test]
+    fn test_url_type_with_return_format() {
+        let request = ElicitationRequest::new(
+            "oauth-req",
+            ElicitationType::Url,
+            "Authenticate with GitHub",
+            ElicitationSchema::new("string", None),
+        )
+        .url("https://github.com/login/oauth/authorize?client_id=xxx")
+        .return_value_format("token");
+
+        assert_eq!(request.input_type, ElicitationType::Url);
+        assert_eq!(request.url, Some("https://github.com/login/oauth/authorize?client_id=xxx".to_string()));
+        assert_eq!(request.return_value_format, Some("token".to_string()));
+    }
+
+    #[test]
+    fn test_elicitation_option_with_metadata() {
+        let option = ElicitationOption::new("backend", "Backend Refactoring")
+            .description("Refactor backend services")
+            .meta(json!({"icon": "gear", "risk": "medium"}));
+
+        assert_eq!(option.value, "backend");
+        assert_eq!(option.label, "Backend Refactoring");
+        assert!(option.description.is_some());
+        assert!(option.meta.is_some());
+    }
+
+    #[test]
+    fn test_elicitation_response_with_metadata() {
+        let response = ElicitationResponse::string("req1", "my-choice")
+            .meta(json!({"timestamp": "2024-01-12T00:00:00Z"}));
+
+        assert_eq!(response.id, "req1");
+        assert!(response.meta.is_some());
+    }
+
+    #[test]
+    fn test_all_elicitation_types_serialize() {
+        for elicitation_type in [
+            ElicitationType::Text,
+            ElicitationType::Number,
+            ElicitationType::Select,
+            ElicitationType::Multiselect,
+            ElicitationType::Boolean,
+            ElicitationType::Password,
+            ElicitationType::Url,
+        ] {
+            let json_str = serde_json::to_string(&elicitation_type).expect("serialize");
+            let deserialized: ElicitationType = serde_json::from_str(&json_str).expect("deserialize");
+            assert_eq!(elicitation_type, deserialized);
+        }
+    }
+
+    #[test]
+    fn test_multiselect_response() {
+        let response = ElicitationResponse::array(
+            "multi-req",
+            vec!["option1".to_string(), "option2".to_string(), "option3".to_string()],
+        );
+
+        let array = response.value.as_array().expect("should be array");
+        assert_eq!(array.len(), 3);
+        assert_eq!(array[0], json!("option1"));
+    }
+
+    #[test]
+    fn test_optional_fields_skip_serialization() {
+        let request = ElicitationRequest::new(
+            "minimal",
+            ElicitationType::Text,
+            "Enter text",
+            ElicitationSchema::new("string", None),
+        );
+
+        let json = serde_json::to_string(&request).expect("serialize");
+        let value: serde_json::Value = serde_json::from_str(&json).expect("parse json");
+
+        assert!(value.get("description").is_none());
+        assert!(value.get("options").is_none());
+        assert!(value.get("url").is_none());
+        assert!(value.get("meta").is_none());
+    }
+
+    #[test]
+    fn test_capability_with_custom_types() {
+        let capability = ElicitationCapability::new(
+            true,
+            vec!["text".to_string(), "select".to_string()],
+        )
+        .meta(json!({"version": "1.0"}));
+
+        assert!(capability.supported);
+        assert_eq!(capability.supported_types.len(), 2);
+        assert!(capability.meta.is_some());
+    }
 }
