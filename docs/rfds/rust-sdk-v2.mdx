@@ -16,7 +16,7 @@ Replace the current ACP Rust SDK with a new implementation based on SACP (Sympos
 
 The current `agent-client-protocol` crate has a straightforward design with trait-based callbacks for common ACP methods and well-typed requests and responses. It's convenient for simple purposes but quickly becomes awkward when attempting more complex designs.
 
-Two examples that we found pushed the limits of the design are the *conductor* (from the [proxy chains](./proxy-chains) RFD) and the [patchwork-rs](https://patchwork-lang.github.io/patchwork-rs/) project:
+Two examples that we found pushed the limits of the design are the _conductor_ (from the [proxy chains](./proxy-chains) RFD) and the [patchwork-rs](https://patchwork-lang.github.io/patchwork-rs/) project:
 
 The Conductor is an orchestrator that routes messages between proxies, agents, and MCP servers. It must adapt messages as they flow through the system and maintain the correct ordering.
 
@@ -80,7 +80,7 @@ In the current SDK, every incoming request or notification results is handled in
 
 ### Limitation: Confusing naming and 1:1 assumption
 
-`AgentSideConnection` is ambiguous - does this represent the agent, or the connection *to* an agent? What's more, the SDK currently assumes that each connection has a single peer, but [proxies](./proxy-chains) may wish to send/receive messages from multiple peers (client or agent). This was a constant source of confusion in early versions of the conductor and frequently required the author to get out a pencil and paper and work things out very carefully.
+`AgentSideConnection` is ambiguous - does this represent the agent, or the connection _to_ an agent? What's more, the SDK currently assumes that each connection has a single peer, but [proxies](./proxy-chains) may wish to send/receive messages from multiple peers (client or agent). This was a constant source of confusion in early versions of the conductor and frequently required the author to get out a pencil and paper and work things out very carefully.
 
 **Goal:** Use directional naming like `ClientToAgent` that makes relationships explicit: "I am the client, the remote peer is an agent." Enable multiple peers.
 
@@ -94,7 +94,7 @@ When building tests and other applications, it's convenient to be able to create
 
 This isn't a limitation of the current SDK per se, but a common pitfall in async Rust designs that we want to address.
 
-We want the SDK to be independent from specific executors (not tied to tokio) while still supporting richer patterns like spawning background tasks. One specific common issue with Rust async APIs is *starvation*, which can occur with stream-like APIs where it is important to keep awaiting the stream so that items make progress. For example, in a setup like this one, the "connection" is not being "awaited" while each message is handled:
+We want the SDK to be independent from specific executors (not tied to tokio) while still supporting richer patterns like spawning background tasks. One specific common issue with Rust async APIs is _starvation_, which can occur with stream-like APIs where it is important to keep awaiting the stream so that items make progress. For example, in a setup like this one, the "connection" is not being "awaited" while each message is handled:
 
 ```rust
 // PROBLEMATIC: message handling starves while processing
@@ -124,23 +124,23 @@ We propose to replace the current Rust SDK with [`sacp`](https://github.com/symp
 
 The following table summarizes the key API concepts and which goals they address:
 
-| API Concept | Goals Addressed |
-|-------------|-----------------|
-| [Link types](#link-types-and-directional-naming) (`ClientToAgent`, `AgentToClient`) | Confusing naming, 1:1 assumption |
-| [`Component` trait + `connect_to`](#the-component-trait-and-connect_to) | Awkward to connect components |
-| [Connection context (`cx`)](#sending-messages) | Handlers can't send messages |
-| [`on_receive_*` handlers](#handling-messages) with closure types | Fixed set of handlers |
-| [`serve` / `run_until`](#running-connections-serve-and-run_until) | Executor independence, starvation freedom |
-| [Session builders + dynamic handlers](#session-builders-and-mcp-servers) | Handlers must be same across sessions |
-| [Ordering guarantees + `spawn`](#controlling-ordering) | No ordering guarantees |
+| API Concept                                                                         | Goals Addressed                           |
+| ----------------------------------------------------------------------------------- | ----------------------------------------- |
+| [Link types](#link-types-and-directional-naming) (`ClientToAgent`, `AgentToClient`) | Confusing naming, 1:1 assumption          |
+| [`Component` trait + `connect_to`](#the-component-trait-and-connect_to)             | Awkward to connect components             |
+| [Connection context (`cx`)](#sending-messages)                                      | Handlers can't send messages              |
+| [`on_receive_*` handlers](#handling-messages) with closure types                    | Fixed set of handlers                     |
+| [`serve` / `run_until`](#running-connections-serve-and-run_until)                   | Executor independence, starvation freedom |
+| [Session builders + dynamic handlers](#session-builders-and-mcp-servers)            | Handlers must be same across sessions     |
+| [Ordering guarantees + `spawn`](#controlling-ordering)                              | No ordering guarantees                    |
 
 We have validated the design by implementing a number of use cases:
 
-* [sacp-conductor](https://github.com/symposium-dev/symposium-acp/tree/main/src/sacp-conductor) - proxy chain orchestrator
-* [Patchwork](https://patchwork-lang.github.io/patchwork-rs/) - programmatic agent orchestration
-* [elizacp](https://github.com/symposium-dev/symposium-acp/tree/main/src/elizacp) - agent implementing the classic ELIZA program
-* [sacp-tee](https://crates.io/crates/sacp-tee) - proxy that logs messages before forwarding
-* [yopo](https://crates.io/crates/yopo) ("You Only Prompt Once") - CLI tool for single prompts
+- [sacp-conductor](https://github.com/symposium-dev/symposium-acp/tree/main/src/sacp-conductor) - proxy chain orchestrator
+- [Patchwork](https://patchwork-lang.github.io/patchwork-rs/) - programmatic agent orchestration
+- [elizacp](https://github.com/symposium-dev/symposium-acp/tree/main/src/elizacp) - agent implementing the classic ELIZA program
+- [sacp-tee](https://crates.io/crates/sacp-tee) - proxy that logs messages before forwarding
+- [yopo](https://crates.io/crates/yopo) ("You Only Prompt Once") - CLI tool for single prompts
 
 The [Deep dive](#deep-dive) section below walks through each concept in detail. Code examples are also available in the [sacp-cookbook crate](https://docs.rs/sacp-cookbook/latest/sacp_cookbook/).
 
@@ -152,10 +152,10 @@ This section walks through the SDK concepts in detail, organized by what you're 
 
 #### Link types and directional naming
 
-The SDK is organized around *link types* that describe who you are and who you're talking to. The two most common examples are:
+The SDK is organized around _link types_ that describe who you are and who you're talking to. The two most common examples are:
 
-* `ClientToAgent` - "I am a client, connecting to an agent"
-* `AgentToClient` - "I am an agent, serving a client"
+- `ClientToAgent` - "I am a client, connecting to an agent"
+- `AgentToClient` - "I am an agent, serving a client"
 
 To build a connection, start with the link type and invoke the `builder` method. Builders use the typical "fluent" style:
 
@@ -234,7 +234,7 @@ AgentToClient::builder()
     .await
 ```
 
-**`run_until()`** takes an async closure and runs your code concurrently with message handling. The closure receives a *connection context* (conventionally called `cx`) - this is how you interact with the connection, sending messages, spawning tasks, and adding dynamic handlers. When the closure returns, the connection closes:
+**`run_until()`** takes an async closure and runs your code concurrently with message handling. The closure receives a _connection context_ (conventionally called `cx`) - this is how you interact with the connection, sending messages, spawning tasks, and adding dynamic handlers. When the closure returns, the connection closes:
 
 ```rust
 ClientToAgent::builder()
@@ -250,7 +250,7 @@ ClientToAgent::builder()
     .await
 ```
 
-The `run_until` pattern directly addresses starvation. Instead of exposing an async stream that users might accidentally block, `run_until` runs your code *concurrently* with message handling.
+The `run_until` pattern directly addresses starvation. Instead of exposing an async stream that users might accidentally block, `run_until` runs your code _concurrently_ with message handling.
 
 The `cx` type (`JrConnectionCx`) follows the "handle" pattern: cloned values refer to the same connection. It's `'static` so it can be sent across threads or stored in structs. Handlers registered with `on_receive_*` also receive a `cx` parameter.
 
@@ -342,7 +342,7 @@ Use `cx.spawn` to run work concurrently with message handling:
         /* ... */
         Ok(())
     })?;
-    
+
     // Handler returns immediately, spawned work continues
     request_cx.respond(/* ... */)
 }, sacp::on_receive_request!())
@@ -422,7 +422,7 @@ When you need to start a session from inside an `on_receive_*` handler but can't
             let response = session.read_to_string().await?;
             Ok(())
         })?;
-    
+
     // Handler returns immediately, session runs in background
     Ok(())
 }, sacp::on_receive_request!())
@@ -456,7 +456,7 @@ For proxies that want to inject MCP servers but otherwise forward all messages, 
         .block_task()
         .start_session_proxy(request_cx)
         .await?;
-    
+
     // Session messages are automatically proxied between client and agent
     Ok(())
 }, sacp::on_receive_request!())
@@ -492,7 +492,7 @@ Request handlers receive an additional `request_cx` parameter for sending the re
     async |req: PromptRequest, request_cx, cx| {
         // Process the request...
         cx.send_notification(StatusNotification::new("processing"))?;
-        
+
         // Send the response
         request_cx.respond(PromptResponse::new(StopReason::EndTurn))
     },
@@ -579,25 +579,25 @@ Use `on_receive_message` with `MessageCx` to intercept any incoming message (req
 
 #### Handler chains
 
-A *message handler* takes ownership of a message and either handles it or returns a (possibly modified) copy to be tried by the next handler. Handlers are chained together - each gets a chance to claim the message before it passes to the next.
+A _message handler_ takes ownership of a message and either handles it or returns a (possibly modified) copy to be tried by the next handler. Handlers are chained together - each gets a chance to claim the message before it passes to the next.
 
 ```mermaid
 flowchart TD
     MSG[Incoming Message] --> STATIC
-    
+
     subgraph STATIC[Static Handlers]
         S1[Handler 1] --> S2[Handler 2] --> S3[Handler n...]
     end
-    
+
     STATIC -->|not claimed| DYNAMIC
-    
+
     subgraph DYNAMIC[Dynamic Handlers]
         D1[Session handlers, etc.]
     end
-    
+
     DYNAMIC -->|not claimed| DEFAULT[Link Default Handler]
     DEFAULT -->|not claimed| UNHANDLED{Unhandled}
-    
+
     UNHANDLED -->|retry: false| ERROR[Send error response]
     UNHANDLED -->|retry: true| QUEUE[Queue for retry]
     QUEUE -->|new handler added| DYNAMIC
@@ -616,7 +616,7 @@ The `JrMessageHandler` trait defines how handlers work:
 ```rust
 pub trait JrMessageHandler: Send {
     type Link: JrLink;
-    
+
     async fn handle_message(
         &mut self,
         message: MessageCx,
@@ -682,7 +682,7 @@ When implementing `JrMessageHandler` directly, `MatchMessage` provides ergonomic
 ```rust
 impl JrMessageHandler for MyHandler {
     type Link = AgentToClient;
-    
+
     async fn handle_message(
         &mut self,
         message: MessageCx,
@@ -788,15 +788,15 @@ pub struct MyCustomLink;
 
 impl JrLink for MyCustomLink {
     type ConnectsTo = OtherSideLink;
-    
+
     fn direction() -> LinkDirection {
         LinkDirection::Outbound // We initiate the connection
     }
-    
+
     fn default_request_handling() -> DefaultHandling {
         DefaultHandling::Error // Unknown requests return an error
     }
-    
+
     fn default_notification_handling() -> DefaultHandling {
         DefaultHandling::Ignore // Unknown notifications are silently dropped
     }
