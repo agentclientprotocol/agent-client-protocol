@@ -893,7 +893,7 @@ This is a potential future enhancement - enum derives could dispatch to differen
 
 ### What changes are needed relative to the existing `sacp` crate?
 
-The existing `sacp` crate is aligned but we are in the process of changing how response messages work to simplify the implementation of the conductor. Before stabilzing though we should do a thorough review of the methods and look for candidates that can be removed or simplified.
+The existing `sacp` crate is aligned but we are in the process of changing how response messages work to simplify the implementation of the conductor. Before stabilizing we should do a thorough review of the methods and look for candidates that can be removed or simplified.
 
 The existing conductor is feature complete but the support for MCP-over-ACP needs a few minor improvements (in particular, it should detect when the agent only supports stdio bridging and not attempt to use HTTP, which it currently does not).
 
