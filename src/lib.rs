@@ -62,6 +62,7 @@ mod plan;
 #[cfg(feature = "unstable_cancel_request")]
 mod protocol_level;
 mod rpc;
+mod stream;
 mod tool_call;
 mod version;
 
@@ -79,6 +80,7 @@ pub use plan::*;
 pub use protocol_level::*;
 pub use rpc::*;
 pub use serde_json::value::RawValue;
+pub use stream::*;
 pub use tool_call::*;
 pub use version::*;
 

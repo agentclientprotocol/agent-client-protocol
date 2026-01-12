@@ -39,6 +39,7 @@ path = "src/bin/generate.rs"
 
 [dependencies]
 anyhow = "1"
+async-broadcast = "0.7"
 derive_more = { version = "2", features = ["from", "display"] }
 schemars = { version = "1" }
 serde = { version = "1", features = ["derive", "rc"] }
