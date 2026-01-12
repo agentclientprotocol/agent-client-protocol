@@ -188,6 +188,56 @@ Aligning with MCP and building on [Session Config Options discussions](https://g
 
 This constraint list can expand in future versions based on community feedback.
 
+### Complete Turn Response with Elicitation
+
+An agent can include both content and an elicitation request in the same turn response:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "I can refactor this code in several ways. Each approach has different tradeoffs. Which strategy would you prefer?"
+      }
+    ],
+    "elicitation": {
+      "id": "refactor-strategy-001",
+      "type": "select",
+      "title": "Choose Refactoring Strategy",
+      "description": "How would you like me to approach this refactoring?",
+      "schema": {
+        "type": "string",
+        "enum": ["conservative", "balanced", "aggressive"],
+        "default": "balanced"
+      },
+      "options": [
+        {
+          "value": "conservative",
+          "label": "Conservative",
+          "description": "Minimal changes, heavily tested approach"
+        },
+        {
+          "value": "balanced",
+          "label": "Balanced (Recommended)",
+          "description": "Good balance of progress and safety"
+        },
+        {
+          "value": "aggressive",
+          "label": "Aggressive",
+          "description": "Maximum optimization, requires review"
+        }
+      ]
+    },
+    "stopReason": "elicitation_requested"
+  }
+}
+```
+
+The agent displays content to the user, then presents the elicitation UI. The `stopReason` indicates why the turn has stopped (awaiting user input).
+
 ### User Response
 
 When a user responds to an elicitation request, the response is included in the next turn request:
@@ -197,8 +247,19 @@ When a user responds to an elicitation request, the response is included in the 
   "method": "session/turn",
   "params": {
     "sessionId": "...",
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "I'll go with balanced"
+          }
+        ]
+      }
+    ],
     "elicitationResponse": {
-      "id": "unique-request-id",
+      "id": "refactor-strategy-001",
       "value": "balanced"
     }
   }
@@ -207,16 +268,34 @@ When a user responds to an elicitation request, the response is included in the 
 
 ### Client Capabilities
 
-Clients should declare whether they support elicitation when initializing a session, allowing agents to know what features are available:
+Clients declare whether they support elicitation during the `initialize` phase via `ClientCapabilities`, following the same pattern as `fs` and `terminal` capabilities:
 
 ```json
 {
-  "elicitationSupport": {
-    "supported": true,
-    "supportedTypes": ["text", "number", "select", "multiselect", "boolean"]
+  "jsonrpc": "2.0",
+  "method": "initialize",
+  "params": {
+    "protocolVersion": "2025-11-25",
+    "clientCapabilities": {
+      "fs": {
+        "readTextFile": true,
+        "writeTextFile": true
+      },
+      "terminal": true,
+      "elicitation": {
+        "supported": true,
+        "supportedTypes": ["text", "number", "select", "multiselect", "boolean"]
+      }
+    },
+    "clientInfo": {
+      "name": "my-client",
+      "version": "1.0.0"
+    }
   }
 }
 ```
+
+This tells the agent which elicitation input types the client can render. Agents must gracefully handle clients that don't include this field (assumed to have no elicitation support).
 
 ### Backward Compatibility
 
@@ -225,6 +304,20 @@ Clients should declare whether they support elicitation when initializing a sess
 - Clients that don't understand an elicitation type should treat it as requesting text input
 
 ## Frequently asked questions
+
+### Can an agent request multiple pieces of information in one turn?
+
+For v1, we recommend a **single elicitation per turn**. This keeps the design simple and predictable for both clients and agents. It also follows the Session Config Options pattern of having agents send full state updates.
+
+If an agent needs to collect multiple pieces of information, it can:
+1. Ask one question per turn (with sensible defaults)
+2. Incorporate the user's response in the context for the next turn
+3. Ask the next question in a subsequent turn
+
+This approach:
+- Keeps client UI logic simple
+- Allows agents to adapt follow-up questions based on previous answers
+- Can be extended to array-based multi-elicitation in future versions if compelling use cases emerge
 
 ### How does this differ from session config options?
 
@@ -252,15 +345,17 @@ PR #340 specifically concluded: "I think we'd rather have an MCP elicitation sto
 
 ### How does authentication flow work with URL-mode elicitation?
 
-From PR #330: URL-mode elicitation (like MCP's OAuth flow) allows agents to request authentication without exposing credentials to the protocol:
+From PR #330: URL-mode elicitation allows agents to request authentication without exposing credentials to the protocol. While inspired by MCP's URL-mode elicitation, ACP's implementation focuses specifically on out-of-band credential handling:
 
 1. Agent sends elicitation request with `type: "url"` and OAuth authorization URL
-2. Client opens URL in browser (out-of-band)
-3. User authenticates and grants permission
-4. Browser returns token/credential to client
-5. Client sends response back to agent
+2. Client opens URL in user's browser (out-of-band process)
+3. User authenticates and grants permission in the browser
+4. Browser returns token/credential to client (e.g., via redirect or callback)
+5. Client includes token in next `session/turn` via `elicitationResponse`
 
-This addresses the core pain point from PR #330: credentials never flow through the agent/LLM, avoiding exposure.
+**Key guarantee**: Credentials never flow through the agent or LLM, addressing the core pain point from PR #330.
+
+The exact semantics of how tokens are returned from the browser and how `returnValueFormat` is handled will be specified in detail during the implementation phase of this RFD.
 
 ### Can agents use elicitation for information required before responding?
 
@@ -288,7 +383,14 @@ Potentially, but that's out of scope for this RFD. PR #210 discussed that elicit
 
 ### What about validating user input on the client side?
 
-Clients should validate against the provided schema and only send valid responses to the agent. The agent can include additional validation on the server side.
+Clients should validate user input against the provided JSON Schema **before** sending the response to the agent. This prevents invalid data from reaching the agent and provides immediate feedback to the user.
+
+If the agent requires additional validation beyond what's expressible in JSON Schema:
+1. Agent validates the received value in the next turn
+2. If validation fails, agent can fail the turn with an error
+3. Client can then re-prompt the user (or fall back to the original default)
+
+For v1, we recommend starting with JSON Schema validation only. If more complex validation patterns emerge from real-world usage, a future RFD can specify additional validation mechanisms.
 
 ## Revision history
 
