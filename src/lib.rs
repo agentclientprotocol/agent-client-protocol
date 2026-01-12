@@ -54,6 +54,8 @@ mod agent;
 mod client;
 mod content;
 mod error;
+#[cfg(feature = "unstable_elicitation")]
+mod elicitation;
 mod ext;
 mod maybe_undefined;
 mod plan;
@@ -68,6 +70,8 @@ pub use client::*;
 pub use content::*;
 use derive_more::{Display, From};
 pub use error::*;
+#[cfg(feature = "unstable_elicitation")]
+pub use elicitation::*;
 pub use ext::*;
 pub use maybe_undefined::*;
 pub use plan::*;

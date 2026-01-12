@@ -14,6 +14,9 @@ use crate::{
     ProtocolVersion, SessionId,
 };
 
+#[cfg(feature = "unstable_elicitation")]
+use crate::{ElicitationRequest, ElicitationResponse};
+
 // Initialize
 
 /// Request parameters for the initialize method.
@@ -2074,6 +2077,15 @@ pub struct PromptRequest {
     /// as it avoids extra round-trips and allows the message to include
     /// pieces of context from sources the agent may not have access to.
     pub prompt: Vec<ContentBlock>,
+    /// **UNSTABLE**
+    ///
+    /// The user's response to a previous elicitation request.
+    /// Only present if the user is responding to an elicitation.
+    ///
+    /// This feature is unstable and may change.
+    #[cfg(feature = "unstable_elicitation")]
+    #[serde(skip_serializing_if = "Option::is_none", rename = "elicitationResponse")]
+    pub elicitation_response: Option<ElicitationResponse>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -2089,8 +2101,23 @@ impl PromptRequest {
         Self {
             session_id: session_id.into(),
             prompt,
+            #[cfg(feature = "unstable_elicitation")]
+            elicitation_response: None,
             meta: None,
         }
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// Sets the elicitation response for this request.
+    /// Should be set when the user is responding to a previous elicitation.
+    ///
+    /// This feature is unstable and may change.
+    #[cfg(feature = "unstable_elicitation")]
+    #[must_use]
+    pub fn elicitation_response(mut self, response: impl IntoOption<ElicitationResponse>) -> Self {
+        self.elicitation_response = response.into_option();
+        self
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -2108,13 +2135,22 @@ impl PromptRequest {
 /// Response from processing a user prompt.
 ///
 /// See protocol docs: [Check for Completion](https://agentclientprotocol.com/protocol/prompt-turn#4-check-for-completion)
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_PROMPT_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct PromptResponse {
     /// Indicates why the agent stopped processing the turn.
     pub stop_reason: StopReason,
+    /// **UNSTABLE**
+    ///
+    /// An elicitation request if the agent is waiting for structured user input.
+    /// Only present when `stop_reason` is `ElicitationRequested`.
+    ///
+    /// This feature is unstable and may change.
+    #[cfg(feature = "unstable_elicitation")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub elicitation: Option<ElicitationRequest>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -2129,8 +2165,23 @@ impl PromptResponse {
     pub fn new(stop_reason: StopReason) -> Self {
         Self {
             stop_reason,
+            #[cfg(feature = "unstable_elicitation")]
+            elicitation: None,
             meta: None,
         }
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// Sets the elicitation request for this response.
+    /// Only valid when `stop_reason` is `ElicitationRequested`.
+    ///
+    /// This feature is unstable and may change.
+    #[cfg(feature = "unstable_elicitation")]
+    #[must_use]
+    pub fn elicitation(mut self, elicitation: impl IntoOption<ElicitationRequest>) -> Self {
+        self.elicitation = elicitation.into_option();
+        self
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -2170,6 +2221,14 @@ pub enum StopReason {
     /// Agents should catch these exceptions and return this semantically meaningful
     /// response to confirm successful cancellation.
     Cancelled,
+    /// **UNSTABLE**
+    ///
+    /// The turn ended because the agent is waiting for user input via elicitation.
+    /// The turn response will include an elicitation request.
+    ///
+    /// This feature is unstable and may change.
+    #[serde(rename = "elicitation_requested")]
+    ElicitationRequested,
 }
 
 // Model
