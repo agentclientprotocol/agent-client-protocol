@@ -1,0 +1,403 @@
+---
+title: "Elicitation: Structured User Input During Sessions"
+---
+
+Author(s): [@yordis](https://github.com/yordis)
+
+## Elevator pitch
+
+Add support for agents to request structured information from users during a session through a standardized elicitation mechanism, aligned with [MCP's elicitation feature](https://modelcontextprotocol.io/specification/2025-11-25/client/elicitation). This allows agents to ask follow-up questions, collect authentication credentials, gather preferences, and request required information without side-channel communication or ad-hoc client UI implementations.
+
+## Status quo
+
+Currently, agents have two limited mechanisms for gathering user input:
+
+1. **Session Config Options** (PR #210): Pre-declared, persistent configuration (model, mode, etc.) with default values required. These are available at session initialization and changes are broadcast to the client.
+
+2. **Unstructured text in turn responses**: Agents can include prompts in their responses, but clients have no standardized way to recognize auth requests, form inputs, or structured selections, leading to inconsistent UX across agents.
+
+However, there is no mechanism for agents to:
+
+- Request ad-hoc information during a turn (e.g., "Which of these approaches should I proceed with?" from PR #340)
+- Ask for authentication credentials in a recognized, secure way (pain point from PR #330)
+- Collect open-ended text input with validation constraints
+- Handle decision points that weren't anticipated at session initialization
+- Request sensitive information via out-of-band mechanisms (browser-based OAuth)
+
+The community has already identified the need for this: PR #340 explored a `session/select` mechanism but concluded that leveraging an MCP-like elicitation pattern would be more aligned with how clients will already support MCP servers. PR #330 recognized that authentication requests specifically need special handling separate from regular session data.
+
+This gap limits the richness of agent-client interaction and forces both agents and clients to implement ad-hoc solutions for structured user input.
+
+## What we propose to do about it
+
+We propose introducing an elicitation mechanism for agents to request structured information from users, aligned with [MCP's established elicitation patterns](https://modelcontextprotocol.io/specification/2025-11-25/client/elicitation). This addresses discussions from PR #340 about standardizing user selection flows and PR #330 about secure authentication handling.
+
+The mechanism would:
+
+1. **Use restricted JSON Schema** (as discussed in PR #210): Like MCP, constrain JSON Schema to a useful subset for `type`, `enum`, `minimum`, `maximum`, `minLength`, `maxLength`, `pattern`, `default`, and `description`. This aligns with how Session Config Options already think about schema.
+
+2. **Support multiple input modalities**:
+   - **Simple inputs**: text, number, boolean
+   - **Selections**: select (single), multiselect (multiple) with enum-based options
+   - **Sensitive inputs**: password, URL-mode for out-of-band OAuth flows (addressing PR #330 authentication pain points)
+
+3. **Work in turn context**: Elicitation requests are triggered when a turn ends with `stopReason: "elicitation_requested"`, allowing agents to ask questions naturally within the conversation flow. Agents send elicitation requests via a separate `session/elicitation` method (following the same request/response pattern as `session/request_permission`). Unlike Session Config Options (which are persistent), elicitation requests are transient and turn-specific.
+
+4. **Support client capability negotiation**: Clients declare what elicitation types they support (similar to the client capabilities pattern emerging in the protocol). Agents handle gracefully when clients don't support elicitation.
+
+5. **Provide rich context**: Agents can include title, description, detailed constraints, and examples—helping clients render consistent, helpful UI without custom implementations.
+
+6. **Enable out-of-band flows**: Support URL-mode elicitation (like MCP) for sensitive operations like authentication, where credentials bypass the agent entirely (addressing the core pain point in PR #330).
+
+## Shiny future
+
+Once implemented, agents can:
+
+- Ask users "Which approach would you prefer: A or B?" and receive a structured response
+- Request text input: "What's the name for this function?"
+- Collect multiple related pieces of information in a single request
+- Guide users through decision trees with follow-up questions
+- Provide rich context (descriptions, examples, constraints) for what they're asking for
+
+Clients can:
+
+- Present a consistent, standardized UI for elicitation across all agents
+- Validate user input against constraints before sending to the agent
+- Cache elicitation history and offer suggestions based on previous responses
+- Provide keyboard shortcuts and accessibility features for common elicitation types
+
+## Implementation details and plan
+
+### Alignment with MCP
+
+This proposal follows MCP's established elicitation patterns. See [MCP Elicitation Specification](https://modelcontextprotocol.io/specification/2025-11-25/client/elicitation) for detailed guidance. ACP will use the same JSON Schema constraint approach, but adapted for our session/turn-based architecture.
+
+Key differences from MCP:
+- MCP elicitation is tool-call-scoped; ACP elicitation is session/turn-scoped
+- ACP must integrate with existing Session Config Options (which also use schema constraints)
+- ACP should support out-of-band flows for sensitive data (authentication from PR #330)
+
+### Elicitation Request Structure
+
+When a turn ends with `stopReason: "elicitation_requested"`, the agent sends a separate elicitation request (following the same pattern as permission requests). Example 1 (User Selection - from PR #340):
+
+```json
+{
+  "elicitation": {
+    "id": "strategy-choice-42",
+    "type": "select",
+    "title": "Choose a Refactoring Strategy",
+    "description": "How would you like me to approach this refactoring?",
+    "schema": {
+      "type": "string",
+      "enum": ["conservative", "balanced", "aggressive"],
+      "default": "balanced"
+    },
+    "options": [
+      {
+        "value": "conservative",
+        "label": "Conservative",
+        "description": "Minimal changes, heavily tested approach"
+      },
+      {
+        "value": "balanced",
+        "label": "Balanced (Recommended)",
+        "description": "Good balance of progress and safety"
+      },
+      {
+        "value": "aggressive",
+        "label": "Aggressive",
+        "description": "Maximum optimization, requires review"
+      }
+    ]
+  }
+}
+```
+
+Example 2 (Authentication Request - from PR #330, out-of-band OAuth):
+
+```json
+{
+  "elicitation": {
+    "id": "github-oauth-123",
+    "type": "url",
+    "title": "Authenticate with GitHub",
+    "description": "Please authorize this agent to access your GitHub repositories",
+    "schema": {
+      "type": "string",
+      "default": null
+    },
+    "url": "https://github.com/login/oauth/authorize?client_id=...",
+    "returnValueFormat": "token"
+  }
+}
+```
+
+Example 3 (Text Input with Constraints):
+
+```json
+{
+  "elicitation": {
+    "id": "function-name",
+    "type": "text",
+    "title": "Function Name",
+    "description": "What should this function be named?",
+    "schema": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$",
+      "default": "processData"
+    }
+  }
+}
+```
+
+### Input Types
+
+Following MCP's approach, we would start with these types. Clients should gracefully degrade unknown types to `text`:
+
+- `text` - Open-ended text input
+- `number` - Numeric input
+- `select` - Single-choice selection from a list
+- `multiselect` - Multiple-choice selection
+- `boolean` - Yes/no choice
+- `password` - Masked text input (for sensitive credentials)
+- `url` - URL-based out-of-band authentication (browser-opened flows like OAuth)
+
+### Restricted JSON Schema
+
+Aligning with MCP and building on [Session Config Options discussions](https://github.com/agentclientprotocol/agent-client-protocol/pull/210) about schema constraints, agents use a restricted JSON Schema subset:
+
+**Required fields:**
+- `type` (string) - One of the input types above
+
+**Optional constraint fields:**
+- `default` - Default value if user doesn't respond (agents should always provide this, even if `null`)
+- `description` - Help text explaining what's being requested
+- `enum` - Array of allowed values (for select/multiselect)
+- `minLength`, `maxLength` - String length constraints
+- `minimum`, `maximum` - Numeric range constraints
+- `pattern` - Regex pattern for validation
+
+**Not supported** (to keep initial implementation simple):
+- Complex nested objects/arrays
+- `allOf`, `anyOf`, `oneOf`
+- Conditional validation
+- Custom formats
+
+This constraint list can expand in future versions based on community feedback.
+
+### Turn Response with Elicitation Stop Reason
+
+When an agent reaches a decision point and needs structured user input, it ends the turn with `stopReason: "elicitation_requested"`:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "I can refactor this code in several ways. Each approach has different tradeoffs. Which strategy would you prefer?"
+      }
+    ],
+    "stopReason": "elicitation_requested"
+  }
+}
+```
+
+### Elicitation Request
+
+After the turn completes with `stopReason: "elicitation_requested"`, the agent immediately sends a separate `session/elicitation` request (following the same pattern as `session/request_permission`):
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 43,
+  "method": "session/elicitation",
+  "params": {
+    "sessionId": "...",
+    "elicitation": {
+      "id": "refactor-strategy-001",
+      "type": "select",
+      "title": "Choose Refactoring Strategy",
+      "description": "How would you like me to approach this refactoring?",
+      "schema": {
+        "type": "string",
+        "enum": ["conservative", "balanced", "aggressive"],
+        "default": "balanced"
+      },
+      "options": [
+        {
+          "value": "conservative",
+          "label": "Conservative",
+          "description": "Minimal changes, heavily tested approach"
+        },
+        {
+          "value": "balanced",
+          "label": "Balanced (Recommended)",
+          "description": "Good balance of progress and safety"
+        },
+        {
+          "value": "aggressive",
+          "label": "Aggressive",
+          "description": "Maximum optimization, requires review"
+        }
+      ]
+    }
+  }
+}
+```
+
+The client presents the elicitation UI to the user based on the input type and constraints.
+
+### User Response
+
+When the user responds to an elicitation request, the client sends a separate `session/elicitation` response:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 43,
+  "result": {
+    "elicitationResponse": {
+      "id": "refactor-strategy-001",
+      "value": "balanced"
+    }
+  }
+}
+```
+
+The agent then continues processing with the user's input in the next turn or takes immediate action based on the response.
+
+### Client Capabilities
+
+Clients declare whether they support elicitation during the `initialize` phase via `ClientCapabilities`, following the same pattern as `fs` and `terminal` capabilities:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "initialize",
+  "params": {
+    "protocolVersion": "2025-11-25",
+    "clientCapabilities": {
+      "fs": {
+        "readTextFile": true,
+        "writeTextFile": true
+      },
+      "terminal": true,
+      "elicitation": {
+        "supported": true,
+        "supportedTypes": ["text", "number", "select", "multiselect", "boolean"]
+      }
+    },
+    "clientInfo": {
+      "name": "my-client",
+      "version": "1.0.0"
+    }
+  }
+}
+```
+
+This tells the agent which elicitation input types the client can render. Agents must gracefully handle clients that don't include this field (assumed to have no elicitation support).
+
+### Backward Compatibility
+
+- If a client doesn't support elicitation, agents must provide a default value and continue
+- Agents should not require elicitation responses to continue operating
+- Clients that don't understand an elicitation type should treat it as requesting text input
+
+## Frequently asked questions
+
+### Can an agent request multiple pieces of information in one turn?
+
+For v1, we recommend a **single elicitation per turn**. This keeps the design simple and predictable for both clients and agents. It also follows the Session Config Options pattern of having agents send full state updates.
+
+If an agent needs to collect multiple pieces of information, it can:
+1. Ask one question per turn (with sensible defaults)
+2. Incorporate the user's response in the context for the next turn
+3. Ask the next question in a subsequent turn
+
+This approach:
+- Keeps client UI logic simple
+- Allows agents to adapt follow-up questions based on previous answers
+- Can be extended to array-based multi-elicitation in future versions if compelling use cases emerge
+
+### How does this differ from session config options?
+
+Excellent question from PR #210 discussions. Both use restricted JSON Schema, but serve different purposes:
+
+| Aspect | Session Config Options | Elicitation |
+|--------|------------------------|-------------|
+| **Lifecycle** | Persistent, pre-declared at session init | Transient, appears during turns |
+| **Scope** | Session-wide configuration | Single turn/decision point |
+| **Defaults** | Required (agents must have defaults) | Required (agents should always provide) |
+| **State management** | Client maintains full state, broadcast on changes | Agent provides response in next turn |
+| **Use cases** | Model selection, session mode, persistent settings | Authentication, step-by-step decisions, one-time questions |
+
+Session Config Options are great for "how should you run this session?" Elicitation is for "what should I do next?"
+
+### Why align with MCP's elicitation instead of creating something different?
+
+As identified in PR #340, clients will already implement MCP elicitation support for MCP servers. Aligning ACP's elicitation with MCP:
+- Reduces client implementation burden
+- Creates consistent UX across MCP and ACP agents
+- Lets code be shared or reused
+- Follows the protocol design principle of only constraining when necessary
+
+PR #340 specifically concluded: "I think we'd rather have an MCP elicitation story in general, and maybe offer the same interface outside of tool calls."
+
+### How does authentication flow work with URL-mode elicitation?
+
+From PR #330: URL-mode elicitation allows agents to request authentication without exposing credentials to the protocol. While inspired by MCP's URL-mode elicitation, ACP's implementation focuses specifically on out-of-band credential handling:
+
+1. Agent sends elicitation request with `type: "url"` and OAuth authorization URL
+2. Client opens URL in user's browser (out-of-band process)
+3. User authenticates and grants permission in the browser
+4. Browser returns token/credential to client (e.g., via redirect or callback)
+5. Client includes token in next `session/turn` via `elicitationResponse`
+
+**Key guarantee**: Credentials never flow through the agent or LLM, addressing the core pain point from PR #330.
+
+The exact semantics of how tokens are returned from the browser and how `returnValueFormat` is handled will be specified in detail during the implementation phase of this RFD.
+
+### Can agents use elicitation for information required before responding?
+
+Yes. An agent can include an elicitation request in a turn response with a default value and continue, then incorporate the user's response into the next turn. This is how agents can guide users through multi-step workflows.
+
+### What if a user doesn't respond to an elicitation request?
+
+The agent's default value is used (which agents must always provide). If an agent truly requires user input and wants to block, it should fail the turn and let the client handle retry logic.
+
+### Should elicitation support complex nested data structures?
+
+For the initial version: no. We're focusing on simple types (strings, numbers, booleans, arrays of those). Complex nested structures can be added in future versions if use cases emerge. This keeps the initial scope manageable and lets us learn from real-world usage.
+
+### How should agents handle clients that don't support elicitation?
+
+Agents should always design to gracefully degrade:
+- Provide sensible default values
+- Describe what they're requesting in turn content (text)
+- Proceed with the defaults
+- Clients declare capabilities so agents can make informed decisions
+
+### Can we extend this to replace the existing Permission-Request mechanism?
+
+Potentially, but that's out of scope for this RFD. PR #210 discussed that elicitation "could potentially even replace the Permission-Request mechanism" (Phil65), but that requires separate analysis of the permission request use cases and whether elicitation's constraints (no complex nesting, simpler lifecycle) are sufficient.
+
+### What about validating user input on the client side?
+
+Clients should validate user input against the provided JSON Schema **before** sending the response to the agent. This prevents invalid data from reaching the agent and provides immediate feedback to the user.
+
+If the agent requires additional validation beyond what's expressible in JSON Schema:
+1. Agent validates the received value in the next turn
+2. If validation fails, agent can fail the turn with an error
+3. Client can then re-prompt the user (or fall back to the original default)
+
+For v1, we recommend starting with JSON Schema validation only. If more complex validation patterns emerge from real-world usage, a future RFD can specify additional validation mechanisms.
+
+## Revision history
+
+- 2026-01-12: Initial draft based on community discussions in PR #340 (user selection), PR #210 (session config alignment), and PR #330 (authentication use cases). Aligned with MCP elicitation patterns.
