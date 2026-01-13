@@ -80,6 +80,7 @@
                 "hidden": true,
                 "pages": [
                   "protocol/draft/cancellation",
+                  "protocol/draft/session-config-options",
                   "protocol/draft/schema"
                 ]
               }
@@ -105,7 +106,6 @@
             "group": "Draft",
             "pages": [
               "rfds/session-list",
-              "rfds/session-config-options",
               "rfds/session-fork",
               "rfds/request-cancellation",
               "rfds/session-resume",
@@ -118,7 +118,7 @@
               "rfds/acp-agent-registry"
             ]
           },
-          { "group": "Preview", "pages": [] },
+          { "group": "Preview", "pages": ["rfds/session-config-options"] },
           { "group": "Completed", "pages": ["rfds/introduce-rfd-process"] }
         ]
       },
