@@ -34,7 +34,7 @@ let _: () = patchwork.think()
             results.push(input.item);
             Ok(RecordOutput { success: true })
         },
-        sacp::tool_fn_mut!(),
+        acp::tool_fn_mut!(),
     )
     .await?;
 
@@ -120,7 +120,20 @@ connection.run_until(async |cx| {
 
 > What are you proposing to improve the situation?
 
-We propose to replace the current Rust SDK with [`sacp`](https://github.com/symposium-dev/symposium-acp/), developed as part of the [Symposium project](https://symposium.dev). The new SDK addresses the limitations above through a builder-based API with explicit connection semantics.
+We propose to adopt the design and implementation from [`sacp`](https://github.com/symposium-dev/symposium-acp/) (developed as part of the [Symposium project](https://symposium.dev)) as the foundation for `agent-client-protocol` v2.0. The `sacp` crates will be imported into this repository and renamed:
+
+| Current | New name |
+|---------|----------|
+| `sacp` | `agent-client-protocol` (v2.0) |
+| `sacp-derive` | `agent-client-protocol-derive` |
+| `sacp-tokio` | `agent-client-protocol-tokio` |
+| `sacp-rmcp` | `agent-client-protocol-rmcp` |
+| `sacp-conductor` | `agent-client-protocol-conductor` |
+| `sacp-test` | `agent-client-protocol-test` |
+| `sacp-tee` | `agent-client-protocol-tee` |
+| `sacp-trace-viewer` | `agent-client-protocol-trace-viewer` |
+
+The `sacp` crates will then be deprecated in favor of the `agent-client-protocol` family. The new SDK addresses the limitations above through a builder-based API with explicit connection semantics.
 
 The following table summarizes the key API concepts and which goals they address:
 
@@ -136,13 +149,13 @@ The following table summarizes the key API concepts and which goals they address
 
 We have validated the design by implementing a number of use cases:
 
-- [sacp-conductor](https://github.com/symposium-dev/symposium-acp/tree/main/src/sacp-conductor) - proxy chain orchestrator
+- **sacp-conductor** (to be renamed **agent-client-protocol-conductor**) - implementation of the conductor from the [proxy chains](./proxy-chains) RFD
 - [Patchwork](https://patchwork-lang.github.io/patchwork-rs/) - programmatic agent orchestration
-- [elizacp](https://github.com/symposium-dev/symposium-acp/tree/main/src/elizacp) - agent implementing the classic ELIZA program
-- [sacp-tee](https://crates.io/crates/sacp-tee) - proxy that logs messages before forwarding
-- [yopo](https://crates.io/crates/yopo) ("You Only Prompt Once") - CLI tool for single prompts
+- **elizacp** - agent implementing the classic ELIZA program
+- **agent-client-protocol-tee** - proxy that logs messages before forwarding
+- **yopo** ("You Only Prompt Once") - CLI tool for single prompts
 
-The [Deep dive](#deep-dive) section below walks through each concept in detail. Code examples are also available in the [sacp-cookbook crate](https://docs.rs/sacp-cookbook/latest/sacp_cookbook/).
+The [Deep dive](#deep-dive) section below walks through each concept in detail.
 
 ## Deep dive
 
@@ -180,7 +193,7 @@ The `connect_to` method connects your builder to the other side. The argument ca
 ```rust
 // Connect to an agent over stdio
 ClientToAgent::builder()
-    .connect_to(sacp::stdio())
+    .connect_to(acp::stdio())
 ```
 
 The `AcpAgent` type allows connecting to an external ACP agent or agent extension:
@@ -206,7 +219,7 @@ Or connect to a struct that implements `Component`:
 
 ```rust
 impl Component<AgentToClient> for MyAgent {
-    async fn serve(self, client: impl Component<ClientToAgent>) -> Result<(), sacp::Error> {
+    async fn serve(self, client: impl Component<ClientToAgent>) -> Result<(), acp::Error> {
         AgentToClient::builder()
             .on_receive_request(/* ... */)
             .serve(client)
@@ -283,7 +296,7 @@ cx.send_request(PromptRequest::new(session_id, messages))
             println!("Agent finished: {:?}", response.stop_reason);
             Ok(())
         },
-        sacp::on_response!()
+        acp::on_response!()
     )?;
 ```
 
@@ -309,7 +322,7 @@ Handler methods (methods whose names begin with `on_`) execute in the order mess
     cx.send_notification(StatusNotification::new("processing"))?;
     // The notification is guaranteed to be sent before the response
     request_cx.respond(PromptResponse::new(StopReason::EndTurn))
-}, sacp::on_receive_request!())
+}, acp::on_receive_request!())
 ```
 
 #### `block_task` and deadlock
@@ -323,7 +336,7 @@ Using `block_task` inside a handler creates a deadlock: the handler waits for a 
         .block_task()  // Deadlock! Handler blocks waiting for response
         .await?;       // but responses can't be processed until handler returns
     request_cx.respond(/* ... */)
-}, sacp::on_receive_request!())
+}, acp::on_receive_request!())
 ```
 
 Use `on_response` instead, or spawn a task.
@@ -345,7 +358,7 @@ Use `cx.spawn` to run work concurrently with message handling:
 
     // Handler returns immediately, spawned work continues
     request_cx.respond(/* ... */)
-}, sacp::on_receive_request!())
+}, acp::on_receive_request!())
 ```
 
 Spawned tasks are tracked in the `JrConnectionCx` and don't require runtime-specific spawning.
@@ -380,7 +393,7 @@ cx.build_session(workspace_path)
             .tool_fn("get_path", "Returns the path", async move |_: (), _| {
                 // Can capture `workspace_path` by reference!
                 Ok(workspace_path.display().to_string())
-            }, sacp::tool_fn!())
+            }, acp::tool_fn!())
             .build()
     )?
     .block_task()
@@ -399,10 +412,10 @@ The `run_until` closure receives an `ActiveSession` with methods for interacting
 - **`read_to_string()`** - Read all updates until the turn ends, returning text content
 - **`read_update()`** - Read individual updates for fine-grained control
 
-For more complex MCP servers, you can use the standard rmcp API via the `sacp-rmcp` crate:
+For more complex MCP servers, you can use the standard rmcp API via the `agent-client-protocol-rmcp` crate:
 
 ```rust
-use sacp_rmcp::RmcpServer;
+use agent_client_protocol_rmcp::RmcpServer;
 
 cx.build_session(workspace_path)
     .with_mcp_server(RmcpServer::new(my_rmcp_service))?
@@ -425,7 +438,7 @@ When you need to start a session from inside an `on_receive_*` handler but can't
 
     // Handler returns immediately, session runs in background
     Ok(())
-}, sacp::on_receive_request!())
+}, acp::on_receive_request!())
 ```
 
 Note that `on_session_start` requires `'static` - closures and MCP servers cannot borrow from the surrounding scope. Use owned data or `Arc` for shared state.
@@ -459,7 +472,7 @@ For proxies that want to inject MCP servers but otherwise forward all messages, 
 
     // Session messages are automatically proxied between client and agent
     Ok(())
-}, sacp::on_receive_request!())
+}, acp::on_receive_request!())
 ```
 
 ### Handling messages
@@ -477,7 +490,7 @@ AgentToClient::builder()
             println!("Session update: {:?}", notif.update);
             Ok(())
         },
-        sacp::on_receive_notification!(), // <-- Hacky macro argument required
+        acp::on_receive_notification!(), // <-- Hacky macro argument required
     )
 ```
 
@@ -496,7 +509,7 @@ Request handlers receive an additional `request_cx` parameter for sending the re
         // Send the response
         request_cx.respond(PromptResponse::new(StopReason::EndTurn))
     },
-    sacp::on_receive_request!(),
+    acp::on_receive_request!(),
 )
 ```
 
@@ -517,7 +530,7 @@ The `request_cx` is `Send`, so you can move it to another task or thread if you 
         });
         Ok(())
     },
-    sacp::on_receive_request!(),
+    acp::on_receive_request!(),
 )
 ```
 
@@ -554,7 +567,7 @@ ClientToAgent::builder()
             println!("Progress: {}% - {}", notif.percent, notif.message);
             Ok(())
         },
-        sacp::on_receive_notification!()
+        acp::on_receive_notification!()
     )
 ```
 
@@ -569,7 +582,7 @@ Use `on_receive_message` with `MessageCx` to intercept any incoming message (req
         message_sender.send(message)?;
         Ok(())
     },
-    sacp::on_receive_message!(),
+    acp::on_receive_message!(),
 )
 ```
 
@@ -649,7 +662,7 @@ Handlers can also modify the message before passing it along:
         message: (req, request_cx),
         retry: false,
     })
-}, sacp::on_receive_request!())
+}, acp::on_receive_request!())
 ```
 
 #### Registering dynamic handlers
@@ -734,7 +747,7 @@ For request handlers, you can propagate error responses instead of tearing down 
             format!("Failed to process: {}", e),
         )),
     }
-}, sacp::on_receive_request!())
+}, acp::on_receive_request!())
 ```
 
 ### Writing proxies
@@ -748,14 +761,14 @@ With multiple peers, you must explicitly name which peer you're communicating wi
 ```rust
 ProxyToConductor::builder()
     .on_receive_notification_from(
-        sacp::Agent, // <-- Receive from the agent
+        acp::Agent, // <-- Receive from the agent
         async |notif: SessionNotification, cx| {
-            cx.send_notification_to(sacp::Client, notif)?;
+            cx.send_notification_to(acp::Client, notif)?;
             //                      -----------
             //                   Send to the client
             Ok(())
         },
-        sacp::on_receive_notification!(),
+        acp::on_receive_notification!(),
     )
 ```
 
@@ -773,7 +786,7 @@ cx.build_session_from(req)
         // This handler only runs for this session
         log_notification(&notif);
         Ok(())
-    }, sacp::on_receive_notification!())
+    }, acp::on_receive_notification!())
     .on_proxy_session_start(request_cx, async |_| Ok(()))
 ```
 
@@ -782,7 +795,7 @@ cx.build_session_from(req)
 Link types define the relationship between peers. The SDK provides built-in types, but you can define your own:
 
 ```rust
-use sacp::link::{JrLink, LinkDirection};
+use acp::link::{JrLink, LinkDirection};
 
 pub struct MyCustomLink;
 
@@ -819,15 +832,15 @@ We can provide migration guidance and potentially a thin compatibility layer for
 
 ### Potential crate reorganization
 
-Currently, `sacp` contains both generic JSON-RPC machinery (builder patterns, message handling, connection management) and ACP-specific types (link types, schema integration). In the future, it might be valuable to split the generic JSON-RPC layer into its own crate.
+Currently, `agent-client-protocol` contains both generic JSON-RPC machinery (builder patterns, message handling, connection management) and ACP-specific types (link types, schema integration). In the future, it might be valuable to split the generic JSON-RPC layer into its own crate.
 
 However, this is complicated by the trait implementations: the generic traits need to be implemented for ACP types currently defined in the schema crate. We'd need to carefully consider where type definitions live to avoid orphan rule issues. This reorganization isn't blocking for the initial adoption.
 
 ### Cross-language SDK alignment
 
-The design principles in SACP - builder patterns, context parameters, directional naming, component abstractions - aren't Rust-specific. They represent good SDK design that could inform TypeScript and other language SDKs.
+The design principles here - builder patterns, context parameters, directional naming, component abstractions - aren't Rust-specific. They represent good SDK design that could inform TypeScript and other language SDKs.
 
-This doesn't mean other SDKs should be ports of SACP. Each language has its own idioms. But the core ideas (explicit message ordering, composable components, context in callbacks) translate across languages.
+This doesn't mean other SDKs should be ports of the Rust SDK. Each language has its own idioms. But the core ideas (explicit message ordering, composable components, context in callbacks) translate across languages.
 
 ### Foundation for protocol evolution
 
@@ -839,13 +852,16 @@ The builder pattern and component model make it easier to evolve the ACP protoco
 
 ### Crate structure
 
-SACP is organized into several crates with clear responsibilities:
+The new SDK is organized into several crates with clear responsibilities:
 
-- **`sacp`** - Core SDK with builder patterns, link types, and component abstractions
-- **`sacp-tokio`** - Tokio runtime integration (spawn, timers, I/O)
-- **`sacp-proxy`** - Extensions for implementing proxies (successor forwarding, message transformation)
-- **`sacp-rmcp`** - Bridge to the rmcp crate for MCP integration
-- **`sacp-conductor`** - Reference conductor implementation
+- **`agent-client-protocol`** - Core SDK with builder patterns, link types, and component abstractions
+- **`agent-client-protocol-tokio`** - Tokio runtime integration (spawn, timers, I/O)
+- **`agent-client-protocol-rmcp`** - Bridge to the rmcp crate for MCP integration
+- **`agent-client-protocol-conductor`** - Reference conductor implementation
+- **`agent-client-protocol-derive`** - Derive macros for JSON-RPC traits
+- **`agent-client-protocol-test`** - Test utilities and mock implementations
+- **`agent-client-protocol-tee`** - Debugging proxy that logs all traffic
+- **`agent-client-protocol-trace-viewer`** - Interactive sequence diagram viewer for trace files
 
 ### Current status
 
@@ -857,11 +873,12 @@ A working implementation exists in the [symposium-dev/symposium-acp](https://git
 
 ### Migration path
 
-The transition from the current SDK to SACP can be gradual:
+The transition involves importing the `sacp` implementation into this repository:
 
-1. **Publish SACP crates** under the ACP organization namespace
-2. **Deprecate current SDK** with clear migration guidance
-3. **Provide compatibility layer** for common patterns (optional, if demand exists)
+1. **Import `sacp` crates** into this repository with the new `agent-client-protocol-*` naming
+2. **Release `agent-client-protocol` v2.0** with the new builder-based API
+3. **Deprecate `sacp` crates** on crates.io, pointing users to the `agent-client-protocol` family
+4. **Provide migration guidance** for users of the current v1.x SDK
 
 Most users will find the migration straightforward - the builder pattern is more ergonomic than the trait-based approach, so the new code is often simpler than the old.
 
@@ -891,11 +908,11 @@ Not currently. The derive macros only support structs with a single method name.
 
 This is a potential future enhancement - enum derives could dispatch to different methods per variant, which would be useful for `MessageCx<Req, Notif>` typed handlers. For now, use the untyped `MessageCx` with `MatchMessage` for this pattern.
 
-### What changes are needed relative to the existing `sacp` crate?
+### What changes are needed before stabilizing?
 
-The existing `sacp` crate is aligned but we are in the process of changing how response messages work to simplify the implementation of the conductor. Before stabilizing we should do a thorough review of the methods and look for candidates that can be removed or simplified.
+We are in the process of changing how response messages work to simplify the implementation of the conductor. Before stabilizing we should do a thorough review of the methods and look for candidates that can be removed or simplified.
 
-The existing conductor is feature complete but the support for MCP-over-ACP needs a few minor improvements (in particular, it should detect when the agent only supports stdio bridging and not attempt to use HTTP, which it currently does not).
+The conductor is feature complete but the support for MCP-over-ACP needs a few minor improvements (in particular, it should detect when the agent only supports stdio bridging and not attempt to use HTTP, which it currently does not).
 
 ## Revision history
 
