@@ -115,7 +115,8 @@
               "rfds/proxy-chains",
               "rfds/mcp-over-acp",
               "rfds/session-usage",
-              "rfds/acp-agent-registry"
+              "rfds/acp-agent-registry",
+              "rfds/auth-methods"
             ]
           },
           { "group": "Preview", "pages": [] },
