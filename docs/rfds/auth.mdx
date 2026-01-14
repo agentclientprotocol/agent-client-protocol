@@ -1,5 +1,5 @@
 ---
-title: "AUTHENTICATION"
+title: "Authentication Methods"
 ---
 
 Author(s): [anna239](https://github.com/anna239)
@@ -17,23 +17,13 @@ I suggest adding more information about auth methods that agent supports, which 
 Agents have different ways of authenticating users: env vars with api keys, running a command like `<agent_name> login`, some just open a browser and use oauth.
 [AuthMethod](https://agentclientprotocol.com/protocol/schema#authmethod) does not really tell the client what should be done to authenticate. This means we can't show the user a control for entering key if an agent supports auth through env var.
 
+Very few agents can authenticate fully on their own without user input, so agents with ACP auth support are limited in the methods they can offer, or require manual setup before being run as an ACP agent.
+
 ## What we propose to do about it
 
 > What are you proposing to improve the situation?
 
-We can add different types of AuthMethods, so that clients can show some UI for them. For example, this auth method
-
-```json
-{
-  "id": "123",
-  "name": "OpenAI api key",
-  "description": "Provide your key",
-  "type": "env_var",
-  "varName": "OPEN_AI_KEY"
-}
-```
-
-would allow client to prompt user to enter a key, then client can provide this key to an agent via `OPEN_AI_KEY` env variable.
+We can add addition types of AuthMethods, to provide clients with additional information so they can assist in the login process.
 
 ## Shiny future
 
@@ -47,7 +37,20 @@ It will be easier for end-users to start using an agent from inside the IDE as a
 
 I suggest adding following auth types:
 
-1. Env variable
+1. Agent auth
+
+Same as what there is now – agent handles the auth itself, this should be a default type if no type is provided for backward compatibility
+
+```json
+{
+  "id": "123",
+  "name": "Agent",
+  "description": "Authenticate through agent",
+  "type": "agent" // Optional/default value
+}
+```
+
+2. Env variable
 
 A user can enter a key and a client will pass it to the agent as an env variable
 
@@ -58,58 +61,32 @@ A user can enter a key and a client will pass it to the agent as an env variable
   "description": "Provide your key",
   "type": "env_var",
   "varName": "OPEN_AI_KEY",
-  "link": "OPTIONAL link to a page where user can get their key",
-  "requiresRestart": true // default
+  "link": "OPTIONAL link to a page where user can get their key"
 }
 ```
 
-2. Start argument
+Since this would need to be supplied to the agent when the process is started, the client can check if it already passed such an env variable to the process, in which case the user can click on the button and the agent will read the already available key.
 
-A user can enter a key, and a client will pass it to the agent as a start parameter
+Otherwise, when the user clicks the button, the client could restart the agent process with the desired env variable, and then automatically send the authenticate message with the correct id to sign in for the user.
 
-```json
-{
-  "id": "123",
-  "name": "OpenAI api key",
-  "description": "Provide your key",
-  "type": "startParam",
-  "paramName": "OPEN_AI_KEY",
-  "link": "OPTIONAL link to a page where user can get their key",
-  "requiresRestart": true // default
-}
-```
+3. Terminal Auth
 
-3. Agent auth
-
-Same as what there is now – agent handles the auth itself, this should be a default type if no type is provided for backward compatibility
-
-```json
-{
-  "id": "123",
-  "name": "Agent",
-  "description": "Authenticate through agent",
-  "type": "agent",
-  "requiresRestart": false // default, can be changed
-}
-```
-
-4. Terminal auth
-
-What's now done with `terminal-auth` capability and \_meta field, for backward compatibility clients might want to read properties from both \_meta and the object itself.
-This means that the client should run the provided command themselves in the terminal and let user interact with that terminal
+There have been experiments for a "terminal-auth" experience as a fallback. This requires the client to be able to run an interactive terminal for the user to login via a TUI.
 
 ```json
 {
   "id": "123",
   "name": "Run in terminal",
+  "description": "Setup Label",
   "type": "terminal",
-  "command": "/path/to/command",
   "args": ["--setup"],
-  "env": { "VAR1": "value1", "VAR2": "value2" },
-  "label": "Setup Label",
-  "requiresRestart": true // default, can be changed
+  "env": { "VAR1": "value1", "VAR2": "value2" }
 }
 ```
+
+The `command` cannot be specified, the client will invoke the exact same binary with the exact same setup. The agent can supply additional arguments and environment variables as necessary. These will be supplied in **addition** to any args/env supplied by default when the server is started. So agents will need to have a way to kickoff their interactive login flow even if normal acp commands/arguments are supplied as well.
+
+This is so that the agent doesn't need to know about the environment it is running in. It can't know the absolute path necessarily, and shouldn't be able to supply other commands or programs to minimize security issues.
 
 ### AuthErrors
 
@@ -149,3 +126,5 @@ There is also an alternative to adding a separate `elicitation` capability, whic
 <!-- If there have been major updates to this RFD, you can include the git revisions and a summary of the changes. -->
 
 There was a part about elicitations https://github.com/agentclientprotocol/agent-client-protocol/blob/939ef116a1b14016e4e3808b8764237250afa253/docs/rfds/auth.mdx removed it for now, will move to a separate rfd
+
+- 2026-01-14: Updates based on Core Maintainer discussion
