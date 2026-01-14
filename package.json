@@ -28,7 +28,7 @@
     "format:check": "prettier --check . && cargo fmt -- --check",
     "spellcheck": "./scripts/spellcheck.sh",
     "spellcheck:fix": "./scripts/spellcheck.sh --write-changes",
-    "check": "cargo clippy --all-features && npm run format:check && npm run spellcheck && cargo test",
+    "check": "cargo clippy --all-features && npm run format:check && npm run spellcheck && cargo test --all-features",
     "docs": "cd docs && npx mint dev"
   },
   "devDependencies": {

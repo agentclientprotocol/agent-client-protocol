@@ -109,14 +109,16 @@ Each top-level config option MAY include an optional `category` field. This is i
 
 In addition to `category`, Clients SHOULD use the ordering of the `configOptions` array as provided by the Agent as the primary way to establish priority and resolve ties. For example, if multiple options share the same `category`, a Client can prefer the first matching option in the list when assigning keyboard shortcuts or deciding which options to surface most prominently.
 
-`category` is semantic metadata and MUST NOT be required for correctness. Clients MUST handle missing or unknown categories gracefully (treat as `other`).
+`category` is semantic metadata and MUST NOT be required for correctness. Clients MUST handle missing or unknown categories gracefully.
+
+Category names beginning with `_` are free for custom use. Category names that do not begin with `_` are reserved for the ACP spec.
 
 Proposed enum:
 
 - `mode` - Session mode selector
 - `model` - Model selector
 - `thought_level` - Thought/reasoning level selector
-- `other` - Unknown / uncategorized selector
+- Any string beginning with `_` - Custom category (e.g., `_my_custom_category`)
 
 When we introduce this, we could also allow for grouped options, in case there are logical sub-headers and groupings for the options in an individual selector.
 

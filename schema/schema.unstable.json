@@ -2548,8 +2548,7 @@
       "type": "object"
     },
     "SessionConfigOptionCategory": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSemantic category for a session configuration option.\n\nThis is intended to help Clients distinguish broadly common selectors (e.g. model selector vs\nsession mode selector vs thought/reasoning level) for UX purposes (keyboard shortcuts, icons,\nplacement). It MUST NOT be required for correctness. Clients MUST handle missing or unknown\ncategories gracefully (treat as `Other`).",
-      "oneOf": [
+      "anyOf": [
         {
           "const": "mode",
           "description": "Session mode selector.",
@@ -2566,11 +2565,11 @@
           "type": "string"
         },
         {
-          "const": "other",
           "description": "Unknown / uncategorized selector.",
           "type": "string"
         }
-      ]
+      ],
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSemantic category for a session configuration option.\n\nThis is intended to help Clients distinguish broadly common selectors (e.g. model selector vs\nsession mode selector vs thought/reasoning level) for UX purposes (keyboard shortcuts, icons,\nplacement). It MUST NOT be required for correctness. Clients MUST handle missing or unknown\ncategories gracefully.\n\nCategory names beginning with `_` are free for custom use, like other ACP extension methods.\nCategory names that do not begin with `_` are reserved for the ACP spec."
     },
     "SessionConfigSelect": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA single-value selector (dropdown) session configuration option payload.",

@@ -1566,9 +1566,12 @@ impl SessionConfigSelect {
 /// This is intended to help Clients distinguish broadly common selectors (e.g. model selector vs
 /// session mode selector vs thought/reasoning level) for UX purposes (keyboard shortcuts, icons,
 /// placement). It MUST NOT be required for correctness. Clients MUST handle missing or unknown
-/// categories gracefully (treat as `Other`).
+/// categories gracefully.
+///
+/// Category names beginning with `_` are free for custom use, like other ACP extension methods.
+/// Category names that do not begin with `_` are reserved for the ACP spec.
 #[cfg(feature = "unstable_session_config_options")]
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum SessionConfigOptionCategory {
@@ -1579,8 +1582,8 @@ pub enum SessionConfigOptionCategory {
     /// Thought/reasoning level selector.
     ThoughtLevel,
     /// Unknown / uncategorized selector.
-    #[serde(other)]
-    Other,
+    #[serde(untagged)]
+    Other(String),
 }
 
 /// **UNSTABLE**
@@ -3291,5 +3294,76 @@ mod test_serialization {
             }
             _ => panic!("Expected Sse variant"),
         }
+    }
+
+    #[test]
+    #[cfg(feature = "unstable_session_config_options")]
+    fn test_session_config_option_category_known_variants() {
+        // Test serialization of known variants
+        assert_eq!(
+            serde_json::to_value(&SessionConfigOptionCategory::Mode).unwrap(),
+            json!("mode")
+        );
+        assert_eq!(
+            serde_json::to_value(&SessionConfigOptionCategory::Model).unwrap(),
+            json!("model")
+        );
+        assert_eq!(
+            serde_json::to_value(&SessionConfigOptionCategory::ThoughtLevel).unwrap(),
+            json!("thought_level")
+        );
+
+        // Test deserialization of known variants
+        assert_eq!(
+            serde_json::from_str::<SessionConfigOptionCategory>("\"mode\"").unwrap(),
+            SessionConfigOptionCategory::Mode
+        );
+        assert_eq!(
+            serde_json::from_str::<SessionConfigOptionCategory>("\"model\"").unwrap(),
+            SessionConfigOptionCategory::Model
+        );
+        assert_eq!(
+            serde_json::from_str::<SessionConfigOptionCategory>("\"thought_level\"").unwrap(),
+            SessionConfigOptionCategory::ThoughtLevel
+        );
+    }
+
+    #[test]
+    #[cfg(feature = "unstable_session_config_options")]
+    fn test_session_config_option_category_unknown_variants() {
+        // Test that unknown strings are captured in Other variant
+        let unknown: SessionConfigOptionCategory =
+            serde_json::from_str("\"some_future_category\"").unwrap();
+        assert_eq!(
+            unknown,
+            SessionConfigOptionCategory::Other("some_future_category".to_string())
+        );
+
+        // Test round-trip of unknown category
+        let json = serde_json::to_value(&unknown).unwrap();
+        assert_eq!(json, json!("some_future_category"));
+    }
+
+    #[test]
+    #[cfg(feature = "unstable_session_config_options")]
+    fn test_session_config_option_category_custom_categories() {
+        // Category names beginning with `_` are free for custom use
+        let custom: SessionConfigOptionCategory =
+            serde_json::from_str("\"_my_custom_category\"").unwrap();
+        assert_eq!(
+            custom,
+            SessionConfigOptionCategory::Other("_my_custom_category".to_string())
+        );
+
+        // Test round-trip preserves the custom category name
+        let json = serde_json::to_value(&custom).unwrap();
+        assert_eq!(json, json!("_my_custom_category"));
+
+        // Deserialize back and verify
+        let deserialized: SessionConfigOptionCategory = serde_json::from_value(json).unwrap();
+        assert_eq!(
+            deserialized,
+            SessionConfigOptionCategory::Other("_my_custom_category".to_string())
+        );
     }
 }

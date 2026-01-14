@@ -123,16 +123,16 @@ Each config option **MAY** include a `category` field. Categories are semantic m
 
 <Warning>
   Categories are for UX purposes only and **MUST NOT** be required for
-  correctness. Clients **MUST** handle missing or unknown categories gracefully
-  by treating them as `other`.
+  correctness. Clients **MUST** handle missing or unknown categories gracefully.
 </Warning>
 
-| Category        | Description                                 |
-| --------------- | ------------------------------------------- |
-| `mode`          | Session mode selector                       |
-| `model`         | Model selector                              |
-| `thought_level` | Thought/reasoning level selector            |
-| `other`         | Unknown or uncategorized selector (default) |
+Category names beginning with `_` are free for custom use (e.g., `_my_custom_category`). Category names that do not begin with `_` are reserved for the ACP spec.
+
+| Category        | Description                      |
+| --------------- | -------------------------------- |
+| `mode`          | Session mode selector            |
+| `model`         | Model selector                   |
+| `thought_level` | Thought/reasoning level selector |
 
 When multiple options share the same category, Clients **SHOULD** use the array ordering to resolve ties, preferring earlier options in the list for prominent placement or keyboard shortcuts.
 
