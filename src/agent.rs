@@ -2440,6 +2440,13 @@ impl AgentCapabilities {
         self
     }
 
+    /// Session capabilities supported by the agent.
+    #[must_use]
+    pub fn session_capabilities(mut self, session_capabilities: SessionCapabilities) -> Self {
+        self.session_capabilities = session_capabilities;
+        self
+    }
+
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
