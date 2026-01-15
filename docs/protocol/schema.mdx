@@ -1159,7 +1159,7 @@ The input specification for a command.
 
 **Type:** Union
 
-<ResponseField name="Variant">
+<ResponseField name="unstructured">
 All text that was typed after the command name is provided as input.
 
 <Expandable title="Properties">
@@ -1676,7 +1676,7 @@ and use the reserved range (-32000 to -32099) for protocol-specific errors.
   **Resource not found**: A given resource, such as a file, was not found.
 </ResponseField>
 
-<ResponseField name="integer" type="int32">
+<ResponseField name="Other" type="int32">
   Other undefined error code.
 </ResponseField>
 
@@ -1918,7 +1918,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 </Expandable>
 </ResponseField>
 
-<ResponseField name="Variant">
+<ResponseField name="stdio">
 Stdio transport configuration
 
 All Agents MUST support this transport.
@@ -2271,11 +2271,11 @@ The Server MUST reply with the same value in the Response object if included. Th
   {""}
 </ResponseField>
 
-<ResponseField name="integer" type="int64">
+<ResponseField name="Number" type="int64">
   {""}
 </ResponseField>
 
-<ResponseField name="string" type="string">
+<ResponseField name="Str" type="string">
   {""}
 </ResponseField>
 

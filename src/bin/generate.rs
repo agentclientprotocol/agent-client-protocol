@@ -36,6 +36,7 @@ enum AcpTypes {
 
 fn main() {
     let mut settings = SchemaSettings::draft2020_12();
+    settings.untagged_enum_variant_titles = true;
     let mut bool_schemas = ReplaceBoolSchemas::default();
     bool_schemas.skip_additional_properties = true;
     settings = settings

@@ -1629,7 +1629,7 @@ The input specification for a command.
 
 **Type:** Union
 
-<ResponseField name="Variant">
+<ResponseField name="unstructured">
 All text that was typed after the command name is provided as input.
 
 <Expandable title="Properties">
@@ -2180,7 +2180,7 @@ because of resource constraints or shutdown.
   **Resource not found**: A given resource, such as a file, was not found.
 </ResponseField>
 
-<ResponseField name="integer" type="int32">
+<ResponseField name="Other" type="int32">
   Other undefined error code.
 </ResponseField>
 
@@ -2422,7 +2422,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 </Expandable>
 </ResponseField>
 
-<ResponseField name="Variant">
+<ResponseField name="stdio">
 Stdio transport configuration
 
 All Agents MUST support this transport.
@@ -2815,11 +2815,11 @@ The Server MUST reply with the same value in the Response object if included. Th
   {""}
 </ResponseField>
 
-<ResponseField name="integer" type="int64">
+<ResponseField name="Number" type="int64">
   {""}
 </ResponseField>
 
-<ResponseField name="string" type="string">
+<ResponseField name="Str" type="string">
   {""}
 </ResponseField>
 
@@ -3062,7 +3062,7 @@ Category names that do not begin with `_` are reserved for the ACP spec.
   Thought/reasoning level selector.
 </ResponseField>
 
-<ResponseField name="string" type="string">
+<ResponseField name="other" type="string">
   Unknown / uncategorized selector.
 </ResponseField>
 
@@ -3163,11 +3163,11 @@ Possible values for a session configuration option.
 
 **Type:** Union
 
-<ResponseField name="array" type="array">
+<ResponseField name="Ungrouped" type="array">
   A flat list of options with no grouping.
 </ResponseField>
 
-<ResponseField name="array" type="array">
+<ResponseField name="Grouped" type="array">
   A list of options grouped under headers.
 </ResponseField>
 
