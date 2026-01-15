@@ -117,7 +117,7 @@
               "rfds/session-usage",
               "rfds/acp-agent-registry",
               "rfds/auth-methods",
-              "rfds/rust-sdk-v2"
+              "rfds/rust-sdk-v1"
             ]
           },
           { "group": "Preview", "pages": ["rfds/session-config-options"] },

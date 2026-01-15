@@ -120,17 +120,17 @@ connection.run_until(async |cx| {
 
 > What are you proposing to improve the situation?
 
-We propose to adopt the design and implementation from [`sacp`](https://github.com/symposium-dev/symposium-acp/) (developed as part of the [Symposium project](https://symposium.dev)) as the foundation for `agent-client-protocol` v2.0. The `sacp` crates will be imported into this repository and renamed:
+We propose to adopt the design and implementation from [`sacp`](https://github.com/symposium-dev/symposium-acp/) (developed as part of the [Symposium project](https://symposium.dev)) as the foundation for `agent-client-protocol` v1.0. The `sacp` crates will be imported into this repository and renamed:
 
-| Current | New name |
-|---------|----------|
-| `sacp` | `agent-client-protocol` (v2.0) |
-| `sacp-derive` | `agent-client-protocol-derive` |
-| `sacp-tokio` | `agent-client-protocol-tokio` |
-| `sacp-rmcp` | `agent-client-protocol-rmcp` |
-| `sacp-conductor` | `agent-client-protocol-conductor` |
-| `sacp-test` | `agent-client-protocol-test` |
-| `sacp-tee` | `agent-client-protocol-tee` |
+| Current             | New name                             |
+| ------------------- | ------------------------------------ |
+| `sacp`              | `agent-client-protocol` (v1.0)       |
+| `sacp-derive`       | `agent-client-protocol-derive`       |
+| `sacp-tokio`        | `agent-client-protocol-tokio`        |
+| `sacp-rmcp`         | `agent-client-protocol-rmcp`         |
+| `sacp-conductor`    | `agent-client-protocol-conductor`    |
+| `sacp-test`         | `agent-client-protocol-test`         |
+| `sacp-tee`          | `agent-client-protocol-tee`          |
 | `sacp-trace-viewer` | `agent-client-protocol-trace-viewer` |
 
 The `sacp` crates will then be deprecated in favor of the `agent-client-protocol` family. The new SDK addresses the limitations above through a builder-based API with explicit connection semantics.
@@ -876,9 +876,9 @@ A working implementation exists in the [symposium-dev/symposium-acp](https://git
 The transition involves importing the `sacp` implementation into this repository:
 
 1. **Import `sacp` crates** into this repository with the new `agent-client-protocol-*` naming
-2. **Release `agent-client-protocol` v2.0** with the new builder-based API
+2. **Release `agent-client-protocol` v1.0** with the new builder-based API
 3. **Deprecate `sacp` crates** on crates.io, pointing users to the `agent-client-protocol` family
-4. **Provide migration guidance** for users of the current v1.x SDK
+4. **Provide migration guidance** for users of the current v0.x SDK
 
 Most users will find the migration straightforward - the builder pattern is more ergonomic than the trait-based approach, so the new code is often simpler than the old.
 
