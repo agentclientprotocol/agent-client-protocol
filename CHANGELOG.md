@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.10.7](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.10.6...v0.10.7) - 2026-01-15
+
+### Fixed
+
+- *(schema)* Add missing titles for enum variants in schema ([#384](https://github.com/agentclientprotocol/agent-client-protocol/pull/384))
+- *(unstable)* Add missing session capabilities builder method ([#380](https://github.com/agentclientprotocol/agent-client-protocol/pull/380))
+- *(unstable)* Add copy to SessionConfigOptionCategory ([#368](https://github.com/agentclientprotocol/agent-client-protocol/pull/368))
+
+### Other
+
+- *(rfd)* Session Config Options to Preview stage ([#378](https://github.com/agentclientprotocol/agent-client-protocol/pull/378))
+- *(deps)* bump the minor group with 5 updates ([#375](https://github.com/agentclientprotocol/agent-client-protocol/pull/375))
+
 ## [0.10.6](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.10.5...v0.10.6) - 2026-01-09
 
 ### Added
