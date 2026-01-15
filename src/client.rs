@@ -11,6 +11,10 @@ use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "unstable_session_config_options")]
 use crate::SessionConfigOption;
+#[cfg(feature = "unstable_elicitation")]
+use crate::agent::SESSION_ELICITATION_METHOD_NAME;
+#[cfg(feature = "unstable_elicitation")]
+use crate::{ElicitationRequest, ElicitationResponse};
 use crate::{
     ContentBlock, ExtNotification, ExtRequest, ExtResponse, IntoOption, Meta, Plan, SessionId,
     SessionModeId, ToolCall, ToolCallUpdate,
@@ -622,6 +626,100 @@ impl SelectedPermissionOutcome {
     pub fn new(option_id: impl Into<PermissionOptionId>) -> Self {
         Self {
             option_id: option_id.into(),
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+// Elicitation
+
+/// Request for structured user input during a turn.
+///
+/// Sent when the agent needs to elicit specific information from the user.
+///
+/// **UNSTABLE**
+/// This feature is unstable and may change.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[cfg(feature = "unstable_elicitation")]
+#[schemars(extend("x-side" = "client", "x-method" = SESSION_ELICITATION_METHOD_NAME))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct RequestElicitationRequest {
+    /// The session ID for this request.
+    pub session_id: SessionId,
+    /// The elicitation request details.
+    pub elicitation: ElicitationRequest,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl RequestElicitationRequest {
+    #[must_use]
+    pub fn new(
+        session_id: impl Into<SessionId>,
+        elicitation: ElicitationRequest,
+    ) -> Self {
+        Self {
+            session_id: session_id.into(),
+            elicitation,
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// Response to an elicitation request containing the user's input.
+///
+/// **UNSTABLE**
+/// This feature is unstable and may change.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[cfg(feature = "unstable_elicitation")]
+#[schemars(extend("x-side" = "client", "x-method" = SESSION_ELICITATION_METHOD_NAME))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct RequestElicitationResponse {
+    /// The user's response to the elicitation request.
+    pub elicitation_response: ElicitationResponse,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl RequestElicitationResponse {
+    #[must_use]
+    pub fn new(elicitation_response: ElicitationResponse) -> Self {
+        Self {
+            elicitation_response,
             meta: None,
         }
     }
