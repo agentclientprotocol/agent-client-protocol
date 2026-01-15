@@ -41,7 +41,7 @@ The mechanism would:
    - **Selections**: select (single), multiselect (multiple) with enum-based options
    - **Sensitive inputs**: password, URL-mode for out-of-band OAuth flows (addressing PR #330 authentication pain points)
 
-3. **Work in turn context**: Elicitation requests appear as part of turn responses, allowing agents to ask questions naturally within the conversation flow. Unlike Session Config Options (which are persistent), elicitation requests are transient and turn-specific.
+3. **Work in turn context**: Elicitation requests are triggered when a turn ends with `stopReason: "elicitation_requested"`, allowing agents to ask questions naturally within the conversation flow. Agents send elicitation requests via a separate `session/elicitation` method (following the same request/response pattern as `session/request_permission`). Unlike Session Config Options (which are persistent), elicitation requests are transient and turn-specific.
 
 4. **Support client capability negotiation**: Clients declare what elicitation types they support (similar to the client capabilities pattern emerging in the protocol). Agents handle gracefully when clients don't support elicitation.
 
@@ -79,7 +79,7 @@ Key differences from MCP:
 
 ### Elicitation Request Structure
 
-An elicitation request would be included in a turn response. Example 1 (User Selection - from PR #340):
+When a turn ends with `stopReason: "elicitation_requested"`, the agent sends a separate elicitation request (following the same pattern as permission requests). Example 1 (User Selection - from PR #340):
 
 ```json
 {
@@ -188,9 +188,9 @@ Aligning with MCP and building on [Session Config Options discussions](https://g
 
 This constraint list can expand in future versions based on community feedback.
 
-### Complete Turn Response with Elicitation
+### Turn Response with Elicitation Stop Reason
 
-An agent can include both content and an elicitation request in the same turn response:
+When an agent reaches a decision point and needs structured user input, it ends the turn with `stopReason: "elicitation_requested"`:
 
 ```json
 {
@@ -203,6 +203,22 @@ An agent can include both content and an elicitation request in the same turn re
         "text": "I can refactor this code in several ways. Each approach has different tradeoffs. Which strategy would you prefer?"
       }
     ],
+    "stopReason": "elicitation_requested"
+  }
+}
+```
+
+### Elicitation Request
+
+After the turn completes with `stopReason: "elicitation_requested"`, the agent immediately sends a separate `session/elicitation` request (following the same pattern as `session/request_permission`):
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 43,
+  "method": "session/elicitation",
+  "params": {
+    "sessionId": "...",
     "elicitation": {
       "id": "refactor-strategy-001",
       "type": "select",
@@ -230,34 +246,22 @@ An agent can include both content and an elicitation request in the same turn re
           "description": "Maximum optimization, requires review"
         }
       ]
-    },
-    "stopReason": "elicitation_requested"
+    }
   }
 }
 ```
 
-The agent displays content to the user, then presents the elicitation UI. The `stopReason` indicates why the turn has stopped (awaiting user input).
+The client presents the elicitation UI to the user based on the input type and constraints.
 
 ### User Response
 
-When a user responds to an elicitation request, the response is included in the next turn request:
+When the user responds to an elicitation request, the client sends a separate `session/elicitation` response:
 
 ```json
 {
-  "method": "session/turn",
-  "params": {
-    "sessionId": "...",
-    "messages": [
-      {
-        "role": "user",
-        "content": [
-          {
-            "type": "text",
-            "text": "I'll go with balanced"
-          }
-        ]
-      }
-    ],
+  "jsonrpc": "2.0",
+  "id": 43,
+  "result": {
     "elicitationResponse": {
       "id": "refactor-strategy-001",
       "value": "balanced"
@@ -265,6 +269,8 @@ When a user responds to an elicitation request, the response is included in the 
   }
 }
 ```
+
+The agent then continues processing with the user's input in the next turn or takes immediate action based on the response.
 
 ### Client Capabilities
 
