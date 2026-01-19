@@ -44,7 +44,7 @@ jobs:
         run: npm run format:check
 
       - name: Check for typos
-        uses: crate-ci/typos@bb4666ad77b539a6b4ce4eda7ebb6de553704021
+        uses: crate-ci/typos@65120634e79d8374d1aa2f27e54baa0c364fff5a
         with:
           config: ./typos.toml
 
