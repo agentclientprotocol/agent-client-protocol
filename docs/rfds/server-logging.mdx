@@ -8,9 +8,7 @@ Author(s): [@chazcb](https://github.com/chazcb)
 
 > What are you proposing to change?
 
-Add a `log` notification that allows agents to send purely informational diagnostic messages to clients without terminating operations.
-
-JSON-RPC error responses terminate the request—the run is over. But many situations (approaching rate limit, using fallback model, retrying a failed request) warrant informing the client *without* stopping the run. This proposal adds that capability.
+Add a `log` notification that allows agents to send diagnostic messages to clients.
 
 ## Status quo
 
