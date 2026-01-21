@@ -20,7 +20,7 @@ ACP has no mechanism for agents to proactively notify clients about diagnostic i
 
 1. **JSON-RPC errors terminate requests**: If an agent returns an error, the run stops. There's no way to report non-fatal issues.
 
-2. **`session/update` requires a session**: Connection-wide errors (MCP server failures, server shutting down) can't be communicated because there's no session to attach them to.
+2. **`session/update` requires a session**: Connection-wide issues (server shutting down, configuration problems) can't be communicated because there's no session to attach them to.
 
 3. **Errors during long runs are invisible**: A prompt turn can run for minutes. If something goes wrong mid-run but the agent can recover, the client has no visibility.
 
@@ -107,7 +107,7 @@ Several reasons:
 
 3. **Opt-in presentation**: Not all clients care about logs. A separate channel lets clients ignore them entirely without polluting the conversation stream.
 
-4. **Connection-wide messages**: Errors can occur before any session exists (e.g., MCP server failing to connect after `initialize` but before `session/new`). `session/update` requires a `sessionId`, so it simply can't be used in these cases.
+4. **Connection-wide messages**: Errors can occur before any session exists (e.g., after `initialize` but before `session/new`). `session/update` requires a `sessionId`, so it simply can't be used in these cases.
 
 ### Why not use a separate channel (stderr, separate SSE endpoint, etc.)?
 
