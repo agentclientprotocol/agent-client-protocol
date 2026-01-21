@@ -32,7 +32,7 @@ Today, ACP has several limitations around server-to-client diagnostic messaging:
 
 3. **No severity levels**: There's no standard way to indicate whether a message is an error, warning, informational, or debug-level.
 
-4. **stderr is informal**: The transport spec mentions agents MAY write to stderr for logging, but this is unstructured and clients may ignore it.
+4. **Transport-agnostic gap**: ACP supports multiple transports (stdio, WebSocket, HTTP). While the stdio transport allows informal stderr logging, other transports have no equivalent. A protocol-level logging mechanism ensures consistent behavior across all transports.
 
 ### Real-world problems this causes
 
@@ -180,7 +180,7 @@ Agents should be reasonable about log frequency.
 
 3. **Out-of-band telemetry (like agent-telemetry-export RFD)**: Good for observability backends but doesn't solve in-band client notification needs.
 
-4. **stderr logging**: Already exists informally but is unstructured, has no levels, and clients may ignore it.
+4. **Transport-specific logging (e.g., stderr)**: Only works for stdio transport. ACP is transport-agnostic, so we need a protocol-level solution that works over WebSocket, HTTP, and any future transports.
 
 5. **New capability negotiation**: Considered requiring a capability, but logging is basic infrastructure that all clients should handle (even if just ignoring it).
 
@@ -189,6 +189,23 @@ The proposed `log` notification is the simplest solution that:
 - Supports both session-scoped and connection-wide messages
 - Uses standard log levels
 - Fits ACP's existing patterns
+- Works identically across all transports
+
+### How does this compare to other protocols?
+
+| Protocol | Method | Levels | Scoping | Notes |
+|----------|--------|--------|---------|-------|
+| **ACP (proposed)** | `log` | RFC 5424 (8 levels) | Optional `sessionId` | Connection-wide or session-scoped |
+| **MCP** | `notifications/message` | RFC 5424 (8 levels) | None (server-wide) | Requires `logging` capability; has `logging/setLevel` request |
+| **LSP** | `window/logMessage` | 5 levels (Error→Debug) | None | Separate `window/showMessage` for UI display |
+| **A2A** | None (via `TaskStatus.message`) | None | Task-scoped | Errors via binding-specific mechanisms (JSON-RPC, gRPC, HTTP Problem Details) |
+| **AG-UI** | `RunError` event | None | Run-scoped | Event-driven; uses `StepStarted`/`StepFinished` for progress |
+
+**Key design choices:**
+
+- **RFC 5424 levels**: Aligns with MCP for ecosystem consistency. More expressive than LSP's 5 levels.
+- **Optional `sessionId`**: Unlike MCP (server-wide only) or A2A/AG-UI (task/run-scoped only), ACP supports both connection-wide AND session-scoped messages.
+- **Single method**: Unlike LSP which separates `logMessage` (background) from `showMessage` (UI), ACP uses one method with levels. Clients decide presentation.
 
 ## Revision history
 
