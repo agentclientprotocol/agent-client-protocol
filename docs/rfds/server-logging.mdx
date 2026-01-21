@@ -159,13 +159,38 @@ Agents may emit both: a `log` notification for user-visible errors AND detailed 
 
 ### Why not add a variant to `SessionUpdate`?
 
-`SessionUpdate` variants are delivered via `session/update`, which requires a `sessionId`. This means:
+There are several reasons to keep logging separate from `session/update`:
 
-1. You cannot send messages before any session exists
-2. You cannot send connection-wide messages that affect all sessions
-3. Semantically, log messages are different from session state updates (chunks, tool calls, mode changes)
+1. **Connection-level messages are essential**: Errors can occur before any session exists (during initialization, MCP server connection, authentication). A session-scoped mechanism simply cannot handle these cases.
 
-A separate `log` notification cleanly handles all scoping scenarios.
+2. **Separation of concerns**: Log messages are conceptually different from conversation state. `SessionUpdate` represents the actual conversation flow (user messages, agent responses, tool calls, mode changes). Mixing diagnostic notifications into that stream forces clients to filter out messages they may not want to display in the conversation UI. A separate channel lets clients handle logs independently—show them in a status bar, a separate panel, or ignore them entirely.
+
+3. **Opt-in presentation**: Not all clients care about every log message. By keeping logs separate, clients can choose their level of engagement without polluting the conversation thread.
+
+### Why not require capability negotiation for logging?
+
+We considered requiring a `logging` capability (like MCP does), but rejected it because:
+
+1. **Pre-initialize errors**: Connection-level errors can occur *before* `initialize` completes. If the agent can't send logs until capabilities are negotiated, critical startup errors would be lost.
+
+2. **Basic infrastructure**: Logging is fundamental enough that all clients should be able to receive it (even if they choose to ignore it). Making it capability-gated adds friction without clear benefit.
+
+Clients that don't want to display logs can simply ignore `log` notifications.
+
+### When should agents use `log` vs JSON-RPC error responses?
+
+**JSON-RPC errors should still be used when possible.** The `log` notification is specifically for out-of-band situations where there's no request to respond to:
+
+| Situation | Use |
+|-----------|-----|
+| Request fails (invalid params, auth required, etc.) | JSON-RPC error response |
+| Connection to upstream service lost | `log` notification |
+| Rate limit hit during request processing | JSON-RPC error response |
+| Approaching rate limit (proactive warning) | `log` notification |
+| MCP server disconnected | `log` notification |
+| Server shutting down soon | `log` notification |
+
+The rule of thumb: if there's a pending request that caused the error, respond with a JSON-RPC error. If the error/warning is unsolicited (no request triggered it), use `log`.
 
 ### Why use RFC 5424 log levels instead of simpler error/warning/info?
 
