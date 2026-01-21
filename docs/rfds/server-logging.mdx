@@ -8,9 +8,9 @@ Author(s): [@chazcb](https://github.com/chazcb)
 
 > What are you proposing to change?
 
-Add a `log` notification that allows agents to send diagnostic messages to clients without terminating operations. This enables real-time visibility into agent health, warnings, and errors.
+Add a `log` notification that allows agents to send diagnostic messages to clients without terminating operations.
 
-**Key insight**: JSON-RPC error responses terminate the request. But many situations (MCP server disconnected, approaching rate limit, using fallback model) warrant notifying the client *without* stopping the run.
+JSON-RPC error responses terminate the request—the run is over. But many situations (approaching rate limit, using fallback model, retrying a failed request) warrant notifying the client *without* stopping the run. This proposal adds that capability.
 
 ## Status quo
 
@@ -27,9 +27,9 @@ ACP has no mechanism for agents to proactively notify clients about diagnostic i
 4. **No standard severity levels**: No way to distinguish errors from warnings from informational messages.
 
 **Real-world examples:**
-- MCP server disconnects, but other tools still work → client should know, but run continues
-- Approaching rate limit → warn the user, don't abort
-- Using fallback model → informational, definitely don't abort
+- Backing model rate limited → warn the user, retry in progress
+- Backing service disconnected → informational, reconnecting
+- Using fallback model → informational, run continues
 - Server shutting down in 5 minutes → warn all sessions
 
 ## What we propose to do about it
@@ -44,12 +44,12 @@ Add a `log` notification (agent → client) that requires capability negotiation
   "method": "log",
   "params": {
     "level": "warning",
-    "message": "MCP server 'database-tools' disconnected, retrying...",
+    "message": "Backing model rate limited, retrying in 5 seconds...",
     "sessionId": "abc-123",
-    "logger": "mcp",
+    "logger": "model",
     "code": -32001,
     "timestamp": "2025-01-21T10:30:00Z",
-    "data": { "server": "database-tools", "retryIn": 5 }
+    "data": { "model": "claude-3", "retryIn": 5 }
   }
 }
 ```
@@ -128,7 +128,7 @@ The key question is: **should the run stop?**
 - JSON-RPC error responses terminate the request—the run is over
 - `log` notifications are independent—the run continues
 
-Many situations (MCP server disconnected but others work, approaching rate limit, using fallback model) warrant notifying the client without aborting.
+Many situations (backing model rate limited, approaching context limit, using fallback model) warrant notifying the client without aborting.
 
 Also: not all agents use `prompt()`. Some use extension methods like `_enqueue` (a notification). Notifications have no response, so there's nowhere to return an error.
 
