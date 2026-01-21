@@ -23,7 +23,7 @@ But neither option works when:
 
 - There's no active JSON RPC request to attach an error response to
 - We don't want to fail the request (e.g., retries, rate limiting, fallback selection)
-- There's no session yet (diagnostics after `initialize` but before `session/start`)
+- There's no session yet (diagnostics after `initialize` but before `session/new`)
 - We don't want to put diagnostics in chat history, or to force clients to filter non-chat content, or to fake chat content just to send diagnostic logs, etc.
 
 Without a way to surface these situations, users can be left confused when their ACP connection or session seem to stall or behave unexpectedly.
@@ -89,7 +89,31 @@ If `level` is omitted, agents should default to `info`. Agents MUST NOT send log
 
 ### Method naming
 
-`log` follows ACP’s convention for connection-level operations (e.g., `initialize`, `authenticate`) rather than introducing a new namespace.
+`log` follows ACP's convention for connection-level operations (e.g., `initialize`, `authenticate`) rather than introducing a new namespace.
+
+## Alternatives considered
+
+### Add a notification type to `session/update`
+
+Extend `session/update` with a new notification type for diagnostics. This keeps diagnostics within the existing session machinery but has drawbacks: it requires a session (can't send connection-wide diagnostics), risks polluting chat history unless clients explicitly filter, and overloads `session/update` with non-conversation concerns. Additionally, ACP specifies that session history is replayed on `session/load`, but diagnostic logs are transient and shouldn't be replayed—they're not part of the conversation.
+
+### Structured `status` notification
+
+Instead of general-purpose logging, define a more structured `status` notification explicitly for lightweight status info—similar to Claude Code's interim status messages ("Thinking...", "Searching files..."). This would be scoped to either the current session or the agent/connection level.
+
+**Tradeoffs**: More constrained semantics could be clearer for clients, but less flexible. Logging with severity levels is a well-understood pattern; inventing a new "status" abstraction may not add value over `log` with `level: info`.
+
+### Explicit progress or heartbeat notification
+
+Define a `progress` or `heartbeat` notification specifically for long-running operations, with structured fields like `percentComplete`, `estimatedTimeRemaining`, etc.
+
+**Tradeoffs**: Progress is better suited to `session/update` since it's about task state. Heartbeats could be useful but solve a different problem (connection liveness) than diagnostics. A `log` notification can express "retrying in 5s" without requiring structured progress semantics.
+
+### Transport-level mechanisms
+
+Use HTTP headers, WebSocket ping payloads, or other transport-level channels for status.
+
+**Tradeoffs**: ACP is transport-agnostic. Relying on transport-specific mechanisms would fragment implementations and lose capability negotiation.
 
 ## Shiny future
 
