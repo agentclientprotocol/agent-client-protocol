@@ -192,6 +192,17 @@ Clients that don't want to display logs can simply ignore `log` notifications.
 
 The rule of thumb: if there's a pending request that caused the error, respond with a JSON-RPC error. If the error/warning is unsolicited (no request triggered it), use `log`.
 
+### Is this a breaking change?
+
+**No.** Per JSON-RPC 2.0, notifications are fire-and-forget—the sender does not expect a response. If a client receives a notification for a method it doesn't recognize, it simply ignores it. This is standard JSON-RPC behavior.
+
+This means:
+- Existing clients will safely ignore `log` notifications from updated agents
+- Updated clients will work with older agents that don't send `log` notifications
+- No version negotiation or capability exchange is required
+
+The proposal is fully backward-compatible.
+
 ### Why use RFC 5424 log levels instead of simpler error/warning/info?
 
 RFC 5424 levels are a well-established standard used by syslog, many logging libraries, and MCP. Using the same levels:
