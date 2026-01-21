@@ -12,8 +12,9 @@ Add a `log` notification that allows agents to send diagnostic messages (errors,
 
 Currently, servers have no way to proactively notify clients about errors, warnings, or other diagnostic information outside of request-response cycles. This RFD proposes a simple, flexible logging mechanism that:
 
-- Works before, during, and after sessions exist
-- Supports 8 severity levels (RFC 5424/MCP-compatible)
+- Supports both connection-wide and session-specific messages via optional `sessionId`
+- Uses 8 severity levels (RFC 5424/MCP-compatible)
+- Requires capability negotiation for clean opt-in (no breaking changes)
 - Includes optional structured data and error codes
 - Follows ACP's existing naming conventions
 
@@ -80,6 +81,26 @@ Add a new `log` notification method (agent → client) with the following struct
 | `timestamp` | `string` | No | ISO 8601 timestamp when the event occurred |
 | `data` | `object` | No | Additional structured data |
 | `_meta` | `object` | No | Extensibility metadata |
+
+### Capability Declaration
+
+Clients that want to receive `log` notifications MUST declare the `logging` capability during `initialize`:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "initialize",
+  "params": {
+    "protocolVersion": "0.1",
+    "clientCapabilities": {
+      "logging": {}
+    }
+  }
+}
+```
+
+Agents MUST NOT send `log` notifications to clients that did not declare this capability.
 
 ### Log Levels (RFC 5424)
 
@@ -167,15 +188,43 @@ There are several reasons to keep logging separate from `session/update`:
 
 3. **Opt-in presentation**: Not all clients care about every log message. By keeping logs separate, clients can choose their level of engagement without polluting the conversation thread.
 
-### Why not require capability negotiation for logging?
+### Should logging require capability negotiation?
 
-We considered requiring a `logging` capability (like MCP does), but rejected it because:
+**Yes.** Agents MUST only send `log` notifications to clients that declare support via a `logging` capability in `ClientCapabilities` during `initialize`.
 
-1. **Pre-initialize errors**: Connection-level errors can occur *before* `initialize` completes. If the agent can't send logs until capabilities are negotiated, critical startup errors would be lost.
+This works because:
 
-2. **Basic infrastructure**: Logging is fundamental enough that all clients should be able to receive it (even if they choose to ignore it). Making it capability-gated adds friction without clear benefit.
+1. **Initialize handles startup errors**: The `initialize` method is a request/response—if something is broken during startup, the agent responds with a JSON-RPC error. There's no "pre-initialize" gap where we need unsolicited notifications.
 
-Clients that don't want to display logs can simply ignore `log` notifications.
+2. **Clean opt-in**: Clients explicitly declare they want log notifications. Older clients that don't support `log` simply don't receive them—no SDK changes needed, no breaking changes.
+
+3. **Follows MCP pattern**: MCP requires a `logging` capability for the same reasons.
+
+**Flow:**
+1. Transport connects
+2. Client calls `initialize()` with `clientCapabilities: { logging: {} }`
+3. If startup fails → Agent responds with JSON-RPC error
+4. If startup succeeds → Agent knows client supports `log`, can send notifications
+
+Clients that don't declare `logging` capability won't receive `log` notifications, but can still receive JSON-RPC errors in response to their method calls.
+
+### Why not just return errors on `prompt()` responses?
+
+The key question is: **should the run stop?**
+
+A JSON-RPC error response terminates the request—the run is over. But many situations warrant notifying the client *without* aborting:
+
+1. **Non-fatal issues during long runs**: A prompt turn can run for minutes. If one MCP server disconnects but others are fine, the agent might continue with degraded functionality. The client should know about the issue, but the run shouldn't stop.
+
+2. **Warnings and informational messages**: "Approaching rate limit" or "Using fallback model" are useful to surface, but definitely shouldn't abort the run.
+
+3. **Connection-wide issues**: Some errors affect all sessions (server shutting down soon). There's no single prompt to attach these to.
+
+4. **Out-of-band timing**: Errors can occur between prompt turns, when no request is pending.
+
+5. **Alternative interaction patterns**: Not all ACP implementations use `prompt()`. Some agents use custom extension methods like `_enqueue` (a notification for steering during a run). Since notifications don't have responses, there's no place to return a JSON-RPC error.
+
+The `log` notification provides an independent channel for diagnostic messages that don't terminate the current operation.
 
 ### When should agents use `log` vs JSON-RPC error responses?
 
@@ -194,14 +243,13 @@ The rule of thumb: if there's a pending request that caused the error, respond w
 
 ### Is this a breaking change?
 
-**No.** Per JSON-RPC 2.0, notifications are fire-and-forget—the sender does not expect a response. If a client receives a notification for a method it doesn't recognize, it simply ignores it. This is standard JSON-RPC behavior.
+**No.** Because logging requires capability negotiation:
 
-This means:
-- Existing clients will safely ignore `log` notifications from updated agents
-- Updated clients will work with older agents that don't send `log` notifications
-- No version negotiation or capability exchange is required
+- **Older clients** don't declare `logging` capability → agents don't send `log` notifications → no change in behavior
+- **Older agents** don't send `log` notifications → updated clients just don't receive any → no change in behavior
+- **Updated clients + updated agents** → client declares `logging` capability → agent sends `log` notifications → new feature works
 
-The proposal is fully backward-compatible.
+No SDK changes are required for backward compatibility. Clients opt-in by declaring the capability.
 
 ### Why use RFC 5424 log levels instead of simpler error/warning/info?
 
