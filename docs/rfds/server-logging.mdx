@@ -131,6 +131,32 @@ Once this feature exists:
 
 > What questions have arisen over the course of authoring this document or during subsequent discussions?
 
+### How does this relate to the [Agent Telemetry Export RFD](./agent-telemetry-export)?
+
+They are **complementary**, serving different purposes:
+
+| Aspect | `log` notification (this RFD) | OTEL Telemetry Export |
+|--------|------------------------------|----------------------|
+| **Channel** | In-band (ACP protocol messages) | Out-of-band (HTTP to OTLP collector) |
+| **Purpose** | Real-time user-facing notifications | Observability/debugging infrastructure |
+| **Audience** | End users via client UI | Developers, ops teams, observability backends |
+| **Transport** | Works on all ACP transports | Requires HTTP (stdio subprocess focus) |
+| **Volume** | Low (errors, warnings, key events) | High (traces, spans, metrics, debug logs) |
+
+**When to use which:**
+
+- **`log` notification**: User-relevant events that should appear in the client UI
+  - "Rate limit exceeded - waiting 60s" → User sees toast/status bar
+  - "MCP server disconnected" → User knows why tools stopped working
+
+- **OTEL telemetry**: Developer/ops diagnostics for debugging and monitoring
+  - Detailed span traces with timing
+  - Token usage metrics
+  - High-volume debug logs
+  - Integration with Datadog, Grafana, etc.
+
+Agents may emit both: a `log` notification for user-visible errors AND detailed OTEL telemetry for debugging the same issue.
+
 ### Why not add a variant to `SessionUpdate`?
 
 `SessionUpdate` variants are delivered via `session/update`, which requires a `sessionId`. This means:
