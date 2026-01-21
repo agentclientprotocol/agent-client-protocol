@@ -196,10 +196,10 @@ The proposed `log` notification is the simplest solution that:
 | Protocol | Method | Levels | Scoping | Notes |
 |----------|--------|--------|---------|-------|
 | **ACP (proposed)** | `log` | RFC 5424 (8 levels) | Optional `sessionId` | Connection-wide or session-scoped |
-| **MCP** | `notifications/message` | RFC 5424 (8 levels) | None (server-wide) | Requires `logging` capability; has `logging/setLevel` request |
-| **LSP** | `window/logMessage` | 5 levels (Error→Debug) | None | Separate `window/showMessage` for UI display |
-| **A2A** | None (via `TaskStatus.message`) | None | Task-scoped | Errors via binding-specific mechanisms (JSON-RPC, gRPC, HTTP Problem Details) |
-| **AG-UI** | `RunError` event | None | Run-scoped | Event-driven; uses `StepStarted`/`StepFinished` for progress |
+| **[MCP](https://modelcontextprotocol.io/specification/2025-11-25/server/utilities/logging)** | `notifications/message` | RFC 5424 (8 levels) | None (server-wide) | Requires `logging` capability; has `logging/setLevel` request |
+| **[LSP](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#window_logMessage)** | `window/logMessage` | 5 levels (Error→Debug) | None | Separate `window/showMessage` for UI display |
+| **[A2A](https://a2a-protocol.org/latest/specification/)** | None (via `TaskStatus.message`) | None | Task-scoped | Errors via binding-specific mechanisms (JSON-RPC, gRPC, HTTP Problem Details) |
+| **[AG-UI](https://docs.ag-ui.com/concepts/events)** | `RunError` event | None | Run-scoped | Event-driven; uses `StepStarted`/`StepFinished` for progress |
 
 **Key design choices:**
 
