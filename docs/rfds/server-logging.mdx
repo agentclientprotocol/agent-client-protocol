@@ -1,0 +1,195 @@
+---
+title: "Server-to-Client Logging"
+---
+
+Author(s): [@chazcb](https://github.com/chazcb)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Add a `log` notification that allows agents to send diagnostic messages (errors, warnings, info, etc.) to clients. This notification supports both connection-wide and session-specific messages via an optional `sessionId` field.
+
+Currently, servers have no way to proactively notify clients about errors, warnings, or other diagnostic information outside of request-response cycles. This RFD proposes a simple, flexible logging mechanism that:
+
+- Works before, during, and after sessions exist
+- Supports 8 severity levels (RFC 5424/MCP-compatible)
+- Includes optional structured data and error codes
+- Follows ACP's existing naming conventions
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+Today, ACP has several limitations around server-to-client diagnostic messaging:
+
+1. **JSON-RPC errors are response-only**: The JSON-RPC 2.0 specification only allows errors in response to method calls. Servers cannot proactively send error notifications.
+
+2. **SessionNotification requires a session**: The existing `session/update` notification requires a `sessionId`. This means servers cannot communicate errors that occur:
+   - Before any session is created
+   - During connection setup or MCP server initialization
+   - At the connection level (affecting all sessions)
+
+3. **No severity levels**: There's no standard way to indicate whether a message is an error, warning, informational, or debug-level.
+
+4. **stderr is informal**: The transport spec mentions agents MAY write to stderr for logging, but this is unstructured and clients may ignore it.
+
+### Real-world problems this causes
+
+- **MCP server connection failures**: When an agent fails to connect to an MCP server, there's no way to inform the client. The user just sees tools not working.
+- **Rate limiting**: When a provider rate-limits requests, the server can only fail the current request. It cannot proactively warn about approaching limits or advise the client to wait.
+- **Transient errors**: Connection timeouts, retries, and other transient issues are invisible to clients.
+- **Debugging**: Developers have no visibility into agent behavior without external logging infrastructure.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+Add a new `log` notification method (agent → client) with the following structure:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "log",
+  "params": {
+    "level": "error",
+    "sessionId": "abc-123",
+    "logger": "mcp.database",
+    "message": "Connection to MCP server 'database-tools' failed",
+    "code": -32001,
+    "timestamp": "2025-01-21T10:30:00Z",
+    "data": {
+      "server": "database-tools",
+      "error": "ECONNREFUSED",
+      "retryIn": 5
+    },
+    "_meta": {}
+  }
+}
+```
+
+### Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `level` | `LogLevel` | Yes | Severity level of the message |
+| `message` | `string` | Yes | Human-readable log message |
+| `sessionId` | `SessionId` | No | Session this message pertains to. Omit for connection-wide messages. |
+| `logger` | `string` | No | Name of the logger/component emitting this message (e.g., "mcp.database", "auth") |
+| `code` | `ErrorCode` | No | Structured error code (uses same space as JSON-RPC errors) |
+| `timestamp` | `string` | No | ISO 8601 timestamp when the event occurred |
+| `data` | `object` | No | Additional structured data |
+| `_meta` | `object` | No | Extensibility metadata |
+
+### Log Levels (RFC 5424)
+
+The `LogLevel` enum follows RFC 5424 syslog severity levels, which are also used by MCP:
+
+| Level | Description |
+|-------|-------------|
+| `debug` | Detailed debugging information |
+| `info` | General informational messages |
+| `notice` | Normal but significant events |
+| `warning` | Warning conditions |
+| `error` | Error conditions |
+| `critical` | Critical conditions |
+| `alert` | Action must be taken immediately |
+| `emergency` | System is unusable |
+
+### Why `log` (no namespace)?
+
+The method name follows ACP's convention for connection-level operations:
+
+| Pattern | Examples |
+|---------|----------|
+| No namespace (connection-level) | `initialize`, `authenticate`, **`log`** |
+| Resource namespace | `session/*`, `fs/*`, `terminal/*` |
+| Protocol-level | `$/cancel_request` |
+
+We chose `log` over alternatives:
+- `log/message` - Creates a namespace with only one method
+- `notifications/message` - ACP doesn't use the `notifications/` pattern
+- `SessionUpdate::Log` - Can't handle connection-wide messages
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+Once this feature exists:
+
+1. **Better error visibility**: Clients can display connection errors, rate limit warnings, and other diagnostic information to users. IDEs could show a status indicator or notification panel for agent health.
+
+2. **Proactive warnings**: Servers can warn about approaching limits (token budget, rate limits) before they become errors, allowing clients to adapt.
+
+3. **Debugging support**: Developers can see what's happening inside agents without external logging infrastructure. The `logger` field allows filtering by component.
+
+4. **Session-scoped context**: Errors related to specific sessions can be attributed correctly, while connection-wide issues (like MCP server failures) are clearly distinguished.
+
+5. **Structured error handling**: The optional `code` field allows clients to programmatically handle specific error types (retry on rate limit, prompt for auth on auth errors, etc.).
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Why not add a variant to `SessionUpdate`?
+
+`SessionUpdate` variants are delivered via `session/update`, which requires a `sessionId`. This means:
+
+1. You cannot send messages before any session exists
+2. You cannot send connection-wide messages that affect all sessions
+3. Semantically, log messages are different from session state updates (chunks, tool calls, mode changes)
+
+A separate `log` notification cleanly handles all scoping scenarios.
+
+### Why use RFC 5424 log levels instead of simpler error/warning/info?
+
+RFC 5424 levels are a well-established standard used by syslog, many logging libraries, and MCP. Using the same levels:
+
+- Provides familiar semantics for developers
+- Enables compatibility with MCP logging
+- Supports future use cases (debug logging, critical alerts)
+
+Clients can always map these to simpler categories in their UI.
+
+### How should clients handle log messages?
+
+Clients have flexibility in how they present log messages:
+
+- **IDE status bar**: Show counts of errors/warnings with hover details
+- **Notification toasts**: Pop up for critical/alert/emergency levels
+- **Log panel**: Dedicated panel showing filterable log history
+- **Ignore**: For levels below a configured threshold
+
+The `logger` field can help clients filter/categorize messages.
+
+### Can agents flood clients with log messages?
+
+Yes, like any notification. Clients should:
+
+- Rate-limit UI updates
+- Drop old messages if buffer is full
+- Consider filtering by level
+
+Agents should be reasonable about log frequency.
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+1. **Tunneling over `SessionUpdate`**: Rejected because it can't handle connection-wide messages and mixes concerns.
+
+2. **JSON-RPC error responses**: Not possible - JSON-RPC only allows errors in response to requests.
+
+3. **Out-of-band telemetry (like agent-telemetry-export RFD)**: Good for observability backends but doesn't solve in-band client notification needs.
+
+4. **stderr logging**: Already exists informally but is unstructured, has no levels, and clients may ignore it.
+
+5. **New capability negotiation**: Considered requiring a capability, but logging is basic infrastructure that all clients should handle (even if just ignoring it).
+
+The proposed `log` notification is the simplest solution that:
+- Works at all lifecycle stages
+- Supports both session-scoped and connection-wide messages
+- Uses standard log levels
+- Fits ACP's existing patterns
+
+## Revision history
+
+- **2025-01-21**: Initial draft
