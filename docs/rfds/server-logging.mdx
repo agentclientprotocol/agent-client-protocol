@@ -8,9 +8,9 @@ Author(s): [@chazcb](https://github.com/chazcb)
 
 > What are you proposing to change?
 
-Add a `log` notification that allows agents to send diagnostic messages to clients without terminating operations.
+Add a `log` notification that allows agents to send purely informational diagnostic messages to clients without terminating operations.
 
-JSON-RPC error responses terminate the request—the run is over. But many situations (approaching rate limit, using fallback model, retrying a failed request) warrant notifying the client *without* stopping the run. This proposal adds that capability.
+JSON-RPC error responses terminate the request—the run is over. But many situations (approaching rate limit, using fallback model, retrying a failed request) warrant informing the client *without* stopping the run. This proposal adds that capability.
 
 ## Status quo
 
@@ -47,7 +47,6 @@ Add a `log` notification (agent → client) that requires capability negotiation
     "message": "Backing model rate limited, retrying in 5 seconds...",
     "sessionId": "abc-123",
     "logger": "model",
-    "code": -32001,
     "timestamp": "2025-01-21T10:30:00Z",
     "data": { "model": "claude-3", "retryIn": 5 }
   }
@@ -69,6 +68,8 @@ Clients opt-in by declaring `logging` capability during `initialize`:
 
 Agents MUST NOT send `log` notifications to clients that didn't declare this capability. This ensures backward compatibility—older clients simply don't receive notifications they can't handle.
 
+Log notifications are purely informational. Clients MAY display them to users but MUST NOT take automated action based on their contents.
+
 ### Fields
 
 | Field | Type | Required | Description |
@@ -76,10 +77,9 @@ Agents MUST NOT send `log` notifications to clients that didn't declare this cap
 | `level` | `LogLevel` | Yes | RFC 5424 severity: `debug`, `info`, `notice`, `warning`, `error`, `critical`, `alert`, `emergency` |
 | `message` | `string` | Yes | Human-readable message |
 | `sessionId` | `SessionId` | No | Omit for connection-wide messages |
-| `logger` | `string` | No | Component name (e.g., "mcp", "auth") |
-| `code` | `ErrorCode` | No | Structured error code |
+| `logger` | `string` | No | Component name (e.g., "model", "auth") |
 | `timestamp` | `string` | No | ISO 8601 timestamp |
-| `data` | `object` | No | Additional structured data |
+| `data` | `object` | No | Additional context for display/debugging (opaque to clients) |
 | `_meta` | `object` | No | Extensibility metadata |
 
 ### Method Naming
