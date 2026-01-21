@@ -1,5 +1,5 @@
 ---
-title: "Server-to-Client Logging"
+title: "Agent-to-Client Logging"
 ---
 
 Author(s): [@chazcb](https://github.com/chazcb)
@@ -8,33 +8,48 @@ Author(s): [@chazcb](https://github.com/chazcb)
 
 > What are you proposing to change?
 
-Add a `log` notification that allows agents to send diagnostic messages to clients.
+Introduce a capability-gated `log` notification (agent → client) so agents can share diagnostic messages without polluting conversation history.
 
 ## Status quo
 
-> How do things work today and what problems does this cause?
+> How do things work today and what problems does this cause? Why would we change things?
 
-ACP has no mechanism for agents to proactively notify clients about diagnostic information:
+Today, agents have limited ways to inform clients about status that might impact their experience. The two options are:
 
-1. **JSON-RPC errors terminate requests**: If an agent returns an error, the run stops. There's no way to report non-fatal issues.
+1. **JSON-RPC errors**: Terminate the request immediately with an informative error message the client can display to the user
+2. **`session/update`**: Update conversation history with diagnostic information in the `agent_message_chunk` or other chat history notification
 
-2. **`session/update` requires a session**: Connection-wide issues (server shutting down, configuration problems) can't be communicated because there's no session to attach them to.
+But neither option works when:
 
-3. **Errors during long runs are invisible**: A prompt turn can run for minutes. If something goes wrong mid-run but the agent can recover, the client has no visibility.
+- There's no active JSON RPC request to attach an error response to
+- We don't want to fail the request (e.g., retries, rate limiting, fallback selection)
+- There's no session yet (diagnostics after `initialize` but before `session/start`)
+- We don't want to put diagnostics in chat history, or to force clients to filter non-chat content, or to fake chat content just to send diagnostic logs, etc.
 
-4. **No standard severity levels**: No way to distinguish errors from warnings from informational messages.
-
-**Real-world examples:**
-- Backing model rate limited → warn the user, retry in progress
-- Backing service disconnected → informational, reconnecting
-- Using fallback model → informational, run continues
-- Server shutting down in 5 minutes → warn all sessions
+Without a way to surface these situations, users can be left confused when their ACP connection or session seem to stall or behave unexpectedly.
 
 ## What we propose to do about it
 
 > What are you proposing to improve the situation?
 
-Add a `log` notification (agent → client) that requires capability negotiation:
+Add a `log` JSON-RPC notification that is explicitly capability-gated. Clients opt in via `clientCapabilities.logging`; agents only send logs to clients that declare the capability. Clients can optionally specify a minimum log level.
+
+```json
+{
+  "method": "initialize",
+  "params": {
+    "clientCapabilities": {
+      "logging": {
+        "level": "warning"
+      }
+    }
+  }
+}
+```
+
+If `level` is omitted, agents should default to `info`. Agents MUST NOT send logs below the client's requested level.
+
+### Method
 
 ```json
 {
@@ -51,146 +66,88 @@ Add a `log` notification (agent → client) that requires capability negotiation
 }
 ```
 
-### Capability Declaration
-
-Clients opt-in by declaring `logging` capability during `initialize`:
-
-```json
-{
-  "method": "initialize",
-  "params": {
-    "clientCapabilities": { "logging": {} }
-  }
-}
-```
-
-Agents MUST NOT send `log` notifications to clients that didn't declare this capability. This ensures backward compatibility—older clients simply don't receive notifications they can't handle.
-
-Log notifications are purely informational. Clients MAY display them to users but MUST NOT take automated action based on their contents.
-
 ### Fields
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `level` | `LogLevel` | Yes | RFC 5424 severity: `debug`, `info`, `notice`, `warning`, `error`, `critical`, `alert`, `emergency` |
-| `message` | `string` | Yes | Human-readable message |
+| `message` | `string` | Yes | Human-readable summary safe for display |
 | `sessionId` | `SessionId` | No | Omit for connection-wide messages |
 | `logger` | `string` | No | Component name (e.g., "model", "auth") |
-| `timestamp` | `string` | No | ISO 8601 timestamp |
-| `data` | `object` | No | Additional context for display/debugging (opaque to clients) |
+| `timestamp` | `string` | No | ISO 8601 timestamp if provided |
+| `data` | `object` | No | Opaque context (clients must not depend on structure) |
 | `_meta` | `object` | No | Extensibility metadata |
 
-### Method Naming
+### Semantics
 
-The method name `log` follows ACP's convention for connection-level operations (like `initialize`, `authenticate`) rather than using a namespace like `log/message`.
+- **Capability-gated**: Agents MUST NOT send `log` notification to clients that did not declare `clientCapabilities.logging`.
+- **Level filtering**: Agents MUST NOT send logs below the client's requested level (default: `info`).
+- **Informational only**: Clients MAY display logs but MUST NOT treat them as protocol-affecting or control flow signals.
+- **Best-effort delivery**: Logs are not reliable transport and are not replayed on reconnect.
+- **Session optional**: `sessionId` is optional; omitted logs are connection-wide.
+- **Manageable volume**: Implementations should keep volume low and user-relevant.
+
+### Method naming
+
+`log` follows ACP’s convention for connection-level operations (e.g., `initialize`, `authenticate`) rather than introducing a new namespace.
 
 ## Shiny future
 
 > How will things play out once this feature exists?
 
-1. **Real-time health visibility**: Clients can show agent status—errors in a panel, warnings in a status bar
-2. **Non-fatal error reporting**: Agents can report issues without aborting runs
-3. **Proactive warnings**: "Approaching rate limit" before it becomes an error
-4. **Debugging**: Developers see what's happening without external infrastructure
+- **Clear connection feedback**: Clients can surface warnings (rate limits, retries, fallbacks) so users understand what's happening.
+- **No more mysterious stalls**: Users see why things are slow (retries, rate limits) rather than assuming a hang.
+- **Better developer experience**: Diagnostics are visible without requiring OTEL or external logging.
+- **No compatibility risk**: Capability gating means legacy clients are unaffected.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+1. **Schema**: Add a `LogLevel` enum and a `LogNotification` params schema with the fields above.
+2. **Capabilities**: Add `clientCapabilities.logging` with optional `level` field for minimum severity filtering.
+3. **Protocol**: Add `log` to method tables and route it through notification handling.
+4. **Docs**: Update protocol docs and examples to show capability negotiation and sample logs.
 
 ## Frequently asked questions
 
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
 ### Why not use `session/update`?
 
-Several reasons:
-
-1. **Separation of concerns**: `SessionUpdate` represents conversation state (messages, tool calls, mode changes). Logs are diagnostic metadata, not conversation content. Mixing them forces clients to filter out logs they don't want in the conversation UI.
-
-2. **Breaking change**: Adding a log variant to `SessionUpdate` would send logs to existing clients that don't expect them. A separate capability-gated notification is opt-in and non-breaking.
-
-3. **Opt-in presentation**: Not all clients care about logs. A separate channel lets clients ignore them entirely without polluting the conversation stream.
-
-4. **Connection-wide messages**: Errors can occur before any session exists (e.g., after `initialize` but before `session/new`). `session/update` requires a `sessionId`, so it simply can't be used in these cases.
+`session/update` represents conversation state. Logs are diagnostic metadata and should not appear in chat history or require clients to filter out non-conversation content. `session/update` also can't represent connection-wide issues because it requires `sessionId`.
 
 ### Why not send diagnostics as agent text messages?
 
-Sending diagnostic info as `agent_message_chunk` would conflate conversation content with status messages:
+Agent messages are persistent conversation content. Logs are ephemeral status and should not be reloaded or forked with the session. Agent text also lacks severity levels and would require ad-hoc parsing to separate real answers from diagnostics.
 
-1. **Wrong semantics**: Agent messages are conversation history. Diagnostics are ephemeral status. "Rate limit warning from 2 hours ago" shouldn't appear when you reload a session.
+### Why not use a separate channel (stderr, SSE side channel, etc.)?
 
-2. **No severity levels**: Text chunks can't express error vs warning vs info.
-
-3. **Filtering burden**: Clients would need to parse messages to separate "real" responses from diagnostics. How? Magic prefix? `_meta` field? Both are hacky.
-
-4. **Still requires sessionId**: Doesn't solve connection-wide messages.
-
-### Why not use a separate channel (stderr, separate SSE endpoint, etc.)?
-
-1. **Transport-agnostic**: ACP works over stdio, WebSocket, HTTP, etc. A side channel like stderr only exists for stdio. A protocol-level solution works across all transports.
-
-2. **Already connected**: Clients already have an ACP connection. Why require a separate channel just for logs?
-
-3. **Session context**: The `sessionId` field ties logs to specific sessions. A separate channel would need to reinvent this.
-
-4. **Capability negotiation**: ACP already has capability negotiation. A separate channel would need its own opt-in mechanism.
-
-5. **OTEL handles heavy telemetry**: The [Agent Telemetry Export RFD](./agent-telemetry-export) covers high-volume, developer-focused observability. `log` is for low-volume, user-facing messages—different use case, belongs in-band.
+ACP is transport-agnostic. A protocol-level log works uniformly across stdio, WebSocket, and HTTP, reuses capability negotiation, and allows optional session scoping without inventing a parallel channel.
 
 ### Why not return errors on `prompt()`?
 
-The key question is: **should the run stop?**
+JSON-RPC errors terminate the request. Many conditions (rate limiting, retries, fallback selection) are non-fatal and should not end the run. Logs allow notification without aborting.
 
-- JSON-RPC error responses terminate the request—the run is over
-- `log` notifications are independent—the run continues
+### Are logs ordered relative to other notifications?
 
-Many situations (backing model rate limited, approaching context limit, using fallback model) warrant notifying the client without aborting.
+No strict guarantees. Implementations may keep logs ordered with other notifications for readability, but clients must treat them as best-effort informational messages.
 
-Also: not all agents use `prompt()`. Some use extension methods like `_enqueue` (a notification). Notifications have no response, so there's nowhere to return an error.
+### Are logs replayed after reconnect?
 
-### How does this relate to the [Agent Telemetry Export RFD](./agent-telemetry-export)?
+No. Logs are not part of session state and are not replayed.
 
-They're complementary:
+### How does this relate to Agent Telemetry Export?
 
-| | `log` notification | OTEL Telemetry |
-|-|-------------------|----------------|
-| **Channel** | In-band (ACP) | Out-of-band (HTTP) |
-| **Audience** | End users | Developers/ops |
-| **Volume** | Low (key events) | High (traces, metrics) |
-
-Use `log` for user-facing messages. Use OTEL for observability infrastructure.
+They are complementary: `log` is low-volume, user-facing diagnostics in-band; OTEL, as currently proposed, is for high-volume, developer/ops telemetry out-of-band. See `/docs/rfds/agent-telemetry-export`.
 
 ### Is this a breaking change?
 
-**No.** Capability negotiation makes it opt-in:
-- Older clients don't declare capability → don't receive notifications
-- Older agents don't send notifications → nothing changes
+No. It is opt-in via capability negotiation; older clients won't receive notifications they don't understand.
 
-### When should agents use `log` vs JSON-RPC errors?
+### Why RFC 5424 log levels instead of error/warning/info?
 
-| Situation | Use |
-|-----------|-----|
-| Request fails | JSON-RPC error (terminates request) |
-| Non-fatal issue during run | `log` notification (run continues) |
-| Proactive warning | `log` notification |
-| Connection-wide issue | `log` notification |
-
-Rule: If there's a pending request that should fail, use JSON-RPC error. Otherwise, use `log`.
-
-### Why RFC 5424 log levels instead of just error/warning/info?
-
-RFC 5424 (syslog) levels are used by MCP, most logging libraries, and observability tools. Using the same 8 levels:
-- Provides familiar semantics
-- Enables MCP compatibility
-- Supports future use cases (debug logging, critical alerts)
-
-Clients can always map to simpler categories in their UI.
-
-### How does this compare to other protocols?
-
-| Protocol | Method | Levels | Scoping |
-|----------|--------|--------|---------|
-| **ACP (proposed)** | `log` | RFC 5424 (8) | Optional `sessionId` |
-| **[MCP](https://modelcontextprotocol.io/specification/2025-11-25/server/utilities/logging)** | `notifications/message` | RFC 5424 (8) | Server-wide only |
-| **[LSP](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#window_logMessage)** | `window/logMessage` | 5 levels | None |
-| **[A2A](https://a2a-protocol.org/latest/specification/)** | None | None | Task-scoped |
-| **[AG-UI](https://docs.ag-ui.com/concepts/events)** | `RunError` event | None | Run-scoped |
-
-ACP's optional `sessionId` is unique—supports both connection-wide AND session-scoped messages.
+RFC 5424 is widely used and aligns with MCP and common logging libraries. Clients can map to simpler categories in their UI.
 
 ## Revision history
 
