@@ -109,6 +109,18 @@ Several reasons:
 
 4. **Connection-wide messages**: Errors can occur before any session exists (e.g., after `initialize` but before `session/new`). `session/update` requires a `sessionId`, so it simply can't be used in these cases.
 
+### Why not send diagnostics as agent text messages?
+
+Sending diagnostic info as `agent_message_chunk` would conflate conversation content with status messages:
+
+1. **Wrong semantics**: Agent messages are conversation history. Diagnostics are ephemeral status. "Rate limit warning from 2 hours ago" shouldn't appear when you reload a session.
+
+2. **No severity levels**: Text chunks can't express error vs warning vs info.
+
+3. **Filtering burden**: Clients would need to parse messages to separate "real" responses from diagnostics. How? Magic prefix? `_meta` field? Both are hacky.
+
+4. **Still requires sessionId**: Doesn't solve connection-wide messages.
+
 ### Why not use a separate channel (stderr, separate SSE endpoint, etc.)?
 
 1. **Transport-agnostic**: ACP works over stdio, WebSocket, HTTP, etc. A side channel like stderr only exists for stdio. A protocol-level solution works across all transports.
