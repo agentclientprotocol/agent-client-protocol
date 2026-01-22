@@ -1,0 +1,289 @@
+---
+title: "Session Input Options Discovery"
+---
+
+Author(s): [@chazcb](https://github.com/chazcb)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Allow Agents to declare what input options they accept for `session/new` and `session/load` requests in the `InitializeResponse`. This enables Clients to build dynamic configuration UIs *before* creating a session, showing users exactly what options are available and their types.
+
+This proposal complements the existing [Session Config Options RFD](./session-config-options) which handles *runtime* configuration (mode/model selectors during a session). This RFD addresses *input* discovery - what options can be passed when creating or loading sessions.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+Currently, the ACP schema defines some standard fields on `NewSessionRequest` and `LoadSessionRequest`:
+
+- `cwd` - Working directory for the session
+- `mcpServers` - List of MCP servers to connect
+
+However:
+
+1. **Not all Agents support all options** - Some agents don't use `cwd` or have their own working directory handling. Some agents don't support client-provided MCP servers. Clients have no way to know which standard options an agent actually accepts.
+
+2. **Agent-specific options are invisible** - Agents may want to accept additional options (like initial model, system prompt, subagents, etc.), but there's no standard way to expose these to clients.
+
+3. **New vs Load may differ** - Creating a new session might accept different options than loading an existing one (e.g., you might set certain options only at creation time).
+
+4. **Client UIs are static** - Without discovery, clients must either hardcode known options or provide generic key-value inputs, neither of which provides a good user experience.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+Add an `inputOptions` field to `InitializeResponse` that declares what options an Agent accepts for session creation and loading. Use a JSON Schema subset for type definitions to enable rich client UIs.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "protocolVersion": 1,
+    "agentCapabilities": { ... },
+    "agentInfo": { ... },
+    "inputOptions": {
+      "newSession": {
+        "model": {
+          "enum": ["claude-sonnet-4-20250514", "claude-opus-4-20250514", "claude-haiku"],
+          "description": "Model to use for this session"
+        },
+        "systemPrompt": {
+          "type": "string",
+          "description": "Custom system prompt to guide the agent's behavior"
+        },
+        "enabledSubagents": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of subagent IDs to enable for this session"
+        },
+        "maxTokens": {
+          "type": "integer",
+          "description": "Maximum tokens per response"
+        }
+      },
+      "loadSession": {
+        "model": {
+          "enum": ["claude-sonnet-4-20250514", "claude-opus-4-20250514", "claude-haiku"],
+          "description": "Model to use when resuming (can differ from original)"
+        }
+      }
+    }
+  }
+}
+```
+
+Clients pass input options via `inputOptions` on `NewSessionRequest` and `LoadSessionRequest`:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "session/new",
+  "params": {
+    "cwd": "/path/to/project",
+    "mcpServers": [],
+    "inputOptions": {
+      "model": "claude-sonnet-4-20250514",
+      "systemPrompt": "You are a helpful coding assistant.",
+      "enabledSubagents": ["web-search", "code-execution"],
+      "maxTokens": 4096
+    }
+  }
+}
+```
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+**For Clients:**
+- Query `inputOptions` from `InitializeResponse` to know what the Agent accepts
+- Build dynamic forms showing available options with proper input types (text fields, dropdowns for enums, checkboxes for booleans)
+- Show different options for "New Session" vs "Load Session" flows
+- Gracefully handle Agents that don't declare any `inputOptions`
+
+**For Agents:**
+- Declare supported options with types and descriptions
+- MUST handle all options as optional - clients may not provide all (or any) options
+- MUST provide sensible defaults for undeclared options
+- Can declare standard ACP options (`cwd`, `mcpServers`) in `inputOptions` to indicate explicit support
+
+**Key behaviors:**
+- Input options are for session *creation/loading*, not runtime configuration
+- Runtime configuration (mode switching, model selection during a session) is handled by the [Session Config Options RFD](./session-config-options)
+- Agents can support both: `inputOptions` for initial setup, `configOptions` for runtime changes
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+### Schema
+
+The `inputOptions` schema uses a simplified JSON Schema subset to balance expressiveness with cross-language compatibility:
+
+```typescript
+type InputOptionSchema =
+  | { type: "string"; description?: string }
+  | { type: "number"; description?: string }
+  | { type: "integer"; description?: string }
+  | { type: "boolean"; description?: string }
+  | { enum: (string | number | boolean | null)[]; description?: string }
+  | { type: "array"; items: InputOptionSchema; description?: string }
+  | { type: "object"; properties: Record<string, InputOptionSchema>; required?: string[]; description?: string };
+
+interface InitializeResponse {
+  protocolVersion: number;
+  agentCapabilities: AgentCapabilities;
+  agentInfo: AgentInfo;
+  inputOptions?: {
+    newSession?: Record<string, InputOptionSchema>;
+    loadSession?: Record<string, InputOptionSchema>;
+  };
+}
+
+interface NewSessionRequest {
+  cwd: string;
+  mcpServers: McpServer[];
+  inputOptions?: Record<string, unknown>;
+}
+
+interface LoadSessionRequest {
+  sessionId: string;
+  cwd: string;
+  mcpServers: McpServer[];
+  inputOptions?: Record<string, unknown>;
+}
+```
+
+### Why JSON Schema subset instead of `select`/`text` types?
+
+The existing [Session Config Options RFD](./session-config-options) uses `select` and `text` types because runtime selectors are primarily UI widgets - dropdowns and text fields.
+
+Input options need richer types because they're data inputs:
+- **Booleans** - checkboxes, toggle switches
+- **Numbers/Integers** - numeric inputs with validation
+- **Enums** - constrained choice from known values
+- **Arrays** - multi-select or list inputs
+- **Objects** - nested configuration groups
+
+### Passing input options
+
+Clients send input options in `inputOptions` on session requests:
+
+```json
+{
+  "method": "session/new",
+  "params": {
+    "cwd": "/path/to/project",
+    "mcpServers": [],
+    "inputOptions": {
+      "mode": "code",
+      "maxResults": 50,
+      "enableFeature": true
+    }
+  }
+}
+```
+
+Values should match the declared types (strings, numbers, booleans - not string-encoded).
+
+### Relationship to well-known protocol fields
+
+The ACP protocol already defines some fields on `NewSessionRequest` and `LoadSessionRequest`:
+
+- `cwd` - Working directory (required, top-level)
+- `mcpServers` - MCP server configurations (required, top-level)
+
+These **remain top-level fields** on the request - they are not moved into `inputOptions`. The `inputOptions` field is for **additional agent-specific options** beyond what the protocol defines.
+
+```json
+{
+  "method": "session/new",
+  "params": {
+    "cwd": "/path/to/project",
+    "mcpServers": [...],
+    "inputOptions": {
+      "model": "claude-sonnet-4-20250514",
+      "systemPrompt": "You are a helpful assistant."
+    }
+  }
+}
+```
+
+This keeps a clean separation:
+- **Protocol fields** - Always present, well-defined schemas, top-level
+- **Agent-specific options** - Discovered via `inputOptions` schema, passed in `inputOptions` object
+
+### Implementation phases
+
+**Phase 1: Schema definition**
+- Add `InputOptionSchema` type definitions to ACP schema
+- Add `inputOptions` to `InitializeResponse`
+- Add `inputOptions` to `NewSessionRequest` and `LoadSessionRequest`
+
+**Phase 2: Client support**
+- Update TypeScript SDK to expose `inputOptions`
+- Implement example UI rendering in reference client
+
+**Phase 3: Agent adoption**
+- Document pattern for agents to declare their options
+- Add examples to protocol documentation
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+1. **Extend Session Config Options with richer types** - The existing [Session Config Options RFD](./session-config-options) uses `select`/`text` types. We could update that RFD to support richer types (boolean, number, array, nested objects) and use the same schema for both input options and runtime config options. This would provide consistency across the protocol. The main tradeoff is that runtime selectors (mode/model dropdowns) have different UX needs than input options (forms with various field types), but a unified schema could still work well for both.
+
+2. **Separate discovery endpoint** - Could add a `session/describe` method. Rejected because `InitializeResponse` already exists for capability discovery and adding another round-trip adds latency.
+
+3. **Use full JSON Schema** - Could support the complete JSON Schema spec. Rejected for cross-language compatibility - a simplified subset is easier to implement consistently across TypeScript, Python, Kotlin, etc.
+
+### How does this relate to Session Config Options?
+
+| Aspect | Input Options (this RFD) | Config Options (existing RFD) |
+|--------|-------------------------|-------------------------------|
+| When | Before session creation | During session runtime |
+| Purpose | Set initial configuration | Change configuration mid-session |
+| Examples | Initial model, system prompt, subagents | Switch modes, change model mid-session |
+| Schema | JSON Schema subset | `select`/`text` types |
+| Location | `InitializeResponse.inputOptions` | `NewSessionResponse.configOptions` |
+
+Agents can support both - use `inputOptions` for things that can only be set at creation time, and `configOptions` for things that can be changed during the session.
+
+### Should we unify the schema with Session Config Options?
+
+This is an open question worth discussing. The Session Config Options RFD currently uses `select`/`text` types, while this proposal uses a JSON Schema subset. We could:
+
+**Option A: Keep them separate** (current proposal)
+- Input options use JSON Schema subset (richer types for form inputs)
+- Config options use `select`/`text` (simpler for runtime selectors)
+- Pro: Each is optimized for its use case
+- Con: Two different schema systems to learn and implement
+
+**Option B: Unify on JSON Schema subset**
+- Update Session Config Options RFD to use the same JSON Schema subset
+- Both input options and config options use identical schema definitions
+- Pro: Consistency, single schema system
+- Con: May be overkill for simple runtime selectors
+
+**Option C: Unify on extended select/text**
+- Extend the `select`/`text` types to support boolean, number, array, etc.
+- Pro: Builds on existing work
+- Con: Inventing a new schema language vs using JSON Schema conventions
+
+Feedback welcome on which approach the community prefers.
+
+### Are input options required?
+
+No. Agents MUST handle missing options gracefully. Clients MAY not support input options UI. This is purely for discoverability and better UX.
+
+## Revision history
+
+- 2025-01-22: Initial draft
