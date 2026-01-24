@@ -14,14 +14,7 @@ Add a capability-gated `session/delete` method so clients can remove sessions fr
 
 > How do things work today and what problems does this cause? Why would we change things?
 
-The [`session/list` RFD](/rfds/session-list) introduced the ability for clients to enumerate sessions. However, there's no standard way to remove sessions from this list. Users accumulate sessions over time and have no way to clean them up.
-
-Without `session/delete`:
-
-- Users cannot remove old, abandoned, or mistakenly created sessions
-- Session lists grow unbounded, making it harder to find relevant sessions
-- Clients must implement non-standard deletion mechanisms or rely on agent-specific cleanup policies
-- Users have no control over their session history
+The [`session/list` RFD](/rfds/session-list) introduced the ability for clients to enumerate sessions. However, there's no standard way to remove sessions from this list. Without `session/delete`, users have no control over their session history—old sessions accumulate, and clients must implement non-standard deletion mechanisms or rely on agent-specific cleanup policies.
 
 ## What we propose to do about it
 
@@ -105,10 +98,7 @@ Support deleting multiple sessions in one call via a `sessionIds` array.
 
 > How will things play out once this feature exists?
 
-- **User control**: Users can manage their session history, removing sessions they no longer need
-- **Cleaner session lists**: Session browsers stay manageable as users clean up old conversations
-- **Consistent behavior**: All ACP clients can offer session deletion using the same protocol method
-- **Foundation for more features**: Batch delete, undo, archiving, etc. can build on this base
+Users can manage their session history, and all ACP clients can offer this using the same protocol method rather than implementing their own mechanisms.
 
 ## Implementation details and plan
 
