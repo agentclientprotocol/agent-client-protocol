@@ -95,6 +95,10 @@
               "libraries/typescript",
               "libraries/community"
             ]
+          },
+          {
+            "group": "Registry",
+            "pages": ["registry/index"]
           }
         ]
       },
