@@ -49,20 +49,25 @@ Add an `inputOptions` field to `InitializeResponse` that declares what options a
       "newSession": {
         "model": {
           "enum": ["claude-sonnet-4-20250514", "claude-opus-4-20250514", "claude-haiku"],
+          "default": "claude-sonnet-4-20250514",
           "description": "Model to use for this session"
         },
         "systemPrompt": {
           "type": "string",
-          "description": "Custom system prompt to guide the agent's behavior"
+          "description": "Custom system prompt to guide the agent's behavior",
+          "hint": "You are a helpful coding assistant..."
         },
         "enabledSubagents": {
           "type": "array",
           "items": { "type": "string" },
-          "description": "List of subagent IDs to enable for this session"
+          "description": "List of subagent IDs to enable for this session",
+          "default": []
         },
         "maxTokens": {
           "type": "integer",
-          "description": "Maximum tokens per response"
+          "description": "Maximum tokens per response",
+          "default": 4096,
+          "hint": "Enter a value between 1 and 8192"
         }
       },
       "loadSession": {
@@ -103,13 +108,18 @@ Clients pass input options via `inputOptions` on `NewSessionRequest` and `LoadSe
 **For Clients:**
 - Query `inputOptions` from `InitializeResponse` to know what the Agent accepts
 - Build dynamic forms showing available options with proper input types (text fields, dropdowns for enums, checkboxes for booleans)
+- Use `description` to show help text explaining each option
+- Use `hint` for placeholder text or input guidance (e.g., example values)
+- Pre-populate form fields with `default` values when provided
 - Show different options for "New Session" vs "Load Session" flows
 - Gracefully handle Agents that don't declare any `inputOptions`
 
 **For Agents:**
-- Declare supported options with types and descriptions
+- Declare supported options with types, descriptions, hints, and defaults
+- Use `default` to communicate the value that will be used if the client omits the option
+- Use `hint` to provide example values or input guidance for clients to display
 - MUST handle all options as optional - clients may not provide all (or any) options
-- MUST provide sensible defaults for undeclared options
+- MUST use declared `default` values when options are not provided by the client
 - Can declare standard ACP options (`cwd`, `mcpServers`) in `inputOptions` to indicate explicit support
 
 **Key behaviors:**
@@ -126,14 +136,19 @@ Clients pass input options via `inputOptions` on `NewSessionRequest` and `LoadSe
 The `inputOptions` schema uses a simplified JSON Schema subset to balance expressiveness with cross-language compatibility:
 
 ```typescript
+interface InputOptionBase {
+  description?: string;  // Human-readable description of the option
+  hint?: string;         // UI hint (e.g., placeholder text for input fields)
+}
+
 type InputOptionSchema =
-  | { type: "string"; description?: string }
-  | { type: "number"; description?: string }
-  | { type: "integer"; description?: string }
-  | { type: "boolean"; description?: string }
-  | { enum: (string | number | boolean | null)[]; description?: string }
-  | { type: "array"; items: InputOptionSchema; description?: string }
-  | { type: "object"; properties: Record<string, InputOptionSchema>; required?: string[]; description?: string };
+  | InputOptionBase & { type: "string"; default?: string }
+  | InputOptionBase & { type: "number"; default?: number }
+  | InputOptionBase & { type: "integer"; default?: number }
+  | InputOptionBase & { type: "boolean"; default?: boolean }
+  | InputOptionBase & { enum: (string | number | boolean | null)[]; default?: string | number | boolean | null }
+  | InputOptionBase & { type: "array"; items: InputOptionSchema; default?: unknown[] }
+  | InputOptionBase & { type: "object"; properties: Record<string, InputOptionSchema>; required?: string[]; default?: Record<string, unknown> };
 
 interface InitializeResponse {
   protocolVersion: number;
@@ -158,6 +173,18 @@ interface LoadSessionRequest {
   inputOptions?: Record<string, unknown>;
 }
 ```
+
+### Optional metadata fields
+
+All option types support three optional metadata fields:
+
+- **`description`** - Human-readable explanation of what the option does. Clients typically display this as help text or tooltips.
+
+- **`hint`** - UI guidance for input fields. For text inputs, this is typically shown as placeholder text. For numeric inputs, it might describe valid ranges. For enums, it could explain how to choose between options.
+
+- **`default`** - The value the agent will use if the client doesn't provide this option. Clients SHOULD pre-populate form fields with default values. Agents MUST use the declared default when an option is omitted.
+
+All three fields are optional. Agents can declare options with just a type, or provide any combination of these metadata fields.
 
 ### Why JSON Schema subset instead of `select`/`text` types?
 
@@ -284,6 +311,27 @@ Feedback welcome on which approach the community prefers.
 
 No. Agents MUST handle missing options gracefully. Clients MAY not support input options UI. This is purely for discoverability and better UX.
 
+### Should we have both `description` and `hint`, or just `description`?
+
+This is an open question. The current proposal includes both:
+
+- **`description`** - Explains what the option does (shown as help text/tooltip)
+- **`hint`** - Provides input guidance (shown as placeholder text)
+
+**Arguments for having both:**
+- They serve different UI purposes: `description` is explanatory, `hint` is exemplary
+- Matches common form patterns where labels/help text differ from placeholder text
+- Allows "System prompt" (description) vs "You are a helpful assistant..." (hint)
+
+**Arguments for just `description`:**
+- Simpler schema with fewer fields to implement
+- Clients can derive placeholder text from description if needed
+- Less ambiguity about which field to use for what purpose
+- Many options don't need both (e.g., boolean toggles, enum dropdowns)
+
+Feedback welcome on whether the added complexity of `hint` is worth it.
+
 ## Revision history
 
+- 2025-01-26: Added `hint` and `default` optional fields to schema
 - 2025-01-22: Initial draft
