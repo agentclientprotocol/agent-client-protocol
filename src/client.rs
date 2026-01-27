@@ -9,11 +9,9 @@ use derive_more::{Display, From};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-#[cfg(feature = "unstable_session_config_options")]
-use crate::SessionConfigOption;
 use crate::{
-    ContentBlock, ExtNotification, ExtRequest, ExtResponse, IntoOption, Meta, Plan, SessionId,
-    SessionModeId, ToolCall, ToolCallUpdate,
+    ContentBlock, ExtNotification, ExtRequest, ExtResponse, IntoOption, Meta, Plan,
+    SessionConfigOption, SessionId, SessionModeId, ToolCall, ToolCallUpdate,
 };
 #[cfg(feature = "unstable_session_info_update")]
 use crate::{IntoMaybeUndefined, MaybeUndefined};
@@ -94,11 +92,6 @@ pub enum SessionUpdate {
     ///
     /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
     CurrentModeUpdate(CurrentModeUpdate),
-    #[cfg(feature = "unstable_session_config_options")]
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Session configuration options have been updated.
     ConfigOptionUpdate(ConfigOptionUpdate),
     #[cfg(feature = "unstable_session_info_update")]
@@ -152,12 +145,7 @@ impl CurrentModeUpdate {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Session configuration options have been updated.
-#[cfg(feature = "unstable_session_config_options")]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -173,7 +161,6 @@ pub struct ConfigOptionUpdate {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_session_config_options")]
 impl ConfigOptionUpdate {
     #[must_use]
     pub fn new(config_options: Vec<SessionConfigOption>) -> Self {

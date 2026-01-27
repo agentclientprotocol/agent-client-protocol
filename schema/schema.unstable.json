@@ -718,7 +718,7 @@
                       "$ref": "#/$defs/SetSessionConfigOptionRequest"
                     }
                   ],
-                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSets the current value for a session configuration option.",
+                  "description": "Sets the current value for a session configuration option.",
                   "title": "SetSessionConfigOptionRequest"
                 },
                 {
@@ -867,7 +867,7 @@
       "x-docs-ignore": true
     },
     "ConfigOptionUpdate": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSession configuration options have been updated.",
+      "description": "Session configuration options have been updated.",
       "properties": {
         "_meta": {
           "additionalProperties": true,
@@ -1368,7 +1368,7 @@
           "type": ["object", "null"]
         },
         "configOptions": {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nInitial session configuration options if supported by the Agent.",
+          "description": "Initial session configuration options if supported by the Agent.",
           "items": {
             "$ref": "#/$defs/SessionConfigOption"
           },
@@ -1722,7 +1722,7 @@
           "type": ["object", "null"]
         },
         "configOptions": {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nInitial session configuration options if supported by the Agent.",
+          "description": "Initial session configuration options if supported by the Agent.",
           "items": {
             "$ref": "#/$defs/SessionConfigOption"
           },
@@ -1976,7 +1976,7 @@
           "type": ["object", "null"]
         },
         "configOptions": {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nInitial session configuration options if supported by the Agent.",
+          "description": "Initial session configuration options if supported by the Agent.",
           "items": {
             "$ref": "#/$defs/SessionConfigOption"
           },
@@ -2554,7 +2554,7 @@
           "type": ["object", "null"]
         },
         "configOptions": {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nInitial session configuration options if supported by the Agent.",
+          "description": "Initial session configuration options if supported by the Agent.",
           "items": {
             "$ref": "#/$defs/SessionConfigOption"
           },
@@ -2657,15 +2657,15 @@
       "type": "object"
     },
     "SessionConfigGroupId": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nUnique identifier for a session configuration option value group.",
+      "description": "Unique identifier for a session configuration option value group.",
       "type": "string"
     },
     "SessionConfigId": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nUnique identifier for a session configuration option.",
+      "description": "Unique identifier for a session configuration option.",
       "type": "string"
     },
     "SessionConfigOption": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA session configuration option selector and its current state.",
+      "description": "A session configuration option selector and its current state.",
       "discriminator": {
         "propertyName": "type"
       },
@@ -2747,10 +2747,10 @@
           "type": "string"
         }
       ],
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSemantic category for a session configuration option.\n\nThis is intended to help Clients distinguish broadly common selectors (e.g. model selector vs\nsession mode selector vs thought/reasoning level) for UX purposes (keyboard shortcuts, icons,\nplacement). It MUST NOT be required for correctness. Clients MUST handle missing or unknown\ncategories gracefully.\n\nCategory names beginning with `_` are free for custom use, like other ACP extension methods.\nCategory names that do not begin with `_` are reserved for the ACP spec."
+      "description": "Semantic category for a session configuration option.\n\nThis is intended to help Clients distinguish broadly common selectors (e.g. model selector vs\nsession mode selector vs thought/reasoning level) for UX purposes (keyboard shortcuts, icons,\nplacement). It MUST NOT be required for correctness. Clients MUST handle missing or unknown\ncategories gracefully.\n\nCategory names beginning with `_` are free for custom use, like other ACP extension methods.\nCategory names that do not begin with `_` are reserved for the ACP spec."
     },
     "SessionConfigSelect": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA single-value selector (dropdown) session configuration option payload.",
+      "description": "A single-value selector (dropdown) session configuration option payload.",
       "properties": {
         "currentValue": {
           "allOf": [
@@ -2773,7 +2773,7 @@
       "type": "object"
     },
     "SessionConfigSelectGroup": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA group of possible values for a session configuration option.",
+      "description": "A group of possible values for a session configuration option.",
       "properties": {
         "_meta": {
           "additionalProperties": true,
@@ -2804,7 +2804,7 @@
       "type": "object"
     },
     "SessionConfigSelectOption": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA possible value for a session configuration option.",
+      "description": "A possible value for a session configuration option.",
       "properties": {
         "_meta": {
           "additionalProperties": true,
@@ -2850,10 +2850,10 @@
           "type": "array"
         }
       ],
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nPossible values for a session configuration option."
+      "description": "Possible values for a session configuration option."
     },
     "SessionConfigValueId": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nUnique identifier for a session configuration option value.",
+      "description": "Unique identifier for a session configuration option value.",
       "type": "string"
     },
     "SessionForkCapabilities": {
@@ -3193,7 +3193,7 @@
               "$ref": "#/$defs/ConfigOptionUpdate"
             }
           ],
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSession configuration options have been updated.",
+          "description": "Session configuration options have been updated.",
           "properties": {
             "sessionUpdate": {
               "const": "config_option_update",
@@ -3238,7 +3238,7 @@
       ]
     },
     "SetSessionConfigOptionRequest": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for setting a session configuration option.",
+      "description": "Request parameters for setting a session configuration option.",
       "properties": {
         "_meta": {
           "additionalProperties": true,
@@ -3276,7 +3276,7 @@
       "x-side": "agent"
     },
     "SetSessionConfigOptionResponse": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nResponse to `session/set_config_option` method.",
+      "description": "Response to `session/set_config_option` method.",
       "properties": {
         "_meta": {
           "additionalProperties": true,

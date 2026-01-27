@@ -122,8 +122,14 @@
               "rfds/logout-method"
             ]
           },
-          { "group": "Preview", "pages": ["rfds/session-config-options"] },
-          { "group": "Completed", "pages": ["rfds/introduce-rfd-process"] }
+          { "group": "Preview", "pages": [] },
+          {
+            "group": "Completed",
+            "pages": [
+              "rfds/introduce-rfd-process",
+              "rfds/session-config-options"
+            ]
+          }
         ]
       },
       {

@@ -267,12 +267,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
 </ResponseField>
 <ResponseField name="configOptions" type={<><span><a href="#sessionconfigoption">SessionConfigOption[]</a></span><span> | null</span></>} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Initial session configuration options if supported by the Agent.
-
+  Initial session configuration options if supported by the Agent.
 </ResponseField>
 <ResponseField name="models" type={<><span><a href="#sessionmodelstate">SessionModelState</a></span><span> | null</span></>} >
   **UNSTABLE**
@@ -424,12 +419,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
 </ResponseField>
 <ResponseField name="configOptions" type={<><span><a href="#sessionconfigoption">SessionConfigOption[]</a></span><span> | null</span></>} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Initial session configuration options if supported by the Agent.
-
+  Initial session configuration options if supported by the Agent.
 </ResponseField>
 <ResponseField name="models" type={<><span><a href="#sessionmodelstate">SessionModelState</a></span><span> | null</span></>} >
   **UNSTABLE**
@@ -507,12 +497,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
 </ResponseField>
 <ResponseField name="configOptions" type={<><span><a href="#sessionconfigoption">SessionConfigOption[]</a></span><span> | null</span></>} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Initial session configuration options if supported by the Agent.
-
+  Initial session configuration options if supported by the Agent.
 </ResponseField>
 <ResponseField name="models" type={<><span><a href="#sessionmodelstate">SessionModelState</a></span><span> | null</span></>} >
   **UNSTABLE**
@@ -691,12 +676,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
 </ResponseField>
 <ResponseField name="configOptions" type={<><span><a href="#sessionconfigoption">SessionConfigOption[]</a></span><span> | null</span></>} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Initial session configuration options if supported by the Agent.
-
+  Initial session configuration options if supported by the Agent.
 </ResponseField>
 <ResponseField name="models" type={<><span><a href="#sessionmodelstate">SessionModelState</a></span><span> | null</span></>} >
   **UNSTABLE**
@@ -716,17 +696,9 @@ See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/sess
 <a id="session-set_config_option"></a>
 ### <span class="font-mono">session/set_config_option</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 Sets the current value for a session configuration option.
 
 #### <span class="font-mono">SetSessionConfigOptionRequest</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Request parameters for setting a session configuration option.
 
@@ -753,10 +725,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 </ResponseField>
 
 #### <span class="font-mono">SetSessionConfigOptionResponse</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Response to `session/set_config_option` method.
 
@@ -1736,10 +1704,6 @@ Determines which file operations the agent can request.
 </ResponseField>
 
 ## <span class="font-mono">ConfigOptionUpdate</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Session configuration options have been updated.
 
@@ -3007,29 +2971,17 @@ Whether the agent supports `session/resume`.
 
 ## <span class="font-mono">SessionConfigGroupId</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 Unique identifier for a session configuration option value group.
 
 **Type:** `string`
 
 ## <span class="font-mono">SessionConfigId</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 Unique identifier for a session configuration option.
 
 **Type:** `string`
 
 ## <span class="font-mono">SessionConfigOption</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 A session configuration option selector and its current state.
 
@@ -3061,10 +3013,6 @@ Single-value selector (dropdown).
 
 ## <span class="font-mono">SessionConfigOptionCategory</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 Semantic category for a session configuration option.
 
 This is intended to help Clients distinguish broadly common selectors (e.g. model selector vs
@@ -3095,10 +3043,6 @@ Category names that do not begin with `_` are reserved for the ACP spec.
 
 ## <span class="font-mono">SessionConfigSelect</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 A single-value selector (dropdown) session configuration option payload.
 
 **Type:** Object
@@ -3121,10 +3065,6 @@ A single-value selector (dropdown) session configuration option payload.
 </ResponseField>
 
 ## <span class="font-mono">SessionConfigSelectGroup</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 A group of possible values for a session configuration option.
 
@@ -3152,10 +3092,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
 ## <span class="font-mono">SessionConfigSelectOption</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 A possible value for a session configuration option.
 
 **Type:** Object
@@ -3182,10 +3118,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
 ## <span class="font-mono">SessionConfigSelectOptions</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 Possible values for a session configuration option.
 
 **Type:** Union
@@ -3199,10 +3131,6 @@ Possible values for a session configuration option.
 </ResponseField>
 
 ## <span class="font-mono">SessionConfigValueId</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Unique identifier for a session configuration option value.
 
@@ -3664,10 +3592,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 </ResponseField>
 
 <ResponseField name="config_option_update" type="object">
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 Session configuration options have been updated.
 
 <Expandable title="Properties">

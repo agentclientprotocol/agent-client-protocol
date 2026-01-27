@@ -247,6 +247,14 @@
                 {
                   "allOf": [
                     {
+                      "$ref": "#/$defs/SetSessionConfigOptionResponse"
+                    }
+                  ],
+                  "title": "SetSessionConfigOptionResponse"
+                },
+                {
+                  "allOf": [
+                    {
                       "$ref": "#/$defs/PromptResponse"
                     }
                   ],
@@ -626,6 +634,15 @@
                 {
                   "allOf": [
                     {
+                      "$ref": "#/$defs/SetSessionConfigOptionRequest"
+                    }
+                  ],
+                  "description": "Sets the current value for a session configuration option.",
+                  "title": "SetSessionConfigOptionRequest"
+                },
+                {
+                  "allOf": [
+                    {
                       "$ref": "#/$defs/PromptRequest"
                     }
                   ],
@@ -758,6 +775,25 @@
         }
       ],
       "x-docs-ignore": true
+    },
+    "ConfigOptionUpdate": {
+      "description": "Session configuration options have been updated.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "configOptions": {
+          "description": "The full set of configuration options and their current values.",
+          "items": {
+            "$ref": "#/$defs/SessionConfigOption"
+          },
+          "type": "array"
+        }
+      },
+      "required": ["configOptions"],
+      "type": "object"
     },
     "Content": {
       "description": "Standard content block (text, images, resources).",
@@ -1442,6 +1478,13 @@
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
         },
+        "configOptions": {
+          "description": "Initial session configuration options if supported by the Agent.",
+          "items": {
+            "$ref": "#/$defs/SessionConfigOption"
+          },
+          "type": ["array", "null"]
+        },
         "modes": {
           "anyOf": [
             {
@@ -1645,6 +1688,13 @@
           "additionalProperties": true,
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
+        },
+        "configOptions": {
+          "description": "Initial session configuration options if supported by the Agent.",
+          "items": {
+            "$ref": "#/$defs/SessionConfigOption"
+          },
+          "type": ["array", "null"]
         },
         "modes": {
           "anyOf": [
@@ -2190,6 +2240,206 @@
       },
       "type": "object"
     },
+    "SessionConfigGroupId": {
+      "description": "Unique identifier for a session configuration option value group.",
+      "type": "string"
+    },
+    "SessionConfigId": {
+      "description": "Unique identifier for a session configuration option.",
+      "type": "string"
+    },
+    "SessionConfigOption": {
+      "description": "A session configuration option selector and its current state.",
+      "discriminator": {
+        "propertyName": "type"
+      },
+      "oneOf": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionConfigSelect"
+            }
+          ],
+          "description": "Single-value selector (dropdown).",
+          "properties": {
+            "type": {
+              "const": "select",
+              "type": "string"
+            }
+          },
+          "required": ["type"],
+          "type": "object"
+        }
+      ],
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "category": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SessionConfigOptionCategory"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional semantic category for this option (UX only)."
+        },
+        "description": {
+          "description": "Optional description for the Client to display to the user.",
+          "type": ["string", "null"]
+        },
+        "id": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionConfigId"
+            }
+          ],
+          "description": "Unique identifier for the configuration option."
+        },
+        "name": {
+          "description": "Human-readable label for the option.",
+          "type": "string"
+        }
+      },
+      "required": ["id", "name"],
+      "type": "object"
+    },
+    "SessionConfigOptionCategory": {
+      "anyOf": [
+        {
+          "const": "mode",
+          "description": "Session mode selector.",
+          "type": "string"
+        },
+        {
+          "const": "model",
+          "description": "Model selector.",
+          "type": "string"
+        },
+        {
+          "const": "thought_level",
+          "description": "Thought/reasoning level selector.",
+          "type": "string"
+        },
+        {
+          "description": "Unknown / uncategorized selector.",
+          "title": "other",
+          "type": "string"
+        }
+      ],
+      "description": "Semantic category for a session configuration option.\n\nThis is intended to help Clients distinguish broadly common selectors (e.g. model selector vs\nsession mode selector vs thought/reasoning level) for UX purposes (keyboard shortcuts, icons,\nplacement). It MUST NOT be required for correctness. Clients MUST handle missing or unknown\ncategories gracefully.\n\nCategory names beginning with `_` are free for custom use, like other ACP extension methods.\nCategory names that do not begin with `_` are reserved for the ACP spec."
+    },
+    "SessionConfigSelect": {
+      "description": "A single-value selector (dropdown) session configuration option payload.",
+      "properties": {
+        "currentValue": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionConfigValueId"
+            }
+          ],
+          "description": "The currently selected value."
+        },
+        "options": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionConfigSelectOptions"
+            }
+          ],
+          "description": "The set of selectable options."
+        }
+      },
+      "required": ["currentValue", "options"],
+      "type": "object"
+    },
+    "SessionConfigSelectGroup": {
+      "description": "A group of possible values for a session configuration option.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "group": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionConfigGroupId"
+            }
+          ],
+          "description": "Unique identifier for this group."
+        },
+        "name": {
+          "description": "Human-readable label for this group.",
+          "type": "string"
+        },
+        "options": {
+          "description": "The set of option values in this group.",
+          "items": {
+            "$ref": "#/$defs/SessionConfigSelectOption"
+          },
+          "type": "array"
+        }
+      },
+      "required": ["group", "name", "options"],
+      "type": "object"
+    },
+    "SessionConfigSelectOption": {
+      "description": "A possible value for a session configuration option.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "description": {
+          "description": "Optional description for this option value.",
+          "type": ["string", "null"]
+        },
+        "name": {
+          "description": "Human-readable label for this option value.",
+          "type": "string"
+        },
+        "value": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionConfigValueId"
+            }
+          ],
+          "description": "Unique identifier for this option value."
+        }
+      },
+      "required": ["value", "name"],
+      "type": "object"
+    },
+    "SessionConfigSelectOptions": {
+      "anyOf": [
+        {
+          "description": "A flat list of options with no grouping.",
+          "items": {
+            "$ref": "#/$defs/SessionConfigSelectOption"
+          },
+          "title": "Ungrouped",
+          "type": "array"
+        },
+        {
+          "description": "A list of options grouped under headers.",
+          "items": {
+            "$ref": "#/$defs/SessionConfigSelectGroup"
+          },
+          "title": "Grouped",
+          "type": "array"
+        }
+      ],
+      "description": "Possible values for a session configuration option."
+    },
+    "SessionConfigValueId": {
+      "description": "Unique identifier for a session configuration option value.",
+      "type": "string"
+    },
     "SessionId": {
       "description": "A unique identifier for a conversation session between a client and agent.\n\nSessions maintain their own context, conversation history, and state,\nallowing multiple independent interactions with the same agent.\n\nSee protocol docs: [Session ID](https://agentclientprotocol.com/protocol/session-setup#session-id)",
       "type": "string"
@@ -2409,8 +2659,83 @@
           },
           "required": ["sessionUpdate"],
           "type": "object"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ConfigOptionUpdate"
+            }
+          ],
+          "description": "Session configuration options have been updated.",
+          "properties": {
+            "sessionUpdate": {
+              "const": "config_option_update",
+              "type": "string"
+            }
+          },
+          "required": ["sessionUpdate"],
+          "type": "object"
         }
       ]
+    },
+    "SetSessionConfigOptionRequest": {
+      "description": "Request parameters for setting a session configuration option.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "configId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionConfigId"
+            }
+          ],
+          "description": "The ID of the configuration option to set."
+        },
+        "sessionId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ],
+          "description": "The ID of the session to set the configuration option for."
+        },
+        "value": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionConfigValueId"
+            }
+          ],
+          "description": "The ID of the configuration option value to set."
+        }
+      },
+      "required": ["sessionId", "configId", "value"],
+      "type": "object",
+      "x-method": "session/set_config_option",
+      "x-side": "agent"
+    },
+    "SetSessionConfigOptionResponse": {
+      "description": "Response to `session/set_config_option` method.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "configOptions": {
+          "description": "The full set of configuration options and their current values.",
+          "items": {
+            "$ref": "#/$defs/SessionConfigOption"
+          },
+          "type": "array"
+        }
+      },
+      "required": ["configOptions"],
+      "type": "object",
+      "x-method": "session/set_config_option",
+      "x-side": "agent"
     },
     "SetSessionModeRequest": {
       "description": "Request parameters for setting a session mode.",
