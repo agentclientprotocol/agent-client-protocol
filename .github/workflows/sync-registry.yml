@@ -8,18 +8,21 @@ on:
   schedule:
     - cron: "15 * * * *" # Every hour at :15
 
-permissions:
-  contents: write
-  pull-requests: write
-
 jobs:
   sync:
     name: Sync Registry Documentation
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v5
@@ -50,11 +53,23 @@ jobs:
             echo "changed=true" >> $GITHUB_OUTPUT
           fi
 
+        # Generating a GitHub token, so that PRs and tags created by
+        # the action can trigger actions workflows.
+      - name: Generate GitHub token
+        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf
+        id: generate-token
+        with:
+          # GitHub App ID secret name
+          app-id: ${{ secrets.RELEASE_PLZ_APP_ID }}
+          # GitHub App private key secret name
+          private-key: ${{ secrets.RELEASE_PLZ_APP_PRIVATE_KEY }}
+
       - name: Create Pull Request
         id: cpr
         if: steps.changes.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v6
         with:
+          token: ${{ steps.generate-token.outputs.token }}
           commit-message: "docs: update registry agents"
           title: "docs: update registry agents"
           body: |
@@ -69,4 +84,4 @@ jobs:
         if: steps.cpr.outputs.pull-request-number
         run: gh pr merge --squash --auto "${{ steps.cpr.outputs.pull-request-number }}"
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
