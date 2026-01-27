@@ -104,6 +104,9 @@ pub enum SessionUpdate {
     #[cfg(feature = "unstable_session_info_update")]
     /// Session metadata has been updated (title, timestamps, custom metadata)
     SessionInfoUpdate(SessionInfoUpdate),
+    /// Context window and cost update for the session.
+    #[cfg(feature = "unstable_session_usage")]
+    UsageUpdate(UsageUpdate),
 }
 
 /// The current mode of the session has changed
@@ -242,6 +245,82 @@ impl SessionInfoUpdate {
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
         self
+    }
+}
+
+/// Context window and cost update for a session.
+#[cfg(feature = "unstable_session_usage")]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct UsageUpdate {
+    /// Tokens currently in context.
+    pub used: u64,
+    /// Total context window size in tokens.
+    pub size: u64,
+    /// Cumulative session cost (optional).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cost: Option<Cost>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_usage")]
+impl UsageUpdate {
+    #[must_use]
+    pub fn new(used: u64, size: u64) -> Self {
+        Self {
+            used,
+            size,
+            cost: None,
+            meta: None,
+        }
+    }
+
+    /// Cumulative session cost (optional).
+    #[must_use]
+    pub fn cost(mut self, cost: impl IntoOption<Cost>) -> Self {
+        self.cost = cost.into_option();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// Cost information for a session.
+#[cfg(feature = "unstable_session_usage")]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct Cost {
+    /// Total cumulative cost for session.
+    pub amount: f64,
+    /// ISO 4217 currency code (e.g., "USD", "EUR").
+    pub currency: String,
+}
+
+#[cfg(feature = "unstable_session_usage")]
+impl Cost {
+    #[must_use]
+    pub fn new(amount: f64, currency: impl Into<String>) -> Self {
+        Self {
+            amount,
+            currency: currency.into(),
+        }
     }
 }
 
