@@ -2118,6 +2118,10 @@ impl PromptRequest {
 pub struct PromptResponse {
     /// Indicates why the agent stopped processing the turn.
     pub stop_reason: StopReason,
+    /// Token usage for this turn (optional).
+    #[cfg(feature = "unstable_session_usage")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub usage: Option<Usage>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -2132,8 +2136,18 @@ impl PromptResponse {
     pub fn new(stop_reason: StopReason) -> Self {
         Self {
             stop_reason,
+            #[cfg(feature = "unstable_session_usage")]
+            usage: None,
             meta: None,
         }
+    }
+
+    /// Token usage for this turn.
+    #[cfg(feature = "unstable_session_usage")]
+    #[must_use]
+    pub fn usage(mut self, usage: impl IntoOption<Usage>) -> Self {
+        self.usage = usage.into_option();
+        self
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -2173,6 +2187,65 @@ pub enum StopReason {
     /// Agents should catch these exceptions and return this semantically meaningful
     /// response to confirm successful cancellation.
     Cancelled,
+}
+
+/// Token usage information for a prompt turn.
+#[cfg(feature = "unstable_session_usage")]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct Usage {
+    /// Sum of all token types across session.
+    pub total_tokens: u64,
+    /// Total input tokens across all turns.
+    pub input_tokens: u64,
+    /// Total output tokens across all turns.
+    pub output_tokens: u64,
+    /// Total thought/reasoning tokens (for o1/o3 models).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub thought_tokens: Option<u64>,
+    /// Total cache read tokens.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cached_read_tokens: Option<u64>,
+    /// Total cache write tokens.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cached_write_tokens: Option<u64>,
+}
+
+#[cfg(feature = "unstable_session_usage")]
+impl Usage {
+    #[must_use]
+    pub fn new(total_tokens: u64, input_tokens: u64, output_tokens: u64) -> Self {
+        Self {
+            total_tokens,
+            input_tokens,
+            output_tokens,
+            thought_tokens: None,
+            cached_read_tokens: None,
+            cached_write_tokens: None,
+        }
+    }
+
+    /// Total thought/reasoning tokens (for o1/o3 models).
+    #[must_use]
+    pub fn thought_tokens(mut self, thought_tokens: impl IntoOption<u64>) -> Self {
+        self.thought_tokens = thought_tokens.into_option();
+        self
+    }
+
+    /// Total cache read tokens.
+    #[must_use]
+    pub fn cached_read_tokens(mut self, cached_read_tokens: impl IntoOption<u64>) -> Self {
+        self.cached_read_tokens = cached_read_tokens.into_option();
+        self
+    }
+
+    /// Total cache write tokens.
+    #[must_use]
+    pub fn cached_write_tokens(mut self, cached_write_tokens: impl IntoOption<u64>) -> Self {
+        self.cached_write_tokens = cached_write_tokens.into_option();
+        self
+    }
 }
 
 // Model
