@@ -50,12 +50,13 @@
         "tab": "Protocol",
         "pages": [
           {
-            "group": "Overview",
+            "group": "Get Started",
             "pages": [
-              "overview/introduction",
-              "overview/architecture",
-              "overview/agents",
-              "overview/clients"
+              "get-started/introduction",
+              "get-started/architecture",
+              "get-started/agents",
+              "get-started/clients",
+              "get-started/registry"
             ]
           },
           {
@@ -95,10 +96,6 @@
               "libraries/typescript",
               "libraries/community"
             ]
-          },
-          {
-            "group": "Registry",
-            "pages": ["registry/index"]
           }
         ]
       },
@@ -165,5 +162,32 @@
   },
   "contextual": {
     "options": ["copy", "view"]
-  }
+  },
+  "redirects": [
+    {
+      "source": "/overview/introduction",
+      "destination": "/get-started/introduction",
+      "permanent": true
+    },
+    {
+      "source": "/overview/architecture",
+      "destination": "/get-started/architecture",
+      "permanent": true
+    },
+    {
+      "source": "/overview/agents",
+      "destination": "/get-started/agents",
+      "permanent": true
+    },
+    {
+      "source": "/overview/clients",
+      "destination": "/get-started/clients",
+      "permanent": true
+    },
+    {
+      "source": "/registry",
+      "destination": "/get-started/registry",
+      "permanent": true
+    }
+  ]
 }
