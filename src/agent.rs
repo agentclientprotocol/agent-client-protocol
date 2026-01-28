@@ -2111,7 +2111,7 @@ impl PromptRequest {
 /// Response from processing a user prompt.
 ///
 /// See protocol docs: [Check for Completion](https://agentclientprotocol.com/protocol/prompt-turn#4-check-for-completion)
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_PROMPT_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -2173,6 +2173,15 @@ pub enum StopReason {
     /// Agents should catch these exceptions and return this semantically meaningful
     /// response to confirm successful cancellation.
     Cancelled,
+    /// **UNSTABLE**
+    ///
+    /// The turn ended because the agent is waiting for user input via elicitation.
+    /// The agent will send a separate `session/elicitation` request.
+    ///
+    /// This feature is unstable and may change.
+    #[serde(rename = "elicitation_requested")]
+    #[cfg(feature = "unstable_elicitation")]
+    ElicitationRequested,
 }
 
 // Model
@@ -2817,6 +2826,9 @@ pub struct AgentMethodNames {
     pub session_set_config_option: &'static str,
     /// Method for sending a prompt to the agent.
     pub session_prompt: &'static str,
+    /// Method for requesting elicitation (structured user input).
+    #[cfg(feature = "unstable_elicitation")]
+    pub session_elicitation: &'static str,
     /// Notification for cancelling operations.
     pub session_cancel: &'static str,
     /// Method for selecting a model for a given session.
@@ -2843,6 +2855,8 @@ pub const AGENT_METHOD_NAMES: AgentMethodNames = AgentMethodNames {
     #[cfg(feature = "unstable_session_config_options")]
     session_set_config_option: SESSION_SET_CONFIG_OPTION_METHOD_NAME,
     session_prompt: SESSION_PROMPT_METHOD_NAME,
+    #[cfg(feature = "unstable_elicitation")]
+    session_elicitation: SESSION_ELICITATION_METHOD_NAME,
     session_cancel: SESSION_CANCEL_METHOD_NAME,
     #[cfg(feature = "unstable_session_model")]
     session_set_model: SESSION_SET_MODEL_METHOD_NAME,
@@ -2869,6 +2883,9 @@ pub(crate) const SESSION_SET_MODE_METHOD_NAME: &str = "session/set_mode";
 pub(crate) const SESSION_SET_CONFIG_OPTION_METHOD_NAME: &str = "session/set_config_option";
 /// Method name for sending a prompt.
 pub(crate) const SESSION_PROMPT_METHOD_NAME: &str = "session/prompt";
+/// Method name for requesting elicitation (structured user input).
+#[cfg(feature = "unstable_elicitation")]
+pub(crate) const SESSION_ELICITATION_METHOD_NAME: &str = "session/elicitation";
 /// Method name for the cancel notification.
 pub(crate) const SESSION_CANCEL_METHOD_NAME: &str = "session/cancel";
 /// Method name for selecting a model for a given session.
