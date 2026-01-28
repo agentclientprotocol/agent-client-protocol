@@ -187,7 +187,7 @@
     {
       "source": "/registry",
       "destination": "/get-started/registry",
-      "permanent": true
+      "permanent": false
     }
   ]
 }
