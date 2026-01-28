@@ -11,6 +11,7 @@ Usage:
 Environment variables:
     REGISTRY_URL: Override the default CDN URL (optional)
 """
+
 from __future__ import annotations
 
 import json
@@ -27,8 +28,8 @@ ICON_BASE_URL = "https://cdn.agentclientprotocol.com/registry/v1/latest"
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS_DIR = ROOT / "docs"
-TEMPLATE_PATH = DOCS_DIR / "registry" / "_agents.mdx"
-OUTPUT_PATH = DOCS_DIR / "registry" / "index.mdx"
+TEMPLATE_PATH = DOCS_DIR / "get-started" / "_registry_agents.mdx"
+OUTPUT_PATH = DOCS_DIR / "get-started" / "registry.mdx"
 PLACEHOLDER = "$$AGENTS_CARDS$$"
 
 # SVG attribute mappings for JSX compatibility
@@ -118,7 +119,7 @@ def _render_agent_cards(agents: list[dict]) -> str:
     # Sort agents by name
     agents = sorted(agents, key=lambda a: a.get("name", "").lower())
 
-    lines: list[str] = ["<CardGroup cols={2}>"]
+    lines: list[str] = ["<CardGroup cols={3}>"]
 
     for agent in agents:
         agent_id = agent.get("id", "-")
