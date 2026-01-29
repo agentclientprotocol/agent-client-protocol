@@ -129,9 +129,9 @@ def _render_agent_cards(agents: list[dict]) -> str:
         icon_svg = _fetch_icon_svg(agent_id)
 
         lines.append("  <Card")
+        lines.append(f'    title="{_escape_html(name)}"')
         if repository:
             lines.append(f'    href="{_escape_html(repository)}"')
-        lines.append(f'    title="{_escape_html(name)}"')
         if icon_svg:
             lines.append("    icon={")
             for line in icon_svg.splitlines():
