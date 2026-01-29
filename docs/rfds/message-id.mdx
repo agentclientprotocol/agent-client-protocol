@@ -6,7 +6,7 @@ Author(s): [@michelTho](https://github.com/michelTho), [@nemtecl](https://github
 
 ## Elevator pitch
 
-Add a `messageId` field to `agent_message_chunk`, `user_message_chunk`, and `agent_thought_chunk` session updates, and to `session/prompt` responses, to uniquely identify individual messages within a conversation. This enables clients to distinguish between different messages beyond changes in update type and lays the groundwork for future capabilities like message editing.
+Add a `messageId` field to `agent_message_chunk`, `user_message_chunk`, and `agent_thought_chunk` session updates, to `session/prompt` requests and responses, to uniquely identify individual messages within a conversation. Both clients and agents can generate message IDs using UUID format. This enables clients to distinguish between different messages beyond changes in update type and lays the groundwork for future capabilities like message editing and session deduplication.
 
 ## Status quo
 
@@ -69,7 +69,7 @@ Add a `messageId` field to `AgentMessageChunk`, `UserMessageChunk`, and `AgentTh
 
 ### Proposed Structure
 
-When the Client sends a user message via `session/prompt`:
+When the Client sends a user message via `session/prompt`, it can optionally include a `messageId`:
 
 ```json
 {
@@ -78,6 +78,7 @@ When the Client sends a user message via `session/prompt`:
   "method": "session/prompt",
   "params": {
     "sessionId": "sess_abc123def456",
+    "messageId": "4c12d49b-729c-4086-bfed-5b82e9a53400",
     "prompt": [
       {
         "type": "text",
@@ -88,20 +89,20 @@ When the Client sends a user message via `session/prompt`:
 }
 ```
 
-The Agent assigns a `messageId` to the user message and returns it in the response:
+The Agent echoes the `messageId` in the response (or assigns one if the client didn't provide it):
 
 ```json
 {
   "jsonrpc": "2.0",
   "id": 2,
   "result": {
-    "messageId": "msg_user_001",
+    "messageId": "4c12d49b-729c-4086-bfed-5b82e9a53400",
     "stopReason": "end_turn"
   }
 }
 ```
 
-For agent message chunks, the Agent includes the `messageId`:
+For agent message chunks, the Agent generates and includes a `messageId`:
 
 ```json
 {
@@ -111,7 +112,7 @@ For agent message chunks, the Agent includes the `messageId`:
     "sessionId": "sess_abc123def456",
     "update": {
       "sessionUpdate": "agent_message_chunk",
-      "messageId": "msg_agent_001",
+      "messageId": "ea87d0e7-beb8-484a-a404-94a30b78a5a8",
       "content": {
         "type": "text",
         "text": "Let me analyze your code..."
@@ -121,7 +122,7 @@ For agent message chunks, the Agent includes the `messageId`:
 }
 ```
 
-If the Agent sends `user_message_chunk` updates, it uses the user message ID:
+If the Agent sends `user_message_chunk` updates (e.g., during `session/load`), it uses the user message ID:
 
 ```json
 {
@@ -131,7 +132,7 @@ If the Agent sends `user_message_chunk` updates, it uses the user message ID:
     "sessionId": "sess_abc123def456",
     "update": {
       "sessionUpdate": "user_message_chunk",
-      "messageId": "msg_user_001",
+      "messageId": "4c12d49b-729c-4086-bfed-5b82e9a53400",
       "content": {
         "type": "text",
         "text": "Can you..."
@@ -144,11 +145,12 @@ If the Agent sends `user_message_chunk` updates, it uses the user message ID:
 The `messageId` field would be:
 
 - **Optional** on `agent_message_chunk`, `user_message_chunk`, and `agent_thought_chunk` updates
-- **Optional** in `session/prompt` responses as `messageId`
+- **Optional** in `session/prompt` requests (client-provided) and responses (agent-provided or echoed)
+- **UUID format** - Both clients and agents SHOULD use UUID format to avoid collisions
 - **Unique per message** within a session
 - **Stable across chunks** - all chunks belonging to the same message share the same `messageId`
-- **Opaque** - Clients treat it as an identifier without parsing its structure
-- **Agent-generated** - The Agent generates and manages all message IDs, consistent with how the protocol handles `sessionId`, `terminalId`, and `toolCallId`
+- **Opaque** - Implementations treat it as an identifier without parsing its structure
+- **Dual-origin** - Clients generate IDs for user messages, agents generate IDs for agent messages
 
 ## Shiny future
 
@@ -180,7 +182,7 @@ Example future editing capability:
     "sessionId": "sess_abc123def456",
     "update": {
       "sessionUpdate": "message_update",
-      "messageId": "msg_abc123",
+      "messageId": "ea87d0e7-beb8-484a-a404-94a30b78a5a8",
       "updateType": "replace",
       "content": {
         "type": "text",
@@ -196,13 +198,13 @@ Example future editing capability:
 ### Phase 1: Core Protocol Changes
 
 1. **Update schema** (`schema/schema.json`):
-   - Add optional `messageId` field (type: `string`) to `AgentMessageChunk`
-   - Add optional `messageId` field (type: `string`) to `UserMessageChunk`
-   - Add optional `messageId` field (type: `string`) to `AgentThoughtChunk`
-   - Add optional `messageId` field (type: `string`) to `PromptResponse`
+   - Add optional `messageId` field (type: `string`) to `ContentChunk` (used by `AgentMessageChunk`, `UserMessageChunk`, `AgentThoughtChunk`)
+   - Add optional `messageId` field (type: `string`) to `PromptRequest` (client-provided)
+   - Add optional `messageId` field (type: `string`) to `PromptResponse` (agent-provided or echoed)
 
 2. **Update Rust SDK** (`rust/client.rs` and `rust/agent.rs`):
    - Add `message_id: Option<String>` field to `ContentChunk` struct
+   - Add `message_id: Option<String>` field to `PromptRequest` struct
    - Add `message_id: Option<String>` field to `PromptResponse` struct
    - Update serialization to include `messageId` in JSON output when present
 
@@ -211,8 +213,9 @@ Example future editing capability:
 
 4. **Update documentation** (`docs/protocol/prompt-turn.mdx`):
    - Document the `messageId` field and its semantics
-   - Clarify that the Agent generates all message IDs
-   - Show that `messageId` is returned in prompt responses
+   - Clarify that clients can provide `messageId` for user messages
+   - Clarify that agents generate `messageId` for agent messages
+   - Show that `messageId` can be provided in prompt requests and is returned in responses
    - Add examples showing message boundaries
    - Explain that `messageId` changes indicate new messages
 
@@ -253,38 +256,32 @@ Making this field required will be considered for a future v2 version of the pro
    - Requires additional notifications
    - More state to track on both sides
 
-4. **Client-generated message IDs** - Have the Client generate IDs for user messages:
-   - Inconsistent with protocol patterns (Agent generates `sessionId`, `terminalId`, `toolCallId`)
-   - Adds complexity to Client implementations
-   - Requires coordination on ID namespace to avoid collisions
-   - Agent is better positioned as single source of truth
+4. **Agent-only message IDs** - Have the Agent generate all IDs (including for user messages):
+   - Consistent with protocol patterns (`sessionId`, `terminalId`, `toolCallId`)
+   - But creates complexity for returning user message IDs (response comes after streaming)
+   - Not all agents support passing user message IDs through
+   - Clients may need IDs immediately for deduplication or multi-client scenarios
 
 The proposed approach with `messageId` is:
 
 - **Simple** - Just one new field with clear semantics
 - **Flexible** - Enables future capabilities without further protocol changes
-- **Consistent** - Aligns with how other resources (sessions, terminals, tool calls) are identified in the protocol
-- **Centralized** - Agent as single source of truth for all IDs simplifies uniqueness guarantees
+- **Practical** - Clients generate IDs for their messages, agents for theirs
+- **Collision-safe** - UUID format ensures uniqueness across both sides
 
 ### Who generates message IDs?
 
-The **Agent generates all message IDs**, for both user and agent messages:
+**Both clients and agents can generate message IDs**, each for their own messages:
 
-- **For user messages**: When the Client sends `session/prompt`, the Agent assigns a message ID and returns it as `messageId` in the response
-- **For agent messages**: The Agent generates the ID when creating its response
+- **For user messages**: The Client generates a UUID and includes it as `messageId` in the `session/prompt` request. The Agent echoes this ID in the response. If the client doesn't provide one, the agent MAY assign one.
+- **For agent messages**: The Agent generates the UUID when creating its response and includes it in session update chunks.
 
-This is consistent with how the protocol handles other resource identifiers:
+This differs from other protocol identifiers (`sessionId`, `terminalId`, `toolCallId`) which are agent-generated, but provides practical benefits:
 
-- `sessionId` - generated by Agent in `session/new` response
-- `terminalId` - generated by Agent in `terminal/create` response
-- `toolCallId` - generated by Agent in tool call notifications
-
-Benefits of this approach:
-
-- **Single source of truth** - Agent controls all ID generation
-- **Simpler for Clients** - No ID generation logic needed
-- **Better uniqueness guarantees** - Agent controls the namespace
-- **Protocol consistency** - Matches established patterns
+- **Immediate availability** - Clients have the ID as soon as they send the message, without waiting for a response
+- **Deduplication** - Clients can use IDs to deduplicate messages on `session/load` or when echoing to multiple clients
+- **Collision-safe** - UUID format ensures uniqueness without coordination
+- **Adapter-friendly** - Adapters for agents that don't support message IDs can simply not pass them through
 
 ### Should this field be required or optional?
 
@@ -292,16 +289,15 @@ The field is **optional** for v1 to ensure backward compatibility. Agents SHOULD
 
 Making this field required will be considered for a future v2 version of the protocol.
 
-### How should Agents generate message IDs?
+### What format should message IDs use?
 
-The protocol doesn't mandate a specific format. Agents may use:
+Both clients and agents **SHOULD** use UUID format for message IDs. This ensures:
 
-- UUIDs (e.g., `msg_550e8400-e29b-41d4-a716-446655440000`)
-- Prefixed sequential IDs (e.g., `msg_1`, `msg_2`, ...)
-- Hash-based IDs
-- Any other unique identifier scheme
+- **No collisions** - UUIDs are globally unique without coordination
+- **Interoperability** - Both sides use the same format
+- **Simplicity** - Standard libraries available in all languages
 
-Clients **MUST** treat `messageId` as an opaque string and not rely on any particular format or structure.
+Implementations **MUST** treat `messageId` as an opaque string and not rely on any particular structure beyond it being a valid identifier.
 
 ### What about message IDs across session loads?
 
@@ -324,4 +320,5 @@ Future RFDs may propose extending `messageId` to other update types if use cases
 
 ## Revision history
 
+- **2026-01-29**: Updated to allow both clients and agents to generate message IDs using UUID format
 - **2025-11-09**: Initial draft
