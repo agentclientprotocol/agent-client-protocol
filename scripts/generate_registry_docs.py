@@ -124,24 +124,24 @@ def _render_agent_cards(agents: list[dict]) -> str:
     for agent in agents:
         agent_id = agent.get("id", "-")
         name = agent.get("name", agent_id)
-        description = _escape_text(agent.get("description", "-"))
         version = _escape_text(agent.get("version", "-"))
         repository = agent.get("repository", "")
         icon_svg = _fetch_icon_svg(agent_id)
 
         lines.append("  <Card")
+        if repository:
+            lines.append(f'    href="{_escape_html(repository)}"')
         lines.append(f'    title="{_escape_html(name)}"')
         if icon_svg:
             lines.append("    icon={")
             for line in icon_svg.splitlines():
                 lines.append(f"      {line}")
             lines.append("    }")
-        if repository:
-            lines.append(f'    href="{_escape_html(repository)}"')
         lines.append("  >")
-        lines.append(f"    {description}")
         version_text = version if version not in ("", "-") else "version unknown"
-        lines.append(f"    <p><code>{_escape_text(version_text)}</code></p>")
+        lines.append('    <p class="text-xs mt-3">')
+        lines.append(f"      <code>{_escape_text(version_text)}</code>")
+        lines.append("    </p>")
         lines.append("  </Card>")
 
     lines.append("</CardGroup>")
