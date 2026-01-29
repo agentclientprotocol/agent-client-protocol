@@ -42,12 +42,12 @@ jobs:
         run: python scripts/generate_registry_docs.py
 
       - name: Format generated files
-        run: npx prettier --write docs/registry/
+        run: npx prettier --write docs/get-started/registry.mdx
 
       - name: Check for changes
         id: changes
         run: |
-          if git diff --quiet docs/registry/index.mdx; then
+          if git diff --quiet docs/get-started/registry.mdx; then
             echo "changed=false" >> $GITHUB_OUTPUT
           else
             echo "changed=true" >> $GITHUB_OUTPUT
