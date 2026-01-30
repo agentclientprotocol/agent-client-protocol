@@ -16,6 +16,7 @@ include = ["/src/**/*.rs", "/README.md", "/LICENSE", "/Cargo.toml"]
 [features]
 unstable = [
     "unstable_cancel_request",
+    "unstable_elicitation",
     "unstable_session_config_options",
     "unstable_session_fork",
     "unstable_session_info_update",
@@ -24,6 +25,7 @@ unstable = [
     "unstable_session_resume",
 ]
 unstable_cancel_request = []
+unstable_elicitation = []
 unstable_session_config_options = []
 unstable_session_fork = []
 unstable_session_info_update = []
@@ -37,6 +39,7 @@ path = "src/bin/generate.rs"
 
 [dependencies]
 anyhow = "1"
+async-broadcast = "0.7"
 derive_more = { version = "2", features = ["from", "display"] }
 schemars = { version = "1" }
 serde = { version = "1", features = ["derive", "rc"] }
