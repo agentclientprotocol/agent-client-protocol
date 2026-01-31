@@ -22,6 +22,7 @@ unstable = [
     "unstable_session_list",
     "unstable_session_model",
     "unstable_session_resume",
+    "unstable_session_usage",
 ]
 unstable_cancel_request = []
 unstable_session_config_options = []
@@ -30,6 +31,7 @@ unstable_session_info_update = []
 unstable_session_list = []
 unstable_session_model = []
 unstable_session_resume = []
+unstable_session_usage = []
 
 [[bin]]
 name = "generate"
