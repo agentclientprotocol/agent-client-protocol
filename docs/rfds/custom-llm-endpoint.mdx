@@ -61,7 +61,7 @@ interface LlmEndpointConfig {
    * Value for the Authorization header.
    * Will be sent as-is (e.g., "Bearer sk-..." or "Basic ...").
    */
-  authHeader: string;
+  authHeader?: string | null;
 
   /** Extension metadata */
   _meta?: Record<string, unknown>;
@@ -92,7 +92,7 @@ interface InitializeResponse {
           "description": "Base URL for LLM API requests."
         },
         "authHeader": {
-          "type": ["string"],
+          "type": ["string", "null"],
           "description": "Value for the Authorization header. Sent as-is."
         },
         "_meta": {
@@ -100,7 +100,7 @@ interface InitializeResponse {
           "type": ["object", "null"]
         }
       },
-      "required": ["url", "authHeader"],
+      "required": ["url"],
       "type": "object"
     }
   }
@@ -175,7 +175,7 @@ interface InitializeResponse {
 
 2. **Per-process scope**: The `llmEndpoint` configuration applies to the entire agent process lifetime. It should not be stored to disk or persist beyond the process.
 
-3. **All LLM requests**: When `llmEndpoint` is accepted, the agent should route ALL LLM API requests through the specified URL, using the provided `authHeader` for authentication.
+3. **All LLM requests**: When `llmEndpoint` is accepted, the agent should route ALL LLM API requests through the specified URL, using the provided `authHeader` for authentication (if provided).
 
 4. **No mid-execution changes**: The endpoint cannot be changed after initialization. If a different endpoint is needed, a new agent process must be started.
 
@@ -191,7 +191,7 @@ interface SetLlmEndpointRequest {
   url: string;
 
   /** Value for the Authorization header */
-  authHeader: string;
+  authHeader?: string | null;
 
   /** Extension metadata */
   _meta?: Record<string, unknown>;
