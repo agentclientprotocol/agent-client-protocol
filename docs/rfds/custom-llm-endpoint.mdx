@@ -1,0 +1,291 @@
+---
+title: "Custom LLM Endpoint Configuration"
+---
+
+- Author(s): [@anna239](https://github.com/anna239)
+
+> **Note:** This RFD is very preliminary and intended to start a dialog about this feature. The proposed design may change significantly based on feedback and further discussion.
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Add the ability for clients to pass a custom LLM endpoint URL and authentication credentials to agents during initialization. This allows organizations to route all LLM requests through their own infrastructure (proxies, gateways, or self-hosted models) without agents needing to know about this configuration in advance.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+Currently, agents are configured with their own LLM endpoints and credentials, typically through environment variables or configuration files. This creates problems for:
+
+- **Client proxies**: Clients want to route agent traffic through their own proxies, f.i. for setting additional headers or logging
+- **Enterprise deployments**: Organizations want to route LLM traffic through their own proxies for compliance, logging, or cost management
+- **Self-hosted models**: Users running local LLM servers (vLLM, Ollama, etc.) cannot easily redirect agent traffic
+- **API gateways**: Organizations using LLM gateways for rate limiting, caching, or multi-provider routing
+
+## Shiny future
+
+> How will things play out once this feature exists?
+
+Clients will be able to:
+1. Pass a custom LLM endpoint URL and authentication header
+2. Have all agent LLM requests automatically routed through that endpoint
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+We present three alternative approaches for discussion.
+
+### Alternative A: Pass in `initialize` request
+
+Add a new optional `llmEndpoint` property to `InitializeRequest`:
+
+```typescript
+interface InitializeRequest {
+  // ... existing fields ...
+
+  /**
+   * Custom LLM endpoint configuration.
+   * When provided, the agent should route all LLM requests through this endpoint.
+   * This configuration is per-process and should not be persisted to disk.
+   */
+  llmEndpoint?: LlmEndpointConfig | null;
+}
+
+interface LlmEndpointConfig {
+  /** Base URL for LLM API requests (e.g., "https://llm-proxy.corp.example.com/v1") */
+  url: string;
+
+  /**
+   * Value for the Authorization header.
+   * Will be sent as-is (e.g., "Bearer sk-..." or "Basic ...").
+   */
+  authHeader: string;
+
+  /** Extension metadata */
+  _meta?: Record<string, unknown>;
+}
+
+interface InitializeResponse {
+  // ... existing fields ...
+
+  /**
+   * Echoed back when the agent accepts the custom LLM endpoint.
+   * If present in the response, the agent confirms it will use this endpoint.
+   * If absent (and was provided in request), the agent did not accept it.
+   */
+  llmEndpoint?: LlmEndpointConfig | null;
+}
+```
+
+#### JSON Schema Additions
+
+```json
+{
+  "$defs": {
+    "LlmEndpointConfig": {
+      "description": "Configuration for a custom LLM endpoint. This configuration is per-process and should not be persisted to disk.",
+      "properties": {
+        "url": {
+          "type": "string",
+          "description": "Base URL for LLM API requests."
+        },
+        "authHeader": {
+          "type": ["string"],
+          "description": "Value for the Authorization header. Sent as-is."
+        },
+        "_meta": {
+          "additionalProperties": true,
+          "type": ["object", "null"]
+        }
+      },
+      "required": ["url", "authHeader"],
+      "type": "object"
+    }
+  }
+}
+```
+
+#### Example Exchange
+
+**Initialize Request:**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "initialize",
+  "params": {
+    "clientInfo": {
+      "name": "MyIDE",
+      "version": "1.0.0"
+    },
+    "protocolVersion": "2025-01-01",
+    "llmEndpoint": {
+      "url": "https://llm-gateway.corp.example.com/v1",
+      "authHeader": "Bearer temporary-token-abc123"
+    }
+  }
+}
+```
+
+**Initialize Response (endpoint accepted):**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "protocolVersion": "2025-01-01",
+    "agentInfo": {
+      "name": "MyAgent",
+      "version": "2.0.0"
+    },
+    "agentCapabilities": {
+      "sessionCapabilities": {}
+    },
+    "llmEndpoint": {
+      "url": "https://llm-gateway.corp.example.com/v1",
+      "authHeader": "Bearer temporary-token-abc123"
+    }
+  }
+}
+```
+
+**Initialize Response (endpoint not accepted):**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "protocolVersion": "2025-01-01",
+    "agentInfo": {
+      "name": "MyAgent",
+      "version": "2.0.0"
+    },
+    "agentCapabilities": {
+      "sessionCapabilities": {}
+    }
+  }
+}
+```
+
+#### Behavior
+
+1. **Confirmation via response**: When the agent accepts the `llmEndpoint`, it MUST echo it back in the `InitializeResponse`. If `llmEndpoint` is absent from the response, the client should assume the agent did not accept the custom endpoint configuration.
+
+2. **Per-process scope**: The `llmEndpoint` configuration applies to the entire agent process lifetime. It should not be stored to disk or persist beyond the process.
+
+3. **All LLM requests**: When `llmEndpoint` is accepted, the agent should route ALL LLM API requests through the specified URL, using the provided `authHeader` for authentication.
+
+4. **No mid-execution changes**: The endpoint cannot be changed after initialization. If a different endpoint is needed, a new agent process must be started.
+
+5. **Agent discretion**: If an agent cannot support custom endpoints (e.g., uses a proprietary API), it should omit `llmEndpoint` from the response or return an error during initialization.
+
+### Alternative B: Dedicated `setLlmEndpoint` method
+
+Instead of passing the endpoint in `initialize`, introduce a dedicated method that can be called after initialization but before session creation.
+
+```typescript
+interface SetLlmEndpointRequest {
+  /** Base URL for LLM API requests */
+  url: string;
+
+  /** Value for the Authorization header */
+  authHeader: string;
+
+  /** Extension metadata */
+  _meta?: Record<string, unknown>;
+}
+
+interface SetLlmEndpointResponse {
+  /** Whether the endpoint was accepted */
+  accepted: boolean;
+
+  /** Extension metadata */
+  _meta?: Record<string, unknown>;
+}
+```
+
+**Example flow:**
+1. Client calls `initialize`
+2. Client calls `setLlmEndpoint` with URL and auth header
+3. Agent confirms acceptance
+4. Client creates session
+
+**Trade-offs:**
+- (+) Cleaner separation of concerns - initialization vs configuration
+- (+) Could potentially allow changing endpoint between sessions (if desired)
+- (-) Different sessions might want different endpoints, but we want a single endpoint per process
+
+### Alternative C: Registry-declared environment variables
+
+Declare in the Agent Registry which environment variables or command-line arguments should be used to pass the URL and token when starting the agent process.
+
+```json
+{
+  "name": "MyAgent",
+  "command": "my-agent",
+  "llmEndpointConfig": {
+    "urlEnvVar": "LLM_BASE_URL",
+    "authEnvVar": "LLM_AUTH_TOKEN"
+  }
+}
+```
+
+Or with command-line arguments:
+
+```json
+{
+  "name": "MyAgent",
+  "command": "my-agent",
+  "llmEndpointConfig": {
+    "urlArg": "--llm-url",
+    "authArg": "--llm-token"
+  }
+}
+```
+
+The client would then start the agent process with:
+```bash
+LLM_BASE_URL="https://gateway.example.com/v1" LLM_AUTH_TOKEN="Bearer sk-..." my-agent
+# or
+my-agent --llm-url "https://gateway.example.com/v1" --llm-token "Bearer sk-..."
+```
+
+**Trade-offs:**
+- (+) Agents in the Registry can be marked as supporting custom endpoints
+- (+) Easier to implement for agents that already read these values from environment variables
+- (+) No protocol changes needed - uses existing process spawning mechanisms
+- (+) Works even before ACP connection is established
+- (-) Requires Registry support
+- (-) Less dynamic - configuration is fixed at process start
+
+## Open questions
+
+### How should model availability be handled?
+
+When a custom endpoint is provided, it may only support a subset of models. For example, a self-hosted vLLM server might only have `llama-3-70b` available, while the agent normally advertises `claude-3-opus`, `gpt-4`, etc.
+
+### Should the agent advertise support for custom endpoints?
+
+Should there be a capability flag indicating the agent supports `llmEndpoint`? This would let clients know whether passing this configuration will have any effect.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document?
+
+### Why not pass endpoint when selecting a model?
+
+One option would be to pass the endpoint URL and credentials when the user selects a model (e.g., in `session/new` or a model selection method).
+
+Many agents throw authentication errors before the model selection happens. This makes the flow unreliable.
+
+### What if the agent doesn't support custom endpoints?
+
+If the agent doesn't support custom endpoints, it should omit `llmEndpoint` from the `InitializeResponse`. The client can then detect this by comparing the request and response:
+- If `llmEndpoint` was sent but not returned, the agent did not accept it
+- The client can then decide whether to proceed (using agent's default endpoint) or abort
+
+## Revision history
+
+- 2026-02-02: Initial draft - preliminary proposal to start discussion
