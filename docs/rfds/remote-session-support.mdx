@@ -15,6 +15,7 @@ Add first-class support for remote agent execution by extending `session/new` re
 This RFD focuses exclusively on the **data types and schema changes** required for remote session support.
 
 **Explicitly out of scope:**
+
 - Authentication mechanisms (OAuth, tokens, API keys, etc.)
 - Transport protocols (WebSocket vs HTTP)
 - Connection management and lifecycle
@@ -38,6 +39,7 @@ Clients will be able to send repository context when creating sessions, and agen
 2. **IDE integration** where the client fetches the result branch and presents merge options
 
 The typical flow becomes:
+
 1. Client sends `session/new` with `remote` containing repository URL, branch, and revision
 2. Agent clones/fetches the repo, checks out the revision
 3. Agent performs requested work
@@ -111,7 +113,6 @@ Add optional `target` field to `SessionPromptResponse`:
 
 ```typescript
 interface PromptResponse {
-
   target?: RemoteRef;
 
   stopReason: StopReason;
@@ -128,9 +129,7 @@ interface PromptResponse {
   "$defs": {
     "RemoteRef": {
       "description": "A reference to remote storage. Discriminated by the 'type' field.",
-      "oneOf": [
-        { "$ref": "#/$defs/GitRemoteRef" }
-      ]
+      "oneOf": [{ "$ref": "#/$defs/GitRemoteRef" }]
     },
     "GitRemoteRef": {
       "description": "A git-based remote reference.",
