@@ -1,0 +1,192 @@
+---
+title: "Logout Method"
+---
+
+- Author(s): [@anna239](https://github.com/anna239)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Add a `logout` method that allows clients to terminate an authenticated session with an agent. This is the counterpart to the existing `authenticate` method and enables proper session cleanup and credential invalidation.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+Currently, ACP provides an `authenticate` method for establishing authenticated sessions, but there is no standardized way to:
+
+- Log out of an authenticated session
+- Invalidate credentials or tokens
+- Signal to the agent that the user wants to end their authenticated state
+
+Users who want to switch accounts, revoke access, or simply log out must rely on:
+
+- Manually clearing credentials outside of ACP
+- Agent-specific workarounds
+
+This creates inconsistent user experiences and potential security concerns when credentials should be invalidated but aren't.
+
+## Shiny future
+
+> How will things play out once this feature exists?
+
+Clients will be able to offer a proper "Log out" button that:
+
+1. Cleanly terminates the authenticated session
+2. Allows the agent to invalidate tokens/credentials as needed
+3. Returns the connection to an unauthenticated state
+4. Enables the user to re-authenticate with different credentials
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+### New Method: `logout`
+
+A new method that terminates the current authenticated session.
+
+#### LogoutRequest
+
+```typescript
+interface LogoutRequest {
+  /** Extension metadata */
+  _meta?: Record<string, unknown>;
+}
+```
+
+#### LogoutResponse
+
+```typescript
+interface LogoutResponse {
+  /** Extension metadata */
+  _meta?: Record<string, unknown>;
+}
+```
+
+### Capability Advertisement
+
+The `logout` capability should be advertised within a new `authCapabilities` object in `AgentCapabilities`:
+
+```typescript
+interface AgentCapabilities {
+  // ... existing fields ...
+
+  /** Authentication-related capabilities */
+  authCapabilities?: AuthCapabilities;
+}
+
+interface AuthCapabilities {
+  /** Extension metadata */
+  _meta?: Record<string, unknown>;
+
+  /** Agent supports the logout method */
+  logout?: boolean;
+}
+```
+
+### JSON Schema Additions
+
+```json
+{
+  "$defs": {
+    "AuthCapabilities": {
+      "description": "Authentication-related capabilities supported by the agent.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "type": ["object", "null"]
+        },
+        "logout": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether the agent supports the logout method."
+        }
+      },
+      "type": "object"
+    },
+    "LogoutRequest": {
+      "description": "Request to terminate the current authenticated session.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object",
+      "x-method": "logout",
+      "x-side": "agent"
+    },
+    "LogoutResponse": {
+      "description": "Response to the logout method.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object",
+      "x-method": "logout",
+      "x-side": "agent"
+    }
+  }
+}
+```
+
+### Example Exchange
+
+**Request:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "logout",
+  "params": {}
+}
+```
+
+**Response:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {}
+}
+```
+
+### Behavior
+
+1. **Pre-condition**: The client should only call `logout` if:
+   - The agent advertises `authCapabilities.logout: true`
+
+2. **Agent responsibilities**:
+   - Invalidate any stored tokens or credentials as appropriate
+   - Clean up any session state associated with the authenticated user
+   - Return the connection to an unauthenticated state
+
+3. **Post-condition**: After a successful `logout`:
+   - Subsequent requests that require authentication should return `auth_required` error
+   - The client can call `authenticate` again to establish a new authenticated session
+
+4. **Active sessions**: If there are active sessions when `logout` is called, the agent should either:
+   - Terminate them gracefully
+   - Throw an `auth_required` error
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document?
+
+### Should logout affect active sessions?
+
+This is left as implementation-defined. Some agents may want to:
+
+- Automatically terminate all sessions (strict security)
+- Keep sessions running
+
+The RFD intentionally does not mandate a specific behavior to allow flexibility.
+
+## Revision history
+
+- 2026-02-02: Initial draft
