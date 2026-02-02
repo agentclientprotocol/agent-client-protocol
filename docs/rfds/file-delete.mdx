@@ -1,0 +1,57 @@
+---
+title: "Diff event for the case of deleted file"
+---
+
+Author(s): [anna239](https://github.com/benbrandt)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Add flag `deleted` to [Diff](https://agentclientprotocol.com/protocol/tool-calls#diffs) entity type for the case of a deleted file.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+Currently, in Diff entity type `newText` is not nullable, so it's not possible to distinguish between a deleted file and empty file.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+Add flag `deleted` to [Diff](https://agentclientprotocol.com/protocol/tool-calls#diffs) entity type for the case of a deleted file.
+
+Note: we would ideally make newText nullable, but that would break existing clients.
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+It is possible for the agent to distinguish between a deleted file and an empty file.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+<!--
+    Use this section to add details that were not covered in the "What we propose to do about it" section and also include an implementation plan with phases.
+
+    Note: This section is OPTIONAL and NOT RECOMMENDED when RFDs are first opened. It can distract from the discussion of the problem.
+-->
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+<!--
+    Keep this section up-to-date as discussion proceeds. The goal is to capture major points that came up on a PR or in a discussion forum -- and if they reoccur, to point people to the FAQ so that we can start the dialog from a more informed place.
+-->
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+We considered making newText nullable, but that would break existing clients.
+
+## Revision history
+
+<!-- If there have been major updates to this RFD, you can include the git revisions and a summary of the changes. -->
