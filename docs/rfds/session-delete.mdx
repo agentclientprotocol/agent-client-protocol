@@ -20,13 +20,15 @@ The [`session/list` RFD](/rfds/session-list) introduced the ability for clients 
 
 > What are you proposing to improve the situation?
 
-Add a `session/delete` JSON-RPC method that is capability-gated. Clients opt in via `sessionCapabilities.delete`; agents advertise this capability at initialization if they support deletion.
+Add a `session/delete` JSON-RPC method that is capability-gated. Agents advertise support via `sessionCapabilities.delete` in their initialization response.
 
 ```json
 {
-  "method": "initialize",
-  "params": {
-    "clientCapabilities": {
+  "jsonrpc": "2.0",
+  "id": 0,
+  "result": {
+    "protocolVersion": 1,
+    "agentCapabilities": {
       "sessionCapabilities": {
         "delete": {}
       }
@@ -135,4 +137,5 @@ The [`session/list` RFD](/rfds/session-list#what-about-session-deletion) explici
 
 ## Revision history
 
+- **2025-02-03**: Fixed capability example to use agent capability (initialize response)
 - **2025-01-24**: Initial draft
