@@ -612,6 +612,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 <ResponseField name="stopReason" type={<a href="#stopreason">StopReason</a>} required>
   Indicates why the agent stopped processing the turn.
 </ResponseField>
+<ResponseField name="usage" type={<><span><a href="#usage">Usage</a></span><span> | null</span></>} >
+  Token usage for this turn (optional).
+</ResponseField>
 
 <a id="session-resume"></a>
 ### <span class="font-mono">session/resume</span>
@@ -1953,6 +1956,21 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 </ResponseField>
 <ResponseField name="content" type={<a href="#contentblock">ContentBlock</a>} required>
   A single item of content
+</ResponseField>
+
+## <span class="font-mono">Cost</span>
+
+Cost information for a session.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="amount" type={"number"} required>
+  Total cumulative cost for session.
+</ResponseField>
+<ResponseField name="currency" type={"string"} required>
+  ISO 4217 currency code (e.g., "USD", "EUR").
 </ResponseField>
 
 ## <span class="font-mono">CurrentModeUpdate</span>
@@ -3687,6 +3705,40 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 </Expandable>
 </ResponseField>
 
+<ResponseField name="usage_update" type="object">
+Context window and cost update for the session.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="cost" type={<><span><a href="#cost">Cost</a></span><span> | null</span></>} >
+  Cumulative session cost (optional).
+</ResponseField>
+<ResponseField name="sessionUpdate" type={"string"} required>
+</ResponseField>
+<ResponseField name="size" type={"uint64"} required>
+  Total context window size in tokens.
+
+    - Minimum: `0`
+
+</ResponseField>
+<ResponseField name="used" type={"uint64"} required>
+  Tokens currently in context.
+
+    - Minimum: `0`
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 ## <span class="font-mono">StopReason</span>
 
 Reasons why an agent stops processing a prompt turn.
@@ -4130,4 +4182,81 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 </ResponseField>
 <ResponseField name="hint" type={"string"} required>
   A hint to display when the input hasn't been provided yet
+</ResponseField>
+
+## <span class="font-mono">Usage</span>
+
+Token usage information for a prompt turn.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="cachedReadTokens" type={"integer | null"} >
+  Total cache read tokens.
+
+    - Minimum: `0`
+
+</ResponseField>
+<ResponseField name="cachedWriteTokens" type={"integer | null"} >
+  Total cache write tokens.
+
+    - Minimum: `0`
+
+</ResponseField>
+<ResponseField name="inputTokens" type={"uint64"} required>
+  Total input tokens across all turns.
+
+    - Minimum: `0`
+
+</ResponseField>
+<ResponseField name="outputTokens" type={"uint64"} required>
+  Total output tokens across all turns.
+
+    - Minimum: `0`
+
+</ResponseField>
+<ResponseField name="thoughtTokens" type={"integer | null"} >
+  Total thought/reasoning tokens (for o1/o3 models).
+
+    - Minimum: `0`
+
+</ResponseField>
+<ResponseField name="totalTokens" type={"uint64"} required>
+  Sum of all token types across session.
+
+    - Minimum: `0`
+
+</ResponseField>
+
+## <span class="font-mono">UsageUpdate</span>
+
+Context window and cost update for a session.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="cost" type={<><span><a href="#cost">Cost</a></span><span> | null</span></>} >
+  Cumulative session cost (optional).
+</ResponseField>
+<ResponseField name="size" type={"uint64"} required>
+  Total context window size in tokens.
+
+    - Minimum: `0`
+
+</ResponseField>
+<ResponseField name="used" type={"uint64"} required>
+  Tokens currently in context.
+
+    - Minimum: `0`
+
 </ResponseField>
