@@ -1013,6 +1013,22 @@
       "required": ["content"],
       "type": "object"
     },
+    "Cost": {
+      "description": "Cost information for a session.",
+      "properties": {
+        "amount": {
+          "description": "Total cumulative cost for session.",
+          "format": "double",
+          "type": "number"
+        },
+        "currency": {
+          "description": "ISO 4217 currency code (e.g., \"USD\", \"EUR\").",
+          "type": "string"
+        }
+      },
+      "required": ["amount", "currency"],
+      "type": "object"
+    },
     "CreateTerminalRequest": {
       "description": "Request to create a new terminal and execute a command.",
       "properties": {
@@ -2224,6 +2240,17 @@
             }
           ],
           "description": "Indicates why the agent stopped processing the turn."
+        },
+        "usage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Usage"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Token usage for this turn (optional)."
         }
       },
       "required": ["stopReason"],
@@ -3191,6 +3218,22 @@
           },
           "required": ["sessionUpdate"],
           "type": "object"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/UsageUpdate"
+            }
+          ],
+          "description": "Context window and cost update for the session.",
+          "properties": {
+            "sessionUpdate": {
+              "const": "usage_update",
+              "type": "string"
+            }
+          },
+          "required": ["sessionUpdate"],
+          "type": "object"
         }
       ]
     },
@@ -3811,6 +3854,84 @@
         }
       },
       "required": ["hint"],
+      "type": "object"
+    },
+    "Usage": {
+      "description": "Token usage information for a prompt turn.",
+      "properties": {
+        "cachedReadTokens": {
+          "description": "Total cache read tokens.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": ["integer", "null"]
+        },
+        "cachedWriteTokens": {
+          "description": "Total cache write tokens.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": ["integer", "null"]
+        },
+        "inputTokens": {
+          "description": "Total input tokens across all turns.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "outputTokens": {
+          "description": "Total output tokens across all turns.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "thoughtTokens": {
+          "description": "Total thought/reasoning tokens (for o1/o3 models).",
+          "format": "uint64",
+          "minimum": 0,
+          "type": ["integer", "null"]
+        },
+        "totalTokens": {
+          "description": "Sum of all token types across session.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": ["totalTokens", "inputTokens", "outputTokens"],
+      "type": "object"
+    },
+    "UsageUpdate": {
+      "description": "Context window and cost update for a session.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "cost": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Cost"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Cumulative session cost (optional)."
+        },
+        "size": {
+          "description": "Total context window size in tokens.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "used": {
+          "description": "Tokens currently in context.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": ["used", "size"],
       "type": "object"
     },
     "WaitForTerminalExitRequest": {
