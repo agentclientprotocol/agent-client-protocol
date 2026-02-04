@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.8](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.10.7...v0.10.8) - 2026-02-04
+
+### Added
+
+- Stabilize Session Config Options ([#411](https://github.com/agentclientprotocol/agent-client-protocol/pull/411))
+- *(unstable)* Add unstable support for session usage ([#454](https://github.com/agentclientprotocol/agent-client-protocol/pull/454))
+
 ## [0.10.7](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.10.6...v0.10.7) - 2026-01-15
 
 ### Fixed
