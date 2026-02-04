@@ -118,7 +118,8 @@
               "rfds/session-usage",
               "rfds/acp-agent-registry",
               "rfds/auth-methods",
-              "rfds/rust-sdk-v1"
+              "rfds/rust-sdk-v1",
+              "rfds/logout-method"
             ]
           },
           { "group": "Preview", "pages": ["rfds/session-config-options"] },
