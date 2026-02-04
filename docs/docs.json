@@ -72,6 +72,7 @@
               "protocol/terminals",
               "protocol/agent-plan",
               "protocol/session-modes",
+              "protocol/session-config-options",
               "protocol/slash-commands",
               "protocol/extensibility",
               "protocol/transports",
@@ -81,7 +82,6 @@
                 "hidden": true,
                 "pages": [
                   "protocol/draft/cancellation",
-                  "protocol/draft/session-config-options",
                   "protocol/draft/schema"
                 ]
               }
