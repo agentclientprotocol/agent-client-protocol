@@ -613,7 +613,12 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
   Indicates why the agent stopped processing the turn.
 </ResponseField>
 <ResponseField name="usage" type={<><span><a href="#usage">Usage</a></span><span> | null</span></>} >
-  Token usage for this turn (optional).
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Token usage for this turn (optional).
+
 </ResponseField>
 
 <a id="session-resume"></a>
@@ -1959,6 +1964,10 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 </ResponseField>
 
 ## <span class="font-mono">Cost</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Cost information for a session.
 
@@ -3706,6 +3715,10 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 </ResponseField>
 
 <ResponseField name="usage_update" type="object">
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
 Context window and cost update for the session.
 
 <Expandable title="Properties">
@@ -4186,6 +4199,10 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
 ## <span class="font-mono">Usage</span>
 
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
 Token usage information for a prompt turn.
 
 **Type:** Object
@@ -4217,7 +4234,7 @@ Token usage information for a prompt turn.
 
 </ResponseField>
 <ResponseField name="thoughtTokens" type={"integer | null"} >
-  Total thought/reasoning tokens (for o1/o3 models).
+  Total thought/reasoning tokens
 
     - Minimum: `0`
 
@@ -4230,6 +4247,10 @@ Token usage information for a prompt turn.
 </ResponseField>
 
 ## <span class="font-mono">UsageUpdate</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Context window and cost update for a session.
 

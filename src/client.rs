@@ -104,6 +104,10 @@ pub enum SessionUpdate {
     #[cfg(feature = "unstable_session_info_update")]
     /// Session metadata has been updated (title, timestamps, custom metadata)
     SessionInfoUpdate(SessionInfoUpdate),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
     /// Context window and cost update for the session.
     #[cfg(feature = "unstable_session_usage")]
     UsageUpdate(UsageUpdate),
@@ -248,6 +252,10 @@ impl SessionInfoUpdate {
     }
 }
 
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
 /// Context window and cost update for a session.
 #[cfg(feature = "unstable_session_usage")]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
@@ -301,6 +309,10 @@ impl UsageUpdate {
     }
 }
 
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
 /// Cost information for a session.
 #[cfg(feature = "unstable_session_usage")]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]

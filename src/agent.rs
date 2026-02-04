@@ -2118,6 +2118,10 @@ impl PromptRequest {
 pub struct PromptResponse {
     /// Indicates why the agent stopped processing the turn.
     pub stop_reason: StopReason,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
     /// Token usage for this turn (optional).
     #[cfg(feature = "unstable_session_usage")]
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -2142,6 +2146,10 @@ impl PromptResponse {
         }
     }
 
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
     /// Token usage for this turn.
     #[cfg(feature = "unstable_session_usage")]
     #[must_use]
@@ -2189,6 +2197,10 @@ pub enum StopReason {
     Cancelled,
 }
 
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
 /// Token usage information for a prompt turn.
 #[cfg(feature = "unstable_session_usage")]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -2201,7 +2213,7 @@ pub struct Usage {
     pub input_tokens: u64,
     /// Total output tokens across all turns.
     pub output_tokens: u64,
-    /// Total thought/reasoning tokens (for o1/o3 models).
+    /// Total thought/reasoning tokens
     #[serde(skip_serializing_if = "Option::is_none")]
     pub thought_tokens: Option<u64>,
     /// Total cache read tokens.
@@ -2226,7 +2238,7 @@ impl Usage {
         }
     }
 
-    /// Total thought/reasoning tokens (for o1/o3 models).
+    /// Total thought/reasoning tokens
     #[must_use]
     pub fn thought_tokens(mut self, thought_tokens: impl IntoOption<u64>) -> Self {
         self.thought_tokens = thought_tokens.into_option();

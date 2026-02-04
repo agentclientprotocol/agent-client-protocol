@@ -1014,7 +1014,7 @@
       "type": "object"
     },
     "Cost": {
-      "description": "Cost information for a session.",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCost information for a session.",
       "properties": {
         "amount": {
           "description": "Total cumulative cost for session.",
@@ -2250,7 +2250,7 @@
               "type": "null"
             }
           ],
-          "description": "Token usage for this turn (optional)."
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nToken usage for this turn (optional)."
         }
       },
       "required": ["stopReason"],
@@ -3225,7 +3225,7 @@
               "$ref": "#/$defs/UsageUpdate"
             }
           ],
-          "description": "Context window and cost update for the session.",
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nContext window and cost update for the session.",
           "properties": {
             "sessionUpdate": {
               "const": "usage_update",
@@ -3857,7 +3857,7 @@
       "type": "object"
     },
     "Usage": {
-      "description": "Token usage information for a prompt turn.",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nToken usage information for a prompt turn.",
       "properties": {
         "cachedReadTokens": {
           "description": "Total cache read tokens.",
@@ -3884,7 +3884,7 @@
           "type": "integer"
         },
         "thoughtTokens": {
-          "description": "Total thought/reasoning tokens (for o1/o3 models).",
+          "description": "Total thought/reasoning tokens",
           "format": "uint64",
           "minimum": 0,
           "type": ["integer", "null"]
@@ -3900,7 +3900,7 @@
       "type": "object"
     },
     "UsageUpdate": {
-      "description": "Context window and cost update for a session.",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nContext window and cost update for a session.",
       "properties": {
         "_meta": {
           "additionalProperties": true,
