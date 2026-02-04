@@ -195,13 +195,13 @@ Use the elicitation mechanism from [MCP Elicitation](https://github.com/modelcon
 
 - No new protocol additions - reuses elicitation
 - Consistent with MCP patterns
-- Dynamic - agent can ask different questions per session
+- Dynamic - config options can vary per `session/new` or `session/load` call, not bound to the connection
 
 **Cons:**
 
 - **Client cannot show config UI until session exists** - Creates awkward UX flows where clients must create a session just to discover if there are config options to show.
 - Session exists in "pending config" state - semantically awkward
-- **Agent initialization complexity** - Agent cannot directly use config for session initialization (model selection, system prompt setup, etc.) since the session is already created.
+- **Agent initialization complexity** - Agent cannot directly use config for session initialization (model selection, system prompt setup, etc.) since the session is already created. A workaround is to create a lightweight session that hands off to a configured backend session, but this adds complexity for agent developers and requires the ability to mint session IDs upfront.
 
 **Why not chosen:** This approach works for mid-session information gathering but doesn't solve the initialization use case well.
 
