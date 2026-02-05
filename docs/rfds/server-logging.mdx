@@ -8,13 +8,13 @@ Author(s): [@chazcb](https://github.com/chazcb)
 
 > What are you proposing to change?
 
-Introduce a capability-gated `log` notification (agent → client) so agents can share diagnostic messages without polluting conversation history.
+Introduce a capability-gated `log` notification (agent → client) so agents can share diagnostic messages with clients for debugging and visibility into agent internals, without polluting conversation history.
 
 ## Status quo
 
 > How do things work today and what problems does this cause? Why would we change things?
 
-Today, agents have limited ways to inform clients about status that might impact their experience. The two options are:
+Today, agents have limited ways to send diagnostic information to clients. The two options are:
 
 1. **JSON-RPC errors**: Terminate the request immediately with an informative error message the client can display to the user
 2. **`session/update`**: Update conversation history with diagnostic information in the `agent_message_chunk` or other chat history notification
@@ -26,28 +26,26 @@ But neither option works when:
 - There's no session yet (diagnostics after `initialize` but before `session/new`)
 - We don't want to put diagnostics in chat history, or to force clients to filter non-chat content, or to fake chat content just to send diagnostic logs, etc.
 
-Without a way to surface these situations, users can be left confused when their ACP connection or session seem to stall or behave unexpectedly.
+Without a way to surface these situations, clients have no visibility into what's happening inside the agent—making debugging difficult and leaving developers blind to retries, fallbacks, and other internal behavior.
 
 ## What we propose to do about it
 
 > What are you proposing to improve the situation?
 
-Add a `log` JSON-RPC notification that is explicitly capability-gated. Clients opt in via `clientCapabilities.logging`; agents only send logs to clients that declare the capability. Clients can optionally specify a minimum log level.
+Add a `log` JSON-RPC notification that is explicitly capability-gated. Clients opt in via `clientCapabilities.logging`; agents only send logs to clients that declare the capability.
 
 ```json
 {
   "method": "initialize",
   "params": {
     "clientCapabilities": {
-      "logging": {
-        "level": "warning"
-      }
+      "logging": {}
     }
   }
 }
 ```
 
-If `level` is omitted, agents should default to `info`. Agents MUST NOT send logs below the client's requested level.
+When a client declares the `logging` capability, agents MAY send logs at any level. Clients are responsible for filtering or displaying logs as appropriate for their UI (e.g., showing only errors in a status bar, or all levels in a debug pane).
 
 ### Method
 
@@ -80,12 +78,12 @@ If `level` is omitted, agents should default to `info`. Agents MUST NOT send log
 
 ### Semantics
 
-- **Capability-gated**: Agents MUST NOT send `log` notification to clients that did not declare `clientCapabilities.logging`.
-- **Level filtering**: Agents MUST NOT send logs below the client's requested level (default: `info`).
+- **Capability-gated**: Agents MUST NOT send `log` notifications to clients that did not declare `clientCapabilities.logging`.
+- **Client-side filtering**: Clients are responsible for filtering logs by level as appropriate for their UI.
 - **Informational only**: Clients MAY display logs but MUST NOT treat them as protocol-affecting or control flow signals.
 - **Best-effort delivery**: Logs are not reliable transport and are not replayed on reconnect.
 - **Session optional**: `sessionId` is optional; omitted logs are connection-wide.
-- **Manageable volume**: Implementations should keep volume low and user-relevant.
+- **Reasonable volume**: Agents should avoid flooding clients with excessive logs, but volume management is implementation-specific.
 
 ### Method naming
 
@@ -99,9 +97,9 @@ Extend `session/update` with a new notification type for diagnostics. This keeps
 
 ### Structured `status` notification
 
-Instead of general-purpose logging, define a more structured `status` notification explicitly for lightweight status info—similar to Claude Code's interim status messages ("Thinking...", "Searching files..."). This would be scoped to either the current session or the agent/connection level.
+Instead of general-purpose logging, define a more structured `status` notification explicitly for user-facing status info—similar to Claude Code's interim status messages ("Thinking...", "Searching files..."). This would be scoped to either the current session or the agent/connection level.
 
-**Tradeoffs**: More constrained semantics could be clearer for clients, but less flexible. Logging with severity levels is a well-understood pattern; inventing a new "status" abstraction may not add value over `log` with `level: info`.
+**Why not chosen**: This proposal focuses on debug/diagnostic logging for developer visibility, not user-facing status updates. A structured status notification could be valuable for UI feedback, but it solves a different problem and could be addressed in a separate RFD. Logs are intentionally unstructured and may be noisy; status updates would need stricter semantics for reliable UI display.
 
 ### Explicit progress or heartbeat notification
 
@@ -119,9 +117,9 @@ Use HTTP headers, WebSocket ping payloads, or other transport-level channels for
 
 > How will things play out once this feature exists?
 
-- **Clear connection feedback**: Clients can surface warnings (rate limits, retries, fallbacks) so users understand what's happening.
-- **No more mysterious stalls**: Users see why things are slow (retries, rate limits) rather than assuming a hang.
-- **Better developer experience**: Diagnostics are visible without requiring OTEL or external logging.
+- **Debug visibility**: Clients can offer a "show logs" pane for developers and power users to see what's happening inside the agent (retries, rate limits, fallbacks, errors).
+- **Remote debugging**: For remote agents where stderr isn't accessible, clients can still surface agent diagnostics.
+- **Better developer experience**: Diagnostics are visible without requiring OTEL or external logging infrastructure.
 - **No compatibility risk**: Capability gating means legacy clients are unaffected.
 
 ## Implementation details and plan
@@ -129,13 +127,17 @@ Use HTTP headers, WebSocket ping payloads, or other transport-level channels for
 > Tell me more about your implementation. What is your detailed implementation plan?
 
 1. **Schema**: Add a `LogLevel` enum and a `LogNotification` params schema with the fields above.
-2. **Capabilities**: Add `clientCapabilities.logging` with optional `level` field for minimum severity filtering.
+2. **Capabilities**: Add `clientCapabilities.logging` as a capability clients can declare.
 3. **Protocol**: Add `log` to method tables and route it through notification handling.
 4. **Docs**: Update protocol docs and examples to show capability negotiation and sample logs.
 
 ## Frequently asked questions
 
 > What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Is this for user-facing status updates?
+
+No. This proposal is for debug/diagnostic logging—giving developers and power users visibility into agent internals. Logs may be verbose, unstructured, and not suitable for primary UI display. User-facing status (like "Thinking..." or "Searching files...") would benefit from a more structured approach; see the "Structured `status` notification" alternative.
 
 ### Why not use `session/update`?
 
@@ -163,11 +165,15 @@ No. Logs are not part of session state and are not replayed.
 
 ### How does this relate to Agent Telemetry Export?
 
-They are complementary: `log` is low-volume, user-facing diagnostics in-band; OTEL, as currently proposed, is for high-volume, developer/ops telemetry out-of-band. See `/docs/rfds/agent-telemetry-export`.
+They are complementary: `log` is low-volume, in-band diagnostics for client-side visibility; OTEL, as currently proposed, is for high-volume, developer/ops telemetry out-of-band. See `/docs/rfds/agent-telemetry-export`.
 
 ### Is this a breaking change?
 
 No. It is opt-in via capability negotiation; older clients won't receive notifications they don't understand.
+
+### Can clients change the log level at runtime?
+
+Not in this proposal. Clients declare the capability at initialization and are responsible for filtering logs client-side. A future extension could add a `logging/setLevel` method if runtime control proves necessary, but for simplicity we start with client-side filtering.
 
 ### Why RFC 5424 log levels instead of error/warning/info?
 
@@ -175,4 +181,5 @@ RFC 5424 is widely used and aligns with MCP and common logging libraries. Client
 
 ## Revision history
 
+- **2025-02-04**: Clarified focus on debug/diagnostic logging vs user-facing status; simplified capability (client-side filtering); addressed PR feedback
 - **2025-01-21**: Initial draft
