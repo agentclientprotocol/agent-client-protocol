@@ -20,7 +20,7 @@ Currently, the `agent_message_chunk` session update is strictly cumulative. The 
 
 **Current Workarounds:**
 *   **Separator & Re-push**: Agents append a visual separator (like `---`) and re-send the entire text. This causes **UI clutter**, **flicker**, and **massive context waste** in transcripts.
-*   **Silent Freezing**: Agents stop streaming until the text "catches up" to the previous length, making the UI feel laggy or frozen.
+*   **Non Stream**: Agents stop streaming until the full text done. This makes the UI feel "frozen" or laggy.
 
 ## What we propose to do about it
 
