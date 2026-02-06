@@ -653,7 +653,13 @@ Agents should always design to gracefully degrade:
 
 ### Can we extend this to replace the existing Permission-Request mechanism?
 
-Potentially, but that's out of scope for this RFD. PR #210 discussed that elicitation "could potentially even replace the Permission-Request mechanism" (Phil65), but that requires separate analysis of the permission request use cases and whether elicitation's constraints (no complex nesting, simpler lifecycle) are sufficient.
+We recommend keeping them separate. Permission requests are fundamentally security decisions—allowing a tool call to proceed is distinct from the model asking for clarification or collecting user preferences. Keeping these separate allows clients to:
+
+- Offer a consistent, recognizable UX for security-sensitive decisions (permissions)
+- Clearly distinguish "the agent needs approval to do something" from "the agent needs information to continue"
+- Apply different policies (e.g., "always allow file reads" vs. per-request elicitation responses)
+
+This is the same reasoning behind keeping authentication flows (URL mode) distinct from data collection (form mode). While we may reuse some types between these mechanisms, conflating the features would blur important security boundaries.
 
 ### What about validating user input on the client side?
 
