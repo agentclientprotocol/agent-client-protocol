@@ -636,7 +636,9 @@ Yes. An agent can include an elicitation request in a turn response with a defau
 
 ### What if a user doesn't respond to an elicitation request?
 
-The agent's default value is used (which agents must always provide). If an agent truly requires user input and wants to block, it should fail the turn and let the client handle retry logic.
+Elicitation requests require a response. If the user dismisses the elicitation without making an explicit choice (closes the dialog, presses Escape, etc.), the client responds with `action: "cancel"`. The agent then decides how to proceed—it may use a default value, prompt again later, or fail the turn.
+
+This ties into the broader request cancellation work: elicitation requests can be cancelled like any other request, and the `cancel` action provides a clear signal that the user chose not to engage rather than explicitly declining.
 
 ### Should elicitation support complex nested data structures?
 
