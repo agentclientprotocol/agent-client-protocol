@@ -43,7 +43,7 @@ The mechanism would:
 
 3. **Work in turn context**: Elicitation requests are triggered when a turn ends with `stopReason: "elicitation_requested"`, allowing agents to ask questions naturally within the conversation flow. Agents send elicitation requests via a separate `session/elicitation` method (following the same request/response pattern as `session/request_permission`). Unlike Session Config Options (which are persistent), elicitation requests are transient and turn-specific.
 
-4. **Support client capability negotiation**: Clients declare what elicitation types they support (similar to the client capabilities pattern emerging in the protocol). Agents handle gracefully when clients don't support elicitation.
+4. **Support client capability negotiation**: Clients declare elicitation support via a structured capability object that distinguishes between `form`-based and `url`-based elicitation (following MCP's capability model). This allows clients to support one or both modalities, enables agents to pass capabilities along to MCP servers, and handles graceful degradation when clients have limited elicitation support.
 
 5. **Provide rich context**: Agents can include title, description, detailed constraints, and examples—helping clients render consistent, helpful UI without custom implementations.
 
@@ -155,15 +155,20 @@ Example 3 (Text Input with Constraints):
 
 ### Input Types
 
-Following MCP's approach, we would start with these types. Clients should gracefully degrade unknown types to `text`:
+Following MCP's approach, we would start with these types, organized into two categories:
 
+**Form-based types** (rendered inline by the client):
 - `text` - Open-ended text input
 - `number` - Numeric input
 - `select` - Single-choice selection from a list
 - `multiselect` - Multiple-choice selection
 - `boolean` - Yes/no choice
 - `password` - Masked text input (for sensitive credentials)
+
+**URL-based types** (out-of-band browser flows):
 - `url` - URL-based out-of-band authentication (browser-opened flows like OAuth)
+
+This distinction is reflected in the client capabilities model, allowing clients to declare support for one or both modalities. Clients should gracefully degrade unknown form types to `text`.
 
 ### Restricted JSON Schema
 
@@ -274,7 +279,7 @@ The agent then continues processing with the user's input in the next turn or ta
 
 ### Client Capabilities
 
-Clients declare whether they support elicitation during the `initialize` phase via `ClientCapabilities`, following the same pattern as `fs` and `terminal` capabilities:
+Clients declare elicitation support during the `initialize` phase via `ClientCapabilities`, following MCP's capability model pattern. The capability distinguishes between `form`-based and `url`-based elicitation:
 
 ```json
 {
@@ -289,8 +294,8 @@ Clients declare whether they support elicitation during the `initialize` phase v
       },
       "terminal": true,
       "elicitation": {
-        "supported": true,
-        "supportedTypes": ["text", "number", "select", "multiselect", "boolean"]
+        "form": {},
+        "url": {}
       }
     },
     "clientInfo": {
@@ -301,13 +306,47 @@ Clients declare whether they support elicitation during the `initialize` phase v
 }
 ```
 
-This tells the agent which elicitation input types the client can render. Agents must gracefully handle clients that don't include this field (assumed to have no elicitation support).
+**Capability structure:**
+- `elicitation.form` - Present if the client can render form-based input types (`text`, `number`, `select`, `multiselect`, `boolean`, `password`)
+- `elicitation.url` - Present if the client can open URLs for out-of-band flows (OAuth, etc.)
+
+**Example: Headless client (no browser access):**
+```json
+"elicitation": {
+  "form": {}
+}
+```
+
+**Example: Simple terminal with URL support only:**
+```json
+"elicitation": {
+  "url": {}
+}
+```
+
+**Example: Full-featured client:**
+```json
+"elicitation": {
+  "form": {},
+  "url": {}
+}
+```
+
+This structure:
+1. Allows clients to declare partial support based on their environment
+2. Enables agents to pass capabilities along to MCP servers they connect to
+3. Maps cleanly to MCP's elicitation capability model
+4. Provides clear semantics for graceful degradation
+
+Agents must gracefully handle clients that don't include this field (assumed to have no elicitation support) or that only include one of `form` or `url`.
 
 ### Backward Compatibility
 
-- If a client doesn't support elicitation, agents must provide a default value and continue
+- If a client doesn't declare `elicitation` capabilities, agents must provide a default value and continue
+- If a client only declares `elicitation.form`, agents must not send `url`-type elicitation requests (or provide defaults and continue)
+- If a client only declares `elicitation.url`, agents must not send form-type elicitation requests (or provide defaults and continue)
 - Agents should not require elicitation responses to continue operating
-- Clients that don't understand an elicitation type should treat it as requesting text input
+- Clients that don't understand a specific form type should treat it as requesting text input
 
 ## Frequently asked questions
 
@@ -378,10 +417,11 @@ For the initial version: no. We're focusing on simple types (strings, numbers, b
 ### How should agents handle clients that don't support elicitation?
 
 Agents should always design to gracefully degrade:
-- Provide sensible default values
-- Describe what they're requesting in turn content (text)
+- Check `elicitation.form` and `elicitation.url` capabilities before sending requests
+- If the required capability is missing, provide sensible default values
+- Describe what they're requesting in turn content (text) as fallback
 - Proceed with the defaults
-- Clients declare capabilities so agents can make informed decisions
+- For agents connecting to MCP servers: pass the client's elicitation capabilities to the MCP server so it can also make informed decisions
 
 ### Can we extend this to replace the existing Permission-Request mechanism?
 
@@ -400,4 +440,5 @@ For v1, we recommend starting with JSON Schema validation only. If more complex 
 
 ## Revision history
 
+- 2026-02-05: Updated capability model to distinguish between `form` and `url` elicitation types, following MCP's capability pattern. This enables partial support (form-only or url-only clients) and better mapping to MCP servers.
 - 2026-01-12: Initial draft based on community discussions in PR #340 (user selection), PR #210 (session config alignment), and PR #330 (authentication use cases). Aligned with MCP elicitation patterns.
