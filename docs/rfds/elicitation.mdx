@@ -40,7 +40,7 @@ The mechanism would:
    - **Form mode** (in-band): Structured data collection via JSON Schema forms
    - **URL mode** (out-of-band): Browser-based flows for sensitive operations like OAuth (addressing PR #330 authentication pain points)
 
-3. **Work in turn context**: Elicitation requests are triggered when a turn ends with `stopReason: "elicitation_requested"`, allowing agents to ask questions naturally within the conversation flow. Agents send elicitation requests via a separate `session/elicitation` method (following the same request/response pattern as `session/request_permission`). Unlike Session Config Options (which are persistent), elicitation requests are transient and turn-specific.
+3. **Request/response pattern**: Agents send elicitation requests via a `session/elicitation` method and receive responses. The agent controls when to send requests and whether to wait for responses before proceeding. Unlike Session Config Options (which are persistent), elicitation requests are transient.
 
 4. **Support client capability negotiation**: Clients declare elicitation support via a structured capability object that distinguishes between `form`-based and `url`-based elicitation (following MCP's capability model). This allows clients to support one or both modalities, enables agents to pass capabilities along to MCP servers, and handles graceful degradation when clients have limited elicitation support.
 
@@ -72,14 +72,13 @@ Clients can:
 This proposal follows MCP's draft elicitation specification. See [MCP Elicitation Specification](https://modelcontextprotocol.io/specification/draft/client/elicitation) for detailed guidance. ACP uses the same JSON Schema constraint approach and capability model, adapted for our session/turn-based architecture.
 
 Key differences from MCP:
-- MCP elicitation is tool-call-scoped; ACP elicitation is session/turn-scoped
+- MCP elicitation is tool-call-scoped; ACP elicitation is session-scoped
 - ACP uses `session/elicitation` method; MCP uses `elicitation/create`
 - ACP must integrate with existing Session Config Options (which also use schema constraints)
-- ACP elicitation is triggered by `stopReason: "elicitation_requested"` in turn responses
 
 ### Elicitation Request Structure
 
-When a turn ends with `stopReason: "elicitation_requested"`, the agent sends a separate elicitation request (following the same pattern as permission requests).
+Agents send elicitation requests when they need information from the user. This is a request/response pattern—the agent sends the request and waits for the client's response.
 
 **Example 1: Form Mode - User Selection (from PR #340)**
 
@@ -319,29 +318,9 @@ Clients use this schema to generate appropriate input forms, validate user input
 
 **Security note:** Following MCP, servers MUST NOT use form mode elicitation to request sensitive information (passwords, API keys, credentials). Sensitive data collection MUST use URL mode elicitation, which bypasses the agent and client entirely.
 
-### Turn Response with Elicitation Stop Reason
-
-When an agent reaches a decision point and needs structured user input, it ends the turn with `stopReason: "elicitation_requested"`:
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 42,
-  "result": {
-    "content": [
-      {
-        "type": "text",
-        "text": "I can refactor this code in several ways. Each approach has different tradeoffs. Which strategy would you prefer?"
-      }
-    ],
-    "stopReason": "elicitation_requested"
-  }
-}
-```
-
 ### Elicitation Request
 
-After the turn completes with `stopReason: "elicitation_requested"`, the agent immediately sends a separate `session/elicitation` request (following the same pattern as `session/request_permission`):
+The agent sends a `session/elicitation` request when it needs information from the user:
 
 **Form mode example:**
 ```json
