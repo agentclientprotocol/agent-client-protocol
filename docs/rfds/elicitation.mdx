@@ -640,7 +640,7 @@ The agent's default value is used (which agents must always provide). If an agen
 
 ### Should elicitation support complex nested data structures?
 
-For the initial version: no. We're focusing on simple types (strings, numbers, booleans, arrays of those). Complex nested structures can be added in future versions if use cases emerge. This keeps the initial scope manageable and lets us learn from real-world usage.
+We follow MCP's design here. MCP intentionally restricts elicitation schemas to flat objects with primitive properties to simplify client implementation and user experience. Complex nested structures, arrays of objects (beyond enum arrays), and advanced JSON Schema features are explicitly not supported. If MCP expands this in the future, ACP would follow suit.
 
 ### How should agents handle clients that don't support elicitation?
 
