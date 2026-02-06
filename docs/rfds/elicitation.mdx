@@ -561,19 +561,13 @@ Agents must gracefully handle clients that don't include this field (assumed to 
 
 ## Frequently asked questions
 
-### Can an agent request multiple pieces of information in one turn?
+### Can an agent request multiple pieces of information at once?
 
-For v1, we recommend a **single elicitation per turn**. This keeps the design simple and predictable for both clients and agents. It also follows the Session Config Options pattern of having agents send full state updates.
+Yes—a single form mode elicitation request can include multiple fields in its `requestedSchema`. The schema is an object with multiple properties, and the client renders a form with all requested fields.
 
-If an agent needs to collect multiple pieces of information, it can:
-1. Ask one question per turn (with sensible defaults)
-2. Incorporate the user's response in the context for the next turn
-3. Ask the next question in a subsequent turn
+For sequential information gathering, agents can send multiple elicitation requests and wait for each response before proceeding. This allows agents to adapt follow-up questions based on previous answers.
 
-This approach:
-- Keeps client UI logic simple
-- Allows agents to adapt follow-up questions based on previous answers
-- Can be extended to array-based multi-elicitation in future versions if compelling use cases emerge
+The request/response model gives agents flexibility: they control when to send elicitation requests and whether to wait for responses or continue with other work.
 
 ### How does this differ from session config options?
 
@@ -581,11 +575,11 @@ Excellent question from PR #210 discussions. Both use restricted JSON Schema, bu
 
 | Aspect | Session Config Options | Elicitation |
 |--------|------------------------|-------------|
-| **Lifecycle** | Persistent, pre-declared at session init | Transient, appears during turns |
-| **Scope** | Session-wide configuration | Single turn/decision point |
+| **Lifecycle** | Persistent, pre-declared at session init | Transient, request/response |
+| **Scope** | Session-wide configuration | Single decision point or data collection |
 | **Defaults** | Required (agents must have defaults) | Optional (schema's `required` array determines mandatory fields) |
-| **State management** | Client maintains full state, broadcast on changes | Agent provides response in next turn |
-| **Use cases** | Model selection, session mode, persistent settings | Authentication, step-by-step decisions, one-time questions |
+| **State management** | Client maintains full state, broadcast on changes | Agent receives response and decides how to proceed |
+| **Use cases** | Model selection, session mode, persistent settings | Authentication, clarifying questions, one-time data collection |
 
 Session Config Options are great for "how should you run this session?" Elicitation is for "what should I do next?"
 
