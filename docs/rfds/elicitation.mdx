@@ -632,7 +632,13 @@ From PR #330: URL-mode elicitation allows agents to request authentication witho
 
 ### Can agents use elicitation for information required before responding?
 
-Yes. An agent can include an elicitation request in a turn response with a default value and continue, then incorporate the user's response into the next turn. This is how agents can guide users through multi-step workflows.
+Yes. By modeling elicitation as a request/response pattern (like MCP's `elicitation/create`), the agent controls its own flow. The agent can:
+
+- Send an elicitation request and wait for the response before proceeding
+- Continue with other work while waiting for user input
+- Chain multiple elicitations as needed for multi-step workflows
+
+This flexibility is why elicitation is modeled as a separate request/response rather than being tightly coupled to turns.
 
 ### What if a user doesn't respond to an elicitation request?
 
