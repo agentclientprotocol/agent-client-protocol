@@ -583,7 +583,7 @@ Excellent question from PR #210 discussions. Both use restricted JSON Schema, bu
 |--------|------------------------|-------------|
 | **Lifecycle** | Persistent, pre-declared at session init | Transient, appears during turns |
 | **Scope** | Session-wide configuration | Single turn/decision point |
-| **Defaults** | Required (agents must have defaults) | Required (agents should always provide) |
+| **Defaults** | Required (agents must have defaults) | Optional (schema's `required` array determines mandatory fields) |
 | **State management** | Client maintains full state, broadcast on changes | Agent provides response in next turn |
 | **Use cases** | Model selection, session mode, persistent settings | Authentication, step-by-step decisions, one-time questions |
 
