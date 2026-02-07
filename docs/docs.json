@@ -82,6 +82,7 @@
                 "hidden": true,
                 "pages": [
                   "protocol/draft/cancellation",
+                  "protocol/draft/session-list",
                   "protocol/draft/schema"
                 ]
               }
@@ -106,12 +107,10 @@
           {
             "group": "Draft",
             "pages": [
-              "rfds/session-list",
               "rfds/session-fork",
               "rfds/request-cancellation",
               "rfds/session-resume",
               "rfds/meta-propagation",
-              "rfds/session-info-update",
               "rfds/agent-telemetry-export",
               "rfds/proxy-chains",
               "rfds/mcp-over-acp",
@@ -123,7 +122,10 @@
               "rfds/session-delete"
             ]
           },
-          { "group": "Preview", "pages": [] },
+          {
+            "group": "Preview",
+            "pages": ["rfds/session-list", "rfds/session-info-update"]
+          },
           {
             "group": "Completed",
             "pages": [
