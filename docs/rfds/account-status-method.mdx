@@ -1,0 +1,435 @@
+---
+title: "Account Status Method"
+---
+
+- Author(s): [@anna239](https://github.com/anna239)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Add an `account/status` method that allows clients to query the agent's current account status, including credit balance, usage quotas, rate limits, and billing information. This enables clients to display quota warnings, remaining credits, and help users understand their usage limits.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+Currently, there is no standardized way for clients to query an agent's account or billing status. Users only discover quota issues when requests fail with rate limit or quota errors.
+
+Different LLM providers expose this information through various means:
+
+- [OpenAI](https://platform.openai.com/docs/api-reference/usage): Usage dashboard and undocumented billing endpoints
+- [Anthropic](https://platform.claude.com/docs/en/build-with-claude/usage-cost-api): Admin API with usage and cost reports
+- [Google Gemini](https://ai.google.dev/gemini-api/docs/rate-limits): Rate limits viewable in AI Studio, 429 errors with quota info
+
+## Shiny future
+
+> How will things play out once this feature exists?
+
+Clients will be able to:
+
+1. Display current credit balance and warn when running low
+2. Show rate limit status (requests/tokens remaining)
+3. Display account tier and plan information
+4. Help users understand when quotas will reset
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+### New Method: `account/status`
+
+A method to retrieve current account status. This method is **not tied to a session** and can be called at any time after initialization.
+
+#### AccountStatusRequest
+
+```typescript
+interface AccountStatusRequest {
+  /** Extension metadata */
+  _meta?: Record<string, unknown>;
+}
+```
+
+#### AccountStatusResponse
+
+All fields are nullable to accommodate different providers that may not support all metrics.
+
+```typescript
+interface AccountStatusResponse {
+  /** Extension metadata */
+  _meta?: Record<string, unknown>;
+
+  /** Credit/balance information */
+  credits?: CreditsInfo | null;
+
+  /** Rate limit information */
+  rateLimits?: RateLimitsInfo | null;
+
+  /** Account tier/plan information */
+  account?: AccountInfo | null;
+
+  /** Usage information for current billing period */
+  usage?: UsageInfo | null;
+}
+```
+
+### Supporting Types
+
+#### CreditsInfo
+
+Information about prepaid credits or account balance.
+
+```typescript
+interface CreditsInfo {
+  /** Remaining credit balance in smallest currency unit (e.g., cents) */
+  remaining?: number | null;
+
+  /** Total credits purchased/allocated */
+  total?: number | null;
+
+  /** Currency code (ISO 4217, e.g., "USD") */
+  currency?: string | null;
+
+  /** Credit expiration timestamp (ISO 8601) */
+  expiresAt?: string | null;
+}
+```
+
+#### RateLimitsInfo
+
+Current rate limit status across different dimensions.
+
+```typescript
+interface RateLimitsInfo {
+  /** Requests per minute limit */
+  requestsPerMinute?: RateLimitStatus | null;
+
+  /** Requests per day limit */
+  requestsPerDay?: RateLimitStatus | null;
+
+  /** Input tokens per minute limit */
+  inputTokensPerMinute?: RateLimitStatus | null;
+
+  /** Output tokens per minute limit */
+  outputTokensPerMinute?: RateLimitStatus | null;
+
+  /** Total tokens per minute limit (if not split by input/output) */
+  tokensPerMinute?: RateLimitStatus | null;
+
+  /** Tokens per day limit */
+  tokensPerDay?: RateLimitStatus | null;
+}
+
+interface RateLimitStatus {
+  /** Maximum allowed */
+  limit?: number | null;
+
+  /** Currently remaining */
+  remaining?: number | null;
+
+  /** Timestamp when the limit resets (ISO 8601) */
+  resetsAt?: string | null;
+}
+```
+
+#### AccountInfo
+
+Information about the account tier and plan.
+
+```typescript
+interface AccountInfo {
+  /** Account/usage tier (e.g., "free", "tier-1", "tier-2", "enterprise") */
+  tier?: string | null;
+
+  /** Plan name (e.g., "Pay-as-you-go", "Pro", "Team") */
+  plan?: string | null;
+
+  /** Billing period start (ISO 8601) */
+  billingPeriodStart?: string | null;
+
+  /** Billing period end (ISO 8601) */
+  billingPeriodEnd?: string | null;
+}
+```
+
+#### UsageInfo
+
+Usage statistics for the current billing period.
+
+```typescript
+interface UsageInfo {
+  /** Total input tokens used */
+  inputTokens?: number | null;
+
+  /** Total output tokens used */
+  outputTokens?: number | null;
+
+  /** Total requests made */
+  requests?: number | null;
+
+  /** Total cost incurred in smallest currency unit */
+  cost?: number | null;
+
+  /** Currency code for cost (ISO 4217) */
+  currency?: string | null;
+}
+```
+
+### Capability Advertisement
+
+The capability should be advertised within a new `accountCapabilities` object in `AgentCapabilities`:
+
+```typescript
+interface AgentCapabilities {
+  // ... existing fields ...
+
+  /** Account-related capabilities */
+  accountCapabilities?: AccountCapabilities;
+}
+
+interface AccountCapabilities {
+  /** Extension metadata */
+  _meta?: Record<string, unknown>;
+
+  /** Agent supports the account/status method */
+  status?: boolean;
+}
+```
+
+### JSON Schema Additions
+
+```json
+{
+  "$defs": {
+    "AccountCapabilities": {
+      "description": "Account-related capabilities supported by the agent.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "type": ["object", "null"]
+        },
+        "status": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether the agent supports the account/status method."
+        }
+      },
+      "type": "object"
+    },
+    "AccountStatusRequest": {
+      "description": "Request to retrieve current account status.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object",
+      "x-method": "account/status",
+      "x-side": "agent"
+    },
+    "AccountStatusResponse": {
+      "description": "Response containing account status information.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "type": ["object", "null"]
+        },
+        "credits": {
+          "anyOf": [{ "$ref": "#/$defs/CreditsInfo" }, { "type": "null" }],
+          "description": "Credit/balance information."
+        },
+        "rateLimits": {
+          "anyOf": [{ "$ref": "#/$defs/RateLimitsInfo" }, { "type": "null" }],
+          "description": "Rate limit information."
+        },
+        "account": {
+          "anyOf": [{ "$ref": "#/$defs/AccountInfo" }, { "type": "null" }],
+          "description": "Account tier/plan information."
+        },
+        "usage": {
+          "anyOf": [{ "$ref": "#/$defs/UsageInfo" }, { "type": "null" }],
+          "description": "Usage information for current billing period."
+        }
+      },
+      "type": "object",
+      "x-method": "account/status",
+      "x-side": "agent"
+    },
+    "CreditsInfo": {
+      "description": "Information about prepaid credits or account balance.",
+      "properties": {
+        "remaining": { "type": ["number", "null"] },
+        "total": { "type": ["number", "null"] },
+        "currency": { "type": ["string", "null"] },
+        "expiresAt": { "type": ["string", "null"], "format": "date-time" }
+      },
+      "type": "object"
+    },
+    "RateLimitsInfo": {
+      "description": "Current rate limit status.",
+      "properties": {
+        "requestsPerMinute": {
+          "anyOf": [{ "$ref": "#/$defs/RateLimitStatus" }, { "type": "null" }]
+        },
+        "requestsPerDay": {
+          "anyOf": [{ "$ref": "#/$defs/RateLimitStatus" }, { "type": "null" }]
+        },
+        "inputTokensPerMinute": {
+          "anyOf": [{ "$ref": "#/$defs/RateLimitStatus" }, { "type": "null" }]
+        },
+        "outputTokensPerMinute": {
+          "anyOf": [{ "$ref": "#/$defs/RateLimitStatus" }, { "type": "null" }]
+        },
+        "tokensPerMinute": {
+          "anyOf": [{ "$ref": "#/$defs/RateLimitStatus" }, { "type": "null" }]
+        },
+        "tokensPerDay": {
+          "anyOf": [{ "$ref": "#/$defs/RateLimitStatus" }, { "type": "null" }]
+        }
+      },
+      "type": "object"
+    },
+    "RateLimitStatus": {
+      "description": "Status of a single rate limit dimension.",
+      "properties": {
+        "limit": { "type": ["number", "null"] },
+        "remaining": { "type": ["number", "null"] },
+        "resetsAt": { "type": ["string", "null"], "format": "date-time" }
+      },
+      "type": "object"
+    },
+    "AccountInfo": {
+      "description": "Account tier and plan information.",
+      "properties": {
+        "tier": { "type": ["string", "null"] },
+        "plan": { "type": ["string", "null"] },
+        "billingPeriodStart": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "billingPeriodEnd": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        }
+      },
+      "type": "object"
+    },
+    "UsageInfo": {
+      "description": "Usage statistics for the current billing period.",
+      "properties": {
+        "inputTokens": { "type": ["number", "null"] },
+        "outputTokens": { "type": ["number", "null"] },
+        "requests": { "type": ["number", "null"] },
+        "cost": { "type": ["number", "null"] },
+        "currency": { "type": ["string", "null"] }
+      },
+      "type": "object"
+    }
+  }
+}
+```
+
+### Example Exchange
+
+**Request:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "account/status",
+  "params": {}
+}
+```
+
+**Response (full example):**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "credits": {
+      "remaining": 4250,
+      "total": 10000,
+      "currency": "USD",
+      "expiresAt": "2027-02-01T00:00:00Z"
+    },
+    "rateLimits": {
+      "requestsPerMinute": {
+        "limit": 60,
+        "remaining": 45,
+        "resetsAt": "2026-02-02T12:01:00Z"
+      },
+      "tokensPerMinute": {
+        "limit": 100000,
+        "remaining": 75000,
+        "resetsAt": "2026-02-02T12:01:00Z"
+      }
+    },
+    "account": {
+      "tier": "tier-2",
+      "plan": "Pay-as-you-go",
+      "billingPeriodStart": "2026-02-01T00:00:00Z",
+      "billingPeriodEnd": "2026-03-01T00:00:00Z"
+    },
+    "usage": {
+      "inputTokens": 1500000,
+      "outputTokens": 500000,
+      "requests": 2500,
+      "cost": 5750,
+      "currency": "USD"
+    }
+  }
+}
+```
+
+**Response (partial - agent only knows some info):**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "credits": null,
+    "rateLimits": {
+      "requestsPerMinute": {
+        "limit": 60,
+        "remaining": 45,
+        "resetsAt": "2026-02-02T12:01:00Z"
+      },
+      "requestsPerDay": null,
+      "tokensPerMinute": null,
+      "tokensPerDay": null,
+      "inputTokensPerMinute": null,
+      "outputTokensPerMinute": null
+    },
+    "account": {
+      "tier": "free",
+      "plan": null,
+      "billingPeriodStart": null,
+      "billingPeriodEnd": null
+    },
+    "usage": null
+  }
+}
+```
+
+### Behavior Notes
+
+1. **Session independence**: This method can be called at any time after `initialize`, regardless of whether a session exists.
+
+2. **Caching**: Agents may cache this information and return slightly stale data. Clients should not poll this endpoint excessively.
+
+3. **Partial data**: Agents should return as much information as they have access to. Fields that are unknown or unavailable should be `null`.
+
+4. **Currency units**: Monetary values (`remaining`, `total`, `cost`) are in the smallest currency unit (e.g., cents for USD) to avoid floating-point issues.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document?
+
+## Revision history
+
+- 2026-02-02: Initial draft
