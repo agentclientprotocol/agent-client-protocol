@@ -6,17 +6,19 @@ Author(s): [steve02081504](https://github.com/steve02081504)
 
 ## Elevator pitch
 
-The current Agent Communication Protocol (ACP) SDK exclusively uses stdio for transport, requiring a separate forwarding process when the agent backend operates over WebSocket. This proposal introduces native WebSocket transport support directly into the ACP SDK, eliminating the need for intermediate stdio-to-WebSocket bridging processes and enabling more flexible, resource-efficient deployment architectures.
+While the Agent Communication Protocol (ACP) supports multiple concurrent sessions, the current SDK exclusively uses stdio for transport. This creates a tight 1:1 coupling between the client and the agent process, making it difficult to expose a single agent instance to multiple clients without complex bridge processes. This proposal introduces native WebSocket transport support, unlocking the protocol's native multi-session capabilities over the network and enabling scalable, service-oriented agent architectures.
 
 ## Status quo
 
-Currently, the ACP SDK (`@agentclientprotocol/sdk`) is designed around stdio-based communication. When an agent backend is implemented as a web service (e.g., using Express.js with WebSocket endpoints), the following architecture is required:
+Currently, the ACP SDK (`@agentclientprotocol/sdk`) is designed around stdio-based communication. While the protocol allows a single agent to handle multiple sessions, **stdio streams are inherently single-connection pipes**.
 
-1. **Backend Service**: Implements ACP protocol over WebSocket (e.g., `ws://localhost:8931/ws/acp`).
-2. **Bridge Process**: A separate script or bin that:
-   - Connects to the WebSocket endpoint.
-   - Forwards all messages between stdio and WebSocket.
-   - Handles buffering, encoding, and line-delimitation.
+To connect multiple clients (e.g., multiple IDE windows or remote users) to a single agent backend, developers are currently forced to use a **"Bridge Architecture"**:
+
+1. **Shared Backend**: The actual agent service (running centrally, e.g. `ws://localhost:8931/ws/acp`).
+2. **Bridge Processes**: For *each* client connecting, the IDE spawns a separate local process (e.g. a Node.js script or native binary) acting as a middleman.
+   - It communicates with the IDE via stdio.
+   - It opens a WebSocket connection to the Shared Backend.
+   - It pipes data back and forth.
 3. **IDE Client**: Launches the bridge process and communicates via stdio.
 
 **[Example from fount framework:](https://github.com/steve02081504/fount/blob/master/src/public/parts/shells/ideIntegration/public/fount_ide_agent.mjs)**
@@ -38,19 +40,20 @@ ws.onmessage = (event) => {
 
 **Problems with this approach:**
 
-1. **Resource Overhead**: Each client connection requires an additional process, consuming:
-   - ~3-70MB RAM depends on the runtime.
+1. **Bridge Process Overhead**: Even if the backend agent is a singleton, every connected client requires spawning a local bridge process just to forward bytes, consuming:
+   - ~3–70MB RAM per process (depending on the runtime).
    - CPU cycles for message forwarding.
    - Disk I/O for process spawning and script loading.
-2. **Architectural Complexity**: Introduces an unnecessary layer of indirection that must handle:
+2. **Artificial Coupling**: The stdio transport forces a process-per-connection model on the client side, obscuring the multi-session nature of the backend.
+3. **Architectural Complexity**: Introduces an unnecessary layer of indirection (Client ↔ Stdio ↔ Bridge ↔ WebSocket ↔ Agent) instead of a direct connection (Client ↔ WebSocket ↔ Agent). This layer must handle:
    - Connection lifecycle synchronization (stdio close ↔ WebSocket close).
    - Error propagation and retry logic.
    - Authentication token passing (via URL params or environment variables).
-3. **Deployment Friction**: Deploying an ACP agent as a web service requires:
+4. **Deployment Friction**: Deploying an ACP agent as a web service requires:
    - Hosting both the main backend **and** distributing the bridge script.
    - Managing separate versioning for the bridge script.
    - Documenting non-standard connection procedures.
-4. **Latency**: Every message incurs an extra serialization/deserialization cycle and inter-process communication overhead.
+5. **Latency**: Every message incurs an extra serialization/deserialization cycle and inter-process communication overhead.
 
 **Current Workarounds:**
 - **Custom Bridge Scripts**: Each project maintains its own stdio-to-WebSocket forwarder (e.g., [`fount_ide_agent.mjs`](https://github.com/steve02081504/fount/blob/master/src/public/parts/shells/ideIntegration/public/fount_ide_agent.mjs)).
@@ -113,8 +116,11 @@ app.ws('/acp', authenticate, (ws, req) => {
 
 ## Shiny future
 
-In the shiny future, ACP agents will be truly transport-agnostic:
+In the shiny future, ACP agents can fully utilize their multi-session capabilities:
 
+- **True Multi-Tenancy**: A single Agent process can accept direct WebSocket connections from multiple clients simultaneously, creating a distinct session for each without spawning child processes.
+- **No More Bridges**: IDEs and clients connect directly to the agent's URL, eliminating the RAM and CPU overhead of local forwarding scripts.
+- **Simplified Topology**: The architecture flattens to `Client <-> Agent`, reducing latency and points of failure.
 - **Cloud-Native Deployment**: A single agent backend can serve thousands of concurrent users over WebSocket without spawning child processes.
 - **Unified Architecture**: Frameworks like [fount](https://github.com/steve02081504/fount) can expose ACP directly as an HTTP/WebSocket API without auxiliary bridge scripts.
 - **Mobile & Web Support**: Browser-based IDEs and mobile apps can connect directly to ACP agents via WebSocket without WASM runtimes or proxy servers.
@@ -183,6 +189,12 @@ interface Transport {
 - **TCP Sockets**: Raw TCP for ultra-low-latency scenarios.
 
 ## Frequently asked questions
+
+### Since ACP supports multiple sessions, why does stdio limit us to one process per client?
+
+While an ACP Agent *logic* can handle infinite sessions, the **stdio transport** is a physical 1:1 pipe. You cannot easily multiplex multiple distinct clients (e.g., a desktop IDE and a web dashboard) into the same `stdin` stream without writing a complex custom multiplexer.
+
+Currently, to share one agent, clients spawn "bridge" processes. This proposal removes the need for those bridges, allowing the Agent to handle connection multiplexing natively via the WebSocket server implementation, which is the standard way to handle concurrency in network services.
 
 ### What alternative approaches did you consider, and why did you settle on this one?
 
@@ -278,4 +290,5 @@ The SDK will document these platform-specific patterns.
 
 ## Revision history
 
+- **2026-02-10**: Revised per reviewer feedback: reframed around stdio as transport bottleneck (protocol supports multi-session); added FAQ on stdio vs multi-session.
 - **2026-02-09**: Initial draft by steve02081504.
