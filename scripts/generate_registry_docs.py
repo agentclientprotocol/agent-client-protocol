@@ -17,6 +17,8 @@ from __future__ import annotations
 import json
 import os
 import re
+import sys
+import time
 import urllib.request
 from pathlib import Path
 
@@ -103,18 +105,49 @@ def _fetch_registry() -> dict:
     return data
 
 
-def _fetch_icon_svg(agent_id: str) -> str:
-    """Fetch and sanitize SVG icon from CDN."""
+def _fetch_icon_svg(agent_id: str, retries: int = 3) -> str | None:
+    """Fetch and sanitize SVG icon from CDN.
+
+    Returns the sanitized SVG string, or None if all retries fail.
+    """
     url = f"{ICON_BASE_URL}/{agent_id}.svg"
-    try:
-        svg = _make_request(url, timeout=10).decode("utf-8")
-        return _sanitize_svg(svg)
-    except Exception as e:
-        print(f"Warning: Could not fetch icon for {agent_id}: {e}")
-        return ""
+    for attempt in range(1, retries + 1):
+        try:
+            svg = _make_request(url, timeout=10).decode("utf-8")
+            return _sanitize_svg(svg)
+        except Exception as e:
+            print(f"Warning: Could not fetch icon for {agent_id} (attempt {attempt}/{retries}): {e}")
+            if attempt < retries:
+                time.sleep(2)
+    return None
 
 
-def _render_agent_cards(agents: list[dict]) -> str:
+def _fetch_all_icons(agents: list[dict]) -> dict[str, str]:
+    """Fetch icons for all agents from the CDN.
+
+    Returns a dict mapping agent_id -> sanitized SVG string.
+    Raises SystemExit if any icon fails to fetch after retries.
+    """
+    icons: dict[str, str] = {}
+    failed: list[str] = []
+
+    for agent in agents:
+        agent_id = agent.get("id", "-")
+        svg = _fetch_icon_svg(agent_id)
+        if svg is None:
+            failed.append(agent_id)
+        else:
+            icons[agent_id] = svg
+
+    if failed:
+        print(f"Error: Failed to fetch icons for {len(failed)} agent(s): {', '.join(failed)}")
+        print("Aborting to prevent publishing docs with missing icons.")
+        sys.exit(1)
+
+    return icons
+
+
+def _render_agent_cards(agents: list[dict], icons: dict[str, str]) -> str:
     """Render agent cards as MDX components."""
     # Sort agents by name
     agents = sorted(agents, key=lambda a: a.get("name", "").lower())
@@ -126,7 +159,7 @@ def _render_agent_cards(agents: list[dict]) -> str:
         name = agent.get("name", agent_id)
         version = _escape_text(agent.get("version", "-"))
         repository = agent.get("repository", "")
-        icon_svg = _fetch_icon_svg(agent_id)
+        icon_svg = icons.get(agent_id)
 
         lines.append("  <Card")
         lines.append(f'    title="{_escape_html(name)}"')
@@ -158,16 +191,18 @@ def main() -> None:
         print("Please create the template file first.")
         raise SystemExit(1)
 
-    # Fetch registry data
+    # Phase 1: Fetch all data (registry + icons) — abort on any failure
     registry = _fetch_registry()
     agents = registry.get("agents", [])
 
     if not agents:
         print("Warning: No agents found in registry")
 
-    # Generate output
+    icons = _fetch_all_icons(agents)
+
+    # Phase 2: Render and write — only reached if all fetches succeeded
     template = TEMPLATE_PATH.read_text()
-    cards = _render_agent_cards(agents)
+    cards = _render_agent_cards(agents, icons)
     output = template.replace(PLACEHOLDER, cards)
 
     # Write output
