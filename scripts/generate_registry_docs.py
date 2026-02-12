@@ -160,11 +160,12 @@ def _render_agent_cards(agents: list[dict], icons: dict[str, str]) -> str:
     # Sort agents by name
     agents = sorted(agents, key=lambda a: a.get("name", "").lower())
 
-    lines: list[str] = ["<CardGroup cols={3}>"]
+    lines: list[str] = ["<CardGroup cols={2}>"]
 
     for agent in agents:
         agent_id = agent.get("id", "-")
         name = agent.get("name", agent_id)
+        description = _escape_text(agent.get("description", ""))
         version = _escape_text(agent.get("version", "-"))
         repository = agent.get("repository", "")
         icon_svg = icons.get(agent_id)
@@ -179,6 +180,8 @@ def _render_agent_cards(agents: list[dict], icons: dict[str, str]) -> str:
                 lines.append(f"      {line}")
             lines.append("    }")
         lines.append("  >")
+        if description:
+            lines.append(f"    {description}")
         version_text = version if version not in ("", "-") else "version unknown"
         lines.append('    <p class="text-xs mt-3">')
         lines.append(f"      <code>{_escape_text(version_text)}</code>")
