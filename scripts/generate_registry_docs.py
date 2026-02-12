@@ -70,6 +70,14 @@ def _escape_text(text: str) -> str:
 def _sanitize_svg(svg: str) -> str:
     """Sanitize SVG for JSX embedding with currentColor support."""
     svg = svg.strip()
+    # Remove XML declaration
+    svg = re.sub(r"<\?xml[^?]*\?>\s*", "", svg)
+    # Remove non-SVG elements (e.g. Inkscape metadata)
+    svg = re.sub(r"<(defs|sodipodi:\w+|inkscape:\w+)\b[^>]*/>", "", svg)
+    svg = re.sub(r"<(defs|sodipodi:\w+|inkscape:\w+)\b[^>]*>.*?</\1>", "", svg, flags=re.DOTALL)
+    # Remove namespace and Inkscape/sodipodi attributes
+    svg = re.sub(r'\s+xmlns:\w+="[^"]*"', "", svg)
+    svg = re.sub(r'\s+(sodipodi|inkscape):\w+="[^"]*"', "", svg)
     # Remove existing width/height/class attributes
     svg = re.sub(r'\s(width|height)="[^"]*"', "", svg)
     svg = re.sub(r'\sclass="[^"]*"', "", svg)
