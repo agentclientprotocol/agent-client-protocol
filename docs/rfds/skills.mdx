@@ -47,7 +47,12 @@ At a high level:
    - If MCP-over-ACP is available, skill content may be surfaced as MCP resources and `skills/get` can return resource URIs.
    - Otherwise, `skills/get` can return inline SKILL.md content and optional manifests.
 
-4. **Compatibility with the open standard**
+4. **Client UX hooks**
+   - Recommend a `/skills` slash command via `available_commands_update` when the Skills capability is present.
+   - Clients may treat `$` as a UI affordance to open a skills picker backed by `skills/list`.
+   - `$` is not a protocol message; it is a client-side convention that maps to skills discovery.
+
+5. **Compatibility with the open standard**
    - ACP does not re-define file layout; it adopts the SKILL.md frontmatter as the canonical metadata source.
    - References/scripts/assets remain optional and discoverable via the `skills/get` response or MCP resources.
 
@@ -57,6 +62,7 @@ This keeps ACP small while giving clients and agents a consistent, interoperable
 
 - Agents can always ask “what skills are available?” and load details only when needed.
 - Proxies can inject or augment skills in a standard way.
+- Users can type `$` to open a skills picker (client UX) or run `/skills` to list available skills.
 - Skills move between clients without repackaging or bespoke integrations.
 - The ecosystem converges on a shared contract without losing flexibility in storage or transport.
 
@@ -69,7 +75,7 @@ A likely phased plan:
 1. Define `SkillDescriptor` and the `skills/list` + `skills/get` methods in the spec and schemas.
 2. Update proxy guidance and MCP-over-ACP docs to describe skill resource mapping.
 3. Add SDK support (Rust and TypeScript) and generator updates.
-4. Update docs and examples to show skill discovery and retrieval.
+4. Update docs and examples to show skill discovery and retrieval, including `/skills` and `$` UX guidance.
 
 ## Frequently asked questions
 
@@ -88,6 +94,10 @@ Large skills should be fetched lazily. `skills/get` can return a manifest and/or
 ## Who owns skill sources?
 
 Skills can be provided by the client, agent, or proxy. The `source` field indicates provenance without enforcing policy.
+
+## How does this relate to slash commands and `$` lookup?
+
+`/skills` should be a normal slash command advertised via `available_commands_update` when the Skills capability is present. `$` is a client-side UX affordance that opens a skills picker backed by `skills/list`; it does not introduce a new ACP message.
 
 ### What alternative approaches did you consider, and why did you settle on this one?
 
