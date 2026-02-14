@@ -6,15 +6,16 @@ title: "Skills Discovery and Delivery"
 
 ## Elevator pitch
 
-Define first-class **Skills** in ACP so agents, clients, and proxies can discover and load skill metadata and content in a consistent way. Align with the open agent skills standard (SKILL.md + references/scripts/assets) while keeping the ACP surface area small and transport-agnostic (direct ACP or MCP resources).
+Define first-class **Skills** discovery in ACP so agents and clients can enumerate skills consistently and power `/skills` and `$` UX. Align with [the open agent skills standard](https://agentskills.io/) (SKILL.md + references/scripts/assets) while keeping the ACP surface area small.
 
 ## Status quo
 
-Skills exist today as **tool-specific filesystem conventions**:
+Skills exist today as **tool-specific filesystem conventions** that are not directly exposed via ACP at all:
 
 - Each client defines its own discovery paths and activation heuristics.
 - ACP only mentions skills indirectly in the proxy-chains RFD; there is no protocol-level contract for listing or fetching skills.
 - Proxies can inject instructions, but there is no standardized metadata, no cross-client interoperability, and no way for an agent to ask, “what skills are available?”
+- Users have to know what skills are available by heart rather than using the standard `$`/`/skills` discovery mechanisms.
 
 This leads to:
 
@@ -24,7 +25,7 @@ This leads to:
 
 ## What we propose to do about it
 
-Introduce an **optional Skills capability** in ACP that standardizes discovery and retrieval while remaining compatible with existing skill packaging.
+Introduce an **optional Skills capability** in ACP that standardizes discovery while remaining compatible with existing skill packaging.
 
 At a high level:
 
@@ -33,36 +34,34 @@ At a high level:
      - `name`: string (unique key)
      - `description`: string
      - `version?`: string
-     - `source?`: enum (agent, client, proxy, external)
-     - `uri?`: string (content location, e.g., ACP or MCP resource URI)
      - `updatedAt?`: string (ISO 8601)
      - `checksum?`: string (optional integrity)
 
-2. **Discovery and retrieval**
+2. **Discovery**
    - Add a `skills/list` request/response returning `SkillDescriptor[]`.
-   - Add a `skills/get` request/response that returns the **SKILL.md** content (and optionally reference/script manifests).
-   - Agents can request skill content lazily.
+   - This is sufficient for `/skills` and `$` pickers without requiring any skill content transfer.
 
-3. **Transport options**
-   - If MCP-over-ACP is available, skill content may be surfaced as MCP resources and `skills/get` can return resource URIs.
-   - Otherwise, `skills/get` can return inline SKILL.md content and optional manifests.
-
-4. **Client UX hooks**
+3. **Client UX hooks**
    - Recommend a `/skills` slash command via `available_commands_update` when the Skills capability is present.
    - Clients may treat `$` as a UI affordance to open a skills picker backed by `skills/list`.
-   - `$` is not a protocol message; it is a client-side convention that maps to skills discovery.
+   - `/` and `$` are client-side conventions; ACP only defines the discovery data and the `available_commands_update` signal.
 
-5. **Compatibility with the open standard**
+4. **Compatibility with the open standard**
    - ACP does not re-define file layout; it adopts the SKILL.md frontmatter as the canonical metadata source.
-   - References/scripts/assets remain optional and discoverable via the `skills/get` response or MCP resources.
+   - ACP does not define installation or execution. It only lets clients discover what the agent already exposes.
 
 This keeps ACP small while giving clients and agents a consistent, interoperable skills surface.
 
+## Non-goals
+
+- Define how skills are installed, updated, or executed.
+- Allow clients or proxies to inject or override agent skills.
+- Standardize filesystem paths or activation heuristics.
+
 ## Shiny future
 
-- Agents can always ask “what skills are available?” and load details only when needed.
-- Proxies can inject or augment skills in a standard way.
 - Users can type `$` to open a skills picker (client UX) or run `/skills` to list available skills.
+- Agents can always ask “what skills are available?” and get a consistent list.
 - Skills move between clients without repackaging or bespoke integrations.
 - The ecosystem converges on a shared contract without losing flexibility in storage or transport.
 
@@ -72,28 +71,28 @@ This keeps ACP small while giving clients and agents a consistent, interoperable
 
 A likely phased plan:
 
-1. Define `SkillDescriptor` and the `skills/list` + `skills/get` methods in the spec and schemas.
-2. Update proxy guidance and MCP-over-ACP docs to describe skill resource mapping.
-3. Add SDK support (Rust and TypeScript) and generator updates.
-4. Update docs and examples to show skill discovery and retrieval, including `/skills` and `$` UX guidance.
+1. Define `SkillDescriptor` and the `skills/list` method in the spec and schemas.
+2. Add SDK support (Rust and TypeScript) and generator updates.
+3. Update docs and examples to show skill discovery, `/skills`, and `$` UX guidance.
+4. If needed, add `skills/get` for richer previews of SKILL.md content without requiring the agent to surface it in conversation.
 
 ## Frequently asked questions
 
-## Why not rely only on MCP resources?
+## Why not rely only on filesystem conventions?
 
-MCP is a transport mechanism, not a semantic contract for “skills.” ACP needs a small skills contract so agents and clients can enumerate and request skills predictably, whether or not MCP is available.
+Filesystem conventions are local and tool-specific. ACP needs a small, explicit contract so clients can discover skills consistently across agents and hosts without hard-coding paths or heuristics.
 
 ## Does this replace filesystem skills?
 
-No. Filesystem layout remains a local implementation detail. ACP simply standardizes how skills are exposed over the protocol.
+No. Filesystem layout remains a local implementation detail. ACP simply standardizes how skills are exposed over the protocol. It does not define how skills are installed or injected; it only lets clients discover what the agent already exposes.
 
-## How large can skills be?
+## Who owns skills?
 
-Large skills should be fetched lazily. `skills/get` can return a manifest and/or MCP resource URIs so that clients fetch only what’s needed.
+Agents own the skills they expose. ACP does not define client-side or proxy-defined skills; it only reports what the agent makes available.
 
-## Who owns skill sources?
+## Why would we ever add `skills/get`?
 
-Skills can be provided by the client, agent, or proxy. The `source` field indicates provenance without enforcing policy.
+Discovery is the primary goal. A follow-up `skills/get` is only for richer previews (e.g., showing SKILL.md details or reference lists in the UI) without the agent spending tokens to restate that content in the chat. It is not a way to execute skills, install them, or inject new ones.
 
 ## How does this relate to slash commands and `$` lookup?
 
