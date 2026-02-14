@@ -43,7 +43,7 @@ At a high level:
 3. **Client UX hooks**
    - Recommend a `/skills` slash command via `available_commands_update` when the Skills capability is present.
    - Clients should treat `$` as a skills-only picker backed by `skills/list`.
-   - `/` remains the general slash-command picker; clients may also list skills there for compatibility (e.g., `/1password`), but `$` should remain the skills-only entry point.
+   - `/` remains the general slash-command picker and SHOULD include skills whenever the Skills capability is advertised (e.g., `/1password`), even if the agent does not expose each skill as a standalone slash command. `$` remains the skills-only entry point.
    - `/` and `$` are client-side conventions; ACP only defines the discovery data and the `available_commands_update` signal.
 
 4. **Compatibility with the open standard**
@@ -94,7 +94,7 @@ Agents own the skills they expose. ACP does not define client-side or proxy-defi
 
 ## Why would we ever add `skills/get`?
 
-Discovery is the primary goal. A follow-up `skills/get` is only for richer previews (e.g., showing SKILL.md details or reference lists in the UI) without the agent spending tokens to restate that content in the chat. It is not a way to execute skills, install them, or inject new ones. In effect, it lets clients render “what this skill does” by parsing SKILL.md.
+Discovery is the primary goal. A follow-up `skills/get` is only for richer previews (e.g., showing SKILL.md details or reference lists in the UI) without the agent spending tokens to restate that content in the chat. It is not a way to execute skills, install them, or inject new ones. In effect, it lets clients render “what this skill does” by parsing SKILL.md. This is not considered necessary for an MVP.
 
 ## How does this relate to slash commands and `$` lookup?
 
