@@ -13,6 +13,7 @@ Define first-class **Skills** discovery in ACP so agents and clients can enumera
 Skills exist today as **tool-specific filesystem conventions** that are not directly exposed via ACP at all:
 
 - Users have to know what skills are available by heart rather than using the standard `$`/`/skills` discovery mechanisms.
+  - This is also an unnecessary 'surprise' for users coming from direct codex/claude usage who are used to this affordance.
 - Each client defines its own discovery paths and activation heuristics.
 - ACP only mentions skills indirectly in the proxy-chains RFD; there is no protocol-level contract for listing or fetching skills.
 - Proxies can inject instructions, but there is no standardized metadata, no cross-client interoperability, and no way for an agent to ask, “what skills are available?”
