@@ -1,0 +1,99 @@
+---
+title: "Skills Discovery and Delivery"
+---
+
+- Author(s): [@timvisher](https://github.com/timvisher)
+
+## Elevator pitch
+
+Define first-class **Skills** in ACP so agents, clients, and proxies can discover and load skill metadata and content in a consistent way. Align with the open agent skills standard (SKILL.md + references/scripts/assets) while keeping the ACP surface area small and transport-agnostic (direct ACP or MCP resources).
+
+## Status quo
+
+Skills exist today as **tool-specific filesystem conventions**:
+
+- Each client defines its own discovery paths and activation heuristics.
+- ACP only mentions skills indirectly in the proxy-chains RFD; there is no protocol-level contract for listing or fetching skills.
+- Proxies can inject instructions, but there is no standardized metadata, no cross-client interoperability, and no way for an agent to ask, “what skills are available?”
+
+This leads to:
+
+- Fragmented discovery and inconsistent activation.
+- Reduced portability of skills across clients.
+- Difficulty for proxies or agents to expose or request skills programmatically.
+
+## What we propose to do about it
+
+Introduce an **optional Skills capability** in ACP that standardizes discovery and retrieval while remaining compatible with existing skill packaging.
+
+At a high level:
+
+1. **Skill metadata contract**
+   - A `SkillDescriptor` includes required fields compatible with the open standard (name + description) plus ACP metadata:
+     - `name`: string (unique key)
+     - `description`: string
+     - `version?`: string
+     - `source?`: enum (agent, client, proxy, external)
+     - `uri?`: string (content location, e.g., ACP or MCP resource URI)
+     - `updatedAt?`: string (ISO 8601)
+     - `checksum?`: string (optional integrity)
+
+2. **Discovery and retrieval**
+   - Add a `skills/list` request/response returning `SkillDescriptor[]`.
+   - Add a `skills/get` request/response that returns the **SKILL.md** content (and optionally reference/script manifests).
+   - Agents can request skill content lazily.
+
+3. **Transport options**
+   - If MCP-over-ACP is available, skill content may be surfaced as MCP resources and `skills/get` can return resource URIs.
+   - Otherwise, `skills/get` can return inline SKILL.md content and optional manifests.
+
+4. **Compatibility with the open standard**
+   - ACP does not re-define file layout; it adopts the SKILL.md frontmatter as the canonical metadata source.
+   - References/scripts/assets remain optional and discoverable via the `skills/get` response or MCP resources.
+
+This keeps ACP small while giving clients and agents a consistent, interoperable skills surface.
+
+## Shiny future
+
+- Agents can always ask “what skills are available?” and load details only when needed.
+- Proxies can inject or augment skills in a standard way.
+- Skills move between clients without repackaging or bespoke integrations.
+- The ecosystem converges on a shared contract without losing flexibility in storage or transport.
+
+## Implementation details and plan
+
+> Optional for initial draft; fill in after discussion.
+
+A likely phased plan:
+
+1. Define `SkillDescriptor` and the `skills/list` + `skills/get` methods in the spec and schemas.
+2. Update proxy guidance and MCP-over-ACP docs to describe skill resource mapping.
+3. Add SDK support (Rust and TypeScript) and generator updates.
+4. Update docs and examples to show skill discovery and retrieval.
+
+## Frequently asked questions
+
+## Why not rely only on MCP resources?
+
+MCP is a transport mechanism, not a semantic contract for “skills.” ACP needs a small skills contract so agents and clients can enumerate and request skills predictably, whether or not MCP is available.
+
+## Does this replace filesystem skills?
+
+No. Filesystem layout remains a local implementation detail. ACP simply standardizes how skills are exposed over the protocol.
+
+## How large can skills be?
+
+Large skills should be fetched lazily. `skills/get` can return a manifest and/or MCP resource URIs so that clients fetch only what’s needed.
+
+## Who owns skill sources?
+
+Skills can be provided by the client, agent, or proxy. The `source` field indicates provenance without enforcing policy.
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+- **Do nothing**: keeps interoperability fragmented and pushes burden onto every client.
+- **Proxy-only guidance**: too indirect and does not define an ACP contract for skills.
+
+The proposed approach is minimal while enabling cross-client interoperability.
+
+## Revision history
