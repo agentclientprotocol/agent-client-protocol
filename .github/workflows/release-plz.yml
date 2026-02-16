@@ -38,7 +38,7 @@ jobs:
           # GitHub App private key secret name
           private-key: ${{ secrets.RELEASE_PLZ_APP_PRIVATE_KEY }}
       - name: Run release-plz
-        uses: release-plz/action@52440b50d383aa252927de395c8b2c1e0a9cf8e9
+        uses: release-plz/action@f708778669256143d984cce4b23592637532e040
         with:
           command: release
         env:
@@ -59,7 +59,7 @@ jobs:
       - *install-rust
       - *generate-token
       - name: Run release-plz
-        uses: release-plz/action@52440b50d383aa252927de395c8b2c1e0a9cf8e9
+        uses: release-plz/action@f708778669256143d984cce4b23592637532e040
         with:
           command: release-pr
         env:
