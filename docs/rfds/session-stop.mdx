@@ -1,0 +1,79 @@
+---
+title: "Stopping active sessions"
+---
+
+Author(s): [@SteffenDE](https://github.com/SteffenDE)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+We propose adding the ability to stop active sessions. This allows the agent to free up any memory
+and threads/subprocesses associated with that session.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+Today, if you start a session, it will remain active until the ACP process is terminated.
+This means that if the agent implements sessions as separate processes, active users with
+many sessions can end up with a lot of processes unnecessarily using up system memory.
+Even if the agent does not spawn separate processes, memory used by large tool results or
+similar could still accumulate over time.
+
+The only way to free up that memory is to terminate the whole ACP process, which will stop
+all sessions and - if the agent does not support resuming sessions (load / resume / fork) -
+lead to a bad user experience.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+Add a new `session/stop` method. If supported, the agent **must** cancel any ongoing work
+related to the session (treat it as if `session/cancel` was called) and then free up any resources
+associated with the session.
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+Clients can track what sessions are actively used by a user and automatically stop old sessions.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+We propose to add a new `"session/stop"` method. Agents must declare this option is
+available by returning `session: { stop : {} }` in their capabilities. The object is reserved
+to declare future capabilities.
+
+Then the client would be able to stop a specific session with:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "session/stop",
+  "params": {
+    "sessionId": "sess_789xyz"
+  }
+}
+```
+
+Agents might reply with an error if the session is not active or does not exist.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+None so far.
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+It could be an agent specific custom method, since we mainly ran into problems with Claude Code, but
+even for agents that don't spawn full subprocesses for sessions, cleaning up unneeded sessions still
+seems like a good idea.
+
+## Revision history
+
+<!-- If there have been major updates to this RFD, you can include the git revisions and a summary of the changes. -->
