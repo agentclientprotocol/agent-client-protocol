@@ -1,0 +1,352 @@
+---
+title: "Multi-Client Session Attach"
+---
+
+- Author(s): [@joaommartins](https://github.com/joaommartins)
+- Champion: <!-- to be assigned -->
+
+## Elevator pitch
+
+Allow multiple ACP clients to connect to and interact with the same live agent session simultaneously, enabling a unified notification and approval UI across concurrent coding agent workflows. A developer running several agent sessions (e.g., Claude Code, Codex, Gemini) could respond to permission requests, answer agent questions, and monitor progress from a single dashboard client — even if the sessions were started from different frontends.
+
+## Status quo
+
+ACP currently assumes a **1:1 relationship** between a client and an agent session. The transport layer (stdio) is inherently single-client: one process pipe per connection, no shared state between clients. This creates several problems for developers running multiple agent sessions:
+
+1. **No unified oversight** — Each agent session is bound to the frontend that started it. If you start Claude Code in terminal A, you can only respond to its permission requests from terminal A.
+2. **Permission requests go unanswered** — When an agent blocks on `request_permission`, the developer must find the correct terminal/tab/window to respond. With multiple concurrent sessions, this becomes a significant context-switching tax.
+3. **No observation without control** — There is no way to passively monitor an active session from a secondary client (e.g., a mobile device, a web dashboard, or a notification center).
+4. **Session handoff is sequential, not concurrent** — `session/load` allows a new client to resume a previous session, but the original client must have disconnected first. There is no mechanism for a second client to "attach" to a live, in-progress session.
+
+### Current workarounds
+
+- **Toad** and **Agentastic.dev** solve part of this by being the single frontend that starts all sessions — but you must commit to one UI upfront.
+- **`ai-agents-notifier`** and **`anot`** provide desktop notifications for permission requests but are one-way (notify only, no reply).
+- **`tmux`/`screen`** can share a terminal session, but this shares the entire terminal, not the structured ACP session.
+
+### Related RFDs
+
+This proposal builds on and intersects with several existing draft RFDs:
+
+- **[Agent Extensions via ACP Proxies](./proxy-chains)** — The proxy/multiplexer architecture pattern is central to the recommended implementation approach for multi-client sessions
+- **[Session List](./session-list)** — Discovering existing sessions (prerequisite for attach)
+- **[Resuming of existing sessions](./session-resume)** (`session/resume`) — Sequential handoff between clients
+- **Session Info Update** — Real-time metadata propagation (draft)
+- **Session Fork** — Branching sessions (related but distinct — fork creates a copy, attach shares the original) (draft)
+
+## What we propose to do about it
+
+### Core concept: Session Attach
+
+Add a `session/attach` method that allows a client to connect to an **active, in-progress session** owned by another client. The attaching client receives:
+
+1. A replay of conversation history (like `session/load`)
+2. A live stream of `session/update` notifications going forward
+3. The ability to respond to `request_permission` prompts
+4. Optionally, the ability to send `session/prompt` messages
+
+### Capability negotiation
+
+Agents (or proxies) advertise multi-client support during initialization:
+
+```json
+{
+  "agentCapabilities": {
+    "sessionCapabilities": {
+      "attach": {
+        "maxClients": 3,
+        "roles": ["controller", "observer"]
+      }
+    }
+  }
+}
+```
+
+### Client roles
+
+- **Controller** — Can send prompts, respond to permission requests, cancel operations. The original client is always a controller.
+- **Observer** — Receives `session/update` notifications and can see pending `request_permission` prompts, but cannot act on them.
+
+A client specifies its requested role when attaching:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 5,
+  "method": "session/attach",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "role": "controller",
+    "clientInfo": {
+      "name": "notification-dashboard",
+      "version": "1.0.0"
+    }
+  }
+}
+```
+
+The response follows standard ACP patterns, returning session metadata:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 5,
+  "result": {
+    "sessionId": "sess_abc123def456",
+    "role": "controller",
+    "history": [
+      {
+        "type": "prompt",
+        "content": "Add authentication to the API",
+        "timestamp": "2026-02-18T14:22:00Z"
+      },
+      {
+        "type": "permission_request",
+        "toolCallId": "call_abc",
+        "status": "pending"
+      }
+    ],
+    "connectedClients": [
+      {
+        "name": "Claude Code",
+        "version": "1.0.0",
+        "role": "controller"
+      }
+    ]
+  }
+}
+```
+
+### Permission request routing
+
+When an agent emits `request_permission`, it is broadcast to **all connected controller clients**. The first client to respond wins (first-writer-wins semantics). The agent then notifies all other clients that the permission was resolved:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "type": "permission_resolved",
+      "toolCallId": "call_xyz",
+      "chosenOptionId": "allow_once",
+      "resolvedBy": {
+        "name": "notification-dashboard",
+        "version": "1.0.0"
+      }
+    }
+  }
+}
+```
+
+### Transport considerations
+
+The current stdio transport is inherently single-client. Multi-client attach requires a **network-capable transport**. We propose this works over:
+
+- **WebSocket** — For persistent, bidirectional connections from multiple clients
+- **HTTP + SSE** — For observer-only clients that only need to receive updates
+
+The agent (or an ACP proxy) would listen on a network port. This is consistent with the direction of the **[Proxy Chains RFD](./proxy-chains)**, where a proxy mediates between clients and agents.
+
+### Proxy architecture (recommended implementation pattern)
+
+Rather than requiring every agent to implement multi-client support natively, the recommended pattern is an **ACP proxy/multiplexer**, as described in the [Agent Extensions via ACP Proxies RFD](./proxy-chains):
+
+```
+Agent (Claude Code) ←(stdio)→ ACP Proxy ←(WebSocket)→ Client A (Toad/IDE)
+                                         ←(WebSocket)→ Client B (dashboard)
+                                         ←(WebSocket)→ Client C (mobile)
+```
+
+The proxy:
+- Holds the single stdio connection to the agent
+- Fans out `session/update` notifications to all connected clients
+- Broadcasts `request_permission` to all controllers
+- Routes the first response back to the agent
+- Tracks client roles and connection state
+
+This means existing agents work **unchanged** — the proxy handles all multi-client logic. This approach aligns perfectly with the proxy-chains architecture, where proxies sit between clients and agents to extend functionality without modifying the core agent implementation.
+
+### Detach and lifecycle
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 6,
+  "method": "session/detach",
+  "params": {
+    "sessionId": "sess_abc123def456"
+  }
+}
+```
+
+Lifecycle rules:
+- Clients can detach voluntarily via `session/detach`
+- If the original (owning) client detaches, the session continues as long as at least one controller remains
+- If all clients detach, the agent MAY keep the session alive for a configurable timeout (allowing reconnection)
+- Agents notify remaining clients when a peer disconnects via a `client_disconnected` session update:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "type": "client_disconnected",
+      "client": {
+        "name": "Claude Code",
+        "version": "1.0.0",
+        "role": "controller"
+      },
+      "timestamp": "2026-02-18T15:30:00Z"
+    }
+  }
+}
+```
+
+## Shiny future
+
+With multi-client session attach:
+
+1. **Unified notification dashboard** — A single web or mobile app shows all pending permission requests across all your running agent sessions. You tap "approve" on your phone while the agent continues in your terminal.
+2. **Pair programming with agents** — Two developers attach to the same agent session. One focuses on reviewing the agent's output while the other provides guidance.
+3. **IDE + terminal coexistence** — Start a session in Toad or your terminal, but have your IDE also attached for inline diff display and file navigation.
+4. **Monitoring and audit** — Observer clients can log all agent actions for compliance or debugging without interfering with the workflow.
+5. **Graceful client recovery** — If your terminal crashes, you attach from a new terminal and pick up exactly where you were — no `session/load` replay delay because the session never stopped.
+6. **Cross-device continuity** — Start a coding session on your desktop, get a permission request notification on your phone, approve it while commuting, then review the results on your laptop when you get home.
+
+## Implementation details and plan
+
+### Phase 1: Protocol specification
+1. Add `session/attach` and `session/detach` methods to schema.json
+2. Define `attach` capability in `sessionCapabilities` with `maxClients` and `roles` fields
+3. Define client roles (controller/observer) and their semantics
+4. Specify `permission_resolved` and `client_disconnected` session update variants
+5. Document interaction with existing `session/load` and `session/resume`
+
+### Phase 2: Reference proxy implementation
+6. Build a reference multi-client proxy (potentially extending `sacp-conductor` from the proxy-chains RFD) that:
+   - Spawns an agent subprocess over stdio
+   - Accepts multiple client connections over WebSocket
+   - Implements attach/detach and permission routing logic
+   - Handles MCP-over-ACP for any MCP servers the agent provides
+7. Test with Claude Code, Gemini CLI, and Codex as backend agents
+
+### Phase 3: Client integration
+8. Add attach support to at least one ACP client (Toad, Zed, or a purpose-built dashboard)
+9. Build a minimal "notification center" client that demonstrates the core use case
+
+### Compatibility considerations
+- **Fully backward compatible** — Agents that don't advertise `attach` capability work exactly as today
+- **Proxy-based approach** means no changes required to existing agents
+- **Optional for clients** — Clients that don't need multi-client support ignore the capability
+- **Works with session/list** — Clients can discover sessions via `session/list` (if supported) before attempting to attach
+
+### Security considerations
+- **Authentication** — Attaching clients MUST authenticate with the same identity as the session owner (or be explicitly authorized). The proxy is responsible for enforcing this policy.
+- **Role enforcement** — Observer clients MUST NOT be able to send prompts or respond to permissions. The proxy enforces role restrictions.
+- **Audit trail** — Permission resolutions SHOULD include which client responded (for accountability), as shown in the `resolvedBy` field.
+- **Transport security** — WebSocket connections MUST use TLS in non-localhost scenarios.
+- **Authorization model** — Future extensions could support fine-grained permissions (e.g., allow specific users to attach as observers but not controllers).
+
+## Frequently asked questions
+
+### Why not just use `session/load`?
+
+`session/load` is designed for sequential handoff — Client A stops, Client B starts. It replays the full history, which can be slow for long sessions. More importantly, `session/load` doesn't support the core use case: responding to a permission request that was issued to a *different* client while the session is still active.
+
+`session/attach` enables **concurrent access** to a live session, with real-time streaming of events and collaborative control over permissions.
+
+### Why not require agents to implement this natively?
+
+Most agents are simple process-based CLIs that communicate over stdio. Requiring them to manage WebSocket connections and multiple clients would be a large implementation burden. The proxy pattern means the ecosystem can adopt this with zero agent changes.
+
+As described in the [Agent Extensions via ACP Proxies RFD](./proxy-chains), proxies are designed to extend agent functionality without modifying agent implementations. Multi-client session attach is a perfect use case for this pattern.
+
+### How does this relate to the Proxy Chains RFD?
+
+This RFD depends heavily on the [Agent Extensions via ACP Proxies RFD](./proxy-chains). The proxy-chains RFD establishes:
+- The general architecture of ACP proxies that sit between clients and agents
+- The conductor component that orchestrates proxy chains
+- MCP-over-ACP for tool integration
+
+Multi-client session attach specifies one concrete capability a proxy should support: multiplexing connections from multiple clients to a single agent session. The two RFDs are complementary:
+- **Proxy Chains** provides the infrastructure for extension mechanisms
+- **Multi-Client Attach** defines a specific extension use case
+
+The reference implementation would likely extend the `sacp-conductor` from the proxy-chains work to add multi-client multiplexing capabilities.
+
+### What happens if two controllers respond to the same permission request?
+
+First-writer-wins. The agent (or proxy) accepts the first valid response and ignores subsequent ones. All clients receive a `permission_resolved` notification indicating the outcome and which client provided the response. This is a simple, well-understood concurrency model that avoids complex conflict resolution.
+
+### Could observer clients be promoted to controllers?
+
+Yes, this could be supported via a `session/promote` method (future extension). For the initial proposal, roles are fixed at attach time to keep the design simple.
+
+A future `session/promote` request might look like:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 7,
+  "method": "session/promote",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "targetClient": {
+      "name": "mobile-app",
+      "version": "1.0.0"
+    },
+    "newRole": "controller"
+  }
+}
+```
+
+This would require authorization from an existing controller.
+
+### How does this work with MCP servers?
+
+The proxy (which implements multi-client logic) can provide MCP servers via [MCP-over-ACP transport](./mcp-over-acp). When the proxy advertises MCP capabilities, all attached clients can see and use the tools provided by those MCP servers.
+
+The conductor (from the proxy-chains RFD) handles bridging for agents that don't support native ACP transport, so proxy authors don't need to worry about agent compatibility.
+
+### What about rate limiting or preventing spam?
+
+The proxy can implement rate limiting policies to prevent a misbehaving client from overwhelming the agent with requests. This is an implementation detail left to the proxy, but common patterns might include:
+- Limiting the number of permission responses per client per minute
+- Throttling prompt submissions from any single client
+- Implementing backpressure when the agent is overloaded
+
+### Can this support mobile clients?
+
+Yes! Mobile clients would connect via WebSocket (likely over TLS for security). A mobile app could:
+1. Discover sessions via `session/list` (if the proxy supports it)
+2. Attach as an observer to monitor progress
+3. Receive push notifications for `request_permission` events
+4. Upgrade to controller role (via future `session/promote`) to respond
+
+This enables the "approve on phone" use case described in the shiny future section.
+
+### What about latency for real-time collaboration?
+
+WebSocket connections provide low-latency bidirectional communication, typically in the 10-100ms range for most network conditions. This is sufficient for human-paced interactions like responding to permission requests or reviewing agent output.
+
+For use cases requiring sub-millisecond latency (e.g., real-time cursor sharing), additional optimizations may be needed, but these are beyond the scope of basic multi-client attach.
+
+### How does this interact with `session/list` and `session/resume`?
+
+Multi-client attach works naturally with these related features:
+- **`session/list`** — Clients use this to discover existing sessions before attaching
+- **`session/resume`** — If an agent only supports `session/resume` (not `session/load`), the proxy can use `session/resume` to reconnect to the session while providing the history from its own storage
+- **`session/load`** — Full-featured agents that support `session/load` can provide richer history, but attach doesn't require it
+
+The typical flow for a dashboard client would be:
+1. Call `session/list` to see all active sessions
+2. Call `session/attach` to connect to a selected session
+3. Stream `session/update` notifications in real-time
+
+## Revision history
+
+- **2026-02-18**: Initial proposal
