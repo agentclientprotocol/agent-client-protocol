@@ -238,7 +238,7 @@ impl Side for ClientSide {
                 if let Some(custom_method) = method.strip_prefix('_') {
                     Ok(AgentNotification::ExtNotification(ExtNotification {
                         method: custom_method.into(),
-                        params: RawValue::from_string(params.get().to_string())?.into(),
+                        params: params.to_owned().into(),
                     }))
                 } else {
                     Err(Error::method_not_found())
@@ -294,7 +294,6 @@ impl Side for AgentSide {
             m if m == AGENT_METHOD_NAMES.session_set_mode => serde_json::from_str(params.get())
                 .map(ClientRequest::SetSessionModeRequest)
                 .map_err(Into::into),
-            #[cfg(feature = "unstable_session_config_options")]
             m if m == AGENT_METHOD_NAMES.session_set_config_option => {
                 serde_json::from_str(params.get())
                     .map(ClientRequest::SetSessionConfigOptionRequest)
@@ -331,7 +330,7 @@ impl Side for AgentSide {
                 if let Some(custom_method) = method.strip_prefix('_') {
                     Ok(ClientNotification::ExtNotification(ExtNotification {
                         method: custom_method.into(),
-                        params: RawValue::from_string(params.get().to_string())?.into(),
+                        params: params.to_owned().into(),
                     }))
                 } else {
                     Err(Error::method_not_found())

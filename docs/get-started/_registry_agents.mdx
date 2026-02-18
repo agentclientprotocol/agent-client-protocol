@@ -1,0 +1,51 @@
+---
+title: ACP Registry
+description: The easiest way to find and install ACP-compatible agents.
+---
+
+<style>{`
+.agent-icon {
+  width: 20px;
+  height: 20px;
+  color: currentColor;
+}
+`}</style>
+
+## Overview
+
+The ACP Registry is an easy way for developers to distribute their ACP-compatible agents to any client that speaks the protocol.
+
+At the moment, this is a curated set of agents, including only the ones that [support authentication](/rfds/auth-methods).
+
+Visit [the registry repository on GitHub](https://github.com/agentclientprotocol/registry) to learn more about it.
+
+<Warning>
+  The registry is under active development, so expect its format and contents to
+  change.
+</Warning>
+
+## Available Agents
+
+$$AGENTS_CARDS$$
+
+## Using the Registry
+
+Clients can fetch the registry programmatically:
+
+```bash
+curl https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json
+```
+
+The registry JSON contains all agent metadata including distribution information for automatic installation.
+
+## Submit your Agent
+
+To add your agent to the registry:
+
+1. Fork the [registry repository on GitHub](https://github.com/agentclientprotocol/registry)
+2. Create a folder with your agent's ID (lowercase, hyphens allowed)
+3. Add an `agent.json` file following [the schema](https://github.com/agentclientprotocol/registry/blob/main/agent.schema.json)
+4. Optionally add an `icon.svg` (16x16 recommended)
+5. Submit a pull request
+
+See the [contributing guide](https://github.com/agentclientprotocol/registry/blob/main/CONTRIBUTING.md) for details.

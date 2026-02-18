@@ -255,6 +255,7 @@ fn error_code_transform(schema: &mut Schema) {
         .as_str()
         .expect("Unexpected type for description")
         .to_owned();
+    schema.insert("title".into(), code.to_string().into());
     description.insert_str(0, &format!("**{code}**: "));
     schema.insert("description".into(), description.into());
     schema.insert("const".into(), i32::from(code).into());

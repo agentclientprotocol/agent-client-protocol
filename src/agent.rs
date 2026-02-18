@@ -424,12 +424,7 @@ pub struct NewSessionResponse {
     #[cfg(feature = "unstable_session_model")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub models: Option<SessionModelState>,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Initial session configuration options if supported by the Agent.
-    #[cfg(feature = "unstable_session_config_options")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub config_options: Option<Vec<SessionConfigOption>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -449,7 +444,6 @@ impl NewSessionResponse {
             modes: None,
             #[cfg(feature = "unstable_session_model")]
             models: None,
-            #[cfg(feature = "unstable_session_config_options")]
             config_options: None,
             meta: None,
         }
@@ -476,12 +470,7 @@ impl NewSessionResponse {
         self
     }
 
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Initial session configuration options if supported by the Agent.
-    #[cfg(feature = "unstable_session_config_options")]
     #[must_use]
     pub fn config_options(
         mut self,
@@ -578,12 +567,7 @@ pub struct LoadSessionResponse {
     #[cfg(feature = "unstable_session_model")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub models: Option<SessionModelState>,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Initial session configuration options if supported by the Agent.
-    #[cfg(feature = "unstable_session_config_options")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub config_options: Option<Vec<SessionConfigOption>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -622,12 +606,7 @@ impl LoadSessionResponse {
         self
     }
 
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Initial session configuration options if supported by the Agent.
-    #[cfg(feature = "unstable_session_config_options")]
     #[must_use]
     pub fn config_options(
         mut self,
@@ -739,12 +718,7 @@ pub struct ForkSessionResponse {
     #[cfg(feature = "unstable_session_model")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub models: Option<SessionModelState>,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Initial session configuration options if supported by the Agent.
-    #[cfg(feature = "unstable_session_config_options")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub config_options: Option<Vec<SessionConfigOption>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -765,7 +739,6 @@ impl ForkSessionResponse {
             modes: None,
             #[cfg(feature = "unstable_session_model")]
             models: None,
-            #[cfg(feature = "unstable_session_config_options")]
             config_options: None,
             meta: None,
         }
@@ -792,12 +765,7 @@ impl ForkSessionResponse {
         self
     }
 
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Initial session configuration options if supported by the Agent.
-    #[cfg(feature = "unstable_session_config_options")]
     #[must_use]
     pub fn config_options(
         mut self,
@@ -907,12 +875,7 @@ pub struct ResumeSessionResponse {
     #[cfg(feature = "unstable_session_model")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub models: Option<SessionModelState>,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Initial session configuration options if supported by the Agent.
-    #[cfg(feature = "unstable_session_config_options")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub config_options: Option<Vec<SessionConfigOption>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -952,12 +915,7 @@ impl ResumeSessionResponse {
         self
     }
 
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Initial session configuration options if supported by the Agent.
-    #[cfg(feature = "unstable_session_config_options")]
     #[must_use]
     pub fn config_options(
         mut self,
@@ -1331,69 +1289,46 @@ impl SetSessionModeResponse {
 
 // Session config options
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Unique identifier for a session configuration option.
-#[cfg(feature = "unstable_session_config_options")]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, From, Display)]
 #[serde(transparent)]
 #[from(Arc<str>, String, &'static str)]
 #[non_exhaustive]
 pub struct SessionConfigId(pub Arc<str>);
 
-#[cfg(feature = "unstable_session_config_options")]
 impl SessionConfigId {
     pub fn new(id: impl Into<Arc<str>>) -> Self {
         Self(id.into())
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Unique identifier for a session configuration option value.
-#[cfg(feature = "unstable_session_config_options")]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, From, Display)]
 #[serde(transparent)]
 #[from(Arc<str>, String, &'static str)]
 #[non_exhaustive]
 pub struct SessionConfigValueId(pub Arc<str>);
 
-#[cfg(feature = "unstable_session_config_options")]
 impl SessionConfigValueId {
     pub fn new(id: impl Into<Arc<str>>) -> Self {
         Self(id.into())
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Unique identifier for a session configuration option value group.
-#[cfg(feature = "unstable_session_config_options")]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, From, Display)]
 #[serde(transparent)]
 #[from(Arc<str>, String, &'static str)]
 #[non_exhaustive]
 pub struct SessionConfigGroupId(pub Arc<str>);
 
-#[cfg(feature = "unstable_session_config_options")]
 impl SessionConfigGroupId {
     pub fn new(id: impl Into<Arc<str>>) -> Self {
         Self(id.into())
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// A possible value for a session configuration option.
-#[cfg(feature = "unstable_session_config_options")]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -1414,7 +1349,6 @@ pub struct SessionConfigSelectOption {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_session_config_options")]
 impl SessionConfigSelectOption {
     #[must_use]
     pub fn new(value: impl Into<SessionConfigValueId>, name: impl Into<String>) -> Self {
@@ -1444,12 +1378,7 @@ impl SessionConfigSelectOption {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// A group of possible values for a session configuration option.
-#[cfg(feature = "unstable_session_config_options")]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -1469,7 +1398,6 @@ pub struct SessionConfigSelectGroup {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_session_config_options")]
 impl SessionConfigSelectGroup {
     #[must_use]
     pub fn new(
@@ -1497,12 +1425,7 @@ impl SessionConfigSelectGroup {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Possible values for a session configuration option.
-#[cfg(feature = "unstable_session_config_options")]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(untagged)]
 #[non_exhaustive]
@@ -1513,26 +1436,19 @@ pub enum SessionConfigSelectOptions {
     Grouped(Vec<SessionConfigSelectGroup>),
 }
 
-#[cfg(feature = "unstable_session_config_options")]
 impl From<Vec<SessionConfigSelectOption>> for SessionConfigSelectOptions {
     fn from(options: Vec<SessionConfigSelectOption>) -> Self {
         SessionConfigSelectOptions::Ungrouped(options)
     }
 }
 
-#[cfg(feature = "unstable_session_config_options")]
 impl From<Vec<SessionConfigSelectGroup>> for SessionConfigSelectOptions {
     fn from(groups: Vec<SessionConfigSelectGroup>) -> Self {
         SessionConfigSelectOptions::Grouped(groups)
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// A single-value selector (dropdown) session configuration option payload.
-#[cfg(feature = "unstable_session_config_options")]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -1543,7 +1459,6 @@ pub struct SessionConfigSelect {
     pub options: SessionConfigSelectOptions,
 }
 
-#[cfg(feature = "unstable_session_config_options")]
 impl SessionConfigSelect {
     #[must_use]
     pub fn new(
@@ -1557,12 +1472,31 @@ impl SessionConfigSelect {
     }
 }
 
-/// **UNSTABLE**
+/// Semantic category for a session configuration option.
 ///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
+/// This is intended to help Clients distinguish broadly common selectors (e.g. model selector vs
+/// session mode selector vs thought/reasoning level) for UX purposes (keyboard shortcuts, icons,
+/// placement). It MUST NOT be required for correctness. Clients MUST handle missing or unknown
+/// categories gracefully.
 ///
+/// Category names beginning with `_` are free for custom use, like other ACP extension methods.
+/// Category names that do not begin with `_` are reserved for the ACP spec.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum SessionConfigOptionCategory {
+    /// Session mode selector.
+    Mode,
+    /// Model selector.
+    Model,
+    /// Thought/reasoning level selector.
+    ThoughtLevel,
+    /// Unknown / uncategorized selector.
+    #[serde(untagged)]
+    Other(String),
+}
+
 /// Type-specific session configuration option payload.
-#[cfg(feature = "unstable_session_config_options")]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(tag = "type", rename_all = "snake_case")]
 #[schemars(extend("discriminator" = {"propertyName": "type"}))]
@@ -1572,12 +1506,7 @@ pub enum SessionConfigKind {
     Select(SessionConfigSelect),
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// A session configuration option selector and its current state.
-#[cfg(feature = "unstable_session_config_options")]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -1589,6 +1518,9 @@ pub struct SessionConfigOption {
     /// Optional description for the Client to display to the user.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
+    /// Optional semantic category for this option (UX only).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub category: Option<SessionConfigOptionCategory>,
     /// Type-specific fields for this configuration option.
     #[serde(flatten)]
     pub kind: SessionConfigKind,
@@ -1601,7 +1533,6 @@ pub struct SessionConfigOption {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_session_config_options")]
 impl SessionConfigOption {
     #[must_use]
     pub fn new(
@@ -1613,6 +1544,7 @@ impl SessionConfigOption {
             id: id.into(),
             name: name.into(),
             description: None,
+            category: None,
             kind,
             meta: None,
         }
@@ -1638,6 +1570,12 @@ impl SessionConfigOption {
         self
     }
 
+    #[must_use]
+    pub fn category(mut self, category: impl IntoOption<SessionConfigOptionCategory>) -> Self {
+        self.category = category.into_option();
+        self
+    }
+
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -1650,12 +1588,7 @@ impl SessionConfigOption {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Request parameters for setting a session configuration option.
-#[cfg(feature = "unstable_session_config_options")]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_SET_CONFIG_OPTION_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -1676,7 +1609,6 @@ pub struct SetSessionConfigOptionRequest {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_session_config_options")]
 impl SetSessionConfigOptionRequest {
     #[must_use]
     pub fn new(
@@ -1704,12 +1636,7 @@ impl SetSessionConfigOptionRequest {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Response to `session/set_config_option` method.
-#[cfg(feature = "unstable_session_config_options")]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_SET_CONFIG_OPTION_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -1726,7 +1653,6 @@ pub struct SetSessionConfigOptionResponse {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_session_config_options")]
 impl SetSessionConfigOptionResponse {
     #[must_use]
     pub fn new(config_options: Vec<SessionConfigOption>) -> Self {
@@ -2079,6 +2005,14 @@ impl PromptRequest {
 pub struct PromptResponse {
     /// Indicates why the agent stopped processing the turn.
     pub stop_reason: StopReason,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Token usage for this turn (optional).
+    #[cfg(feature = "unstable_session_usage")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub usage: Option<Usage>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -2093,8 +2027,22 @@ impl PromptResponse {
     pub fn new(stop_reason: StopReason) -> Self {
         Self {
             stop_reason,
+            #[cfg(feature = "unstable_session_usage")]
+            usage: None,
             meta: None,
         }
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Token usage for this turn.
+    #[cfg(feature = "unstable_session_usage")]
+    #[must_use]
+    pub fn usage(mut self, usage: impl IntoOption<Usage>) -> Self {
+        self.usage = usage.into_option();
+        self
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -2134,6 +2082,69 @@ pub enum StopReason {
     /// Agents should catch these exceptions and return this semantically meaningful
     /// response to confirm successful cancellation.
     Cancelled,
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Token usage information for a prompt turn.
+#[cfg(feature = "unstable_session_usage")]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct Usage {
+    /// Sum of all token types across session.
+    pub total_tokens: u64,
+    /// Total input tokens across all turns.
+    pub input_tokens: u64,
+    /// Total output tokens across all turns.
+    pub output_tokens: u64,
+    /// Total thought/reasoning tokens
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub thought_tokens: Option<u64>,
+    /// Total cache read tokens.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cached_read_tokens: Option<u64>,
+    /// Total cache write tokens.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cached_write_tokens: Option<u64>,
+}
+
+#[cfg(feature = "unstable_session_usage")]
+impl Usage {
+    #[must_use]
+    pub fn new(total_tokens: u64, input_tokens: u64, output_tokens: u64) -> Self {
+        Self {
+            total_tokens,
+            input_tokens,
+            output_tokens,
+            thought_tokens: None,
+            cached_read_tokens: None,
+            cached_write_tokens: None,
+        }
+    }
+
+    /// Total thought/reasoning tokens
+    #[must_use]
+    pub fn thought_tokens(mut self, thought_tokens: impl IntoOption<u64>) -> Self {
+        self.thought_tokens = thought_tokens.into_option();
+        self
+    }
+
+    /// Total cache read tokens.
+    #[must_use]
+    pub fn cached_read_tokens(mut self, cached_read_tokens: impl IntoOption<u64>) -> Self {
+        self.cached_read_tokens = cached_read_tokens.into_option();
+        self
+    }
+
+    /// Total cache write tokens.
+    #[must_use]
+    pub fn cached_write_tokens(mut self, cached_write_tokens: impl IntoOption<u64>) -> Self {
+        self.cached_write_tokens = cached_write_tokens.into_option();
+        self
+    }
 }
 
 // Model
@@ -2401,6 +2412,13 @@ impl AgentCapabilities {
     #[must_use]
     pub fn mcp_capabilities(mut self, mcp_capabilities: McpCapabilities) -> Self {
         self.mcp_capabilities = mcp_capabilities;
+        self
+    }
+
+    /// Session capabilities supported by the agent.
+    #[must_use]
+    pub fn session_capabilities(mut self, session_capabilities: SessionCapabilities) -> Self {
+        self.session_capabilities = session_capabilities;
         self
     }
 
@@ -2767,7 +2785,6 @@ pub struct AgentMethodNames {
     /// Method for setting the mode for a session.
     pub session_set_mode: &'static str,
     /// Method for setting a configuration option for a session.
-    #[cfg(feature = "unstable_session_config_options")]
     pub session_set_config_option: &'static str,
     /// Method for sending a prompt to the agent.
     pub session_prompt: &'static str,
@@ -2794,7 +2811,6 @@ pub const AGENT_METHOD_NAMES: AgentMethodNames = AgentMethodNames {
     session_new: SESSION_NEW_METHOD_NAME,
     session_load: SESSION_LOAD_METHOD_NAME,
     session_set_mode: SESSION_SET_MODE_METHOD_NAME,
-    #[cfg(feature = "unstable_session_config_options")]
     session_set_config_option: SESSION_SET_CONFIG_OPTION_METHOD_NAME,
     session_prompt: SESSION_PROMPT_METHOD_NAME,
     session_cancel: SESSION_CANCEL_METHOD_NAME,
@@ -2819,7 +2835,6 @@ pub(crate) const SESSION_LOAD_METHOD_NAME: &str = "session/load";
 /// Method name for setting the mode for a session.
 pub(crate) const SESSION_SET_MODE_METHOD_NAME: &str = "session/set_mode";
 /// Method name for setting a configuration option for a session.
-#[cfg(feature = "unstable_session_config_options")]
 pub(crate) const SESSION_SET_CONFIG_OPTION_METHOD_NAME: &str = "session/set_config_option";
 /// Method name for sending a prompt.
 pub(crate) const SESSION_PROMPT_METHOD_NAME: &str = "session/prompt";
@@ -2944,11 +2959,6 @@ pub enum ClientRequest {
     ///
     /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
     SetSessionModeRequest(SetSessionModeRequest),
-    #[cfg(feature = "unstable_session_config_options")]
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Sets the current value for a session configuration option.
     SetSessionConfigOptionRequest(SetSessionConfigOptionRequest),
     /// Processes a user prompt within a session.
@@ -2995,7 +3005,6 @@ impl ClientRequest {
             #[cfg(feature = "unstable_session_resume")]
             Self::ResumeSessionRequest(_) => AGENT_METHOD_NAMES.session_resume,
             Self::SetSessionModeRequest(_) => AGENT_METHOD_NAMES.session_set_mode,
-            #[cfg(feature = "unstable_session_config_options")]
             Self::SetSessionConfigOptionRequest(_) => AGENT_METHOD_NAMES.session_set_config_option,
             Self::PromptRequest(_) => AGENT_METHOD_NAMES.session_prompt,
             #[cfg(feature = "unstable_session_model")]
@@ -3027,7 +3036,6 @@ pub enum AgentResponse {
     #[cfg(feature = "unstable_session_resume")]
     ResumeSessionResponse(#[serde(default)] ResumeSessionResponse),
     SetSessionModeResponse(#[serde(default)] SetSessionModeResponse),
-    #[cfg(feature = "unstable_session_config_options")]
     SetSessionConfigOptionResponse(SetSessionConfigOptionResponse),
     PromptResponse(PromptResponse),
     #[cfg(feature = "unstable_session_model")]
@@ -3255,5 +3263,73 @@ mod test_serialization {
             }
             _ => panic!("Expected Sse variant"),
         }
+    }
+
+    #[test]
+    fn test_session_config_option_category_known_variants() {
+        // Test serialization of known variants
+        assert_eq!(
+            serde_json::to_value(&SessionConfigOptionCategory::Mode).unwrap(),
+            json!("mode")
+        );
+        assert_eq!(
+            serde_json::to_value(&SessionConfigOptionCategory::Model).unwrap(),
+            json!("model")
+        );
+        assert_eq!(
+            serde_json::to_value(&SessionConfigOptionCategory::ThoughtLevel).unwrap(),
+            json!("thought_level")
+        );
+
+        // Test deserialization of known variants
+        assert_eq!(
+            serde_json::from_str::<SessionConfigOptionCategory>("\"mode\"").unwrap(),
+            SessionConfigOptionCategory::Mode
+        );
+        assert_eq!(
+            serde_json::from_str::<SessionConfigOptionCategory>("\"model\"").unwrap(),
+            SessionConfigOptionCategory::Model
+        );
+        assert_eq!(
+            serde_json::from_str::<SessionConfigOptionCategory>("\"thought_level\"").unwrap(),
+            SessionConfigOptionCategory::ThoughtLevel
+        );
+    }
+
+    #[test]
+    fn test_session_config_option_category_unknown_variants() {
+        // Test that unknown strings are captured in Other variant
+        let unknown: SessionConfigOptionCategory =
+            serde_json::from_str("\"some_future_category\"").unwrap();
+        assert_eq!(
+            unknown,
+            SessionConfigOptionCategory::Other("some_future_category".to_string())
+        );
+
+        // Test round-trip of unknown category
+        let json = serde_json::to_value(&unknown).unwrap();
+        assert_eq!(json, json!("some_future_category"));
+    }
+
+    #[test]
+    fn test_session_config_option_category_custom_categories() {
+        // Category names beginning with `_` are free for custom use
+        let custom: SessionConfigOptionCategory =
+            serde_json::from_str("\"_my_custom_category\"").unwrap();
+        assert_eq!(
+            custom,
+            SessionConfigOptionCategory::Other("_my_custom_category".to_string())
+        );
+
+        // Test round-trip preserves the custom category name
+        let json = serde_json::to_value(&custom).unwrap();
+        assert_eq!(json, json!("_my_custom_category"));
+
+        // Deserialize back and verify
+        let deserialized: SessionConfigOptionCategory = serde_json::from_value(json).unwrap();
+        assert_eq!(
+            deserialized,
+            SessionConfigOptionCategory::Other("_my_custom_category".to_string())
+        );
     }
 }

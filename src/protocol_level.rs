@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{Meta, RequestId};
+use crate::{IntoOption, Meta, RequestId};
 
 /// **UNSTABLE**
 ///
@@ -43,8 +43,8 @@ impl CancelRequestNotification {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: Meta) -> Self {
-        self.meta = Some(meta);
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
