@@ -1,5 +1,6 @@
 ---
 title: "Multi-Client Session Attach"
+status: "proposal"
 ---
 
 - Author(s): [@joaommartins](https://github.com/joaommartins)
@@ -40,7 +41,7 @@ This proposal builds on and intersects with several existing draft RFDs:
 
 Add a `session/attach` method that allows a client to connect to an **active, in-progress session** owned by another client. The attaching client receives:
 
-1. A replay of conversation history (like `session/load`)
+1. A replay of conversation history, controlled by the `historyPolicy` parameter (see below)
 2. A live stream of `session/update` notifications going forward
 3. The ability to respond to `request_permission` prompts
 4. Optionally, the ability to send `session/prompt` messages
@@ -54,7 +55,6 @@ Agents (or proxies) advertise multi-client support during initialization:
   "agentCapabilities": {
     "sessionCapabilities": {
       "attach": {
-        "maxClients": 3,
         "roles": ["controller", "observer"]
       }
     }
@@ -65,9 +65,9 @@ Agents (or proxies) advertise multi-client support during initialization:
 ### Client roles
 
 - **Controller** — Can send prompts, respond to permission requests, cancel operations. The original client is always a controller.
-- **Observer** — Receives `session/update` notifications and can see pending `request_permission` prompts, but cannot act on them.
+- **Observer** — Receives `session/update` notifications and can see pending `request_permission` prompts, but cannot act on them unless promoted via a future `session/promote` extension.
 
-A client specifies its requested role when attaching:
+A client specifies its requested role and history policy when attaching:
 
 ```json
 {
@@ -77,6 +77,7 @@ A client specifies its requested role when attaching:
   "params": {
     "sessionId": "sess_abc123def456",
     "role": "controller",
+    "historyPolicy": "full",
     "clientInfo": {
       "name": "notification-dashboard",
       "version": "1.0.0"
@@ -85,7 +86,13 @@ A client specifies its requested role when attaching:
 }
 ```
 
-The response follows standard ACP patterns, returning session metadata:
+The `historyPolicy` parameter controls what history is replayed on attach:
+
+- `"full"` (default) — Replay the complete conversation history, matching the behaviour of `session/load`. Best for IDE and desktop clients.
+- `"pending_only"` — Replay only events that require action (e.g., pending `request_permission` prompts). Best for notification clients.
+- `"none"` — No history replay; receive only future `session/update` events. Best for lightweight observer or logging clients.
+
+The response follows standard ACP patterns, returning session metadata. When `historyPolicy` is `"none"`, the `history` field is omitted. When `"pending_only"`, only items with `"status": "pending"` are included:
 
 ```json
 {
@@ -113,6 +120,47 @@ The response follows standard ACP patterns, returning session metadata:
         "role": "controller"
       }
     ]
+  }
+}
+```
+
+#### Error responses
+
+The proxy returns a JSON-RPC error when attach cannot be completed:
+
+```json
+// Session not found or already terminated
+{
+  "jsonrpc": "2.0",
+  "id": 5,
+  "error": {
+    "code": -32001,
+    "message": "Session not found",
+    "data": { "sessionId": "sess_abc123def456" }
+  }
+}
+```
+
+```json
+// Client not authorised to attach
+{
+  "jsonrpc": "2.0",
+  "id": 5,
+  "error": {
+    "code": -32002,
+    "message": "Not authorised to attach to this session"
+  }
+}
+```
+
+```json
+// Session does not support attach (capability absent)
+{
+  "jsonrpc": "2.0",
+  "id": 5,
+  "error": {
+    "code": -32003,
+    "message": "Session does not support multi-client attach"
   }
 }
 ```
@@ -181,6 +229,19 @@ This means existing agents work **unchanged** — the proxy handles all multi-cl
 }
 ```
 
+On success, the proxy confirms the detach:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 6,
+  "result": {
+    "sessionId": "sess_abc123def456",
+    "status": "detached"
+  }
+}
+```
+
 Lifecycle rules:
 - Clients can detach voluntarily via `session/detach`
 - If the original (owning) client detaches, the session continues as long as at least one controller remains
@@ -216,12 +277,13 @@ With multi-client session attach:
 4. **Monitoring and audit** — Observer clients can log all agent actions for compliance or debugging without interfering with the workflow.
 5. **Graceful client recovery** — If your terminal crashes, you attach from a new terminal and pick up exactly where you were — no `session/load` replay delay because the session never stopped.
 6. **Cross-device continuity** — Start a coding session on your desktop, get a permission request notification on your phone, approve it while commuting, then review the results on your laptop when you get home.
+7. **Configurable client limits** — Proxies could advertise a `maxClients` cap in their `attach` capability, allowing operators to limit concurrent connections per session for resource or security reasons.
 
 ## Implementation details and plan
 
 ### Phase 1: Protocol specification
 1. Add `session/attach` and `session/detach` methods to schema.json
-2. Define `attach` capability in `sessionCapabilities` with `maxClients` and `roles` fields
+2. Define `attach` capability in `sessionCapabilities` with a `roles` field
 3. Define client roles (controller/observer) and their semantics
 4. Specify `permission_resolved` and `client_disconnected` session update variants
 5. Document interaction with existing `session/load` and `session/resume`
