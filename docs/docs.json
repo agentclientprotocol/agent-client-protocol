@@ -118,7 +118,8 @@
               "rfds/auth-methods",
               "rfds/rust-sdk-v1",
               "rfds/logout-method",
-              "rfds/session-delete"
+              "rfds/session-delete",
+              "rfds/message-id"
             ]
           },
           {
