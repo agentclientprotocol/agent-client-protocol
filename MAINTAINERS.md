@@ -2,23 +2,22 @@
 
 The current maintainers for ACP are:
 
-**Last updated:** November 18, 2025
+**Last updated:** February 19, 2026
 
 ## Lead Maintainers
 
-| Name         | Email            | GitHub                       |
-| ------------ | ---------------- | ---------------------------- |
-| Ben Brandt   | benjamin@zed.dev | https://github.com/benbrandt |
-| Agus Zubiaga | agus@zed.dev     | https://github.com/agu-z     |
+| Name           | Email                        | GitHub                       |
+| -------------- | ---------------------------- | ---------------------------- |
+| Ben Brandt     | benjamin@zed.dev             | https://github.com/benbrandt |
+| Sergey Ignatov | sergey.ignatov@jetbrains.com | https://github.com/ignatov   |
 
 ## Core Maintainers
 
-| Name            | GitHub                          |
-| --------------- | ------------------------------- |
-| Richard Feldman | https://github.com/rtfeldman    |
-| Sergey Ignatov  | https://github.com/ignatov      |
-| Anna Zhdan      | https://github.com/anna239      |
-| Niko Matsakis   | https://github.com/nikomatsakis |
+| Name          | GitHub                          |
+| ------------- | ------------------------------- |
+| Agus Zubiaga  | https://github.com/agu-z        |
+| Anna Zhdan    | https://github.com/anna239      |
+| Niko Matsakis | https://github.com/nikomatsakis |
 
 ## SDK Maintainers
 
