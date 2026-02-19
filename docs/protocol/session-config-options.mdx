@@ -61,6 +61,13 @@ During [Session Setup](./session-setup) the Agent **MAY** return a list of confi
             "description": "The most powerful model"
           }
         ]
+      },
+      {
+        "id": "brave_mode",
+        "name": "Brave Mode",
+        "description": "Skip confirmation prompts and act autonomously",
+        "type": "boolean",
+        "currentValue": false
       }
     ]
   }
@@ -93,8 +100,12 @@ During [Session Setup](./session-setup) the Agent **MAY** return a list of confi
 </ResponseField>
 
 <ResponseField name="type" type="ConfigOptionType" required>
-  The type of input control. Currently only `select` is supported.
+  The type of input control. Supported types are `select` and `boolean`.
 </ResponseField>
+
+### Select Options
+
+When `type` is `select`, the following fields are used:
 
 <ResponseField name="currentValue" type="string" required>
   The currently selected value for this option
@@ -103,6 +114,16 @@ During [Session Setup](./session-setup) the Agent **MAY** return a list of confi
 <ResponseField name="options" type="ConfigOptionValue[]" required>
   The available values for this option
 </ResponseField>
+
+### Boolean Options
+
+When `type` is `boolean`, the following fields are used:
+
+<ResponseField name="currentValue" type="boolean" required>
+  The current boolean state of the option (`true` for on, `false` for off)
+</ResponseField>
+
+Boolean options are intended for simple on/off toggles such as "Brave Mode", "Produce Report", or "Read Only". Clients **SHOULD** render them as toggle switches or checkboxes.
 
 ### ConfigOptionValue
 
@@ -186,9 +207,10 @@ Clients can change a config option value by calling the `session/set_config_opti
   The `id` of the configuration option to change
 </ParamField>
 
-<ParamField path="value" type="string" required>
-  The new value to set. Must be one of the values listed in the option's
-  `options` array.
+<ParamField path="value" type="string | boolean" required>
+  The new value to set. For `select` options, this must be one of the values
+  listed in the option's `options` array. For `boolean` options, this must be a
+  boolean (`true` or `false`).
 </ParamField>
 
 The Agent **MUST** respond with the complete list of all configuration options and their current values:

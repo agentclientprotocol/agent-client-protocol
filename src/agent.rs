@@ -1929,6 +1929,28 @@ impl SessionConfigSelect {
     }
 }
 
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// A boolean on/off toggle session configuration option payload.
+#[cfg(feature = "unstable_boolean_config")]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct SessionConfigBoolean {
+    /// The current value of the boolean option.
+    pub current_value: bool,
+}
+
+#[cfg(feature = "unstable_boolean_config")]
+impl SessionConfigBoolean {
+    #[must_use]
+    pub fn new(current_value: bool) -> Self {
+        Self { current_value }
+    }
+}
+
 /// Semantic category for a session configuration option.
 ///
 /// This is intended to help Clients distinguish broadly common selectors (e.g. model selector vs
@@ -1961,6 +1983,13 @@ pub enum SessionConfigOptionCategory {
 pub enum SessionConfigKind {
     /// Single-value selector (dropdown).
     Select(SessionConfigSelect),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Boolean on/off toggle.
+    #[cfg(feature = "unstable_boolean_config")]
+    Boolean(SessionConfigBoolean),
 }
 
 /// A session configuration option selector and its current state.
@@ -2021,6 +2050,23 @@ impl SessionConfigOption {
         )
     }
 
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    #[cfg(feature = "unstable_boolean_config")]
+    #[must_use]
+    pub fn boolean(
+        id: impl Into<SessionConfigId>,
+        name: impl Into<String>,
+        current_value: bool,
+    ) -> Self {
+        Self::new(
+            id,
+            name,
+            SessionConfigKind::Boolean(SessionConfigBoolean::new(current_value)),
+        )
+    }
+
     #[must_use]
     pub fn description(mut self, description: impl IntoOption<String>) -> Self {
         self.description = description.into_option();
@@ -2045,6 +2091,38 @@ impl SessionConfigOption {
     }
 }
 
+/// The value to set for a session configuration option.
+///
+/// For `select` options, the value is a `SessionConfigValueId` string.
+/// For `boolean` options, the value is a boolean.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(untagged)]
+#[non_exhaustive]
+pub enum SessionConfigOptionValue {
+    /// A string value (used by `select` options).
+    String(SessionConfigValueId),
+    /// A boolean value (used by `boolean` options).
+    Bool(bool),
+}
+
+impl From<SessionConfigValueId> for SessionConfigOptionValue {
+    fn from(value: SessionConfigValueId) -> Self {
+        SessionConfigOptionValue::String(value)
+    }
+}
+
+impl From<bool> for SessionConfigOptionValue {
+    fn from(value: bool) -> Self {
+        SessionConfigOptionValue::Bool(value)
+    }
+}
+
+impl From<&str> for SessionConfigOptionValue {
+    fn from(value: &str) -> Self {
+        SessionConfigOptionValue::String(SessionConfigValueId::new(value))
+    }
+}
+
 /// Request parameters for setting a session configuration option.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_SET_CONFIG_OPTION_METHOD_NAME))]
@@ -2055,8 +2133,9 @@ pub struct SetSessionConfigOptionRequest {
     pub session_id: SessionId,
     /// The ID of the configuration option to set.
     pub config_id: SessionConfigId,
-    /// The ID of the configuration option value to set.
-    pub value: SessionConfigValueId,
+    /// The value to set. For `select` options, this is a `SessionConfigValueId` string.
+    /// For `boolean` options, this is a boolean.
+    pub value: SessionConfigOptionValue,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -2071,7 +2150,7 @@ impl SetSessionConfigOptionRequest {
     pub fn new(
         session_id: impl Into<SessionId>,
         config_id: impl Into<SessionConfigId>,
-        value: impl Into<SessionConfigValueId>,
+        value: impl Into<SessionConfigOptionValue>,
     ) -> Self {
         Self {
             session_id: session_id.into(),

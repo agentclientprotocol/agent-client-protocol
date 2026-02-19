@@ -25,6 +25,7 @@ unstable = [
     "unstable_session_stop",
     "unstable_session_usage",
     "unstable_message_id",
+    "unstable_boolean_config",
 ]
 unstable_auth_methods = []
 unstable_cancel_request = []
@@ -36,6 +37,7 @@ unstable_session_resume = []
 unstable_session_stop = []
 unstable_session_usage = []
 unstable_message_id = []
+unstable_boolean_config = []
 
 [[bin]]
 name = "generate"
