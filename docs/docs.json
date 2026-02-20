@@ -119,7 +119,8 @@
               "rfds/rust-sdk-v1",
               "rfds/logout-method",
               "rfds/session-delete",
-              "rfds/message-id"
+              "rfds/message-id",
+              "rfds/diff-delete"
             ]
           },
           {
