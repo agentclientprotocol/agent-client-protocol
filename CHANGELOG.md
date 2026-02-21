@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.10.9](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.10.8...v0.10.9) - 2026-02-21
+
+### Fixed
+
+- use impl IntoOption<Meta> for CancelRequestNotification::meta() ([#467](https://github.com/agentclientprotocol/agent-client-protocol/pull/467))
+- avoid redundant JSON validation in extension notification decoding ([#459](https://github.com/agentclientprotocol/agent-client-protocol/pull/459))
+
+### Other
+
+- *(deps)* bump the minor group with 3 updates ([#518](https://github.com/agentclientprotocol/agent-client-protocol/pull/518))
+- *(deps)* bump the minor group with 4 updates ([#480](https://github.com/agentclientprotocol/agent-client-protocol/pull/480))
+
 ## [0.10.8](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.10.7...v0.10.8) - 2026-02-04
 
 ### Added
