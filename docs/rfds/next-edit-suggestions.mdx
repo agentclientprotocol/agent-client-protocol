@@ -65,6 +65,25 @@ During `initialize`, the agent includes a `nes` field in its capabilities:
 
 All fields under `events` and `context` are optional — an agent advertises only what it can use.
 
+#### Client capabilities
+
+The **client** advertises its own NES-related capabilities in the `initialize` request. Currently, the client can declare which well-known IDE actions it supports by listing their IDs. The agent reads these and may later include `"action"` kind suggestions that reference them.
+
+```json
+{
+  "capabilities": {
+    "nes": {
+      "ideActions": {
+        "rename": {},
+        "searchAndReplace": {}
+      }
+    }
+  }
+}
+```
+
+Each entry in `ideActions` is the ID of a well-known action (see [Well-known IDE actions](#well-known-ide-actions) below). Agents should only suggest actions that the client has advertised.
+
 ### Session lifecycle
 
 If the `nes` capability is present, the client may call `nes/start` to begin an NES session. The agent can also use the existing `configOptions` mechanism to expose NES-related settings (model selection, debounce preferences, enabled/disabled state, etc.).
@@ -293,7 +312,7 @@ The client requests a suggestion by calling `nes/suggest`. Context fields are in
 
 ### Suggestion response
 
-A suggestion is one of two kinds: an **edit** (text changes) or a **jump** (navigate to a different file).
+A suggestion is one of three kinds: an **edit** (text changes), a **jump** (navigate to a different file), or an **action** (trigger an IDE action).
 
 **Edit suggestion:**
 
@@ -342,11 +361,38 @@ A suggestion is one of two kinds: an **edit** (text changes) or a **jump** (navi
 }
 ```
 
-A response may contain a mix of edit and jump suggestions. The client decides how to present them (e.g. inline ghost text for edits, a navigation hint for jumps).
+**Action suggestion:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": {
+    "suggestions": [
+      {
+        "id": "sugg_003",
+        "kind": "action",
+        "actionId": "rename",
+        "arguments": {
+          "uri": "file:///path/to/file.rs",
+          "position": { "line": 5, "character": 10 },
+          "newName": "calculateTotal"
+        }
+      }
+    ]
+  }
+}
+```
+
+Action suggestions reference an IDE action that the client previously advertised in its capabilities:
+- `actionId` — matches an `id` from the client's advertised `ideActions`.
+- `arguments` — matches the parameter schema declared by the client for that action.
+
+A response may contain a mix of edit, jump, and action suggestions. The client decides how to present them (e.g. inline ghost text for edits, a navigation hint for jumps).
 
 Each suggestion contains:
 - `id` — unique identifier for accept/reject tracking.
-- `kind` — `"edit"` or `"jump"`.
+- `kind` — `"edit"`, `"jump"`, or `"action"`.
 
 Edit suggestions additionally contain:
 - `edits` — one or more text edits to apply.
@@ -355,6 +401,10 @@ Edit suggestions additionally contain:
 Jump suggestions additionally contain:
 - `uri` — the file to navigate to.
 - `position` — the target position within that file.
+
+Action suggestions additionally contain:
+- `actionId` — the IDE action to perform (must match a client-advertised action `id`).
+- `arguments` — action parameters matching the schema from the client's capability.
 
 ### Accept / Reject
 
@@ -426,6 +476,27 @@ Response:
   }
 }
 ```
+
+### Well-known IDE actions
+
+The following actions are well-known and have standardized parameter schemas. Clients that support these actions should use the IDs and parameter shapes defined here.
+
+**`rename`** — Rename a symbol across the workspace.
+
+Parameters:
+- `uri` (`string`) — the file URI containing the symbol.
+- `position` (`Position`) — the position of the symbol to rename.
+- `newName` (`string`) — the new name for the symbol.
+
+**`searchAndReplace`** — Search and replace text within a file.
+
+Parameters:
+- `uri` (`string`) — the file URI to search within.
+- `search` (`string`) — the text or pattern to find.
+- `replace` (`string`) — the replacement text.
+- `isRegex` (`boolean`, optional) — whether `search` is a regular expression. Defaults to `false`.
+
+Additional well-known actions may be added to the protocol in the future. Agents should only suggest actions whose `id` matches an entry the client has advertised.
 
 ### Config options
 
