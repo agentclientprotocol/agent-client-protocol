@@ -306,6 +306,7 @@ The client requests a suggestion by calling `nes/suggest`. Context fields are in
 `selection` is the current text selection range, if any. When the selection is empty (cursor is a point), this field may be omitted or have `start` equal to `end`. Agents can use selection state to predict replacements or transformations of the selected text.
 
 `triggerKind` is one of:
+
 - `"automatic"` — triggered by user typing or cursor movement
 - `"diagnostic"` — triggered by a diagnostic (error/warning) appearing at or near the cursor position. The client includes the relevant diagnostics in the `diagnostics` context field so the agent can target a fix.
 - `"manual"` — triggered by explicit user action (keyboard shortcut)
@@ -385,24 +386,29 @@ A suggestion is one of three kinds: an **edit** (text changes), a **jump** (navi
 ```
 
 Action suggestions reference an IDE action that the client previously advertised in its capabilities:
+
 - `actionId` — matches an `id` from the client's advertised `ideActions`.
 - `arguments` — matches the parameter schema declared by the client for that action.
 
 A response may contain a mix of edit, jump, and action suggestions. The client decides how to present them (e.g. inline ghost text for edits, a navigation hint for jumps).
 
 Each suggestion contains:
+
 - `id` — unique identifier for accept/reject tracking.
 - `kind` — `"edit"`, `"jump"`, or `"action"`.
 
 Edit suggestions additionally contain:
+
 - `edits` — one or more text edits to apply.
 - `cursorPosition` — optional suggested cursor position after applying edits.
 
 Jump suggestions additionally contain:
+
 - `uri` — the file to navigate to.
 - `position` — the target position within that file.
 
 Action suggestions additionally contain:
+
 - `actionId` — the IDE action to perform (must match a client-advertised action `id`).
 - `arguments` — action parameters matching the schema from the client's capability.
 
@@ -430,6 +436,7 @@ Action suggestions additionally contain:
 ```
 
 `reason` is one of:
+
 - `"rejected"` — the user explicitly dismissed the suggestion (e.g. pressed Escape or typed something incompatible).
 - `"ignored"` — the suggestion was shown but the user continued editing without interacting with it, and the context changed enough to invalidate it.
 - `"replaced"` — the suggestion was superseded by a newer suggestion before the user could act on it.
@@ -484,6 +491,7 @@ The following actions are well-known and have standardized parameter schemas. Cl
 **`rename`** — Rename a symbol across the workspace.
 
 Parameters:
+
 - `uri` (`string`) — the file URI containing the symbol.
 - `position` (`Position`) — the position of the symbol to rename.
 - `newName` (`string`) — the new name for the symbol.
@@ -491,6 +499,7 @@ Parameters:
 **`searchAndReplace`** — Search and replace text within a file.
 
 Parameters:
+
 - `uri` (`string`) — the file URI to search within.
 - `search` (`string`) — the text or pattern to find.
 - `replace` (`string`) — the replacement text.
@@ -538,6 +547,7 @@ An agent may want both (events for incremental file tracking + context for edit 
 ### Why not reuse LSP's `textDocument/didOpen` etc. directly?
 
 LSP's document sync notifications carry the same information, but:
+
 1. ACP is not LSP — reusing method names could cause confusion in implementations that bridge both.
 2. We may want to evolve the event payloads independently (e.g. adding metadata fields).
 3. Keeping them namespaced under `nes/` makes capability negotiation cleaner.
