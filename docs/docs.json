@@ -121,7 +121,8 @@
               "rfds/session-delete",
               "rfds/message-id",
               "rfds/diff-delete",
-              "rfds/boolean-config-option"
+              "rfds/boolean-config-option",
+              "rfds/elicitation"
             ]
           },
           {
