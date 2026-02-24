@@ -120,6 +120,7 @@
               "rfds/logout-method",
               "rfds/session-delete",
               "rfds/message-id",
+              "rfds/diff-delete",
               "rfds/boolean-config-option"
             ]
           },
