@@ -1,0 +1,137 @@
+---
+title: "Boolean Config Option Type"
+---
+
+- Author(s): [fscarponi](https://github.com/fscarponi)
+- Champion: [benbrandt](https://github.com/benbrandt)
+
+## Elevator pitch
+
+Add a new `boolean` type to session configuration options, enabling agents to expose simple ON/OFF toggles (e.g., "Brave Mode", "Read Only", "Produce Report") as first-class config options alongside the existing `select` type.
+
+## Status quo
+
+Currently, `SessionConfigKind` only supports the `select` type, which allows agents to expose dropdown-style selectors with a list of named values. This works well for choosing models, modes, or reasoning levels.
+
+However, there is no native way to represent a simple boolean on/off toggle. To expose a boolean option today, agents must use a `select` with two artificial options (e.g., "on"/"off"), and clients need custom, non-agnostic logic to detect that a particular select is actually a boolean toggle. This defeats the purpose of a standardized protocol.
+
+## What we propose to do about it
+
+- Add a `SessionConfigBoolean` struct with a `current_value: bool` field
+- Add a `Boolean(SessionConfigBoolean)` variant to the `SessionConfigKind` enum, discriminated by `"type": "boolean"`
+- Add a `SessionConfigOptionValue` enum (untagged: `String` | `Bool`) so that `SetSessionConfigOptionRequest.value` can accept both string values (for `select`) and boolean values (for `flag`)
+- Provide convenience constructors and `From` impls for ergonomic usage
+- Update documentation and regenerate schema files
+
+## Shiny future
+
+Clients can natively render boolean config options as toggle switches or checkboxes, without any custom logic. Agents can expose options like "Brave Mode", "Produce Report", or "Read Only" in a standardized way that any ACP-compliant client understands out of the box.
+
+## Implementation details and plan
+
+### Wire format: declaring a boolean option
+
+In a `session/new` response (or any response containing `configOptions`):
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "sessionId": "sess_abc123",
+    "configOptions": [
+      {
+        "id": "brave_mode",
+        "name": "Brave Mode",
+        "description": "Skip confirmation prompts and act autonomously",
+        "type": "boolean",
+        "currentValue": true
+      },
+      {
+        "id": "mode",
+        "name": "Session Mode",
+        "category": "mode",
+        "type": "select",
+        "currentValue": "code",
+        "options": [
+          { "value": "ask", "name": "Ask" },
+          { "value": "code", "name": "Code" }
+        ]
+      }
+    ]
+  }
+}
+```
+
+### Wire format: setting a boolean option
+
+The `session/set_config_option` request uses a string value, consistent with `select` options:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "session/set_config_option",
+  "params": {
+    "sessionId": "sess_abc123",
+    "configId": "brave_mode",
+    "value": true
+  }
+}
+```
+
+The response returns the full set of config options with current values, as with `select`:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "configOptions": [
+      {
+        "id": "brave_mode",
+        "name": "Brave Mode",
+        "description": "Skip confirmation prompts and act autonomously",
+        "type": "boolean",
+        "currentValue": true
+      },
+      {
+        "id": "mode",
+        "name": "Session Mode",
+        "category": "mode",
+        "type": "select",
+        "currentValue": "code",
+        "options": [..]
+      }
+    ]
+  }
+}
+```
+
+A working implementation is available at: https://github.com/fscarponi/agent-client-protocol/tree/fabrizio.scarponi/flag-config-option
+
+Key changes:
+
+1. `SessionConfigFlag` struct with `current_value: bool`
+2. `Flag` variant in `SessionConfigKind` (tagged via `"type": "flag"`)
+3. `SessionConfigOptionValue` untagged enum (`String` | `Bool`) replacing `SessionConfigValueId` in `SetSessionConfigOptionRequest.value`
+4. `From` impls ensure backward compatibility — existing code passing strings still compiles
+5. Wire-level backward compatible: existing JSON payloads with string values remain valid
+
+### Client capabilities
+
+Per the existing protocol design, clients that receive a config option with an unrecognized `type` should ignore it. Since the agent is required to have a default value for every option, the agent can function correctly even if the client doesn't render or interact with the boolean option. No new client capability negotiation is needed.
+
+## Frequently asked questions
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+We considered reusing the existing `select` type with a convention (e.g., options named "on"/"off"), but this would require clients to implement non-agnostic detection logic, which contradicts the goal of a standardized protocol. A dedicated `flag` type is cleaner and lets clients render the appropriate UI control without guessing.
+
+### Is this a breaking change?
+
+On the wire/JSON level: no. `SessionConfigOptionValue` uses `#[serde(untagged)]`, so existing string payloads deserialize correctly. On the Rust API level: the type of `SetSessionConfigOptionRequest.value` changed, but `From` impls ensure source compatibility for users of the `new()` constructor.
+
+## Revision history
+
+- 2026-02-24: Initial proposal
