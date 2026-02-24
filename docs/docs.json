@@ -82,6 +82,7 @@
                 "hidden": true,
                 "pages": [
                   "protocol/draft/cancellation",
+                  "protocol/draft/session-list",
                   "protocol/draft/schema"
                 ]
               }
@@ -106,12 +107,10 @@
           {
             "group": "Draft",
             "pages": [
-              "rfds/session-list",
               "rfds/session-fork",
               "rfds/request-cancellation",
               "rfds/session-resume",
               "rfds/meta-propagation",
-              "rfds/session-info-update",
               "rfds/agent-telemetry-export",
               "rfds/proxy-chains",
               "rfds/mcp-over-acp",
@@ -119,10 +118,21 @@
               "rfds/auth-methods",
               "rfds/rust-sdk-v1",
               "rfds/logout-method",
-              "rfds/session-delete"
+              "rfds/session-delete",
+              "rfds/message-id",
+              "rfds/diff-delete",
+              "rfds/boolean-config-option",
+              "rfds/elicitation"
             ]
           },
-          { "group": "Preview", "pages": ["rfds/acp-agent-registry"] },
+          {
+            "group": "Preview",
+            "pages": [
+              "rfds/acp-agent-registry",
+              "rfds/session-list",
+              "rfds/session-info-update"
+            ]
+          },
           {
             "group": "Completed",
             "pages": [
