@@ -122,7 +122,8 @@
               "rfds/message-id",
               "rfds/diff-delete",
               "rfds/boolean-config-option",
-              "rfds/elicitation"
+              "rfds/elicitation",
+              "rfds/session-stop"
             ]
           },
           {
