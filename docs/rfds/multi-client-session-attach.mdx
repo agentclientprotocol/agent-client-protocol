@@ -32,6 +32,7 @@ This proposal builds on and intersects with several existing draft RFDs:
 - **[Agent Extensions via ACP Proxies](./proxy-chains)** — The proxy/multiplexer architecture pattern is central to the recommended implementation approach for multi-client sessions
 - **[Session List](./session-list)** — Discovering existing sessions (prerequisite for attach)
 - **[Resuming of existing sessions](./session-resume)** (`session/resume`) — Sequential handoff between clients
+- **[Message ID](./message-id)** — Stable message identifiers enabling `after_message` history replay and correlation of `turn_complete`/`prompt_received` notifications
 - **Session Info Update** — Real-time metadata propagation (draft)
 - **Session Fork** — Branching sessions (related but distinct — fork creates a copy, attach shares the original) (draft)
 
@@ -91,8 +92,31 @@ The `historyPolicy` parameter controls what history is replayed on attach:
 - `"full"` (default) — Replay the complete conversation history, matching the behaviour of `session/load`. Best for IDE and desktop clients.
 - `"pending_only"` — Replay only events that require action (e.g., pending `request_permission` prompts). Best for notification clients.
 - `"none"` — No history replay; receive only future `session/update` events. Best for lightweight observer or logging clients.
+- `"after_message"` — Replay history starting after the message identified by `afterMessageId`. Best for reconnecting clients that already have partial history and only need the delta. Requires the [Message ID RFD](./message-id) to be adopted.
 
-The response follows standard ACP patterns, returning session metadata. When `historyPolicy` is `"none"`, the `history` field is omitted. When `"pending_only"`, only items with `"status": "pending"` are included:
+When using `"after_message"`, the client includes an `afterMessageId` field:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 5,
+  "method": "session/attach",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "role": "controller",
+    "historyPolicy": "after_message",
+    "afterMessageId": "ea87d0e7-beb8-484a-a404-94a30b78a5a8",
+    "clientInfo": {
+      "name": "notification-dashboard",
+      "version": "1.0.0"
+    }
+  }
+}
+```
+
+If the proxy does not recognise the provided `afterMessageId` (e.g., the message has been evicted from its buffer), it SHOULD fall back to `"full"` replay and indicate this in the response via the `historyPolicy` field.
+
+The response follows standard ACP patterns, returning session metadata. When `historyPolicy` is `"none"`, the `history` field is omitted. When `"pending_only"`, only items with `"status": "pending"` are included. When `"after_message"`, only events after the specified message are included:
 
 ```json
 {
@@ -188,6 +212,59 @@ When an agent emits `request_permission`, it is broadcast to **all connected con
 }
 ```
 
+### Turn completion notification
+
+When a controller sends a `session/prompt` and the agent finishes processing that turn, the proxy broadcasts a `turn_complete` notification to all connected clients. This is essential for multiplexed clients — without it, secondary clients have no reliable way to know when the agent has finished responding and is ready for the next prompt.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "type": "turn_complete",
+      "stopReason": "end_turn",
+      "messageId": "ea87d0e7-beb8-484a-a404-94a30b78a5a8"
+    }
+  }
+}
+```
+
+The `stopReason` field mirrors the `stopReason` from the `session/prompt` response (e.g., `"end_turn"`, `"max_tokens"`). The optional `messageId` field references the final agent message of the turn (requires the [Message ID RFD](./message-id)).
+
+Note: The primary client (the one that sent the prompt) already receives this signal via the `session/prompt` response. The `turn_complete` notification is for all *other* connected clients that only see `session/update` events.
+
+### Prompt echoing
+
+When a controller sends a `session/prompt`, the proxy echoes that prompt to all **other** connected clients via a `prompt_received` session update. Without this, secondary clients would see the agent's response stream without knowing what question or instruction triggered it.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "type": "prompt_received",
+      "messageId": "4c12d49b-729c-4086-bfed-5b82e9a53400",
+      "prompt": [
+        {
+          "type": "text",
+          "text": "Add authentication to the API"
+        }
+      ],
+      "sentBy": {
+        "name": "Claude Code",
+        "version": "1.0.0"
+      }
+    }
+  }
+}
+```
+
+The prompt is echoed *before* the agent begins streaming its response, so clients can display the user message in the correct position in the conversation. The `sentBy` field identifies which client sent the prompt, and the optional `messageId` allows clients to correlate the prompt with subsequent response chunks (requires the [Message ID RFD](./message-id)).
+
 ### Transport considerations
 
 The current stdio transport is inherently single-client. Multi-client attach requires a **network-capable transport**. We propose this works over:
@@ -212,7 +289,10 @@ The proxy:
 - Fans out `session/update` notifications to all connected clients
 - Broadcasts `request_permission` to all controllers
 - Routes the first response back to the agent
+- Echoes `session/prompt` from one controller to all other clients as `prompt_received`
+- Broadcasts `turn_complete` to all non-prompting clients when a turn finishes
 - Tracks client roles and connection state
+- Buffers message history for `after_message` replay on reconnect
 
 This means existing agents work **unchanged** — the proxy handles all multi-client logic. This approach aligns perfectly with the proxy-chains architecture, where proxies sit between clients and agents to extend functionality without modifying the core agent implementation.
 
@@ -285,7 +365,7 @@ With multi-client session attach:
 1. Add `session/attach` and `session/detach` methods to schema.json
 2. Define `attach` capability in `sessionCapabilities` with a `roles` field
 3. Define client roles (controller/observer) and their semantics
-4. Specify `permission_resolved` and `client_disconnected` session update variants
+4. Specify `permission_resolved`, `client_disconnected`, `turn_complete`, and `prompt_received` session update variants
 5. Document interaction with existing `session/load` and `session/resume`
 
 ### Phase 2: Reference proxy implementation
@@ -411,4 +491,5 @@ The typical flow for a dashboard client would be:
 
 ## Revision history
 
+- **2026-02-24**: Added `after_message` history policy with `afterMessageId` for delta sync on reconnect; added `turn_complete` notification for secondary clients; added `prompt_received` echoing so all clients see prompts sent by other controllers
 - **2026-02-18**: Initial proposal
