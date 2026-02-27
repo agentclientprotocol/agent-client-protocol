@@ -376,8 +376,70 @@
       "required": ["data", "mimeType"],
       "type": "object"
     },
+    "AuthCapabilities": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAuthentication capabilities supported by the client.\n\nAdvertised during initialization to inform the agent which authentication\nmethod types the client can handle. This governs opt-in types that require\nadditional client-side support.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "terminal": {
+          "default": false,
+          "description": "Whether the client supports `terminal` authentication methods.\n\nWhen `true`, the agent may include `terminal` entries in its authentication methods.",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
     "AuthMethod": {
-      "description": "Describes an available authentication method.",
+      "anyOf": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/AuthMethodEnvVar"
+            }
+          ],
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nUser provides a key that the client passes to the agent as an environment variable.",
+          "properties": {
+            "type": {
+              "const": "env_var",
+              "type": "string"
+            }
+          },
+          "required": ["type"],
+          "type": "object"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/AuthMethodTerminal"
+            }
+          ],
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nClient runs an interactive terminal for the user to authenticate via a TUI.",
+          "properties": {
+            "type": {
+              "const": "terminal",
+              "type": "string"
+            }
+          },
+          "required": ["type"],
+          "type": "object"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/AuthMethodAgent"
+            }
+          ],
+          "description": "Agent handles authentication itself.\n\nThis is the default when no `type` is specified.",
+          "title": "agent"
+        }
+      ],
+      "description": "Describes an available authentication method.\n\nThe `type` field acts as the discriminator in the serialized JSON form.\nWhen no `type` is present, the method is treated as `agent`."
+    },
+    "AuthMethodAgent": {
+      "description": "Agent handles authentication itself.\n\nThis is the default authentication method type.",
       "properties": {
         "_meta": {
           "additionalProperties": true,
@@ -387,6 +449,76 @@
         "description": {
           "description": "Optional description providing more details about this authentication method.",
           "type": ["string", "null"]
+        },
+        "id": {
+          "description": "Unique identifier for this authentication method.",
+          "type": "string"
+        },
+        "name": {
+          "description": "Human-readable name of the authentication method.",
+          "type": "string"
+        }
+      },
+      "required": ["id", "name"],
+      "type": "object"
+    },
+    "AuthMethodEnvVar": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nEnvironment variable authentication method.\n\nThe user provides a key that the client passes to the agent as an environment variable.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "description": {
+          "description": "Optional description providing more details about this authentication method.",
+          "type": ["string", "null"]
+        },
+        "id": {
+          "description": "Unique identifier for this authentication method.",
+          "type": "string"
+        },
+        "link": {
+          "description": "Optional link to a page where the user can obtain their key.",
+          "type": ["string", "null"]
+        },
+        "name": {
+          "description": "Human-readable name of the authentication method.",
+          "type": "string"
+        },
+        "varName": {
+          "description": "The name of the environment variable the client should set with the user's key.",
+          "type": "string"
+        }
+      },
+      "required": ["id", "name", "varName"],
+      "type": "object"
+    },
+    "AuthMethodTerminal": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nTerminal-based authentication method.\n\nThe client runs an interactive terminal for the user to authenticate via a TUI.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "args": {
+          "description": "Additional arguments to pass when running the agent binary for terminal auth.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "description": {
+          "description": "Optional description providing more details about this authentication method.",
+          "type": ["string", "null"]
+        },
+        "env": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Additional environment variables to set when running the agent binary for terminal auth.",
+          "type": "object"
         },
         "id": {
           "description": "Unique identifier for this authentication method.",
@@ -567,6 +699,17 @@
           "additionalProperties": true,
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
+        },
+        "auth": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/AuthCapabilities"
+            }
+          ],
+          "default": {
+            "terminal": false
+          },
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAuthentication capabilities supported by the client.\nDetermines which authentication method types the agent may include\nin its `InitializeResponse`."
         },
         "fs": {
           "allOf": [
@@ -1210,6 +1353,13 @@
     "Error": {
       "description": "JSON-RPC error object.\n\nRepresents an error that occurred during method execution, following the\nJSON-RPC 2.0 error object specification with optional additional data.\n\nSee protocol docs: [JSON-RPC Error Object](https://www.jsonrpc.org/specification#error_object)",
       "properties": {
+        "authMethods": {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAuthentication methods relevant to this error.\nTypically included with `AUTH_REQUIRED` errors to narrow down which\nauthentication methods are applicable from those shared during initialization.",
+          "items": {
+            "$ref": "#/$defs/AuthMethod"
+          },
+          "type": "array"
+        },
         "code": {
           "allOf": [
             {
@@ -1500,6 +1650,9 @@
             }
           ],
           "default": {
+            "auth": {
+              "terminal": false
+            },
             "fs": {
               "readTextFile": false,
               "writeTextFile": false

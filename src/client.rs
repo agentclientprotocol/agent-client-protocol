@@ -1440,6 +1440,16 @@ pub struct ClientCapabilities {
     /// Whether the Client support all `terminal/*` methods.
     #[serde(default)]
     pub terminal: bool,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Authentication capabilities supported by the client.
+    /// Determines which authentication method types the agent may include
+    /// in its `InitializeResponse`.
+    #[cfg(feature = "unstable_auth_methods")]
+    #[serde(default)]
+    pub auth: AuthCapabilities,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -1464,6 +1474,77 @@ impl ClientCapabilities {
     }
 
     /// Whether the Client support all `terminal/*` methods.
+    #[must_use]
+    pub fn terminal(mut self, terminal: bool) -> Self {
+        self.terminal = terminal;
+        self
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Authentication capabilities supported by the client.
+    /// Determines which authentication method types the agent may include
+    /// in its `InitializeResponse`.
+    #[cfg(feature = "unstable_auth_methods")]
+    #[must_use]
+    pub fn auth(mut self, auth: AuthCapabilities) -> Self {
+        self.auth = auth;
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Authentication capabilities supported by the client.
+///
+/// Advertised during initialization to inform the agent which authentication
+/// method types the client can handle. This governs opt-in types that require
+/// additional client-side support.
+#[cfg(feature = "unstable_auth_methods")]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct AuthCapabilities {
+    /// Whether the client supports `terminal` authentication methods.
+    ///
+    /// When `true`, the agent may include `terminal` entries in its authentication methods.
+    #[serde(default)]
+    pub terminal: bool,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_auth_methods")]
+impl AuthCapabilities {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Whether the client supports `terminal` authentication methods.
+    ///
+    /// When `true`, the agent may include `AuthMethod::Terminal`
+    /// entries in its authentication methods.
     #[must_use]
     pub fn terminal(mut self, terminal: bool) -> Self {
         self.terminal = terminal;

@@ -2,7 +2,7 @@
 title: "Authentication Methods"
 ---
 
-Author(s): [anna239](https://github.com/anna239)
+Author(s): [anna239](https://github.com/anna239), [benbrandt](https://github.com/benbrandt)
 
 ## Elevator pitch
 
@@ -37,22 +37,25 @@ It will be easier for end-users to start using an agent from inside the IDE as a
 
 I suggest adding following auth types:
 
+### Auth method types
+
 1. Agent auth
 
-Same as what there is now – agent handles the auth itself, this should be a default type if no type is provided for backward compatibility
+Same as what there is now – agent handles the auth itself. This is the default type when no `type` is provided, preserving backward compatibility.
 
 ```json
 {
   "id": "123",
   "name": "Agent",
-  "description": "Authenticate through agent",
-  "type": "agent" // Optional/default value
+  "description": "Authenticate through agent"
 }
 ```
 
+An explicit `"type": "agent"` is also accepted but not required.
+
 2. Env variable
 
-A user can enter a key and a client will pass it to the agent as an env variable
+A user can enter a key and a client will pass it to the agent as an env variable. Requires `"type": "env_var"`.
 
 ```json
 {
@@ -65,13 +68,16 @@ A user can enter a key and a client will pass it to the agent as an env variable
 }
 ```
 
+- `varName` (required): The environment variable name the client should set.
+- `link` (optional): URL where the user can obtain their key.
+
 Since this would need to be supplied to the agent when the process is started, the client can check if it already passed such an env variable to the process, in which case the user can click on the button and the agent will read the already available key.
 
 Otherwise, when the user clicks the button, the client could restart the agent process with the desired env variable, and then automatically send the authenticate message with the correct id to sign in for the user.
 
 3. Terminal Auth
 
-There have been experiments for a "terminal-auth" experience as a fallback. This requires the client to be able to run an interactive terminal for the user to login via a TUI.
+This requires the client to be able to run an interactive terminal for the user to login via a TUI. Requires `"type": "terminal"`.
 
 ```json
 {
@@ -84,11 +90,32 @@ There have been experiments for a "terminal-auth" experience as a fallback. This
 }
 ```
 
+- `args` (optional, default `[]`): Additional arguments to pass when running the agent binary.
+- `env` (optional, default `{}`): Additional environment variables to set.
+
 The `command` cannot be specified, the client will invoke the exact same binary with the exact same setup. The agent can supply additional arguments and environment variables as necessary. These will be supplied in **addition** to any args/env supplied by default when the server is started. So agents will need to have a way to kickoff their interactive login flow even if normal acp commands/arguments are supplied as well.
 
 This is so that the agent doesn't need to know about the environment it is running in. It can't know the absolute path necessarily, and shouldn't be able to supply other commands or programs to minimize security issues.
 
-### AuthErrors
+### Client capabilities
+
+Because `terminal` auth methods require specific client-side support, clients must opt in via `AuthCapabilities` on `ClientCapabilities` during initialization:
+
+```json
+{
+  "clientCapabilities": {
+    "auth": {
+      "terminal": true
+    }
+  }
+}
+```
+
+- `auth.terminal` (default `false`): When `true`, the agent may include `terminal` entries in its authentication methods.
+
+The `env_var` type does not require a capability opt-in since any client can set environment variables when starting a process, we are just providing additional context for the environment variable.
+
+### Auth errors
 
 It might be useful to include a list of AuthMethod ids to the AUTH_REQUIRED JsonRpc error. Why do we need this if they're already shared during `initialize`:
 All supported auth methods are shared during `initialize`. When user starts a session, they've already selected a model, which can narrow down a list of options.
@@ -125,4 +152,5 @@ There is also an alternative to adding a separate `elicitation` capability, whic
 
 There was a part about elicitations https://github.com/agentclientprotocol/agent-client-protocol/blob/939ef116a1b14016e4e3808b8764237250afa253/docs/rfds/auth.mdx removed it for now, will move to a separate rfd
 
+- 2026-02-27: Updated to reflect current implementation
 - 2026-01-14: Updates based on Core Maintainer discussion

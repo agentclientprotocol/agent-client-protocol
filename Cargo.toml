@@ -15,6 +15,7 @@ include = ["/src/**/*.rs", "/README.md", "/LICENSE", "/Cargo.toml"]
 
 [features]
 unstable = [
+    "unstable_auth_methods",
     "unstable_cancel_request",
     "unstable_session_fork",
     "unstable_session_info_update",
@@ -23,6 +24,7 @@ unstable = [
     "unstable_session_resume",
     "unstable_session_usage",
 ]
+unstable_auth_methods = []
 unstable_cancel_request = []
 unstable_session_fork = []
 unstable_session_info_update = []
