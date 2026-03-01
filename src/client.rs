@@ -1681,7 +1681,7 @@ pub enum AgentRequest {
     /// the command as soon as elapsed, and then get the final output so it can be sent
     /// to the model.
     ///
-    /// Note: `terminal/release` when `TerminalId` is no longer needed.
+    /// Note: Call `terminal/release` when `TerminalId` is no longer needed.
     ///
     /// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)
     KillTerminalCommandRequest(KillTerminalCommandRequest),
