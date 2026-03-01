@@ -93,7 +93,7 @@ pub enum ProtocolLevelNotification {
     ///
     /// Cancels an ongoing request.
     ///
-    /// This is a notification sent by the the side that sent a request to cancel that request.
+    /// This is a notification sent by the side that sent a request to cancel that request.
     ///
     /// Upon receiving this notification, the receiver:
     ///
