@@ -2565,6 +2565,17 @@
           "type": "object"
         },
         {
+          "description": "Instructs the client to clear the accumulated streamed content for the current agent message. Subsequent agent_message_chunk updates append from empty. Enables non-monotonic streaming (e.g. reformatting, delegation, iterative refinement).",
+          "properties": {
+            "sessionUpdate": {
+              "const": "agent_message_clear",
+              "type": "string"
+            }
+          },
+          "required": ["sessionUpdate"],
+          "type": "object"
+        },
+        {
           "allOf": [
             {
               "$ref": "#/$defs/ContentChunk"
