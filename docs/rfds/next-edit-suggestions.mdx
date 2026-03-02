@@ -94,6 +94,43 @@ The agent can also use the existing `configOptions` mechanism to expose NES-rela
 
 > Tell me more about your implementation. What is your detailed implementation plan?
 
+### Position encoding
+
+All `Position` objects in NES use zero-based line and zero-based character offsets, following the same conventions as [LSP 3.17](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#position). The meaning of the `character` offset depends on the negotiated **position encoding**.
+
+Three encoding kinds are supported:
+
+- `"utf-16"` — character offsets count UTF-16 code units. This is the **default** and must be supported by all clients and agents.
+- `"utf-32"` — character offsets count Unicode code points.
+- `"utf-8"` — character offsets count UTF-8 code units (bytes).
+
+**Negotiation:** The client declares which encodings it supports in the `initialize` request via `general.positionEncodings`, listed in order of preference. The agent selects one from the client's list and declares it in its `initialize` response as `positionEncoding`. If the client omits `positionEncodings`, or the agent omits `positionEncoding` in its response, both sides default to `"utf-16"`.
+
+Client `initialize` request (excerpt):
+
+```json
+{
+  "capabilities": {
+    "general": {
+      "positionEncodings": ["utf-32", "utf-16"]
+    }
+  }
+}
+```
+
+Agent `initialize` response (excerpt):
+
+```json
+{
+  "capabilities": {
+    "nes": { ... },
+    "positionEncoding": "utf-32"
+  }
+}
+```
+
+The negotiated encoding applies to all `Position` and `Range` values exchanged within NES — events, suggestion requests, and suggestion responses.
+
 ### Events
 
 Events are fire-and-forget notifications from client to agent. The client sends them only if the corresponding key is present in `nes.events`.
