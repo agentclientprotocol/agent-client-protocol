@@ -79,6 +79,7 @@ A client specifies its requested role and history policy when attaching:
     "sessionId": "sess_abc123def456",
     "role": "controller",
     "historyPolicy": "full",
+    "clientId": "d290f1ee-6c54-4b01-90e6-d701748f0851",
     "clientInfo": {
       "name": "notification-dashboard",
       "version": "1.0.0"
@@ -86,6 +87,8 @@ A client specifies its requested role and history policy when attaching:
   }
 }
 ```
+
+The optional `clientId` is a self-assigned opaque identifier (e.g., a UUID) that uniquely identifies this specific client connection. When provided, the proxy uses it to distinguish between multiple instances of the same client — for example, two mobile ACP frontends both named `"acp-mobile"`. The `clientId` is propagated in `connectedClients`, `resolvedBy`, `sentBy`, and lifecycle notifications so other clients can correlate actions to a specific peer. If omitted, the proxy MAY assign one and return it in the response.
 
 The `historyPolicy` parameter controls what history is replayed on attach:
 
@@ -106,6 +109,7 @@ When using `"after_message"`, the client includes an `afterMessageId` field:
     "role": "controller",
     "historyPolicy": "after_message",
     "afterMessageId": "ea87d0e7-beb8-484a-a404-94a30b78a5a8",
+    "clientId": "d290f1ee-6c54-4b01-90e6-d701748f0851",
     "clientInfo": {
       "name": "notification-dashboard",
       "version": "1.0.0"
@@ -137,8 +141,10 @@ The response follows standard ACP patterns, returning session metadata. When `hi
         "status": "pending"
       }
     ],
+    "clientId": "d290f1ee-6c54-4b01-90e6-d701748f0851",
     "connectedClients": [
       {
+        "clientId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
         "name": "Claude Code",
         "version": "1.0.0",
         "role": "controller"
@@ -204,6 +210,7 @@ When an agent emits `request_permission`, it is broadcast to **all connected con
       "toolCallId": "call_xyz",
       "chosenOptionId": "allow_once",
       "resolvedBy": {
+        "clientId": "d290f1ee-6c54-4b01-90e6-d701748f0851",
         "name": "notification-dashboard",
         "version": "1.0.0"
       }
@@ -211,6 +218,14 @@ When an agent emits `request_permission`, it is broadcast to **all connected con
   }
 }
 ```
+
+### Pending permission replay for attaching controllers
+
+When a controller attaches with `historyPolicy: "full"` or `"pending_only"`, pending `request_permission` items appear in the history replay. However, history entries are informational — they give the client display context but do not provide a mechanism to *respond*.
+
+To make pending permissions actionable, the proxy re-issues any unresolved `request_permission` calls as standard JSON-RPC requests to the newly-attached controller **after** the `session/attach` response is sent. From the client's perspective, these are indistinguishable from fresh permission requests — no special handling is required.
+
+The proxy continues to enforce first-writer-wins semantics: if another client resolves the permission before the new controller responds, the proxy discards the late response and sends the new client a `permission_resolved` notification. This two-step approach (history for display context, re-issued RPC for actionability) keeps client implementation simple while ensuring no pending permission goes unactionable.
 
 ### Turn completion notification
 
@@ -255,6 +270,7 @@ When a controller sends a `session/prompt`, the proxy echoes that prompt to all 
         }
       ],
       "sentBy": {
+        "clientId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
         "name": "Claude Code",
         "version": "1.0.0"
       }
@@ -288,10 +304,11 @@ The proxy:
 - Holds the single stdio connection to the agent
 - Fans out `session/update` notifications to all connected clients
 - Broadcasts `request_permission` to all controllers
-- Routes the first response back to the agent
+- Re-issues pending `request_permission` calls to newly-attached controllers
+- Routes the first response back to the agent (first-writer-wins)
 - Echoes `session/prompt` from one controller to all other clients as `prompt_received`
 - Broadcasts `turn_complete` to all non-prompting clients when a turn finishes
-- Tracks client roles and connection state
+- Tracks client roles, `clientId`s, and connection state
 - Buffers message history for `after_message` replay on reconnect
 
 This means existing agents work **unchanged** — the proxy handles all multi-client logic. This approach aligns perfectly with the proxy-chains architecture, where proxies sit between clients and agents to extend functionality without modifying the core agent implementation.
@@ -337,6 +354,7 @@ Lifecycle rules:
     "update": {
       "type": "client_disconnected",
       "client": {
+        "clientId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
         "name": "Claude Code",
         "version": "1.0.0",
         "role": "controller"
@@ -438,6 +456,7 @@ A future `session/promote` request might look like:
   "params": {
     "sessionId": "sess_abc123def456",
     "targetClient": {
+      "clientId": "f7e8d9c0-b1a2-3456-7890-abcdef123456",
       "name": "mobile-app",
       "version": "1.0.0"
     },
@@ -491,5 +510,6 @@ The typical flow for a dashboard client would be:
 
 ## Revision history
 
+- **2026-02-27**: Added optional `clientId` field for disambiguating multiple instances of the same client; clarified pending permission request replay mechanism for attaching controllers
 - **2026-02-24**: Added `after_message` history policy with `afterMessageId` for delta sync on reconnect; added `turn_complete` notification for secondary clients; added `prompt_received` echoing so all clients see prompts sent by other controllers
 - **2026-02-18**: Initial proposal
