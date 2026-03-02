@@ -86,7 +86,9 @@ Each entry in `ideActions` is the ID of a well-known action (see [Well-known IDE
 
 ### Session lifecycle
 
-If the `nes` capability is present, the client may call `nes/start` to begin an NES session. The agent can also use the existing `configOptions` mechanism to expose NES-related settings (model selection, debounce preferences, enabled/disabled state, etc.).
+If the `nes` capability is present, the client may call `nes/start` to begin an NES session. An NES session is **separate from and independent of** the ACP chat session — it has its own session ID, its own lifecycle, and its own stream of events and requests. A single ACP connection may have any number of active NES sessions alongside any number of chat sessions. The NES session is started and stopped independently via `nes/start`; it does not inherit state from, or share context with, chat sessions.
+
+The agent can also use the existing `configOptions` mechanism to expose NES-related settings (model selection, debounce preferences, enabled/disabled state, etc.).
 
 ## Implementation details and plan
 
@@ -483,6 +485,26 @@ Response:
   }
 }
 ```
+
+#### Error handling
+
+The agent may reject `nes/start` with an error. In particular, agents that require authentication may return an `auth_required` error:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "error": {
+    "code": -32001,
+    "message": "Authentication required",
+    "data": {
+      "reason": "auth_required"
+    }
+  }
+}
+```
+
+Clients **must** be prepared to handle `auth_required` errors on `nes/start`. The recommended behavior is to prompt the user to authenticate (e.g. sign in or provide credentials) and retry the `nes/start` call after authentication succeeds. Clients should not silently ignore this error or assume NES is unavailable — the agent may be fully functional once the user authenticates.
 
 ### Well-known IDE actions
 
