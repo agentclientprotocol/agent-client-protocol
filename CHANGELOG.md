@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.11.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.10.8...v0.11.0) - 2026-03-03
+
+### Added
+
+- *(unstable)* Initial support for various auth methods ([#588](https://github.com/agentclientprotocol/agent-client-protocol/pull/588))
+
+### Fixed
+
+- remove duplicate word typos across docs and source ([#606](https://github.com/agentclientprotocol/agent-client-protocol/pull/606))
+- use impl IntoOption<Meta> for CancelRequestNotification::meta() ([#467](https://github.com/agentclientprotocol/agent-client-protocol/pull/467))
+- avoid redundant JSON validation in extension notification decoding ([#459](https://github.com/agentclientprotocol/agent-client-protocol/pull/459))
+
+### Other
+
+- fix incomplete sentence in KillTerminalCommandRequest doc comment ([#608](https://github.com/agentclientprotocol/agent-client-protocol/pull/608))
+- *(deps)* bump the minor group with 2 updates ([#563](https://github.com/agentclientprotocol/agent-client-protocol/pull/563))
+- *(deps)* bump strum from 0.27.2 to 0.28.0 ([#564](https://github.com/agentclientprotocol/agent-client-protocol/pull/564))
+- *(deps)* bump the minor group with 3 updates ([#518](https://github.com/agentclientprotocol/agent-client-protocol/pull/518))
+- *(deps)* bump the minor group with 4 updates ([#480](https://github.com/agentclientprotocol/agent-client-protocol/pull/480))
+
 ## [0.10.8](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.10.7...v0.10.8) - 2026-02-04
 
 ### Added
