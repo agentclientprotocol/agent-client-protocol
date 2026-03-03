@@ -75,6 +75,7 @@ pub struct TextContent {
 }
 
 impl TextContent {
+    #[must_use]
     pub fn new(text: impl Into<String>) -> Self {
         Self {
             annotations: None,
@@ -128,6 +129,7 @@ pub struct ImageContent {
 }
 
 impl ImageContent {
+    #[must_use]
     pub fn new(data: impl Into<String>, mime_type: impl Into<String>) -> Self {
         Self {
             annotations: None,
@@ -181,6 +183,7 @@ pub struct AudioContent {
 }
 
 impl AudioContent {
+    #[must_use]
     pub fn new(data: impl Into<String>, mime_type: impl Into<String>) -> Self {
         Self {
             annotations: None,
@@ -280,6 +283,7 @@ pub struct TextResourceContents {
 }
 
 impl TextResourceContents {
+    #[must_use]
     pub fn new(text: impl Into<String>, uri: impl Into<String>) -> Self {
         Self {
             mime_type: None,
@@ -326,6 +330,7 @@ pub struct BlobResourceContents {
 }
 
 impl BlobResourceContents {
+    #[must_use]
     pub fn new(blob: impl Into<String>, uri: impl Into<String>) -> Self {
         Self {
             blob: blob.into(),
@@ -380,6 +385,7 @@ pub struct ResourceLink {
 }
 
 impl ResourceLink {
+    #[must_use]
     pub fn new(name: impl Into<String>, uri: impl Into<String>) -> Self {
         Self {
             annotations: None,

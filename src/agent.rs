@@ -193,6 +193,7 @@ pub struct Implementation {
 }
 
 impl Implementation {
+    #[must_use]
     pub fn new(name: impl Into<String>, version: impl Into<String>) -> Self {
         Self {
             name: name.into(),
@@ -297,6 +298,7 @@ impl AuthenticateResponse {
 pub struct AuthMethodId(pub Arc<str>);
 
 impl AuthMethodId {
+    #[must_use]
     pub fn new(id: impl Into<Arc<str>>) -> Self {
         Self(id.into())
     }
@@ -393,6 +395,7 @@ pub struct AuthMethodAgent {
 }
 
 impl AuthMethodAgent {
+    #[must_use]
     pub fn new(id: impl Into<AuthMethodId>, name: impl Into<String>) -> Self {
         Self {
             id: id.into(),
@@ -456,6 +459,7 @@ pub struct AuthMethodEnvVar {
 
 #[cfg(feature = "unstable_auth_methods")]
 impl AuthMethodEnvVar {
+    #[must_use]
     pub fn new(
         id: impl Into<AuthMethodId>,
         name: impl Into<String>,
@@ -473,8 +477,8 @@ impl AuthMethodEnvVar {
 
     /// Optional link to a page where the user can obtain their credentials.
     #[must_use]
-    pub fn link(mut self, link: impl Into<String>) -> Self {
-        self.link = Some(link.into());
+    pub fn link(mut self, link: impl IntoOption<String>) -> Self {
+        self.link = link.into_option();
         self
     }
 
@@ -554,6 +558,7 @@ fn is_false(v: &bool) -> bool {
 #[cfg(feature = "unstable_auth_methods")]
 impl AuthEnvVar {
     /// Creates a new auth env var.
+    #[must_use]
     pub fn new(name: impl Into<String>) -> Self {
         Self {
             name: name.into(),
@@ -566,8 +571,8 @@ impl AuthEnvVar {
 
     /// Human-readable label for this variable, displayed in client UI.
     #[must_use]
-    pub fn label(mut self, label: impl Into<String>) -> Self {
-        self.label = Some(label.into());
+    pub fn label(mut self, label: impl IntoOption<String>) -> Self {
+        self.label = label.into_option();
         self
     }
 
@@ -634,6 +639,7 @@ pub struct AuthMethodTerminal {
 
 #[cfg(feature = "unstable_auth_methods")]
 impl AuthMethodTerminal {
+    #[must_use]
     pub fn new(id: impl Into<AuthMethodId>, name: impl Into<String>) -> Self {
         Self {
             id: id.into(),
@@ -702,6 +708,7 @@ pub struct NewSessionRequest {
 }
 
 impl NewSessionRequest {
+    #[must_use]
     pub fn new(cwd: impl Into<PathBuf>) -> Self {
         Self {
             cwd: cwd.into(),
@@ -850,6 +857,7 @@ pub struct LoadSessionRequest {
 }
 
 impl LoadSessionRequest {
+    #[must_use]
     pub fn new(session_id: impl Into<SessionId>, cwd: impl Into<PathBuf>) -> Self {
         Self {
             mcp_servers: vec![],
@@ -994,6 +1002,7 @@ pub struct ForkSessionRequest {
 
 #[cfg(feature = "unstable_session_fork")]
 impl ForkSessionRequest {
+    #[must_use]
     pub fn new(session_id: impl Into<SessionId>, cwd: impl Into<PathBuf>) -> Self {
         Self {
             session_id: session_id.into(),
@@ -1153,6 +1162,7 @@ pub struct ResumeSessionRequest {
 
 #[cfg(feature = "unstable_session_resume")]
 impl ResumeSessionRequest {
+    #[must_use]
     pub fn new(session_id: impl Into<SessionId>, cwd: impl Into<PathBuf>) -> Self {
         Self {
             session_id: session_id.into(),
@@ -1507,6 +1517,7 @@ pub struct SessionInfo {
 
 #[cfg(feature = "unstable_session_list")]
 impl SessionInfo {
+    #[must_use]
     pub fn new(session_id: impl Into<SessionId>, cwd: impl Into<PathBuf>) -> Self {
         Self {
             session_id: session_id.into(),
@@ -1609,6 +1620,7 @@ pub struct SessionMode {
 }
 
 impl SessionMode {
+    #[must_use]
     pub fn new(id: impl Into<SessionModeId>, name: impl Into<String>) -> Self {
         Self {
             id: id.into(),
@@ -1644,6 +1656,7 @@ impl SessionMode {
 pub struct SessionModeId(pub Arc<str>);
 
 impl SessionModeId {
+    #[must_use]
     pub fn new(id: impl Into<Arc<str>>) -> Self {
         Self(id.into())
     }
@@ -1718,6 +1731,7 @@ impl SetSessionModeResponse {
 pub struct SessionConfigId(pub Arc<str>);
 
 impl SessionConfigId {
+    #[must_use]
     pub fn new(id: impl Into<Arc<str>>) -> Self {
         Self(id.into())
     }
@@ -1731,6 +1745,7 @@ impl SessionConfigId {
 pub struct SessionConfigValueId(pub Arc<str>);
 
 impl SessionConfigValueId {
+    #[must_use]
     pub fn new(id: impl Into<Arc<str>>) -> Self {
         Self(id.into())
     }
@@ -1744,6 +1759,7 @@ impl SessionConfigValueId {
 pub struct SessionConfigGroupId(pub Arc<str>);
 
 impl SessionConfigGroupId {
+    #[must_use]
     pub fn new(id: impl Into<Arc<str>>) -> Self {
         Self(id.into())
     }
@@ -2143,6 +2159,7 @@ pub struct McpServerHttp {
 }
 
 impl McpServerHttp {
+    #[must_use]
     pub fn new(name: impl Into<String>, url: impl Into<String>) -> Self {
         Self {
             name: name.into(),
@@ -2192,6 +2209,7 @@ pub struct McpServerSse {
 }
 
 impl McpServerSse {
+    #[must_use]
     pub fn new(name: impl Into<String>, url: impl Into<String>) -> Self {
         Self {
             name: name.into(),
@@ -2243,6 +2261,7 @@ pub struct McpServerStdio {
 }
 
 impl McpServerStdio {
+    #[must_use]
     pub fn new(name: impl Into<String>, command: impl Into<PathBuf>) -> Self {
         Self {
             name: name.into(),
@@ -2298,6 +2317,7 @@ pub struct EnvVariable {
 }
 
 impl EnvVariable {
+    #[must_use]
     pub fn new(name: impl Into<String>, value: impl Into<String>) -> Self {
         Self {
             name: name.into(),
@@ -2337,6 +2357,7 @@ pub struct HttpHeader {
 }
 
 impl HttpHeader {
+    #[must_use]
     pub fn new(name: impl Into<String>, value: impl Into<String>) -> Self {
         Self {
             name: name.into(),
@@ -2690,6 +2711,7 @@ pub struct ModelId(pub Arc<str>);
 
 #[cfg(feature = "unstable_session_model")]
 impl ModelId {
+    #[must_use]
     pub fn new(id: impl Into<Arc<str>>) -> Self {
         Self(id.into())
     }
@@ -2723,6 +2745,7 @@ pub struct ModelInfo {
 
 #[cfg(feature = "unstable_session_model")]
 impl ModelInfo {
+    #[must_use]
     pub fn new(model_id: impl Into<ModelId>, name: impl Into<String>) -> Self {
         Self {
             model_id: model_id.into(),

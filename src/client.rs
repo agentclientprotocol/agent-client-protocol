@@ -448,6 +448,7 @@ pub struct AvailableCommand {
 }
 
 impl AvailableCommand {
+    #[must_use]
     pub fn new(name: impl Into<String>, description: impl Into<String>) -> Self {
         Self {
             name: name.into(),
@@ -502,6 +503,7 @@ pub struct UnstructuredCommandInput {
 }
 
 impl UnstructuredCommandInput {
+    #[must_use]
     pub fn new(hint: impl Into<String>) -> Self {
         Self {
             hint: hint.into(),
@@ -596,6 +598,7 @@ pub struct PermissionOption {
 }
 
 impl PermissionOption {
+    #[must_use]
     pub fn new(
         option_id: impl Into<PermissionOptionId>,
         name: impl Into<String>,
@@ -629,6 +632,7 @@ impl PermissionOption {
 pub struct PermissionOptionId(pub Arc<str>);
 
 impl PermissionOptionId {
+    #[must_use]
     pub fn new(id: impl Into<Arc<str>>) -> Self {
         Self(id.into())
     }
@@ -772,6 +776,7 @@ pub struct WriteTextFileRequest {
 }
 
 impl WriteTextFileRequest {
+    #[must_use]
     pub fn new(
         session_id: impl Into<SessionId>,
         path: impl Into<PathBuf>,
@@ -860,6 +865,7 @@ pub struct ReadTextFileRequest {
 }
 
 impl ReadTextFileRequest {
+    #[must_use]
     pub fn new(session_id: impl Into<SessionId>, path: impl Into<PathBuf>) -> Self {
         Self {
             session_id: session_id.into(),
@@ -913,6 +919,7 @@ pub struct ReadTextFileResponse {
 }
 
 impl ReadTextFileResponse {
+    #[must_use]
     pub fn new(content: impl Into<String>) -> Self {
         Self {
             content: content.into(),
@@ -941,6 +948,7 @@ impl ReadTextFileResponse {
 pub struct TerminalId(pub Arc<str>);
 
 impl TerminalId {
+    #[must_use]
     pub fn new(id: impl Into<Arc<str>>) -> Self {
         Self(id.into())
     }
@@ -985,6 +993,7 @@ pub struct CreateTerminalRequest {
 }
 
 impl CreateTerminalRequest {
+    #[must_use]
     pub fn new(session_id: impl Into<SessionId>, command: impl Into<String>) -> Self {
         Self {
             session_id: session_id.into(),
@@ -1145,6 +1154,7 @@ pub struct TerminalOutputResponse {
 }
 
 impl TerminalOutputResponse {
+    #[must_use]
     pub fn new(output: impl Into<String>, truncated: bool) -> Self {
         Self {
             output: output.into(),

@@ -72,6 +72,7 @@ pub enum Response<Result> {
 }
 
 impl<R> Response<R> {
+    #[must_use]
     pub fn new(id: impl Into<RequestId>, result: Result<R>) -> Self {
         match result {
             Ok(result) => Self::Result {
