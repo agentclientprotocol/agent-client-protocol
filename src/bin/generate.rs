@@ -27,6 +27,7 @@ struct ClientOutgoingMessage(JsonRpcMessage<OutgoingMessage<ClientSide, AgentSid
 #[derive(JsonSchema)]
 #[serde(untagged)]
 #[schemars(title = "Agent Client Protocol")]
+#[expect(clippy::large_enum_variant)]
 enum AcpTypes {
     Agent(AgentOutgoingMessage),
     Client(ClientOutgoingMessage),
