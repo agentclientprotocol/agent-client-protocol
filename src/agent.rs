@@ -427,7 +427,7 @@ impl AuthMethodAgent {
 ///
 /// Environment variable authentication method.
 ///
-/// The user provides a key that the client passes to the agent as an environment variable.
+/// The user provides credentials that the client passes to the agent as environment variables.
 #[cfg(feature = "unstable_auth_methods")]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -440,9 +440,9 @@ pub struct AuthMethodEnvVar {
     /// Optional description providing more details about this authentication method.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
-    /// The name of the environment variable the client should set with the user's key.
-    pub var_name: String,
-    /// Optional link to a page where the user can obtain their key.
+    /// The environment variables the client should set.
+    pub vars: Vec<AuthEnvVar>,
+    /// Optional link to a page where the user can obtain their credentials.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub link: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -459,19 +459,19 @@ impl AuthMethodEnvVar {
     pub fn new(
         id: impl Into<AuthMethodId>,
         name: impl Into<String>,
-        var_name: impl Into<String>,
+        vars: Vec<AuthEnvVar>,
     ) -> Self {
         Self {
             id: id.into(),
             name: name.into(),
             description: None,
-            var_name: var_name.into(),
+            vars,
             link: None,
             meta: None,
         }
     }
 
-    /// Optional link to a page where the user can obtain their key.
+    /// Optional link to a page where the user can obtain their credentials.
     #[must_use]
     pub fn link(mut self, link: impl Into<String>) -> Self {
         self.link = Some(link.into());
