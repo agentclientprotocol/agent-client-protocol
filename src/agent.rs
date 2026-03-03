@@ -501,6 +501,107 @@ impl AuthMethodEnvVar {
 ///
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
+/// Describes a single environment variable for an [`AuthMethodEnvVar`] authentication method.
+#[cfg(feature = "unstable_auth_methods")]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct AuthEnvVar {
+    /// The environment variable name (e.g. `"OPENAI_API_KEY"`).
+    pub name: String,
+    /// Human-readable label for this variable, displayed in client UI.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
+    /// Whether this value is a secret (e.g. API key, token).
+    /// Clients should use a password-style input for secret vars.
+    ///
+    /// Defaults to `true`.
+    #[serde(default = "default_true", skip_serializing_if = "is_true")]
+    #[schemars(extend("default" = true))]
+    pub secret: bool,
+    /// Whether this variable is optional.
+    ///
+    /// Defaults to `false`.
+    #[serde(default, skip_serializing_if = "is_false")]
+    #[schemars(extend("default" = false))]
+    pub optional: bool,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_auth_methods")]
+fn default_true() -> bool {
+    true
+}
+
+#[cfg(feature = "unstable_auth_methods")]
+#[expect(clippy::trivially_copy_pass_by_ref)]
+fn is_true(v: &bool) -> bool {
+    *v
+}
+
+#[cfg(feature = "unstable_auth_methods")]
+#[expect(clippy::trivially_copy_pass_by_ref)]
+fn is_false(v: &bool) -> bool {
+    !*v
+}
+
+#[cfg(feature = "unstable_auth_methods")]
+impl AuthEnvVar {
+    /// Creates a new auth env var.
+    pub fn new(name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            label: None,
+            secret: true,
+            optional: false,
+            meta: None,
+        }
+    }
+
+    /// Human-readable label for this variable, displayed in client UI.
+    #[must_use]
+    pub fn label(mut self, label: impl Into<String>) -> Self {
+        self.label = Some(label.into());
+        self
+    }
+
+    /// Whether this value is a secret (e.g. API key, token).
+    /// Clients should use a password-style input for secret vars.
+    #[must_use]
+    pub fn secret(mut self, secret: bool) -> Self {
+        self.secret = secret;
+        self
+    }
+
+    /// Whether this variable is optional.
+    #[must_use]
+    pub fn optional(mut self, optional: bool) -> Self {
+        self.optional = optional;
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
 /// Terminal-based authentication method.
 ///
 /// The client runs an interactive terminal for the user to authenticate via a TUI.
@@ -3606,7 +3707,11 @@ mod test_serialization {
     #[cfg(feature = "unstable_auth_methods")]
     #[test]
     fn test_auth_method_env_var_serialization() {
-        let method = AuthMethod::EnvVar(AuthMethodEnvVar::new("api-key", "API Key", "API_KEY"));
+        let method = AuthMethod::EnvVar(AuthMethodEnvVar::new(
+            "api-key",
+            "API Key",
+            vec![AuthEnvVar::new("API_KEY")],
+        ));
 
         let json = serde_json::to_value(&method).unwrap();
         assert_eq!(
@@ -3615,22 +3720,33 @@ mod test_serialization {
                 "id": "api-key",
                 "name": "API Key",
                 "type": "env_var",
-                "varName": "API_KEY"
+                "vars": [{"name": "API_KEY"}]
             })
+        );
+        // secret defaults to true and should be omitted; optional defaults to false and should be omitted
+        assert!(!json["vars"][0].as_object().unwrap().contains_key("secret"));
+        assert!(
+            !json["vars"][0]
+                .as_object()
+                .unwrap()
+                .contains_key("optional")
         );
 
         let deserialized: AuthMethod = serde_json::from_value(json).unwrap();
         match deserialized {
             AuthMethod::EnvVar(AuthMethodEnvVar {
                 id,
-                name,
-                var_name,
+                name: method_name,
+                vars,
                 link,
                 ..
             }) => {
                 assert_eq!(id.0.as_ref(), "api-key");
-                assert_eq!(name, "API Key");
-                assert_eq!(var_name, "API_KEY");
+                assert_eq!(method_name, "API Key");
+                assert_eq!(vars.len(), 1);
+                assert_eq!(vars[0].name, "API_KEY");
+                assert!(vars[0].secret);
+                assert!(!vars[0].optional);
                 assert!(link.is_none());
             }
             _ => panic!("Expected EnvVar variant"),
@@ -3641,7 +3757,8 @@ mod test_serialization {
     #[test]
     fn test_auth_method_env_var_with_link_serialization() {
         let method = AuthMethod::EnvVar(
-            AuthMethodEnvVar::new("api-key", "API Key", "API_KEY").link("https://example.com/keys"),
+            AuthMethodEnvVar::new("api-key", "API Key", vec![AuthEnvVar::new("API_KEY")])
+                .link("https://example.com/keys"),
         );
 
         let json = serde_json::to_value(&method).unwrap();
@@ -3651,7 +3768,7 @@ mod test_serialization {
                 "id": "api-key",
                 "name": "API Key",
                 "type": "env_var",
-                "varName": "API_KEY",
+                "vars": [{"name": "API_KEY"}],
                 "link": "https://example.com/keys"
             })
         );
@@ -3660,6 +3777,61 @@ mod test_serialization {
         match deserialized {
             AuthMethod::EnvVar(AuthMethodEnvVar { link, .. }) => {
                 assert_eq!(link.as_deref(), Some("https://example.com/keys"));
+            }
+            _ => panic!("Expected EnvVar variant"),
+        }
+    }
+
+    #[cfg(feature = "unstable_auth_methods")]
+    #[test]
+    fn test_auth_method_env_var_multiple_vars() {
+        let method = AuthMethod::EnvVar(AuthMethodEnvVar::new(
+            "azure-openai",
+            "Azure OpenAI",
+            vec![
+                AuthEnvVar::new("AZURE_OPENAI_API_KEY").label("API Key"),
+                AuthEnvVar::new("AZURE_OPENAI_ENDPOINT")
+                    .label("Endpoint URL")
+                    .secret(false),
+                AuthEnvVar::new("AZURE_OPENAI_API_VERSION")
+                    .label("API Version")
+                    .secret(false)
+                    .optional(true),
+            ],
+        ));
+
+        let json = serde_json::to_value(&method).unwrap();
+        assert_eq!(
+            json,
+            json!({
+                "id": "azure-openai",
+                "name": "Azure OpenAI",
+                "type": "env_var",
+                "vars": [
+                    {"name": "AZURE_OPENAI_API_KEY", "label": "API Key"},
+                    {"name": "AZURE_OPENAI_ENDPOINT", "label": "Endpoint URL", "secret": false},
+                    {"name": "AZURE_OPENAI_API_VERSION", "label": "API Version", "secret": false, "optional": true}
+                ]
+            })
+        );
+
+        let deserialized: AuthMethod = serde_json::from_value(json).unwrap();
+        match deserialized {
+            AuthMethod::EnvVar(AuthMethodEnvVar { vars, .. }) => {
+                assert_eq!(vars.len(), 3);
+                // First var: secret (default true), not optional (default false)
+                assert_eq!(vars[0].name, "AZURE_OPENAI_API_KEY");
+                assert_eq!(vars[0].label.as_deref(), Some("API Key"));
+                assert!(vars[0].secret);
+                assert!(!vars[0].optional);
+                // Second var: not a secret, not optional
+                assert_eq!(vars[1].name, "AZURE_OPENAI_ENDPOINT");
+                assert!(!vars[1].secret);
+                assert!(!vars[1].optional);
+                // Third var: not a secret, optional
+                assert_eq!(vars[2].name, "AZURE_OPENAI_API_VERSION");
+                assert!(!vars[2].secret);
+                assert!(vars[2].optional);
             }
             _ => panic!("Expected EnvVar variant"),
         }

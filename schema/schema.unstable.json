@@ -392,6 +392,36 @@
       },
       "type": "object"
     },
+    "AuthEnvVar": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nDescribes a single environment variable for an [`AuthMethodEnvVar`] authentication method.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "label": {
+          "description": "Human-readable label for this variable, displayed in client UI.",
+          "type": ["string", "null"]
+        },
+        "name": {
+          "description": "The environment variable name (e.g. `\"OPENAI_API_KEY\"`).",
+          "type": "string"
+        },
+        "optional": {
+          "default": false,
+          "description": "Whether this variable is optional.\n\nDefaults to `false`.",
+          "type": "boolean"
+        },
+        "secret": {
+          "default": true,
+          "description": "Whether this value is a secret (e.g. API key, token).\nClients should use a password-style input for secret vars.\n\nDefaults to `true`.",
+          "type": "boolean"
+        }
+      },
+      "required": ["name"],
+      "type": "object"
+    },
     "AuthMethod": {
       "anyOf": [
         {
@@ -463,7 +493,7 @@
       "type": "object"
     },
     "AuthMethodEnvVar": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nEnvironment variable authentication method.\n\nThe user provides a key that the client passes to the agent as an environment variable.",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nEnvironment variable authentication method.\n\nThe user provides credentials that the client passes to the agent as environment variables.",
       "properties": {
         "_meta": {
           "additionalProperties": true,
@@ -479,19 +509,22 @@
           "type": "string"
         },
         "link": {
-          "description": "Optional link to a page where the user can obtain their key.",
+          "description": "Optional link to a page where the user can obtain their credentials.",
           "type": ["string", "null"]
         },
         "name": {
           "description": "Human-readable name of the authentication method.",
           "type": "string"
         },
-        "varName": {
-          "description": "The name of the environment variable the client should set with the user's key.",
-          "type": "string"
+        "vars": {
+          "description": "The environment variables the client should set.",
+          "items": {
+            "$ref": "#/$defs/AuthEnvVar"
+          },
+          "type": "array"
         }
       },
-      "required": ["id", "name", "varName"],
+      "required": ["id", "name", "vars"],
       "type": "object"
     },
     "AuthMethodTerminal": {

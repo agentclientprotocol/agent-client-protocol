@@ -1580,6 +1580,50 @@ When `true`, the agent may include `terminal` entries in its authentication meth
 
 </ResponseField>
 
+## <span class="font-mono">AuthEnvVar</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Describes a single environment variable for an `AuthMethodEnvVar` authentication method.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="label" type={"string | null"} >
+  Human-readable label for this variable, displayed in client UI.
+</ResponseField>
+<ResponseField name="name" type={"string"} required>
+  The environment variable name (e.g. `"OPENAI_API_KEY"`).
+</ResponseField>
+<ResponseField name="optional" type={"boolean"} >
+  Whether this variable is optional.
+
+Defaults to `false`.
+
+    - Default: `false`
+
+</ResponseField>
+<ResponseField name="secret" type={"boolean"} >
+  Whether this value is a secret (e.g. API key, token).
+Clients should use a password-style input for secret vars.
+
+Defaults to `true`.
+
+    - Default: `true`
+
+</ResponseField>
+
 ## <span class="font-mono">AuthMethod</span>
 
 Describes an available authentication method.
@@ -1613,7 +1657,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
   Unique identifier for this authentication method.
 </ResponseField>
 <ResponseField name="link" type={"string | null"} >
-  Optional link to a page where the user can obtain their key.
+  Optional link to a page where the user can obtain their credentials.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
   Human-readable name of the authentication method.
@@ -1621,8 +1665,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 <ResponseField name="type" type={"string"} required>
   The discriminator value. Must be `"env_var"`.
 </ResponseField>
-<ResponseField name="varName" type={"string"} required>
-  The name of the environment variable the client should set with the user's key.
+<ResponseField name="vars" type={<a href="#authenvvar">AuthEnvVar[]</a>} required>
+  The environment variables the client should set.
 </ResponseField>
 
 </Expandable>
@@ -1731,7 +1775,7 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 Environment variable authentication method.
 
-The user provides a key that the client passes to the agent as an environment variable.
+The user provides credentials that the client passes to the agent as environment variables.
 
 **Type:** Object
 
@@ -1752,13 +1796,13 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
   Unique identifier for this authentication method.
 </ResponseField>
 <ResponseField name="link" type={"string | null"} >
-  Optional link to a page where the user can obtain their key.
+  Optional link to a page where the user can obtain their credentials.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
   Human-readable name of the authentication method.
 </ResponseField>
-<ResponseField name="varName" type={"string"} required>
-  The name of the environment variable the client should set with the user's key.
+<ResponseField name="vars" type={<a href="#authenvvar">AuthEnvVar[]</a>} required>
+  The environment variables the client should set.
 </ResponseField>
 
 ## <span class="font-mono">AuthMethodTerminal</span>
