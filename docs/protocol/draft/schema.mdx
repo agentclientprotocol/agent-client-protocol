@@ -556,6 +556,18 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
 </ResponseField>
+<ResponseField name="messageId" type={"string | null"} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+A client-generated unique identifier for this user message.
+
+If provided, the Agent SHOULD echo this value as `userMessageId` in the
+`PromptResponse` to confirm it was recorded.
+Both clients and agents MUST use UUID format for message IDs.
+
+</ResponseField>
 <ResponseField name="prompt" type={<a href="#contentblock">ContentBlock[]</a>} required>
   The blocks of content that compose the user's message.
 
@@ -603,6 +615,18 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Token usage for this turn (optional).
+
+</ResponseField>
+<ResponseField name="userMessageId" type={"string | null"} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+The acknowledged user message ID.
+
+If the client provided a `messageId` in the `PromptRequest`, the agent echoes it here
+to confirm it was recorded. If the client did not provide one, the agent MAY assign one
+and return it here. Absence of this field indicates the agent did not record a message ID.
 
 </ResponseField>
 
@@ -1925,6 +1949,18 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 </ResponseField>
 <ResponseField name="content" type={<a href="#contentblock">ContentBlock</a>} required>
   A single item of content
+</ResponseField>
+<ResponseField name="messageId" type={"string | null"} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+A unique identifier for the message this chunk belongs to.
+
+All chunks belonging to the same message share the same `messageId`.
+A change in `messageId` indicates a new message has started.
+Both clients and agents MUST use UUID format for message IDs.
+
 </ResponseField>
 
 ## <span class="font-mono">Cost</span>
@@ -3380,6 +3416,18 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 <ResponseField name="content" type={<a href="#contentblock">ContentBlock</a>} required>
   A single item of content
 </ResponseField>
+<ResponseField name="messageId" type={"string | null"} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+A unique identifier for the message this chunk belongs to.
+
+All chunks belonging to the same message share the same `messageId`.
+A change in `messageId` indicates a new message has started.
+Both clients and agents MUST use UUID format for message IDs.
+
+</ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
 </ResponseField>
 
@@ -3402,6 +3450,18 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 <ResponseField name="content" type={<a href="#contentblock">ContentBlock</a>} required>
   A single item of content
 </ResponseField>
+<ResponseField name="messageId" type={"string | null"} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+A unique identifier for the message this chunk belongs to.
+
+All chunks belonging to the same message share the same `messageId`.
+A change in `messageId` indicates a new message has started.
+Both clients and agents MUST use UUID format for message IDs.
+
+</ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
 </ResponseField>
 
@@ -3423,6 +3483,18 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 </ResponseField>
 <ResponseField name="content" type={<a href="#contentblock">ContentBlock</a>} required>
   A single item of content
+</ResponseField>
+<ResponseField name="messageId" type={"string | null"} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+A unique identifier for the message this chunk belongs to.
+
+All chunks belonging to the same message share the same `messageId`.
+A change in `messageId` indicates a new message has started.
+Both clients and agents MUST use UUID format for message IDs.
+
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
 </ResponseField>
