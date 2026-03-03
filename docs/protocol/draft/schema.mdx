@@ -851,6 +851,71 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
 </ResponseField>
 
+<a id="session-stop"></a>
+### <span class="font-mono">session/stop</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Stops an active session and frees up any resources associated with it.
+
+This method is only available if the agent advertises the `session.stop` capability.
+
+The agent must cancel any ongoing work (as if `session/cancel` was called)
+and then free up any resources associated with the session.
+
+#### <span class="font-mono">StopSessionRequest</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Request parameters for stopping an active session.
+
+If supported, the agent **must** cancel any ongoing work related to the session
+(treat it as if `session/cancel` was called) and then free up any resources
+associated with the session.
+
+Only available if the Agent supports the `session.stop` capability.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The ID of the session to stop.
+</ResponseField>
+
+#### <span class="font-mono">StopSessionResponse</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Response from stopping a session.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+
 ## Client
 
 Defines the interface that ACP-compliant clients must implement.
@@ -2968,6 +3033,14 @@ This capability is not part of the spec yet, and may be removed or changed at an
 Whether the agent supports `session/resume`.
 
 </ResponseField>
+<ResponseField name="stop" type={<><span><a href="#sessionstopcapabilities">SessionStopCapabilities</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Whether the agent supports `session/stop`.
+
+</ResponseField>
 
 ## <span class="font-mono">SessionConfigGroupId</span>
 
@@ -3340,6 +3413,29 @@ This capability is not part of the spec yet, and may be removed or changed at an
 Capabilities for the `session/resume` method.
 
 By supplying `\{\}` it means that the agent supports resuming of sessions.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+
+## <span class="font-mono">SessionStopCapabilities</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Capabilities for the `session/stop` method.
+
+By supplying `\{\}` it means that the agent supports stopping of sessions.
 
 **Type:** Object
 
