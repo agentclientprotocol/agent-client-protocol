@@ -256,6 +256,11 @@ impl AuthenticateRequest {
         }
     }
 
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -265,8 +270,8 @@ impl AuthenticateRequest {
 
 /// Response to the `authenticate` method.
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "agent", "x-method" = AUTHENTICATE_METHOD_NAME))]
+#[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct AuthenticateResponse {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -284,6 +289,11 @@ impl AuthenticateResponse {
         Self::default()
     }
 
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -1704,6 +1714,11 @@ impl SetSessionModeRequest {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SetSessionModeResponse {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -1714,6 +1729,11 @@ impl SetSessionModeResponse {
         Self::default()
     }
 
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -3623,7 +3643,7 @@ pub enum AgentResponse {
     SetSessionConfigOptionResponse(SetSessionConfigOptionResponse),
     PromptResponse(PromptResponse),
     #[cfg(feature = "unstable_session_model")]
-    SetSessionModelResponse(SetSessionModelResponse),
+    SetSessionModelResponse(#[serde(default)] SetSessionModelResponse),
     ExtMethodResponse(ExtResponse),
 }
 

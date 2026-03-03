@@ -205,7 +205,7 @@ impl Side for ClientSide {
                 .map(AgentRequest::TerminalOutputRequest)
                 .map_err(Into::into),
             m if m == CLIENT_METHOD_NAMES.terminal_kill => serde_json::from_str(params.get())
-                .map(AgentRequest::KillTerminalCommandRequest)
+                .map(AgentRequest::KillTerminalRequest)
                 .map_err(Into::into),
             m if m == CLIENT_METHOD_NAMES.terminal_release => serde_json::from_str(params.get())
                 .map(AgentRequest::ReleaseTerminalRequest)

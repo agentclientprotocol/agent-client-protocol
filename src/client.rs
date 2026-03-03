@@ -804,7 +804,7 @@ impl WriteTextFileRequest {
 
 /// Response to `fs/write_text_file`
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[serde(default, rename_all = "camelCase")]
+#[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = FS_WRITE_TEXT_FILE_METHOD_NAME))]
 #[non_exhaustive]
 pub struct WriteTextFileResponse {
@@ -1257,12 +1257,12 @@ impl ReleaseTerminalResponse {
     }
 }
 
-/// Request to kill a terminal command without releasing the terminal.
+/// Request to kill a terminal without releasing it.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_KILL_METHOD_NAME))]
 #[non_exhaustive]
-pub struct KillTerminalCommandRequest {
+pub struct KillTerminalRequest {
     /// The session ID for this request.
     pub session_id: SessionId,
     /// The ID of the terminal to kill.
@@ -1276,7 +1276,7 @@ pub struct KillTerminalCommandRequest {
     pub meta: Option<Meta>,
 }
 
-impl KillTerminalCommandRequest {
+impl KillTerminalRequest {
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>, terminal_id: impl Into<TerminalId>) -> Self {
         Self {
@@ -1298,12 +1298,12 @@ impl KillTerminalCommandRequest {
     }
 }
 
-/// Response to terminal/kill command method
+/// Response to `terminal/kill` method
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_KILL_METHOD_NAME))]
 #[non_exhaustive]
-pub struct KillTerminalCommandResponse {
+pub struct KillTerminalResponse {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -1313,7 +1313,7 @@ pub struct KillTerminalCommandResponse {
     pub meta: Option<Meta>,
 }
 
-impl KillTerminalCommandResponse {
+impl KillTerminalResponse {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -1476,7 +1476,7 @@ pub struct ClientCapabilities {
     /// File system capabilities supported by the client.
     /// Determines which file operations the agent can request.
     #[serde(default)]
-    pub fs: FileSystemCapability,
+    pub fs: FileSystemCapabilities,
     /// Whether the Client support all `terminal/*` methods.
     #[serde(default)]
     pub terminal: bool,
@@ -1508,7 +1508,7 @@ impl ClientCapabilities {
     /// File system capabilities supported by the client.
     /// Determines which file operations the agent can request.
     #[must_use]
-    pub fn fs(mut self, fs: FileSystemCapability) -> Self {
+    pub fn fs(mut self, fs: FileSystemCapabilities) -> Self {
         self.fs = fs;
         self
     }
@@ -1603,14 +1603,13 @@ impl AuthCapabilities {
     }
 }
 
-/// Filesystem capabilities supported by the client.
 /// File system capabilities that a client may support.
 ///
 /// See protocol docs: [FileSystem](https://agentclientprotocol.com/protocol/initialization#filesystem)
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct FileSystemCapability {
+pub struct FileSystemCapabilities {
     /// Whether the Client supports `fs/read_text_file` requests.
     #[serde(default)]
     pub read_text_file: bool,
@@ -1626,7 +1625,7 @@ pub struct FileSystemCapability {
     pub meta: Option<Meta>,
 }
 
-impl FileSystemCapability {
+impl FileSystemCapabilities {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -1805,7 +1804,7 @@ pub enum AgentRequest {
     /// Note: Call `terminal/release` when `TerminalId` is no longer needed.
     ///
     /// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)
-    KillTerminalCommandRequest(KillTerminalCommandRequest),
+    KillTerminalRequest(KillTerminalRequest),
     /// Handles extension method requests from the agent.
     ///
     /// Allows the Agent to send an arbitrary request that is not part of the ACP spec.
@@ -1828,7 +1827,7 @@ impl AgentRequest {
             Self::TerminalOutputRequest(_) => CLIENT_METHOD_NAMES.terminal_output,
             Self::ReleaseTerminalRequest(_) => CLIENT_METHOD_NAMES.terminal_release,
             Self::WaitForTerminalExitRequest(_) => CLIENT_METHOD_NAMES.terminal_wait_for_exit,
-            Self::KillTerminalCommandRequest(_) => CLIENT_METHOD_NAMES.terminal_kill,
+            Self::KillTerminalRequest(_) => CLIENT_METHOD_NAMES.terminal_kill,
             Self::ExtMethodRequest(ext_request) => &ext_request.method,
         }
     }
@@ -1852,7 +1851,7 @@ pub enum ClientResponse {
     TerminalOutputResponse(TerminalOutputResponse),
     ReleaseTerminalResponse(#[serde(default)] ReleaseTerminalResponse),
     WaitForTerminalExitResponse(WaitForTerminalExitResponse),
-    KillTerminalResponse(#[serde(default)] KillTerminalCommandResponse),
+    KillTerminalResponse(#[serde(default)] KillTerminalResponse),
     ExtMethodResponse(ExtResponse),
 }
 

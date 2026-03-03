@@ -960,7 +960,7 @@ starting with '$/' it is free to ignore the notification."
                 "terminal/output" => self.client.get("TerminalOutputRequest").unwrap(),
                 "terminal/release" => self.client.get("ReleaseTerminalRequest").unwrap(),
                 "terminal/wait_for_exit" => self.client.get("WaitForTerminalExitRequest").unwrap(),
-                "terminal/kill" => self.client.get("KillTerminalCommandRequest").unwrap(),
+                "terminal/kill" => self.client.get("KillTerminalRequest").unwrap(),
                 _ => panic!("Introduced a method? Add it here :)"),
             }
         }

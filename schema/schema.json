@@ -167,11 +167,11 @@
                 {
                   "allOf": [
                     {
-                      "$ref": "#/$defs/KillTerminalCommandRequest"
+                      "$ref": "#/$defs/KillTerminalRequest"
                     }
                   ],
                   "description": "Kills the terminal command without releasing the terminal\n\nWhile `terminal/release` will also kill the command, this method will keep\nthe `TerminalId` valid so it can be used with other methods.\n\nThis method can be helpful when implementing command timeouts which terminate\nthe command as soon as elapsed, and then get the final output so it can be sent\nto the model.\n\nNote: Call `terminal/release` when `TerminalId` is no longer needed.\n\nSee protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)",
-                  "title": "KillTerminalCommandRequest"
+                  "title": "KillTerminalRequest"
                 },
                 {
                   "allOf": [
@@ -531,7 +531,7 @@
         "fs": {
           "allOf": [
             {
-              "$ref": "#/$defs/FileSystemCapability"
+              "$ref": "#/$defs/FileSystemCapabilities"
             }
           ],
           "default": {
@@ -753,7 +753,7 @@
                 {
                   "allOf": [
                     {
-                      "$ref": "#/$defs/KillTerminalCommandResponse"
+                      "$ref": "#/$defs/KillTerminalResponse"
                     }
                   ],
                   "title": "KillTerminalResponse"
@@ -1206,8 +1206,8 @@
     "ExtResponse": {
       "description": "Allows for sending an arbitrary response to an [`ExtRequest`] that is not part of the ACP spec.\nExtension methods provide a way to add custom functionality while maintaining\nprotocol compatibility.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)"
     },
-    "FileSystemCapability": {
-      "description": "Filesystem capabilities supported by the client.\nFile system capabilities that a client may support.\n\nSee protocol docs: [FileSystem](https://agentclientprotocol.com/protocol/initialization#filesystem)",
+    "FileSystemCapabilities": {
+      "description": "File system capabilities that a client may support.\n\nSee protocol docs: [FileSystem](https://agentclientprotocol.com/protocol/initialization#filesystem)",
       "properties": {
         "_meta": {
           "additionalProperties": true,
@@ -1412,8 +1412,8 @@
       "x-method": "initialize",
       "x-side": "agent"
     },
-    "KillTerminalCommandRequest": {
-      "description": "Request to kill a terminal command without releasing the terminal.",
+    "KillTerminalRequest": {
+      "description": "Request to kill a terminal without releasing it.",
       "properties": {
         "_meta": {
           "additionalProperties": true,
@@ -1438,8 +1438,8 @@
       "x-method": "terminal/kill",
       "x-side": "client"
     },
-    "KillTerminalCommandResponse": {
-      "description": "Response to terminal/kill command method",
+    "KillTerminalResponse": {
+      "description": "Response to `terminal/kill` method",
       "properties": {
         "_meta": {
           "additionalProperties": true,
@@ -2786,6 +2786,7 @@
       "properties": {
         "_meta": {
           "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
         }
       },

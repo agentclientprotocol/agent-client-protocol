@@ -816,7 +816,14 @@ Response to `session/set_mode` method.
 
 **Properties:**
 
-<ResponseField name="_meta" type={"object | null"}></ResponseField>
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
 
 <a id="session-set_model"></a>
 ### <span class="font-mono">session/set_model</span>
@@ -1274,9 +1281,9 @@ Note: Call `terminal/release` when `TerminalId` is no longer needed.
 
 See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)
 
-#### <span class="font-mono">KillTerminalCommandRequest</span>
+#### <span class="font-mono">KillTerminalRequest</span>
 
-Request to kill a terminal command without releasing the terminal.
+Request to kill a terminal without releasing it.
 
 **Type:** Object
 
@@ -1297,9 +1304,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
   The ID of the terminal to kill.
 </ResponseField>
 
-#### <span class="font-mono">KillTerminalCommandResponse</span>
+#### <span class="font-mono">KillTerminalResponse</span>
 
-Response to terminal/kill command method
+Response to `terminal/kill` method
 
 **Type:** Object
 
@@ -2056,7 +2063,7 @@ in its `InitializeResponse`.
     - Default: `{"terminal":false}`
 
 </ResponseField>
-<ResponseField name="fs" type={<a href="#filesystemcapability">FileSystemCapability</a>} >
+<ResponseField name="fs" type={<a href="#filesystemcapabilities">FileSystemCapabilities</a>} >
   File system capabilities supported by the client.
 Determines which file operations the agent can request.
 
@@ -2592,9 +2599,8 @@ protocol compatibility.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
-## <span class="font-mono">FileSystemCapability</span>
+## <span class="font-mono">FileSystemCapabilities</span>
 
-Filesystem capabilities supported by the client.
 File system capabilities that a client may support.
 
 See protocol docs: [FileSystem](https://agentclientprotocol.com/protocol/initialization#filesystem)
