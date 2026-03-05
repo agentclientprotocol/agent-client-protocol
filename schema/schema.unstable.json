@@ -3002,25 +3002,6 @@
       ],
       "description": "Semantic category for a session configuration option.\n\nThis is intended to help Clients distinguish broadly common selectors (e.g. model selector vs\nsession mode selector vs thought/reasoning level) for UX purposes (keyboard shortcuts, icons,\nplacement). It MUST NOT be required for correctness. Clients MUST handle missing or unknown\ncategories gracefully.\n\nCategory names beginning with `_` are free for custom use, like other ACP extension methods.\nCategory names that do not begin with `_` are reserved for the ACP spec."
     },
-    "SessionConfigOptionValue": {
-      "anyOf": [
-        {
-          "allOf": [
-            {
-              "$ref": "#/$defs/SessionConfigValueId"
-            }
-          ],
-          "description": "A string value (used by `select` options).",
-          "title": "String"
-        },
-        {
-          "description": "A boolean value (used by `boolean` options).",
-          "title": "Bool",
-          "type": "boolean"
-        }
-      ],
-      "description": "The value to set for a session configuration option.\n\nFor `select` options, the value is a `SessionConfigValueId` string.\nFor `boolean` options, the value is a boolean."
-    },
     "SessionConfigSelect": {
       "description": "A single-value selector (dropdown) session configuration option payload.",
       "properties": {
@@ -3521,6 +3502,39 @@
       ]
     },
     "SetSessionConfigOptionRequest": {
+      "anyOf": [
+        {
+          "description": "A boolean value (`type: \"boolean\"`).",
+          "properties": {
+            "type": {
+              "const": "boolean",
+              "type": "string"
+            },
+            "value": {
+              "description": "The boolean value.",
+              "type": "boolean"
+            }
+          },
+          "required": ["type", "value"],
+          "type": "object"
+        },
+        {
+          "description": "A [`SessionConfigValueId`] string value.\n\nThis is the default when `type` is absent on the wire. Unknown `type`\nvalues with string payloads also gracefully deserialize into this\nvariant.",
+          "properties": {
+            "value": {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/SessionConfigValueId"
+                }
+              ],
+              "description": "The value ID."
+            }
+          },
+          "required": ["value"],
+          "title": "value_id",
+          "type": "object"
+        }
+      ],
       "description": "Request parameters for setting a session configuration option.",
       "properties": {
         "_meta": {
@@ -3543,17 +3557,9 @@
             }
           ],
           "description": "The ID of the session to set the configuration option for."
-        },
-        "value": {
-          "allOf": [
-            {
-              "$ref": "#/$defs/SessionConfigOptionValue"
-            }
-          ],
-          "description": "The value to set. For `select` options, this is a `SessionConfigValueId` string.\nFor `boolean` options, this is a boolean."
         }
       },
-      "required": ["sessionId", "configId", "value"],
+      "required": ["sessionId", "configId"],
       "type": "object",
       "x-method": "session/set_config_option",
       "x-side": "agent"

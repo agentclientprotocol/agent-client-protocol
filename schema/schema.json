@@ -2347,25 +2347,6 @@
       ],
       "description": "Semantic category for a session configuration option.\n\nThis is intended to help Clients distinguish broadly common selectors (e.g. model selector vs\nsession mode selector vs thought/reasoning level) for UX purposes (keyboard shortcuts, icons,\nplacement). It MUST NOT be required for correctness. Clients MUST handle missing or unknown\ncategories gracefully.\n\nCategory names beginning with `_` are free for custom use, like other ACP extension methods.\nCategory names that do not begin with `_` are reserved for the ACP spec."
     },
-    "SessionConfigOptionValue": {
-      "anyOf": [
-        {
-          "allOf": [
-            {
-              "$ref": "#/$defs/SessionConfigValueId"
-            }
-          ],
-          "description": "A string value (used by `select` options).",
-          "title": "String"
-        },
-        {
-          "description": "A boolean value (used by `boolean` options).",
-          "title": "Bool",
-          "type": "boolean"
-        }
-      ],
-      "description": "The value to set for a session configuration option.\n\nFor `select` options, the value is a `SessionConfigValueId` string.\nFor `boolean` options, the value is a boolean."
-    },
     "SessionConfigSelect": {
       "description": "A single-value selector (dropdown) session configuration option payload.",
       "properties": {
@@ -2738,10 +2719,10 @@
         "value": {
           "allOf": [
             {
-              "$ref": "#/$defs/SessionConfigOptionValue"
+              "$ref": "#/$defs/SessionConfigValueId"
             }
           ],
-          "description": "The value to set. For `select` options, this is a `SessionConfigValueId` string.\nFor `boolean` options, this is a boolean."
+          "description": "The ID of the configuration option value to set."
         }
       },
       "required": ["sessionId", "configId", "value"],

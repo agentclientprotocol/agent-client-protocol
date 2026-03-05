@@ -726,27 +726,41 @@ Sets the current value for a session configuration option.
 
 Request parameters for setting a session configuration option.
 
-**Type:** Object
+**Type:** Union
 
-**Properties:**
+<ResponseField name="boolean" type="object">
+A boolean value (`type: "boolean"`).
 
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
+<Expandable title="Properties">
 
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-
+<ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"boolean"`.
 </ResponseField>
-<ResponseField name="configId" type={<a href="#sessionconfigid">SessionConfigId</a>} required>
-  The ID of the configuration option to set.
+<ResponseField name="value" type={"boolean"} required>
+  The boolean value.
 </ResponseField>
-<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
-  The ID of the session to set the configuration option for.
+
+</Expandable>
 </ResponseField>
-<ResponseField name="value" type={<a href="#sessionconfigoptionvalue">SessionConfigOptionValue</a>} required>
-  The value to set. For `select` options, this is a `SessionConfigValueId` string.
-For `boolean` options, this is a boolean.
+
+<ResponseField name="Object" type="object">
+A `SessionConfigValueId` string value.
+
+This is the default when `type` is absent on the wire. Unknown `type`
+values with string payloads also gracefully deserialize into this
+variant.
+
+<Expandable title="Properties">
+
+<ResponseField
+  name="value"
+  type={<a href="#sessionconfigvalueid">SessionConfigValueId</a>}
+  required
+>
+  The value ID.
+</ResponseField>
+
+</Expandable>
 </ResponseField>
 
 #### <span class="font-mono">SetSessionConfigOptionResponse</span>
@@ -3489,23 +3503,6 @@ Category names that do not begin with `_` are reserved for the ACP spec.
 
 <ResponseField name="other" type="string">
   Unknown / uncategorized selector.
-</ResponseField>
-
-## <span class="font-mono">SessionConfigOptionValue</span>
-
-The value to set for a session configuration option.
-
-For `select` options, the value is a `SessionConfigValueId` string.
-For `boolean` options, the value is a boolean.
-
-**Type:** Union
-
-<ResponseField name="String">
-  A string value (used by `select` options).
-</ResponseField>
-
-<ResponseField name="Bool" type="boolean">
-  A boolean value (used by `boolean` options).
 </ResponseField>
 
 ## <span class="font-mono">SessionConfigSelect</span>

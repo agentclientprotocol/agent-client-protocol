@@ -19,7 +19,7 @@ However, there is no native way to represent a simple boolean on/off toggle. To 
 
 - Add a `SessionConfigBoolean` struct with a `current_value: bool` field
 - Add a `Boolean(SessionConfigBoolean)` variant to the `SessionConfigKind` enum, discriminated by `"type": "boolean"`
-- Add a `SessionConfigOptionValue` enum (untagged: `String` | `Bool`) so that `SetSessionConfigOptionRequest.value` can accept both string values (for `select`) and boolean values (for `flag`)
+- Add a `SessionConfigOptionValue` internally-tagged enum so that `SetSessionConfigOptionRequest` can carry both string values (for `select`) and boolean values (for `boolean`) with an explicit `type` discriminator
 - Provide convenience constructors and `From` impls for ergonomic usage
 - Update documentation and regenerate schema files
 
@@ -65,7 +65,9 @@ In a `session/new` response (or any response containing `configOptions`):
 
 ### Wire format: setting a boolean option
 
-The `session/set_config_option` request uses a string value, consistent with `select` options:
+The `session/set_config_option` request carries a `type` discriminator alongside the `value`. The `type` field describes the _shape_ of the value, not the option kind.
+
+When `type` is absent the value is treated as a `SessionConfigValueId` string, preserving backwards compatibility with existing clients:
 
 ```json
 {
@@ -75,7 +77,23 @@ The `session/set_config_option` request uses a string value, consistent with `se
   "params": {
     "sessionId": "sess_abc123",
     "configId": "brave_mode",
+    "type": "boolean",
     "value": true
+  }
+}
+```
+
+For select options the `type` field can be omitted (defaults to `value_id`):
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "session/set_config_option",
+  "params": {
+    "sessionId": "sess_abc123",
+    "configId": "mode",
+    "value": "code"
   }
 }
 ```
@@ -108,15 +126,17 @@ The response returns the full set of config options with current values, as with
 }
 ```
 
-A working implementation is available at: https://github.com/fscarponi/agent-client-protocol/tree/fabrizio.scarponi/flag-config-option
-
 Key changes:
 
-1. `SessionConfigFlag` struct with `current_value: bool`
-2. `Flag` variant in `SessionConfigKind` (tagged via `"type": "flag"`)
-3. `SessionConfigOptionValue` untagged enum (`String` | `Bool`) replacing `SessionConfigValueId` in `SetSessionConfigOptionRequest.value`
-4. `From` impls ensure backward compatibility — existing code passing strings still compiles
-5. Wire-level backward compatible: existing JSON payloads with string values remain valid
+1. `SessionConfigBoolean` struct with `current_value: bool`
+2. `Boolean(SessionConfigBoolean)` variant in `SessionConfigKind` (tagged via `"type": "boolean"`)
+3. `SessionConfigOptionValue` enum using `#[serde(tag = "type")]` with a `#[serde(untagged)]` fallback variant — the same pattern as `AuthMethod`:
+   - `Boolean { value: bool }` — matched when `type` is `"boolean"`
+   - `ValueId { value: SessionConfigValueId }` — untagged fallback when `type` is absent or unrecognised
+4. `SessionConfigOptionValue` is flattened (`#[serde(flatten)]`) onto `SetSessionConfigOptionRequest`, producing top-level `type` and `value` fields on the wire
+5. The `value` field type change in `SetSessionConfigOptionRequest` is gated behind `#[cfg(feature = "unstable_boolean_config")]` — without the feature the field remains `SessionConfigValueId`
+6. `From` impls (`&str`, `SessionConfigValueId`, `bool`) ensure ergonomic construction
+7. Wire-level backward compatible: existing JSON payloads without a `type` field remain valid via the untagged fallback
 
 ### Client capabilities
 
@@ -126,12 +146,13 @@ Per the existing protocol design, clients that receive a config option with an u
 
 ### What alternative approaches did you consider, and why did you settle on this one?
 
-We considered reusing the existing `select` type with a convention (e.g., options named "on"/"off"), but this would require clients to implement non-agnostic detection logic, which contradicts the goal of a standardized protocol. A dedicated `flag` type is cleaner and lets clients render the appropriate UI control without guessing.
+We considered reusing the existing `select` type with a convention (e.g., options named "on"/"off"), but this would require clients to implement non-agnostic detection logic, which contradicts the goal of a standardized protocol. A dedicated `boolean` type is cleaner and lets clients render the appropriate UI control without guessing.
 
 ### Is this a breaking change?
 
-On the wire/JSON level: no. `SessionConfigOptionValue` uses `#[serde(untagged)]`, so existing string payloads deserialize correctly. On the Rust API level: the type of `SetSessionConfigOptionRequest.value` changed, but `From` impls ensure source compatibility for users of the `new()` constructor.
+On the wire/JSON level: no. When `type` is absent the value is treated as a `SessionConfigValueId`, so existing payloads deserialize correctly. On the Rust API level: the type of `SetSessionConfigOptionRequest.value` changes, but this is gated behind `unstable_boolean_config`. Without the feature flag the stable API is unchanged. With the feature flag, `From` impls ensure source compatibility for users of the `new()` constructor.
 
 ## Revision history
 
 - 2026-02-24: Initial proposal
+- 2026-03-05: Updated to reflect final implementation — `flag` renamed to `boolean`, value type changed from untagged `String | Bool` enum to internally-tagged enum with `type` discriminator and untagged `ValueId` fallback, feature-gated behind `unstable_boolean_config`
