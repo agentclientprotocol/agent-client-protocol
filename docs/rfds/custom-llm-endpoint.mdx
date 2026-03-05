@@ -237,7 +237,7 @@ interface SetLlmEndpointsResponse {
 
 1. **Capability discovery**: The agent MUST list its supported providers in `agentCapabilities.llmEndpoints.providers` if it supports the `setLlmEndpoints` method. Clients SHOULD only send endpoint configurations for providers listed there.
 
-2. **Timing**: The `setLlmEndpoints` method MUST be called after `initialize` and before `session/new`. Calling it during an active session is undefined behavior. All subsequent sessions will use the newly configured endpoints.
+2. **Timing**: The `setLlmEndpoints` method MUST be called after `initialize` and before `session/new`. Calling this MAY NOT affect currently running sessions. Agents MUST apply these settings to any sessions created or loaded after this has been called.
 
 3. **Per-process scope**: The endpoint configuration applies to the entire agent process lifetime. It should not be stored to disk or persist beyond the process.
 
