@@ -1,0 +1,121 @@
+---
+title: "Turn-complete signal for session/update"
+---
+
+Author(s): [@stablegenius49](https://github.com/stablegenius49)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Add a protocol-level `turn_complete` signal so clients can reliably know when a prompt turn's `session/update` stream is finished, without using arbitrary sleeps.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+Today, clients call `session/prompt` and receive:
+
+1. zero or more `session/update` notifications (chunks, tool call updates, usage, etc.)
+2. a `session/prompt` response with `stopReason`
+
+In practice, some client implementations process notifications asynchronously. This means `session/prompt` can resolve before all queued `session/update` handlers complete locally. Clients then fall back to timing heuristics (`sleep(100ms)`), which are racy and add latency.
+
+For advanced UIs (multi-pane streaming, usage counters, transcript persistence, tool timeline integrity), this is a correctness issue, not just UX polish.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+Introduce a new `session/update` variant:
+
+- `sessionUpdate: "turn_complete"`
+
+Semantics:
+
+- Emitted **once per prompt turn**.
+- Emitted **after all other updates for that turn have been sent**.
+- Includes a turn correlation field so clients can match it to the originating prompt request.
+
+Proposed shape (illustrative):
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "turn_complete",
+      "promptRequestId": "2",
+      "stopReason": "end_turn"
+    }
+  }
+}
+```
+
+### Capability advertisement
+
+To make this reliable for clients, support should be explicit via session capabilities:
+
+```json
+{
+  "agentCapabilities": {
+    "sessionCapabilities": {
+      "turnComplete": {}
+    }
+  }
+}
+```
+
+Clients can then use strict synchronization when supported, and fallback behavior otherwise.
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+- Clients stop using sleep-based hacks.
+- Prompt turn boundaries become explicit and auditable in event logs.
+- SDKs can provide a clean “await until turn stream drained” primitive.
+- Multi-client/proxy setups get deterministic end-of-turn ordering, which composes better with ongoing session-list/session-info/session-usage work.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+### Phase 1 (unstable)
+
+1. Add unstable `TurnCompleteUpdate` schema/type.
+2. Add `turnComplete` marker under `sessionCapabilities`.
+3. Document ordering requirement:
+   - For a given prompt turn, all non-`turn_complete` updates must be emitted before `turn_complete`.
+
+### Phase 2 (SDK support)
+
+4. Add ergonomic helpers in SDKs (Rust/Python/TS) to await turn completion by `promptRequestId`.
+5. Add conformance tests validating event ordering and single-emission behavior.
+
+### Phase 3 (stabilization)
+
+6. Gather feedback from clients currently using sleep-based workarounds.
+7. Stabilize once at least two independent client implementations adopt it.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Why not rely only on the `session/prompt` response?
+
+Because response completion and notification-handler completion can diverge in async client runtimes. We need an explicit stream barrier in the same update channel clients already consume.
+
+### Should this be a new top-level notification instead of `session/update` variant?
+
+Keeping it inside `session/update` avoids adding another channel and preserves existing per-session ordering machinery.
+
+### Why include `promptRequestId`?
+
+To support robust correlation in clients with concurrent internal pipelines and to make replay/log analysis unambiguous.
+
+## Revision history
+
+- 2026-03-04: Initial draft for issue #554
