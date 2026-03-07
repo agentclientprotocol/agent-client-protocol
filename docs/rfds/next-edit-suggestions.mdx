@@ -133,16 +133,16 @@ The negotiated encoding applies to all `Position` and `Range` values exchanged w
 
 ### Events
 
-Events are fire-and-forget notifications from client to agent. The client sends them only if the corresponding key is present in `nes.events`.
+Events are fire-and-forget notifications from client to agent. The client sends them only if the corresponding key is present in the agent's advertised `events` capability (e.g. `nes.events` for NES).
 
-#### `nes/didOpen`
+#### `document/didOpen`
 
 Sent when a file is opened in the editor.
 
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "nes/didOpen",
+  "method": "document/didOpen",
   "params": {
     "uri": "file:///path/to/file.rs",
     "languageId": "rust",
@@ -152,7 +152,7 @@ Sent when a file is opened in the editor.
 }
 ```
 
-#### `nes/didChange`
+#### `document/didChange`
 
 Sent when a file is edited. Supports two sync modes declared by the agent:
 
@@ -164,7 +164,7 @@ Sent when a file is edited. Supports two sync modes declared by the agent:
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "nes/didChange",
+  "method": "document/didChange",
   "params": {
     "uri": "file:///path/to/file.rs",
     "version": 2,
@@ -186,7 +186,7 @@ Sent when a file is edited. Supports two sync modes declared by the agent:
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "nes/didChange",
+  "method": "document/didChange",
   "params": {
     "uri": "file:///path/to/file.rs",
     "version": 2,
@@ -199,42 +199,42 @@ Sent when a file is edited. Supports two sync modes declared by the agent:
 }
 ```
 
-#### `nes/didClose`
+#### `document/didClose`
 
 Sent when a file is closed.
 
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "nes/didClose",
+  "method": "document/didClose",
   "params": {
     "uri": "file:///path/to/file.rs"
   }
 }
 ```
 
-#### `nes/didSave`
+#### `document/didSave`
 
 Sent when a file is saved.
 
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "nes/didSave",
+  "method": "document/didSave",
   "params": {
     "uri": "file:///path/to/file.rs"
   }
 }
 ```
 
-#### `nes/didFocus`
+#### `document/didFocus`
 
-Sent when a file becomes the active editor tab. Unlike `nes/didOpen` (which fires once when a file is first opened), `nes/didFocus` fires every time the user switches to a file, including files that are already open. This is the primary trigger for agents that need to refresh context on tab switch (e.g. re-indexing relevant code snippets).
+Sent when a file becomes the active editor tab. Unlike `document/didOpen` (which fires once when a file is first opened), `document/didFocus` fires every time the user switches to a file, including files that are already open. This is the primary trigger for agents that need to refresh context on tab switch (e.g. re-indexing relevant code snippets).
 
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "nes/didFocus",
+  "method": "document/didFocus",
   "params": {
     "uri": "file:///path/to/file.rs",
     "version": 2,
@@ -599,7 +599,7 @@ Events and context serve different purposes and have different delivery models:
 - **Events** are pushed as they happen — they allow the agent to maintain internal state (like an LSP server tracking open documents). This is the model Copilot uses.
 - **Context** is attached to each request — it allows stateless agents to receive everything they need in one call. This is the model Zed Predict and Supermaven use.
 
-A note about Cursor: Cursor has a separate context-collection phase (`RefreshTabContext`) that involves vector DB lookup and is triggered on file open, tab switch, and significant edits. The event-based approach supports this flow: an NES agent can listen for `nes/didOpen`, `nes/didFocus`, and accumulated `nes/didChange` events to self-trigger its own context refresh. The `nes/didFocus` event (with cursor position and visible range) and workspace metadata from `nes/start` provide all the inputs Cursor's `RefreshTabContext` needs.
+A note about Cursor: Cursor has a separate context-collection phase (`RefreshTabContext`) that involves vector DB lookup and is triggered on file open, tab switch, and significant edits. The event-based approach supports this flow: an NES agent can listen for `document/didOpen`, `document/didFocus`, and accumulated `document/didChange` events to self-trigger its own context refresh. The `document/didFocus` event (with cursor position and visible range) and workspace metadata from `nes/start` provide all the inputs Cursor's `RefreshTabContext` needs.
 
 An agent may want both (events for incremental file tracking + context for edit history), or just one. The capability split lets each agent pick the model that fits its architecture.
 
@@ -609,7 +609,7 @@ LSP's document sync notifications carry the same information, but:
 
 1. ACP is not LSP — reusing method names could cause confusion in implementations that bridge both.
 2. We may want to evolve the event payloads independently (e.g. adding metadata fields).
-3. Keeping them namespaced under `nes/` makes capability negotiation cleaner.
+3. Using `document/` as a generic namespace keeps these methods reusable across different ACP capabilities (NES, and potentially others in the future) without tying them to a single feature.
 
 ### How does this relate to PR #325?
 
