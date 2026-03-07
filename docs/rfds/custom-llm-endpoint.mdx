@@ -1,0 +1,327 @@
+---
+title: "Custom LLM Endpoint Configuration"
+---
+
+- Author(s): [@anna239](https://github.com/anna239), [@xtmq](https://github.com/xtmq)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Add the ability for clients to pass custom LLM endpoint URLs and authentication credentials to agents via a dedicated `setLlmEndpoints` method, with support for multiple LLM protocols. This allows clients to route LLM requests through their own infrastructure (proxies, gateways, or self-hosted models) without agents needing to know about this configuration in advance.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+Currently, agents are configured with their own LLM endpoints and credentials, typically through environment variables or configuration files. This creates problems for:
+
+- **Client proxies**: Clients want to route agent traffic through their own proxies, f.i. for setting additional headers or logging
+- **Enterprise deployments**: Organizations want to route LLM traffic through their own proxies for compliance, logging, or cost management
+- **Self-hosted models**: Users running local LLM servers (vLLM, Ollama, etc.) cannot easily redirect agent traffic
+- **API gateways**: Organizations using LLM gateways for rate limiting, caching, or multi-provider routing
+
+## Shiny future
+
+> How will things play out once this feature exists?
+
+Clients will be able to:
+1. Discover whether an agent supports custom LLM endpoints via capabilities during initialization
+2. Perform agent configuration, including authorization based on this knowledge
+3. Pass custom LLM endpoint URLs and headers for different LLM protocols via a dedicated method
+4. Have agent LLM requests automatically routed through the appropriate endpoint based on the LLM protocol
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+### Intended flow
+
+The design uses a two-step approach: capability discovery during initialization, followed by endpoint configuration via a dedicated method. This enables the following flow:
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Agent
+
+    Client->>Agent: initialize
+    Note right of Agent: Agent reports capabilities,<br/>including llmEndpoints support
+    Agent-->>Client: initialize response<br/>(agentCapabilities.llmEndpoints.protocols)
+
+    Note over Client: Client sees supported protocols.<br/>Performs configuration / authorization<br/>based on this knowledge.
+
+    Client->>Agent: setLlmEndpoints
+    Agent-->>Client: setLlmEndpoints response
+
+    Note over Client,Agent: Ready for session setup
+    Client->>Agent: session/new
+```
+
+1. **Initialization**: The client calls `initialize`. The agent responds with its capabilities, including an `llmEndpoints` object listing supported LLM protocols.
+2. **Client-side decision**: The client inspects the supported protocols list. If the agent lists protocols in `llmEndpoints.protocols`, the client can perform authorization, resolve credentials, or configure endpoints for those specific protocols. If `llmEndpoints` is absent or the protocols list is empty, the client falls back to a different authorization and configuration strategy.
+3. **Endpoint configuration**: The client calls `setLlmEndpoints` with endpoint configurations for the supported protocols.
+4. **Session creation**: The client proceeds to create a session.
+
+### Capability advertisement
+
+The agent advertises support for custom LLM endpoints and lists its supported LLM protocols via a new `llmEndpoints` capability in `agentCapabilities`:
+
+```typescript
+/**
+ * LLM protocol identifier representing an API compatibility level, not a specific vendor.
+ * For example, "openai" means any endpoint implementing the OpenAI-compatible API
+ * (including proxies, gateways, and self-hosted servers like vLLM or Ollama).
+ *
+ * Well-known values: "anthropic", "openai", "google", "amazon".
+ * Custom protocol identifiers are allowed for regional or emerging LLM APIs not covered by the well-known set.
+ */
+type LlmProtocol = string;
+
+interface LlmEndpointsCapability {
+  /**
+   * Map of supported LLM protocol identifiers.
+   * The client should only configure endpoints for protocols listed here.
+   */
+  protocols: Record<LlmProtocol, unknown>;
+
+  /** Extension metadata */
+  _meta?: Record<string, unknown>;
+}
+
+interface AgentCapabilities {
+  // ... existing fields ...
+
+  /**
+   * Custom LLM endpoint support.
+   * If present with a non-empty protocols map, the agent supports the setLlmEndpoints method.
+   * If absent or protocols is empty, the agent does not support custom endpoints.
+   */
+  llmEndpoints?: LlmEndpointsCapability;
+}
+```
+
+**Initialize Response example:**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 0,
+  "result": {
+    "protocolVersion": 1,
+    "agentInfo": {
+      "name": "MyAgent",
+      "version": "2.0.0"
+    },
+    "agentCapabilities": {
+      "llmEndpoints": {
+        "protocols": {
+          "anthropic": {},
+          "openai": {}
+        }
+      },
+      "sessionCapabilities": {}
+    }
+  }
+}
+```
+
+### `setLlmEndpoints` method
+
+A dedicated method that can be called after initialization but before session creation.
+
+```typescript
+interface LlmEndpointConfig {
+  /** Base URL for LLM API requests (e.g., "https://llm-proxy.corp.example.com/v1") */
+  url: string;
+
+  /**
+   * Additional HTTP headers to include in LLM API requests.
+   * Each entry is a header name mapped to its value.
+   * Common use cases include Authorization, custom routing, or tracing headers.
+   */
+  headers?: Record<string, string> | null;
+
+  /** Extension metadata */
+  _meta?: Record<string, unknown>;
+}
+
+interface SetLlmEndpointsRequest {
+  /**
+   * Custom LLM endpoint configurations per LLM protocol.
+   * When provided, the agent should route LLM requests to the appropriate endpoint
+   * based on the protocol being used.
+   * This configuration is per-process and should not be persisted to disk.
+   */
+  endpoints: Record<LlmProtocol, LlmEndpointConfig>;
+
+  /** Extension metadata */
+  _meta?: Record<string, unknown>;
+}
+
+interface SetLlmEndpointsResponse {
+  /** Extension metadata */
+  _meta?: Record<string, unknown>;
+}
+```
+
+#### JSON Schema Additions
+
+```json
+{
+  "$defs": {
+    "LlmEndpointConfig": {
+      "description": "Configuration for a custom LLM endpoint.",
+      "properties": {
+        "url": {
+          "type": "string",
+          "description": "Base URL for LLM API requests."
+        },
+        "headers": {
+          "type": ["object", "null"],
+          "description": "Additional HTTP headers to include in LLM API requests.",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "_meta": {
+          "additionalProperties": true,
+          "type": ["object", "null"]
+        }
+      },
+      "required": ["url"],
+      "type": "object"
+    },
+    "LlmEndpoints": {
+      "description": "Map of LLM protocol identifiers to endpoint configurations. This configuration is per-process and should not be persisted to disk.",
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/LlmEndpointConfig"
+      }
+    }
+  }
+}
+```
+
+#### Example Exchange
+
+**setLlmEndpoints Request:**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "setLlmEndpoints",
+  "params": {
+    "endpoints": {
+      "anthropic": {
+        "url": "https://llm-gateway.corp.example.com/anthropic/v1",
+        "headers": {
+          "Authorization": "Bearer anthropic-token-abc123",
+          "X-Request-Source": "my-ide"
+        }
+      },
+      "openai": {
+        "url": "https://llm-gateway.corp.example.com/openai/v1",
+        "headers": {
+          "Authorization": "Bearer openai-token-xyz789"
+        }
+      }
+    }
+  }
+}
+```
+
+**setLlmEndpoints Response:**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {}
+}
+```
+
+#### Behavior
+
+1. **Capability discovery**: The agent MUST list its supported protocols in `agentCapabilities.llmEndpoints.protocols` if it supports the `setLlmEndpoints` method. Clients SHOULD only send endpoint configurations for protocols listed there.
+
+2. **Timing**: The `setLlmEndpoints` method MUST be called after `initialize` and before `session/new`. Calling this MAY NOT affect currently running sessions. Agents MUST apply these settings to any sessions created or loaded after this has been called.
+
+3. **Per-process scope**: The endpoint configuration applies to the entire agent process lifetime. It should not be stored to disk or persist beyond the process.
+
+4. **Protocol-based routing**: The agent should route LLM requests to the appropriate endpoint based on the LLM protocol. If the agent uses a protocol not in the provided map, it uses its default endpoint for that protocol.
+
+5. **Agent discretion**: If an agent cannot support custom endpoints (e.g., uses a proprietary API), it should omit `llmEndpoints` from capabilities or return an empty protocols map.
+
+## Open questions
+
+### ~~How should protocol identifiers be standardized?~~ Resolved
+
+Protocol identifiers are plain strings with a set of well-known values (`"anthropic"`, `"openai"`, `"google"`, `"amazon"`). Custom identifiers are allowed for regional or emerging LLM APIs not covered by the well-known set. Agents advertise the protocol identifiers they understand; clients match against them.
+
+### ~~How should model availability be handled?~~ Resolved
+
+Model availability is not a concern of this RFD. Most agents can discover available models from the configured endpoint at runtime. Agents that cannot should report an error if a user selects a model not supported by the custom endpoint.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document?
+
+### Why is `LlmProtocol` a plain string instead of a fixed enum?
+
+The protocol wire format uses plain strings to keep the specification stable and avoid blocking adoption of new LLM APIs. A fixed enum would require a spec update every time a new protocol emerges.
+
+Instead, well-known protocol identifiers are provided by SDKs as convenience constants:
+
+**TypeScript** — an open string type with predefined values:
+```typescript
+type LlmProtocol = string & {};
+
+const LlmProtocols = {
+  Anthropic: "anthropic",
+  OpenAI: "openai",
+  Google: "google",
+  Amazon: "amazon",
+} as const;
+```
+
+**Kotlin** — a string wrapper with predefined companion objects:
+```kotlin
+value class LlmProtocol(val value: String) {
+    companion object {
+        val Anthropic = LlmProtocol("anthropic")
+        val OpenAI = LlmProtocol("openai")
+        val Google = LlmProtocol("google")
+        val Amazon = LlmProtocol("amazon")
+    }
+}
+```
+
+This way SDK users get discoverability and autocomplete for well-known protocols while remaining free to use any custom string for protocols not yet in the predefined set.
+
+### Why not pass endpoints in the `initialize` request?
+
+Passing endpoints directly in `initialize` would require the client to have already resolved credentials and configured endpoints before knowing whether the agent supports this feature. In practice, the client needs to inspect the agent's capabilities first to decide its authorization strategy — for example, whether to route through a corporate proxy or use direct credentials. A dedicated method after initialization solves this chicken-and-egg problem and keeps capability negotiation separate from endpoint configuration.
+
+### Why not pass endpoint when selecting a model?
+
+One option would be to pass the endpoint URL and credentials when the user selects a model (e.g., in `session/new` or a model selection method).
+
+Many agents throw authentication errors before the model selection happens. This makes the flow unreliable.
+
+### Why not use environment variables or command-line arguments?
+
+One option would be to pass endpoint configuration via environment variables (like `OPENAI_API_BASE`) or command-line arguments when starting the agent process.
+
+This approach has significant drawbacks:
+- With multiple providers, the configuration becomes complex JSON that is awkward to pass via command-line arguments
+- Environment variables may be logged or visible to other processes, creating security concerns
+- Requires knowledge of agent-specific variable names or argument formats
+- No standardized way to confirm the agent accepted the configuration
+
+### What if the agent doesn't support custom endpoints?
+
+If the agent doesn't support custom endpoints, `llmEndpoints` will be absent from `agentCapabilities` (or its `protocols` map will be empty). The client can detect this and choose an alternative authorization and configuration strategy, or proceed using the agent's default endpoints.
+
+## Revision history
+
+- 2026-03-07: Rename "provider" to "protocol" to reflect API compatibility level; make `LlmProtocol` an open string type with well-known values; resolve open questions on identifier standardization and model availability
+- 2026-03-04: Revised to use dedicated `setLlmEndpoints` method with capability advertisement
+- 2026-02-02: Initial draft - preliminary proposal to start discussion
