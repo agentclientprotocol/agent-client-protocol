@@ -10,7 +10,7 @@ title: "Custom LLM Endpoint Configuration"
 
 > What are you proposing to change?
 
-Add the ability for clients to pass custom LLM endpoint URLs and authentication credentials to agents via a dedicated `setLlmEndpoints` method, with support for multiple providers. This allows clients to route LLM requests through their own infrastructure (proxies, gateways, or self-hosted models) without agents needing to know about this configuration in advance.
+Add the ability for clients to pass custom LLM endpoint URLs and authentication credentials to agents via a dedicated `setLlmEndpoints` method, with support for multiple LLM protocols. This allows clients to route LLM requests through their own infrastructure (proxies, gateways, or self-hosted models) without agents needing to know about this configuration in advance.
 
 ## Status quo
 
@@ -30,8 +30,8 @@ Currently, agents are configured with their own LLM endpoints and credentials, t
 Clients will be able to:
 1. Discover whether an agent supports custom LLM endpoints via capabilities during initialization
 2. Perform agent configuration, including authorization based on this knowledge
-3. Pass custom LLM endpoint URLs and headers for different providers via a dedicated method
-4. Have agent LLM requests automatically routed through the appropriate endpoint based on provider
+3. Pass custom LLM endpoint URLs and headers for different LLM protocols via a dedicated method
+4. Have agent LLM requests automatically routed through the appropriate endpoint based on the LLM protocol
 
 ## Implementation details and plan
 
@@ -48,9 +48,9 @@ sequenceDiagram
 
     Client->>Agent: initialize
     Note right of Agent: Agent reports capabilities,<br/>including llmEndpoints support
-    Agent-->>Client: initialize response<br/>(agentCapabilities.llmEndpoints.providers)
+    Agent-->>Client: initialize response<br/>(agentCapabilities.llmEndpoints.protocols)
 
-    Note over Client: Client sees supported providers.<br/>Performs configuration / authorization<br/>based on this knowledge.
+    Note over Client: Client sees supported protocols.<br/>Performs configuration / authorization<br/>based on this knowledge.
 
     Client->>Agent: setLlmEndpoints
     Agent-->>Client: setLlmEndpoints response
@@ -59,25 +59,30 @@ sequenceDiagram
     Client->>Agent: session/new
 ```
 
-1. **Initialization**: The client calls `initialize`. The agent responds with its capabilities, including an `llmEndpoints` object listing supported providers.
-2. **Client-side decision**: The client inspects the supported providers list. If the agent lists providers in `llmEndpoints.providers`, the client can perform authorization, resolve credentials, or configure endpoints for those specific providers. If `llmEndpoints` is absent or the providers list is empty, the client falls back to a different authorization and configuration strategy.
-3. **Endpoint configuration**: The client calls `setLlmEndpoints` with endpoint configurations for the supported providers.
+1. **Initialization**: The client calls `initialize`. The agent responds with its capabilities, including an `llmEndpoints` object listing supported LLM protocols.
+2. **Client-side decision**: The client inspects the supported protocols list. If the agent lists protocols in `llmEndpoints.protocols`, the client can perform authorization, resolve credentials, or configure endpoints for those specific protocols. If `llmEndpoints` is absent or the protocols list is empty, the client falls back to a different authorization and configuration strategy.
+3. **Endpoint configuration**: The client calls `setLlmEndpoints` with endpoint configurations for the supported protocols.
 4. **Session creation**: The client proceeds to create a session.
 
 ### Capability advertisement
 
-The agent advertises support for custom LLM endpoints and lists its supported providers via a new `llmEndpoints` capability in `agentCapabilities`:
+The agent advertises support for custom LLM endpoints and lists its supported LLM protocols via a new `llmEndpoints` capability in `agentCapabilities`:
 
 ```typescript
-/** Well-known LLM provider identifiers */
-type LlmProvider = "anthropic" | "openai" | "google" | "amazon" | "will be added later";
+/**
+ * Well-known LLM protocol identifiers.
+ * Each identifier represents an API compatibility level, not a specific vendor.
+ * For example, "openai" means any endpoint implementing the OpenAI-compatible API
+ * (including proxies, gateways, and self-hosted servers like vLLM or Ollama).
+ */
+type LlmProtocol = "anthropic" | "openai" | "google" | "amazon" | "will be added later";
 
 interface LlmEndpointsCapability {
   /**
-   * Map of supported provider identifiers.
-   * The client should only configure endpoints for providers listed here.
+   * Map of supported LLM protocol identifiers.
+   * The client should only configure endpoints for protocols listed here.
    */
-  providers: Record<LlmProvider, unknown>;
+  protocols: Record<LlmProtocol, unknown>;
 
   /** Extension metadata */
   _meta?: Record<string, unknown>;
@@ -88,8 +93,8 @@ interface AgentCapabilities {
 
   /**
    * Custom LLM endpoint support.
-   * If present with a non-empty providers map, the agent supports the setLlmEndpoints method.
-   * If absent or providers is empty, the agent does not support custom endpoints.
+   * If present with a non-empty protocols map, the agent supports the setLlmEndpoints method.
+   * If absent or protocols is empty, the agent does not support custom endpoints.
    */
   llmEndpoints?: LlmEndpointsCapability;
 }
@@ -108,7 +113,7 @@ interface AgentCapabilities {
     },
     "agentCapabilities": {
       "llmEndpoints": {
-        "providers": {
+        "protocols": {
           "anthropic": {},
           "openai": {}
         }
@@ -141,12 +146,12 @@ interface LlmEndpointConfig {
 
 interface SetLlmEndpointsRequest {
   /**
-   * Custom LLM endpoint configurations per provider.
+   * Custom LLM endpoint configurations per LLM protocol.
    * When provided, the agent should route LLM requests to the appropriate endpoint
-   * based on the provider being used.
+   * based on the protocol being used.
    * This configuration is per-process and should not be persisted to disk.
    */
-  endpoints: Record<LlmProvider, LlmEndpointConfig>;
+  endpoints: Record<LlmProtocol, LlmEndpointConfig>;
 
   /** Extension metadata */
   _meta?: Record<string, unknown>;
@@ -186,7 +191,7 @@ interface SetLlmEndpointsResponse {
       "type": "object"
     },
     "LlmEndpoints": {
-      "description": "Map of provider identifiers to endpoint configurations. This configuration is per-process and should not be persisted to disk.",
+      "description": "Map of LLM protocol identifiers to endpoint configurations. This configuration is per-process and should not be persisted to disk.",
       "type": "object",
       "additionalProperties": {
         "$ref": "#/$defs/LlmEndpointConfig"
@@ -235,21 +240,21 @@ interface SetLlmEndpointsResponse {
 
 #### Behavior
 
-1. **Capability discovery**: The agent MUST list its supported providers in `agentCapabilities.llmEndpoints.providers` if it supports the `setLlmEndpoints` method. Clients SHOULD only send endpoint configurations for providers listed there.
+1. **Capability discovery**: The agent MUST list its supported protocols in `agentCapabilities.llmEndpoints.protocols` if it supports the `setLlmEndpoints` method. Clients SHOULD only send endpoint configurations for protocols listed there.
 
 2. **Timing**: The `setLlmEndpoints` method MUST be called after `initialize` and before `session/new`. Calling this MAY NOT affect currently running sessions. Agents MUST apply these settings to any sessions created or loaded after this has been called.
 
 3. **Per-process scope**: The endpoint configuration applies to the entire agent process lifetime. It should not be stored to disk or persist beyond the process.
 
-4. **Provider-based routing**: The agent should route LLM requests to the appropriate endpoint based on the provider. If the agent uses a provider not in the provided map, it uses its default endpoint for that provider.
+4. **Protocol-based routing**: The agent should route LLM requests to the appropriate endpoint based on the LLM protocol. If the agent uses a protocol not in the provided map, it uses its default endpoint for that protocol.
 
-5. **Agent discretion**: If an agent cannot support custom endpoints (e.g., uses a proprietary API), it should omit `llmEndpoints` from capabilities or return an empty providers map.
+5. **Agent discretion**: If an agent cannot support custom endpoints (e.g., uses a proprietary API), it should omit `llmEndpoints` from capabilities or return an empty protocols map.
 
 ## Open questions
 
-### How should provider identifiers be standardized?
+### How should protocol identifiers be standardized?
 
-We need to define a standard set of provider identifiers (e.g., `"anthropic"`, `"openai"`, `"google"`, `"amazon"`). Should this be:
+We need to define a standard set of LLM protocol identifiers (e.g., `"anthropic"`, `"openai"`, `"google"`, `"amazon"`). Should this be:
 - A fixed enum in the protocol specification?
 - An extensible set with well-known values and support for custom strings?
 - Defined in a separate registry/document that can be updated independently?
@@ -284,7 +289,7 @@ This approach has significant drawbacks:
 
 ### What if the agent doesn't support custom endpoints?
 
-If the agent doesn't support custom endpoints, `llmEndpoints` will be absent from `agentCapabilities` (or its `providers` map will be empty). The client can detect this and choose an alternative authorization and configuration strategy, or proceed using the agent's default endpoints.
+If the agent doesn't support custom endpoints, `llmEndpoints` will be absent from `agentCapabilities` (or its `protocols` map will be empty). The client can detect this and choose an alternative authorization and configuration strategy, or proceed using the agent's default endpoints.
 
 ## Revision history
 
