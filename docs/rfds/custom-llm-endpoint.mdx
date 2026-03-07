@@ -70,12 +70,14 @@ The agent advertises support for custom LLM endpoints and lists its supported LL
 
 ```typescript
 /**
- * Well-known LLM protocol identifiers.
- * Each identifier represents an API compatibility level, not a specific vendor.
+ * LLM protocol identifier representing an API compatibility level, not a specific vendor.
  * For example, "openai" means any endpoint implementing the OpenAI-compatible API
  * (including proxies, gateways, and self-hosted servers like vLLM or Ollama).
+ *
+ * Well-known values: "anthropic", "openai", "google", "amazon".
+ * Custom protocol identifiers are allowed for regional or emerging LLM APIs not covered by the well-known set.
  */
-type LlmProtocol = "anthropic" | "openai" | "google" | "amazon" | "will be added later";
+type LlmProtocol = string;
 
 interface LlmEndpointsCapability {
   /**
@@ -252,12 +254,9 @@ interface SetLlmEndpointsResponse {
 
 ## Open questions
 
-### How should protocol identifiers be standardized?
+### ~~How should protocol identifiers be standardized?~~ Resolved
 
-We need to define a standard set of LLM protocol identifiers (e.g., `"anthropic"`, `"openai"`, `"google"`, `"amazon"`). Should this be:
-- A fixed enum in the protocol specification?
-- An extensible set with well-known values and support for custom strings?
-- Defined in a separate registry/document that can be updated independently?
+Protocol identifiers are plain strings with a set of well-known values (`"anthropic"`, `"openai"`, `"google"`, `"amazon"`). Custom identifiers are allowed for regional or emerging LLM APIs not covered by the well-known set. Agents advertise the protocol identifiers they understand; clients match against them.
 
 ### How should model availability be handled?
 
@@ -266,6 +265,38 @@ When a custom endpoint is provided, it may only support a subset of models. For 
 ## Frequently asked questions
 
 > What questions have arisen over the course of authoring this document?
+
+### Why is `LlmProtocol` a plain string instead of a fixed enum?
+
+The protocol wire format uses plain strings to keep the specification stable and avoid blocking adoption of new LLM APIs. A fixed enum would require a spec update every time a new protocol emerges.
+
+Instead, well-known protocol identifiers are provided by SDKs as convenience constants:
+
+**TypeScript** — an open string type with predefined values:
+```typescript
+type LlmProtocol = string & {};
+
+const LlmProtocols = {
+  Anthropic: "anthropic",
+  OpenAI: "openai",
+  Google: "google",
+  Amazon: "amazon",
+} as const;
+```
+
+**Kotlin** — a string wrapper with predefined companion objects:
+```kotlin
+value class LlmProtocol(val value: String) {
+    companion object {
+        val Anthropic = LlmProtocol("anthropic")
+        val OpenAI = LlmProtocol("openai")
+        val Google = LlmProtocol("google")
+        val Amazon = LlmProtocol("amazon")
+    }
+}
+```
+
+This way SDK users get discoverability and autocomplete for well-known protocols while remaining free to use any custom string for protocols not yet in the predefined set.
 
 ### Why not pass endpoints in the `initialize` request?
 
