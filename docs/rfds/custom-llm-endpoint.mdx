@@ -258,9 +258,9 @@ interface SetLlmEndpointsResponse {
 
 Protocol identifiers are plain strings with a set of well-known values (`"anthropic"`, `"openai"`, `"google"`, `"amazon"`). Custom identifiers are allowed for regional or emerging LLM APIs not covered by the well-known set. Agents advertise the protocol identifiers they understand; clients match against them.
 
-### How should model availability be handled?
+### ~~How should model availability be handled?~~ Resolved
 
-When a custom endpoint is provided, it may only support a subset of models. For example, a self-hosted vLLM server might only have `llama-3-70b` available, while the agent normally advertises `claude-3-opus`, `gpt-4`, etc.
+Model availability is not a concern of this RFD. Most agents can discover available models from the configured endpoint at runtime. Agents that cannot should report an error if a user selects a model not supported by the custom endpoint.
 
 ## Frequently asked questions
 
