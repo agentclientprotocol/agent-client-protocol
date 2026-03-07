@@ -4,8 +4,6 @@ title: "Agent Authentication State Query"
 
 - Author(s): [@xtmq](https://github.com/xtmq)
 
-> **Note:** This RFD is very preliminary and intended to start a dialog about this feature. The proposed design may change significantly based on feedback and further discussion.
-
 ## Elevator pitch
 
 > What are you proposing to change?
@@ -58,7 +56,7 @@ sequenceDiagram
     Agent-->>Client: initialize response<br/>(agentCapabilities.getAuthState)
 
     Client->>Agent: getAuthState
-    Agent-->>Client: getAuthState response<br/>(authenticated, providers)
+    Agent-->>Client: getAuthState response<br/>(authenticated, authMethods)
 
     alt Authenticated
         Client->>Agent: session/new
@@ -113,9 +111,15 @@ interface AgentCapabilities {
 A method that can be called after initialization to query the agent's current authentication state.
 
 ```typescript
-interface AuthProviderState {
+interface AuthMethodState {
   /**
-   * Whether the agent has credentials configured for this provider.
+   * The ID of the authentication method.
+   * Corresponds to an `id` from the `authMethods` array returned during initialization.
+   */
+  authMethodId: string;
+
+  /**
+   * Whether the agent has credentials configured for this auth method.
    * true means credentials are present (validity is not guaranteed).
    */
   authenticated: boolean;
@@ -141,10 +145,11 @@ interface GetAuthStateResponse {
   authenticated: boolean;
 
   /**
-   * Optional per-provider breakdown of auth state.
-   * Keys are provider identifiers (e.g., "anthropic", "openai").
+   * Optional per-auth-method breakdown of auth state.
+   * Each entry corresponds to an auth method from the `authMethods` array
+   * returned during initialization.
    */
-  providers?: Record<string, AuthProviderState>;
+  authMethods?: AuthMethodState[];
 
   /** Human-readable description of the overall auth state */
   message?: string;
@@ -159,12 +164,16 @@ interface GetAuthStateResponse {
 ```json
 {
   "$defs": {
-    "AuthProviderState": {
-      "description": "Authentication state for a specific provider.",
+    "AuthMethodState": {
+      "description": "Authentication state for a specific auth method.",
       "properties": {
+        "authMethodId": {
+          "type": "string",
+          "description": "The ID of the authentication method, matching an entry from the authMethods array returned during initialization."
+        },
         "authenticated": {
           "type": "boolean",
-          "description": "Whether credentials are configured for this provider."
+          "description": "Whether credentials are configured for this auth method."
         },
         "message": {
           "type": ["string", "null"],
@@ -175,7 +184,7 @@ interface GetAuthStateResponse {
           "type": ["object", "null"]
         }
       },
-      "required": ["authenticated"],
+      "required": ["authMethodId", "authenticated"],
       "type": "object"
     },
     "GetAuthStateResponse": {
@@ -185,11 +194,11 @@ interface GetAuthStateResponse {
           "type": "boolean",
           "description": "Whether the agent has credentials configured."
         },
-        "providers": {
-          "type": ["object", "null"],
-          "description": "Per-provider auth state breakdown.",
-          "additionalProperties": {
-            "$ref": "#/$defs/AuthProviderState"
+        "authMethods": {
+          "type": ["array", "null"],
+          "description": "Per-auth-method state breakdown.",
+          "items": {
+            "$ref": "#/$defs/AuthMethodState"
           }
         },
         "message": {
@@ -227,12 +236,13 @@ interface GetAuthStateResponse {
   "id": 1,
   "result": {
     "authenticated": true,
-    "providers": {
-      "anthropic": {
+    "authMethods": [
+      {
+        "authMethodId": "anthropic-api-key",
         "authenticated": true,
         "message": "API key configured via local config"
       }
-    }
+    ]
   }
 }
 ```
@@ -251,28 +261,21 @@ interface GetAuthStateResponse {
 
 #### Behavior
 
-1. **Capability advertisement**: The agent MUST include `getAuthState` in `agentCapabilities` if it supports the `getAuthState` method. Clients SHOULD check for this capability before calling the method.
+1. **Capability advertisement**: The agent SHOULD include `getAuthState` in `agentCapabilities` if it supports the `getAuthState` method. Clients MUST check for this capability before calling the method.
 
 2. **Timing**: The `getAuthState` method MUST be callable after `initialize`. It MAY be called multiple times (e.g., after `authenticate`, to re-check state).
 
-3. **Local checks only**: The agent SHOULD determine auth state based on locally available information (config files, environment variables, stored tokens). It SHOULD NOT make external API calls to validate credentials. `authenticated: true` means credentials are present, not that they are guaranteed to be valid.
+3. **Local checks only**: The agent MAY determine auth state based on locally available information (config files, environment variables, stored tokens) or by making external API calls. `authenticated: true` means credentials are present, NOT that they are guaranteed to be valid.
 
 4. **No side effects**: Calling `getAuthState` MUST NOT modify any agent state. It is a pure query.
 
-5. **Per-provider breakdown**: The `providers` field is optional. Agents that use multiple LLM providers MAY include per-provider state to help clients make fine-grained decisions.
+5. **Per-auth-method breakdown**: The `authMethods` field is optional. Agents that support multiple authentication methods MAY include per-method state to help clients make fine-grained decisions.
 
 ## Open questions
 
-### Is a per-provider breakdown needed, or is an aggregate state sufficient?
+### Is a per-auth-method breakdown needed, or is an aggregate state sufficient?
 
-The current design includes an optional `providers` field with per-provider auth state. However, for many agents a single aggregate `state` may be enough. A per-provider breakdown adds complexity to both the agent implementation and client logic. Should we simplify to just the top-level `state` and `message`?
-
-### Should `getAuthState` indicate what kind of auth is expected?
-
-When the state is `"unauthenticated"`, should the response include hints about what the agent needs? For example:
-- "Needs an API key for Anthropic **or** OpenAI"
-
-This could help clients build more targeted authorization flows, but it adds complexity.
+The current design includes an optional `authMethods` field with per-auth-method state. However, for many agents a single aggregate `state` may be enough. A per-method breakdown adds complexity to both the agent implementation and client logic. Should we simplify to just the top-level `state` and `message`?
 
 ## Frequently asked questions
 
@@ -292,4 +295,5 @@ Agents may obtain credentials from many sources: config files, keychains, OAuth 
 
 ## Revision history
 
+- 2026-03-07: Address review feedback, replace per-provider breakdown with per-auth-method
 - 2026-03-05: Initial draft — preliminary proposal to start discussion
