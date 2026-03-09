@@ -26,6 +26,7 @@ Currently, agents are configured with their own LLM endpoints and credentials, t
 > How will things play out once this feature exists?
 
 Clients will be able to:
+
 1. Discover whether an agent supports custom LLM endpoints via capabilities during initialization
 2. Perform agent configuration, including authorization based on this knowledge
 3. Pass custom LLM endpoint URLs and headers for different LLM protocols via a dedicated method
@@ -101,6 +102,7 @@ interface AgentCapabilities {
 ```
 
 **Initialize Response example:**
+
 ```json
 {
   "jsonrpc": "2.0",
@@ -204,6 +206,7 @@ interface SetLlmEndpointsResponse {
 #### Example Exchange
 
 **setLlmEndpoints Request:**
+
 ```json
 {
   "jsonrpc": "2.0",
@@ -230,6 +233,7 @@ interface SetLlmEndpointsResponse {
 ```
 
 **setLlmEndpoints Response:**
+
 ```json
 {
   "jsonrpc": "2.0",
@@ -271,6 +275,7 @@ The protocol wire format uses plain strings to keep the specification stable and
 Instead, well-known protocol identifiers are provided by SDKs as convenience constants:
 
 **TypeScript** — an open string type with predefined values:
+
 ```typescript
 type LlmProtocol = string & {};
 
@@ -283,6 +288,7 @@ const LlmProtocols = {
 ```
 
 **Kotlin** — a string wrapper with predefined companion objects:
+
 ```kotlin
 value class LlmProtocol(val value: String) {
     companion object {
@@ -311,6 +317,7 @@ Many agents throw authentication errors before the model selection happens. This
 One option would be to pass endpoint configuration via environment variables (like `OPENAI_API_BASE`) or command-line arguments when starting the agent process.
 
 This approach has significant drawbacks:
+
 - With multiple providers, the configuration becomes complex JSON that is awkward to pass via command-line arguments
 - Environment variables may be logged or visible to other processes, creating security concerns
 - Requires knowledge of agent-specific variable names or argument formats
