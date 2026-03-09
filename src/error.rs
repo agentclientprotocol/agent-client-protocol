@@ -38,16 +38,6 @@ pub struct Error {
     /// This may include debugging information or context-specific details.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub data: Option<serde_json::Value>,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// Authentication methods relevant to this error.
-    /// Typically included with `AUTH_REQUIRED` errors to narrow down which
-    /// authentication methods are applicable from those shared during initialization.
-    #[cfg(feature = "unstable_auth_methods")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "authMethods")]
-    pub auth_methods: Vec<crate::AuthMethod>,
 }
 
 impl Error {
@@ -60,8 +50,6 @@ impl Error {
             code: code.into(),
             message: message.into(),
             data: None,
-            #[cfg(feature = "unstable_auth_methods")]
-            auth_methods: Vec::new(),
         }
     }
 
@@ -123,20 +111,6 @@ impl Error {
     #[must_use]
     pub fn auth_required() -> Self {
         ErrorCode::AuthRequired.into()
-    }
-
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// Authentication methods relevant to this error.
-    /// Typically included with `AUTH_REQUIRED` errors to narrow down which
-    /// authentication methods are applicable from those shared during initialization.
-    #[cfg(feature = "unstable_auth_methods")]
-    #[must_use]
-    pub fn auth_methods(mut self, auth_methods: Vec<crate::AuthMethod>) -> Self {
-        self.auth_methods = auth_methods;
-        self
     }
 
     /// A given resource, such as a file, was not found.
@@ -312,16 +286,6 @@ impl Display for Error {
             write!(f, ": {pretty}")?;
         }
 
-        #[cfg(feature = "unstable_auth_methods")]
-        if !self.auth_methods.is_empty() {
-            let ids: Vec<&str> = self
-                .auth_methods
-                .iter()
-                .map(|m| m.id().0.as_ref())
-                .collect();
-            write!(f, " (auth methods: {})", ids.join(", "))?;
-        }
-
         Ok(())
     }
 }
@@ -378,37 +342,5 @@ mod tests {
                 serde_json::from_value(serde_json::to_value(error).unwrap()).unwrap()
             );
         }
-    }
-
-    #[cfg(feature = "unstable_auth_methods")]
-    #[test]
-    fn serialize_error_auth_methods() {
-        use crate::{AuthMethod, AuthMethodAgent};
-
-        // Verify auth_methods is omitted when empty
-        let err = Error::auth_required();
-        let json = serde_json::to_value(&err).unwrap();
-        assert!(
-            !json.as_object().unwrap().contains_key("authMethods"),
-            "authMethods should be omitted when empty"
-        );
-
-        // Verify auth_methods round-trips when present
-        let err = Error::auth_required().auth_methods(vec![AuthMethod::Agent(
-            AuthMethodAgent::new("api-key", "API Key"),
-        )]);
-        let json = serde_json::to_value(&err).unwrap();
-        assert!(
-            json.as_object().unwrap().contains_key("authMethods"),
-            "authMethods should be present"
-        );
-        assert_eq!(json["authMethods"].as_array().unwrap().len(), 1);
-        assert_eq!(json["authMethods"][0]["id"], "api-key");
-        assert_eq!(json["authMethods"][0]["name"], "API Key");
-
-        // Verify deserialization
-        let deserialized: Error = serde_json::from_value(json).unwrap();
-        assert_eq!(deserialized.auth_methods.len(), 1);
-        assert_eq!(deserialized.auth_methods[0].id().0.as_ref(), "api-key");
     }
 }

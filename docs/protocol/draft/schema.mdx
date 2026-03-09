@@ -2501,27 +2501,18 @@ See protocol docs: [JSON-RPC Error Object](https://www.jsonrpc.org/specification
 
 **Properties:**
 
-<ResponseField name="authMethods" type={<a href="#authmethod">AuthMethod[]</a>} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Authentication methods relevant to this error.
-Typically included with `AUTH_REQUIRED` errors to narrow down which
-authentication methods are applicable from those shared during initialization.
-
-</ResponseField>
 <ResponseField name="code" type={<a href="#errorcode">ErrorCode</a>} required>
-  A number indicating the error type that occurred.
-This must be an integer as defined in the JSON-RPC specification.
+  A number indicating the error type that occurred. This must be an integer as
+  defined in the JSON-RPC specification.
 </ResponseField>
-<ResponseField name="data" type={"object"} >
-  Optional primitive or structured value that contains additional information about the error.
-This may include debugging information or context-specific details.
+<ResponseField name="data" type={"object"}>
+  Optional primitive or structured value that contains additional information
+  about the error. This may include debugging information or context-specific
+  details.
 </ResponseField>
 <ResponseField name="message" type={"string"} required>
-  A string providing a short description of the error.
-The message should be limited to a concise single sentence.
+  A string providing a short description of the error. The message should be
+  limited to a concise single sentence.
 </ResponseField>
 
 ## <span class="font-mono">ErrorCode</span>

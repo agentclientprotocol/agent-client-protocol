@@ -152,29 +152,6 @@ Because `terminal` auth methods require specific client-side support, clients mu
 
 The `env_var` type does not require a capability opt-in since any client can set environment variables when starting a process, we are just providing additional context for the environment variable.
 
-### Auth errors
-
-It might be useful to include a list of AuthMethod ids to the AUTH_REQUIRED JsonRpc error. Why do we need this if they're already shared during `initialize`:
-All supported auth methods are shared during `initialize`. When user starts a session, they've already selected a model, which can narrow down a list of options.
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 2,
-  "error": {
-    "code": -32000,
-    "message": "Authentication required",
-    "authMethods": [
-      {
-        "id": "chatgpt",
-        "name": "Login with ChatGPT",
-        "description": "Use your ChatGPT login with Codex CLI (requires a paid ChatGPT subscription)"
-      }
-    ]
-  }
-}
-```
-
 ## Frequently asked questions
 
 > What questions have arisen over the course of authoring this document or during subsequent discussions?
@@ -189,6 +166,7 @@ There is also an alternative to adding a separate `elicitation` capability, whic
 
 There was a part about elicitations https://github.com/agentclientprotocol/agent-client-protocol/blob/939ef116a1b14016e4e3808b8764237250afa253/docs/rfds/auth.mdx removed it for now, will move to a separate rfd
 
+- 2026-03-09: Remove auth_methods from Error type
 - 2026-03-03: Changed `env_var` from single `varName` to structured `vars` array of `AuthEnvVar` objects; simplified field name from `varName` to `name`
 - 2026-02-27: Updated to reflect current implementation
 - 2026-01-14: Updates based on Core Maintainer discussion

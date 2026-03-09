@@ -1442,13 +1442,6 @@
     "Error": {
       "description": "JSON-RPC error object.\n\nRepresents an error that occurred during method execution, following the\nJSON-RPC 2.0 error object specification with optional additional data.\n\nSee protocol docs: [JSON-RPC Error Object](https://www.jsonrpc.org/specification#error_object)",
       "properties": {
-        "authMethods": {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAuthentication methods relevant to this error.\nTypically included with `AUTH_REQUIRED` errors to narrow down which\nauthentication methods are applicable from those shared during initialization.",
-          "items": {
-            "$ref": "#/$defs/AuthMethod"
-          },
-          "type": "array"
-        },
         "code": {
           "allOf": [
             {
