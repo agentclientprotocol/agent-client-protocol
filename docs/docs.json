@@ -123,7 +123,7 @@
               "rfds/diff-delete",
               "rfds/boolean-config-option",
               "rfds/elicitation",
-              "rfds/session-stop"
+              "rfds/session-close"
             ]
           },
           {
@@ -206,6 +206,11 @@
       "source": "/registry",
       "destination": "/get-started/registry",
       "permanent": false
+    },
+    {
+      "source": "/rfds/session-stop",
+      "destination": "/rfds/session-close",
+      "permanent": true
     }
   ]
 }

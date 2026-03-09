@@ -1287,26 +1287,26 @@ impl ResumeSessionResponse {
     }
 }
 
-// Stop session
+// Close session
 
 /// **UNSTABLE**
 ///
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
-/// Request parameters for stopping an active session.
+/// Request parameters for closing an active session.
 ///
 /// If supported, the agent **must** cancel any ongoing work related to the session
 /// (treat it as if `session/cancel` was called) and then free up any resources
 /// associated with the session.
 ///
-/// Only available if the Agent supports the `session.stop` capability.
-#[cfg(feature = "unstable_session_stop")]
+/// Only available if the Agent supports the `session.close` capability.
+#[cfg(feature = "unstable_session_close")]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = SESSION_STOP_METHOD_NAME))]
+#[schemars(extend("x-side" = "agent", "x-method" = SESSION_CLOSE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct StopSessionRequest {
-    /// The ID of the session to stop.
+pub struct CloseSessionRequest {
+    /// The ID of the session to close.
     pub session_id: SessionId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -1317,8 +1317,8 @@ pub struct StopSessionRequest {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_session_stop")]
-impl StopSessionRequest {
+#[cfg(feature = "unstable_session_close")]
+impl CloseSessionRequest {
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>) -> Self {
         Self {
@@ -1343,13 +1343,13 @@ impl StopSessionRequest {
 ///
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
-/// Response from stopping a session.
-#[cfg(feature = "unstable_session_stop")]
+/// Response from closing a session.
+#[cfg(feature = "unstable_session_close")]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = SESSION_STOP_METHOD_NAME))]
+#[schemars(extend("x-side" = "agent", "x-method" = SESSION_CLOSE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct StopSessionResponse {
+pub struct CloseSessionResponse {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -1359,8 +1359,8 @@ pub struct StopSessionResponse {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_session_stop")]
-impl StopSessionResponse {
+#[cfg(feature = "unstable_session_close")]
+impl CloseSessionResponse {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -3161,10 +3161,10 @@ pub struct SessionCapabilities {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
-    /// Whether the agent supports `session/stop`.
-    #[cfg(feature = "unstable_session_stop")]
+    /// Whether the agent supports `session/close`.
+    #[cfg(feature = "unstable_session_close")]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub stop: Option<SessionStopCapabilities>,
+    pub stop: Option<SessionCloseCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -3204,10 +3204,10 @@ impl SessionCapabilities {
         self
     }
 
-    #[cfg(feature = "unstable_session_stop")]
-    /// Whether the agent supports `session/stop`.
+    #[cfg(feature = "unstable_session_close")]
+    /// Whether the agent supports `session/close`.
     #[must_use]
-    pub fn stop(mut self, stop: impl IntoOption<SessionStopCapabilities>) -> Self {
+    pub fn stop(mut self, stop: impl IntoOption<SessionCloseCapabilities>) -> Self {
         self.stop = stop.into_option();
         self
     }
@@ -3342,13 +3342,13 @@ impl SessionResumeCapabilities {
 ///
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
-/// Capabilities for the `session/stop` method.
+/// Capabilities for the `session/close` method.
 ///
-/// By supplying `{}` it means that the agent supports stopping of sessions.
-#[cfg(feature = "unstable_session_stop")]
+/// By supplying `{}` it means that the agent supports closing of sessions.
+#[cfg(feature = "unstable_session_close")]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[non_exhaustive]
-pub struct SessionStopCapabilities {
+pub struct SessionCloseCapabilities {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -3358,8 +3358,8 @@ pub struct SessionStopCapabilities {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_session_stop")]
-impl SessionStopCapabilities {
+#[cfg(feature = "unstable_session_close")]
+impl SessionCloseCapabilities {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -3544,9 +3544,9 @@ pub struct AgentMethodNames {
     /// Method for resuming an existing session.
     #[cfg(feature = "unstable_session_resume")]
     pub session_resume: &'static str,
-    /// Method for stopping an active session.
-    #[cfg(feature = "unstable_session_stop")]
-    pub session_stop: &'static str,
+    /// Method for closing an active session.
+    #[cfg(feature = "unstable_session_close")]
+    pub session_close: &'static str,
 }
 
 /// Constant containing all agent method names.
@@ -3567,8 +3567,8 @@ pub const AGENT_METHOD_NAMES: AgentMethodNames = AgentMethodNames {
     session_fork: SESSION_FORK_METHOD_NAME,
     #[cfg(feature = "unstable_session_resume")]
     session_resume: SESSION_RESUME_METHOD_NAME,
-    #[cfg(feature = "unstable_session_stop")]
-    session_stop: SESSION_STOP_METHOD_NAME,
+    #[cfg(feature = "unstable_session_close")]
+    session_close: SESSION_CLOSE_METHOD_NAME,
 };
 
 /// Method name for the initialize request.
@@ -3599,9 +3599,9 @@ pub(crate) const SESSION_FORK_METHOD_NAME: &str = "session/fork";
 /// Method name for resuming an existing session.
 #[cfg(feature = "unstable_session_resume")]
 pub(crate) const SESSION_RESUME_METHOD_NAME: &str = "session/resume";
-/// Method name for stopping an active session.
-#[cfg(feature = "unstable_session_stop")]
-pub(crate) const SESSION_STOP_METHOD_NAME: &str = "session/stop";
+/// Method name for closing an active session.
+#[cfg(feature = "unstable_session_close")]
+pub(crate) const SESSION_CLOSE_METHOD_NAME: &str = "session/close";
 
 /// All possible requests that a client can send to an agent.
 ///
@@ -3695,18 +3695,18 @@ pub enum ClientRequest {
     /// The agent should resume the session context, allowing the conversation to continue
     /// without replaying the message history (unlike `session/load`).
     ResumeSessionRequest(ResumeSessionRequest),
-    #[cfg(feature = "unstable_session_stop")]
+    #[cfg(feature = "unstable_session_close")]
     /// **UNSTABLE**
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
-    /// Stops an active session and frees up any resources associated with it.
+    /// Closes an active session and frees up any resources associated with it.
     ///
-    /// This method is only available if the agent advertises the `session.stop` capability.
+    /// This method is only available if the agent advertises the `session.close` capability.
     ///
     /// The agent must cancel any ongoing work (as if `session/cancel` was called)
     /// and then free up any resources associated with the session.
-    StopSessionRequest(StopSessionRequest),
+    CloseSessionRequest(CloseSessionRequest),
     /// Sets the current mode for a session.
     ///
     /// Allows switching between different agent modes (e.g., "ask", "architect", "code")
@@ -3766,8 +3766,8 @@ impl ClientRequest {
             Self::ForkSessionRequest(_) => AGENT_METHOD_NAMES.session_fork,
             #[cfg(feature = "unstable_session_resume")]
             Self::ResumeSessionRequest(_) => AGENT_METHOD_NAMES.session_resume,
-            #[cfg(feature = "unstable_session_stop")]
-            Self::StopSessionRequest(_) => AGENT_METHOD_NAMES.session_stop,
+            #[cfg(feature = "unstable_session_close")]
+            Self::CloseSessionRequest(_) => AGENT_METHOD_NAMES.session_close,
             Self::SetSessionModeRequest(_) => AGENT_METHOD_NAMES.session_set_mode,
             Self::SetSessionConfigOptionRequest(_) => AGENT_METHOD_NAMES.session_set_config_option,
             Self::PromptRequest(_) => AGENT_METHOD_NAMES.session_prompt,
@@ -3800,8 +3800,8 @@ pub enum AgentResponse {
     ForkSessionResponse(ForkSessionResponse),
     #[cfg(feature = "unstable_session_resume")]
     ResumeSessionResponse(#[serde(default)] ResumeSessionResponse),
-    #[cfg(feature = "unstable_session_stop")]
-    StopSessionResponse(#[serde(default)] StopSessionResponse),
+    #[cfg(feature = "unstable_session_close")]
+    CloseSessionResponse(#[serde(default)] CloseSessionResponse),
     SetSessionModeResponse(#[serde(default)] SetSessionModeResponse),
     SetSessionConfigOptionResponse(SetSessionConfigOptionResponse),
     PromptResponse(PromptResponse),

@@ -1,5 +1,5 @@
 ---
-title: "Stopping active sessions"
+title: "Closing active sessions"
 ---
 
 Author(s): [@SteffenDE](https://github.com/SteffenDE)
@@ -8,7 +8,7 @@ Author(s): [@SteffenDE](https://github.com/SteffenDE)
 
 > What are you proposing to change?
 
-We propose adding the ability to stop active sessions. This allows the agent to free up any memory
+We propose adding the ability to close active sessions. This allows the agent to free up any memory
 and threads/subprocesses associated with that session.
 
 ## Status quo
@@ -29,7 +29,7 @@ lead to a bad user experience.
 
 > What are you proposing to improve the situation?
 
-Add a new `session/stop` method. If supported, the agent **must** cancel any ongoing work
+Add a new `session/close` method. If supported, the agent **must** cancel any ongoing work
 related to the session (treat it as if `session/cancel` was called) and then free up any resources
 associated with the session.
 
@@ -37,23 +37,23 @@ associated with the session.
 
 > How will things will play out once this feature exists?
 
-Clients can track what sessions are actively used by a user and automatically stop old sessions.
+Clients can track what sessions are actively used by a user and automatically close old sessions.
 
 ## Implementation details and plan
 
 > Tell me more about your implementation. What is your detailed implementation plan?
 
-We propose to add a new `"session/stop"` method. Agents must declare this option is
-available by returning `session: { stop : {} }` in their capabilities. The object is reserved
+We propose to add a new `"session/close"` method. Agents must declare this option is
+available by returning `session: { close : {} }` in their capabilities. The object is reserved
 to declare future capabilities.
 
-Then the client would be able to stop a specific session with:
+Then the client would be able to close a specific session with:
 
 ```json
 {
   "jsonrpc": "2.0",
   "id": 1,
-  "method": "session/stop",
+  "method": "session/close",
   "params": {
     "sessionId": "sess_789xyz"
   }
@@ -76,4 +76,5 @@ seems like a good idea.
 
 ## Revision history
 
+2026-03-09: Rename from session/stop to session/close
 2026-02-24: Initial draft

@@ -292,9 +292,9 @@ impl Side for AgentSide {
             m if m == AGENT_METHOD_NAMES.session_resume => serde_json::from_str(params.get())
                 .map(ClientRequest::ResumeSessionRequest)
                 .map_err(Into::into),
-            #[cfg(feature = "unstable_session_stop")]
-            m if m == AGENT_METHOD_NAMES.session_stop => serde_json::from_str(params.get())
-                .map(ClientRequest::StopSessionRequest)
+            #[cfg(feature = "unstable_session_close")]
+            m if m == AGENT_METHOD_NAMES.session_close => serde_json::from_str(params.get())
+                .map(ClientRequest::CloseSessionRequest)
                 .map_err(Into::into),
             m if m == AGENT_METHOD_NAMES.session_set_mode => serde_json::from_str(params.get())
                 .map(ClientRequest::SetSessionModeRequest)
