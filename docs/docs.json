@@ -65,6 +65,7 @@
               "protocol/overview",
               "protocol/initialization",
               "protocol/session-setup",
+              "protocol/session-list",
               "protocol/prompt-turn",
               "protocol/content",
               "protocol/tool-calls",
@@ -82,7 +83,6 @@
                 "hidden": true,
                 "pages": [
                   "protocol/draft/cancellation",
-                  "protocol/draft/session-list",
                   "protocol/draft/schema"
                 ]
               }
@@ -128,17 +128,15 @@
           },
           {
             "group": "Preview",
-            "pages": [
-              "rfds/acp-agent-registry",
-              "rfds/session-list",
-              "rfds/session-info-update"
-            ]
+            "pages": ["rfds/acp-agent-registry"]
           },
           {
             "group": "Completed",
             "pages": [
               "rfds/introduce-rfd-process",
-              "rfds/session-config-options"
+              "rfds/session-config-options",
+              "rfds/session-list",
+              "rfds/session-info-update"
             ]
           }
         ]

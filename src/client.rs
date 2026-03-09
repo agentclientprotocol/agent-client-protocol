@@ -13,7 +13,6 @@ use crate::{
     ContentBlock, ExtNotification, ExtRequest, ExtResponse, IntoOption, Meta, Plan,
     SessionConfigOption, SessionId, SessionModeId, ToolCall, ToolCallUpdate,
 };
-#[cfg(feature = "unstable_session_info_update")]
 use crate::{IntoMaybeUndefined, MaybeUndefined};
 
 // Session updates
@@ -94,7 +93,6 @@ pub enum SessionUpdate {
     CurrentModeUpdate(CurrentModeUpdate),
     /// Session configuration options have been updated.
     ConfigOptionUpdate(ConfigOptionUpdate),
-    #[cfg(feature = "unstable_session_info_update")]
     /// Session metadata has been updated (title, timestamps, custom metadata)
     SessionInfoUpdate(SessionInfoUpdate),
     /// **UNSTABLE**
@@ -186,7 +184,6 @@ impl ConfigOptionUpdate {
 ///
 /// Agents send this notification to update session information like title or custom metadata.
 /// This allows clients to display dynamic session names and track session state changes.
-#[cfg(feature = "unstable_session_info_update")]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -206,7 +203,6 @@ pub struct SessionInfoUpdate {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_session_info_update")]
 impl SessionInfoUpdate {
     #[must_use]
     pub fn new() -> Self {
@@ -1904,7 +1900,6 @@ impl AgentNotification {
 mod tests {
     use super::*;
 
-    #[cfg(feature = "unstable_session_info_update")]
     #[test]
     fn test_serialization_behavior() {
         use serde_json::json;

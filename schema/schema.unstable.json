@@ -866,7 +866,7 @@
                       "$ref": "#/$defs/ListSessionsRequest"
                     }
                   ],
-                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nLists existing sessions known to the agent.\n\nThis method is only available if the agent advertises the `listSessions` capability.\n\nThe agent should return metadata about sessions with optional filtering and pagination support.",
+                  "description": "Lists existing sessions known to the agent.\n\nThis method is only available if the agent advertises the `sessionCapabilities.list` capability.\n\nThe agent should return metadata about sessions with optional filtering and pagination support.",
                   "title": "ListSessionsRequest"
                 },
                 {
@@ -1877,7 +1877,7 @@
       "x-side": "client"
     },
     "ListSessionsRequest": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for listing existing sessions.\n\nOnly available if the Agent supports the `listSessions` capability.",
+      "description": "Request parameters for listing existing sessions.\n\nOnly available if the Agent supports the `sessionCapabilities.list` capability.",
       "properties": {
         "_meta": {
           "additionalProperties": true,
@@ -1898,7 +1898,7 @@
       "x-side": "agent"
     },
     "ListSessionsResponse": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nResponse from listing sessions.",
+      "description": "Response from listing sessions.",
       "properties": {
         "_meta": {
           "additionalProperties": true,
@@ -2890,7 +2890,7 @@
               "type": "null"
             }
           ],
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nWhether the agent supports `session/list`."
+          "description": "Whether the agent supports `session/list`."
         },
         "resume": {
           "anyOf": [
@@ -3171,7 +3171,7 @@
       "type": "string"
     },
     "SessionInfo": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nInformation about a session returned by session/list",
+      "description": "Information about a session returned by session/list",
       "properties": {
         "_meta": {
           "additionalProperties": true,
@@ -3222,7 +3222,7 @@
       "type": "object"
     },
     "SessionListCapabilities": {
-      "description": "Capabilities for the `session/list` method.\n\nBy supplying `{}` it means that the agent supports listing of sessions.\n\nFurther capabilities can be added in the future for other means of filtering or searching the list.",
+      "description": "Capabilities for the `session/list` method.\n\nBy supplying `{}` it means that the agent supports listing of sessions.",
       "properties": {
         "_meta": {
           "additionalProperties": true,

@@ -355,25 +355,17 @@ See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/sess
 <a id="session-list"></a>
 ### <span class="font-mono">session/list</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 Lists existing sessions known to the agent.
 
-This method is only available if the agent advertises the `listSessions` capability.
+This method is only available if the agent advertises the `sessionCapabilities.list` capability.
 
 The agent should return metadata about sessions with optional filtering and pagination support.
 
 #### <span class="font-mono">ListSessionsRequest</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 Request parameters for listing existing sessions.
 
-Only available if the Agent supports the `listSessions` capability.
+Only available if the Agent supports the `sessionCapabilities.list` capability.
 
 **Type:** Object
 
@@ -395,10 +387,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 </ResponseField>
 
 #### <span class="font-mono">ListSessionsResponse</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Response from listing sessions.
 
@@ -3372,12 +3360,7 @@ Whether the agent supports `session/fork`.
 
 </ResponseField>
 <ResponseField name="list" type={<><span><a href="#sessionlistcapabilities">SessionListCapabilities</a></span><span> | null</span></>} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Whether the agent supports `session/list`.
-
+  Whether the agent supports `session/list`.
 </ResponseField>
 <ResponseField name="resume" type={<><span><a href="#sessionresumecapabilities">SessionResumeCapabilities</a></span><span> | null</span></>} >
   **UNSTABLE**
@@ -3659,10 +3642,6 @@ See protocol docs: [Session ID](https://agentclientprotocol.com/protocol/session
 
 ## <span class="font-mono">SessionInfo</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 Information about a session returned by session/list
 
 **Type:** Object
@@ -3721,8 +3700,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 Capabilities for the `session/list` method.
 
 By supplying `\{\}` it means that the agent supports listing of sessions.
-
-Further capabilities can be added in the future for other means of filtering or searching the list.
 
 **Type:** Object
 

@@ -1380,14 +1380,9 @@ impl CloseSessionResponse {
 
 // List sessions
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Request parameters for listing existing sessions.
 ///
-/// Only available if the Agent supports the `listSessions` capability.
-#[cfg(feature = "unstable_session_list")]
+/// Only available if the Agent supports the `sessionCapabilities.list` capability.
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_LIST_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -1408,7 +1403,6 @@ pub struct ListSessionsRequest {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_session_list")]
 impl ListSessionsRequest {
     #[must_use]
     pub fn new() -> Self {
@@ -1441,12 +1435,7 @@ impl ListSessionsRequest {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Response from listing sessions.
-#[cfg(feature = "unstable_session_list")]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_LIST_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -1467,7 +1456,6 @@ pub struct ListSessionsResponse {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_session_list")]
 impl ListSessionsResponse {
     #[must_use]
     pub fn new(sessions: Vec<SessionInfo>) -> Self {
@@ -1496,12 +1484,7 @@ impl ListSessionsResponse {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Information about a session returned by session/list
-#[cfg(feature = "unstable_session_list")]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -1525,7 +1508,6 @@ pub struct SessionInfo {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_session_list")]
 impl SessionInfo {
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>, cwd: impl Into<PathBuf>) -> Self {
@@ -3133,12 +3115,7 @@ impl AgentCapabilities {
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct SessionCapabilities {
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Whether the agent supports `session/list`.
-    #[cfg(feature = "unstable_session_list")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub list: Option<SessionListCapabilities>,
     /// **UNSTABLE**
@@ -3180,7 +3157,6 @@ impl SessionCapabilities {
         Self::default()
     }
 
-    #[cfg(feature = "unstable_session_list")]
     /// Whether the agent supports `session/list`.
     #[must_use]
     pub fn list(mut self, list: impl IntoOption<SessionListCapabilities>) -> Self {
@@ -3227,9 +3203,6 @@ impl SessionCapabilities {
 /// Capabilities for the `session/list` method.
 ///
 /// By supplying `{}` it means that the agent supports listing of sessions.
-///
-/// Further capabilities can be added in the future for other means of filtering or searching the list.
-#[cfg(feature = "unstable_session_list")]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct SessionListCapabilities {
@@ -3242,7 +3215,6 @@ pub struct SessionListCapabilities {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_session_list")]
 impl SessionListCapabilities {
     #[must_use]
     pub fn new() -> Self {
@@ -3536,7 +3508,6 @@ pub struct AgentMethodNames {
     #[cfg(feature = "unstable_session_model")]
     pub session_set_model: &'static str,
     /// Method for listing existing sessions.
-    #[cfg(feature = "unstable_session_list")]
     pub session_list: &'static str,
     /// Method for forking an existing session.
     #[cfg(feature = "unstable_session_fork")]
@@ -3561,7 +3532,6 @@ pub const AGENT_METHOD_NAMES: AgentMethodNames = AgentMethodNames {
     session_cancel: SESSION_CANCEL_METHOD_NAME,
     #[cfg(feature = "unstable_session_model")]
     session_set_model: SESSION_SET_MODEL_METHOD_NAME,
-    #[cfg(feature = "unstable_session_list")]
     session_list: SESSION_LIST_METHOD_NAME,
     #[cfg(feature = "unstable_session_fork")]
     session_fork: SESSION_FORK_METHOD_NAME,
@@ -3591,7 +3561,6 @@ pub(crate) const SESSION_CANCEL_METHOD_NAME: &str = "session/cancel";
 #[cfg(feature = "unstable_session_model")]
 pub(crate) const SESSION_SET_MODEL_METHOD_NAME: &str = "session/set_model";
 /// Method name for listing existing sessions.
-#[cfg(feature = "unstable_session_list")]
 pub(crate) const SESSION_LIST_METHOD_NAME: &str = "session/list";
 /// Method name for forking an existing session.
 #[cfg(feature = "unstable_session_fork")]
@@ -3659,14 +3628,9 @@ pub enum ClientRequest {
     ///
     /// See protocol docs: [Loading Sessions](https://agentclientprotocol.com/protocol/session-setup#loading-sessions)
     LoadSessionRequest(LoadSessionRequest),
-    #[cfg(feature = "unstable_session_list")]
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Lists existing sessions known to the agent.
     ///
-    /// This method is only available if the agent advertises the `listSessions` capability.
+    /// This method is only available if the agent advertises the `sessionCapabilities.list` capability.
     ///
     /// The agent should return metadata about sessions with optional filtering and pagination support.
     ListSessionsRequest(ListSessionsRequest),
@@ -3760,7 +3724,6 @@ impl ClientRequest {
             Self::AuthenticateRequest(_) => AGENT_METHOD_NAMES.authenticate,
             Self::NewSessionRequest(_) => AGENT_METHOD_NAMES.session_new,
             Self::LoadSessionRequest(_) => AGENT_METHOD_NAMES.session_load,
-            #[cfg(feature = "unstable_session_list")]
             Self::ListSessionsRequest(_) => AGENT_METHOD_NAMES.session_list,
             #[cfg(feature = "unstable_session_fork")]
             Self::ForkSessionRequest(_) => AGENT_METHOD_NAMES.session_fork,
@@ -3794,7 +3757,6 @@ pub enum AgentResponse {
     AuthenticateResponse(#[serde(default)] AuthenticateResponse),
     NewSessionResponse(NewSessionResponse),
     LoadSessionResponse(#[serde(default)] LoadSessionResponse),
-    #[cfg(feature = "unstable_session_list")]
     ListSessionsResponse(ListSessionsResponse),
     #[cfg(feature = "unstable_session_fork")]
     ForkSessionResponse(ForkSessionResponse),

@@ -18,8 +18,6 @@ unstable = [
     "unstable_auth_methods",
     "unstable_cancel_request",
     "unstable_session_fork",
-    "unstable_session_info_update",
-    "unstable_session_list",
     "unstable_session_model",
     "unstable_session_resume",
     "unstable_session_close",
@@ -30,8 +28,6 @@ unstable = [
 unstable_auth_methods = []
 unstable_cancel_request = []
 unstable_session_fork = []
-unstable_session_info_update = []
-unstable_session_list = []
 unstable_session_model = []
 unstable_session_resume = []
 unstable_session_close = []
