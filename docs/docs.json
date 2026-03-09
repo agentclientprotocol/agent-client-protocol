@@ -123,7 +123,8 @@
               "rfds/diff-delete",
               "rfds/boolean-config-option",
               "rfds/elicitation",
-              "rfds/session-stop"
+              "rfds/session-stop",
+              "rfds/turn-complete-signal"
             ]
           },
           {
