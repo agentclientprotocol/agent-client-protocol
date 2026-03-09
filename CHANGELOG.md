@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.11.1](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.11.0...v0.11.1) - 2026-03-09
+
+### Added
+
+- *(unstable)* Remove unused auth_methods from Error type ([#708](https://github.com/agentclientprotocol/agent-client-protocol/pull/708))
+- Stabilize session/list and session_info_update ([#705](https://github.com/agentclientprotocol/agent-client-protocol/pull/705))
+- *(unstable)* Rename unstable session/stop method to session/close ([#701](https://github.com/agentclientprotocol/agent-client-protocol/pull/701))
+- *(unstable)* Add config option type for boolean on/off toggles ([#576](https://github.com/agentclientprotocol/agent-client-protocol/pull/576))
+
+### Other
+
+- *(rfd)* Move initial registry RFD to completed ([#706](https://github.com/agentclientprotocol/agent-client-protocol/pull/706))
+- *(deps)* bump quote from 1.0.44 to 1.0.45 in the minor group ([#698](https://github.com/agentclientprotocol/agent-client-protocol/pull/698))
+
 ## [0.11.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.10.8...v0.11.0) - 2026-03-04
 
 ### Added
