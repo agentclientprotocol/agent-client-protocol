@@ -128,7 +128,7 @@
           },
           {
             "group": "Preview",
-            "pages": ["rfds/acp-agent-registry"]
+            "pages": []
           },
           {
             "group": "Completed",
@@ -136,7 +136,8 @@
               "rfds/introduce-rfd-process",
               "rfds/session-config-options",
               "rfds/session-list",
-              "rfds/session-info-update"
+              "rfds/session-info-update",
+              "rfds/acp-agent-registry"
             ]
           }
         ]

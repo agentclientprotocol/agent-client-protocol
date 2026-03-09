@@ -4490,7 +4490,7 @@ mod test_serialization {
         assert_eq!(json, json!({ "currentValue": true }));
 
         let deserialized: SessionConfigBoolean = serde_json::from_value(json).unwrap();
-        assert_eq!(deserialized.current_value, true);
+        assert!(deserialized.current_value);
     }
 
     #[cfg(feature = "unstable_boolean_config")]
