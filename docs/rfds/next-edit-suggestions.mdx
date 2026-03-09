@@ -36,13 +36,15 @@ During `initialize`, the agent includes a `nes` field in its capabilities:
   "capabilities": {
     "nes": {
       "events": {
-        "didOpen": {},
-        "didChange": {
-          "syncKind": "incremental"
-        },
-        "didClose": {},
-        "didSave": {},
-        "didFocus": {}
+        "document": {
+          "didOpen": {},
+          "didChange": {
+            "syncKind": "incremental"
+          },
+          "didClose": {},
+          "didSave": {},
+          "didFocus": {}
+        }
       },
       "context": {
         "recentFiles": {
@@ -133,7 +135,7 @@ The negotiated encoding applies to all `Position` and `Range` values exchanged w
 
 ### Events
 
-Events are fire-and-forget notifications from client to agent. The client sends them only if the corresponding key is present in the agent's advertised `events` capability (e.g. `nes.events` for NES).
+Events are fire-and-forget notifications from client to agent. The client sends them only if the corresponding key is present in the agent's advertised `events` capability (e.g. `nes.events.document` for NES).
 
 #### `document/didOpen`
 
