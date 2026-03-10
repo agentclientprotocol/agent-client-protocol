@@ -92,6 +92,7 @@
             "group": "Libraries",
             "pages": [
               "libraries/kotlin",
+              "libraries/java",
               "libraries/python",
               "libraries/rust",
               "libraries/typescript",
