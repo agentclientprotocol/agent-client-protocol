@@ -23,7 +23,7 @@ To get started, make sure you have the following installed:
 - [Rust](https://www.rust-lang.org/)
 - [Node.js](https://nodejs.org/)
 
-The schema files in the `/schema` directory are generated from the Rust code in the `rust` directory. You can always generate the latest schema files by running `npm run generate` which will also format the files for you.
+The schema files in the `/schema` directory are generated from the Rust code in the `src` directory. You can always generate the latest schema files by running `npm run generate` which will also format the files for you.
 
 Spellchecking is done via `npm run spellcheck`.
 

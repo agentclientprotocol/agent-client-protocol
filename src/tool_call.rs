@@ -56,6 +56,7 @@ pub struct ToolCall {
 }
 
 impl ToolCall {
+    #[must_use]
     pub fn new(tool_call_id: impl Into<ToolCallId>, title: impl Into<String>) -> Self {
         Self {
             tool_call_id: tool_call_id.into(),
@@ -361,6 +362,7 @@ impl From<ToolCall> for ToolCallUpdate {
 pub struct ToolCallId(pub Arc<str>);
 
 impl ToolCallId {
+    #[must_use]
     pub fn new(id: impl Into<Arc<str>>) -> Self {
         Self(id.into())
     }
@@ -487,6 +489,7 @@ pub struct Content {
 }
 
 impl Content {
+    #[must_use]
     pub fn new(content: impl Into<ContentBlock>) -> Self {
         Self {
             content: content.into(),
@@ -571,6 +574,7 @@ pub struct Diff {
 }
 
 impl Diff {
+    #[must_use]
     pub fn new(path: impl Into<PathBuf>, new_text: impl Into<String>) -> Self {
         Self {
             path: path.into(),
@@ -624,6 +628,7 @@ pub struct ToolCallLocation {
 }
 
 impl ToolCallLocation {
+    #[must_use]
     pub fn new(path: impl Into<PathBuf>) -> Self {
         Self {
             path: path.into(),

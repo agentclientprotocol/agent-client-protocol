@@ -44,6 +44,7 @@ impl Error {
     /// Creates a new error with the given code and message.
     ///
     /// The code parameter can be an `ErrorCode` constant or a tuple of (code, message).
+    #[must_use]
     pub fn new(code: i32, message: impl Into<String>) -> Self {
         Error {
             code: code.into(),
@@ -126,6 +127,7 @@ impl Error {
     /// Converts a standard error into an internal JSON-RPC error.
     ///
     /// The error's string representation is included as additional data.
+    #[must_use]
     pub fn into_internal_error(err: impl std::error::Error) -> Self {
         Error::internal_error().data(err.to_string())
     }

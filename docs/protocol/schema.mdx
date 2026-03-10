@@ -196,6 +196,64 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
   The ID of the session to cancel operations for.
 </ResponseField>
 
+<a id="session-list"></a>
+### <span class="font-mono">session/list</span>
+
+Lists existing sessions known to the agent.
+
+This method is only available if the agent advertises the `sessionCapabilities.list` capability.
+
+The agent should return metadata about sessions with optional filtering and pagination support.
+
+#### <span class="font-mono">ListSessionsRequest</span>
+
+Request parameters for listing existing sessions.
+
+Only available if the Agent supports the `sessionCapabilities.list` capability.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="cursor" type={"string | null"} >
+  Opaque cursor token from a previous response's nextCursor field for cursor-based pagination
+</ResponseField>
+<ResponseField name="cwd" type={"string | null"} >
+  Filter sessions by working directory. Must be an absolute path.
+</ResponseField>
+
+#### <span class="font-mono">ListSessionsResponse</span>
+
+Response from listing sessions.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="nextCursor" type={"string | null"} >
+  Opaque cursor token. If present, pass this in the next request's cursor parameter
+to fetch the next page. If absent, there are no more results.
+</ResponseField>
+<ResponseField name="sessions" type={<a href="#sessioninfo">SessionInfo[]</a>} required>
+  Array of session information objects
+</ResponseField>
+
 <a id="session-load"></a>
 ### <span class="font-mono">session/load</span>
 
@@ -520,7 +578,14 @@ Response to `session/set_mode` method.
 
 **Properties:**
 
-<ResponseField name="_meta" type={"object | null"}></ResponseField>
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
 
 ## Client
 
@@ -852,13 +917,13 @@ This method can be helpful when implementing command timeouts which terminate
 the command as soon as elapsed, and then get the final output so it can be sent
 to the model.
 
-Note: `terminal/release` when `TerminalId` is no longer needed.
+Note: Call `terminal/release` when `TerminalId` is no longer needed.
 
 See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)
 
-#### <span class="font-mono">KillTerminalCommandRequest</span>
+#### <span class="font-mono">KillTerminalRequest</span>
 
-Request to kill a terminal command without releasing the terminal.
+Request to kill a terminal without releasing it.
 
 **Type:** Object
 
@@ -879,9 +944,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
   The ID of the terminal to kill.
 </ResponseField>
 
-#### <span class="font-mono">KillTerminalCommandResponse</span>
+#### <span class="font-mono">KillTerminalResponse</span>
 
-Response to terminal/kill command method
+Response to `terminal/kill` method
 
 **Type:** Object
 
@@ -1162,6 +1227,41 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
 Describes an available authentication method.
 
+The `type` field acts as the discriminator in the serialized JSON form.
+When no `type` is present, the method is treated as `agent`.
+
+Agent handles authentication itself.
+
+This is the default when no `type` is specified.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="description" type={"string | null"} >
+  Optional description providing more details about this authentication method.
+</ResponseField>
+<ResponseField name="id" type={"string"} required>
+  Unique identifier for this authentication method.
+</ResponseField>
+<ResponseField name="name" type={"string"} required>
+  Human-readable name of the authentication method.
+</ResponseField>
+
+## <span class="font-mono">AuthMethodAgent</span>
+
+Agent handles authentication itself.
+
+This is the default authentication method type.
+
 **Type:** Object
 
 **Properties:**
@@ -1214,12 +1314,11 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
 The input specification for a command.
 
-**Type:** Union
-
-<ResponseField name="unstructured">
 All text that was typed after the command name is provided as input.
 
-<Expandable title="Properties">
+**Type:** Object
+
+**Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1231,9 +1330,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 </ResponseField>
 <ResponseField name="hint" type={"string"} required>
   A hint to display when the input hasn't been provided yet
-</ResponseField>
-
-</Expandable>
 </ResponseField>
 
 ## <span class="font-mono">AvailableCommandsUpdate</span>
@@ -1300,7 +1396,7 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
 </ResponseField>
-<ResponseField name="fs" type={<a href="#filesystemcapability">FileSystemCapability</a>} >
+<ResponseField name="fs" type={<a href="#filesystemcapabilities">FileSystemCapabilities</a>} >
   File system capabilities supported by the client.
 Determines which file operations the agent can request.
 
@@ -1395,6 +1491,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 <ResponseField name="text" type={"string"} required>
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"text"`.
 </ResponseField>
 
 </Expandable>
@@ -1422,6 +1519,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 <ResponseField name="mimeType" type={"string"} required>
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"image"`.
 </ResponseField>
 <ResponseField name="uri" type={"string | null"} >
 </ResponseField>
@@ -1451,6 +1549,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 <ResponseField name="mimeType" type={"string"} required>
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"audio"`.
 </ResponseField>
 
 </Expandable>
@@ -1484,6 +1583,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 <ResponseField name="title" type={"string | null"} >
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"resource_link"`.
 </ResponseField>
 <ResponseField name="uri" type={"string"} required>
 </ResponseField>
@@ -1513,6 +1613,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 <ResponseField name="resource" type={<a href="#embeddedresourceresource">EmbeddedResourceResource</a>} required>
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"resource"`.
 </ResponseField>
 
 </Expandable>
@@ -1781,9 +1882,8 @@ protocol compatibility.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
-## <span class="font-mono">FileSystemCapability</span>
+## <span class="font-mono">FileSystemCapabilities</span>
 
-Filesystem capabilities supported by the client.
 File system capabilities that a client may support.
 
 See protocol docs: [FileSystem](https://agentclientprotocol.com/protocol/initialization#filesystem)
@@ -1957,6 +2057,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
   Human-readable name identifying this MCP server.
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"http"`.
 </ResponseField>
 <ResponseField name="url" type={"string"} required>
   URL to the MCP server.
@@ -1987,6 +2088,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
   Human-readable name identifying this MCP server.
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"sse"`.
 </ResponseField>
 <ResponseField name="url" type={"string"} required>
   URL to the MCP server.
@@ -2373,7 +2475,9 @@ See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/promp
 
 <Expandable title="Properties">
 
-<ResponseField name="outcome" type={"string"} required></ResponseField>
+<ResponseField name="outcome" type={"string"} required>
+  The discriminator value. Must be `"cancelled"`.
+</ResponseField>
 
 </Expandable>
 </ResponseField>
@@ -2395,6 +2499,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
   The ID of the option the user selected.
 </ResponseField>
 <ResponseField name="outcome" type={"string"} required>
+  The discriminator value. Must be `"selected"`.
 </ResponseField>
 
 </Expandable>
@@ -2486,6 +2591,9 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
 </ResponseField>
+<ResponseField name="list" type={<><span><a href="#sessionlistcapabilities">SessionListCapabilities</a></span><span> | null</span></>} >
+  Whether the agent supports `session/list`.
+</ResponseField>
 
 ## <span class="font-mono">SessionConfigGroupId</span>
 
@@ -2503,12 +2611,11 @@ Unique identifier for a session configuration option.
 
 A session configuration option selector and its current state.
 
-**Type:** Union
-
-<ResponseField name="select" type="object">
 Single-value selector (dropdown).
 
-<Expandable title="Properties">
+**Type:** Object
+
+**Properties:**
 
 <ResponseField
   name="currentValue"
@@ -2523,10 +2630,6 @@ Single-value selector (dropdown).
   required
 >
   The set of selectable options.
-</ResponseField>
-<ResponseField name="type" type={"string"} required></ResponseField>
-
-</Expandable>
 </ResponseField>
 
 ## <span class="font-mono">SessionConfigOptionCategory</span>
@@ -2665,6 +2768,80 @@ See protocol docs: [Session ID](https://agentclientprotocol.com/protocol/session
 
 **Type:** `string`
 
+## <span class="font-mono">SessionInfo</span>
+
+Information about a session returned by session/list
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="cwd" type={"string"} required>
+  The working directory for this session. Must be an absolute path.
+</ResponseField>
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  Unique identifier for the session
+</ResponseField>
+<ResponseField name="title" type={"string | null"} >
+  Human-readable title for the session
+</ResponseField>
+<ResponseField name="updatedAt" type={"string | null"} >
+  ISO 8601 timestamp of last activity
+</ResponseField>
+
+## <span class="font-mono">SessionInfoUpdate</span>
+
+Update to session metadata. All fields are optional to support partial updates.
+
+Agents send this notification to update session information like title or custom metadata.
+This allows clients to display dynamic session names and track session state changes.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="title" type={"string | null"} >
+  Human-readable title for the session. Set to null to clear.
+</ResponseField>
+<ResponseField name="updatedAt" type={"string | null"} >
+  ISO 8601 timestamp of last activity. Set to null to clear.
+</ResponseField>
+
+## <span class="font-mono">SessionListCapabilities</span>
+
+Capabilities for the `session/list` method.
+
+By supplying `\{\}` it means that the agent supports listing of sessions.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+
 ## <span class="font-mono">SessionMode</span>
 
 A mode the agent can operate in.
@@ -2746,6 +2923,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
   A single item of content
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
+  The discriminator value. Must be `"user_message_chunk"`.
 </ResponseField>
 
 </Expandable>
@@ -2768,6 +2946,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
   A single item of content
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
+  The discriminator value. Must be `"agent_message_chunk"`.
 </ResponseField>
 
 </Expandable>
@@ -2790,6 +2969,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
   A single item of content
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
+  The discriminator value. Must be `"agent_thought_chunk"`.
 </ResponseField>
 
 </Expandable>
@@ -2826,6 +3006,7 @@ Enables "follow-along" features in clients.
   Raw output returned by the tool.
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
+  The discriminator value. Must be `"tool_call"`.
 </ResponseField>
 <ResponseField name="status" type={<a href="#toolcallstatus">ToolCallStatus</a>} >
   Current execution status of the tool call.
@@ -2869,6 +3050,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
   Update the raw output.
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
+  The discriminator value. Must be `"tool_call_update"`.
 </ResponseField>
 <ResponseField name="status" type={<><span><a href="#toolcallstatus">ToolCallStatus</a></span><span> | null</span></>} >
   Update the execution status.
@@ -2905,6 +3087,7 @@ with their current status. The client replaces the entire plan with each update.
 
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
+  The discriminator value. Must be `"plan"`.
 </ResponseField>
 
 </Expandable>
@@ -2927,6 +3110,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
   Commands the agent can execute
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
+  The discriminator value. Must be `"available_commands_update"`.
 </ResponseField>
 
 </Expandable>
@@ -2951,6 +3135,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
   The ID of the current mode
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
+  The discriminator value. Must be `"current_mode_update"`.
 </ResponseField>
 
 </Expandable>
@@ -2973,6 +3158,33 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
   The full set of configuration options and their current values.
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
+  The discriminator value. Must be `"config_option_update"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="session_info_update" type="object">
+Session metadata has been updated (title, timestamps, custom metadata)
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="sessionUpdate" type={"string"} required>
+  The discriminator value. Must be `"session_info_update"`.
+</ResponseField>
+<ResponseField name="title" type={"string | null"} >
+  Human-readable title for the session. Set to null to clear.
+</ResponseField>
+<ResponseField name="updatedAt" type={"string | null"} >
+  ISO 8601 timestamp of last activity. Set to null to clear.
 </ResponseField>
 
 </Expandable>
@@ -3184,6 +3396,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
   The actual content block.
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"content"`.
 </ResponseField>
 
 </Expandable>
@@ -3212,6 +3425,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
   The file path being modified.
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"diff"`.
 </ResponseField>
 
 </Expandable>
@@ -3237,6 +3451,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 <ResponseField name="terminalId" type={"string"} required>
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"terminal"`.
 </ResponseField>
 
 </Expandable>

@@ -65,6 +65,7 @@
               "protocol/overview",
               "protocol/initialization",
               "protocol/session-setup",
+              "protocol/session-list",
               "protocol/prompt-turn",
               "protocol/content",
               "protocol/tool-calls",
@@ -82,7 +83,6 @@
                 "hidden": true,
                 "pages": [
                   "protocol/draft/cancellation",
-                  "protocol/draft/session-list",
                   "protocol/draft/schema"
                 ]
               }
@@ -92,6 +92,7 @@
             "group": "Libraries",
             "pages": [
               "libraries/kotlin",
+              "libraries/java",
               "libraries/python",
               "libraries/rust",
               "libraries/typescript",
@@ -120,22 +121,24 @@
               "rfds/logout-method",
               "rfds/session-delete",
               "rfds/message-id",
-              "rfds/diff-delete"
+              "rfds/diff-delete",
+              "rfds/boolean-config-option",
+              "rfds/elicitation",
+              "rfds/session-close"
             ]
           },
           {
             "group": "Preview",
-            "pages": [
-              "rfds/acp-agent-registry",
-              "rfds/session-list",
-              "rfds/session-info-update"
-            ]
+            "pages": []
           },
           {
             "group": "Completed",
             "pages": [
               "rfds/introduce-rfd-process",
-              "rfds/session-config-options"
+              "rfds/session-config-options",
+              "rfds/session-list",
+              "rfds/session-info-update",
+              "rfds/acp-agent-registry"
             ]
           }
         ]
@@ -203,6 +206,11 @@
       "source": "/registry",
       "destination": "/get-started/registry",
       "permanent": false
+    },
+    {
+      "source": "/rfds/session-stop",
+      "destination": "/rfds/session-close",
+      "permanent": true
     }
   ]
 }
