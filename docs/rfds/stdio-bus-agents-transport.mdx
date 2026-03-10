@@ -1,0 +1,29 @@
+---
+title: "Add stdio Bus to ACP ecosystem"
+---
+
+## Elevator pitch
+
+Add stdio Bus to the ACP ecosystem documentation — a deterministic stdio-based kernel written in C that provides transport-level routing for ACP/MCP-style agent protocols.
+
+## Status quo
+
+Currently, ACP agents and clients communicate through various transport mechanisms, but there is no standardized low-level stdio-based routing kernel in the registry. Developers building agent infrastructure need a reliable, deterministic transport layer for stdio-based protocols.
+
+## What we propose to do about it
+
+Add stdio Bus to three documentation sections:
+
+1. **Registry** — new card with logo and version (2.0.3)
+2. **Clients/Connectors** — as a transport-level routing solution
+3. **Agents** — OpenAI Agent via stdio Bus worker adapter
+
+## Shiny future
+
+Developers will have access to a C-based deterministic kernel for routing ACP/MCP protocols, enabling more reliable stdio-based agent communication pipelines.
+
+## Links
+
+- https://stdiobus.com
+- https://github.com/stdiobus/stdiobus
+- https://github.com/stdiobus/workers-registry
