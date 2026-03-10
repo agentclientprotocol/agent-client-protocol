@@ -124,7 +124,8 @@
               "rfds/diff-delete",
               "rfds/boolean-config-option",
               "rfds/elicitation",
-              "rfds/session-close"
+              "rfds/session-close",
+              "rfds/next-edit-suggestions"
             ]
           },
           {
