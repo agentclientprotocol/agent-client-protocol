@@ -153,6 +153,10 @@
         ]
       },
       {
+        "tab": "Publications",
+        "pages": ["publications"]
+      },
+      {
         "tab": "Updates",
         "pages": ["updates"]
       },
