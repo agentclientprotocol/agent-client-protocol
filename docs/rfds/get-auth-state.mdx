@@ -8,7 +8,7 @@ title: "Agent Authentication State Query"
 
 > What are you proposing to change?
 
-Add a `getAuthState` method and corresponding capability that allows clients to query the agent's current authentication state. This lets clients determine whether the agent is already configured with valid credentials or requires authorization before creating a session, without relying on the ambiguous error behavior of `session/new`.
+Add an `auth/status` method and corresponding capability that allows clients to query the agent's current authentication state. This lets clients determine whether the agent is already configured with valid credentials or requires authorization before creating a session, without relying on the ambiguous error behavior of `session/new`.
 
 ## Status quo
 
@@ -45,7 +45,7 @@ Clients will be able to:
 
 ### Intended flow
 
-The client calls `initialize`, inspects capabilities to confirm `getAuthState` support, then queries auth state before deciding how to proceed.
+The client calls `initialize`, inspects capabilities to confirm `auth/status` support, then queries auth state before deciding how to proceed.
 
 ```mermaid
 sequenceDiagram
@@ -53,11 +53,11 @@ sequenceDiagram
     participant Agent
 
     Client->>Agent: initialize
-    Note right of Agent: Agent reports capabilities,<br/>including getAuthState support
-    Agent-->>Client: initialize response<br/>(agentCapabilities.getAuthState)
+    Note right of Agent: Agent reports capabilities,<br/>including auth/status support
+    Agent-->>Client: initialize response<br/>(agentCapabilities.auth.status)
 
-    Client->>Agent: getAuthState
-    Agent-->>Client: getAuthState response<br/>(authenticated, authMethods)
+    Client->>Agent: auth/status
+    Agent-->>Client: auth/status response<br/>(authenticated, authMethods)
 
     alt Authenticated
         Client->>Agent: session/new
@@ -68,23 +68,23 @@ sequenceDiagram
     end
 ```
 
-1. **Initialization**: The client calls `initialize`. The agent responds with capabilities, including `getAuthState` if supported.
-2. **Auth state query**: The client calls `getAuthState`. The agent inspects its local configuration, stored credentials, or environment to determine the current auth state.
+1. **Initialization**: The client calls `initialize`. The agent responds with capabilities, including `auth/status` support via `agentCapabilities.auth`.
+2. **Auth state query**: The client calls `auth/status`. The agent inspects its local configuration, stored credentials, or environment to determine the current auth state.
 3. **Client-side decision**: Based on the response, the client either proceeds to session creation or initiates an authorization flow first.
 
 ### Capability advertisement
 
-The agent advertises support for the `getAuthState` method via a new capability in `agentCapabilities`:
+The agent advertises support for the `auth/status` method via the existing `auth` capability in `agentCapabilities`:
 
 ```typescript
-interface AgentCapabilities {
-  // ... existing fields ...
+interface AuthCapabilities {
+  // ... existing fields (e.g., terminal) ...
 
   /**
-   * Auth state query support.
-   * If true, the agent supports the getAuthState method.
+   * Auth status query support.
+   * If true, the agent supports the auth/status method.
    */
-  getAuthState?: boolean;
+  status?: boolean;
 }
 ```
 
@@ -101,14 +101,16 @@ interface AgentCapabilities {
       "version": "2.0.0"
     },
     "agentCapabilities": {
-      "getAuthState": true,
+      "auth": {
+        "status": true
+      },
       "sessionCapabilities": {}
     }
   }
 }
 ```
 
-### `getAuthState` method
+### `auth/status` method
 
 A method that can be called after initialization to query the agent's current authentication state.
 
@@ -133,12 +135,12 @@ interface AuthMethodState {
   _meta?: Record<string, unknown>;
 }
 
-interface GetAuthStateRequest {
+interface AuthStatusRequest {
   /** Extension metadata */
   _meta?: Record<string, unknown>;
 }
 
-interface GetAuthStateResponse {
+interface AuthStatusResponse {
   /**
    * Whether the agent has credentials configured.
    * true means credentials are present (validity is not guaranteed).
@@ -189,8 +191,8 @@ interface GetAuthStateResponse {
       "required": ["authMethodId", "authenticated"],
       "type": "object"
     },
-    "GetAuthStateResponse": {
-      "description": "Response to getAuthState method.",
+    "AuthStatusResponse": {
+      "description": "Response to auth/status method.",
       "properties": {
         "authenticated": {
           "type": "boolean",
@@ -221,18 +223,18 @@ interface GetAuthStateResponse {
 
 #### Example Exchange
 
-**getAuthState Request:**
+**auth/status Request:**
 
 ```json
 {
   "jsonrpc": "2.0",
   "id": 1,
-  "method": "getAuthState",
+  "method": "auth/status",
   "params": {}
 }
 ```
 
-**getAuthState Response (authenticated):**
+**auth/status Response (authenticated):**
 
 ```json
 {
@@ -251,7 +253,7 @@ interface GetAuthStateResponse {
 }
 ```
 
-**getAuthState Response (unauthenticated):**
+**auth/status Response (unauthenticated):**
 
 ```json
 {
@@ -266,13 +268,13 @@ interface GetAuthStateResponse {
 
 #### Behavior
 
-1. **Capability advertisement**: The agent SHOULD include `getAuthState` in `agentCapabilities` if it supports the `getAuthState` method. Clients MUST check for this capability before calling the method.
+1. **Capability advertisement**: The agent SHOULD include `auth.status` in `agentCapabilities` if it supports the `auth/status` method. Clients MUST check for this capability before calling the method.
 
-2. **Timing**: The `getAuthState` method MUST be callable after `initialize`. It MAY be called multiple times (e.g., after `authenticate`, to re-check state).
+2. **Timing**: The `auth/status` method MUST be callable after `initialize`. It MAY be called multiple times (e.g., after `authenticate`, to re-check state).
 
 3. **Local checks only**: The agent MAY determine auth state based on locally available information (config files, environment variables, stored tokens) or by making external API calls. `authenticated: true` means credentials are present, NOT that they are guaranteed to be valid.
 
-4. **No side effects**: Calling `getAuthState` MUST NOT modify any agent state. It is a pure query.
+4. **No side effects**: Calling `auth/status` MUST NOT modify any agent state. It is a pure query.
 
 5. **Per-auth-method breakdown**: The `authMethods` field is optional. Agents that support multiple authentication methods MAY include per-method state to help clients make fine-grained decisions.
 
@@ -300,5 +302,6 @@ Agents may obtain credentials from many sources: config files, keychains, OAuth 
 
 ## Revision history
 
+- 2026-03-10: Rename `getAuthState` to `auth/status`, nest capability under `agentCapabilities.auth`
 - 2026-03-07: Address review feedback, replace per-provider breakdown with per-auth-method
 - 2026-03-05: Initial draft — preliminary proposal to start discussion
