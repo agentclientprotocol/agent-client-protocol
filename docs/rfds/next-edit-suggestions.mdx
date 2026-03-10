@@ -483,7 +483,7 @@ Action suggestions additionally contain:
 - `"replaced"` — the suggestion was superseded by a newer suggestion before the user could act on it.
 - `"cancelled"` — the request was cancelled before the agent returned a response (e.g. the user typed quickly and the previous request became stale).
 
-The `reason` field is optional. If omitted, the agent should treat it as `"rejected"`. Providing granular reasons allows agents to improve their models — for example, a `"replaced"` suggestion carries different training signal than an explicit `"rejected"`.
+The `reason` field is optional. Providing granular reasons allows agents to improve their models — for example, a `"replaced"` suggestion carries different training signal than an explicit `"rejected"`.
 
 ### NES session start
 
