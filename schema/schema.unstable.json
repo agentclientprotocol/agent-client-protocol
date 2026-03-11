@@ -2896,7 +2896,7 @@
           ],
           "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nWhether the agent supports `session/resume`."
         },
-        "stop": {
+        "close": {
           "anyOf": [
             {
               "$ref": "#/$defs/SessionCloseCapabilities"

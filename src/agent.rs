@@ -3141,7 +3141,7 @@ pub struct SessionCapabilities {
     /// Whether the agent supports `session/close`.
     #[cfg(feature = "unstable_session_close")]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub stop: Option<SessionCloseCapabilities>,
+    pub close: Option<SessionCloseCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -3183,8 +3183,8 @@ impl SessionCapabilities {
     #[cfg(feature = "unstable_session_close")]
     /// Whether the agent supports `session/close`.
     #[must_use]
-    pub fn stop(mut self, stop: impl IntoOption<SessionCloseCapabilities>) -> Self {
-        self.stop = stop.into_option();
+    pub fn close(mut self, close: impl IntoOption<SessionCloseCapabilities>) -> Self {
+        self.close = close.into_option();
         self
     }
 
