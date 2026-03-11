@@ -379,6 +379,22 @@ impl AuthMethod {
             Self::Terminal(t) => t.description.as_deref(),
         }
     }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(&self) -> Option<&Meta> {
+        match self {
+            Self::Agent(a) => a.meta.as_ref(),
+            #[cfg(feature = "unstable_auth_methods")]
+            Self::EnvVar(e) => e.meta.as_ref(),
+            #[cfg(feature = "unstable_auth_methods")]
+            Self::Terminal(t) => t.meta.as_ref(),
+        }
+    }
 }
 
 /// Agent handles authentication itself.
