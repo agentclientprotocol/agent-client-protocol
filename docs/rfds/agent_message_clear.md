@@ -26,7 +26,7 @@ Currently, the `agent_message_chunk` session update is strictly cumulative. The 
 
 We propose adding a new session update type: `agent_message_clear`. 
 
-This update instructs the client to immediately clear the accumulated streamed content for the current agent message. Subsequent `agent_message_chunk` updates will then start appending from an empty state.
+This update instructs the client to immediately clear the accumulated streamed content for the **current** agent message in the given session. Subsequent `agent_message_chunk` updates will then start appending from an empty state. (The ACP spec already supports multiple sessions on the same connection via repeated `session/new`; all session-scoped notifications and methods carry a `sessionId`, so "current" is unambiguous per session.)
 
 **Key characteristics:**
 - **Simplicity**: It follows the existing "full-replacement" semantics found in `plan` updates and `tool_call_update` content.
@@ -91,6 +91,15 @@ It is fully backward-compatible. A legacy client will simply ignore the unknown 
 ### Does this replace the entire message history?
 No. It only clears the "accumulated streamed content" of the **current** active agent message in the session. It does not affect previously finalized messages in the chat history.
 
+### What about message IDs and "replace by id"?
+
+The spec **already** has **session id**: multiple sessions on the same connection are supported (e.g. repeated `session/new`), and all session-scoped notifications and methods carry a `sessionId`. So we always know *which session* we're updating.
+
+Review feedback suggested going further and building on **message IDs** (for agent messages), so we know *which* message within the session to clear—similar to how `ToolCall` / `ToolCallUpdate` use `toolCallId`. An alternative design: allow **`agent_message`** (full message) in addition to `agent_message_chunk`, with an `id`; when the client sees a full message with an existing id, it would replace all previous chunks/text for that id, like tool call updates.
+
+Today, `SessionUpdate` / `agent_message_chunk` do not carry a message-level id in the schema; the "current" message is implicit per session. This RFD therefore specifies clear for that implicit current message. If the spec already or later adds message IDs for agent messages, this mechanism can be extended to clear (or replace) a specific message by id; the "full `agent_message` with id for replace" design is a viable alternative for that iteration.
+
 ## Revision history
 
 - **2026-02-07**: Initial draft by steve02081504.
+- **2026-03-15**: Updated per review: multi-session clarification, discussion of message IDs and replace-by-id alternative.
