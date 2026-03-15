@@ -57,7 +57,7 @@ sequenceDiagram
     Agent-->>Client: initialize response<br/>(agentCapabilities.auth.status)
 
     Client->>Agent: auth/status
-    Agent-->>Client: auth/status response<br/>(authenticated, authMethods)
+    Agent-->>Client: auth/status response<br/>(authenticated, message)
 
     alt Authenticated
         Client->>Agent: session/new
@@ -115,26 +115,6 @@ interface AuthCapabilities {
 A method that can be called after initialization to query the agent's current authentication state.
 
 ```typescript
-interface AuthMethodState {
-  /**
-   * The ID of the authentication method.
-   * Corresponds to an `id` from the `authMethods` array returned during initialization.
-   */
-  authMethodId: string;
-
-  /**
-   * Whether the agent has credentials configured for this auth method.
-   * true means credentials are present (validity is not guaranteed).
-   */
-  authenticated: boolean;
-
-  /** Human-readable description of the auth state (e.g., "API key configured via environment") */
-  message?: string;
-
-  /** Extension metadata */
-  _meta?: Record<string, unknown>;
-}
-
 interface AuthStatusRequest {
   /** Extension metadata */
   _meta?: Record<string, unknown>;
@@ -147,13 +127,6 @@ interface AuthStatusResponse {
    * false means no credentials are configured.
    */
   authenticated: boolean;
-
-  /**
-   * Optional per-auth-method breakdown of auth state.
-   * Each entry corresponds to an auth method from the `authMethods` array
-   * returned during initialization.
-   */
-  authMethods?: AuthMethodState[];
 
   /** Human-readable description of the overall auth state */
   message?: string;
@@ -168,42 +141,12 @@ interface AuthStatusResponse {
 ```json
 {
   "$defs": {
-    "AuthMethodState": {
-      "description": "Authentication state for a specific auth method.",
-      "properties": {
-        "authMethodId": {
-          "type": "string",
-          "description": "The ID of the authentication method, matching an entry from the authMethods array returned during initialization."
-        },
-        "authenticated": {
-          "type": "boolean",
-          "description": "Whether credentials are configured for this auth method."
-        },
-        "message": {
-          "type": ["string", "null"],
-          "description": "Human-readable description of the auth state."
-        },
-        "_meta": {
-          "additionalProperties": true,
-          "type": ["object", "null"]
-        }
-      },
-      "required": ["authMethodId", "authenticated"],
-      "type": "object"
-    },
     "AuthStatusResponse": {
       "description": "Response to auth/status method.",
       "properties": {
         "authenticated": {
           "type": "boolean",
           "description": "Whether the agent has credentials configured."
-        },
-        "authMethods": {
-          "type": ["array", "null"],
-          "description": "Per-auth-method state breakdown.",
-          "items": {
-            "$ref": "#/$defs/AuthMethodState"
-          }
         },
         "message": {
           "type": ["string", "null"],
@@ -242,13 +185,7 @@ interface AuthStatusResponse {
   "id": 1,
   "result": {
     "authenticated": true,
-    "authMethods": [
-      {
-        "authMethodId": "anthropic-api-key",
-        "authenticated": true,
-        "message": "API key configured via local config"
-      }
-    ]
+    "message": "Credentials are configured"
   }
 }
 ```
@@ -276,13 +213,7 @@ interface AuthStatusResponse {
 
 4. **No side effects**: Calling `auth/status` MUST NOT modify any agent state. It is a pure query.
 
-5. **Per-auth-method breakdown**: The `authMethods` field is optional. Agents that support multiple authentication methods MAY include per-method state to help clients make fine-grained decisions.
-
-## Open questions
-
-### Is a per-auth-method breakdown needed, or is an aggregate state sufficient?
-
-The current design includes an optional `authMethods` field with per-auth-method state. However, for many agents a single aggregate `state` may be enough. A per-method breakdown adds complexity to both the agent implementation and client logic. Should we simplify to just the top-level `state` and `message`?
+5. **Aggregate response**: The response includes only top-level `authenticated` and optional `message`, keeping the API surface minimal and avoiding per-method complexity.
 
 ## Frequently asked questions
 
@@ -300,8 +231,15 @@ The `initialize` response contains capabilities — what the agent _supports_. A
 
 Agents may obtain credentials from many sources: config files, keychains, OAuth tokens, environment variables, or even embedded keys. The client has no visibility into these mechanisms. Only the agent knows whether it has usable credentials configured.
 
+### Why did we remove additional auth details from `auth/status` for now?
+
+Extra fields (such as per-auth-method state or "which auth method was used") are not consistently well-defined across agents. In practice, one auth flow can enable multiple credential types (for example, terminal login resulting in an API key), so a strict 1:1 mapping can be ambiguous and potentially misleading for clients.
+
+To avoid locking in confusing semantics, the proposal currently keeps `auth/status` minimal and reliable: top-level `authenticated` plus optional `message`. This solves the immediate UX and control-flow problem while preserving room to add richer, standardized details later once cross-agent semantics are clearer.
+
 ## Revision history
 
+- 2026-03-15: Remove `authMethods` from the proposal and keep aggregate auth state only (`authenticated` + optional `message`)
 - 2026-03-10: Rename `getAuthState` to `auth/status`, nest capability under `agentCapabilities.auth`
-- 2026-03-07: Address review feedback, replace per-provider breakdown with per-auth-method
+- 2026-03-07: Address review feedback on auth state structure
 - 2026-03-05: Initial draft — preliminary proposal to start discussion
