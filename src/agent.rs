@@ -3241,8 +3241,8 @@ pub struct AgentCapabilities {
     ///
     /// Authentication-related capabilities supported by the agent.
     #[cfg(feature = "unstable_logout")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub auth: Option<AgentAuthCapabilities>,
+    #[serde(default)]
+    pub auth: AgentAuthCapabilities,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -3293,8 +3293,8 @@ impl AgentCapabilities {
     /// Authentication-related capabilities supported by the agent.
     #[cfg(feature = "unstable_logout")]
     #[must_use]
-    pub fn auth(mut self, auth: impl IntoOption<AgentAuthCapabilities>) -> Self {
-        self.auth = auth.into_option();
+    pub fn auth(mut self, auth: AgentAuthCapabilities) -> Self {
+        self.auth = auth;
         self
     }
 

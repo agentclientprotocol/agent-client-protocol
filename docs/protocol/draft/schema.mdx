@@ -135,7 +135,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 <ResponseField name="agentCapabilities" type={<a href="#agentcapabilities">AgentCapabilities</a>} >
   Capabilities supported by the agent.
 
-    - Default: `{"loadSession":false,"mcpCapabilities":{"http":false,"sse":false},"promptCapabilities":{"audio":false,"embeddedContext":false,"image":false},"sessionCapabilities":{}}`
+    - Default: `{"auth":{},"loadSession":false,"mcpCapabilities":{"http":false,"sse":false},"promptCapabilities":{"audio":false,"embeddedContext":false,"image":false},"sessionCapabilities":{}}`
 
 </ResponseField>
 <ResponseField name="agentInfo" type={<><span><a href="#implementation">Implementation</a></span><span> | null</span></>} >
@@ -1658,12 +1658,14 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
 </ResponseField>
-<ResponseField name="auth" type={<><span><a href="#agentauthcapabilities">AgentAuthCapabilities</a></span><span> | null</span></>} >
+<ResponseField name="auth" type={<a href="#agentauthcapabilities">AgentAuthCapabilities</a>} >
   **UNSTABLE**
 
 This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Authentication-related capabilities supported by the agent.
+
+    - Default: `{}`
 
 </ResponseField>
 <ResponseField name="loadSession" type={"boolean"} >

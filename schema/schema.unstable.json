@@ -31,14 +31,12 @@
           "type": ["object", "null"]
         },
         "auth": {
-          "anyOf": [
+          "allOf": [
             {
               "$ref": "#/$defs/AgentAuthCapabilities"
-            },
-            {
-              "type": "null"
             }
           ],
+          "default": {},
           "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAuthentication-related capabilities supported by the agent."
         },
         "loadSession": {
@@ -1833,6 +1831,7 @@
             }
           ],
           "default": {
+            "auth": {},
             "loadSession": false,
             "mcpCapabilities": {
               "http": false,
