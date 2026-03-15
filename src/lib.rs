@@ -100,6 +100,7 @@ use std::{
 pub struct SessionId(pub Arc<str>);
 
 impl SessionId {
+    #[must_use]
     pub fn new(id: impl Into<Arc<str>>) -> Self {
         Self(id.into())
     }

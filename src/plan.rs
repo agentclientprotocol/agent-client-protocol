@@ -82,6 +82,7 @@ pub struct PlanEntry {
 }
 
 impl PlanEntry {
+    #[must_use]
     pub fn new(
         content: impl Into<String>,
         priority: PlanEntryPriority,

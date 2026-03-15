@@ -82,7 +82,7 @@ tools, and forking may accept a messageId for checkpoints.
 **Q: Should fork only accept the `sessionId` or also other options, similar to `session/load`?**
 
 Initially, we proposed to only accept the `sessionId`, but this would make it more difficult to
-allow forking of inactive sessions in agents like `claude-code-acp`, as Claude does not retain the
+allow forking of inactive sessions in agents like `claude-agent-acp`, as Claude does not retain the
 configured MCP servers of a session. Limiting fork to only already active sessions would limit its usefulness.
 
 Moreover, allowing to pass different options also allows features like dynamically adding MCP servers

@@ -227,7 +227,7 @@ The Agent **MUST** respond with the complete list of all configuration options a
 
 ### From the Agent
 
-The Agent can also change configuration options and notify the Client by sending a `config_options_update` session notification:
+The Agent can also change configuration options and notify the Client by sending a `config_option_update` session notification:
 
 ```json
 {
@@ -236,7 +236,7 @@ The Agent can also change configuration options and notify the Client by sending
   "params": {
     "sessionId": "sess_abc123def456",
     "update": {
-      "sessionUpdate": "config_options_update",
+      "sessionUpdate": "config_option_update",
       "configOptions": [
         {
           "id": "mode",

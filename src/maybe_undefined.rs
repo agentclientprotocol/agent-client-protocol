@@ -57,7 +57,7 @@ impl<T> MaybeUndefined<T> {
         matches!(self, MaybeUndefined::Value(_))
     }
 
-    /// Borrow the value, returns `None` if the the `MaybeUndefined<T>` is
+    /// Borrow the value, returns `None` if the `MaybeUndefined<T>` is
     /// `undefined` or `null`, otherwise returns `Some(T)`.
     #[inline]
     pub const fn value(&self) -> Option<&T> {

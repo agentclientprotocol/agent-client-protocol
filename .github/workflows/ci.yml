@@ -26,13 +26,13 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
 
       - name: Use Node.js
-        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
         with:
           node-version: latest
           cache: "npm"
 
       - name: Setup Rust
-        uses: actions-rust-lang/setup-rust-toolchain@1780873c7b576612439a134613cc4cc74ce5538c
+        uses: actions-rust-lang/setup-rust-toolchain@a0b538fa0b742a6aa35d6e2c169b4bd06d225a98
         with:
           toolchain: nightly,stable
           components: rustfmt,clippy
@@ -44,7 +44,7 @@ jobs:
         run: npm run format:check
 
       - name: Check for typos
-        uses: crate-ci/typos@93cbdb2d23269548cf0db0f74d0bc6a09a3f0d5c
+        uses: crate-ci/typos@631208b7aac2daa8b707f55e7331f9112b0e062d
         with:
           config: ./typos.toml
 

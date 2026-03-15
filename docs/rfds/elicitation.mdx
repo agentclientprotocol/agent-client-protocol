@@ -1,0 +1,814 @@
+---
+title: "Elicitation: Structured User Input During Sessions"
+---
+
+- Author(s): [@yordis](https://github.com/yordis)
+- Champion: [@benbrandt](https://github.com/benbrandt)
+
+## Elevator pitch
+
+Add support for agents to request structured information from users during a session through a standardized elicitation mechanism, aligned with [MCP's elicitation feature](https://modelcontextprotocol.io/specification/draft/client/elicitation). This allows agents to ask follow-up questions, collect authentication credentials, gather preferences, and request required information without side-channel communication or ad-hoc client UI implementations.
+
+## Status quo
+
+Currently, agents have two limited mechanisms for gathering user input:
+
+1. **Session Config Options** (PR #210): Pre-declared, persistent configuration (model, mode, etc.) with default values required. These are available at session initialization and changes are broadcast to the client.
+
+2. **Unstructured text in turn responses**: Agents can include prompts in their responses, but clients have no standardized way to recognize auth requests, form inputs, or structured selections, leading to inconsistent UX across agents.
+
+However, there is no mechanism for agents to:
+
+- Request ad-hoc information during a turn (e.g., "Which of these approaches should I proceed with?" from PR #340)
+- Ask for authentication credentials in a recognized, secure way (pain point from PR #330)
+- Collect open-ended text input with validation constraints
+- Handle decision points that weren't anticipated at session initialization
+- Request sensitive information via out-of-band mechanisms (browser-based OAuth)
+
+The community has already identified the need for this: PR #340 explored a `session/select` mechanism but concluded that leveraging an MCP-like elicitation pattern would be more aligned with how clients will already support MCP servers. PR #330 recognized that authentication requests specifically need special handling separate from regular session data.
+
+This gap limits the richness of agent-client interaction and forces both agents and clients to implement ad-hoc solutions for structured user input.
+
+## What we propose to do about it
+
+We propose introducing an elicitation mechanism for agents to request structured information from users, aligned with [MCP's draft elicitation specification](https://modelcontextprotocol.io/specification/draft/client/elicitation). This addresses discussions from PR #340 about standardizing user selection flows and PR #330 about secure authentication handling.
+
+The mechanism would:
+
+1. **Use restricted JSON Schema** (as discussed in PR #210): Like MCP, constrain JSON Schema to a useful subset—flat objects with primitive properties (`string`, `number`, `integer`, `boolean`) plus supported formats and enum values. Clients decide how to render UI based on the schema.
+
+2. **Support two elicitation modes** (following [MCP SEP-1036](https://modelcontextprotocol.io/community/seps/1036-url-mode-elicitation-for-secure-out-of-band-intera)):
+   - **Form mode** (in-band): Structured data collection via JSON Schema forms
+   - **URL mode** (out-of-band): Browser-based flows for sensitive operations like OAuth (addressing PR #330 authentication pain points)
+
+3. **Request/response pattern**: Agents send elicitation requests via a `session/elicitation` method and receive responses. The agent controls when to send requests and whether to wait for responses before proceeding. Unlike Session Config Options (which are persistent), elicitation requests are transient.
+
+4. **Support client capability negotiation**: Clients declare elicitation support via a structured capability object that distinguishes between `form`-based and `url`-based elicitation (following MCP's capability model). This allows clients to support one or both modalities, enables agents to pass capabilities along to MCP servers, and handles graceful degradation when clients have limited elicitation support.
+
+5. **Provide rich context**: Agents can include title, description, detailed constraints, and examples—helping clients render consistent, helpful UI without custom implementations.
+
+6. **Enable out-of-band flows**: Support URL-mode elicitation (like MCP) for sensitive operations like authentication, where credentials bypass the agent entirely (addressing the core pain point in PR #330).
+
+## Shiny future
+
+Once implemented, agents can:
+
+- Ask users "Which approach would you prefer: A or B?" and receive a structured response
+- Request text input: "What's the name for this function?"
+- Collect multiple related pieces of information in a single request
+- Guide users through decision trees with follow-up questions
+- Provide rich context (descriptions, examples, constraints) for what they're asking for
+
+Clients can:
+
+- Present a consistent, standardized UI for elicitation across all agents
+- Validate user input against constraints before sending to the agent
+- Cache elicitation history and offer suggestions based on previous responses
+- Provide keyboard shortcuts and accessibility features for common elicitation types
+
+## Implementation details and plan
+
+### Alignment with MCP
+
+This proposal follows MCP's draft elicitation specification. See [MCP Elicitation Specification](https://modelcontextprotocol.io/specification/draft/client/elicitation) for detailed guidance. ACP uses the same JSON Schema constraint approach and capability model, adapted for our session/turn-based architecture.
+
+Key differences from MCP:
+
+- MCP elicitation is tool-call-scoped; ACP elicitation is session-scoped
+- ACP uses `session/elicitation` method; MCP uses `elicitation/create`
+- ACP must integrate with existing Session Config Options (which also use schema constraints)
+
+### Elicitation Request Structure
+
+Agents send elicitation requests when they need information from the user. This is a request/response pattern—the agent sends the request and waits for the client's response.
+
+**Example 1: Form Mode - User Selection (from PR #340)**
+
+```json
+{
+  "mode": "form",
+  "message": "How would you like me to approach this refactoring?",
+  "requestedSchema": {
+    "type": "object",
+    "properties": {
+      "strategy": {
+        "type": "string",
+        "title": "Refactoring Strategy",
+        "description": "Choose how aggressively to refactor",
+        "oneOf": [
+          {
+            "const": "conservative",
+            "title": "Conservative - Minimal changes"
+          },
+          { "const": "balanced", "title": "Balanced (Recommended)" },
+          {
+            "const": "aggressive",
+            "title": "Aggressive - Maximum optimization"
+          }
+        ],
+        "default": "balanced"
+      }
+    },
+    "required": ["strategy"]
+  }
+}
+```
+
+**Example 2: URL Mode - Authentication (from PR #330, out-of-band OAuth)**
+
+```json
+{
+  "mode": "url",
+  "elicitationId": "github-oauth-123",
+  "url": "https://agent.example.com/connect?elicitationId=github-oauth-123",
+  "message": "Please authorize access to your GitHub repositories to continue."
+}
+```
+
+**Example 3: Form Mode - Text Input with Constraints**
+
+```json
+{
+  "mode": "form",
+  "message": "What should this function be named?",
+  "requestedSchema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "title": "Function Name",
+        "description": "Must be a valid identifier",
+        "minLength": 1,
+        "maxLength": 64,
+        "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$",
+        "default": "processData"
+      }
+    },
+    "required": ["name"]
+  }
+}
+```
+
+**Example 4: Form Mode - Multiple Fields**
+
+```json
+{
+  "mode": "form",
+  "message": "Please provide configuration details",
+  "requestedSchema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "title": "Project Name"
+      },
+      "port": {
+        "type": "integer",
+        "title": "Port Number",
+        "minimum": 1024,
+        "maximum": 65535,
+        "default": 3000
+      },
+      "enableLogging": {
+        "type": "boolean",
+        "title": "Enable Logging",
+        "default": true
+      }
+    },
+    "required": ["name"]
+  }
+}
+```
+
+### Elicitation Modes
+
+Following MCP's approach (specifically [SEP-1036](https://modelcontextprotocol.io/community/seps/1036-url-mode-elicitation-for-secure-out-of-band-intera)), elicitation supports two modes:
+
+**Form mode** (in-band): Servers request structured data from users using restricted JSON Schema. The client decides how to render the form UI based on the schema.
+
+**URL mode** (out-of-band): Servers direct users to external URLs for sensitive interactions that must not pass through the agent or client (OAuth flows, payments, credential collection, etc.).
+
+This distinction is reflected in the client capabilities model, allowing clients to declare support for one or both modalities.
+
+**Normative requirements:**
+
+- Clients declaring the `elicitation` capability MUST support at least one mode (`form` or `url`).
+- Agents MUST NOT send elicitation requests with modes that are not supported by the client.
+- For URL mode, the `url` parameter MUST contain a valid URL.
+- Agents MUST NOT return the `URLElicitationRequiredError` (code `-32042`) except when URL mode elicitation is required.
+
+### Restricted JSON Schema
+
+Aligning with [MCP's draft elicitation specification](https://modelcontextprotocol.io/specification/draft/client/elicitation), form mode elicitation uses a restricted subset of JSON Schema. Schemas are limited to flat objects with primitive properties only—the client decides how to render appropriate input UI based on the schema.
+
+**Supported primitive types:**
+
+1. **String Schema**
+
+```json
+{
+  "type": "string",
+  "title": "Display Name",
+  "description": "Description text",
+  "minLength": 3,
+  "maxLength": 50,
+  "pattern": "^[A-Za-z]+$",
+  "format": "email",
+  "default": "user@example.com"
+}
+```
+
+Supported formats: `email`, `uri`, `date`, `date-time`
+
+2. **Number Schema**
+
+```json
+{
+  "type": "number",
+  "title": "Display Name",
+  "description": "Description text",
+  "minimum": 0,
+  "maximum": 100,
+  "default": 50
+}
+```
+
+Also supports `"type": "integer"` for whole numbers.
+
+3. **Boolean Schema**
+
+```json
+{
+  "type": "boolean",
+  "title": "Display Name",
+  "description": "Description text",
+  "default": false
+}
+```
+
+4. **Enum Schema** (for selections)
+
+Single-select enum (without titles):
+
+```json
+{
+  "type": "string",
+  "title": "Color Selection",
+  "description": "Choose your favorite color",
+  "enum": ["Red", "Green", "Blue"],
+  "default": "Red"
+}
+```
+
+Single-select enum (with titles):
+
+```json
+{
+  "type": "string",
+  "title": "Color Selection",
+  "description": "Choose your favorite color",
+  "oneOf": [
+    { "const": "#FF0000", "title": "Red" },
+    { "const": "#00FF00", "title": "Green" },
+    { "const": "#0000FF", "title": "Blue" }
+  ],
+  "default": "#FF0000"
+}
+```
+
+Multi-select enum (without titles):
+
+```json
+{
+  "type": "array",
+  "title": "Color Selection",
+  "description": "Choose your favorite colors",
+  "minItems": 1,
+  "maxItems": 2,
+  "items": {
+    "type": "string",
+    "enum": ["Red", "Green", "Blue"]
+  },
+  "default": ["Red", "Green"]
+}
+```
+
+Multi-select enum (with titles):
+
+```json
+{
+  "type": "array",
+  "title": "Color Selection",
+  "description": "Choose your favorite colors",
+  "minItems": 1,
+  "maxItems": 2,
+  "items": {
+    "anyOf": [
+      { "const": "#FF0000", "title": "Red" },
+      { "const": "#00FF00", "title": "Green" },
+      { "const": "#0000FF", "title": "Blue" }
+    ]
+  },
+  "default": ["#FF0000", "#00FF00"]
+}
+```
+
+**Request schema structure:**
+
+```json
+"requestedSchema": {
+  "type": "object",
+  "properties": {
+    "propertyName": {
+      "type": "string",
+      "title": "Display Name",
+      "description": "Description of the property"
+    },
+    "anotherProperty": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    }
+  },
+  "required": ["propertyName"]
+}
+```
+
+**Not supported** (to simplify client implementation):
+
+- Complex nested objects/arrays (beyond enum arrays)
+- Conditional validation
+- Custom formats beyond the supported list
+
+Clients use this schema to generate appropriate input forms, validate user input before sending, and provide better guidance to users. All primitive types support optional default values; clients SHOULD pre-populate form fields with these values.
+
+**Security note:** Following MCP, servers MUST NOT use form mode elicitation to request sensitive information (passwords, API keys, credentials). Sensitive data collection MUST use URL mode elicitation, which bypasses the agent and client entirely.
+
+### Elicitation Request
+
+The agent sends a `session/elicitation` request when it needs information from the user:
+
+**Form mode example:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 43,
+  "method": "session/elicitation",
+  "params": {
+    "sessionId": "...",
+    "mode": "form",
+    "message": "How would you like me to approach this refactoring?",
+    "requestedSchema": {
+      "type": "object",
+      "properties": {
+        "strategy": {
+          "type": "string",
+          "title": "Refactoring Strategy",
+          "oneOf": [
+            { "const": "conservative", "title": "Conservative" },
+            { "const": "balanced", "title": "Balanced (Recommended)" },
+            { "const": "aggressive", "title": "Aggressive" }
+          ],
+          "default": "balanced"
+        }
+      },
+      "required": ["strategy"]
+    }
+  }
+}
+```
+
+**URL mode example:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 44,
+  "method": "session/elicitation",
+  "params": {
+    "sessionId": "...",
+    "mode": "url",
+    "elicitationId": "github-oauth-001",
+    "url": "https://agent.example.com/connect?elicitationId=github-oauth-001",
+    "message": "Please authorize access to your GitHub repositories."
+  }
+}
+```
+
+The client presents the elicitation UI to the user. For form mode, the client generates appropriate input UI based on the JSON Schema. For URL mode, the client opens the URL in a secure browser context.
+
+### User Response
+
+Elicitation responses use a three-action model (following MCP) to clearly distinguish between different user actions:
+
+**Accept** - User explicitly approved and submitted with data:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 43,
+  "result": {
+    "action": "accept",
+    "content": {
+      "strategy": "balanced"
+    }
+  }
+}
+```
+
+**Decline** - User explicitly declined the request:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 43,
+  "result": {
+    "action": "decline"
+  }
+}
+```
+
+**Cancel** - User dismissed without making an explicit choice (closed dialog, pressed Escape, etc.):
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 43,
+  "result": {
+    "action": "cancel"
+  }
+}
+```
+
+For URL mode elicitation, the response with `action: "accept"` indicates that the user consented to the interaction. It does not mean the interaction is complete—the interaction occurs out-of-band and the client is not aware of the outcome until the agent sends a completion notification.
+
+Agents should handle each state appropriately:
+
+- **Accept**: Process the submitted data
+- **Decline**: Handle explicit decline (e.g., use default, offer alternatives)
+- **Cancel**: Handle dismissal (e.g., use default, prompt again later)
+
+### Message Flow
+
+#### Form Mode Flow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Client
+    participant Agent
+
+    Note over Agent: Agent initiates elicitation
+    Agent->>Client: session/elicitation (mode: form)
+
+    Note over User,Client: Present elicitation UI
+    User-->>Client: Provide requested information
+
+    Note over Agent,Client: Complete request
+    Client->>Agent: Return user response
+
+    Note over Agent: Continue processing with new information
+```
+
+#### URL Mode Flow
+
+```mermaid
+sequenceDiagram
+    participant UserAgent as User Agent (Browser)
+    participant User
+    participant Client
+    participant Agent
+
+    Note over Agent: Agent initiates elicitation
+    Agent->>Client: session/elicitation (mode: url)
+
+    Client->>User: Present consent to open URL
+    User-->>Client: Provide consent
+
+    Client->>UserAgent: Open URL
+    Client->>Agent: Accept response
+
+    Note over User,UserAgent: User interaction
+    UserAgent-->>Agent: Interaction complete
+    Agent-->>Client: notifications/elicitation/complete (optional)
+
+    Note over Agent: Continue processing with new information
+```
+
+#### URL Mode With Elicitation Required Error Flow
+
+```mermaid
+sequenceDiagram
+    participant UserAgent as User Agent (Browser)
+    participant User
+    participant Client
+    participant Agent
+
+    Client->>Agent: Request (e.g., tool call)
+
+    Note over Agent: Agent needs authorization
+    Agent->>Client: URLElicitationRequiredError
+    Note over Client: Client notes the original request can be retried after elicitation
+
+    Client->>User: Present consent to open URL
+    User-->>Client: Provide consent
+
+    Client->>UserAgent: Open URL
+
+    Note over User,UserAgent: User interaction
+
+    UserAgent-->>Agent: Interaction complete
+    Agent-->>Client: notifications/elicitation/complete (optional)
+
+    Client->>Agent: Retry original request (optional)
+```
+
+### Completion Notifications for URL Mode
+
+Following MCP, agents MAY send a `notifications/elicitation/complete` notification when an out-of-band interaction started by URL mode elicitation is completed:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/elicitation/complete",
+  "params": {
+    "elicitationId": "github-oauth-001"
+  }
+}
+```
+
+Agents sending notifications:
+
+- MUST only send the notification to the client that initiated the elicitation request
+- MUST include the `elicitationId` established in the original request
+
+Clients:
+
+- MUST ignore notifications referencing unknown or already-completed IDs
+- MAY use this notification to automatically retry requests, update UI, or continue an interaction
+- SHOULD provide manual controls for the user to retry or cancel if the notification never arrives
+
+### URL Elicitation Required Error
+
+When a request cannot be processed until a URL mode elicitation is completed, the agent MAY return a `URLElicitationRequiredError` (code `-32042`). This allows clients to understand that a specific elicitation is required before retrying the original request.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "error": {
+    "code": -32042,
+    "message": "This request requires authorization.",
+    "data": {
+      "elicitations": [
+        {
+          "mode": "url",
+          "elicitationId": "github-oauth-001",
+          "url": "https://agent.example.com/connect?elicitationId=github-oauth-001",
+          "message": "Authorization is required to access your GitHub repositories."
+        }
+      ]
+    }
+  }
+}
+```
+
+Any elicitations returned in the error MUST be URL mode elicitations with an `elicitationId`. Clients may automatically retry the failed request after receiving a completion notification.
+
+### Error Handling
+
+Agents MUST return standard JSON-RPC errors for common failure cases:
+
+- When a request cannot be processed until a URL mode elicitation is completed: `-32042` (`URLElicitationRequiredError`)
+
+Clients MUST return standard JSON-RPC errors for common failure cases:
+
+- When the agent sends a `session/elicitation` request with a mode not declared in client capabilities: `-32602` (Invalid params)
+
+### Client Capabilities
+
+Clients declare elicitation support during the `initialize` phase via `ClientCapabilities`, following MCP's capability model pattern. The capability distinguishes between `form`-based and `url`-based elicitation:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "initialize",
+  "params": {
+    "protocolVersion": "2025-11-25",
+    "clientCapabilities": {
+      "fs": {
+        "readTextFile": true,
+        "writeTextFile": true
+      },
+      "terminal": true,
+      "elicitation": {
+        "form": {},
+        "url": {}
+      }
+    },
+    "clientInfo": {
+      "name": "my-client",
+      "version": "1.0.0"
+    }
+  }
+}
+```
+
+**Capability structure:**
+
+- `elicitation.form` - Present if the client can render form UI from restricted JSON Schema (strings, numbers, integers, booleans, enums)
+- `elicitation.url` - Present if the client can open URLs for out-of-band flows (OAuth, payments, credential collection)
+
+**Example: Headless client (no browser access):**
+
+```json
+"elicitation": {
+  "form": {}
+}
+```
+
+**Example: Simple terminal with URL support only:**
+
+```json
+"elicitation": {
+  "url": {}
+}
+```
+
+**Example: Full-featured client:**
+
+```json
+"elicitation": {
+  "form": {},
+  "url": {}
+}
+```
+
+This structure:
+
+1. Allows clients to declare partial support based on their environment
+2. Enables agents to pass capabilities along to MCP servers they connect to
+3. Maps cleanly to MCP's elicitation capability model
+4. Provides clear semantics for graceful degradation
+
+Agents must gracefully handle clients that don't include this field (assumed to have no elicitation support) or that only include one of `form` or `url`.
+
+### Backward Compatibility
+
+- If a client doesn't declare `elicitation` capabilities, agents must provide a default value and continue
+- If a client only declares `elicitation.form`, agents must not send URL-mode elicitation requests (or provide defaults and continue)
+- If a client only declares `elicitation.url`, agents must not send form-mode elicitation requests (or provide defaults and continue)
+- Agents should not require elicitation responses to continue operating
+- Following MCP: an empty capability object (`"elicitation": {}`) is equivalent to declaring support for form mode only
+
+### Statefulness
+
+Most practical uses of elicitation require that the agent maintain state about users:
+
+- Whether required information has been collected (e.g., the user's display name via form mode elicitation)
+- Status of resource access (e.g., API keys or a payment flow via URL mode elicitation)
+
+Agents implementing elicitation MUST securely associate this state with individual users. Specifically:
+
+- State MUST NOT be associated with session IDs alone
+- State storage MUST be protected against unauthorized access
+- For remote agents, user identification MUST be derived from credentials acquired during authorization when possible (e.g., `sub` claim)
+
+Agents MUST NOT rely on client-provided user identification without agent-side verification, as this can be forged.
+
+## Frequently asked questions
+
+### Can an agent request multiple pieces of information at once?
+
+Yes—a single form mode elicitation request can include multiple fields in its `requestedSchema`. The schema is an object with multiple properties, and the client renders a form with all requested fields.
+
+For sequential information gathering, agents can send multiple elicitation requests and wait for each response before proceeding. This allows agents to adapt follow-up questions based on previous answers.
+
+The request/response model gives agents flexibility: they control when to send elicitation requests and whether to wait for responses or continue with other work.
+
+### How does this differ from session config options?
+
+Excellent question from PR #210 discussions. Both use restricted JSON Schema, but serve different purposes:
+
+| Aspect               | Session Config Options                             | Elicitation                                                      |
+| -------------------- | -------------------------------------------------- | ---------------------------------------------------------------- |
+| **Lifecycle**        | Persistent, pre-declared at session init           | Transient, request/response                                      |
+| **Scope**            | Session-wide configuration                         | Single decision point or data collection                         |
+| **Defaults**         | Required (agents must have defaults)               | Optional (schema's `required` array determines mandatory fields) |
+| **State management** | Client maintains full state, broadcast on changes  | Agent receives response and decides how to proceed               |
+| **Use cases**        | Model selection, session mode, persistent settings | Authentication, clarifying questions, one-time data collection   |
+
+Session Config Options are great for "how should you run this session?" Elicitation is for "what should I do next?"
+
+### Why align with MCP's elicitation instead of creating something different?
+
+As identified in PR #340, clients will already implement MCP elicitation support for MCP servers. Aligning ACP's elicitation with MCP:
+
+- Reduces client implementation burden
+- Creates consistent UX across MCP and ACP agents
+- Lets code be shared or reused
+- Follows the protocol design principle of only constraining when necessary
+
+PR #340 specifically concluded: "I think we'd rather have an MCP elicitation story in general, and maybe offer the same interface outside of tool calls."
+
+### How does authentication flow work with URL-mode elicitation?
+
+From PR #330: URL-mode elicitation allows agents to request authentication without exposing credentials to the protocol. Following [MCP's draft elicitation specification](https://modelcontextprotocol.io/specification/draft/client/elicitation):
+
+1. Agent sends elicitation request with `mode: "url"`, an `elicitationId`, and a URL to the agent's own connect endpoint (not directly to the OAuth provider)
+2. Client displays the URL to the user and requests consent to open it
+3. Client responds with `action: "accept"` to indicate the user consented
+4. User opens URL in their browser (out-of-band process)
+5. Agent's connect page verifies the user identity matches the elicitation request
+6. Agent redirects user to the OAuth provider's authorization endpoint
+7. User authenticates and grants permission
+8. OAuth provider redirects back to the agent's redirect_uri
+9. Agent exchanges the authorization code for tokens and stores them bound to the user's identity
+10. Agent sends a `notifications/elicitation/complete` notification to inform the client
+
+**Key guarantees**:
+
+- Credentials never flow through the agent LLM or client
+- The agent is responsible for securely storing third-party tokens
+- The agent MUST verify user identity to prevent phishing attacks
+
+**Security requirements** (from MCP draft spec):
+
+Agents requesting URL mode elicitation:
+
+- MUST NOT include sensitive information about the end-user (credentials, PII, etc.) in the URL
+- MUST NOT provide a URL which is pre-authenticated to access a protected resource
+- SHOULD NOT include URLs intended to be clickable in any field of a form mode elicitation request
+- SHOULD use HTTPS URLs for non-development environments
+
+Clients implementing URL mode elicitation:
+
+- MUST NOT automatically pre-fetch the URL or any of its metadata
+- MUST NOT open the URL without explicit consent from the user
+- MUST show the full URL to the user for examination before consent
+- MUST open the URL in a secure manner that does not enable the client or LLM to inspect the content or user inputs (e.g., SFSafariViewController on iOS, not WKWebView)
+- SHOULD highlight the domain of the URL to mitigate subdomain spoofing
+- SHOULD have warnings for ambiguous/suspicious URIs (e.g., containing Punycode)
+- SHOULD NOT render URLs as clickable in any field of an elicitation request, except for the `url` field in a URL mode elicitation request (with the restrictions detailed above)
+
+**Phishing prevention**: The agent MUST verify that the user who started the elicitation request is the same user who completes the OAuth flow. This is typically done by checking session cookies against the user identity from the MCP authorization.
+
+### Can agents use elicitation for information required before responding?
+
+Yes. By modeling elicitation as a request/response pattern (like MCP's `elicitation/create`), the agent controls its own flow. The agent can:
+
+- Send an elicitation request and wait for the response before proceeding
+- Continue with other work while waiting for user input
+- Chain multiple elicitations as needed for multi-step workflows
+
+This flexibility is why elicitation is modeled as a separate request/response rather than being tightly coupled to turns.
+
+### What if a user doesn't respond to an elicitation request?
+
+Elicitation requests require a response. If the user dismisses the elicitation without making an explicit choice (closes the dialog, presses Escape, etc.), the client responds with `action: "cancel"`. The agent then decides how to proceed—it may use a default value, prompt again later, or fail the turn.
+
+This ties into the broader request cancellation work: elicitation requests can be cancelled like any other request, and the `cancel` action provides a clear signal that the user chose not to engage rather than explicitly declining.
+
+### Should elicitation support complex nested data structures?
+
+We follow MCP's design here. MCP intentionally restricts elicitation schemas to flat objects with primitive properties to simplify client implementation and user experience. Complex nested structures, arrays of objects (beyond enum arrays), and advanced JSON Schema features are explicitly not supported. If MCP expands this in the future, ACP would follow suit.
+
+### How should agents handle clients that don't support elicitation?
+
+Agents should always design to gracefully degrade:
+
+- Check `elicitation.form` and `elicitation.url` capabilities before sending requests
+- If the required mode is not supported, provide sensible default values
+- Describe what they're requesting in turn content (text) as fallback
+- Proceed with the defaults
+- For agents connecting to MCP servers: pass the client's elicitation capabilities to the MCP server so it can also make informed decisions
+
+### Can we extend this to replace the existing Permission-Request mechanism?
+
+We recommend keeping them separate. Permission requests are fundamentally security decisions—allowing a tool call to proceed is distinct from the model asking for clarification or collecting user preferences. Keeping these separate allows clients to:
+
+- Offer a consistent, recognizable UX for security-sensitive decisions (permissions)
+- Clearly distinguish "the agent needs approval to do something" from "the agent needs information to continue"
+- Apply different policies (e.g., "always allow file reads" vs. per-request elicitation responses)
+
+This is the same reasoning behind keeping authentication flows (URL mode) distinct from data collection (form mode). While we may reuse some types between these mechanisms, conflating the features would blur important security boundaries.
+
+### What about validating user input on the client side?
+
+Clients SHOULD validate user input against the provided JSON Schema **before** sending the response to the agent. This prevents invalid data from reaching the agent and provides immediate feedback to the user. Agents SHOULD also validate received data matches the requested schema, as defense-in-depth against malformed or malicious responses.
+
+If the agent requires additional validation beyond what's expressible in JSON Schema:
+
+1. Agent validates the received value in the next turn
+2. If validation fails, agent can fail the turn with an error
+3. Client can then re-prompt the user (or fall back to the original default)
+
+For v1, we recommend starting with JSON Schema validation only. If more complex validation patterns emerge from real-world usage, a future RFD can specify additional validation mechanisms.
+
+## Revision history
+
+- 2026-02-06: Spec alignment review. Fixed OAuth URL examples to use agent connect endpoints (not direct OAuth provider URLs) per MCP phishing prevention guidance. Added normative requirements section (MUST support at least one mode, MUST NOT send unsupported modes, url MUST be valid). Added Error Handling section with `-32042` and `-32602` error codes. Added message flow diagrams (form mode, URL mode, URL mode with error). Expanded safe URL handling requirements (pre-fetch prohibition, Punycode warnings, non-clickable URLs in form fields). Added server-side schema validation SHOULD requirement. Added Statefulness subsection with normative requirements for state association and user identification.
+- 2026-02-05: Major revision to align with MCP draft elicitation specification. Updated enum schema to use `oneOf`/`anyOf` with `const`/`title` instead of `enumNames`. Added multi-select array support. Added `pattern` field for strings. Added URLElicitationRequiredError (-32042) section. Added completion notifications section. Expanded security considerations including phishing prevention. Updated all examples to match MCP draft spec format.
+- 2026-02-05: Initial MCP alignment. Removed explicit "input types" in favor of restricted JSON Schema (client decides rendering). Added `mode` field (`form`/`url`). Updated capability model to use `form`/`url` sub-objects per MCP SEP-1036. Added three-action response model (`accept`/`decline`/`cancel`). Removed `password` type (MCP prohibits sensitive data in form mode).
+- 2026-01-12: Initial draft based on community discussions in PR #340 (user selection), PR #210 (session config alignment), and PR #330 (authentication use cases). Aligned with MCP elicitation patterns.

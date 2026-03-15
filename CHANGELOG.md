@@ -1,5 +1,53 @@
 # Changelog
 
+## [0.11.2](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.11.1...v0.11.2) - 2026-03-11
+
+### Fixed
+
+- *(unstable)* Complete session/stop → session/close rename ([#724](https://github.com/agentclientprotocol/agent-client-protocol/pull/724))
+
+### Other
+
+- Update ecosystem docs for new clients and libraries ([#715](https://github.com/agentclientprotocol/agent-client-protocol/pull/715))
+
+## [0.11.1](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.11.0...v0.11.1) - 2026-03-09
+
+### Added
+
+- *(unstable)* Remove unused auth_methods from Error type ([#708](https://github.com/agentclientprotocol/agent-client-protocol/pull/708))
+- Stabilize session/list and session_info_update ([#705](https://github.com/agentclientprotocol/agent-client-protocol/pull/705))
+- *(unstable)* Rename unstable session/stop method to session/close ([#701](https://github.com/agentclientprotocol/agent-client-protocol/pull/701))
+- *(unstable)* Add config option type for boolean on/off toggles ([#576](https://github.com/agentclientprotocol/agent-client-protocol/pull/576))
+
+### Other
+
+- *(rfd)* Move initial registry RFD to completed ([#706](https://github.com/agentclientprotocol/agent-client-protocol/pull/706))
+- *(deps)* bump quote from 1.0.44 to 1.0.45 in the minor group ([#698](https://github.com/agentclientprotocol/agent-client-protocol/pull/698))
+
+## [0.11.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.10.8...v0.11.0) - 2026-03-04
+
+### Added
+
+- *(unstable)* implementation for unstable session/stop ([#583](https://github.com/agentclientprotocol/agent-client-protocol/pull/583))
+- *(unstable)* implement message id rfd ([#581](https://github.com/agentclientprotocol/agent-client-protocol/pull/581))
+- *(unstable)* Initial support for various auth methods ([#588](https://github.com/agentclientprotocol/agent-client-protocol/pull/588))
+
+### Fixed
+
+- Align struct naming and documentation ([#637](https://github.com/agentclientprotocol/agent-client-protocol/pull/637))
+- remove duplicate word typos across docs and source ([#606](https://github.com/agentclientprotocol/agent-client-protocol/pull/606))
+- use impl IntoOption<Meta> for CancelRequestNotification::meta() ([#467](https://github.com/agentclientprotocol/agent-client-protocol/pull/467))
+- avoid redundant JSON validation in extension notification decoding ([#459](https://github.com/agentclientprotocol/agent-client-protocol/pull/459))
+
+### Other
+
+- Clean up some builder pattern inconsistencies ([#635](https://github.com/agentclientprotocol/agent-client-protocol/pull/635))
+- fix incomplete sentence in KillTerminalCommandRequest doc comment ([#608](https://github.com/agentclientprotocol/agent-client-protocol/pull/608))
+- *(deps)* bump the minor group with 2 updates ([#563](https://github.com/agentclientprotocol/agent-client-protocol/pull/563))
+- *(deps)* bump strum from 0.27.2 to 0.28.0 ([#564](https://github.com/agentclientprotocol/agent-client-protocol/pull/564))
+- *(deps)* bump the minor group with 3 updates ([#518](https://github.com/agentclientprotocol/agent-client-protocol/pull/518))
+- *(deps)* bump the minor group with 4 updates ([#480](https://github.com/agentclientprotocol/agent-client-protocol/pull/480))
+
 ## [0.10.8](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.10.7...v0.10.8) - 2026-02-04
 
 ### Added

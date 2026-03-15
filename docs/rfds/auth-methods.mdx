@@ -37,41 +37,84 @@ It will be easier for end-users to start using an agent from inside the IDE as a
 
 I suggest adding following auth types:
 
+### Auth method types
+
 1. Agent auth
 
-Same as what there is now – agent handles the auth itself, this should be a default type if no type is provided for backward compatibility
+Same as what there is now – agent handles the auth itself. This is the default type when no `type` is provided, preserving backward compatibility.
 
 ```json
 {
   "id": "123",
   "name": "Agent",
-  "description": "Authenticate through agent",
-  "type": "agent" // Optional/default value
+  "description": "Authenticate through agent"
 }
 ```
+
+An explicit `"type": "agent"` is also accepted but not required.
 
 2. Env variable
 
-A user can enter a key and a client will pass it to the agent as an env variable
+The user provides credentials that the client passes to the agent as environment variables. Requires `"type": "env_var"`.
+
+The `vars` field is an array of `AuthEnvVar` objects, each describing a single environment variable. This supports services that require multiple credentials (e.g. Azure OpenAI needs both an API key and an endpoint URL).
+
+Simple single-key example:
 
 ```json
 {
-  "id": "123",
-  "name": "OpenAI api key",
-  "description": "Provide your key",
+  "id": "openai",
+  "name": "OpenAI API Key",
   "type": "env_var",
-  "varName": "OPEN_AI_KEY",
-  "link": "OPTIONAL link to a page where user can get their key"
+  "vars": [{ "name": "OPENAI_API_KEY" }],
+  "link": "https://platform.openai.com/api-keys"
 }
 ```
 
-Since this would need to be supplied to the agent when the process is started, the client can check if it already passed such an env variable to the process, in which case the user can click on the button and the agent will read the already available key.
+Multiple variables with metadata:
 
-Otherwise, when the user clicks the button, the client could restart the agent process with the desired env variable, and then automatically send the authenticate message with the correct id to sign in for the user.
+```json
+{
+  "id": "azure-openai",
+  "name": "Azure OpenAI",
+  "type": "env_var",
+  "vars": [
+    { "name": "AZURE_OPENAI_API_KEY", "label": "API Key" },
+    {
+      "name": "AZURE_OPENAI_ENDPOINT",
+      "label": "Endpoint URL",
+      "secret": false
+    },
+    {
+      "name": "AZURE_OPENAI_API_VERSION",
+      "label": "API Version",
+      "secret": false,
+      "optional": true
+    }
+  ],
+  "link": "https://portal.azure.com"
+}
+```
+
+Fields on `AuthMethodEnvVar`:
+
+- `vars` (required): Array of `AuthEnvVar` objects.
+- `link` (optional): URL where the user can obtain their credentials.
+
+Fields on `AuthEnvVar`:
+
+- `name` (required): The environment variable name (e.g. `"OPENAI_API_KEY"`).
+- `label` (optional): Human-readable label for this variable, displayed in client UI.
+- `secret` (optional, default `true`): Whether this value is a secret. Clients should use a password-style input for secret vars and a plain text input otherwise.
+- `optional` (optional, default `false`): Whether this variable is optional.
+
+Since environment variables need to be supplied when the agent process starts, the client can check if it already passed such variables to the process, in which case the user can click on the button and the agent will read the already available values.
+
+Otherwise, when the user clicks the button, the client could restart the agent process with the desired environment variables, and then automatically send the authenticate message with the correct id to sign in for the user.
 
 3. Terminal Auth
 
-There have been experiments for a "terminal-auth" experience as a fallback. This requires the client to be able to run an interactive terminal for the user to login via a TUI.
+This requires the client to be able to run an interactive terminal for the user to login via a TUI. Requires `"type": "terminal"`.
 
 ```json
 {
@@ -84,32 +127,30 @@ There have been experiments for a "terminal-auth" experience as a fallback. This
 }
 ```
 
+- `args` (optional, default `[]`): Additional arguments to pass when running the agent binary.
+- `env` (optional, default `{}`): Additional environment variables to set.
+
 The `command` cannot be specified, the client will invoke the exact same binary with the exact same setup. The agent can supply additional arguments and environment variables as necessary. These will be supplied in **addition** to any args/env supplied by default when the server is started. So agents will need to have a way to kickoff their interactive login flow even if normal acp commands/arguments are supplied as well.
 
 This is so that the agent doesn't need to know about the environment it is running in. It can't know the absolute path necessarily, and shouldn't be able to supply other commands or programs to minimize security issues.
 
-### AuthErrors
+### Client capabilities
 
-It might be useful to include a list of AuthMethod ids to the AUTH_REQUIRED JsonRpc error. Why do we need this if they're already shared during `initialize`:
-All supported auth methods are shared during `initialize`. When user starts a session, they've already selected a model, which can narrow down a list of options.
+Because `terminal` auth methods require specific client-side support, clients must opt in via `AuthCapabilities` on `ClientCapabilities` during initialization:
 
 ```json
 {
-  "jsonrpc": "2.0",
-  "id": 2,
-  "error": {
-    "code": -32000,
-    "message": "Authentication required",
-    "authMethods": [
-      {
-        "id": "chatgpt",
-        "name": "Login with ChatGPT",
-        "description": "Use your ChatGPT login with Codex CLI (requires a paid ChatGPT subscription)"
-      }
-    ]
+  "clientCapabilities": {
+    "auth": {
+      "terminal": true
+    }
   }
 }
 ```
+
+- `auth.terminal` (default `false`): When `true`, the agent may include `terminal` entries in its authentication methods.
+
+The `env_var` type does not require a capability opt-in since any client can set environment variables when starting a process, we are just providing additional context for the environment variable.
 
 ## Frequently asked questions
 
@@ -125,4 +166,7 @@ There is also an alternative to adding a separate `elicitation` capability, whic
 
 There was a part about elicitations https://github.com/agentclientprotocol/agent-client-protocol/blob/939ef116a1b14016e4e3808b8764237250afa253/docs/rfds/auth.mdx removed it for now, will move to a separate rfd
 
+- 2026-03-09: Remove auth_methods from Error type
+- 2026-03-03: Changed `env_var` from single `varName` to structured `vars` array of `AuthEnvVar` objects; simplified field name from `varName` to `name`
+- 2026-02-27: Updated to reflect current implementation
 - 2026-01-14: Updates based on Core Maintainer discussion

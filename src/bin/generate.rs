@@ -27,6 +27,7 @@ struct ClientOutgoingMessage(JsonRpcMessage<OutgoingMessage<ClientSide, AgentSid
 #[derive(JsonSchema)]
 #[serde(untagged)]
 #[schemars(title = "Agent Client Protocol")]
+#[allow(clippy::large_enum_variant)]
 enum AcpTypes {
     Agent(AgentOutgoingMessage),
     Client(ClientOutgoingMessage),
@@ -291,8 +292,38 @@ starting with '$/' it is free to ignore the notification."
                 writeln!(&mut self.output).unwrap();
             }
             // Determine type kind and document accordingly
-            if definition.get("oneOf").is_some() || definition.get("anyOf").is_some() {
-                self.document_union(definition);
+            if let Some(variants) = definition
+                .get("oneOf")
+                .or_else(|| definition.get("anyOf"))
+                .and_then(|v| v.as_array())
+            {
+                if variants.len() == 1 {
+                    // Single-variant union: resolve the $ref and render as its
+                    // underlying type instead of a "Union" wrapper.
+                    let variant = &variants[0];
+                    let resolved = variant
+                        .get("allOf")
+                        .and_then(|v| v.as_array())
+                        .and_then(|arr| arr.first())
+                        .or(Some(variant))
+                        .and_then(|v| v.get("$ref"))
+                        .and_then(|v| v.as_str())
+                        .and_then(|r| r.strip_prefix("#/$defs/"))
+                        .and_then(|name| self.definitions.get(name).cloned());
+                    if let Some(resolved_def) = resolved {
+                        // Preserve variant-level description if present
+                        if let Some(desc) = Self::get_def_description(variant) {
+                            let escaped_desc = Self::escape_description(&desc);
+                            writeln!(&mut self.output, "{escaped_desc}").unwrap();
+                            writeln!(&mut self.output).unwrap();
+                        }
+                        self.document_object(&resolved_def);
+                    } else {
+                        self.document_union(definition);
+                    }
+                } else {
+                    self.document_union(definition);
+                }
             } else if definition.get("enum").is_some() {
                 self.document_enum_simple(definition);
             } else if definition.get("properties").is_some() {
@@ -525,6 +556,17 @@ starting with '$/' it is free to ignore the notification."
                 // Add description if available
                 if let Some(desc) = Self::get_def_description(prop_schema) {
                     writeln!(&mut self.output, "{indent_str}  {desc}").unwrap();
+                } else if let Some(const_val) = prop_schema.get("const") {
+                    let val_str = if let Some(s) = const_val.as_str() {
+                        format!("\"{s}\"")
+                    } else {
+                        const_val.to_string()
+                    };
+                    writeln!(
+                        &mut self.output,
+                        "{indent_str}  The discriminator value. Must be `{val_str}`."
+                    )
+                    .unwrap();
                 }
 
                 // Add constraints if any
@@ -901,6 +943,7 @@ starting with '$/' it is free to ignore the notification."
                 "session/prompt" => self.agent.get("PromptRequest").unwrap(),
                 "session/cancel" => self.agent.get("CancelNotification").unwrap(),
                 "session/set_model" => self.agent.get("SetSessionModelRequest").unwrap(),
+                "session/close" => self.agent.get("CloseSessionRequest").unwrap(),
                 _ => panic!("Introduced a method? Add it here :)"),
             }
         }
@@ -917,7 +960,7 @@ starting with '$/' it is free to ignore the notification."
                 "terminal/output" => self.client.get("TerminalOutputRequest").unwrap(),
                 "terminal/release" => self.client.get("ReleaseTerminalRequest").unwrap(),
                 "terminal/wait_for_exit" => self.client.get("WaitForTerminalExitRequest").unwrap(),
-                "terminal/kill" => self.client.get("KillTerminalCommandRequest").unwrap(),
+                "terminal/kill" => self.client.get("KillTerminalRequest").unwrap(),
                 _ => panic!("Introduced a method? Add it here :)"),
             }
         }
