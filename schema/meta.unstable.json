@@ -1,8 +1,17 @@
 {
   "agentMethods": {
     "authenticate": "authenticate",
+    "document_did_change": "document/didChange",
+    "document_did_close": "document/didClose",
+    "document_did_focus": "document/didFocus",
+    "document_did_open": "document/didOpen",
+    "document_did_save": "document/didSave",
     "initialize": "initialize",
     "logout": "logout",
+    "nes_accept": "nes/accept",
+    "nes_reject": "nes/reject",
+    "nes_start": "nes/start",
+    "nes_suggest": "nes/suggest",
     "session_cancel": "session/cancel",
     "session_close": "session/close",
     "session_fork": "session/fork",

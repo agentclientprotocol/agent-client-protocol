@@ -17,6 +17,14 @@ use crate::{
     ProtocolVersion, SessionId,
 };
 
+#[cfg(feature = "unstable_nes")]
+use crate::{
+    DocumentDidChangeNotification, DocumentDidCloseNotification, DocumentDidFocusNotification,
+    DocumentDidOpenNotification, DocumentDidSaveNotification, NesAcceptNotification,
+    NesCapabilities, NesRejectNotification, NesStartRequest, NesStartResponse, NesSuggestRequest,
+    NesSuggestResponse, PositionEncodingKind,
+};
+
 // Initialize
 
 /// Request parameters for the initialize method.
@@ -3243,6 +3251,22 @@ pub struct AgentCapabilities {
     #[cfg(feature = "unstable_logout")]
     #[serde(default)]
     pub auth: AgentAuthCapabilities,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// NES (Next Edit Suggestions) capabilities supported by the agent.
+    #[cfg(feature = "unstable_nes")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub nes: Option<NesCapabilities>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// The position encoding selected by the agent from the client's supported encodings.
+    #[cfg(feature = "unstable_nes")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub position_encoding: Option<PositionEncodingKind>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -3295,6 +3319,29 @@ impl AgentCapabilities {
     #[must_use]
     pub fn auth(mut self, auth: AgentAuthCapabilities) -> Self {
         self.auth = auth;
+        self
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// NES (Next Edit Suggestions) capabilities supported by the agent.
+    #[cfg(feature = "unstable_nes")]
+    #[must_use]
+    pub fn nes(mut self, nes: impl IntoOption<NesCapabilities>) -> Self {
+        self.nes = nes.into_option();
+        self
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// The position encoding selected by the agent.
+    #[cfg(feature = "unstable_nes")]
+    #[must_use]
+    pub fn position_encoding(
+        mut self,
+        position_encoding: impl IntoOption<PositionEncodingKind>,
+    ) -> Self {
+        self.position_encoding = position_encoding.into_option();
         self
     }
 
@@ -3728,6 +3775,33 @@ pub struct AgentMethodNames {
     /// Method for logging out of an authenticated session.
     #[cfg(feature = "unstable_logout")]
     pub logout: &'static str,
+    /// Method for starting an NES session.
+    #[cfg(feature = "unstable_nes")]
+    pub nes_start: &'static str,
+    /// Method for requesting a suggestion.
+    #[cfg(feature = "unstable_nes")]
+    pub nes_suggest: &'static str,
+    /// Notification for accepting a suggestion.
+    #[cfg(feature = "unstable_nes")]
+    pub nes_accept: &'static str,
+    /// Notification for rejecting a suggestion.
+    #[cfg(feature = "unstable_nes")]
+    pub nes_reject: &'static str,
+    /// Notification for document open events.
+    #[cfg(feature = "unstable_nes")]
+    pub document_did_open: &'static str,
+    /// Notification for document change events.
+    #[cfg(feature = "unstable_nes")]
+    pub document_did_change: &'static str,
+    /// Notification for document close events.
+    #[cfg(feature = "unstable_nes")]
+    pub document_did_close: &'static str,
+    /// Notification for document save events.
+    #[cfg(feature = "unstable_nes")]
+    pub document_did_save: &'static str,
+    /// Notification for document focus events.
+    #[cfg(feature = "unstable_nes")]
+    pub document_did_focus: &'static str,
 }
 
 /// Constant containing all agent method names.
@@ -3751,6 +3825,31 @@ pub const AGENT_METHOD_NAMES: AgentMethodNames = AgentMethodNames {
     session_close: SESSION_CLOSE_METHOD_NAME,
     #[cfg(feature = "unstable_logout")]
     logout: LOGOUT_METHOD_NAME,
+    #[cfg(feature = "unstable_nes")]
+    nes_start: NES_START_METHOD_NAME,
+    #[cfg(feature = "unstable_nes")]
+    nes_suggest: NES_SUGGEST_METHOD_NAME,
+    #[cfg(feature = "unstable_nes")]
+    nes_accept: NES_ACCEPT_METHOD_NAME,
+    #[cfg(feature = "unstable_nes")]
+    nes_reject: NES_REJECT_METHOD_NAME,
+    #[cfg(feature = "unstable_nes")]
+    document_did_open: DOCUMENT_DID_OPEN_METHOD_NAME,
+    #[cfg(feature = "unstable_nes")]
+    document_did_change: DOCUMENT_DID_CHANGE_METHOD_NAME,
+    #[cfg(feature = "unstable_nes")]
+    document_did_close: DOCUMENT_DID_CLOSE_METHOD_NAME,
+    #[cfg(feature = "unstable_nes")]
+    document_did_save: DOCUMENT_DID_SAVE_METHOD_NAME,
+    #[cfg(feature = "unstable_nes")]
+    document_did_focus: DOCUMENT_DID_FOCUS_METHOD_NAME,
+};
+
+#[cfg(feature = "unstable_nes")]
+use crate::nes::{
+    DOCUMENT_DID_CHANGE_METHOD_NAME, DOCUMENT_DID_CLOSE_METHOD_NAME,
+    DOCUMENT_DID_FOCUS_METHOD_NAME, DOCUMENT_DID_OPEN_METHOD_NAME, DOCUMENT_DID_SAVE_METHOD_NAME,
+    NES_ACCEPT_METHOD_NAME, NES_REJECT_METHOD_NAME, NES_START_METHOD_NAME, NES_SUGGEST_METHOD_NAME,
 };
 
 /// Method name for the initialize request.
@@ -3932,6 +4031,20 @@ pub enum ClientRequest {
     ///
     /// Select a model for a given session.
     SetSessionModelRequest(SetSessionModelRequest),
+    #[cfg(feature = "unstable_nes")]
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Starts an NES session.
+    NesStartRequest(NesStartRequest),
+    #[cfg(feature = "unstable_nes")]
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Requests a code suggestion.
+    NesSuggestRequest(NesSuggestRequest),
     /// Handles extension method requests from the client.
     ///
     /// Extension methods provide a way to add custom functionality while maintaining
@@ -3964,6 +4077,10 @@ impl ClientRequest {
             Self::PromptRequest(_) => AGENT_METHOD_NAMES.session_prompt,
             #[cfg(feature = "unstable_session_model")]
             Self::SetSessionModelRequest(_) => AGENT_METHOD_NAMES.session_set_model,
+            #[cfg(feature = "unstable_nes")]
+            Self::NesStartRequest(_) => AGENT_METHOD_NAMES.nes_start,
+            #[cfg(feature = "unstable_nes")]
+            Self::NesSuggestRequest(_) => AGENT_METHOD_NAMES.nes_suggest,
             Self::ExtMethodRequest(ext_request) => &ext_request.method,
         }
     }
@@ -3999,6 +4116,10 @@ pub enum AgentResponse {
     PromptResponse(PromptResponse),
     #[cfg(feature = "unstable_session_model")]
     SetSessionModelResponse(#[serde(default)] SetSessionModelResponse),
+    #[cfg(feature = "unstable_nes")]
+    NesStartResponse(NesStartResponse),
+    #[cfg(feature = "unstable_nes")]
+    NesSuggestResponse(NesSuggestResponse),
     ExtMethodResponse(ExtResponse),
 }
 
@@ -4025,6 +4146,41 @@ pub enum ClientNotification {
     ///
     /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-turn#cancellation)
     CancelNotification(CancelNotification),
+    #[cfg(feature = "unstable_nes")]
+    /// **UNSTABLE**
+    ///
+    /// Notification sent when a file is opened in the editor.
+    DocumentDidOpenNotification(DocumentDidOpenNotification),
+    #[cfg(feature = "unstable_nes")]
+    /// **UNSTABLE**
+    ///
+    /// Notification sent when a file is edited.
+    DocumentDidChangeNotification(DocumentDidChangeNotification),
+    #[cfg(feature = "unstable_nes")]
+    /// **UNSTABLE**
+    ///
+    /// Notification sent when a file is closed.
+    DocumentDidCloseNotification(DocumentDidCloseNotification),
+    #[cfg(feature = "unstable_nes")]
+    /// **UNSTABLE**
+    ///
+    /// Notification sent when a file is saved.
+    DocumentDidSaveNotification(DocumentDidSaveNotification),
+    #[cfg(feature = "unstable_nes")]
+    /// **UNSTABLE**
+    ///
+    /// Notification sent when a file becomes the active editor tab.
+    DocumentDidFocusNotification(DocumentDidFocusNotification),
+    #[cfg(feature = "unstable_nes")]
+    /// **UNSTABLE**
+    ///
+    /// Notification sent when a suggestion is accepted.
+    NesAcceptNotification(NesAcceptNotification),
+    #[cfg(feature = "unstable_nes")]
+    /// **UNSTABLE**
+    ///
+    /// Notification sent when a suggestion is rejected.
+    NesRejectNotification(NesRejectNotification),
     /// Handles extension notifications from the client.
     ///
     /// Extension notifications provide a way to send one-way messages for custom functionality
@@ -4040,6 +4196,20 @@ impl ClientNotification {
     pub fn method(&self) -> &str {
         match self {
             Self::CancelNotification(_) => AGENT_METHOD_NAMES.session_cancel,
+            #[cfg(feature = "unstable_nes")]
+            Self::DocumentDidOpenNotification(_) => AGENT_METHOD_NAMES.document_did_open,
+            #[cfg(feature = "unstable_nes")]
+            Self::DocumentDidChangeNotification(_) => AGENT_METHOD_NAMES.document_did_change,
+            #[cfg(feature = "unstable_nes")]
+            Self::DocumentDidCloseNotification(_) => AGENT_METHOD_NAMES.document_did_close,
+            #[cfg(feature = "unstable_nes")]
+            Self::DocumentDidSaveNotification(_) => AGENT_METHOD_NAMES.document_did_save,
+            #[cfg(feature = "unstable_nes")]
+            Self::DocumentDidFocusNotification(_) => AGENT_METHOD_NAMES.document_did_focus,
+            #[cfg(feature = "unstable_nes")]
+            Self::NesAcceptNotification(_) => AGENT_METHOD_NAMES.nes_accept,
+            #[cfg(feature = "unstable_nes")]
+            Self::NesRejectNotification(_) => AGENT_METHOD_NAMES.nes_reject,
             Self::ExtNotification(ext_notification) => &ext_notification.method,
         }
     }

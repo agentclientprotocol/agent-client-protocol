@@ -56,6 +56,8 @@ mod content;
 mod error;
 mod ext;
 mod maybe_undefined;
+#[cfg(feature = "unstable_nes")]
+mod nes;
 mod plan;
 #[cfg(feature = "unstable_cancel_request")]
 mod protocol_level;
@@ -70,6 +72,8 @@ use derive_more::{Display, From};
 pub use error::*;
 pub use ext::*;
 pub use maybe_undefined::*;
+#[cfg(feature = "unstable_nes")]
+pub use nes::*;
 pub use plan::*;
 #[cfg(feature = "unstable_cancel_request")]
 pub use protocol_level::*;
