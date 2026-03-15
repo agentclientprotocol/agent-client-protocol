@@ -56,6 +56,28 @@
           },
           "description": "MCP capabilities supported by the agent."
         },
+        "nes": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNES (Next Edit Suggestions) capabilities supported by the agent."
+        },
+        "positionEncoding": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PositionEncodingKind"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nThe position encoding selected by the agent from the client's supported encodings."
+        },
         "promptCapabilities": {
           "allOf": [
             {
@@ -356,6 +378,22 @@
                     }
                   ],
                   "title": "SetSessionModelResponse"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/NesStartResponse"
+                    }
+                  ],
+                  "title": "NesStartResponse"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/NesSuggestResponse"
+                    }
+                  ],
+                  "title": "NesSuggestResponse"
                 },
                 {
                   "allOf": [
@@ -850,10 +888,54 @@
           },
           "description": "File system capabilities supported by the client.\nDetermines which file operations the agent can request."
         },
+        "general": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GeneralCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nGeneral client capabilities (e.g. position encodings)."
+        },
+        "nes": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ClientNesCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNES (Next Edit Suggestions) capabilities supported by the client."
+        },
         "terminal": {
           "default": false,
           "description": "Whether the Client support all `terminal/*` methods.",
           "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "ClientNesCapabilities": {
+      "description": "NES capabilities advertised by the client during initialization.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP.",
+          "type": ["object", "null"]
+        },
+        "ideActions": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesIdeActionsCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "IDE actions the client supports."
         }
       },
       "type": "object"
@@ -875,6 +957,69 @@
                   ],
                   "description": "Cancels ongoing operations for a session.\n\nThis is a notification sent by the client to cancel an ongoing prompt turn.\n\nUpon receiving this notification, the Agent SHOULD:\n- Stop all language model requests as soon as possible\n- Abort all tool call invocations in progress\n- Send any pending `session/update` notifications\n- Respond to the original `session/prompt` request with `StopReason::Cancelled`\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-turn#cancellation)",
                   "title": "CancelNotification"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/DocumentDidOpenNotification"
+                    }
+                  ],
+                  "description": "**UNSTABLE**\n\nNotification sent when a file is opened in the editor.",
+                  "title": "DocumentDidOpenNotification"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/DocumentDidChangeNotification"
+                    }
+                  ],
+                  "description": "**UNSTABLE**\n\nNotification sent when a file is edited.",
+                  "title": "DocumentDidChangeNotification"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/DocumentDidCloseNotification"
+                    }
+                  ],
+                  "description": "**UNSTABLE**\n\nNotification sent when a file is closed.",
+                  "title": "DocumentDidCloseNotification"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/DocumentDidSaveNotification"
+                    }
+                  ],
+                  "description": "**UNSTABLE**\n\nNotification sent when a file is saved.",
+                  "title": "DocumentDidSaveNotification"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/DocumentDidFocusNotification"
+                    }
+                  ],
+                  "description": "**UNSTABLE**\n\nNotification sent when a file becomes the active editor tab.",
+                  "title": "DocumentDidFocusNotification"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/NesAcceptNotification"
+                    }
+                  ],
+                  "description": "**UNSTABLE**\n\nNotification sent when a suggestion is accepted.",
+                  "title": "NesAcceptNotification"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/NesRejectNotification"
+                    }
+                  ],
+                  "description": "**UNSTABLE**\n\nNotification sent when a suggestion is rejected.",
+                  "title": "NesRejectNotification"
                 },
                 {
                   "allOf": [
@@ -1026,6 +1171,24 @@
                   ],
                   "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSelect a model for a given session.",
                   "title": "SetSessionModelRequest"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/NesStartRequest"
+                    }
+                  ],
+                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nStarts an NES session.",
+                  "title": "NesStartRequest"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/NesSuggestRequest"
+                    }
+                  ],
+                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequests a code suggestion.",
+                  "title": "NesSuggestRequest"
                 },
                 {
                   "allOf": [
@@ -1475,6 +1638,142 @@
       },
       "required": ["path", "newText"],
       "type": "object"
+    },
+    "DocumentDidChangeNotification": {
+      "description": "Notification sent when a file is edited.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP.",
+          "type": ["object", "null"]
+        },
+        "contentChanges": {
+          "description": "The content changes.",
+          "items": {
+            "$ref": "#/$defs/TextDocumentContentChangeEvent"
+          },
+          "type": "array"
+        },
+        "uri": {
+          "description": "The URI of the changed document.",
+          "type": "string"
+        },
+        "version": {
+          "description": "The new version number of the document.",
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": ["uri", "version", "contentChanges"],
+      "type": "object",
+      "x-method": "document/didChange",
+      "x-side": "agent"
+    },
+    "DocumentDidCloseNotification": {
+      "description": "Notification sent when a file is closed.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP.",
+          "type": ["object", "null"]
+        },
+        "uri": {
+          "description": "The URI of the closed document.",
+          "type": "string"
+        }
+      },
+      "required": ["uri"],
+      "type": "object",
+      "x-method": "document/didClose",
+      "x-side": "agent"
+    },
+    "DocumentDidFocusNotification": {
+      "description": "Notification sent when a file becomes the active editor tab.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP.",
+          "type": ["object", "null"]
+        },
+        "position": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/Position"
+            }
+          ],
+          "description": "The current cursor position."
+        },
+        "uri": {
+          "description": "The URI of the focused document.",
+          "type": "string"
+        },
+        "version": {
+          "description": "The version number of the document.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "visibleRange": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/Range"
+            }
+          ],
+          "description": "The portion of the file currently visible in the editor viewport."
+        }
+      },
+      "required": ["uri", "version", "position", "visibleRange"],
+      "type": "object",
+      "x-method": "document/didFocus",
+      "x-side": "agent"
+    },
+    "DocumentDidOpenNotification": {
+      "description": "Notification sent when a file is opened in the editor.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP.",
+          "type": ["object", "null"]
+        },
+        "languageId": {
+          "description": "The language identifier of the document (e.g., \"rust\", \"python\").",
+          "type": "string"
+        },
+        "text": {
+          "description": "The full text content of the document.",
+          "type": "string"
+        },
+        "uri": {
+          "description": "The URI of the opened document.",
+          "type": "string"
+        },
+        "version": {
+          "description": "The version number of the document.",
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": ["uri", "languageId", "version", "text"],
+      "type": "object",
+      "x-method": "document/didOpen",
+      "x-side": "agent"
+    },
+    "DocumentDidSaveNotification": {
+      "description": "Notification sent when a file is saved.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP.",
+          "type": ["object", "null"]
+        },
+        "uri": {
+          "description": "The URI of the saved document.",
+          "type": "string"
+        }
+      },
+      "required": ["uri"],
+      "type": "object",
+      "x-method": "document/didSave",
+      "x-side": "agent"
     },
     "ElicitationAcceptAction": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nThe user accepted the elicitation and provided content.",
@@ -2202,6 +2501,24 @@
       "x-method": "session/fork",
       "x-side": "agent"
     },
+    "GeneralCapabilities": {
+      "description": "General client capabilities (not specific to a particular feature).",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP.",
+          "type": ["object", "null"]
+        },
+        "positionEncodings": {
+          "description": "Position encodings supported by the client, in order of preference.\nIf omitted, defaults to UTF-16.",
+          "items": {
+            "$ref": "#/$defs/PositionEncodingKind"
+          },
+          "type": ["array", "null"]
+        }
+      },
+      "type": "object"
+    },
     "HttpHeader": {
       "description": "An HTTP header to set when making requests to the MCP server.",
       "properties": {
@@ -2869,6 +3186,1058 @@
       "required": ["items"],
       "type": "object"
     },
+    "NesAcceptNotification": {
+      "description": "Notification sent when a suggestion is accepted.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP.",
+          "type": ["object", "null"]
+        },
+        "id": {
+          "description": "The ID of the accepted suggestion.",
+          "type": "string"
+        }
+      },
+      "required": ["id"],
+      "type": "object",
+      "x-method": "nes/accept",
+      "x-side": "agent"
+    },
+    "NesActionSuggestion": {
+      "description": "An IDE action suggestion.",
+      "properties": {
+        "actionId": {
+          "description": "The IDE action to perform (must match a client-advertised action).",
+          "type": "string"
+        },
+        "arguments": {
+          "description": "Action parameters matching the schema from the client's capability."
+        },
+        "id": {
+          "description": "Unique identifier for accept/reject tracking.",
+          "type": "string"
+        }
+      },
+      "required": ["id", "actionId"],
+      "type": "object"
+    },
+    "NesCapabilities": {
+      "description": "NES capabilities advertised by the agent during initialization.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions.",
+          "type": ["object", "null"]
+        },
+        "context": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesContextCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Context the agent wants attached to each suggestion request."
+        },
+        "events": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesEventCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Events the agent wants to receive."
+        }
+      },
+      "type": "object"
+    },
+    "NesContextCapabilities": {
+      "description": "Context capabilities the agent wants attached to each suggestion request.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP.",
+          "type": ["object", "null"]
+        },
+        "diagnostics": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesDiagnosticsCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Whether the agent wants diagnostics context."
+        },
+        "editHistory": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesEditHistoryCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Whether the agent wants edit history context."
+        },
+        "openFiles": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesOpenFilesCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Whether the agent wants open files context."
+        },
+        "recentFiles": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesRecentFilesCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Whether the agent wants recent files context."
+        },
+        "relatedSnippets": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesRelatedSnippetsCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Whether the agent wants related snippets context."
+        },
+        "userActions": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesUserActionsCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Whether the agent wants user actions context."
+        }
+      },
+      "type": "object"
+    },
+    "NesDiagnostic": {
+      "description": "A diagnostic (error, warning, etc.).",
+      "properties": {
+        "message": {
+          "description": "The diagnostic message.",
+          "type": "string"
+        },
+        "range": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/Range"
+            }
+          ],
+          "description": "The range of the diagnostic."
+        },
+        "severity": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/NesDiagnosticSeverity"
+            }
+          ],
+          "description": "The severity of the diagnostic."
+        },
+        "uri": {
+          "description": "The URI of the file containing the diagnostic.",
+          "type": "string"
+        }
+      },
+      "required": ["uri", "range", "severity", "message"],
+      "type": "object"
+    },
+    "NesDiagnosticSeverity": {
+      "description": "Severity of a diagnostic.",
+      "oneOf": [
+        {
+          "const": "error",
+          "description": "An error.",
+          "type": "string"
+        },
+        {
+          "const": "warning",
+          "description": "A warning.",
+          "type": "string"
+        },
+        {
+          "const": "information",
+          "description": "An informational message.",
+          "type": "string"
+        },
+        {
+          "const": "hint",
+          "description": "A hint.",
+          "type": "string"
+        }
+      ]
+    },
+    "NesDiagnosticsCapabilities": {
+      "description": "Capabilities for diagnostics context.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP.",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object"
+    },
+    "NesDocumentDidChangeCapabilities": {
+      "description": "Capabilities for `document/didChange` events.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP.",
+          "type": ["object", "null"]
+        },
+        "syncKind": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TextDocumentSyncKind"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The sync kind the agent wants: `\"full\"` or `\"incremental\"`."
+        }
+      },
+      "type": "object"
+    },
+    "NesDocumentDidCloseCapabilities": {
+      "description": "Marker for `document/didClose` capability support.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP.",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object"
+    },
+    "NesDocumentDidFocusCapabilities": {
+      "description": "Marker for `document/didFocus` capability support.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP.",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object"
+    },
+    "NesDocumentDidOpenCapabilities": {
+      "description": "Marker for `document/didOpen` capability support.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP.",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object"
+    },
+    "NesDocumentDidSaveCapabilities": {
+      "description": "Marker for `document/didSave` capability support.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP.",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object"
+    },
+    "NesDocumentEventCapabilities": {
+      "description": "Document event capabilities the agent wants to receive.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP.",
+          "type": ["object", "null"]
+        },
+        "didChange": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesDocumentDidChangeCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Whether the agent wants `document/didChange` events, and the sync kind."
+        },
+        "didClose": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesDocumentDidCloseCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Whether the agent wants `document/didClose` events."
+        },
+        "didFocus": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesDocumentDidFocusCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Whether the agent wants `document/didFocus` events."
+        },
+        "didOpen": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesDocumentDidOpenCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Whether the agent wants `document/didOpen` events."
+        },
+        "didSave": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesDocumentDidSaveCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Whether the agent wants `document/didSave` events."
+        }
+      },
+      "type": "object"
+    },
+    "NesEditHistoryCapabilities": {
+      "description": "Capabilities for edit history context.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP.",
+          "type": ["object", "null"]
+        },
+        "maxCount": {
+          "description": "Maximum number of edit history entries the agent can use.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": ["integer", "null"]
+        }
+      },
+      "type": "object"
+    },
+    "NesEditHistoryEntry": {
+      "description": "An entry in the edit history.",
+      "properties": {
+        "diff": {
+          "description": "A diff representing the edit.",
+          "type": "string"
+        },
+        "uri": {
+          "description": "The URI of the edited file.",
+          "type": "string"
+        }
+      },
+      "required": ["uri", "diff"],
+      "type": "object"
+    },
+    "NesEditSuggestion": {
+      "description": "A text edit suggestion.",
+      "properties": {
+        "cursorPosition": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Position"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional suggested cursor position after applying edits."
+        },
+        "edits": {
+          "description": "The text edits to apply.",
+          "items": {
+            "$ref": "#/$defs/NesTextEdit"
+          },
+          "type": "array"
+        },
+        "id": {
+          "description": "Unique identifier for accept/reject tracking.",
+          "type": "string"
+        },
+        "uri": {
+          "description": "The URI of the file to edit.",
+          "type": "string"
+        }
+      },
+      "required": ["id", "uri", "edits"],
+      "type": "object"
+    },
+    "NesEventCapabilities": {
+      "description": "Event capabilities the agent can consume.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP.",
+          "type": ["object", "null"]
+        },
+        "document": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesDocumentEventCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Document event capabilities."
+        }
+      },
+      "type": "object"
+    },
+    "NesExcerpt": {
+      "description": "A code excerpt from a file.",
+      "properties": {
+        "endLine": {
+          "description": "The end line of the excerpt (zero-based).",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "startLine": {
+          "description": "The start line of the excerpt (zero-based).",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "text": {
+          "description": "The text content of the excerpt.",
+          "type": "string"
+        }
+      },
+      "required": ["startLine", "endLine", "text"],
+      "type": "object"
+    },
+    "NesIdeActionsCapabilities": {
+      "description": "IDE actions the client can perform.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP.",
+          "type": ["object", "null"]
+        },
+        "rename": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesRenameActionCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Whether the client supports the `rename` action."
+        },
+        "searchAndReplace": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesSearchAndReplaceActionCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Whether the client supports the `searchAndReplace` action."
+        }
+      },
+      "type": "object"
+    },
+    "NesJumpSuggestion": {
+      "description": "A jump-to-location suggestion.",
+      "properties": {
+        "id": {
+          "description": "Unique identifier for accept/reject tracking.",
+          "type": "string"
+        },
+        "position": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/Position"
+            }
+          ],
+          "description": "The target position within the file."
+        },
+        "uri": {
+          "description": "The file to navigate to.",
+          "type": "string"
+        }
+      },
+      "required": ["id", "uri", "position"],
+      "type": "object"
+    },
+    "NesOpenFile": {
+      "description": "An open file in the editor.",
+      "properties": {
+        "languageId": {
+          "description": "The language identifier.",
+          "type": "string"
+        },
+        "lastFocusedMs": {
+          "description": "Timestamp in milliseconds since epoch of when the file was last focused.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": ["integer", "null"]
+        },
+        "uri": {
+          "description": "The URI of the file.",
+          "type": "string"
+        },
+        "visibleRange": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Range"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The visible range in the editor, if any."
+        }
+      },
+      "required": ["uri", "languageId"],
+      "type": "object"
+    },
+    "NesOpenFilesCapabilities": {
+      "description": "Capabilities for open files context.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP.",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object"
+    },
+    "NesRecentFile": {
+      "description": "A recently accessed file.",
+      "properties": {
+        "languageId": {
+          "description": "The language identifier.",
+          "type": "string"
+        },
+        "text": {
+          "description": "The full text content of the file.",
+          "type": "string"
+        },
+        "uri": {
+          "description": "The URI of the file.",
+          "type": "string"
+        }
+      },
+      "required": ["uri", "languageId", "text"],
+      "type": "object"
+    },
+    "NesRecentFilesCapabilities": {
+      "description": "Capabilities for recent files context.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP.",
+          "type": ["object", "null"]
+        },
+        "maxCount": {
+          "description": "Maximum number of recent files the agent can use.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": ["integer", "null"]
+        }
+      },
+      "type": "object"
+    },
+    "NesRejectNotification": {
+      "description": "Notification sent when a suggestion is rejected.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP.",
+          "type": ["object", "null"]
+        },
+        "id": {
+          "description": "The ID of the rejected suggestion.",
+          "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesRejectReason"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The reason for rejection."
+        }
+      },
+      "required": ["id"],
+      "type": "object",
+      "x-method": "nes/reject",
+      "x-side": "agent"
+    },
+    "NesRejectReason": {
+      "description": "The reason a suggestion was rejected.",
+      "oneOf": [
+        {
+          "const": "rejected",
+          "description": "The user explicitly dismissed the suggestion.",
+          "type": "string"
+        },
+        {
+          "const": "ignored",
+          "description": "The suggestion was shown but the user continued editing without interacting.",
+          "type": "string"
+        },
+        {
+          "const": "replaced",
+          "description": "The suggestion was superseded by a newer suggestion.",
+          "type": "string"
+        },
+        {
+          "const": "cancelled",
+          "description": "The request was cancelled before the agent returned a response.",
+          "type": "string"
+        }
+      ]
+    },
+    "NesRelatedSnippet": {
+      "description": "A related code snippet from a file.",
+      "properties": {
+        "excerpts": {
+          "description": "The code excerpts.",
+          "items": {
+            "$ref": "#/$defs/NesExcerpt"
+          },
+          "type": "array"
+        },
+        "uri": {
+          "description": "The URI of the file containing the snippets.",
+          "type": "string"
+        }
+      },
+      "required": ["uri", "excerpts"],
+      "type": "object"
+    },
+    "NesRelatedSnippetsCapabilities": {
+      "description": "Capabilities for related snippets context.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP.",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object"
+    },
+    "NesRenameActionCapabilities": {
+      "description": "Marker for rename action support.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP.",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object"
+    },
+    "NesRepository": {
+      "description": "Repository metadata for an NES session.",
+      "properties": {
+        "name": {
+          "description": "The repository name.",
+          "type": "string"
+        },
+        "owner": {
+          "description": "The repository owner.",
+          "type": "string"
+        },
+        "remoteUrl": {
+          "description": "The remote URL of the repository.",
+          "type": "string"
+        }
+      },
+      "required": ["name", "owner", "remoteUrl"],
+      "type": "object"
+    },
+    "NesSearchAndReplaceActionCapabilities": {
+      "description": "Marker for search and replace action support.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP.",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object"
+    },
+    "NesSessionId": {
+      "description": "A unique identifier for an NES session, distinct from chat `SessionId`.",
+      "type": "string"
+    },
+    "NesStartRequest": {
+      "description": "Request to start an NES session.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP.",
+          "type": ["object", "null"]
+        },
+        "repository": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesRepository"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Repository metadata, if the workspace is a git repository."
+        },
+        "workspaceFolders": {
+          "description": "The workspace folders.",
+          "items": {
+            "$ref": "#/$defs/WorkspaceFolder"
+          },
+          "type": ["array", "null"]
+        },
+        "workspaceUri": {
+          "description": "The root URI of the workspace.",
+          "type": ["string", "null"]
+        }
+      },
+      "type": "object",
+      "x-method": "nes/start",
+      "x-side": "agent"
+    },
+    "NesStartResponse": {
+      "description": "Response to `nes/start`.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP.",
+          "type": ["object", "null"]
+        },
+        "sessionId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/NesSessionId"
+            }
+          ],
+          "description": "The session ID for the newly started NES session."
+        }
+      },
+      "required": ["sessionId"],
+      "type": "object",
+      "x-method": "nes/start",
+      "x-side": "agent"
+    },
+    "NesSuggestContext": {
+      "description": "Context attached to a suggestion request.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP.",
+          "type": ["object", "null"]
+        },
+        "diagnostics": {
+          "description": "Current diagnostics (errors, warnings).",
+          "items": {
+            "$ref": "#/$defs/NesDiagnostic"
+          },
+          "type": ["array", "null"]
+        },
+        "editHistory": {
+          "description": "Recent edit history.",
+          "items": {
+            "$ref": "#/$defs/NesEditHistoryEntry"
+          },
+          "type": ["array", "null"]
+        },
+        "openFiles": {
+          "description": "Currently open files in the editor.",
+          "items": {
+            "$ref": "#/$defs/NesOpenFile"
+          },
+          "type": ["array", "null"]
+        },
+        "recentFiles": {
+          "description": "Recently accessed files.",
+          "items": {
+            "$ref": "#/$defs/NesRecentFile"
+          },
+          "type": ["array", "null"]
+        },
+        "relatedSnippets": {
+          "description": "Related code snippets.",
+          "items": {
+            "$ref": "#/$defs/NesRelatedSnippet"
+          },
+          "type": ["array", "null"]
+        },
+        "userActions": {
+          "description": "Recent user actions (typing, navigation, etc.).",
+          "items": {
+            "$ref": "#/$defs/NesUserAction"
+          },
+          "type": ["array", "null"]
+        }
+      },
+      "type": "object"
+    },
+    "NesSuggestRequest": {
+      "description": "Request for a code suggestion.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP.",
+          "type": ["object", "null"]
+        },
+        "context": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesSuggestContext"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Context for the suggestion, included based on agent capabilities."
+        },
+        "position": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/Position"
+            }
+          ],
+          "description": "The current cursor position."
+        },
+        "selection": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Range"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The current text selection range, if any."
+        },
+        "triggerKind": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/NesTriggerKind"
+            }
+          ],
+          "description": "What triggered this suggestion request."
+        },
+        "uri": {
+          "description": "The URI of the document to suggest for.",
+          "type": "string"
+        },
+        "version": {
+          "description": "The version number of the document.",
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": ["uri", "version", "position", "triggerKind"],
+      "type": "object",
+      "x-method": "nes/suggest",
+      "x-side": "agent"
+    },
+    "NesSuggestResponse": {
+      "description": "Response to `nes/suggest`.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP.",
+          "type": ["object", "null"]
+        },
+        "suggestions": {
+          "description": "The list of suggestions.",
+          "items": {
+            "$ref": "#/$defs/NesSuggestion"
+          },
+          "type": "array"
+        }
+      },
+      "required": ["suggestions"],
+      "type": "object",
+      "x-method": "nes/suggest",
+      "x-side": "agent"
+    },
+    "NesSuggestion": {
+      "description": "A suggestion returned by the agent.",
+      "oneOf": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/NesEditSuggestion"
+            }
+          ],
+          "description": "A text edit suggestion.",
+          "properties": {
+            "kind": {
+              "const": "edit",
+              "type": "string"
+            }
+          },
+          "required": ["kind"],
+          "type": "object"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/NesJumpSuggestion"
+            }
+          ],
+          "description": "A jump-to-location suggestion.",
+          "properties": {
+            "kind": {
+              "const": "jump",
+              "type": "string"
+            }
+          },
+          "required": ["kind"],
+          "type": "object"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/NesActionSuggestion"
+            }
+          ],
+          "description": "An IDE action suggestion.",
+          "properties": {
+            "kind": {
+              "const": "action",
+              "type": "string"
+            }
+          },
+          "required": ["kind"],
+          "type": "object"
+        }
+      ]
+    },
+    "NesTextEdit": {
+      "description": "A text edit within a suggestion.",
+      "properties": {
+        "newText": {
+          "description": "The replacement text.",
+          "type": "string"
+        },
+        "range": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/Range"
+            }
+          ],
+          "description": "The range to replace."
+        }
+      },
+      "required": ["range", "newText"],
+      "type": "object"
+    },
+    "NesTriggerKind": {
+      "description": "What triggered the suggestion request.",
+      "oneOf": [
+        {
+          "const": "automatic",
+          "description": "Triggered by user typing or cursor movement.",
+          "type": "string"
+        },
+        {
+          "const": "diagnostic",
+          "description": "Triggered by a diagnostic appearing at or near the cursor.",
+          "type": "string"
+        },
+        {
+          "const": "manual",
+          "description": "Triggered by an explicit user action (keyboard shortcut).",
+          "type": "string"
+        }
+      ]
+    },
+    "NesUserAction": {
+      "description": "A user action (typing, cursor movement, etc.).",
+      "properties": {
+        "action": {
+          "description": "The kind of action (e.g., \"insertChar\", \"cursorMovement\").",
+          "type": "string"
+        },
+        "line": {
+          "description": "The line number where the action occurred.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "offset": {
+          "description": "The character offset where the action occurred.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "timestampMs": {
+          "description": "Timestamp in milliseconds since epoch.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "uri": {
+          "description": "The URI of the file where the action occurred.",
+          "type": "string"
+        }
+      },
+      "required": ["action", "uri", "line", "offset", "timestampMs"],
+      "type": "object"
+    },
+    "NesUserActionsCapabilities": {
+      "description": "Capabilities for user actions context.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP.",
+          "type": ["object", "null"]
+        },
+        "maxCount": {
+          "description": "Maximum number of user actions the agent can use.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": ["integer", "null"]
+        }
+      },
+      "type": "object"
+    },
     "NewSessionRequest": {
       "description": "Request parameters for creating a new session.\n\nSee protocol docs: [Creating a Session](https://agentclientprotocol.com/protocol/session-setup#creating-a-session)",
       "properties": {
@@ -3126,6 +4495,45 @@
         }
       ]
     },
+    "Position": {
+      "description": "A zero-based position in a text document.\n\nThe meaning of `character` depends on the negotiated position encoding.",
+      "properties": {
+        "character": {
+          "description": "Zero-based character offset (encoding-dependent).",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "line": {
+          "description": "Zero-based line number.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": ["line", "character"],
+      "type": "object"
+    },
+    "PositionEncodingKind": {
+      "description": "The encoding used for character offsets in positions.\n\nFollows the same conventions as LSP 3.17. The default is UTF-16.",
+      "oneOf": [
+        {
+          "const": "utf-16",
+          "description": "Character offsets count UTF-16 code units. This is the default.",
+          "type": "string"
+        },
+        {
+          "const": "utf-32",
+          "description": "Character offsets count Unicode code points.",
+          "type": "string"
+        },
+        {
+          "const": "utf-8",
+          "description": "Character offsets count UTF-8 code units (bytes).",
+          "type": "string"
+        }
+      ]
+    },
     "PromptCapabilities": {
       "description": "Prompt capabilities supported by the agent in `session/prompt` requests.\n\nBaseline agent functionality requires support for [`ContentBlock::Text`]\nand [`ContentBlock::ResourceLink`] in prompt requests.\n\nOther variants must be explicitly opted in to.\nCapabilities for different types of content in prompt requests.\n\nIndicates which content types beyond the baseline (text and resource links)\nthe agent can process.\n\nSee protocol docs: [Prompt Capabilities](https://agentclientprotocol.com/protocol/initialization#prompt-capabilities)",
       "properties": {
@@ -3228,6 +4636,29 @@
       "maximum": 65535,
       "minimum": 0,
       "type": "integer"
+    },
+    "Range": {
+      "description": "A range in a text document, expressed as start and end positions.",
+      "properties": {
+        "end": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/Position"
+            }
+          ],
+          "description": "The end position (exclusive)."
+        },
+        "start": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/Position"
+            }
+          ],
+          "description": "The start position (inclusive)."
+        }
+      },
+      "required": ["start", "end"],
+      "type": "object"
     },
     "ReadTextFileRequest": {
       "description": "Request to read content from a text file.\n\nOnly available if the client supports the `fs.readTextFile` capability.",
@@ -4654,6 +6085,43 @@
       "required": ["text"],
       "type": "object"
     },
+    "TextDocumentContentChangeEvent": {
+      "description": "A content change event for a document.\n\nWhen `range` is `None`, `text` is the full content of the document.\nWhen `range` is `Some`, `text` replaces the given range.",
+      "properties": {
+        "range": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Range"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The range of the document that changed. If `None`, the entire content is replaced."
+        },
+        "text": {
+          "description": "The new text for the range, or the full document content if `range` is `None`.",
+          "type": "string"
+        }
+      },
+      "required": ["text"],
+      "type": "object"
+    },
+    "TextDocumentSyncKind": {
+      "description": "How the agent wants document changes delivered.",
+      "oneOf": [
+        {
+          "const": "full",
+          "description": "Client sends the entire file content on each change.",
+          "type": "string"
+        },
+        {
+          "const": "incremental",
+          "description": "Client sends only the changed ranges.",
+          "type": "string"
+        }
+      ]
+    },
     "TextResourceContents": {
       "description": "Text-based resource contents.",
       "properties": {
@@ -5141,6 +6609,21 @@
       "type": "object",
       "x-method": "terminal/wait_for_exit",
       "x-side": "client"
+    },
+    "WorkspaceFolder": {
+      "description": "A workspace folder.",
+      "properties": {
+        "name": {
+          "description": "The display name of the folder.",
+          "type": "string"
+        },
+        "uri": {
+          "description": "The URI of the folder.",
+          "type": "string"
+        }
+      },
+      "required": ["uri", "name"],
+      "type": "object"
     },
     "WriteTextFileRequest": {
       "description": "Request to write content to a text file.\n\nOnly available if the client supports the `fs.writeTextFile` capability.",
