@@ -66,22 +66,27 @@ interface LogoutResponse {
 
 ### Capability Advertisement
 
-The `logout` capability should be advertised within a new `authCapabilities` object in `AgentCapabilities`:
+The `logout` capability should be advertised within a new `auth` object in `AgentCapabilities`:
 
 ```typescript
 interface AgentCapabilities {
   // ... existing fields ...
 
   /** Authentication-related capabilities */
-  authCapabilities?: AuthCapabilities;
+  auth?: AgentAuthCapabilities;
 }
 
-interface AuthCapabilities {
+interface AgentAuthCapabilities {
   /** Extension metadata */
   _meta?: Record<string, unknown>;
 
-  /** Agent supports the logout method */
-  logout?: boolean;
+  /** Agent supports the logout method. Supply `{}` to indicate support. */
+  logout?: LogoutCapabilities;
+}
+
+interface LogoutCapabilities {
+  /** Extension metadata */
+  _meta?: Record<string, unknown>;
 }
 ```
 
@@ -90,7 +95,7 @@ interface AuthCapabilities {
 ```json
 {
   "$defs": {
-    "AuthCapabilities": {
+    "AgentAuthCapabilities": {
       "description": "Authentication-related capabilities supported by the agent.",
       "properties": {
         "_meta": {
@@ -98,9 +103,22 @@ interface AuthCapabilities {
           "type": ["object", "null"]
         },
         "logout": {
-          "type": "boolean",
-          "default": false,
-          "description": "Whether the agent supports the logout method."
+          "allOf": [
+            {
+              "$ref": "#/$defs/LogoutCapabilities"
+            }
+          ],
+          "description": "Whether the agent supports the logout method. Supply `{}` to indicate support."
+        }
+      },
+      "type": "object"
+    },
+    "LogoutCapabilities": {
+      "description": "Logout capabilities supported by the agent. Supply `{}` to indicate support.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "type": ["object", "null"]
         }
       },
       "type": "object"
@@ -159,7 +177,7 @@ interface AuthCapabilities {
 ### Behavior
 
 1. **Pre-condition**: The client should only call `logout` if:
-   - The agent advertises `authCapabilities.logout: true`
+   - The agent advertises `auth.logout: {}`
 
 2. **Agent responsibilities**:
    - Invalidate any stored tokens or credentials as appropriate

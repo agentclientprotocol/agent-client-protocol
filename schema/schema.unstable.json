@@ -1,5 +1,27 @@
 {
   "$defs": {
+    "AgentAuthCapabilities": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAuthentication-related capabilities supported by the agent.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "logout": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LogoutCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Whether the agent supports the logout method.\n\nBy supplying `{}` it means that the agent supports the logout method."
+        }
+      },
+      "type": "object"
+    },
     "AgentCapabilities": {
       "description": "Capabilities supported by the agent.\n\nAdvertised during initialization to inform the client about\navailable features and content types.\n\nSee protocol docs: [Agent Capabilities](https://agentclientprotocol.com/protocol/initialization#agent-capabilities)",
       "properties": {
@@ -7,6 +29,17 @@
           "additionalProperties": true,
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
+        },
+        "auth": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AgentAuthCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAuthentication-related capabilities supported by the agent."
         },
         "loadSession": {
           "default": false,
@@ -219,6 +252,14 @@
                     }
                   ],
                   "title": "AuthenticateResponse"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/LogoutResponse"
+                    }
+                  ],
+                  "title": "LogoutResponse"
                 },
                 {
                   "allOf": [
@@ -841,6 +882,15 @@
                   ],
                   "description": "Authenticates the client using the specified authentication method.\n\nCalled when the agent requires authentication before allowing session creation.\nThe client provides the authentication method ID that was advertised during initialization.\n\nAfter successful authentication, the client can proceed to create sessions with\n`new_session` without receiving an `auth_required` error.\n\nSee protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)",
                   "title": "AuthenticateRequest"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/LogoutRequest"
+                    }
+                  ],
+                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nLogs out of the current authenticated state.\n\nAfter a successful logout, all new sessions will require authentication.\nThere is no guarantee about the behavior of already running sessions.",
+                  "title": "LogoutRequest"
                 },
                 {
                   "allOf": [
@@ -1988,6 +2038,43 @@
       },
       "type": "object",
       "x-method": "session/load",
+      "x-side": "agent"
+    },
+    "LogoutCapabilities": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nLogout capabilities supported by the agent.\n\nBy supplying `{}` it means that the agent supports the logout method.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object"
+    },
+    "LogoutRequest": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for the logout method.\n\nTerminates the current authenticated session.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object",
+      "x-method": "logout",
+      "x-side": "agent"
+    },
+    "LogoutResponse": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nResponse to the `logout` method.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object",
+      "x-method": "logout",
       "x-side": "agent"
     },
     "McpCapabilities": {

@@ -301,6 +301,177 @@ impl AuthenticateResponse {
     }
 }
 
+// Logout
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Request parameters for the logout method.
+///
+/// Terminates the current authenticated session.
+#[cfg(feature = "unstable_logout")]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[schemars(extend("x-side" = "agent", "x-method" = LOGOUT_METHOD_NAME))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct LogoutRequest {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_logout")]
+impl LogoutRequest {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Response to the `logout` method.
+#[cfg(feature = "unstable_logout")]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[schemars(extend("x-side" = "agent", "x-method" = LOGOUT_METHOD_NAME))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct LogoutResponse {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_logout")]
+impl LogoutResponse {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Authentication-related capabilities supported by the agent.
+#[cfg(feature = "unstable_logout")]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct AgentAuthCapabilities {
+    /// Whether the agent supports the logout method.
+    ///
+    /// By supplying `{}` it means that the agent supports the logout method.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub logout: Option<LogoutCapabilities>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_logout")]
+impl AgentAuthCapabilities {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Whether the agent supports the logout method.
+    #[must_use]
+    pub fn logout(mut self, logout: impl IntoOption<LogoutCapabilities>) -> Self {
+        self.logout = logout.into_option();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Logout capabilities supported by the agent.
+///
+/// By supplying `{}` it means that the agent supports the logout method.
+#[cfg(feature = "unstable_logout")]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct LogoutCapabilities {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_logout")]
+impl LogoutCapabilities {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
 #[from(Arc<str>, String, &'static str)]
@@ -3064,6 +3235,14 @@ pub struct AgentCapabilities {
     pub mcp_capabilities: McpCapabilities,
     #[serde(default)]
     pub session_capabilities: SessionCapabilities,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Authentication-related capabilities supported by the agent.
+    #[cfg(feature = "unstable_logout")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub auth: Option<AgentAuthCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -3104,6 +3283,18 @@ impl AgentCapabilities {
     #[must_use]
     pub fn session_capabilities(mut self, session_capabilities: SessionCapabilities) -> Self {
         self.session_capabilities = session_capabilities;
+        self
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Authentication-related capabilities supported by the agent.
+    #[cfg(feature = "unstable_logout")]
+    #[must_use]
+    pub fn auth(mut self, auth: impl IntoOption<AgentAuthCapabilities>) -> Self {
+        self.auth = auth.into_option();
         self
     }
 
@@ -3534,6 +3725,9 @@ pub struct AgentMethodNames {
     /// Method for closing an active session.
     #[cfg(feature = "unstable_session_close")]
     pub session_close: &'static str,
+    /// Method for logging out of an authenticated session.
+    #[cfg(feature = "unstable_logout")]
+    pub logout: &'static str,
 }
 
 /// Constant containing all agent method names.
@@ -3555,6 +3749,8 @@ pub const AGENT_METHOD_NAMES: AgentMethodNames = AgentMethodNames {
     session_resume: SESSION_RESUME_METHOD_NAME,
     #[cfg(feature = "unstable_session_close")]
     session_close: SESSION_CLOSE_METHOD_NAME,
+    #[cfg(feature = "unstable_logout")]
+    logout: LOGOUT_METHOD_NAME,
 };
 
 /// Method name for the initialize request.
@@ -3587,6 +3783,9 @@ pub(crate) const SESSION_RESUME_METHOD_NAME: &str = "session/resume";
 /// Method name for closing an active session.
 #[cfg(feature = "unstable_session_close")]
 pub(crate) const SESSION_CLOSE_METHOD_NAME: &str = "session/close";
+/// Method name for logging out of an authenticated session.
+#[cfg(feature = "unstable_logout")]
+pub(crate) const LOGOUT_METHOD_NAME: &str = "logout";
 
 /// All possible requests that a client can send to an agent.
 ///
@@ -3620,6 +3819,16 @@ pub enum ClientRequest {
     ///
     /// See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)
     AuthenticateRequest(AuthenticateRequest),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Logs out of the current authenticated state.
+    ///
+    /// After a successful logout, all new sessions will require authentication.
+    /// There is no guarantee about the behavior of already running sessions.
+    #[cfg(feature = "unstable_logout")]
+    LogoutRequest(LogoutRequest),
     /// Creates a new conversation session with the agent.
     ///
     /// Sessions represent independent conversation contexts with their own history and state.
@@ -3738,6 +3947,8 @@ impl ClientRequest {
         match self {
             Self::InitializeRequest(_) => AGENT_METHOD_NAMES.initialize,
             Self::AuthenticateRequest(_) => AGENT_METHOD_NAMES.authenticate,
+            #[cfg(feature = "unstable_logout")]
+            Self::LogoutRequest(_) => AGENT_METHOD_NAMES.logout,
             Self::NewSessionRequest(_) => AGENT_METHOD_NAMES.session_new,
             Self::LoadSessionRequest(_) => AGENT_METHOD_NAMES.session_load,
             Self::ListSessionsRequest(_) => AGENT_METHOD_NAMES.session_list,
@@ -3771,6 +3982,8 @@ impl ClientRequest {
 pub enum AgentResponse {
     InitializeResponse(InitializeResponse),
     AuthenticateResponse(#[serde(default)] AuthenticateResponse),
+    #[cfg(feature = "unstable_logout")]
+    LogoutResponse(#[serde(default)] LogoutResponse),
     NewSessionResponse(NewSessionResponse),
     LoadSessionResponse(#[serde(default)] LoadSessionResponse),
     ListSessionsResponse(ListSessionsResponse),
