@@ -44,9 +44,9 @@ In the shiny future, agent UIs will be fluid and reactive.
 ## Implementation details and plan
 
 ### Protocol Change
-Add `agent_message_clear` to the `SessionUpdate` variant list.
+Add `agent_message_clear` to the `SessionUpdate` variant list. When [message IDs](message-id.mdx) are in use (unstable today), the update may include an optional `messageId` to clear a specific message; otherwise it clears the current message in the session.
 
-**JSON-RPC Example:**
+**JSON-RPC Example (clear current message):**
 ```json
 {
   "jsonrpc": "2.0",
@@ -55,6 +55,21 @@ Add `agent_message_clear` to the `SessionUpdate` variant list.
     "sessionId": "sess_abc123",
     "update": {
       "sessionUpdate": "agent_message_clear"
+    }
+  }
+}
+```
+
+**With optional `messageId` (when message ID is supported):**
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123",
+    "update": {
+      "sessionUpdate": "agent_message_clear",
+      "messageId": "msg_uuid_here"
     }
   }
 }
@@ -93,13 +108,11 @@ No. It only clears the "accumulated streamed content" of the **current** active 
 
 ### What about message IDs and "replace by id"?
 
-The spec **already** has **session id**: multiple sessions on the same connection are supported (e.g. repeated `session/new`), and all session-scoped notifications and methods carry a `sessionId`. So we always know *which session* we're updating.
+The spec already has **message IDs** (currently unstable): `agent_message_chunk` and related updates can carry an optional `messageId`; see the [Message ID](message-id.mdx) RFD and `schema.unstable.json`. Review feedback suggested building on this so we know *which* message to clear, and an alternative design: allow **`agent_message`** (full message) in addition to `agent_message_chunk`, with an `id`—when the client sees a full message with an existing id, it would replace all previous chunks/text for that id, similar to tool call updates.
 
-Review feedback suggested going further and building on **message IDs** (for agent messages), so we know *which* message within the session to clear—similar to how `ToolCall` / `ToolCallUpdate` use `toolCallId`. An alternative design: allow **`agent_message`** (full message) in addition to `agent_message_chunk`, with an `id`; when the client sees a full message with an existing id, it would replace all previous chunks/text for that id, like tool call updates.
-
-Today, `SessionUpdate` / `agent_message_chunk` do not carry a message-level id in the schema; the "current" message is implicit per session. This RFD therefore specifies clear for that implicit current message. If the spec already or later adds message IDs for agent messages, this mechanism can be extended to clear (or replace) a specific message by id; the "full `agent_message` with id for replace" design is a viable alternative for that iteration.
+This RFD should align with that existing mechanism: `agent_message_clear` can take an optional `messageId`; when present, the client clears the accumulated content for that message id; when absent, it clears the "current" message (same as today's implicit semantics). That way we build on top of the new message ids as suggested. The "full `agent_message` with id for replace" design remains a viable alternative or future extension.
 
 ## Revision history
 
 - **2026-02-07**: Initial draft by steve02081504.
-- **2026-03-15**: Updated per review: multi-session clarification, discussion of message IDs and replace-by-id alternative.
+- **2026-03-15**: Updated per review: multi-session clarification; build on existing (unstable) message IDs; optional `messageId` on `agent_message_clear`; replace-by-id alternative noted.
