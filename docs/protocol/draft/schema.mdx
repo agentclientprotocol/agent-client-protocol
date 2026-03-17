@@ -2609,6 +2609,22 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
   The file path being modified.
 </ResponseField>
 
+## <span class="font-mono">ElicitationAcceptAction</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+The user accepted the elicitation and provided content.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="content" type={"object"}>
+  The user-provided content, if any.
+</ResponseField>
+
 ## <span class="font-mono">ElicitationAction</span>
 
 **UNSTABLE**
@@ -2706,11 +2722,23 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
 </ResponseField>
 
-## <span class="font-mono">ElicitationId</span>
+## <span class="font-mono">ElicitationFormMode</span>
 
 **UNSTABLE**
 
 This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Form-based elicitation mode where the client renders a form from the provided schema.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="requestedSchema" type={"object"} required>
+  A JSON Schema describing the form fields to present to the user.
+</ResponseField>
+
+## <span class="font-mono">ElicitationId</span>
 
 Unique identifier for an elicitation.
 
@@ -2735,6 +2763,29 @@ these keys.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
+</ResponseField>
+
+## <span class="font-mono">ElicitationUrlMode</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+URL-based elicitation mode where the client directs the user to a URL.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField
+  name="elicitationId"
+  type={<a href="#elicitationid">ElicitationId</a>}
+  required
+>
+  The unique identifier for this elicitation.
+</ResponseField>
+<ResponseField name="url" type={"string"} required>
+  The URL to direct the user to.
 </ResponseField>
 
 ## <span class="font-mono">EmbeddedResource</span>

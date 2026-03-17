@@ -1458,6 +1458,15 @@
       "required": ["path", "newText"],
       "type": "object"
     },
+    "ElicitationAcceptAction": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nThe user accepted the elicitation and provided content.",
+      "properties": {
+        "content": {
+          "description": "The user-provided content, if any."
+        }
+      },
+      "type": "object"
+    },
     "ElicitationAction": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nThe user's action in response to an elicitation.",
       "discriminator": {
@@ -1465,14 +1474,16 @@
       },
       "oneOf": [
         {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ElicitationAcceptAction"
+            }
+          ],
           "description": "The user accepted and provided content.",
           "properties": {
             "action": {
               "const": "accept",
               "type": "string"
-            },
-            "content": {
-              "description": "The user-provided content, if any."
             }
           },
           "required": ["action"],
@@ -1568,8 +1579,18 @@
       },
       "type": "object"
     },
+    "ElicitationFormMode": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nForm-based elicitation mode where the client renders a form from the provided schema.",
+      "properties": {
+        "requestedSchema": {
+          "description": "A JSON Schema describing the form fields to present to the user."
+        }
+      },
+      "required": ["requestedSchema"],
+      "type": "object"
+    },
     "ElicitationId": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nUnique identifier for an elicitation.",
+      "description": "Unique identifier for an elicitation.",
       "type": "string"
     },
     "ElicitationRequest": {
@@ -1579,40 +1600,35 @@
       },
       "oneOf": [
         {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ElicitationFormMode"
+            }
+          ],
           "description": "Form-based elicitation where the client renders a form from the provided schema.",
           "properties": {
             "mode": {
               "const": "form",
               "type": "string"
-            },
-            "requestedSchema": {
-              "description": "A JSON Schema describing the form fields to present to the user."
             }
           },
-          "required": ["mode", "requestedSchema"],
+          "required": ["mode"],
           "type": "object"
         },
         {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ElicitationUrlMode"
+            }
+          ],
           "description": "URL-based elicitation where the client directs the user to a URL.",
           "properties": {
-            "elicitationId": {
-              "allOf": [
-                {
-                  "$ref": "#/$defs/ElicitationId"
-                }
-              ],
-              "description": "The unique identifier for this elicitation."
-            },
             "mode": {
               "const": "url",
               "type": "string"
-            },
-            "url": {
-              "description": "The URL to direct the user to.",
-              "type": "string"
             }
           },
-          "required": ["mode", "elicitationId", "url"],
+          "required": ["mode"],
           "type": "object"
         }
       ],
@@ -1671,6 +1687,25 @@
           "type": ["object", "null"]
         }
       },
+      "type": "object"
+    },
+    "ElicitationUrlMode": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nURL-based elicitation mode where the client directs the user to a URL.",
+      "properties": {
+        "elicitationId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ElicitationId"
+            }
+          ],
+          "description": "The unique identifier for this elicitation."
+        },
+        "url": {
+          "description": "The URL to direct the user to.",
+          "type": "string"
+        }
+      },
+      "required": ["elicitationId", "url"],
       "type": "object"
     },
     "EmbeddedResource": {
