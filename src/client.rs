@@ -746,6 +746,415 @@ impl SelectedPermissionOutcome {
     }
 }
 
+// Elicitation
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Unique identifier for an elicitation.
+#[cfg(feature = "unstable_elicitation")]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
+#[serde(transparent)]
+#[from(Arc<str>, String, &'static str)]
+#[non_exhaustive]
+pub struct ElicitationId(pub Arc<str>);
+
+#[cfg(feature = "unstable_elicitation")]
+impl ElicitationId {
+    #[must_use]
+    pub fn new(id: impl Into<Arc<str>>) -> Self {
+        Self(id.into())
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Elicitation capabilities supported by the client.
+#[cfg(feature = "unstable_elicitation")]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct ElicitationCapabilities {
+    /// Whether the client supports form-based elicitation.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub form: Option<ElicitationFormCapabilities>,
+    /// Whether the client supports URL-based elicitation.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub url: Option<ElicitationUrlCapabilities>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_elicitation")]
+impl ElicitationCapabilities {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Whether the client supports form-based elicitation.
+    #[must_use]
+    pub fn form(mut self, form: impl IntoOption<ElicitationFormCapabilities>) -> Self {
+        self.form = form.into_option();
+        self
+    }
+
+    /// Whether the client supports URL-based elicitation.
+    #[must_use]
+    pub fn url(mut self, url: impl IntoOption<ElicitationUrlCapabilities>) -> Self {
+        self.url = url.into_option();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Form-based elicitation capabilities.
+#[cfg(feature = "unstable_elicitation")]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct ElicitationFormCapabilities {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_elicitation")]
+impl ElicitationFormCapabilities {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// URL-based elicitation capabilities.
+#[cfg(feature = "unstable_elicitation")]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct ElicitationUrlCapabilities {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_elicitation")]
+impl ElicitationUrlCapabilities {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Request from the agent to elicit structured user input.
+///
+/// The agent sends this to the client to request information from the user,
+/// either via a form or by directing them to a URL.
+#[cfg(feature = "unstable_elicitation")]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[schemars(extend("x-side" = "client", "x-method" = SESSION_ELICITATION_METHOD_NAME))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct ElicitationRequest {
+    /// The session ID for this request.
+    pub session_id: SessionId,
+    /// The elicitation mode and its mode-specific fields.
+    #[serde(flatten)]
+    pub mode: ElicitationMode,
+    /// A human-readable message describing what input is needed.
+    pub message: String,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_elicitation")]
+impl ElicitationRequest {
+    #[must_use]
+    pub fn new(
+        session_id: impl Into<SessionId>,
+        mode: ElicitationMode,
+        message: impl Into<String>,
+    ) -> Self {
+        Self {
+            session_id: session_id.into(),
+            mode,
+            message: message.into(),
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// The mode of elicitation, determining how user input is collected.
+#[cfg(feature = "unstable_elicitation")]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[serde(tag = "mode", rename_all = "snake_case")]
+#[schemars(extend("discriminator" = {"propertyName": "mode"}))]
+#[non_exhaustive]
+pub enum ElicitationMode {
+    /// Form-based elicitation where the client renders a form from the provided schema.
+    #[serde(rename_all = "camelCase")]
+    Form {
+        /// A JSON Schema describing the form fields to present to the user.
+        requested_schema: serde_json::Value,
+    },
+    /// URL-based elicitation where the client directs the user to a URL.
+    #[serde(rename_all = "camelCase")]
+    Url {
+        /// The unique identifier for this elicitation.
+        elicitation_id: ElicitationId,
+        /// The URL to direct the user to.
+        url: String,
+    },
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Response from the client to an elicitation request.
+#[cfg(feature = "unstable_elicitation")]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[schemars(extend("x-side" = "client", "x-method" = SESSION_ELICITATION_METHOD_NAME))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct ElicitationResponse {
+    /// The user's action in response to the elicitation.
+    pub action: ElicitationAction,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_elicitation")]
+impl ElicitationResponse {
+    #[must_use]
+    pub fn new(action: ElicitationAction) -> Self {
+        Self { action, meta: None }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// The user's action in response to an elicitation.
+#[cfg(feature = "unstable_elicitation")]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[serde(tag = "action", rename_all = "snake_case")]
+#[schemars(extend("discriminator" = {"propertyName": "action"}))]
+#[non_exhaustive]
+pub enum ElicitationAction {
+    /// The user accepted and provided content.
+    Accept {
+        /// The user-provided content, if any.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        content: Option<serde_json::Value>,
+    },
+    /// The user declined the elicitation.
+    Decline,
+    /// The elicitation was cancelled.
+    Cancel,
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Notification sent by the agent when a URL-based elicitation is complete.
+#[cfg(feature = "unstable_elicitation")]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[schemars(extend("x-side" = "client", "x-method" = NOTIFICATION_ELICITATION_COMPLETE))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct ElicitationCompleteNotification {
+    /// The ID of the elicitation that completed.
+    pub elicitation_id: ElicitationId,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_elicitation")]
+impl ElicitationCompleteNotification {
+    #[must_use]
+    pub fn new(elicitation_id: impl Into<ElicitationId>) -> Self {
+        Self {
+            elicitation_id: elicitation_id.into(),
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Data payload for the `UrlElicitationRequired` error, describing the URL elicitations
+/// the user must complete.
+#[cfg(feature = "unstable_elicitation")]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct UrlElicitationRequiredData {
+    /// The URL elicitations the user must complete.
+    pub elicitations: Vec<UrlElicitationRequiredItem>,
+}
+
+#[cfg(feature = "unstable_elicitation")]
+impl UrlElicitationRequiredData {
+    #[must_use]
+    pub fn new(elicitations: Vec<UrlElicitationRequiredItem>) -> Self {
+        Self { elicitations }
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// A single URL elicitation item within the `UrlElicitationRequired` error data.
+#[cfg(feature = "unstable_elicitation")]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct UrlElicitationRequiredItem {
+    /// The elicitation mode (always `"url"` for this item type).
+    pub mode: String,
+    /// The unique identifier for this elicitation.
+    pub elicitation_id: ElicitationId,
+    /// The URL the user should be directed to.
+    pub url: String,
+    /// A human-readable message describing what input is needed.
+    pub message: String,
+}
+
+#[cfg(feature = "unstable_elicitation")]
+impl UrlElicitationRequiredItem {
+    #[must_use]
+    pub fn new(
+        elicitation_id: impl Into<ElicitationId>,
+        url: impl Into<String>,
+        message: impl Into<String>,
+    ) -> Self {
+        Self {
+            mode: "url".to_string(),
+            elicitation_id: elicitation_id.into(),
+            url: url.into(),
+            message: message.into(),
+        }
+    }
+}
+
 // Write text file
 
 /// Request to write content to a text file.
@@ -1486,6 +1895,15 @@ pub struct ClientCapabilities {
     #[cfg(feature = "unstable_auth_methods")]
     #[serde(default)]
     pub auth: AuthCapabilities,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Elicitation capabilities supported by the client.
+    /// Determines which elicitation modes the agent may use.
+    #[cfg(feature = "unstable_elicitation")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub elicitation: Option<ElicitationCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -1527,6 +1945,19 @@ impl ClientCapabilities {
     #[must_use]
     pub fn auth(mut self, auth: AuthCapabilities) -> Self {
         self.auth = auth;
+        self
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Elicitation capabilities supported by the client.
+    /// Determines which elicitation modes the agent may use.
+    #[cfg(feature = "unstable_elicitation")]
+    #[must_use]
+    pub fn elicitation(mut self, elicitation: impl IntoOption<ElicitationCapabilities>) -> Self {
+        self.elicitation = elicitation.into_option();
         self
     }
 
@@ -1679,6 +2110,12 @@ pub struct ClientMethodNames {
     pub terminal_wait_for_exit: &'static str,
     /// Method for killing a terminal.
     pub terminal_kill: &'static str,
+    /// Method for session elicitation.
+    #[cfg(feature = "unstable_elicitation")]
+    pub session_elicitation: &'static str,
+    /// Notification for elicitation completion.
+    #[cfg(feature = "unstable_elicitation")]
+    pub notification_elicitation_complete: &'static str,
 }
 
 /// Constant containing all client method names.
@@ -1692,6 +2129,10 @@ pub const CLIENT_METHOD_NAMES: ClientMethodNames = ClientMethodNames {
     terminal_release: TERMINAL_RELEASE_METHOD_NAME,
     terminal_wait_for_exit: TERMINAL_WAIT_FOR_EXIT_METHOD_NAME,
     terminal_kill: TERMINAL_KILL_METHOD_NAME,
+    #[cfg(feature = "unstable_elicitation")]
+    session_elicitation: SESSION_ELICITATION_METHOD_NAME,
+    #[cfg(feature = "unstable_elicitation")]
+    notification_elicitation_complete: NOTIFICATION_ELICITATION_COMPLETE,
 };
 
 /// Notification name for session updates.
@@ -1712,6 +2153,12 @@ pub(crate) const TERMINAL_RELEASE_METHOD_NAME: &str = "terminal/release";
 pub(crate) const TERMINAL_WAIT_FOR_EXIT_METHOD_NAME: &str = "terminal/wait_for_exit";
 /// Method for killing a terminal.
 pub(crate) const TERMINAL_KILL_METHOD_NAME: &str = "terminal/kill";
+/// Method name for session elicitation.
+#[cfg(feature = "unstable_elicitation")]
+pub(crate) const SESSION_ELICITATION_METHOD_NAME: &str = "session/elicitation";
+/// Notification name for elicitation completion.
+#[cfg(feature = "unstable_elicitation")]
+pub(crate) const NOTIFICATION_ELICITATION_COMPLETE: &str = "notifications/elicitation/complete";
 
 /// All possible requests that an agent can send to a client.
 ///
@@ -1801,6 +2248,13 @@ pub enum AgentRequest {
     ///
     /// See protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)
     KillTerminalRequest(KillTerminalRequest),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Requests structured user input via a form or URL.
+    #[cfg(feature = "unstable_elicitation")]
+    ElicitationRequest(ElicitationRequest),
     /// Handles extension method requests from the agent.
     ///
     /// Allows the Agent to send an arbitrary request that is not part of the ACP spec.
@@ -1824,6 +2278,8 @@ impl AgentRequest {
             Self::ReleaseTerminalRequest(_) => CLIENT_METHOD_NAMES.terminal_release,
             Self::WaitForTerminalExitRequest(_) => CLIENT_METHOD_NAMES.terminal_wait_for_exit,
             Self::KillTerminalRequest(_) => CLIENT_METHOD_NAMES.terminal_kill,
+            #[cfg(feature = "unstable_elicitation")]
+            Self::ElicitationRequest(_) => CLIENT_METHOD_NAMES.session_elicitation,
             Self::ExtMethodRequest(ext_request) => &ext_request.method,
         }
     }
@@ -1848,6 +2304,8 @@ pub enum ClientResponse {
     ReleaseTerminalResponse(#[serde(default)] ReleaseTerminalResponse),
     WaitForTerminalExitResponse(WaitForTerminalExitResponse),
     KillTerminalResponse(#[serde(default)] KillTerminalResponse),
+    #[cfg(feature = "unstable_elicitation")]
+    ElicitationResponse(ElicitationResponse),
     ExtMethodResponse(ExtResponse),
 }
 
@@ -1875,6 +2333,13 @@ pub enum AgentNotification {
     ///
     /// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-turn#3-agent-reports-output)
     SessionNotification(SessionNotification),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Notification that a URL-based elicitation has completed.
+    #[cfg(feature = "unstable_elicitation")]
+    ElicitationCompleteNotification(ElicitationCompleteNotification),
     /// Handles extension notifications from the agent.
     ///
     /// Allows the Agent to send an arbitrary notification that is not part of the ACP spec.
@@ -1891,6 +2356,10 @@ impl AgentNotification {
     pub fn method(&self) -> &str {
         match self {
             Self::SessionNotification(_) => CLIENT_METHOD_NAMES.session_update,
+            #[cfg(feature = "unstable_elicitation")]
+            Self::ElicitationCompleteNotification(_) => {
+                CLIENT_METHOD_NAMES.notification_elicitation_complete
+            }
             Self::ExtNotification(ext_notification) => &ext_notification.method,
         }
     }
@@ -1954,5 +2423,166 @@ mod tests {
             .unwrap(),
             json!({})
         );
+    }
+
+    #[cfg(feature = "unstable_elicitation")]
+    mod elicitation_tests {
+        use super::*;
+        use serde_json::json;
+
+        #[test]
+        fn form_mode_request_serialization() {
+            let req = ElicitationRequest::new(
+                "sess_1",
+                ElicitationMode::Form {
+                    requested_schema: json!({"type": "object", "properties": {"name": {"type": "string"}}}),
+                },
+                "Please enter your name",
+            );
+
+            let json = serde_json::to_value(&req).unwrap();
+            assert_eq!(json["sessionId"], "sess_1");
+            assert_eq!(json["mode"], "form");
+            assert_eq!(json["message"], "Please enter your name");
+            assert!(json["requestedSchema"].is_object());
+
+            let roundtripped: ElicitationRequest = serde_json::from_value(json).unwrap();
+            assert_eq!(roundtripped.session_id, SessionId::new("sess_1"));
+            assert_eq!(roundtripped.message, "Please enter your name");
+            assert!(matches!(roundtripped.mode, ElicitationMode::Form { .. }));
+        }
+
+        #[test]
+        fn url_mode_request_serialization() {
+            let req = ElicitationRequest::new(
+                "sess_2",
+                ElicitationMode::Url {
+                    elicitation_id: ElicitationId::new("elic_1"),
+                    url: "https://example.com/auth".to_string(),
+                },
+                "Please authenticate",
+            );
+
+            let json = serde_json::to_value(&req).unwrap();
+            assert_eq!(json["sessionId"], "sess_2");
+            assert_eq!(json["mode"], "url");
+            assert_eq!(json["elicitationId"], "elic_1");
+            assert_eq!(json["url"], "https://example.com/auth");
+            assert_eq!(json["message"], "Please authenticate");
+
+            let roundtripped: ElicitationRequest = serde_json::from_value(json).unwrap();
+            assert_eq!(roundtripped.session_id, SessionId::new("sess_2"));
+            assert!(matches!(roundtripped.mode, ElicitationMode::Url { .. }));
+        }
+
+        #[test]
+        fn response_accept_serialization() {
+            let resp = ElicitationResponse::new(ElicitationAction::Accept {
+                content: Some(json!({"name": "Alice"})),
+            });
+
+            let json = serde_json::to_value(&resp).unwrap();
+            assert_eq!(json["action"]["action"], "accept");
+            assert_eq!(json["action"]["content"]["name"], "Alice");
+
+            let roundtripped: ElicitationResponse = serde_json::from_value(json).unwrap();
+            assert!(matches!(
+                roundtripped.action,
+                ElicitationAction::Accept { content: Some(_) }
+            ));
+        }
+
+        #[test]
+        fn response_decline_serialization() {
+            let resp = ElicitationResponse::new(ElicitationAction::Decline);
+
+            let json = serde_json::to_value(&resp).unwrap();
+            assert_eq!(json["action"]["action"], "decline");
+
+            let roundtripped: ElicitationResponse = serde_json::from_value(json).unwrap();
+            assert!(matches!(roundtripped.action, ElicitationAction::Decline));
+        }
+
+        #[test]
+        fn response_cancel_serialization() {
+            let resp = ElicitationResponse::new(ElicitationAction::Cancel);
+
+            let json = serde_json::to_value(&resp).unwrap();
+            assert_eq!(json["action"]["action"], "cancel");
+
+            let roundtripped: ElicitationResponse = serde_json::from_value(json).unwrap();
+            assert!(matches!(roundtripped.action, ElicitationAction::Cancel));
+        }
+
+        #[test]
+        fn completion_notification_serialization() {
+            let notif = ElicitationCompleteNotification::new("elic_1");
+
+            let json = serde_json::to_value(&notif).unwrap();
+            assert_eq!(json["elicitationId"], "elic_1");
+
+            let roundtripped: ElicitationCompleteNotification =
+                serde_json::from_value(json).unwrap();
+            assert_eq!(roundtripped.elicitation_id, ElicitationId::new("elic_1"));
+        }
+
+        #[test]
+        fn capabilities_form_only() {
+            let caps = ElicitationCapabilities::new().form(ElicitationFormCapabilities::new());
+
+            let json = serde_json::to_value(&caps).unwrap();
+            assert!(json["form"].is_object());
+            assert!(json.get("url").is_none());
+
+            let roundtripped: ElicitationCapabilities = serde_json::from_value(json).unwrap();
+            assert!(roundtripped.form.is_some());
+            assert!(roundtripped.url.is_none());
+        }
+
+        #[test]
+        fn capabilities_url_only() {
+            let caps = ElicitationCapabilities::new().url(ElicitationUrlCapabilities::new());
+
+            let json = serde_json::to_value(&caps).unwrap();
+            assert!(json.get("form").is_none());
+            assert!(json["url"].is_object());
+
+            let roundtripped: ElicitationCapabilities = serde_json::from_value(json).unwrap();
+            assert!(roundtripped.form.is_none());
+            assert!(roundtripped.url.is_some());
+        }
+
+        #[test]
+        fn capabilities_both() {
+            let caps = ElicitationCapabilities::new()
+                .form(ElicitationFormCapabilities::new())
+                .url(ElicitationUrlCapabilities::new());
+
+            let json = serde_json::to_value(&caps).unwrap();
+            assert!(json["form"].is_object());
+            assert!(json["url"].is_object());
+
+            let roundtripped: ElicitationCapabilities = serde_json::from_value(json).unwrap();
+            assert!(roundtripped.form.is_some());
+            assert!(roundtripped.url.is_some());
+        }
+
+        #[test]
+        fn url_elicitation_required_data_serialization() {
+            let data = UrlElicitationRequiredData::new(vec![UrlElicitationRequiredItem::new(
+                "elic_1",
+                "https://example.com/auth",
+                "Please authenticate",
+            )]);
+
+            let json = serde_json::to_value(&data).unwrap();
+            assert_eq!(json["elicitations"][0]["mode"], "url");
+            assert_eq!(json["elicitations"][0]["elicitationId"], "elic_1");
+            assert_eq!(json["elicitations"][0]["url"], "https://example.com/auth");
+
+            let roundtripped: UrlElicitationRequiredData = serde_json::from_value(json).unwrap();
+            assert_eq!(roundtripped.elicitations.len(), 1);
+            assert_eq!(roundtripped.elicitations[0].mode, "url");
+        }
     }
 }

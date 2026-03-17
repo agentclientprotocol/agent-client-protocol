@@ -17,6 +17,8 @@
   "clientMethods": {
     "fs_read_text_file": "fs/read_text_file",
     "fs_write_text_file": "fs/write_text_file",
+    "notification_elicitation_complete": "notifications/elicitation/complete",
+    "session_elicitation": "session/elicitation",
     "session_request_permission": "session/request_permission",
     "session_update": "session/update",
     "terminal_create": "terminal/create",

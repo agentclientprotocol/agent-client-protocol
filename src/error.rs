@@ -113,6 +113,17 @@ impl Error {
         ErrorCode::AuthRequired.into()
     }
 
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// The agent requires user input via a URL-based elicitation before it can proceed.
+    #[cfg(feature = "unstable_elicitation")]
+    #[must_use]
+    pub fn url_elicitation_required() -> Self {
+        ErrorCode::UrlElicitationRequired.into()
+    }
+
     /// A given resource, such as a file, was not found.
     #[must_use]
     pub fn resource_not_found(uri: Option<String>) -> Self {
@@ -186,6 +197,15 @@ pub enum ErrorCode {
     #[schemars(transform = error_code_transform)]
     #[strum(to_string = "Resource not found")]
     ResourceNotFound, // -32002
+    #[cfg(feature = "unstable_elicitation")]
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// The agent requires user input via a URL-based elicitation before it can proceed.
+    #[schemars(transform = error_code_transform)]
+    #[strum(to_string = "URL elicitation required")]
+    UrlElicitationRequired, // -32042
 
     /// Other undefined error code.
     #[schemars(untagged)]
@@ -205,6 +225,8 @@ impl From<i32> for ErrorCode {
             -32800 => ErrorCode::RequestCancelled,
             -32000 => ErrorCode::AuthRequired,
             -32002 => ErrorCode::ResourceNotFound,
+            #[cfg(feature = "unstable_elicitation")]
+            -32042 => ErrorCode::UrlElicitationRequired,
             _ => ErrorCode::Other(value),
         }
     }
@@ -222,6 +244,8 @@ impl From<ErrorCode> for i32 {
             ErrorCode::RequestCancelled => -32800,
             ErrorCode::AuthRequired => -32000,
             ErrorCode::ResourceNotFound => -32002,
+            #[cfg(feature = "unstable_elicitation")]
+            ErrorCode::UrlElicitationRequired => -32042,
             ErrorCode::Other(value) => value,
         }
     }
@@ -249,6 +273,8 @@ fn error_code_transform(schema: &mut Schema) {
         "RequestCancelled" => ErrorCode::RequestCancelled,
         "AuthRequired" => ErrorCode::AuthRequired,
         "ResourceNotFound" => ErrorCode::ResourceNotFound,
+        #[cfg(feature = "unstable_elicitation")]
+        "UrlElicitationRequired" => ErrorCode::UrlElicitationRequired,
         _ => panic!("Unexpected error code name {name}"),
     };
     let mut description = schema

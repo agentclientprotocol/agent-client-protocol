@@ -215,6 +215,10 @@ impl Side for ClientSide {
                     .map(AgentRequest::WaitForTerminalExitRequest)
                     .map_err(Into::into)
             }
+            #[cfg(feature = "unstable_elicitation")]
+            m if m == CLIENT_METHOD_NAMES.session_elicitation => serde_json::from_str(params.get())
+                .map(AgentRequest::ElicitationRequest)
+                .map_err(Into::into),
             _ => {
                 if let Some(custom_method) = method.strip_prefix('_') {
                     Ok(AgentRequest::ExtMethodRequest(ExtRequest {
@@ -235,6 +239,12 @@ impl Side for ClientSide {
             m if m == CLIENT_METHOD_NAMES.session_update => serde_json::from_str(params.get())
                 .map(AgentNotification::SessionNotification)
                 .map_err(Into::into),
+            #[cfg(feature = "unstable_elicitation")]
+            m if m == CLIENT_METHOD_NAMES.notification_elicitation_complete => {
+                serde_json::from_str(params.get())
+                    .map(AgentNotification::ElicitationCompleteNotification)
+                    .map_err(Into::into)
+            }
             _ => {
                 if let Some(custom_method) = method.strip_prefix('_') {
                     Ok(AgentNotification::ExtNotification(ExtNotification {
