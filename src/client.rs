@@ -1058,7 +1058,7 @@ pub enum ElicitationAction {
 /// Notification sent by the agent when a URL-based elicitation is complete.
 #[cfg(feature = "unstable_elicitation")]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "client", "x-method" = NOTIFICATION_ELICITATION_COMPLETE))]
+#[schemars(extend("x-side" = "client", "x-method" = SESSION_ELICITATION_COMPLETE))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ElicitationCompleteNotification {
@@ -2115,7 +2115,7 @@ pub struct ClientMethodNames {
     pub session_elicitation: &'static str,
     /// Notification for elicitation completion.
     #[cfg(feature = "unstable_elicitation")]
-    pub notification_elicitation_complete: &'static str,
+    pub session_elicitation_complete: &'static str,
 }
 
 /// Constant containing all client method names.
@@ -2132,7 +2132,7 @@ pub const CLIENT_METHOD_NAMES: ClientMethodNames = ClientMethodNames {
     #[cfg(feature = "unstable_elicitation")]
     session_elicitation: SESSION_ELICITATION_METHOD_NAME,
     #[cfg(feature = "unstable_elicitation")]
-    notification_elicitation_complete: NOTIFICATION_ELICITATION_COMPLETE,
+    session_elicitation_complete: SESSION_ELICITATION_COMPLETE,
 };
 
 /// Notification name for session updates.
@@ -2358,7 +2358,7 @@ impl AgentNotification {
             Self::SessionNotification(_) => CLIENT_METHOD_NAMES.session_update,
             #[cfg(feature = "unstable_elicitation")]
             Self::ElicitationCompleteNotification(_) => {
-                CLIENT_METHOD_NAMES.notification_elicitation_complete
+                CLIENT_METHOD_NAMES.session_elicitation_complete
             }
             Self::ExtNotification(ext_notification) => &ext_notification.method,
         }
