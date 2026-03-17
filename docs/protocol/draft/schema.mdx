@@ -1164,7 +1164,11 @@ Form-based elicitation where the client renders a form from the provided schema.
 <ResponseField name="mode" type={"string"} required>
   The discriminator value. Must be `"form"`.
 </ResponseField>
-<ResponseField name="requestedSchema" type={"object"} required>
+<ResponseField
+  name="requestedSchema"
+  type={<a href="#elicitationschema">ElicitationSchema</a>}
+  required
+>
   A JSON Schema describing the form fields to present to the user.
 </ResponseField>
 
@@ -2241,6 +2245,24 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 <ResponseField name="uri" type={"string"} required>
 </ResponseField>
 
+## <span class="font-mono">BooleanPropertySchema</span>
+
+Schema for boolean properties in an elicitation form.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="default" type={"boolean | null"}>
+  Default value.
+</ResponseField>
+<ResponseField name="description" type={"string | null"}>
+  Human-readable description.
+</ResponseField>
+<ResponseField name="title" type={"string | null"}>
+  Optional title for the property.
+</ResponseField>
+
 ## <span class="font-mono">ClientCapabilities</span>
 
 Capabilities supported by the client.
@@ -2734,7 +2756,11 @@ Form-based elicitation mode where the client renders a form from the provided sc
 
 **Properties:**
 
-<ResponseField name="requestedSchema" type={"object"} required>
+<ResponseField
+  name="requestedSchema"
+  type={<a href="#elicitationschema">ElicitationSchema</a>}
+  required
+>
   A JSON Schema describing the form fields to present to the user.
 </ResponseField>
 
@@ -2743,6 +2769,213 @@ Form-based elicitation mode where the client renders a form from the provided sc
 Unique identifier for an elicitation.
 
 **Type:** `string`
+
+## <span class="font-mono">ElicitationPropertySchema</span>
+
+Property schema for elicitation form fields.
+
+Each variant corresponds to a JSON Schema `"type"` value.
+Single-select enums use the `String` variant with `enum_values` or `one_of` set.
+Multi-select enums use the `Array` variant.
+
+**Type:** Union
+
+<ResponseField name="string" type="object">
+String property (or single-select enum when `enum`/`oneOf` is set).
+
+<Expandable title="Properties">
+
+<ResponseField name="default" type={"string | null"} >
+  Default value.
+</ResponseField>
+<ResponseField name="description" type={"string | null"} >
+  Human-readable description.
+</ResponseField>
+<ResponseField name="enum" type={<><span><><span>"string"</span><span>[]</span></></span><span> | null</span></>} >
+  Enum values for untitled single-select enums.
+</ResponseField>
+<ResponseField name="format" type={<><span><a href="#stringformat">StringFormat</a></span><span> | null</span></>} >
+  String format.
+</ResponseField>
+<ResponseField name="maxLength" type={"integer | null"} >
+  Maximum string length.
+
+    - Minimum: `0`
+
+</ResponseField>
+<ResponseField name="minLength" type={"integer | null"} >
+  Minimum string length.
+
+    - Minimum: `0`
+
+</ResponseField>
+<ResponseField name="oneOf" type={<><span><a href="#enumoption">EnumOption[]</a></span><span> | null</span></>} >
+  Titled enum options for titled single-select enums.
+</ResponseField>
+<ResponseField name="title" type={"string | null"} >
+  Optional title for the property.
+</ResponseField>
+<ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"string"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="number" type="object">
+Number (floating-point) property.
+
+<Expandable title="Properties">
+
+<ResponseField name="default" type={"number | null"}>
+  Default value.
+</ResponseField>
+<ResponseField name="description" type={"string | null"}>
+  Human-readable description.
+</ResponseField>
+<ResponseField name="maximum" type={"number | null"}>
+  Maximum value (inclusive).
+</ResponseField>
+<ResponseField name="minimum" type={"number | null"}>
+  Minimum value (inclusive).
+</ResponseField>
+<ResponseField name="title" type={"string | null"}>
+  Optional title for the property.
+</ResponseField>
+<ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"number"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="integer" type="object">
+Integer property.
+
+<Expandable title="Properties">
+
+<ResponseField name="default" type={"integer | null"}>
+  Default value.
+</ResponseField>
+<ResponseField name="description" type={"string | null"}>
+  Human-readable description.
+</ResponseField>
+<ResponseField name="maximum" type={"integer | null"}>
+  Maximum value (inclusive).
+</ResponseField>
+<ResponseField name="minimum" type={"integer | null"}>
+  Minimum value (inclusive).
+</ResponseField>
+<ResponseField name="title" type={"string | null"}>
+  Optional title for the property.
+</ResponseField>
+<ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"integer"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="boolean" type="object">
+Boolean property.
+
+<Expandable title="Properties">
+
+<ResponseField name="default" type={"boolean | null"}>
+  Default value.
+</ResponseField>
+<ResponseField name="description" type={"string | null"}>
+  Human-readable description.
+</ResponseField>
+<ResponseField name="title" type={"string | null"}>
+  Optional title for the property.
+</ResponseField>
+<ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"boolean"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="array" type="object">
+Multi-select array property.
+
+<Expandable title="Properties">
+
+<ResponseField name="default" type={<><span><><span>"string"</span><span>[]</span></></span><span> | null</span></>} >
+  Default selected values.
+</ResponseField>
+<ResponseField name="description" type={"string | null"} >
+  Human-readable description.
+</ResponseField>
+<ResponseField name="items" type={<a href="#multiselectitems">MultiSelectItems</a>} required>
+  The items definition describing allowed values.
+</ResponseField>
+<ResponseField name="maxItems" type={"integer | null"} >
+  Maximum number of items to select.
+
+    - Minimum: `0`
+
+</ResponseField>
+<ResponseField name="minItems" type={"integer | null"} >
+  Minimum number of items to select.
+
+    - Minimum: `0`
+
+</ResponseField>
+<ResponseField name="title" type={"string | null"} >
+  Optional title for the property.
+</ResponseField>
+<ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"array"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+## <span class="font-mono">ElicitationSchema</span>
+
+Type-safe elicitation schema for requesting structured user input.
+
+This represents a JSON Schema object with primitive-typed properties,
+as required by the elicitation specification.
+
+\# Example
+
+```
+use agent_client_protocol_schema::*;
+
+let schema = ElicitationSchema::new()
+    .required_string("name")
+    .required_email("email")
+    .optional_bool("newsletter");
+```
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="description" type={"string | null"} >
+  Optional description of what this schema represents.
+</ResponseField>
+<ResponseField name="properties" type={"object"} >
+  Property definitions (must be primitive types).
+
+    - Default: `{}`
+
+</ResponseField>
+<ResponseField name="required" type={<><span><><span>"string"</span><span>[]</span></></span><span> | null</span></>} >
+  List of required property names.
+</ResponseField>
+<ResponseField name="title" type={"string | null"} >
+  Optional title for the schema.
+</ResponseField>
+<ResponseField name="type" type={"string"} >
+  Type discriminator. Always `"object"`.
+
+    - Default: `"object"`
+
+</ResponseField>
 
 ## <span class="font-mono">ElicitationUrlCapabilities</span>
 
@@ -2859,6 +3092,21 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 </ResponseField>
 
 </Expandable>
+</ResponseField>
+
+## <span class="font-mono">EnumOption</span>
+
+A titled enum option with a const value and human-readable title.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="const" type={"string"} required>
+  The constant value for this option.
+</ResponseField>
+<ResponseField name="title" type={"string"} required>
+  Human-readable title for this option.
 </ResponseField>
 
 ## <span class="font-mono">EnvVariable</span>
@@ -3109,6 +3357,30 @@ If not provided, the name should be used for display.
 <ResponseField name="version" type={"string"} required>
   Version of the implementation. Can be displayed to the user or used
 for debugging or metrics purposes. (e.g. "1.0.0").
+</ResponseField>
+
+## <span class="font-mono">IntegerPropertySchema</span>
+
+Schema for integer properties in an elicitation form.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="default" type={"integer | null"}>
+  Default value.
+</ResponseField>
+<ResponseField name="description" type={"string | null"}>
+  Human-readable description.
+</ResponseField>
+<ResponseField name="maximum" type={"integer | null"}>
+  Maximum value (inclusive).
+</ResponseField>
+<ResponseField name="minimum" type={"integer | null"}>
+  Minimum value (inclusive).
+</ResponseField>
+<ResponseField name="title" type={"string | null"}>
+  Optional title for the property.
 </ResponseField>
 
 ## <span class="font-mono">LogoutCapabilities</span>
@@ -3386,6 +3658,106 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
   Human-readable name of the model.
+</ResponseField>
+
+## <span class="font-mono">MultiSelectItems</span>
+
+Items for a multi-select (array) property schema.
+
+**Type:** Union
+
+<ResponseField name="Untitled">
+Untitled multi-select items with plain string values.
+
+<Expandable title="Properties">
+
+<ResponseField
+  name="enum"
+  type={
+    <>
+      <span>"string"</span>
+      <span>[]</span>
+    </>
+  }
+  required
+>
+  Allowed enum values.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="Titled">
+Titled multi-select items with human-readable labels.
+
+<Expandable title="Properties">
+
+<ResponseField
+  name="anyOf"
+  type={<a href="#enumoption">EnumOption[]</a>}
+  required
+>
+  Titled enum options.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+## <span class="font-mono">MultiSelectPropertySchema</span>
+
+Schema for multi-select (array) properties in an elicitation form.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="default" type={<><span><><span>"string"</span><span>[]</span></></span><span> | null</span></>} >
+  Default selected values.
+</ResponseField>
+<ResponseField name="description" type={"string | null"} >
+  Human-readable description.
+</ResponseField>
+<ResponseField name="items" type={<a href="#multiselectitems">MultiSelectItems</a>} required>
+  The items definition describing allowed values.
+</ResponseField>
+<ResponseField name="maxItems" type={"integer | null"} >
+  Maximum number of items to select.
+
+    - Minimum: `0`
+
+</ResponseField>
+<ResponseField name="minItems" type={"integer | null"} >
+  Minimum number of items to select.
+
+    - Minimum: `0`
+
+</ResponseField>
+<ResponseField name="title" type={"string | null"} >
+  Optional title for the property.
+</ResponseField>
+
+## <span class="font-mono">NumberPropertySchema</span>
+
+Schema for number (floating-point) properties in an elicitation form.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="default" type={"number | null"}>
+  Default value.
+</ResponseField>
+<ResponseField name="description" type={"string | null"}>
+  Human-readable description.
+</ResponseField>
+<ResponseField name="maximum" type={"number | null"}>
+  Maximum value (inclusive).
+</ResponseField>
+<ResponseField name="minimum" type={"number | null"}>
+  Minimum value (inclusive).
+</ResponseField>
+<ResponseField name="title" type={"string | null"}>
+  Optional title for the property.
 </ResponseField>
 
 ## <span class="font-mono">PermissionOption</span>
@@ -4643,6 +5015,70 @@ response to confirm successful cancellation.
 
 </ResponseField>
 
+## <span class="font-mono">StringFormat</span>
+
+String format types for string properties in elicitation schemas.
+
+**Type:** Union
+
+<ResponseField name="email" type="string">
+  Email address format.
+</ResponseField>
+
+<ResponseField name="uri" type="string">
+  URI format.
+</ResponseField>
+
+<ResponseField name="date" type="string">
+  Date format (YYYY-MM-DD).
+</ResponseField>
+
+<ResponseField name="date-time" type="string">
+  Date-time format (ISO 8601).
+</ResponseField>
+
+## <span class="font-mono">StringPropertySchema</span>
+
+Schema for string properties in an elicitation form.
+
+When `enum_values` or `one_of` is set, this represents a single-select enum
+with `"type": "string"`.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="default" type={"string | null"} >
+  Default value.
+</ResponseField>
+<ResponseField name="description" type={"string | null"} >
+  Human-readable description.
+</ResponseField>
+<ResponseField name="enum" type={<><span><><span>"string"</span><span>[]</span></></span><span> | null</span></>} >
+  Enum values for untitled single-select enums.
+</ResponseField>
+<ResponseField name="format" type={<><span><a href="#stringformat">StringFormat</a></span><span> | null</span></>} >
+  String format.
+</ResponseField>
+<ResponseField name="maxLength" type={"integer | null"} >
+  Maximum string length.
+
+    - Minimum: `0`
+
+</ResponseField>
+<ResponseField name="minLength" type={"integer | null"} >
+  Minimum string length.
+
+    - Minimum: `0`
+
+</ResponseField>
+<ResponseField name="oneOf" type={<><span><a href="#enumoption">EnumOption[]</a></span><span> | null</span></>} >
+  Titled enum options for titled single-select enums.
+</ResponseField>
+<ResponseField name="title" type={"string | null"} >
+  Optional title for the property.
+</ResponseField>
+
 ## <span class="font-mono">Terminal</span>
 
 Embed a terminal created with `terminal/create` by its id.
@@ -4734,6 +5170,22 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 <ResponseField name="text" type={"string"} required>
 </ResponseField>
 <ResponseField name="uri" type={"string"} required>
+</ResponseField>
+
+## <span class="font-mono">TitledMultiSelectItems</span>
+
+Items definition for titled multi-select enum properties.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField
+  name="anyOf"
+  type={<a href="#enumoption">EnumOption[]</a>}
+  required
+>
+  Titled enum options.
 </ResponseField>
 
 ## <span class="font-mono">ToolCall</span>
@@ -5052,6 +5504,27 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 </ResponseField>
 <ResponseField name="hint" type={"string"} required>
   A hint to display when the input hasn't been provided yet
+</ResponseField>
+
+## <span class="font-mono">UntitledMultiSelectItems</span>
+
+Items definition for untitled multi-select enum properties.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField
+  name="enum"
+  type={
+    <>
+      <span>"string"</span>
+      <span>[]</span>
+    </>
+  }
+  required
+>
+  Allowed enum values.
 </ResponseField>
 
 ## <span class="font-mono">Usage</span>

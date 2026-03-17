@@ -746,6 +746,24 @@
       "required": ["blob", "uri"],
       "type": "object"
     },
+    "BooleanPropertySchema": {
+      "description": "Schema for boolean properties in an elicitation form.",
+      "properties": {
+        "default": {
+          "description": "Default value.",
+          "type": ["boolean", "null"]
+        },
+        "description": {
+          "description": "Human-readable description.",
+          "type": ["string", "null"]
+        },
+        "title": {
+          "description": "Optional title for the property.",
+          "type": ["string", "null"]
+        }
+      },
+      "type": "object"
+    },
     "CancelNotification": {
       "description": "Notification to cancel ongoing operations for a session.\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-turn#cancellation)",
       "properties": {
@@ -1583,6 +1601,11 @@
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nForm-based elicitation mode where the client renders a form from the provided schema.",
       "properties": {
         "requestedSchema": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ElicitationSchema"
+            }
+          ],
           "description": "A JSON Schema describing the form fields to present to the user."
         }
       },
@@ -1592,6 +1615,94 @@
     "ElicitationId": {
       "description": "Unique identifier for an elicitation.",
       "type": "string"
+    },
+    "ElicitationPropertySchema": {
+      "description": "Property schema for elicitation form fields.\n\nEach variant corresponds to a JSON Schema `\"type\"` value.\nSingle-select enums use the `String` variant with `enum_values` or `one_of` set.\nMulti-select enums use the `Array` variant.",
+      "discriminator": {
+        "propertyName": "type"
+      },
+      "oneOf": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/StringPropertySchema"
+            }
+          ],
+          "description": "String property (or single-select enum when `enum`/`oneOf` is set).",
+          "properties": {
+            "type": {
+              "const": "string",
+              "type": "string"
+            }
+          },
+          "required": ["type"],
+          "type": "object"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/NumberPropertySchema"
+            }
+          ],
+          "description": "Number (floating-point) property.",
+          "properties": {
+            "type": {
+              "const": "number",
+              "type": "string"
+            }
+          },
+          "required": ["type"],
+          "type": "object"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/IntegerPropertySchema"
+            }
+          ],
+          "description": "Integer property.",
+          "properties": {
+            "type": {
+              "const": "integer",
+              "type": "string"
+            }
+          },
+          "required": ["type"],
+          "type": "object"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/BooleanPropertySchema"
+            }
+          ],
+          "description": "Boolean property.",
+          "properties": {
+            "type": {
+              "const": "boolean",
+              "type": "string"
+            }
+          },
+          "required": ["type"],
+          "type": "object"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/MultiSelectPropertySchema"
+            }
+          ],
+          "description": "Multi-select array property.",
+          "properties": {
+            "type": {
+              "const": "array",
+              "type": "string"
+            }
+          },
+          "required": ["type"],
+          "type": "object"
+        }
+      ]
     },
     "ElicitationRequest": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest from the agent to elicit structured user input.\n\nThe agent sends this to the client to request information from the user,\neither via a form or by directing them to a URL.",
@@ -1678,6 +1789,40 @@
       "x-method": "session/elicitation",
       "x-side": "client"
     },
+    "ElicitationSchema": {
+      "description": "Type-safe elicitation schema for requesting structured user input.\n\nThis represents a JSON Schema object with primitive-typed properties,\nas required by the elicitation specification.\n\n# Example\n\n```\nuse agent_client_protocol_schema::*;\n\nlet schema = ElicitationSchema::new()\n    .required_string(\"name\")\n    .required_email(\"email\")\n    .optional_bool(\"newsletter\");\n```",
+      "properties": {
+        "description": {
+          "description": "Optional description of what this schema represents.",
+          "type": ["string", "null"]
+        },
+        "properties": {
+          "additionalProperties": {
+            "$ref": "#/$defs/ElicitationPropertySchema"
+          },
+          "default": {},
+          "description": "Property definitions (must be primitive types).",
+          "type": "object"
+        },
+        "required": {
+          "description": "List of required property names.",
+          "items": {
+            "type": "string"
+          },
+          "type": ["array", "null"]
+        },
+        "title": {
+          "description": "Optional title for the schema.",
+          "type": ["string", "null"]
+        },
+        "type": {
+          "default": "object",
+          "description": "Type discriminator. Always `\"object\"`.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "ElicitationUrlCapabilities": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nURL-based elicitation capabilities.",
       "properties": {
@@ -1753,6 +1898,21 @@
         }
       ],
       "description": "Resource content that can be embedded in a message."
+    },
+    "EnumOption": {
+      "description": "A titled enum option with a const value and human-readable title.",
+      "properties": {
+        "const": {
+          "description": "The constant value for this option.",
+          "type": "string"
+        },
+        "title": {
+          "description": "Human-readable title for this option.",
+          "type": "string"
+        }
+      },
+      "required": ["const", "title"],
+      "type": "object"
     },
     "EnvVariable": {
       "description": "An environment variable to set when launching an MCP server.",
@@ -2173,6 +2333,35 @@
       "x-method": "initialize",
       "x-side": "agent"
     },
+    "IntegerPropertySchema": {
+      "description": "Schema for integer properties in an elicitation form.",
+      "properties": {
+        "default": {
+          "description": "Default value.",
+          "format": "int64",
+          "type": ["integer", "null"]
+        },
+        "description": {
+          "description": "Human-readable description.",
+          "type": ["string", "null"]
+        },
+        "maximum": {
+          "description": "Maximum value (inclusive).",
+          "format": "int64",
+          "type": ["integer", "null"]
+        },
+        "minimum": {
+          "description": "Minimum value (inclusive).",
+          "format": "int64",
+          "type": ["integer", "null"]
+        },
+        "title": {
+          "description": "Optional title for the property.",
+          "type": ["string", "null"]
+        }
+      },
+      "type": "object"
+    },
     "KillTerminalRequest": {
       "description": "Request to kill a terminal without releasing it.",
       "properties": {
@@ -2557,6 +2746,71 @@
       "required": ["modelId", "name"],
       "type": "object"
     },
+    "MultiSelectItems": {
+      "anyOf": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/UntitledMultiSelectItems"
+            }
+          ],
+          "description": "Untitled multi-select items with plain string values.",
+          "title": "Untitled"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/TitledMultiSelectItems"
+            }
+          ],
+          "description": "Titled multi-select items with human-readable labels.",
+          "title": "Titled"
+        }
+      ],
+      "description": "Items for a multi-select (array) property schema."
+    },
+    "MultiSelectPropertySchema": {
+      "description": "Schema for multi-select (array) properties in an elicitation form.",
+      "properties": {
+        "default": {
+          "description": "Default selected values.",
+          "items": {
+            "type": "string"
+          },
+          "type": ["array", "null"]
+        },
+        "description": {
+          "description": "Human-readable description.",
+          "type": ["string", "null"]
+        },
+        "items": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/MultiSelectItems"
+            }
+          ],
+          "description": "The items definition describing allowed values."
+        },
+        "maxItems": {
+          "description": "Maximum number of items to select.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": ["integer", "null"]
+        },
+        "minItems": {
+          "description": "Minimum number of items to select.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": ["integer", "null"]
+        },
+        "title": {
+          "description": "Optional title for the property.",
+          "type": ["string", "null"]
+        }
+      },
+      "required": ["items"],
+      "type": "object"
+    },
     "NewSessionRequest": {
       "description": "Request parameters for creating a new session.\n\nSee protocol docs: [Creating a Session](https://agentclientprotocol.com/protocol/session-setup#creating-a-session)",
       "properties": {
@@ -2632,6 +2886,35 @@
       "type": "object",
       "x-method": "session/new",
       "x-side": "agent"
+    },
+    "NumberPropertySchema": {
+      "description": "Schema for number (floating-point) properties in an elicitation form.",
+      "properties": {
+        "default": {
+          "description": "Default value.",
+          "format": "double",
+          "type": ["number", "null"]
+        },
+        "description": {
+          "description": "Human-readable description.",
+          "type": ["string", "null"]
+        },
+        "maximum": {
+          "description": "Maximum value (inclusive).",
+          "format": "double",
+          "type": ["number", "null"]
+        },
+        "minimum": {
+          "description": "Minimum value (inclusive).",
+          "format": "double",
+          "type": ["number", "null"]
+        },
+        "title": {
+          "description": "Optional title for the property.",
+          "type": ["string", "null"]
+        }
+      },
+      "type": "object"
     },
     "PermissionOption": {
       "description": "An option presented to the user when requesting permission.",
@@ -4109,6 +4392,86 @@
         }
       ]
     },
+    "StringFormat": {
+      "description": "String format types for string properties in elicitation schemas.",
+      "oneOf": [
+        {
+          "const": "email",
+          "description": "Email address format.",
+          "type": "string"
+        },
+        {
+          "const": "uri",
+          "description": "URI format.",
+          "type": "string"
+        },
+        {
+          "const": "date",
+          "description": "Date format (YYYY-MM-DD).",
+          "type": "string"
+        },
+        {
+          "const": "date-time",
+          "description": "Date-time format (ISO 8601).",
+          "type": "string"
+        }
+      ]
+    },
+    "StringPropertySchema": {
+      "description": "Schema for string properties in an elicitation form.\n\nWhen `enum_values` or `one_of` is set, this represents a single-select enum\nwith `\"type\": \"string\"`.",
+      "properties": {
+        "default": {
+          "description": "Default value.",
+          "type": ["string", "null"]
+        },
+        "description": {
+          "description": "Human-readable description.",
+          "type": ["string", "null"]
+        },
+        "enum": {
+          "description": "Enum values for untitled single-select enums.",
+          "items": {
+            "type": "string"
+          },
+          "type": ["array", "null"]
+        },
+        "format": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StringFormat"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "String format."
+        },
+        "maxLength": {
+          "description": "Maximum string length.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": ["integer", "null"]
+        },
+        "minLength": {
+          "description": "Minimum string length.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": ["integer", "null"]
+        },
+        "oneOf": {
+          "description": "Titled enum options for titled single-select enums.",
+          "items": {
+            "$ref": "#/$defs/EnumOption"
+          },
+          "type": ["array", "null"]
+        },
+        "title": {
+          "description": "Optional title for the property.",
+          "type": ["string", "null"]
+        }
+      },
+      "type": "object"
+    },
     "Terminal": {
       "description": "Embed a terminal created with `terminal/create` by its id.\n\nThe terminal must be added before calling `terminal/release`.\n\nSee protocol docs: [Terminal](https://agentclientprotocol.com/protocol/terminals)",
       "properties": {
@@ -4248,6 +4611,20 @@
         }
       },
       "required": ["text", "uri"],
+      "type": "object"
+    },
+    "TitledMultiSelectItems": {
+      "description": "Items definition for titled multi-select enum properties.",
+      "properties": {
+        "anyOf": {
+          "description": "Titled enum options.",
+          "items": {
+            "$ref": "#/$defs/EnumOption"
+          },
+          "type": "array"
+        }
+      },
+      "required": ["anyOf"],
       "type": "object"
     },
     "ToolCall": {
@@ -4552,6 +4929,20 @@
         }
       },
       "required": ["hint"],
+      "type": "object"
+    },
+    "UntitledMultiSelectItems": {
+      "description": "Items definition for untitled multi-select enum properties.",
+      "properties": {
+        "enum": {
+          "description": "Allowed enum values.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": ["enum"],
       "type": "object"
     },
     "Usage": {

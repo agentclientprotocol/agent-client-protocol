@@ -5,7 +5,7 @@
 //! This module defines the types used for agent-initiated elicitation,
 //! where the agent requests structured input from the user via forms or URLs.
 
-use std::sync::Arc;
+use std::{collections::BTreeMap, sync::Arc};
 
 use derive_more::{Display, From};
 use schemars::JsonSchema;
@@ -27,6 +27,678 @@ impl ElicitationId {
         Self(id.into())
     }
 }
+
+// =============================================================================
+// ELICITATION SCHEMA
+// =============================================================================
+
+/// String format types for string properties in elicitation schemas.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
+pub enum StringFormat {
+    /// Email address format.
+    Email,
+    /// URI format.
+    Uri,
+    /// Date format (YYYY-MM-DD).
+    Date,
+    /// Date-time format (ISO 8601).
+    DateTime,
+}
+
+/// A titled enum option with a const value and human-readable title.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[non_exhaustive]
+pub struct EnumOption {
+    /// The constant value for this option.
+    #[serde(rename = "const")]
+    pub value: String,
+    /// Human-readable title for this option.
+    pub title: String,
+}
+
+impl EnumOption {
+    /// Create a new enum option.
+    #[must_use]
+    pub fn new(value: impl Into<String>, title: impl Into<String>) -> Self {
+        Self {
+            value: value.into(),
+            title: title.into(),
+        }
+    }
+}
+
+/// Schema for string properties in an elicitation form.
+///
+/// When `enum_values` or `one_of` is set, this represents a single-select enum
+/// with `"type": "string"`.
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct StringPropertySchema {
+    /// Optional title for the property.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    /// Human-readable description.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    /// Minimum string length.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub min_length: Option<u32>,
+    /// Maximum string length.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub max_length: Option<u32>,
+    /// String format.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub format: Option<StringFormat>,
+    /// Default value.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default: Option<String>,
+    /// Enum values for untitled single-select enums.
+    #[serde(rename = "enum", skip_serializing_if = "Option::is_none")]
+    pub enum_values: Option<Vec<String>>,
+    /// Titled enum options for titled single-select enums.
+    #[serde(rename = "oneOf", skip_serializing_if = "Option::is_none")]
+    pub one_of: Option<Vec<EnumOption>>,
+}
+
+impl StringPropertySchema {
+    /// Create a new string property schema.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Create an email string property schema.
+    #[must_use]
+    pub fn email() -> Self {
+        Self {
+            format: Some(StringFormat::Email),
+            ..Default::default()
+        }
+    }
+
+    /// Create a URI string property schema.
+    #[must_use]
+    pub fn uri() -> Self {
+        Self {
+            format: Some(StringFormat::Uri),
+            ..Default::default()
+        }
+    }
+
+    /// Optional title for the property.
+    #[must_use]
+    pub fn title(mut self, title: impl IntoOption<String>) -> Self {
+        self.title = title.into_option();
+        self
+    }
+
+    /// Human-readable description.
+    #[must_use]
+    pub fn description(mut self, description: impl IntoOption<String>) -> Self {
+        self.description = description.into_option();
+        self
+    }
+
+    /// Minimum string length.
+    #[must_use]
+    pub fn min_length(mut self, min_length: impl IntoOption<u32>) -> Self {
+        self.min_length = min_length.into_option();
+        self
+    }
+
+    /// Maximum string length.
+    #[must_use]
+    pub fn max_length(mut self, max_length: impl IntoOption<u32>) -> Self {
+        self.max_length = max_length.into_option();
+        self
+    }
+
+    /// String format.
+    #[must_use]
+    pub fn format(mut self, format: impl IntoOption<StringFormat>) -> Self {
+        self.format = format.into_option();
+        self
+    }
+
+    /// Default value.
+    #[must_use]
+    pub fn default_value(mut self, default: impl IntoOption<String>) -> Self {
+        self.default = default.into_option();
+        self
+    }
+
+    /// Enum values for untitled single-select enums.
+    #[must_use]
+    pub fn enum_values(mut self, enum_values: impl IntoOption<Vec<String>>) -> Self {
+        self.enum_values = enum_values.into_option();
+        self
+    }
+
+    /// Titled enum options for titled single-select enums.
+    #[must_use]
+    pub fn one_of(mut self, one_of: impl IntoOption<Vec<EnumOption>>) -> Self {
+        self.one_of = one_of.into_option();
+        self
+    }
+}
+
+/// Schema for number (floating-point) properties in an elicitation form.
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct NumberPropertySchema {
+    /// Optional title for the property.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    /// Human-readable description.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    /// Minimum value (inclusive).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub minimum: Option<f64>,
+    /// Maximum value (inclusive).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub maximum: Option<f64>,
+    /// Default value.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default: Option<f64>,
+}
+
+impl NumberPropertySchema {
+    /// Create a new number property schema.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Optional title for the property.
+    #[must_use]
+    pub fn title(mut self, title: impl IntoOption<String>) -> Self {
+        self.title = title.into_option();
+        self
+    }
+
+    /// Human-readable description.
+    #[must_use]
+    pub fn description(mut self, description: impl IntoOption<String>) -> Self {
+        self.description = description.into_option();
+        self
+    }
+
+    /// Minimum value (inclusive).
+    #[must_use]
+    pub fn minimum(mut self, minimum: impl IntoOption<f64>) -> Self {
+        self.minimum = minimum.into_option();
+        self
+    }
+
+    /// Maximum value (inclusive).
+    #[must_use]
+    pub fn maximum(mut self, maximum: impl IntoOption<f64>) -> Self {
+        self.maximum = maximum.into_option();
+        self
+    }
+
+    /// Default value.
+    #[must_use]
+    pub fn default_value(mut self, default: impl IntoOption<f64>) -> Self {
+        self.default = default.into_option();
+        self
+    }
+}
+
+/// Schema for integer properties in an elicitation form.
+#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct IntegerPropertySchema {
+    /// Optional title for the property.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    /// Human-readable description.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    /// Minimum value (inclusive).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub minimum: Option<i64>,
+    /// Maximum value (inclusive).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub maximum: Option<i64>,
+    /// Default value.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default: Option<i64>,
+}
+
+impl IntegerPropertySchema {
+    /// Create a new integer property schema.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Optional title for the property.
+    #[must_use]
+    pub fn title(mut self, title: impl IntoOption<String>) -> Self {
+        self.title = title.into_option();
+        self
+    }
+
+    /// Human-readable description.
+    #[must_use]
+    pub fn description(mut self, description: impl IntoOption<String>) -> Self {
+        self.description = description.into_option();
+        self
+    }
+
+    /// Minimum value (inclusive).
+    #[must_use]
+    pub fn minimum(mut self, minimum: impl IntoOption<i64>) -> Self {
+        self.minimum = minimum.into_option();
+        self
+    }
+
+    /// Maximum value (inclusive).
+    #[must_use]
+    pub fn maximum(mut self, maximum: impl IntoOption<i64>) -> Self {
+        self.maximum = maximum.into_option();
+        self
+    }
+
+    /// Default value.
+    #[must_use]
+    pub fn default_value(mut self, default: impl IntoOption<i64>) -> Self {
+        self.default = default.into_option();
+        self
+    }
+}
+
+/// Schema for boolean properties in an elicitation form.
+#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct BooleanPropertySchema {
+    /// Optional title for the property.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    /// Human-readable description.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    /// Default value.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default: Option<bool>,
+}
+
+impl BooleanPropertySchema {
+    /// Create a new boolean property schema.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Optional title for the property.
+    #[must_use]
+    pub fn title(mut self, title: impl IntoOption<String>) -> Self {
+        self.title = title.into_option();
+        self
+    }
+
+    /// Human-readable description.
+    #[must_use]
+    pub fn description(mut self, description: impl IntoOption<String>) -> Self {
+        self.description = description.into_option();
+        self
+    }
+
+    /// Default value.
+    #[must_use]
+    pub fn default_value(mut self, default: impl IntoOption<bool>) -> Self {
+        self.default = default.into_option();
+        self
+    }
+}
+
+/// Items definition for untitled multi-select enum properties.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[non_exhaustive]
+pub struct UntitledMultiSelectItems {
+    /// Allowed enum values.
+    #[serde(rename = "enum")]
+    pub values: Vec<String>,
+}
+
+/// Items definition for titled multi-select enum properties.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[non_exhaustive]
+pub struct TitledMultiSelectItems {
+    /// Titled enum options.
+    #[serde(rename = "anyOf", alias = "oneOf")]
+    pub options: Vec<EnumOption>,
+}
+
+impl TitledMultiSelectItems {
+    /// Create new titled multi-select items.
+    #[must_use]
+    pub fn new(options: Vec<EnumOption>) -> Self {
+        Self { options }
+    }
+}
+
+/// Items for a multi-select (array) property schema.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(untagged)]
+#[non_exhaustive]
+pub enum MultiSelectItems {
+    /// Untitled multi-select items with plain string values.
+    Untitled(UntitledMultiSelectItems),
+    /// Titled multi-select items with human-readable labels.
+    Titled(TitledMultiSelectItems),
+}
+
+/// Schema for multi-select (array) properties in an elicitation form.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct MultiSelectPropertySchema {
+    /// Optional title for the property.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    /// Human-readable description.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    /// Minimum number of items to select.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub min_items: Option<u64>,
+    /// Maximum number of items to select.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub max_items: Option<u64>,
+    /// The items definition describing allowed values.
+    pub items: MultiSelectItems,
+    /// Default selected values.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default: Option<Vec<String>>,
+}
+
+impl MultiSelectPropertySchema {
+    /// Create a new untitled multi-select property schema.
+    #[must_use]
+    pub fn new(values: Vec<String>) -> Self {
+        Self {
+            title: None,
+            description: None,
+            min_items: None,
+            max_items: None,
+            items: MultiSelectItems::Untitled(UntitledMultiSelectItems { values }),
+            default: None,
+        }
+    }
+
+    /// Create a new titled multi-select property schema.
+    #[must_use]
+    pub fn titled(options: Vec<EnumOption>) -> Self {
+        Self {
+            title: None,
+            description: None,
+            min_items: None,
+            max_items: None,
+            items: MultiSelectItems::Titled(TitledMultiSelectItems { options }),
+            default: None,
+        }
+    }
+
+    /// Optional title for the property.
+    #[must_use]
+    pub fn title(mut self, title: impl IntoOption<String>) -> Self {
+        self.title = title.into_option();
+        self
+    }
+
+    /// Human-readable description.
+    #[must_use]
+    pub fn description(mut self, description: impl IntoOption<String>) -> Self {
+        self.description = description.into_option();
+        self
+    }
+
+    /// Minimum number of items to select.
+    #[must_use]
+    pub fn min_items(mut self, min_items: impl IntoOption<u64>) -> Self {
+        self.min_items = min_items.into_option();
+        self
+    }
+
+    /// Maximum number of items to select.
+    #[must_use]
+    pub fn max_items(mut self, max_items: impl IntoOption<u64>) -> Self {
+        self.max_items = max_items.into_option();
+        self
+    }
+
+    /// Default selected values.
+    #[must_use]
+    pub fn default_value(mut self, default: impl IntoOption<Vec<String>>) -> Self {
+        self.default = default.into_option();
+        self
+    }
+}
+
+/// Property schema for elicitation form fields.
+///
+/// Each variant corresponds to a JSON Schema `"type"` value.
+/// Single-select enums use the `String` variant with `enum_values` or `one_of` set.
+/// Multi-select enums use the `Array` variant.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(tag = "type")]
+#[schemars(extend("discriminator" = {"propertyName": "type"}))]
+#[non_exhaustive]
+pub enum ElicitationPropertySchema {
+    /// String property (or single-select enum when `enum`/`oneOf` is set).
+    #[serde(rename = "string")]
+    String(StringPropertySchema),
+    /// Number (floating-point) property.
+    #[serde(rename = "number")]
+    Number(NumberPropertySchema),
+    /// Integer property.
+    #[serde(rename = "integer")]
+    Integer(IntegerPropertySchema),
+    /// Boolean property.
+    #[serde(rename = "boolean")]
+    Boolean(BooleanPropertySchema),
+    /// Multi-select array property.
+    #[serde(rename = "array")]
+    Array(MultiSelectPropertySchema),
+}
+
+fn default_object_type() -> String {
+    "object".into()
+}
+
+/// Type-safe elicitation schema for requesting structured user input.
+///
+/// This represents a JSON Schema object with primitive-typed properties,
+/// as required by the elicitation specification.
+///
+/// # Example
+///
+/// ```
+/// use agent_client_protocol_schema::*;
+///
+/// let schema = ElicitationSchema::new()
+///     .required_string("name")
+///     .required_email("email")
+///     .optional_bool("newsletter");
+/// ```
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct ElicitationSchema {
+    /// Type discriminator. Always `"object"`.
+    #[serde(rename = "type", default = "default_object_type")]
+    pub type_: String,
+    /// Optional title for the schema.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    /// Property definitions (must be primitive types).
+    #[serde(default)]
+    pub properties: BTreeMap<String, ElicitationPropertySchema>,
+    /// List of required property names.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub required: Option<Vec<String>>,
+    /// Optional description of what this schema represents.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+}
+
+impl ElicitationSchema {
+    /// Create a new empty elicitation schema.
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            type_: "object".into(),
+            ..Default::default()
+        }
+    }
+
+    /// Optional title for the schema.
+    #[must_use]
+    pub fn title(mut self, title: impl IntoOption<String>) -> Self {
+        self.title = title.into_option();
+        self
+    }
+
+    /// Optional description of what this schema represents.
+    #[must_use]
+    pub fn description(mut self, description: impl IntoOption<String>) -> Self {
+        self.description = description.into_option();
+        self
+    }
+
+    /// Add a property to the schema.
+    #[must_use]
+    pub fn property(mut self, name: impl Into<String>, schema: ElicitationPropertySchema) -> Self {
+        self.properties.insert(name.into(), schema);
+        self
+    }
+
+    /// Add a required property to the schema.
+    #[must_use]
+    pub fn required_property(
+        mut self,
+        name: impl Into<String>,
+        schema: ElicitationPropertySchema,
+    ) -> Self {
+        let name_str = name.into();
+        self.required
+            .get_or_insert_with(Vec::new)
+            .push(name_str.clone());
+        self.properties.insert(name_str, schema);
+        self
+    }
+
+    /// Add a required string property.
+    #[must_use]
+    pub fn required_string(self, name: impl Into<String>) -> Self {
+        self.required_property(
+            name,
+            ElicitationPropertySchema::String(StringPropertySchema::new()),
+        )
+    }
+
+    /// Add an optional string property.
+    #[must_use]
+    pub fn optional_string(self, name: impl Into<String>) -> Self {
+        self.property(
+            name,
+            ElicitationPropertySchema::String(StringPropertySchema::new()),
+        )
+    }
+
+    /// Add a required email property.
+    #[must_use]
+    pub fn required_email(self, name: impl Into<String>) -> Self {
+        self.required_property(
+            name,
+            ElicitationPropertySchema::String(StringPropertySchema::email()),
+        )
+    }
+
+    /// Add an optional email property.
+    #[must_use]
+    pub fn optional_email(self, name: impl Into<String>) -> Self {
+        self.property(
+            name,
+            ElicitationPropertySchema::String(StringPropertySchema::email()),
+        )
+    }
+
+    /// Add a required number property with range.
+    #[must_use]
+    pub fn required_number(self, name: impl Into<String>, min: f64, max: f64) -> Self {
+        self.required_property(
+            name,
+            ElicitationPropertySchema::Number(
+                NumberPropertySchema::new().minimum(min).maximum(max),
+            ),
+        )
+    }
+
+    /// Add an optional number property with range.
+    #[must_use]
+    pub fn optional_number(self, name: impl Into<String>, min: f64, max: f64) -> Self {
+        self.property(
+            name,
+            ElicitationPropertySchema::Number(
+                NumberPropertySchema::new().minimum(min).maximum(max),
+            ),
+        )
+    }
+
+    /// Add a required integer property with range.
+    #[must_use]
+    pub fn required_integer(self, name: impl Into<String>, min: i64, max: i64) -> Self {
+        self.required_property(
+            name,
+            ElicitationPropertySchema::Integer(
+                IntegerPropertySchema::new().minimum(min).maximum(max),
+            ),
+        )
+    }
+
+    /// Add an optional integer property with range.
+    #[must_use]
+    pub fn optional_integer(self, name: impl Into<String>, min: i64, max: i64) -> Self {
+        self.property(
+            name,
+            ElicitationPropertySchema::Integer(
+                IntegerPropertySchema::new().minimum(min).maximum(max),
+            ),
+        )
+    }
+
+    /// Add a required boolean property.
+    #[must_use]
+    pub fn required_bool(self, name: impl Into<String>) -> Self {
+        self.required_property(
+            name,
+            ElicitationPropertySchema::Boolean(BooleanPropertySchema::new()),
+        )
+    }
+
+    /// Add an optional boolean property.
+    #[must_use]
+    pub fn optional_bool(self, name: impl Into<String>) -> Self {
+        self.property(
+            name,
+            ElicitationPropertySchema::Boolean(BooleanPropertySchema::new()),
+        )
+    }
+}
+
+// =============================================================================
+// ELICITATION CAPABILITIES
+// =============================================================================
 
 /// **UNSTABLE**
 ///
@@ -217,7 +889,7 @@ impl ElicitationRequest {
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
 /// The mode of elicitation, determining how user input is collected.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[serde(tag = "mode", rename_all = "snake_case")]
 #[schemars(extend("discriminator" = {"propertyName": "mode"}))]
 #[non_exhaustive]
@@ -233,17 +905,17 @@ pub enum ElicitationMode {
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
 /// Form-based elicitation mode where the client renders a form from the provided schema.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ElicitationFormMode {
     /// A JSON Schema describing the form fields to present to the user.
-    pub requested_schema: serde_json::Value,
+    pub requested_schema: ElicitationSchema,
 }
 
 impl ElicitationFormMode {
     #[must_use]
-    pub fn new(requested_schema: serde_json::Value) -> Self {
+    pub fn new(requested_schema: ElicitationSchema) -> Self {
         Self { requested_schema }
     }
 }
@@ -469,11 +1141,10 @@ mod tests {
 
     #[test]
     fn form_mode_request_serialization() {
+        let schema = ElicitationSchema::new().required_string("name");
         let req = ElicitationRequest::new(
             "sess_1",
-            ElicitationMode::Form(ElicitationFormMode::new(
-                json!({"type": "object", "properties": {"name": {"type": "string"}}}),
-            )),
+            ElicitationMode::Form(ElicitationFormMode::new(schema)),
             "Please enter your name",
         );
 
@@ -482,6 +1153,11 @@ mod tests {
         assert_eq!(json["mode"], "form");
         assert_eq!(json["message"], "Please enter your name");
         assert!(json["requestedSchema"].is_object());
+        assert_eq!(json["requestedSchema"]["type"], "object");
+        assert_eq!(
+            json["requestedSchema"]["properties"]["name"]["type"],
+            "string"
+        );
 
         let roundtripped: ElicitationRequest = serde_json::from_value(json).unwrap();
         assert_eq!(roundtripped.session_id, SessionId::new("sess_1"));
@@ -622,5 +1298,130 @@ mod tests {
         let roundtripped: UrlElicitationRequiredData = serde_json::from_value(json).unwrap();
         assert_eq!(roundtripped.elicitations.len(), 1);
         assert_eq!(roundtripped.elicitations[0].mode, "url");
+    }
+
+    #[test]
+    fn schema_builder_serialization() {
+        let schema = ElicitationSchema::new()
+            .required_string("name")
+            .required_email("email")
+            .required_integer("age", 0, 150)
+            .optional_bool("newsletter")
+            .description("User registration");
+
+        let json = serde_json::to_value(&schema).unwrap();
+        assert_eq!(json["type"], "object");
+        assert_eq!(json["description"], "User registration");
+        assert_eq!(json["properties"]["name"]["type"], "string");
+        assert_eq!(json["properties"]["email"]["type"], "string");
+        assert_eq!(json["properties"]["email"]["format"], "email");
+        assert_eq!(json["properties"]["age"]["type"], "integer");
+        assert_eq!(json["properties"]["age"]["minimum"], 0);
+        assert_eq!(json["properties"]["age"]["maximum"], 150);
+        assert_eq!(json["properties"]["newsletter"]["type"], "boolean");
+
+        let required = json["required"].as_array().unwrap();
+        assert!(required.contains(&json!("name")));
+        assert!(required.contains(&json!("email")));
+        assert!(required.contains(&json!("age")));
+        assert!(!required.contains(&json!("newsletter")));
+
+        let roundtripped: ElicitationSchema = serde_json::from_value(json).unwrap();
+        assert_eq!(roundtripped.properties.len(), 4);
+        assert!(roundtripped.required.unwrap().contains(&"name".to_string()));
+    }
+
+    #[test]
+    fn schema_string_enum_serialization() {
+        let schema = ElicitationSchema::new().required_property(
+            "color",
+            ElicitationPropertySchema::String(StringPropertySchema::new().enum_values(vec![
+                "red".into(),
+                "green".into(),
+                "blue".into(),
+            ])),
+        );
+
+        let json = serde_json::to_value(&schema).unwrap();
+        assert_eq!(json["properties"]["color"]["type"], "string");
+        let enum_vals = json["properties"]["color"]["enum"].as_array().unwrap();
+        assert_eq!(enum_vals.len(), 3);
+
+        let roundtripped: ElicitationSchema = serde_json::from_value(json).unwrap();
+        if let ElicitationPropertySchema::String(s) = roundtripped.properties.get("color").unwrap()
+        {
+            assert_eq!(s.enum_values.as_ref().unwrap().len(), 3);
+        } else {
+            panic!("expected String variant");
+        }
+    }
+
+    #[test]
+    fn schema_multi_select_serialization() {
+        let schema = ElicitationSchema::new().property(
+            "colors",
+            ElicitationPropertySchema::Array(
+                MultiSelectPropertySchema::new(vec!["red".into(), "green".into(), "blue".into()])
+                    .min_items(1)
+                    .max_items(3),
+            ),
+        );
+
+        let json = serde_json::to_value(&schema).unwrap();
+        assert_eq!(json["properties"]["colors"]["type"], "array");
+        assert_eq!(json["properties"]["colors"]["minItems"], 1);
+        assert_eq!(json["properties"]["colors"]["maxItems"], 3);
+
+        let roundtripped: ElicitationSchema = serde_json::from_value(json).unwrap();
+        assert!(matches!(
+            roundtripped.properties.get("colors").unwrap(),
+            ElicitationPropertySchema::Array(_)
+        ));
+    }
+
+    #[test]
+    fn schema_titled_enum_serialization() {
+        let schema = ElicitationSchema::new().required_property(
+            "country",
+            ElicitationPropertySchema::String(StringPropertySchema::new().one_of(vec![
+                EnumOption::new("us", "United States"),
+                EnumOption::new("uk", "United Kingdom"),
+            ])),
+        );
+
+        let json = serde_json::to_value(&schema).unwrap();
+        assert_eq!(json["properties"]["country"]["type"], "string");
+        let one_of = json["properties"]["country"]["oneOf"].as_array().unwrap();
+        assert_eq!(one_of.len(), 2);
+        assert_eq!(one_of[0]["const"], "us");
+        assert_eq!(one_of[0]["title"], "United States");
+
+        let roundtripped: ElicitationSchema = serde_json::from_value(json).unwrap();
+        if let ElicitationPropertySchema::String(s) =
+            roundtripped.properties.get("country").unwrap()
+        {
+            assert_eq!(s.one_of.as_ref().unwrap().len(), 2);
+        } else {
+            panic!("expected String variant");
+        }
+    }
+
+    #[test]
+    fn schema_number_property_serialization() {
+        let schema = ElicitationSchema::new().required_number("rating", 0.0, 5.0);
+
+        let json = serde_json::to_value(&schema).unwrap();
+        assert_eq!(json["properties"]["rating"]["type"], "number");
+        assert_eq!(json["properties"]["rating"]["minimum"], 0.0);
+        assert_eq!(json["properties"]["rating"]["maximum"], 5.0);
+
+        let roundtripped: ElicitationSchema = serde_json::from_value(json).unwrap();
+        if let ElicitationPropertySchema::Number(n) = roundtripped.properties.get("rating").unwrap()
+        {
+            assert_eq!(n.minimum, Some(0.0));
+            assert_eq!(n.maximum, Some(5.0));
+        } else {
+            panic!("expected Number variant");
+        }
     }
 }
