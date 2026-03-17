@@ -3797,6 +3797,7 @@ pub(crate) const LOGOUT_METHOD_NAME: &str = "logout";
 #[serde(untagged)]
 #[schemars(inline)]
 #[non_exhaustive]
+#[allow(clippy::large_enum_variant)]
 pub enum ClientRequest {
     /// Establishes the connection with a client and negotiates protocol capabilities.
     ///
