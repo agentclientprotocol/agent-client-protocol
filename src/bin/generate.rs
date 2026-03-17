@@ -944,6 +944,7 @@ starting with '$/' it is free to ignore the notification."
                 "session/cancel" => self.agent.get("CancelNotification").unwrap(),
                 "session/set_model" => self.agent.get("SetSessionModelRequest").unwrap(),
                 "session/close" => self.agent.get("CloseSessionRequest").unwrap(),
+                "logout" => self.agent.get("LogoutRequest").unwrap(),
                 _ => panic!("Introduced a method? Add it here :)"),
             }
         }

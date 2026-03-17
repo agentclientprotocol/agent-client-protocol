@@ -2,6 +2,7 @@
   "agentMethods": {
     "authenticate": "authenticate",
     "initialize": "initialize",
+    "logout": "logout",
     "session_cancel": "session/cancel",
     "session_close": "session/close",
     "session_fork": "session/fork",

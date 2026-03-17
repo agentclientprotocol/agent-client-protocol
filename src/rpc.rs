@@ -284,6 +284,10 @@ impl Side for AgentSide {
             m if m == AGENT_METHOD_NAMES.authenticate => serde_json::from_str(params.get())
                 .map(ClientRequest::AuthenticateRequest)
                 .map_err(Into::into),
+            #[cfg(feature = "unstable_logout")]
+            m if m == AGENT_METHOD_NAMES.logout => serde_json::from_str(params.get())
+                .map(ClientRequest::LogoutRequest)
+                .map_err(Into::into),
             m if m == AGENT_METHOD_NAMES.session_new => serde_json::from_str(params.get())
                 .map(ClientRequest::NewSessionRequest)
                 .map_err(Into::into),

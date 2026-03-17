@@ -135,7 +135,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 <ResponseField name="agentCapabilities" type={<a href="#agentcapabilities">AgentCapabilities</a>} >
   Capabilities supported by the agent.
 
-    - Default: `{"loadSession":false,"mcpCapabilities":{"http":false,"sse":false},"promptCapabilities":{"audio":false,"embeddedContext":false,"image":false},"sessionCapabilities":{}}`
+    - Default: `{"auth":{},"loadSession":false,"mcpCapabilities":{"http":false,"sse":false},"promptCapabilities":{"audio":false,"embeddedContext":false,"image":false},"sessionCapabilities":{}}`
 
 </ResponseField>
 <ResponseField name="agentInfo" type={<><span><a href="#implementation">Implementation</a></span><span> | null</span></>} >
@@ -155,6 +155,61 @@ Note: in future versions of the protocol, this will be required.
 or the latest protocol version supported by the agent.
 
 The client should disconnect, if it doesn't support this version.
+
+</ResponseField>
+
+### <span class="font-mono">logout</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Logs out of the current authenticated state.
+
+After a successful logout, all new sessions will require authentication.
+There is no guarantee about the behavior of already running sessions.
+
+#### <span class="font-mono">LogoutRequest</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Request parameters for the logout method.
+
+Terminates the current authenticated session.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+
+#### <span class="font-mono">LogoutResponse</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Response to the `logout` method.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
 </ResponseField>
 
@@ -1671,6 +1726,33 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
   The ID of the request to cancel.
 </ResponseField>
 
+## <span class="font-mono">AgentAuthCapabilities</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Authentication-related capabilities supported by the agent.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="logout" type={<><span><a href="#logoutcapabilities">LogoutCapabilities</a></span><span> | null</span></>} >
+  Whether the agent supports the logout method.
+
+By supplying `\{\}` it means that the agent supports the logout method.
+
+</ResponseField>
+
 ## <span class="font-mono">AgentCapabilities</span>
 
 Capabilities supported by the agent.
@@ -1690,6 +1772,16 @@ metadata to their interactions. Implementations MUST NOT make assumptions about 
 these keys.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="auth" type={<a href="#agentauthcapabilities">AgentAuthCapabilities</a>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Authentication-related capabilities supported by the agent.
+
+    - Default: `{}`
 
 </ResponseField>
 <ResponseField name="loadSession" type={"boolean"} >
@@ -2966,6 +3058,29 @@ If not provided, the name should be used for display.
 <ResponseField name="version" type={"string"} required>
   Version of the implementation. Can be displayed to the user or used
 for debugging or metrics purposes. (e.g. "1.0.0").
+</ResponseField>
+
+## <span class="font-mono">LogoutCapabilities</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Logout capabilities supported by the agent.
+
+By supplying `\{\}` it means that the agent supports the logout method.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
 </ResponseField>
 
 ## <span class="font-mono">McpCapabilities</span>
