@@ -966,7 +966,7 @@ impl ElicitationRequest {
 ///
 /// The mode of elicitation, determining how user input is collected.
 #[cfg(feature = "unstable_elicitation")]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(tag = "mode", rename_all = "snake_case")]
 #[schemars(extend("discriminator" = {"propertyName": "mode"}))]
 #[non_exhaustive]

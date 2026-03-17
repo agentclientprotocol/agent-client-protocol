@@ -1134,39 +1134,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
 </ResponseField>
 
-<a id="notifications-elicitation-complete"></a>
-### <span class="font-mono">notifications/elicitation/complete</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Notification that a URL-based elicitation has completed.
-
-#### <span class="font-mono">ElicitationCompleteNotification</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Notification sent by the agent when a URL-based elicitation is complete.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-
-</ResponseField>
-<ResponseField name="elicitationId" type={<a href="#elicitationid">ElicitationId</a>} required>
-  The ID of the elicitation that completed.
-</ResponseField>
-
 <a id="session-elicitation"></a>
 ### <span class="font-mono">session/elicitation</span>
 
@@ -1248,6 +1215,39 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 </ResponseField>
 <ResponseField name="action" type={<a href="#elicitationaction">ElicitationAction</a>} required>
   The user's action in response to the elicitation.
+</ResponseField>
+
+<a id="session-elicitation-complete"></a>
+### <span class="font-mono">session/elicitation/complete</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Notification that a URL-based elicitation has completed.
+
+#### <span class="font-mono">ElicitationCompleteNotification</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Notification sent by the agent when a URL-based elicitation is complete.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="elicitationId" type={<a href="#elicitationid">ElicitationId</a>} required>
+  The ID of the elicitation that completed.
 </ResponseField>
 
 <a id="session-request_permission"></a>

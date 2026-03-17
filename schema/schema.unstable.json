@@ -1554,7 +1554,7 @@
       },
       "required": ["elicitationId"],
       "type": "object",
-      "x-method": "notifications/elicitation/complete",
+      "x-method": "session/elicitation/complete",
       "x-side": "client"
     },
     "ElicitationFormCapabilities": {

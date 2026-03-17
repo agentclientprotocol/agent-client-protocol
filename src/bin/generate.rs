@@ -965,7 +965,7 @@ starting with '$/' it is free to ignore the notification."
                 #[cfg(feature = "unstable_elicitation")]
                 "session/elicitation" => self.client.get("ElicitationRequest").unwrap(),
                 #[cfg(feature = "unstable_elicitation")]
-                "notifications/elicitation/complete" => {
+                "session/elicitation/complete" => {
                     self.client.get("ElicitationCompleteNotification").unwrap()
                 }
                 _ => panic!("Introduced a method? Add it here :)"),
