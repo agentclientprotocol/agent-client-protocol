@@ -2158,7 +2158,7 @@ pub(crate) const TERMINAL_KILL_METHOD_NAME: &str = "terminal/kill";
 pub(crate) const SESSION_ELICITATION_METHOD_NAME: &str = "session/elicitation";
 /// Notification name for elicitation completion.
 #[cfg(feature = "unstable_elicitation")]
-pub(crate) const NOTIFICATION_ELICITATION_COMPLETE: &str = "notifications/elicitation/complete";
+pub(crate) const SESSION_ELICITATION_COMPLETE: &str = "session/elicitation/complete";
 
 /// All possible requests that an agent can send to a client.
 ///
