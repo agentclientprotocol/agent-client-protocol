@@ -1480,7 +1480,9 @@
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nThe user accepted the elicitation and provided content.",
       "properties": {
         "content": {
-          "additionalProperties": true,
+          "additionalProperties": {
+            "$ref": "#/$defs/ElicitationContentValue"
+          },
           "description": "The user-provided content, if any, as an object matching the requested schema.",
           "type": ["object", "null"]
         }
@@ -1587,6 +1589,35 @@
       "type": "object",
       "x-method": "session/elicitation/complete",
       "x-side": "client"
+    },
+    "ElicitationContentValue": {
+      "anyOf": [
+        {
+          "title": "String",
+          "type": "string"
+        },
+        {
+          "format": "int64",
+          "title": "Integer",
+          "type": "integer"
+        },
+        {
+          "format": "double",
+          "title": "Number",
+          "type": "number"
+        },
+        {
+          "title": "Boolean",
+          "type": "boolean"
+        },
+        {
+          "items": {
+            "type": "string"
+          },
+          "title": "StringArray",
+          "type": "array"
+        }
+      ]
     },
     "ElicitationFormCapabilities": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nForm-based elicitation capabilities.",
@@ -1873,6 +1904,7 @@
         },
         "url": {
           "description": "The URL to direct the user to.",
+          "format": "uri",
           "type": "string"
         }
       },

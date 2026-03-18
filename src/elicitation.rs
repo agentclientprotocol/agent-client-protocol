@@ -966,6 +966,7 @@ pub struct ElicitationUrlMode {
     /// The unique identifier for this elicitation.
     pub elicitation_id: ElicitationId,
     /// The URL to direct the user to.
+    #[schemars(extend("format" = "uri"))]
     pub url: String,
 }
 
@@ -1047,7 +1048,7 @@ pub enum ElicitationAction {
 pub struct ElicitationAcceptAction {
     /// The user-provided content, if any, as an object matching the requested schema.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub content: Option<serde_json::Map<String, serde_json::Value>>,
+    pub content: Option<BTreeMap<String, ElicitationContentValue>>,
 }
 
 impl ElicitationAcceptAction {
@@ -1060,10 +1061,69 @@ impl ElicitationAcceptAction {
     #[must_use]
     pub fn content(
         mut self,
-        content: impl IntoOption<serde_json::Map<String, serde_json::Value>>,
+        content: impl IntoOption<BTreeMap<String, ElicitationContentValue>>,
     ) -> Self {
         self.content = content.into_option();
         self
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[serde(untagged)]
+#[non_exhaustive]
+pub enum ElicitationContentValue {
+    String(String),
+    Integer(i64),
+    Number(f64),
+    Boolean(bool),
+    StringArray(Vec<String>),
+}
+
+impl From<String> for ElicitationContentValue {
+    fn from(value: String) -> Self {
+        Self::String(value)
+    }
+}
+
+impl From<&str> for ElicitationContentValue {
+    fn from(value: &str) -> Self {
+        Self::String(value.to_string())
+    }
+}
+
+impl From<i64> for ElicitationContentValue {
+    fn from(value: i64) -> Self {
+        Self::Integer(value)
+    }
+}
+
+impl From<i32> for ElicitationContentValue {
+    fn from(value: i32) -> Self {
+        Self::Integer(i64::from(value))
+    }
+}
+
+impl From<f64> for ElicitationContentValue {
+    fn from(value: f64) -> Self {
+        Self::Number(value)
+    }
+}
+
+impl From<bool> for ElicitationContentValue {
+    fn from(value: bool) -> Self {
+        Self::Boolean(value)
+    }
+}
+
+impl From<Vec<String>> for ElicitationContentValue {
+    fn from(value: Vec<String>) -> Self {
+        Self::StringArray(value)
+    }
+}
+
+impl From<Vec<&str>> for ElicitationContentValue {
+    fn from(value: Vec<&str>) -> Self {
+        Self::StringArray(value.into_iter().map(str::to_string).collect())
     }
 }
 
@@ -1150,6 +1210,7 @@ pub struct UrlElicitationRequiredItem {
     /// The unique identifier for this elicitation.
     pub elicitation_id: ElicitationId,
     /// The URL the user should be directed to.
+    #[schemars(extend("format" = "uri"))]
     pub url: String,
     /// A human-readable message describing what input is needed.
     pub message: String,
@@ -1238,9 +1299,9 @@ mod tests {
     #[test]
     fn response_accept_serialization() {
         let resp = ElicitationResponse::new(ElicitationAction::Accept(
-            ElicitationAcceptAction::new().content(serde_json::Map::from_iter([(
+            ElicitationAcceptAction::new().content(BTreeMap::from([(
                 "name".to_string(),
-                json!("Alice"),
+                ElicitationContentValue::from("Alice"),
             )])),
         ));
 
@@ -1590,5 +1651,49 @@ mod tests {
         .unwrap_err();
 
         assert!(err.to_string().contains("invalid type"));
+    }
+
+    #[test]
+    fn response_accept_rejects_nested_object_content() {
+        let err = serde_json::from_value::<ElicitationResponse>(json!({
+            "action": {
+                "action": "accept",
+                "content": {
+                    "profile": {
+                        "name": "Alice"
+                    }
+                }
+            }
+        }))
+        .unwrap_err();
+
+        assert!(err.to_string().contains("data did not match any variant"));
+    }
+
+    #[test]
+    fn response_accept_allows_primitive_and_string_array_content() {
+        let response = ElicitationResponse::new(ElicitationAction::Accept(
+            ElicitationAcceptAction::new().content(BTreeMap::from([
+                ("name".to_string(), ElicitationContentValue::from("Alice")),
+                ("age".to_string(), ElicitationContentValue::from(30_i32)),
+                ("score".to_string(), ElicitationContentValue::from(9.5_f64)),
+                (
+                    "subscribed".to_string(),
+                    ElicitationContentValue::from(true),
+                ),
+                (
+                    "tags".to_string(),
+                    ElicitationContentValue::from(vec!["rust", "acp"]),
+                ),
+            ])),
+        ));
+
+        let json = serde_json::to_value(&response).unwrap();
+        assert_eq!(json["action"]["content"]["name"], "Alice");
+        assert_eq!(json["action"]["content"]["age"], 30);
+        assert_eq!(json["action"]["content"]["score"], 9.5);
+        assert_eq!(json["action"]["content"]["subscribed"], true);
+        assert_eq!(json["action"]["content"]["tags"][0], "rust");
+        assert_eq!(json["action"]["content"]["tags"][1], "acp");
     }
 }
