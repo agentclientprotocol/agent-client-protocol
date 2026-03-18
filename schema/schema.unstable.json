@@ -1613,7 +1613,7 @@
       "type": "object"
     },
     "ElicitationId": {
-      "description": "Unique identifier for an elicitation.",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nUnique identifier for an elicitation.",
       "type": "string"
     },
     "ElicitationPropertySchema": {

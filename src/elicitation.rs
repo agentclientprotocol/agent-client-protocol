@@ -14,6 +14,10 @@ use serde::{Deserialize, Serialize};
 use crate::client::{SESSION_ELICITATION_COMPLETE, SESSION_ELICITATION_METHOD_NAME};
 use crate::{IntoOption, Meta, SessionId};
 
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
 /// Unique identifier for an elicitation.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
@@ -27,10 +31,6 @@ impl ElicitationId {
         Self(id.into())
     }
 }
-
-// =============================================================================
-// ELICITATION SCHEMA
-// =============================================================================
 
 /// String format types for string properties in elicitation schemas.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -490,24 +490,19 @@ impl MultiSelectPropertySchema {
 /// Single-select enums use the `String` variant with `enum_values` or `one_of` set.
 /// Multi-select enums use the `Array` variant.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-#[serde(tag = "type")]
+#[serde(tag = "type", rename_all = "snake_case")]
 #[schemars(extend("discriminator" = {"propertyName": "type"}))]
 #[non_exhaustive]
 pub enum ElicitationPropertySchema {
     /// String property (or single-select enum when `enum`/`oneOf` is set).
-    #[serde(rename = "string")]
     String(StringPropertySchema),
     /// Number (floating-point) property.
-    #[serde(rename = "number")]
     Number(NumberPropertySchema),
     /// Integer property.
-    #[serde(rename = "integer")]
     Integer(IntegerPropertySchema),
     /// Boolean property.
-    #[serde(rename = "boolean")]
     Boolean(BooleanPropertySchema),
     /// Multi-select array property.
-    #[serde(rename = "array")]
     Array(MultiSelectPropertySchema),
 }
 
@@ -530,7 +525,7 @@ fn default_object_type() -> String {
 ///     .required_email("email")
 ///     .optional_bool("newsletter");
 /// ```
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ElicitationSchema {
@@ -551,14 +546,23 @@ pub struct ElicitationSchema {
     pub description: Option<String>,
 }
 
+impl Default for ElicitationSchema {
+    fn default() -> Self {
+        Self {
+            type_: default_object_type(),
+            title: None,
+            properties: BTreeMap::new(),
+            required: None,
+            description: None,
+        }
+    }
+}
+
 impl ElicitationSchema {
     /// Create a new empty elicitation schema.
     #[must_use]
     pub fn new() -> Self {
-        Self {
-            type_: "object".into(),
-            ..Default::default()
-        }
+        Self::default()
     }
 
     /// Optional title for the schema.
@@ -695,10 +699,6 @@ impl ElicitationSchema {
         )
     }
 }
-
-// =============================================================================
-// ELICITATION CAPABILITIES
-// =============================================================================
 
 /// **UNSTABLE**
 ///
@@ -1298,6 +1298,17 @@ mod tests {
         let roundtripped: UrlElicitationRequiredData = serde_json::from_value(json).unwrap();
         assert_eq!(roundtripped.elicitations.len(), 1);
         assert_eq!(roundtripped.elicitations[0].mode, "url");
+    }
+
+    #[test]
+    fn schema_default_sets_object_type() {
+        let schema = ElicitationSchema::default();
+
+        assert_eq!(schema.type_, "object");
+        assert!(schema.properties.is_empty());
+
+        let json = serde_json::to_value(&schema).unwrap();
+        assert_eq!(json["type"], "object");
     }
 
     #[test]
