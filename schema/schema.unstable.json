@@ -1790,7 +1790,7 @@
       "x-side": "client"
     },
     "ElicitationSchema": {
-      "description": "Type-safe elicitation schema for requesting structured user input.\n\nThis represents a JSON Schema object with primitive-typed properties,\nas required by the elicitation specification.\n\n# Example\n\n```\nuse agent_client_protocol_schema::*;\n\nlet schema = ElicitationSchema::new()\n    .required_string(\"name\")\n    .required_email(\"email\")\n    .optional_bool(\"newsletter\");\n```",
+      "description": "Type-safe elicitation schema for requesting structured user input.\n\nThis represents a JSON Schema object with primitive-typed properties,\nas required by the elicitation specification.",
       "properties": {
         "description": {
           "description": "Optional description of what this schema represents.",

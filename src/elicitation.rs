@@ -128,6 +128,24 @@ impl StringPropertySchema {
         }
     }
 
+    /// Create a date string property schema.
+    #[must_use]
+    pub fn date() -> Self {
+        Self {
+            format: Some(StringFormat::Date),
+            ..Default::default()
+        }
+    }
+
+    /// Create a date-time string property schema.
+    #[must_use]
+    pub fn date_time() -> Self {
+        Self {
+            format: Some(StringFormat::DateTime),
+            ..Default::default()
+        }
+    }
+
     /// Optional title for the property.
     #[must_use]
     pub fn title(mut self, title: impl IntoOption<String>) -> Self {
@@ -506,6 +524,36 @@ pub enum ElicitationPropertySchema {
     Array(MultiSelectPropertySchema),
 }
 
+impl From<StringPropertySchema> for ElicitationPropertySchema {
+    fn from(schema: StringPropertySchema) -> Self {
+        Self::String(schema)
+    }
+}
+
+impl From<NumberPropertySchema> for ElicitationPropertySchema {
+    fn from(schema: NumberPropertySchema) -> Self {
+        Self::Number(schema)
+    }
+}
+
+impl From<IntegerPropertySchema> for ElicitationPropertySchema {
+    fn from(schema: IntegerPropertySchema) -> Self {
+        Self::Integer(schema)
+    }
+}
+
+impl From<BooleanPropertySchema> for ElicitationPropertySchema {
+    fn from(schema: BooleanPropertySchema) -> Self {
+        Self::Boolean(schema)
+    }
+}
+
+impl From<MultiSelectPropertySchema> for ElicitationPropertySchema {
+    fn from(schema: MultiSelectPropertySchema) -> Self {
+        Self::Array(schema)
+    }
+}
+
 fn default_object_type() -> String {
     "object".into()
 }
@@ -514,17 +562,6 @@ fn default_object_type() -> String {
 ///
 /// This represents a JSON Schema object with primitive-typed properties,
 /// as required by the elicitation specification.
-///
-/// # Example
-///
-/// ```
-/// use agent_client_protocol_schema::*;
-///
-/// let schema = ElicitationSchema::new()
-///     .required_string("name")
-///     .required_email("email")
-///     .optional_bool("newsletter");
-/// ```
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -581,122 +618,83 @@ impl ElicitationSchema {
 
     /// Add a property to the schema.
     #[must_use]
-    pub fn property(mut self, name: impl Into<String>, schema: ElicitationPropertySchema) -> Self {
-        self.properties.insert(name.into(), schema);
+    pub fn property<S>(mut self, name: impl Into<String>, schema: S, required: bool) -> Self
+    where
+        S: Into<ElicitationPropertySchema>,
+    {
+        let name = name.into();
+        self.properties.insert(name.clone(), schema.into());
+
+        if required {
+            let required_fields = self.required.get_or_insert_with(Vec::new);
+            if !required_fields.contains(&name) {
+                required_fields.push(name);
+            }
+        } else if let Some(required_fields) = &mut self.required {
+            required_fields.retain(|field| field != &name);
+
+            if required_fields.is_empty() {
+                self.required = None;
+            }
+        }
+
         self
     }
 
-    /// Add a required property to the schema.
+    /// Add a string property.
     #[must_use]
-    pub fn required_property(
-        mut self,
-        name: impl Into<String>,
-        schema: ElicitationPropertySchema,
-    ) -> Self {
-        let name_str = name.into();
-        self.required
-            .get_or_insert_with(Vec::new)
-            .push(name_str.clone());
-        self.properties.insert(name_str, schema);
-        self
+    pub fn string(self, name: impl Into<String>, required: bool) -> Self {
+        self.property(name, StringPropertySchema::new(), required)
     }
 
-    /// Add a required string property.
+    /// Add an email property.
     #[must_use]
-    pub fn required_string(self, name: impl Into<String>) -> Self {
-        self.required_property(
-            name,
-            ElicitationPropertySchema::String(StringPropertySchema::new()),
-        )
+    pub fn email(self, name: impl Into<String>, required: bool) -> Self {
+        self.property(name, StringPropertySchema::email(), required)
     }
 
-    /// Add an optional string property.
+    /// Add a URI property.
     #[must_use]
-    pub fn optional_string(self, name: impl Into<String>) -> Self {
+    pub fn uri(self, name: impl Into<String>, required: bool) -> Self {
+        self.property(name, StringPropertySchema::uri(), required)
+    }
+
+    /// Add a date property.
+    #[must_use]
+    pub fn date(self, name: impl Into<String>, required: bool) -> Self {
+        self.property(name, StringPropertySchema::date(), required)
+    }
+
+    /// Add a date-time property.
+    #[must_use]
+    pub fn date_time(self, name: impl Into<String>, required: bool) -> Self {
+        self.property(name, StringPropertySchema::date_time(), required)
+    }
+
+    /// Add a number property with range.
+    #[must_use]
+    pub fn number(self, name: impl Into<String>, min: f64, max: f64, required: bool) -> Self {
         self.property(
             name,
-            ElicitationPropertySchema::String(StringPropertySchema::new()),
+            NumberPropertySchema::new().minimum(min).maximum(max),
+            required,
         )
     }
 
-    /// Add a required email property.
+    /// Add an integer property with range.
     #[must_use]
-    pub fn required_email(self, name: impl Into<String>) -> Self {
-        self.required_property(
-            name,
-            ElicitationPropertySchema::String(StringPropertySchema::email()),
-        )
-    }
-
-    /// Add an optional email property.
-    #[must_use]
-    pub fn optional_email(self, name: impl Into<String>) -> Self {
+    pub fn integer(self, name: impl Into<String>, min: i64, max: i64, required: bool) -> Self {
         self.property(
             name,
-            ElicitationPropertySchema::String(StringPropertySchema::email()),
+            IntegerPropertySchema::new().minimum(min).maximum(max),
+            required,
         )
     }
 
-    /// Add a required number property with range.
+    /// Add a boolean property.
     #[must_use]
-    pub fn required_number(self, name: impl Into<String>, min: f64, max: f64) -> Self {
-        self.required_property(
-            name,
-            ElicitationPropertySchema::Number(
-                NumberPropertySchema::new().minimum(min).maximum(max),
-            ),
-        )
-    }
-
-    /// Add an optional number property with range.
-    #[must_use]
-    pub fn optional_number(self, name: impl Into<String>, min: f64, max: f64) -> Self {
-        self.property(
-            name,
-            ElicitationPropertySchema::Number(
-                NumberPropertySchema::new().minimum(min).maximum(max),
-            ),
-        )
-    }
-
-    /// Add a required integer property with range.
-    #[must_use]
-    pub fn required_integer(self, name: impl Into<String>, min: i64, max: i64) -> Self {
-        self.required_property(
-            name,
-            ElicitationPropertySchema::Integer(
-                IntegerPropertySchema::new().minimum(min).maximum(max),
-            ),
-        )
-    }
-
-    /// Add an optional integer property with range.
-    #[must_use]
-    pub fn optional_integer(self, name: impl Into<String>, min: i64, max: i64) -> Self {
-        self.property(
-            name,
-            ElicitationPropertySchema::Integer(
-                IntegerPropertySchema::new().minimum(min).maximum(max),
-            ),
-        )
-    }
-
-    /// Add a required boolean property.
-    #[must_use]
-    pub fn required_bool(self, name: impl Into<String>) -> Self {
-        self.required_property(
-            name,
-            ElicitationPropertySchema::Boolean(BooleanPropertySchema::new()),
-        )
-    }
-
-    /// Add an optional boolean property.
-    #[must_use]
-    pub fn optional_bool(self, name: impl Into<String>) -> Self {
-        self.property(
-            name,
-            ElicitationPropertySchema::Boolean(BooleanPropertySchema::new()),
-        )
+    pub fn boolean(self, name: impl Into<String>, required: bool) -> Self {
+        self.property(name, BooleanPropertySchema::new(), required)
     }
 }
 
@@ -1141,7 +1139,7 @@ mod tests {
 
     #[test]
     fn form_mode_request_serialization() {
-        let schema = ElicitationSchema::new().required_string("name");
+        let schema = ElicitationSchema::new().string("name", true);
         let req = ElicitationRequest::new(
             "sess_1",
             ElicitationMode::Form(ElicitationFormMode::new(schema)),
@@ -1314,10 +1312,10 @@ mod tests {
     #[test]
     fn schema_builder_serialization() {
         let schema = ElicitationSchema::new()
-            .required_string("name")
-            .required_email("email")
-            .required_integer("age", 0, 150)
-            .optional_bool("newsletter")
+            .string("name", true)
+            .email("email", true)
+            .integer("age", 0, 150, true)
+            .boolean("newsletter", false)
             .description("User registration");
 
         let json = serde_json::to_value(&schema).unwrap();
@@ -1344,13 +1342,14 @@ mod tests {
 
     #[test]
     fn schema_string_enum_serialization() {
-        let schema = ElicitationSchema::new().required_property(
+        let schema = ElicitationSchema::new().property(
             "color",
-            ElicitationPropertySchema::String(StringPropertySchema::new().enum_values(vec![
+            StringPropertySchema::new().enum_values(vec![
                 "red".into(),
                 "green".into(),
                 "blue".into(),
-            ])),
+            ]),
+            true,
         );
 
         let json = serde_json::to_value(&schema).unwrap();
@@ -1371,11 +1370,10 @@ mod tests {
     fn schema_multi_select_serialization() {
         let schema = ElicitationSchema::new().property(
             "colors",
-            ElicitationPropertySchema::Array(
-                MultiSelectPropertySchema::new(vec!["red".into(), "green".into(), "blue".into()])
-                    .min_items(1)
-                    .max_items(3),
-            ),
+            MultiSelectPropertySchema::new(vec!["red".into(), "green".into(), "blue".into()])
+                .min_items(1)
+                .max_items(3),
+            false,
         );
 
         let json = serde_json::to_value(&schema).unwrap();
@@ -1392,12 +1390,13 @@ mod tests {
 
     #[test]
     fn schema_titled_enum_serialization() {
-        let schema = ElicitationSchema::new().required_property(
+        let schema = ElicitationSchema::new().property(
             "country",
-            ElicitationPropertySchema::String(StringPropertySchema::new().one_of(vec![
+            StringPropertySchema::new().one_of(vec![
                 EnumOption::new("us", "United States"),
                 EnumOption::new("uk", "United Kingdom"),
-            ])),
+            ]),
+            true,
         );
 
         let json = serde_json::to_value(&schema).unwrap();
@@ -1419,7 +1418,7 @@ mod tests {
 
     #[test]
     fn schema_number_property_serialization() {
-        let schema = ElicitationSchema::new().required_number("rating", 0.0, 5.0);
+        let schema = ElicitationSchema::new().number("rating", 0.0, 5.0, true);
 
         let json = serde_json::to_value(&schema).unwrap();
         assert_eq!(json["properties"]["rating"]["type"], "number");
@@ -1434,5 +1433,37 @@ mod tests {
         } else {
             panic!("expected Number variant");
         }
+    }
+
+    #[test]
+    fn schema_string_format_serialization() {
+        let schema = ElicitationSchema::new()
+            .uri("website", true)
+            .date("birthday", true)
+            .date_time("updated_at", false);
+
+        let json = serde_json::to_value(&schema).unwrap();
+        assert_eq!(json["properties"]["website"]["type"], "string");
+        assert_eq!(json["properties"]["website"]["format"], "uri");
+        assert_eq!(json["properties"]["birthday"]["type"], "string");
+        assert_eq!(json["properties"]["birthday"]["format"], "date");
+        assert_eq!(json["properties"]["updated_at"]["type"], "string");
+        assert_eq!(json["properties"]["updated_at"]["format"], "date-time");
+
+        let required = json["required"].as_array().unwrap();
+        assert!(required.contains(&json!("website")));
+        assert!(required.contains(&json!("birthday")));
+        assert!(!required.contains(&json!("updated_at")));
+    }
+
+    #[test]
+    fn schema_property_updates_required_state() {
+        let schema = ElicitationSchema::new()
+            .string("name", true)
+            .email("name", false);
+
+        let json = serde_json::to_value(&schema).unwrap();
+        assert!(json.get("required").is_none());
+        assert_eq!(json["properties"]["name"]["format"], "email");
     }
 }

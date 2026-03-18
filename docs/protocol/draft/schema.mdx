@@ -2944,17 +2944,6 @@ Type-safe elicitation schema for requesting structured user input.
 This represents a JSON Schema object with primitive-typed properties,
 as required by the elicitation specification.
 
-\# Example
-
-```
-use agent_client_protocol_schema::*;
-
-let schema = ElicitationSchema::new()
-    .required_string("name")
-    .required_email("email")
-    .optional_bool("newsletter");
-```
-
 **Type:** Object
 
 **Properties:**
