@@ -62,6 +62,148 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
 </ResponseField>
 
+<a id="document-didchange"></a>
+### <span class="font-mono">document/didChange</span>
+
+**UNSTABLE**
+
+Notification sent when a file is edited.
+
+#### <span class="font-mono">DocumentDidChangeNotification</span>
+
+Notification sent when a file is edited.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"}>
+  The _meta property is reserved by ACP.
+</ResponseField>
+<ResponseField
+  name="contentChanges"
+  type={
+    <a href="#textdocumentcontentchangeevent">
+      TextDocumentContentChangeEvent[]
+    </a>
+  }
+  required
+>
+  The content changes.
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The URI of the changed document.
+</ResponseField>
+<ResponseField name="version" type={"int64"} required>
+  The new version number of the document.
+</ResponseField>
+
+<a id="document-didclose"></a>
+### <span class="font-mono">document/didClose</span>
+
+**UNSTABLE**
+
+Notification sent when a file is closed.
+
+#### <span class="font-mono">DocumentDidCloseNotification</span>
+
+Notification sent when a file is closed.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"}>
+  The _meta property is reserved by ACP.
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The URI of the closed document.
+</ResponseField>
+
+<a id="document-didfocus"></a>
+### <span class="font-mono">document/didFocus</span>
+
+**UNSTABLE**
+
+Notification sent when a file becomes the active editor tab.
+
+#### <span class="font-mono">DocumentDidFocusNotification</span>
+
+Notification sent when a file becomes the active editor tab.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"}>
+  The _meta property is reserved by ACP.
+</ResponseField>
+<ResponseField name="position" type={<a href="#position">Position</a>} required>
+  The current cursor position.
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The URI of the focused document.
+</ResponseField>
+<ResponseField name="version" type={"int64"} required>
+  The version number of the document.
+</ResponseField>
+<ResponseField name="visibleRange" type={<a href="#range">Range</a>} required>
+  The portion of the file currently visible in the editor viewport.
+</ResponseField>
+
+<a id="document-didopen"></a>
+### <span class="font-mono">document/didOpen</span>
+
+**UNSTABLE**
+
+Notification sent when a file is opened in the editor.
+
+#### <span class="font-mono">DocumentDidOpenNotification</span>
+
+Notification sent when a file is opened in the editor.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"}>
+  The _meta property is reserved by ACP.
+</ResponseField>
+<ResponseField name="languageId" type={"string"} required>
+  The language identifier of the document (e.g., "rust", "python").
+</ResponseField>
+<ResponseField name="text" type={"string"} required>
+  The full text content of the document.
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The URI of the opened document.
+</ResponseField>
+<ResponseField name="version" type={"int64"} required>
+  The version number of the document.
+</ResponseField>
+
+<a id="document-didsave"></a>
+### <span class="font-mono">document/didSave</span>
+
+**UNSTABLE**
+
+Notification sent when a file is saved.
+
+#### <span class="font-mono">DocumentDidSaveNotification</span>
+
+Notification sent when a file is saved.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"}>
+  The _meta property is reserved by ACP.
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The URI of the saved document.
+</ResponseField>
+
 ### <span class="font-mono">initialize</span>
 
 Establishes the connection with a client and negotiates protocol capabilities.
@@ -211,6 +353,214 @@ these keys.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
+</ResponseField>
+
+<a id="nes-accept"></a>
+### <span class="font-mono">nes/accept</span>
+
+**UNSTABLE**
+
+Notification sent when a suggestion is accepted.
+
+#### <span class="font-mono">NesAcceptNotification</span>
+
+Notification sent when a suggestion is accepted.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"}>
+  The _meta property is reserved by ACP.
+</ResponseField>
+<ResponseField name="id" type={"string"} required>
+  The ID of the accepted suggestion.
+</ResponseField>
+
+<a id="nes-reject"></a>
+### <span class="font-mono">nes/reject</span>
+
+**UNSTABLE**
+
+Notification sent when a suggestion is rejected.
+
+#### <span class="font-mono">NesRejectNotification</span>
+
+Notification sent when a suggestion is rejected.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"}>
+  The _meta property is reserved by ACP.
+</ResponseField>
+<ResponseField name="id" type={"string"} required>
+  The ID of the rejected suggestion.
+</ResponseField>
+<ResponseField
+  name="reason"
+  type={
+    <>
+      <span>
+        <a href="#nesrejectreason">NesRejectReason</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  The reason for rejection.
+</ResponseField>
+
+<a id="nes-start"></a>
+### <span class="font-mono">nes/start</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Starts an NES session.
+
+#### <span class="font-mono">NesStartRequest</span>
+
+Request to start an NES session.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"}>
+  The _meta property is reserved by ACP.
+</ResponseField>
+<ResponseField
+  name="repository"
+  type={
+    <>
+      <span>
+        <a href="#nesrepository">NesRepository</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Repository metadata, if the workspace is a git repository.
+</ResponseField>
+<ResponseField
+  name="workspaceFolders"
+  type={
+    <>
+      <span>
+        <a href="#workspacefolder">WorkspaceFolder[]</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  The workspace folders.
+</ResponseField>
+<ResponseField name="workspaceUri" type={"string | null"}>
+  The root URI of the workspace.
+</ResponseField>
+
+#### <span class="font-mono">NesStartResponse</span>
+
+Response to `nes/start`.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"}>
+  The _meta property is reserved by ACP.
+</ResponseField>
+<ResponseField
+  name="sessionId"
+  type={<a href="#nessessionid">NesSessionId</a>}
+  required
+>
+  The session ID for the newly started NES session.
+</ResponseField>
+
+<a id="nes-suggest"></a>
+### <span class="font-mono">nes/suggest</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Requests a code suggestion.
+
+#### <span class="font-mono">NesSuggestRequest</span>
+
+Request for a code suggestion.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"}>
+  The _meta property is reserved by ACP.
+</ResponseField>
+<ResponseField
+  name="context"
+  type={
+    <>
+      <span>
+        <a href="#nessuggestcontext">NesSuggestContext</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Context for the suggestion, included based on agent capabilities.
+</ResponseField>
+<ResponseField name="position" type={<a href="#position">Position</a>} required>
+  The current cursor position.
+</ResponseField>
+<ResponseField
+  name="selection"
+  type={
+    <>
+      <span>
+        <a href="#range">Range</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  The current text selection range, if any.
+</ResponseField>
+<ResponseField
+  name="triggerKind"
+  type={<a href="#nestriggerkind">NesTriggerKind</a>}
+  required
+>
+  What triggered this suggestion request.
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The URI of the document to suggest for.
+</ResponseField>
+<ResponseField name="version" type={"int64"} required>
+  The version number of the document.
+</ResponseField>
+
+#### <span class="font-mono">NesSuggestResponse</span>
+
+Response to `nes/suggest`.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"}>
+  The _meta property is reserved by ACP.
+</ResponseField>
+<ResponseField
+  name="suggestions"
+  type={<a href="#nessuggestion">NesSuggestion[]</a>}
+  required
+>
+  The list of suggestions.
 </ResponseField>
 
 <a id="session-cancel"></a>
@@ -1796,6 +2146,22 @@ Authentication-related capabilities supported by the agent.
     - Default: `{"http":false,"sse":false}`
 
 </ResponseField>
+<ResponseField name="nes" type={<><span><a href="#nescapabilities">NesCapabilities</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+NES (Next Edit Suggestions) capabilities supported by the agent.
+
+</ResponseField>
+<ResponseField name="positionEncoding" type={<><span><a href="#positionencodingkind">PositionEncodingKind</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+The position encoding selected by the agent from the client's supported encodings.
+
+</ResponseField>
 <ResponseField name="promptCapabilities" type={<a href="#promptcapabilities">PromptCapabilities</a>} >
   Prompt capabilities supported by the agent.
 
@@ -2290,11 +2656,52 @@ Determines which file operations the agent can request.
     - Default: `{"readTextFile":false,"writeTextFile":false}`
 
 </ResponseField>
+<ResponseField name="general" type={<><span><a href="#generalcapabilities">GeneralCapabilities</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+General client capabilities (e.g. position encodings).
+
+</ResponseField>
+<ResponseField name="nes" type={<><span><a href="#clientnescapabilities">ClientNesCapabilities</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+NES (Next Edit Suggestions) capabilities supported by the client.
+
+</ResponseField>
 <ResponseField name="terminal" type={"boolean"} >
   Whether the Client support all `terminal/*` methods.
 
     - Default: `false`
 
+</ResponseField>
+
+## <span class="font-mono">ClientNesCapabilities</span>
+
+NES capabilities advertised by the client during initialization.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"}>
+  The _meta property is reserved by ACP.
+</ResponseField>
+<ResponseField
+  name="ideActions"
+  type={
+    <>
+      <span>
+        <a href="#nesideactionscapabilities">NesIdeActionsCapabilities</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  IDE actions the client supports.
 </ResponseField>
 
 ## <span class="font-mono">ConfigOptionUpdate</span>
@@ -2978,6 +3385,32 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
 </ResponseField>
 
+## <span class="font-mono">GeneralCapabilities</span>
+
+General client capabilities (not specific to a particular feature).
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"}>
+  The _meta property is reserved by ACP.
+</ResponseField>
+<ResponseField
+  name="positionEncodings"
+  type={
+    <>
+      <span>
+        <a href="#positionencodingkind">PositionEncodingKind[]</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Position encodings supported by the client, in order of preference. If
+  omitted, defaults to UTF-16.
+</ResponseField>
+
 ## <span class="font-mono">HttpHeader</span>
 
 An HTTP header to set when making requests to the MCP server.
@@ -3337,6 +3770,982 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
   Human-readable name of the model.
 </ResponseField>
 
+## <span class="font-mono">NesActionSuggestion</span>
+
+An IDE action suggestion.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="actionId" type={"string"} required>
+  The IDE action to perform (must match a client-advertised action).
+</ResponseField>
+<ResponseField name="arguments" type={"object"}>
+  Action parameters matching the schema from the client's capability.
+</ResponseField>
+<ResponseField name="id" type={"string"} required>
+  Unique identifier for accept/reject tracking.
+</ResponseField>
+
+## <span class="font-mono">NesCapabilities</span>
+
+NES capabilities advertised by the agent during initialization.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"}>
+  The _meta property is reserved by ACP to allow clients and agents to attach
+  additional metadata to their interactions.
+</ResponseField>
+<ResponseField
+  name="context"
+  type={
+    <>
+      <span>
+        <a href="#nescontextcapabilities">NesContextCapabilities</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Context the agent wants attached to each suggestion request.
+</ResponseField>
+<ResponseField
+  name="events"
+  type={
+    <>
+      <span>
+        <a href="#neseventcapabilities">NesEventCapabilities</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Events the agent wants to receive.
+</ResponseField>
+
+## <span class="font-mono">NesContextCapabilities</span>
+
+Context capabilities the agent wants attached to each suggestion request.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"}>
+  The _meta property is reserved by ACP.
+</ResponseField>
+<ResponseField
+  name="diagnostics"
+  type={
+    <>
+      <span>
+        <a href="#nesdiagnosticscapabilities">NesDiagnosticsCapabilities</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Whether the agent wants diagnostics context.
+</ResponseField>
+<ResponseField
+  name="editHistory"
+  type={
+    <>
+      <span>
+        <a href="#nesedithistorycapabilities">NesEditHistoryCapabilities</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Whether the agent wants edit history context.
+</ResponseField>
+<ResponseField
+  name="openFiles"
+  type={
+    <>
+      <span>
+        <a href="#nesopenfilescapabilities">NesOpenFilesCapabilities</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Whether the agent wants open files context.
+</ResponseField>
+<ResponseField
+  name="recentFiles"
+  type={
+    <>
+      <span>
+        <a href="#nesrecentfilescapabilities">NesRecentFilesCapabilities</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Whether the agent wants recent files context.
+</ResponseField>
+<ResponseField
+  name="relatedSnippets"
+  type={
+    <>
+      <span>
+        <a href="#nesrelatedsnippetscapabilities">
+          NesRelatedSnippetsCapabilities
+        </a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Whether the agent wants related snippets context.
+</ResponseField>
+<ResponseField
+  name="userActions"
+  type={
+    <>
+      <span>
+        <a href="#nesuseractionscapabilities">NesUserActionsCapabilities</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Whether the agent wants user actions context.
+</ResponseField>
+
+## <span class="font-mono">NesDiagnostic</span>
+
+A diagnostic (error, warning, etc.).
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="message" type={"string"} required>
+  The diagnostic message.
+</ResponseField>
+<ResponseField name="range" type={<a href="#range">Range</a>} required>
+  The range of the diagnostic.
+</ResponseField>
+<ResponseField
+  name="severity"
+  type={<a href="#nesdiagnosticseverity">NesDiagnosticSeverity</a>}
+  required
+>
+  The severity of the diagnostic.
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The URI of the file containing the diagnostic.
+</ResponseField>
+
+## <span class="font-mono">NesDiagnosticSeverity</span>
+
+Severity of a diagnostic.
+
+**Type:** Union
+
+<ResponseField name="error" type="string">
+  An error.
+</ResponseField>
+
+<ResponseField name="warning" type="string">
+  A warning.
+</ResponseField>
+
+<ResponseField name="information" type="string">
+  An informational message.
+</ResponseField>
+
+<ResponseField name="hint" type="string">
+  A hint.
+</ResponseField>
+
+## <span class="font-mono">NesDiagnosticsCapabilities</span>
+
+Capabilities for diagnostics context.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"}>
+  The _meta property is reserved by ACP.
+</ResponseField>
+
+## <span class="font-mono">NesDocumentDidChangeCapabilities</span>
+
+Capabilities for `document/didChange` events.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"}>
+  The _meta property is reserved by ACP.
+</ResponseField>
+<ResponseField
+  name="syncKind"
+  type={
+    <>
+      <span>
+        <a href="#textdocumentsynckind">TextDocumentSyncKind</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  The sync kind the agent wants: `"full"` or `"incremental"`.
+</ResponseField>
+
+## <span class="font-mono">NesDocumentDidCloseCapabilities</span>
+
+Marker for `document/didClose` capability support.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"}>
+  The _meta property is reserved by ACP.
+</ResponseField>
+
+## <span class="font-mono">NesDocumentDidFocusCapabilities</span>
+
+Marker for `document/didFocus` capability support.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"}>
+  The _meta property is reserved by ACP.
+</ResponseField>
+
+## <span class="font-mono">NesDocumentDidOpenCapabilities</span>
+
+Marker for `document/didOpen` capability support.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"}>
+  The _meta property is reserved by ACP.
+</ResponseField>
+
+## <span class="font-mono">NesDocumentDidSaveCapabilities</span>
+
+Marker for `document/didSave` capability support.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"}>
+  The _meta property is reserved by ACP.
+</ResponseField>
+
+## <span class="font-mono">NesDocumentEventCapabilities</span>
+
+Document event capabilities the agent wants to receive.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"}>
+  The _meta property is reserved by ACP.
+</ResponseField>
+<ResponseField
+  name="didChange"
+  type={
+    <>
+      <span>
+        <a href="#nesdocumentdidchangecapabilities">
+          NesDocumentDidChangeCapabilities
+        </a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Whether the agent wants `document/didChange` events, and the sync kind.
+</ResponseField>
+<ResponseField
+  name="didClose"
+  type={
+    <>
+      <span>
+        <a href="#nesdocumentdidclosecapabilities">
+          NesDocumentDidCloseCapabilities
+        </a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Whether the agent wants `document/didClose` events.
+</ResponseField>
+<ResponseField
+  name="didFocus"
+  type={
+    <>
+      <span>
+        <a href="#nesdocumentdidfocuscapabilities">
+          NesDocumentDidFocusCapabilities
+        </a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Whether the agent wants `document/didFocus` events.
+</ResponseField>
+<ResponseField
+  name="didOpen"
+  type={
+    <>
+      <span>
+        <a href="#nesdocumentdidopencapabilities">
+          NesDocumentDidOpenCapabilities
+        </a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Whether the agent wants `document/didOpen` events.
+</ResponseField>
+<ResponseField
+  name="didSave"
+  type={
+    <>
+      <span>
+        <a href="#nesdocumentdidsavecapabilities">
+          NesDocumentDidSaveCapabilities
+        </a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Whether the agent wants `document/didSave` events.
+</ResponseField>
+
+## <span class="font-mono">NesEditHistoryCapabilities</span>
+
+Capabilities for edit history context.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP.
+</ResponseField>
+<ResponseField name="maxCount" type={"integer | null"} >
+  Maximum number of edit history entries the agent can use.
+
+    - Minimum: `0`
+
+</ResponseField>
+
+## <span class="font-mono">NesEditHistoryEntry</span>
+
+An entry in the edit history.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="diff" type={"string"} required>
+  A diff representing the edit.
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The URI of the edited file.
+</ResponseField>
+
+## <span class="font-mono">NesEditSuggestion</span>
+
+A text edit suggestion.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField
+  name="cursorPosition"
+  type={
+    <>
+      <span>
+        <a href="#position">Position</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Optional suggested cursor position after applying edits.
+</ResponseField>
+<ResponseField
+  name="edits"
+  type={<a href="#nestextedit">NesTextEdit[]</a>}
+  required
+>
+  The text edits to apply.
+</ResponseField>
+<ResponseField name="id" type={"string"} required>
+  Unique identifier for accept/reject tracking.
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The URI of the file to edit.
+</ResponseField>
+
+## <span class="font-mono">NesEventCapabilities</span>
+
+Event capabilities the agent can consume.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"}>
+  The _meta property is reserved by ACP.
+</ResponseField>
+<ResponseField
+  name="document"
+  type={
+    <>
+      <span>
+        <a href="#nesdocumenteventcapabilities">NesDocumentEventCapabilities</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Document event capabilities.
+</ResponseField>
+
+## <span class="font-mono">NesExcerpt</span>
+
+A code excerpt from a file.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="endLine" type={"uint32"} required>
+  The end line of the excerpt (zero-based).
+
+    - Minimum: `0`
+
+</ResponseField>
+<ResponseField name="startLine" type={"uint32"} required>
+  The start line of the excerpt (zero-based).
+
+    - Minimum: `0`
+
+</ResponseField>
+<ResponseField name="text" type={"string"} required>
+  The text content of the excerpt.
+</ResponseField>
+
+## <span class="font-mono">NesIdeActionsCapabilities</span>
+
+IDE actions the client can perform.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"}>
+  The _meta property is reserved by ACP.
+</ResponseField>
+<ResponseField
+  name="rename"
+  type={
+    <>
+      <span>
+        <a href="#nesrenameactioncapabilities">NesRenameActionCapabilities</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Whether the client supports the `rename` action.
+</ResponseField>
+<ResponseField
+  name="searchAndReplace"
+  type={
+    <>
+      <span>
+        <a href="#nessearchandreplaceactioncapabilities">
+          NesSearchAndReplaceActionCapabilities
+        </a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Whether the client supports the `searchAndReplace` action.
+</ResponseField>
+
+## <span class="font-mono">NesJumpSuggestion</span>
+
+A jump-to-location suggestion.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="id" type={"string"} required>
+  Unique identifier for accept/reject tracking.
+</ResponseField>
+<ResponseField name="position" type={<a href="#position">Position</a>} required>
+  The target position within the file.
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The file to navigate to.
+</ResponseField>
+
+## <span class="font-mono">NesOpenFile</span>
+
+An open file in the editor.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="languageId" type={"string"} required>
+  The language identifier.
+</ResponseField>
+<ResponseField name="lastFocusedMs" type={"integer | null"} >
+  Timestamp in milliseconds since epoch of when the file was last focused.
+
+    - Minimum: `0`
+
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The URI of the file.
+</ResponseField>
+<ResponseField name="visibleRange" type={<><span><a href="#range">Range</a></span><span> | null</span></>} >
+  The visible range in the editor, if any.
+</ResponseField>
+
+## <span class="font-mono">NesOpenFilesCapabilities</span>
+
+Capabilities for open files context.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"}>
+  The _meta property is reserved by ACP.
+</ResponseField>
+
+## <span class="font-mono">NesRecentFile</span>
+
+A recently accessed file.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="languageId" type={"string"} required>
+  The language identifier.
+</ResponseField>
+<ResponseField name="text" type={"string"} required>
+  The full text content of the file.
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The URI of the file.
+</ResponseField>
+
+## <span class="font-mono">NesRecentFilesCapabilities</span>
+
+Capabilities for recent files context.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP.
+</ResponseField>
+<ResponseField name="maxCount" type={"integer | null"} >
+  Maximum number of recent files the agent can use.
+
+    - Minimum: `0`
+
+</ResponseField>
+
+## <span class="font-mono">NesRejectReason</span>
+
+The reason a suggestion was rejected.
+
+**Type:** Union
+
+<ResponseField name="rejected" type="string">
+  The user explicitly dismissed the suggestion.
+</ResponseField>
+
+<ResponseField name="ignored" type="string">
+  The suggestion was shown but the user continued editing without interacting.
+</ResponseField>
+
+<ResponseField name="replaced" type="string">
+  The suggestion was superseded by a newer suggestion.
+</ResponseField>
+
+<ResponseField name="cancelled" type="string">
+  The request was cancelled before the agent returned a response.
+</ResponseField>
+
+## <span class="font-mono">NesRelatedSnippet</span>
+
+A related code snippet from a file.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField
+  name="excerpts"
+  type={<a href="#nesexcerpt">NesExcerpt[]</a>}
+  required
+>
+  The code excerpts.
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The URI of the file containing the snippets.
+</ResponseField>
+
+## <span class="font-mono">NesRelatedSnippetsCapabilities</span>
+
+Capabilities for related snippets context.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"}>
+  The _meta property is reserved by ACP.
+</ResponseField>
+
+## <span class="font-mono">NesRenameActionCapabilities</span>
+
+Marker for rename action support.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"}>
+  The _meta property is reserved by ACP.
+</ResponseField>
+
+## <span class="font-mono">NesRepository</span>
+
+Repository metadata for an NES session.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="name" type={"string"} required>
+  The repository name.
+</ResponseField>
+<ResponseField name="owner" type={"string"} required>
+  The repository owner.
+</ResponseField>
+<ResponseField name="remoteUrl" type={"string"} required>
+  The remote URL of the repository.
+</ResponseField>
+
+## <span class="font-mono">NesSearchAndReplaceActionCapabilities</span>
+
+Marker for search and replace action support.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"}>
+  The _meta property is reserved by ACP.
+</ResponseField>
+
+## <span class="font-mono">NesSessionId</span>
+
+A unique identifier for an NES session, distinct from chat `SessionId`.
+
+**Type:** `string`
+
+## <span class="font-mono">NesSuggestContext</span>
+
+Context attached to a suggestion request.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"}>
+  The _meta property is reserved by ACP.
+</ResponseField>
+<ResponseField
+  name="diagnostics"
+  type={
+    <>
+      <span>
+        <a href="#nesdiagnostic">NesDiagnostic[]</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Current diagnostics (errors, warnings).
+</ResponseField>
+<ResponseField
+  name="editHistory"
+  type={
+    <>
+      <span>
+        <a href="#nesedithistoryentry">NesEditHistoryEntry[]</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Recent edit history.
+</ResponseField>
+<ResponseField
+  name="openFiles"
+  type={
+    <>
+      <span>
+        <a href="#nesopenfile">NesOpenFile[]</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Currently open files in the editor.
+</ResponseField>
+<ResponseField
+  name="recentFiles"
+  type={
+    <>
+      <span>
+        <a href="#nesrecentfile">NesRecentFile[]</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Recently accessed files.
+</ResponseField>
+<ResponseField
+  name="relatedSnippets"
+  type={
+    <>
+      <span>
+        <a href="#nesrelatedsnippet">NesRelatedSnippet[]</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Related code snippets.
+</ResponseField>
+<ResponseField
+  name="userActions"
+  type={
+    <>
+      <span>
+        <a href="#nesuseraction">NesUserAction[]</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Recent user actions (typing, navigation, etc.).
+</ResponseField>
+
+## <span class="font-mono">NesSuggestion</span>
+
+A suggestion returned by the agent.
+
+**Type:** Union
+
+<ResponseField name="edit" type="object">
+A text edit suggestion.
+
+<Expandable title="Properties">
+
+<ResponseField
+  name="cursorPosition"
+  type={
+    <>
+      <span>
+        <a href="#position">Position</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Optional suggested cursor position after applying edits.
+</ResponseField>
+<ResponseField
+  name="edits"
+  type={<a href="#nestextedit">NesTextEdit[]</a>}
+  required
+>
+  The text edits to apply.
+</ResponseField>
+<ResponseField name="id" type={"string"} required>
+  Unique identifier for accept/reject tracking.
+</ResponseField>
+<ResponseField name="kind" type={"string"} required>
+  The discriminator value. Must be `"edit"`.
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The URI of the file to edit.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="jump" type="object">
+A jump-to-location suggestion.
+
+<Expandable title="Properties">
+
+<ResponseField name="id" type={"string"} required>
+  Unique identifier for accept/reject tracking.
+</ResponseField>
+<ResponseField name="kind" type={"string"} required>
+  The discriminator value. Must be `"jump"`.
+</ResponseField>
+<ResponseField name="position" type={<a href="#position">Position</a>} required>
+  The target position within the file.
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The file to navigate to.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="action" type="object">
+An IDE action suggestion.
+
+<Expandable title="Properties">
+
+<ResponseField name="actionId" type={"string"} required>
+  The IDE action to perform (must match a client-advertised action).
+</ResponseField>
+<ResponseField name="arguments" type={"object"}>
+  Action parameters matching the schema from the client's capability.
+</ResponseField>
+<ResponseField name="id" type={"string"} required>
+  Unique identifier for accept/reject tracking.
+</ResponseField>
+<ResponseField name="kind" type={"string"} required>
+  The discriminator value. Must be `"action"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+## <span class="font-mono">NesTextEdit</span>
+
+A text edit within a suggestion.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="newText" type={"string"} required>
+  The replacement text.
+</ResponseField>
+<ResponseField name="range" type={<a href="#range">Range</a>} required>
+  The range to replace.
+</ResponseField>
+
+## <span class="font-mono">NesTriggerKind</span>
+
+What triggered the suggestion request.
+
+**Type:** Union
+
+<ResponseField name="automatic" type="string">
+  Triggered by user typing or cursor movement.
+</ResponseField>
+
+<ResponseField name="diagnostic" type="string">
+  Triggered by a diagnostic appearing at or near the cursor.
+</ResponseField>
+
+<ResponseField name="manual" type="string">
+  Triggered by an explicit user action (keyboard shortcut).
+</ResponseField>
+
+## <span class="font-mono">NesUserAction</span>
+
+A user action (typing, cursor movement, etc.).
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="action" type={"string"} required>
+  The kind of action (e.g., "insertChar", "cursorMovement").
+</ResponseField>
+<ResponseField name="line" type={"uint32"} required>
+  The line number where the action occurred.
+
+    - Minimum: `0`
+
+</ResponseField>
+<ResponseField name="offset" type={"uint32"} required>
+  The character offset where the action occurred.
+
+    - Minimum: `0`
+
+</ResponseField>
+<ResponseField name="timestampMs" type={"uint64"} required>
+  Timestamp in milliseconds since epoch.
+
+    - Minimum: `0`
+
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The URI of the file where the action occurred.
+</ResponseField>
+
+## <span class="font-mono">NesUserActionsCapabilities</span>
+
+Capabilities for user actions context.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP.
+</ResponseField>
+<ResponseField name="maxCount" type={"integer | null"} >
+  Maximum number of user actions the agent can use.
+
+    - Minimum: `0`
+
+</ResponseField>
+
 ## <span class="font-mono">PermissionOption</span>
 
 An option presented to the user when requesting permission.
@@ -3497,6 +4906,49 @@ See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/agent
   The task has been successfully completed.
 </ResponseField>
 
+## <span class="font-mono">Position</span>
+
+A zero-based position in a text document.
+
+The meaning of `character` depends on the negotiated position encoding.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="character" type={"uint32"} required>
+  Zero-based character offset (encoding-dependent).
+
+    - Minimum: `0`
+
+</ResponseField>
+<ResponseField name="line" type={"uint32"} required>
+  Zero-based line number.
+
+    - Minimum: `0`
+
+</ResponseField>
+
+## <span class="font-mono">PositionEncodingKind</span>
+
+The encoding used for character offsets in positions.
+
+Follows the same conventions as LSP 3.17. The default is UTF-16.
+
+**Type:** Union
+
+<ResponseField name="utf-16" type="string">
+  Character offsets count UTF-16 code units. This is the default.
+</ResponseField>
+
+<ResponseField name="utf-32" type="string">
+  Character offsets count Unicode code points.
+</ResponseField>
+
+<ResponseField name="utf-8" type="string">
+  Character offsets count UTF-8 code units (bytes).
+</ResponseField>
+
 ## <span class="font-mono">PromptCapabilities</span>
 
 Prompt capabilities supported by the agent in `session/prompt` requests.
@@ -3559,6 +5011,21 @@ Non-breaking changes should be introduced via capabilities.
 | ---------- | ------- |
 | Minimum    | `0`     |
 | Maximum    | `65535` |
+
+## <span class="font-mono">Range</span>
+
+A range in a text document, expressed as start and end positions.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="end" type={<a href="#position">Position</a>} required>
+  The end position (exclusive).
+</ResponseField>
+<ResponseField name="start" type={<a href="#position">Position</a>} required>
+  The start position (inclusive).
+</ResponseField>
 
 ## <span class="font-mono">RequestId</span>
 
@@ -4662,6 +6129,49 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 <ResponseField name="text" type={"string"} required>
 </ResponseField>
 
+## <span class="font-mono">TextDocumentContentChangeEvent</span>
+
+A content change event for a document.
+
+When `range` is `None`, `text` is the full content of the document.
+When `range` is `Some`, `text` replaces the given range.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField
+  name="range"
+  type={
+    <>
+      <span>
+        <a href="#range">Range</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  The range of the document that changed. If `None`, the entire content is
+  replaced.
+</ResponseField>
+<ResponseField name="text" type={"string"} required>
+  The new text for the range, or the full document content if `range` is `None`.
+</ResponseField>
+
+## <span class="font-mono">TextDocumentSyncKind</span>
+
+How the agent wants document changes delivered.
+
+**Type:** Union
+
+<ResponseField name="full" type="string">
+  Client sends the entire file content on each change.
+</ResponseField>
+
+<ResponseField name="incremental" type="string">
+  Client sends only the changed ranges.
+</ResponseField>
+
 ## <span class="font-mono">TextResourceContents</span>
 
 Text-based resource contents.
@@ -5086,4 +6596,19 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
     - Minimum: `0`
 
+</ResponseField>
+
+## <span class="font-mono">WorkspaceFolder</span>
+
+A workspace folder.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="name" type={"string"} required>
+  The display name of the folder.
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The URI of the folder.
 </ResponseField>
