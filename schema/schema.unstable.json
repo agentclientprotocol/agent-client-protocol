@@ -1480,7 +1480,9 @@
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nThe user accepted the elicitation and provided content.",
       "properties": {
         "content": {
-          "description": "The user-provided content, if any."
+          "additionalProperties": true,
+          "description": "The user-provided content, if any, as an object matching the requested schema.",
+          "type": ["object", "null"]
         }
       },
       "type": "object"
@@ -1617,7 +1619,7 @@
       "type": "string"
     },
     "ElicitationPropertySchema": {
-      "description": "Property schema for elicitation form fields.\n\nEach variant corresponds to a JSON Schema `\"type\"` value.\nSingle-select enums use the `String` variant with `enum_values` or `one_of` set.\nMulti-select enums use the `Array` variant.",
+      "description": "Property schema for elicitation form fields.\n\nEach variant corresponds to a JSON Schema `\"type\"` value.\nSingle-select enums use the `String` variant with `enum` or `oneOf` set.\nMulti-select enums use the `Array` variant.",
       "discriminator": {
         "propertyName": "type"
       },
@@ -1816,12 +1818,36 @@
           "type": ["string", "null"]
         },
         "type": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ElicitationSchemaType"
+            }
+          ],
           "default": "object",
-          "description": "Type discriminator. Always `\"object\"`.",
-          "type": "string"
+          "description": "Type discriminator. Always `\"object\"`."
         }
       },
       "type": "object"
+    },
+    "ElicitationSchemaType": {
+      "description": "Type discriminator for elicitation schemas.",
+      "oneOf": [
+        {
+          "const": "object",
+          "description": "Object schema type.",
+          "type": "string"
+        }
+      ]
+    },
+    "ElicitationStringType": {
+      "description": "Items definition for untitled multi-select enum properties.",
+      "oneOf": [
+        {
+          "const": "string",
+          "description": "String schema type.",
+          "type": "string"
+        }
+      ]
     },
     "ElicitationUrlCapabilities": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nURL-based elicitation capabilities.",
@@ -4418,7 +4444,7 @@
       ]
     },
     "StringPropertySchema": {
-      "description": "Schema for string properties in an elicitation form.\n\nWhen `enum_values` or `one_of` is set, this represents a single-select enum\nwith `\"type\": \"string\"`.",
+      "description": "Schema for string properties in an elicitation form.\n\nWhen `enum` or `oneOf` is set, this represents a single-select enum\nwith `\"type\": \"string\"`.",
       "properties": {
         "default": {
           "description": "Default value.",
@@ -4464,6 +4490,10 @@
             "$ref": "#/$defs/EnumOption"
           },
           "type": ["array", "null"]
+        },
+        "pattern": {
+          "description": "Pattern the string must match.",
+          "type": ["string", "null"]
         },
         "title": {
           "description": "Optional title for the property.",
@@ -4940,9 +4970,17 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "type": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ElicitationStringType"
+            }
+          ],
+          "description": "Item type discriminator. Must be `\"string\"`."
         }
       },
-      "required": ["enum"],
+      "required": ["type", "enum"],
       "type": "object"
     },
     "Usage": {

@@ -120,6 +120,7 @@ mod markdown_generator {
 
     pub struct MarkdownGenerator {
         definitions: BTreeMap<String, Value>,
+        doc_augmented_definitions: BTreeMap<String, Value>,
         output: String,
     }
 
@@ -127,6 +128,7 @@ mod markdown_generator {
         pub fn new() -> Self {
             Self {
                 definitions: BTreeMap::new(),
+                doc_augmented_definitions: BTreeMap::new(),
                 output: String::new(),
             }
         }
@@ -135,6 +137,7 @@ mod markdown_generator {
             // Extract definitions
             if let Some(defs) = schema.get("$defs").and_then(|v| v.as_object()) {
                 self.definitions = defs.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+                self.doc_augmented_definitions = self.build_doc_augmented_definitions();
             }
 
             // Start with title and frontmatter
@@ -238,7 +241,12 @@ starting with '$/' it is free to ignore the notification."
 
             referenced_types.sort_by_key(|(name, _)| name.clone());
             for (name, def) in referenced_types {
-                self.document_type(2, &name, &def);
+                let augmented_def = self
+                    .doc_augmented_definitions
+                    .get(&name)
+                    .cloned()
+                    .unwrap_or(def);
+                self.document_type(2, &name, &augmented_def);
             }
 
             self.output.clone()
@@ -309,7 +317,7 @@ starting with '$/' it is free to ignore the notification."
                         .and_then(|v| v.get("$ref"))
                         .and_then(|v| v.as_str())
                         .and_then(|r| r.strip_prefix("#/$defs/"))
-                        .and_then(|name| self.definitions.get(name).cloned());
+                        .and_then(|name| self.doc_augmented_definitions.get(name).cloned());
                     if let Some(resolved_def) = resolved {
                         // Preserve variant-level description if present
                         if let Some(desc) = Self::get_def_description(variant) {
@@ -442,7 +450,7 @@ starting with '$/' it is free to ignore the notification."
             // 1. Check for $ref (direct)
             if let Some(ref_val) = variant.get("$ref").and_then(|v| v.as_str()) {
                 let type_name = ref_val.strip_prefix("#/$defs/").unwrap_or(ref_val);
-                if let Some(ref_def) = self.definitions.get(type_name) {
+                if let Some(ref_def) = self.doc_augmented_definitions.get(type_name) {
                     merge_from(ref_def);
                 }
             }
@@ -452,7 +460,7 @@ starting with '$/' it is free to ignore the notification."
                 for item in all_of {
                     if let Some(ref_val) = item.get("$ref").and_then(|v| v.as_str()) {
                         let type_name = ref_val.strip_prefix("#/$defs/").unwrap_or(ref_val);
-                        if let Some(ref_def) = self.definitions.get(type_name) {
+                        if let Some(ref_def) = self.doc_augmented_definitions.get(type_name) {
                             merge_from(ref_def);
                         }
                     } else {
@@ -912,6 +920,110 @@ starting with '$/' it is free to ignore the notification."
                 .replace("`]", "`");
             let desc = Self::escape_mdx(&desc);
             Some(desc)
+        }
+
+        fn build_doc_augmented_definitions(&self) -> BTreeMap<String, Value> {
+            let mut augmented = self.definitions.clone();
+
+            for def in self.definitions.values() {
+                let Some(variants) = def
+                    .get("oneOf")
+                    .or_else(|| def.get("anyOf"))
+                    .and_then(|v| v.as_array())
+                else {
+                    continue;
+                };
+
+                for variant in variants {
+                    let Some(all_of) = variant.get("allOf").and_then(|v| v.as_array()) else {
+                        continue;
+                    };
+
+                    let mut target_name = None;
+                    let mut wrapper_props = serde_json::Map::new();
+                    let mut wrapper_required = Vec::new();
+
+                    if let Some(props) = variant.get("properties").and_then(|v| v.as_object()) {
+                        for (key, value) in props {
+                            wrapper_props
+                                .entry(key.clone())
+                                .or_insert_with(|| value.clone());
+                        }
+                    }
+                    if let Some(required) = variant.get("required").and_then(|v| v.as_array()) {
+                        for req in required {
+                            if !wrapper_required.contains(req) {
+                                wrapper_required.push(req.clone());
+                            }
+                        }
+                    }
+
+                    for item in all_of {
+                        if let Some(ref_val) = item.get("$ref").and_then(|v| v.as_str()) {
+                            if let Some(name) = ref_val.strip_prefix("#/$defs/") {
+                                target_name = Some(name.to_string());
+                            }
+                        } else {
+                            if let Some(props) = item.get("properties").and_then(|v| v.as_object())
+                            {
+                                for (key, value) in props {
+                                    wrapper_props
+                                        .entry(key.clone())
+                                        .or_insert_with(|| value.clone());
+                                }
+                            }
+                            if let Some(required) = item.get("required").and_then(|v| v.as_array())
+                            {
+                                for req in required {
+                                    if !wrapper_required.contains(req) {
+                                        wrapper_required.push(req.clone());
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    let Some(target_name) = target_name else {
+                        continue;
+                    };
+                    if wrapper_props.is_empty() && wrapper_required.is_empty() {
+                        continue;
+                    }
+
+                    let Some(target_def) = augmented.get_mut(&target_name) else {
+                        continue;
+                    };
+                    let Some(target_obj) = target_def.as_object_mut() else {
+                        continue;
+                    };
+
+                    let target_props = target_obj
+                        .entry("properties".to_string())
+                        .or_insert_with(|| Value::Object(serde_json::Map::new()));
+                    let Some(target_props_obj) = target_props.as_object_mut() else {
+                        continue;
+                    };
+
+                    for (key, value) in wrapper_props {
+                        target_props_obj.entry(key).or_insert(value);
+                    }
+
+                    let target_required = target_obj
+                        .entry("required".to_string())
+                        .or_insert_with(|| Value::Array(Vec::new()));
+                    let Some(target_required_arr) = target_required.as_array_mut() else {
+                        continue;
+                    };
+
+                    for req in wrapper_required {
+                        if !target_required_arr.contains(&req) {
+                            target_required_arr.push(req);
+                        }
+                    }
+                }
+            }
+
+            augmented
         }
 
         fn anchor_text(title: &str) -> String {

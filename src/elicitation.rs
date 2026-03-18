@@ -47,6 +47,16 @@ pub enum StringFormat {
     DateTime,
 }
 
+/// Type discriminator for elicitation schemas.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema, Default)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum ElicitationSchemaType {
+    /// Object schema type.
+    #[default]
+    Object,
+}
+
 /// A titled enum option with a const value and human-readable title.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[non_exhaustive]
@@ -71,7 +81,7 @@ impl EnumOption {
 
 /// Schema for string properties in an elicitation form.
 ///
-/// When `enum_values` or `one_of` is set, this represents a single-select enum
+/// When `enum` or `oneOf` is set, this represents a single-select enum
 /// with `"type": "string"`.
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
@@ -89,6 +99,9 @@ pub struct StringPropertySchema {
     /// Maximum string length.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub max_length: Option<u32>,
+    /// Pattern the string must match.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pattern: Option<String>,
     /// String format.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub format: Option<StringFormat>,
@@ -171,6 +184,13 @@ impl StringPropertySchema {
     #[must_use]
     pub fn max_length(mut self, max_length: impl IntoOption<u32>) -> Self {
         self.max_length = max_length.into_option();
+        self
+    }
+
+    /// Pattern the string must match.
+    #[must_use]
+    pub fn pattern(mut self, pattern: impl IntoOption<String>) -> Self {
+        self.pattern = pattern.into_option();
         self
     }
 
@@ -379,9 +399,22 @@ impl BooleanPropertySchema {
 }
 
 /// Items definition for untitled multi-select enum properties.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema, Default)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum ElicitationStringType {
+    /// String schema type.
+    #[default]
+    String,
+}
+
+/// Items definition for untitled multi-select enum properties.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[non_exhaustive]
 pub struct UntitledMultiSelectItems {
+    /// Item type discriminator. Must be `"string"`.
+    #[serde(rename = "type")]
+    pub type_: ElicitationStringType,
     /// Allowed enum values.
     #[serde(rename = "enum")]
     pub values: Vec<String>,
@@ -392,7 +425,7 @@ pub struct UntitledMultiSelectItems {
 #[non_exhaustive]
 pub struct TitledMultiSelectItems {
     /// Titled enum options.
-    #[serde(rename = "anyOf", alias = "oneOf")]
+    #[serde(rename = "anyOf")]
     pub options: Vec<EnumOption>,
 }
 
@@ -448,7 +481,10 @@ impl MultiSelectPropertySchema {
             description: None,
             min_items: None,
             max_items: None,
-            items: MultiSelectItems::Untitled(UntitledMultiSelectItems { values }),
+            items: MultiSelectItems::Untitled(UntitledMultiSelectItems {
+                type_: ElicitationStringType::String,
+                values,
+            }),
             default: None,
         }
     }
@@ -505,7 +541,7 @@ impl MultiSelectPropertySchema {
 /// Property schema for elicitation form fields.
 ///
 /// Each variant corresponds to a JSON Schema `"type"` value.
-/// Single-select enums use the `String` variant with `enum_values` or `one_of` set.
+/// Single-select enums use the `String` variant with `enum` or `oneOf` set.
 /// Multi-select enums use the `Array` variant.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -554,8 +590,8 @@ impl From<MultiSelectPropertySchema> for ElicitationPropertySchema {
     }
 }
 
-fn default_object_type() -> String {
-    "object".into()
+fn default_object_type() -> ElicitationSchemaType {
+    ElicitationSchemaType::Object
 }
 
 /// Type-safe elicitation schema for requesting structured user input.
@@ -568,7 +604,7 @@ fn default_object_type() -> String {
 pub struct ElicitationSchema {
     /// Type discriminator. Always `"object"`.
     #[serde(rename = "type", default = "default_object_type")]
-    pub type_: String,
+    pub type_: ElicitationSchemaType,
     /// Optional title for the schema.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
@@ -1009,9 +1045,9 @@ pub enum ElicitationAction {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ElicitationAcceptAction {
-    /// The user-provided content, if any.
+    /// The user-provided content, if any, as an object matching the requested schema.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub content: Option<serde_json::Value>,
+    pub content: Option<serde_json::Map<String, serde_json::Value>>,
 }
 
 impl ElicitationAcceptAction {
@@ -1020,9 +1056,12 @@ impl ElicitationAcceptAction {
         Self { content: None }
     }
 
-    /// The user-provided content.
+    /// The user-provided content as an object matching the requested schema.
     #[must_use]
-    pub fn content(mut self, content: impl IntoOption<serde_json::Value>) -> Self {
+    pub fn content(
+        mut self,
+        content: impl IntoOption<serde_json::Map<String, serde_json::Value>>,
+    ) -> Self {
         self.content = content.into_option();
         self
     }
@@ -1107,13 +1146,23 @@ impl UrlElicitationRequiredData {
 #[non_exhaustive]
 pub struct UrlElicitationRequiredItem {
     /// The elicitation mode (always `"url"` for this item type).
-    pub mode: String,
+    pub mode: ElicitationUrlOnlyMode,
     /// The unique identifier for this elicitation.
     pub elicitation_id: ElicitationId,
     /// The URL the user should be directed to.
     pub url: String,
     /// A human-readable message describing what input is needed.
     pub message: String,
+}
+
+/// Type discriminator for URL-only elicitation error items.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema, Default)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum ElicitationUrlOnlyMode {
+    /// URL elicitation mode.
+    #[default]
+    Url,
 }
 
 impl UrlElicitationRequiredItem {
@@ -1124,7 +1173,7 @@ impl UrlElicitationRequiredItem {
         message: impl Into<String>,
     ) -> Self {
         Self {
-            mode: "url".to_string(),
+            mode: ElicitationUrlOnlyMode::Url,
             elicitation_id: elicitation_id.into(),
             url: url.into(),
             message: message.into(),
@@ -1189,7 +1238,10 @@ mod tests {
     #[test]
     fn response_accept_serialization() {
         let resp = ElicitationResponse::new(ElicitationAction::Accept(
-            ElicitationAcceptAction::new().content(json!({"name": "Alice"})),
+            ElicitationAcceptAction::new().content(serde_json::Map::from_iter([(
+                "name".to_string(),
+                json!("Alice"),
+            )])),
         ));
 
         let json = serde_json::to_value(&resp).unwrap();
@@ -1295,14 +1347,17 @@ mod tests {
 
         let roundtripped: UrlElicitationRequiredData = serde_json::from_value(json).unwrap();
         assert_eq!(roundtripped.elicitations.len(), 1);
-        assert_eq!(roundtripped.elicitations[0].mode, "url");
+        assert_eq!(
+            roundtripped.elicitations[0].mode,
+            ElicitationUrlOnlyMode::Url
+        );
     }
 
     #[test]
     fn schema_default_sets_object_type() {
         let schema = ElicitationSchema::default();
 
-        assert_eq!(schema.type_, "object");
+        assert_eq!(schema.type_, ElicitationSchemaType::Object);
         assert!(schema.properties.is_empty());
 
         let json = serde_json::to_value(&schema).unwrap();
@@ -1378,6 +1433,7 @@ mod tests {
 
         let json = serde_json::to_value(&schema).unwrap();
         assert_eq!(json["properties"]["colors"]["type"], "array");
+        assert_eq!(json["properties"]["colors"]["items"]["type"], "string");
         assert_eq!(json["properties"]["colors"]["minItems"], 1);
         assert_eq!(json["properties"]["colors"]["maxItems"], 3);
 
@@ -1457,6 +1513,32 @@ mod tests {
     }
 
     #[test]
+    fn schema_string_pattern_serialization() {
+        let schema = ElicitationSchema::new().property(
+            "name",
+            StringPropertySchema::new()
+                .min_length(1)
+                .max_length(64)
+                .pattern("^[a-zA-Z_][a-zA-Z0-9_]*$"),
+            true,
+        );
+
+        let json = serde_json::to_value(&schema).unwrap();
+        assert_eq!(json["properties"]["name"]["type"], "string");
+        assert_eq!(
+            json["properties"]["name"]["pattern"],
+            "^[a-zA-Z_][a-zA-Z0-9_]*$"
+        );
+
+        let roundtripped: ElicitationSchema = serde_json::from_value(json).unwrap();
+        if let ElicitationPropertySchema::String(s) = roundtripped.properties.get("name").unwrap() {
+            assert_eq!(s.pattern.as_deref(), Some("^[a-zA-Z_][a-zA-Z0-9_]*$"));
+        } else {
+            panic!("expected String variant");
+        }
+    }
+
+    #[test]
     fn schema_property_updates_required_state() {
         let schema = ElicitationSchema::new()
             .string("name", true)
@@ -1465,5 +1547,48 @@ mod tests {
         let json = serde_json::to_value(&schema).unwrap();
         assert!(json.get("required").is_none());
         assert_eq!(json["properties"]["name"]["format"], "email");
+    }
+
+    #[test]
+    fn schema_rejects_invalid_object_type() {
+        let err = serde_json::from_value::<ElicitationSchema>(json!({
+            "type": "array",
+            "properties": {
+                "name": {
+                    "type": "string"
+                }
+            }
+        }))
+        .unwrap_err();
+
+        assert!(err.to_string().contains("unknown variant"));
+    }
+
+    #[test]
+    fn titled_multi_select_items_reject_one_of() {
+        let err = serde_json::from_value::<TitledMultiSelectItems>(json!({
+            "oneOf": [
+                {
+                    "const": "red",
+                    "title": "Red"
+                }
+            ]
+        }))
+        .unwrap_err();
+
+        assert!(err.to_string().contains("missing field `anyOf`"));
+    }
+
+    #[test]
+    fn response_accept_rejects_non_object_content() {
+        let err = serde_json::from_value::<ElicitationResponse>(json!({
+            "action": {
+                "action": "accept",
+                "content": "Alice"
+            }
+        }))
+        .unwrap_err();
+
+        assert!(err.to_string().contains("invalid type"));
     }
 }
