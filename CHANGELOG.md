@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.11.3](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.11.2...v0.11.3) - 2026-03-18
+
+### Added
+
+- *(unstable)* More robust schema for elicitation types ([#771](https://github.com/agentclientprotocol/agent-client-protocol/pull/771))
+- *(unstable)* initial implementation for the logout method capability ([#751](https://github.com/agentclientprotocol/agent-client-protocol/pull/751))
+- *(rust-only)* Add meta getter for AuthMethod enum ([#725](https://github.com/agentclientprotocol/agent-client-protocol/pull/725))
+
+### Other
+
+- initial implementation: elicitation ([#769](https://github.com/agentclientprotocol/agent-client-protocol/pull/769))
+
 ## [0.11.2](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.11.1...v0.11.2) - 2026-03-11
 
 ### Fixed
