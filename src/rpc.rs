@@ -216,7 +216,7 @@ impl Side for ClientSide {
                     .map_err(Into::into)
             }
             #[cfg(feature = "unstable_elicitation")]
-            m if m == CLIENT_METHOD_NAMES.session_elicitation => serde_json::from_str(params.get())
+            m if m == CLIENT_METHOD_NAMES.elicitation_create => serde_json::from_str(params.get())
                 .map(AgentRequest::ElicitationRequest)
                 .map_err(Into::into),
             _ => {
@@ -240,7 +240,7 @@ impl Side for ClientSide {
                 .map(AgentNotification::SessionNotification)
                 .map_err(Into::into),
             #[cfg(feature = "unstable_elicitation")]
-            m if m == CLIENT_METHOD_NAMES.session_elicitation_complete => {
+            m if m == CLIENT_METHOD_NAMES.elicitation_complete => {
                 serde_json::from_str(params.get())
                     .map(AgentNotification::ElicitationCompleteNotification)
                     .map_err(Into::into)

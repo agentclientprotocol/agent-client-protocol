@@ -11,8 +11,8 @@ use derive_more::{Display, From};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::client::{SESSION_ELICITATION_COMPLETE, SESSION_ELICITATION_METHOD_NAME};
-use crate::{IntoOption, Meta, SessionId};
+use crate::client::{ELICITATION_COMPLETE, ELICITATION_CREATE_METHOD_NAME};
+use crate::{IntoOption, Meta, RequestId, SessionId};
 
 /// **UNSTABLE**
 ///
@@ -870,13 +870,18 @@ impl ElicitationUrlCapabilities {
 ///
 /// The agent sends this to the client to request information from the user,
 /// either via a form or by directing them to a URL.
+/// Elicitations may be tied to a session/request, or sent without either scope.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
-#[schemars(extend("x-side" = "client", "x-method" = SESSION_ELICITATION_METHOD_NAME))]
+#[schemars(extend("x-side" = "client", "x-method" = ELICITATION_CREATE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ElicitationRequest {
-    /// The session ID for this request.
-    pub session_id: SessionId,
+    /// Optional session ID if this elicitation is tied to a specific session.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub session_id: Option<SessionId>,
+    /// Optional request ID if this elicitation is tied to a specific request.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub request_id: Option<RequestId>,
     /// The elicitation mode and its mode-specific fields.
     #[serde(flatten)]
     pub mode: ElicitationMode,
@@ -893,17 +898,26 @@ pub struct ElicitationRequest {
 
 impl ElicitationRequest {
     #[must_use]
-    pub fn new(
-        session_id: impl Into<SessionId>,
-        mode: ElicitationMode,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn new(mode: ElicitationMode, message: impl Into<String>) -> Self {
         Self {
-            session_id: session_id.into(),
+            session_id: None,
+            request_id: None,
             mode,
             message: message.into(),
             meta: None,
         }
+    }
+
+    #[must_use]
+    pub fn session_id(mut self, session_id: impl Into<SessionId>) -> Self {
+        self.session_id = Some(session_id.into());
+        self
+    }
+
+    #[must_use]
+    pub fn request_id(mut self, request_id: impl Into<RequestId>) -> Self {
+        self.request_id = Some(request_id.into());
+        self
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -986,7 +1000,7 @@ impl ElicitationUrlMode {
 ///
 /// Response from the client to an elicitation request.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
-#[schemars(extend("x-side" = "client", "x-method" = SESSION_ELICITATION_METHOD_NAME))]
+#[schemars(extend("x-side" = "client", "x-method" = ELICITATION_CREATE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ElicitationResponse {
@@ -1139,7 +1153,7 @@ impl Default for ElicitationAcceptAction {
 ///
 /// Notification sent by the agent when a URL-based elicitation is complete.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "client", "x-method" = SESSION_ELICITATION_COMPLETE))]
+#[schemars(extend("x-side" = "client", "x-method" = ELICITATION_COMPLETE))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ElicitationCompleteNotification {
@@ -1251,13 +1265,13 @@ mod tests {
     fn form_mode_request_serialization() {
         let schema = ElicitationSchema::new().string("name", true);
         let req = ElicitationRequest::new(
-            "sess_1",
             ElicitationMode::Form(ElicitationFormMode::new(schema)),
             "Please enter your name",
         );
 
         let json = serde_json::to_value(&req).unwrap();
-        assert_eq!(json["sessionId"], "sess_1");
+        assert!(json.get("sessionId").is_none());
+        assert!(json.get("requestId").is_none());
         assert_eq!(json["mode"], "form");
         assert_eq!(json["message"], "Please enter your name");
         assert!(json["requestedSchema"].is_object());
@@ -1268,7 +1282,8 @@ mod tests {
         );
 
         let roundtripped: ElicitationRequest = serde_json::from_value(json).unwrap();
-        assert_eq!(roundtripped.session_id, SessionId::new("sess_1"));
+        assert_eq!(roundtripped.session_id, None);
+        assert_eq!(roundtripped.request_id, None);
         assert_eq!(roundtripped.message, "Please enter your name");
         assert!(matches!(roundtripped.mode, ElicitationMode::Form(_)));
     }
@@ -1276,23 +1291,26 @@ mod tests {
     #[test]
     fn url_mode_request_serialization() {
         let req = ElicitationRequest::new(
-            "sess_2",
             ElicitationMode::Url(ElicitationUrlMode::new(
                 "elic_1",
                 "https://example.com/auth",
             )),
             "Please authenticate",
-        );
+        )
+        .session_id("sess_2")
+        .request_id(42i64);
 
         let json = serde_json::to_value(&req).unwrap();
         assert_eq!(json["sessionId"], "sess_2");
+        assert_eq!(json["requestId"], 42);
         assert_eq!(json["mode"], "url");
         assert_eq!(json["elicitationId"], "elic_1");
         assert_eq!(json["url"], "https://example.com/auth");
         assert_eq!(json["message"], "Please authenticate");
 
         let roundtripped: ElicitationRequest = serde_json::from_value(json).unwrap();
-        assert_eq!(roundtripped.session_id, SessionId::new("sess_2"));
+        assert_eq!(roundtripped.session_id, Some(SessionId::new("sess_2")));
+        assert_eq!(roundtripped.request_id, Some(RequestId::Number(42)));
         assert!(matches!(roundtripped.mode, ElicitationMode::Url(_)));
     }
 
