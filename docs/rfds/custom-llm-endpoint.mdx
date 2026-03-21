@@ -365,6 +365,18 @@ Header values may contain secrets and should not be echoed by the agent. `provid
 
 Clients need capability discovery first, then provider discovery, then configuration. A dedicated method family keeps initialization focused on negotiation and leaves provider mutation to explicit steps.
 
+### Why not use `session-config` with a `provider` category instead?
+
+`session-config` is a possible alternative, and we may revisit it as the spec evolves.
+
+We did not choose it as the primary approach in this proposal because provider routing here needs dedicated semantics that are difficult to express with today's session config model:
+
+- Multiple providers identified by `id`, each with its own lifecycle
+- Structured payloads (`apiType`, `baseUrl`, full `headers` map) rather than simple scalar values
+- Explicit discoverable (`providers/list`) and disable (`providers/disable`) semantics
+
+Today, `session-config` values are effectively string-oriented and do not define a standard multi-value/structured model for this use case.
+
 ## Revision history
 
 - 2026-03-22: Finalized provider disable semantics - `providers/remove` renamed to `providers/disable`, required providers are non-disableable, and disabled state is represented as `current: null`
