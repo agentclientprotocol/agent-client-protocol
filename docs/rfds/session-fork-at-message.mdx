@@ -1,0 +1,87 @@
+---
+title: "Forking sessions at a specific message"
+---
+
+Author(s): [@SteffenDE](https://github.com/SteffenDE)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Extend `session/fork` with an optional `messageId` parameter so clients can fork a session at a
+specific point in the conversation, enabling use cases like editing a previous user message or
+regenerating an agent response.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+The [session-fork RFD](./session-fork.mdx) introduced `session/fork` to duplicate an entire session.
+It already anticipated extending this with a message ID. The [message-id RFD](./message-id.mdx) now
+provides stable, unique identifiers for every message. Together, these enable forking at a specific
+point in the conversation.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+Add an optional `messageId` field to `session/fork`. The semantics are **inclusive**: the forked
+session contains all messages up to and including the specified message.
+
+Because the ID is inclusive, to "edit" a user message, the client should fork at the **agent message
+before it** — then the forked session ends with the agent's response, and the client sends the
+edited user message as a new prompt.
+
+The agent MUST not trigger a new response after forking. This could be added as an optional parameter
+with separate capability in the future.
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+Clients can offer conversation editing UIs: editing previous messages, regenerating responses,
+and exploring alternative conversation branches from any point.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+Agents declare support via `session: { fork: { atMessageId: true } }` in capabilities, extending
+the existing `fork: {}` object that was reserved for this purpose.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "session/fork",
+  "params": {
+    "sessionId": "sess_789xyz",
+    "messageId": "ea87d0e7-beb8-484a-a404-94a30b78a5a8",
+    "cwd": "...",
+    "mcpServers": [...]
+  }
+}
+```
+
+When `messageId` is omitted, behavior is unchanged (full session fork). When provided, the agent
+MUST include only messages up to and including the given message, and MUST return an error if the
+ID is not recognized.
+
+Schema changes: add optional `messageId` (UUID string) to `ForkRequest`, add `atMessageId`
+(boolean) to `ForkCapabilities`.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+**Q: Why inclusive rather than exclusive semantics?**
+
+This is mainly because that's how it works in Claude's Agent SDK, but it's also a reasonable choice in general.
+
+**Q: What about forking at a thought message?**
+
+Agents MAY support it but SHOULD return an error if they don't.
+
+## Revision history
+
+- 2026-03-03: Initial draft
