@@ -81,6 +81,11 @@ pub enum SessionUpdate {
     UserMessageChunk(ContentChunk),
     /// A chunk of the agent's response being streamed.
     AgentMessageChunk(ContentChunk),
+    /// Instructs the client to clear the accumulated streamed content for the current agent message.
+    /// Subsequent `agent_message_chunk` updates append from empty. Enables non-monotonic streaming
+    /// (e.g. reformatting, delegation, iterative refinement).
+    /// See protocol docs: [RFD: agent_message_clear](https://github.com/agentclientprotocol/agent-client-protocol/blob/main/docs/rfds/agent_message_clear.md)
+    AgentMessageClear,
     /// A chunk of the agent's internal reasoning being streamed.
     AgentThoughtChunk(ContentChunk),
     /// Notification that a new tool call has been initiated.
