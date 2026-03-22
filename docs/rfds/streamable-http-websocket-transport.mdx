@@ -1,0 +1,317 @@
+---
+title: "Streamable HTTP & WebSocket Transport"
+---
+
+Author(s):
+* Alex Hancock alexhancock@block.xyz (https://github.com/alexhancock)
+* Jasper Hugo jhugo@block.xyz (https://github.com/jh-block)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+ACP needs a standard remote transport. We propose adopting **MCP Streamable HTTP** (2025-11-25) with ACP-specific headers, and extending it with a **WebSocket upgrade** on the same endpoint. A single `/acp` endpoint supports two connectivity profiles:
+
+- **Streamable HTTP (POST/GET/DELETE)** — stateless-friendly, SSE-based streaming, aligned with MCP Streamable HTTP.
+- **WebSocket upgrade (GET with `Upgrade: websocket`)** — persistent, full-duplex, low-latency bidirectional messaging.
+
+Clients that support remote ACP over HTTP MUST support both Streamable HTTP and WebSocket. This allows servers to support only WebSocket if they choose, simplifying deployment.
+
+Both profiles share the same JSON-RPC message format and ACP lifecycle as the existing **stdio** local subprocess transport.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+ACP only has stdio (inherited from MCP). There is no standard remote transport, which causes:
+
+1. **Fragmentation** — implementers invent their own HTTP layers, leading to incompatible SDKs and deployments.
+2. **Missed alignment** — MCP Streamable HTTP is well-designed; ACP should adopt it rather than diverge.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+### 1. Adopts MCP Streamable HTTP semantics with ACP-specific headers
+
+Follows the MCP 2025-11-25 Streamable HTTP spec with these adaptations:
+
+- Session header: `Acp-Session-Id` (not `MCP-Session-Id`)
+- Protocol version header: `Acp-Protocol-Version` (not `MCP-Protocol-Version`)
+- Endpoint path: conventionally `/acp`
+
+### 2. Adds WebSocket as a first-class upgrade on the same endpoint
+
+A GET with `Upgrade: websocket` upgrades to a persistent bidirectional channel — same endpoint, same session model.
+
+This is important for ACP, as its more bidirectional in its nature as a protocol
+
+### 3. Requires cookie support on HTTP transports
+
+Clients MUST accept, store, and return cookies set by the server on all HTTP-based transports (Streamable HTTP and WebSocket). Cookies MUST be sent on subsequent requests to the server for the duration of the session. Clients MAY discard all cookies when a session is complete. This allows servers to rely on cookies for session affinity (e.g., sticky sessions behind a load balancer) and other small amounts of per-session state.
+
+### 4. Defines a unified routing model
+
+| Method | Upgrade Header? | Behavior |
+|--------|-----------------|----------|
+| `POST` | — | Send JSON-RPC request/notification/response (Streamable HTTP) |
+| `GET` | No | Open SSE stream for server-initiated messages (Streamable HTTP) |
+| `GET` | `Upgrade: websocket` | Upgrade to WebSocket for full-duplex messaging |
+| `DELETE` | — | Terminate the session |
+
+### 5. Preserves the full ACP lifecycle
+
+The `initialize` → `initialized` → messages → close lifecycle is identical regardless of transport. Session state is keyed by `Acp-Session-Id` and is transport-agnostic.
+
+## Shiny future
+
+> How will things play out once this feature exists?
+
+- **SDK implementers** get a clear, testable transport spec — Rust, TypeScript, and Python SDKs can all interoperate.
+- **Desktop clients** use WebSocket for low-latency streaming; all clients support it as a baseline.
+- **Cloud deployments** expose agents behind standard HTTP load balancers using the stateless-friendly HTTP mode, with cookie-based sticky sessions guaranteed by client support.
+- **MCP compatibility** is maintained — the HTTP transport is a superset of MCP Streamable HTTP.
+- **Proxy chains** can route ACP traffic over HTTP for multi-hop agent topologies.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+### Transport Architecture
+
+```
+                         ┌─────────────────────────────────┐
+                         │         /acp endpoint           │
+                         └──────┬──────────┬───────────────┘
+                                │          │
+                    ┌───────────▼──┐  ┌────▼──────────────┐
+                    │  HTTP State  │  │  WebSocket State   │
+                    │  (sessions)  │  │  (connections)     │
+                    └───────┬──────┘  └────┬──────────────┘
+                            │              │
+                    ┌───────▼──────────────▼───────────────┐
+                    │     ACP Agent (JSON-RPC handler)     │
+                    │     serve(agent, read, write)        │
+                    └─────────────────────────────────────┘
+```
+
+### Streamable HTTP Message Flow
+
+```
+Client                              Server
+  │                                   │
+  │  ═══ Session Initialization ═══   │
+  │                                   │
+  │─── POST /acp ─────────────────────>│  { method: "initialize", id: 1 }
+  │    Accept: application/json,       │  (no Acp-Session-Id header)
+  │            text/event-stream       │
+  │              ┌─────────────────────│  Server creates session, opens SSE stream
+  │              │ (SSE stream open)   │
+  │<─────────────│─ SSE event ─────────│  { id: 1, result: { capabilities } }
+  │              │                     │  Response includes Acp-Session-Id header
+  │              ▼                     │
+  │                                    │
+  │  ═══ Prompt Flow ═══               │
+  │                                    │
+  │─── POST /acp ─────────────────────>│  { method: "session/new", id: 2,
+  │    Acp-Session-Id: <session_id>    │    params: { cwd, mcp_servers } }
+  │              ┌─────────────────────│  Opens new SSE stream for response
+  │<─────────────│─ SSE event ─────────│  { id: 2, result: { session_id: <goose_session> } }
+  │              ▼                     │
+  │                                    │
+  │─── POST /acp ─────────────────────>│  { method: "session/prompt", id: 3,
+  │    Acp-Session-Id: <session_id>    │    params: { session_id, prompt } }
+  │              ┌─────────────────────│  Opens new SSE stream for response
+  │<─────────────│─ SSE event ─────────│  notification: AgentMessageChunk
+  │<─────────────│─ SSE event ─────────│  notification: AgentThoughtChunk (if reasoning)
+  │<─────────────│─ SSE event ─────────│  notification: ToolCall (status: pending)
+  │<─────────────│─ SSE event ─────────│  notification: ToolCallUpdate (status: completed)
+  │<─────────────│─ SSE event ─────────│  notification: AgentMessageChunk
+  │<─────────────│─ SSE event ─────────│  { id: 3, result: { stop_reason: "end_turn" } }
+  │              ▼                     │
+  │                                    │
+  │  ═══ Permission Flow ═══           │
+  │  (when tool requires confirmation) │
+  │                                    │
+  │─── POST /acp ─────────────────────>│  { method: "session/prompt", id: 4, ... }
+  │    Acp-Session-Id: <session_id>    │
+  │              ┌─────────────────────│
+  │<─────────────│─ SSE event ─────────│  notification: ToolCall (status: pending)
+  │<─────────────│─ SSE event ─────────│  { method: "request_permission", id: 99, params: {...} }
+  │              │                     │  (server-to-client request)
+  │              │                     │
+  │─── POST /acp ┼────────────────────>│  { id: 99, result: { outcome: "allow_once" } }
+  │    Acp-Session-Id: <session_id>    │  (client response, returns 202 Accepted)
+  │              │                     │
+  │<─────────────│─ SSE event ─────────│  notification: ToolCallUpdate (status: completed)
+  │<─────────────│─ SSE event ─────────│  { id: 4, result: { stop_reason: "end_turn" } }
+  │              ▼                     │
+  │                                    │
+  │  ═══ Cancel Flow ═══               │
+  │                                    │
+  │─── POST /acp ─────────────────────>│  { method: "session/prompt", id: 5, ... }
+  │    Acp-Session-Id: <session_id>    │
+  │              ┌─────────────────────│
+  │<─────────────│─ SSE event ─────────│  notification: AgentMessageChunk
+  │              │                     │
+  │─── POST /acp ┼────────────────────>│  { method: "session/cancel" }
+  │    Acp-Session-Id: <session_id>    │  (notification, no id - returns 202 Accepted)
+  │              │                     │
+  │<─────────────│─ SSE event ─────────│  { id: 5, result: { stop_reason: "cancelled" } }
+  │              ▼                     │
+  │                                    │
+  │  ═══ Resume Session Flow ═══       │
+  │                                    │
+  │─── POST /acp ─────────────────────>│  { method: "initialize", id: 1 }
+  │    (no Acp-Session-Id)             │  New HTTP session
+  │              ┌─────────────────────│
+  │<─────────────│─ SSE event ─────────│  { id: 1, result: { capabilities } }
+  │              │                     │  Response includes new Acp-Session-Id
+  │              ▼                     │
+  │                                    │
+  │─── POST /acp ─────────────────────>│  { method: "session/load", id: 2,
+  │    Acp-Session-Id: <new_session>   │    params: { session_id: <existing_goose_session>, cwd } }
+  │              ┌─────────────────────│
+  │<─────────────│─ SSE event ─────────│  notification: UserMessageChunk (history replay)
+  │<─────────────│─ SSE event ─────────│  notification: AgentMessageChunk (history replay)
+  │<─────────────│─ SSE event ─────────│  notification: ToolCall (history replay)
+  │<─────────────│─ SSE event ─────────│  notification: ToolCallUpdate (history replay)
+  │<─────────────│─ SSE event ─────────│  { id: 2, result: {} }
+  │              ▼                     │
+  │                                    │
+  │  ═══ Standalone SSE Stream ═══     │
+  │  (optional, for server-initiated)  │
+  │                                    │
+  │─── GET /acp ──────────────────────>│  Open dedicated SSE listener
+  │    Acp-Session-Id: <session_id>    │
+  │    Accept: text/event-stream       │
+  │              ┌─────────────────────│  Long-lived connection for
+  │              │ (SSE stream open)   │  server-initiated messages
+  │              ▼                     │
+  │                                    │
+  │  ═══ Session Termination ═══       │
+  │                                    │
+  │─── DELETE /acp ───────────────────>│  Terminate session
+  │    Acp-Session-Id: <session_id>    │
+  │<────────── 202 Accepted ───────────│
+```
+
+#### Content Negotiation and Validation
+
+- `Content-Type` **MUST** be `application/json` (415 otherwise).
+- `Accept` **MUST** include both `application/json` and `text/event-stream` (406 otherwise).
+- Batch JSON-RPC requests return 501.
+
+### WebSocket Request Flow
+
+#### Connection Establishment (GET with Upgrade)
+
+```
+Client                                    Server
+  │  GET /acp                               │
+  │  Upgrade: websocket                     │
+  │────────────────────────────────────────►│
+  │  HTTP 101 Switching Protocols           │
+  │  Acp-Session-Id: <uuid>                 │
+  │◄────────────────────────────────────────│
+  │  ══════ WebSocket Channel ══════════════│
+```
+
+A new session is created on upgrade. The `Acp-Session-Id` is returned in the upgrade response headers.
+
+#### Bidirectional Messaging
+
+All messages are WebSocket text frames containing JSON-RPC. Binary frames are ignored. On disconnect, the server cleans up the session.
+
+### Unified Endpoint Routing
+
+```
+GET /acp
+  ├── Has Upgrade: websocket? → WebSocket handler
+  └── No → SSE stream handler
+
+POST /acp
+  ├── Initialize request? → Create session, return SSE
+  └── Has Acp-Session-Id?
+        ├── JSON-RPC request → Forward, return SSE
+        └── Notification/response → Forward, return 202
+
+DELETE /acp → Terminate session
+```
+
+### Session Model
+
+```
+TransportSession {
+    to_agent_tx:   mpsc::Sender<String>,
+    from_agent_rx: Arc<Mutex<Receiver<String>>>,
+    handle:        JoinHandle<()>,
+}
+```
+
+The agent task is spawned once per session. The transport layer adapts channels to the wire format (SSE events for HTTP, text frames for WebSocket).
+
+### MCP Streamable HTTP Compliance
+
+| MCP Requirement | ACP Implementation | Status |
+|---|---|---|
+| POST for all client→server messages | ✅ | Compliant |
+| Accept header validation (406) | ✅ | Compliant |
+| Notifications/responses return 202 | ✅ | Compliant |
+| Requests return SSE stream | ✅ | Compliant |
+| Session ID on initialize response | ✅ (`Acp-Session-Id`) | Compliant |
+| Session ID required on subsequent requests | ✅ (400 if missing) | Compliant |
+| GET opens SSE stream | ✅ | Compliant |
+| DELETE terminates session | ✅ | Compliant |
+| 404 for unknown sessions | ✅ | Compliant |
+| Batch requests | ❌ (returns 501) | Documented deviation |
+| Resumability (Last-Event-ID) | ❌ | Future work |
+| Protocol version header | ❌ | Future work |
+
+### Deviations from MCP Streamable HTTP
+
+1. **Header naming**: `Acp-Session-Id` / `Acp-Protocol-Version` instead of MCP equivalents, to avoid collision when an ACP agent is also an MCP client.
+2. **WebSocket extension**: MCP doesn't define WebSocket. ACP adds it as a required client capability. Clients MUST support WebSocket, and servers MAY choose to only support WebSocket connections.
+3. **Cookie support required**: Clients MUST handle cookies on HTTP transports for the duration of the session, enabling sticky sessions and per-session server state.
+4. **No batch requests**: Returns 501. May be added later.
+5. **No resumability yet in reference implementation**: SSE event IDs and `Last-Event-ID` resumption planned as follow-up.
+
+### Implementation Plan
+
+1. **Phase 1 — Specification** (this RFD): Define the transport spec and align terminology.
+2. **Phase 2 — Reference Implementation** (in progress): Working implementation in Goose (`block/goose`) at `crates/goose-acp/src/transport/` (`transport.rs`, `http.rs`, `websocket.rs`).
+3. **Phase 3 — SDK Support**: Add Streamable HTTP and WebSocket client support to Rust SDK (`sacp`), then TypeScript SDK.
+4. **Phase 4 — Hardening**: Origin validation, `Acp-Protocol-Version`, SSE resumability, batch requests, security audit.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Why not just use MCP Streamable HTTP as-is?
+
+We largely do. The only differences are header naming (`Acp-Session-Id` vs `MCP-Session-Id`) to avoid ambiguity, and the WebSocket extension for long-running agent sessions.
+
+### Why add WebSocket support?
+
+A single `prompt` can generate dozens of streaming updates and ACP is more bidirectional in nature than MCP. With Streamable HTTP, the server can only push via SSE on POST responses or a separate GET stream. WebSocket provides true bidirectional messaging, lower per-message overhead, and connection persistence. Clients MUST support WebSocket so that servers can choose to only support WebSocket connections, simplifying deployment. Streamable HTTP remains available as an additional option for environments where WebSocket is not viable on the server side (e.g., serverless).
+
+### How does the server distinguish WebSocket from SSE on GET?
+
+By inspecting the `Upgrade: websocket` header. This is standard HTTP behavior.
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+- **Separate endpoints** (`/acp/http`, `/acp/ws`): Rejected — single endpoint is simpler; WebSocket upgrade is natural HTTP.
+- **WebSocket only**: Rejected — doesn't work through all proxies; Streamable HTTP is better for stateless/serverless.
+
+### How does this interact with authentication?
+
+Authentication (see auth-methods RFD) is orthogonal and layered on top via HTTP headers, query parameters, or WebSocket subprotocols. `Acp-Session-Id` is a transport-level session identifier, not an auth token.
+
+### What about the `Acp-Protocol-Version` header?
+
+Clients SHOULD include it on all requests after initialization. Not yet implemented; part of Phase 4 hardening.
+
+## Revision history
+
+- **2025-03-10**: Initial draft based on the RFC template and goose reference implementation.
