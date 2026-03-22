@@ -13,3 +13,6 @@ typescript/*.js.map
 
 # TypeDoc generated documentation
 typescript/docs/
+
+# JetBrains IDE
+.idea
