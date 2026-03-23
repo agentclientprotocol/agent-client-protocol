@@ -59,7 +59,7 @@ Agents advertise support with `sessionCapabilities.additionalDirectories`. Clien
 
 Clients can declare multi-root workspace scope in a standard way while preserving existing `cwd` behavior.
 
-Agents can treat a session as an ordered root set (`[cwd, ...additionalDirectories]`) and perform implementation-defined discovery across declared roots. ACP remains agnostic to repository conventions, instruction layout, and skill naming.
+Agents can treat a session as an ordered root set (`[cwd, ...additionalDirectories]`) and apply the same discovery and resource-handling behavior they already apply under `cwd` to the other declared roots.
 
 Security boundaries remain explicit: declared roots communicate intended scope, while sandboxing, approvals, and OS permissions continue to govern actual access.
 
@@ -74,12 +74,12 @@ Security boundaries remain explicit: declared roots communicate intended scope, 
 - Standardize additional workspace roots on session lifecycle entry points.
 - Preserve `cwd` as the primary working directory for the session.
 - Define clear validation and error-handling rules.
-- Enable generic multi-root discovery by agents without standardizing any particular directory layout.
+- Enable generic multi-root discovery and resource handling by agents across all declared roots.
 - Expand the filesystem scope without changing the existing RPC method structure.
 
 #### Non-goals
 
-- Defining any required directory names, such as `.agents`, `skills/`, or similar.
+- Defining any required directory names or layouts, such as `.agents/`, `skills/`, or `.<agent>/`.
 - Defining a standard instruction, skill, or configuration file format.
 - Replacing `cwd` with a list-valued field.
 - Changing relative-path semantics.
@@ -182,13 +182,15 @@ This RFD defines lifecycle-time workspace scope only. It does not define mid-ses
 
 Agents MUST treat paths under `additionalDirectories` as part of the session's accessible workspace scope in the same sense as paths under `cwd`, subject to capabilities and permissions actually available for that session.
 
-Agents MAY perform implementation-defined discovery across any declared root. For example, an agent MAY look for instruction files, skill directories, or repository-local configuration within one or more roots. When an agent performs such discovery across multiple roots, it SHOULD use the ordered root list `[cwd, ...additionalDirectories]` as its search order.
+For any discovery, indexing, or resource-loading behavior an agent applies under `cwd` such as instructions, skills, configuration, or other agent-specific artifacts, the agent SHOULD apply the same behavior to each declared root in `additionalDirectories`, subject to the same capabilities and permissions.
+
+If an implementation resolves conflicts across multiple roots, earlier roots in `[cwd, ...additionalDirectories]` SHOULD take precedence over later roots. Conflict resolution within a single root remains implementation-defined.
 
 ACP does not define:
 
-- required directory names;
-- whether an agent MUST perform any discovery at all;
-- precedence rules when multiple roots contain similar artifacts; or
+- required directory names or layouts;
+- the contents or file formats of discovered artifacts;
+- whether an agent MUST perform any discovery at all; or
 - how discovered artifacts affect prompting or execution.
 
 Implementations MAY define such behavior independently, but ACP remains agnostic to directory contents.
@@ -345,7 +347,9 @@ This RFD does not add a new RPC method. It also does not change the meaning of `
 
 ### Does ACP define `.agents`, `skills`, or instruction directory conventions?
 
-No. ACP remains agnostic to directory naming and contents. This proposal only defines additional accessible roots.
+No. ACP does not define `.agents`, `skills`, or other instruction directory conventions. This proposal only defines additional accessible roots.
+
+Agents SHOULD handle resources under `additionalDirectories` the same way they handle analogous resources under `cwd`, but the names, layouts, and file formats of those resources remain implementation-defined.
 
 ### How should clients handle older agents that may not support this field?
 
