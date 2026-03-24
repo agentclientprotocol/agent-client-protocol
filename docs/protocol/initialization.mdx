@@ -71,6 +71,9 @@ The Agent **MUST** respond with the chosen [protocol version](#protocol-version)
       "mcp": {
         "http": true,
         "sse": true
+      },
+      "sessionCapabilities": {
+        "additionalDirectories": {}
       }
     },
     "agentInfo": {
@@ -196,6 +199,8 @@ Optionally, they **MAY** support other session methods and notifications by spec
   `session/load` is still handled by the top-level `load_session` capability.
   This will be unified in future versions of the protocol.
 </Note>
+
+Agents that support multi-root session workspaces advertise `sessionCapabilities.additionalDirectories`. Clients **MUST** only send `additionalDirectories` on session lifecycle requests or `session/list` when that capability is present.
 
 ## Implementation Information
 

@@ -42,7 +42,7 @@ Add a new `session_info_update` variant to the existing `SessionUpdate` discrimi
    - Contains the same fields as `SessionInfo` from `session/list`
    - All fields are optional (partial updates)
    - Enables incremental metadata updates
-   - **Important**: `SessionInfoUpdate` must stay aligned with `SessionInfo` - when new fields are added to `SessionInfo`, they should also be added to `SessionInfoUpdate` as optional fields
+   - **Important**: `SessionInfoUpdate` must stay aligned with the mutable metadata fields of `SessionInfo` - immutable fields such as workspace roots do not need corresponding update fields
 
 3. **Support common use cases**:
    - Agent auto-generates title after first prompt

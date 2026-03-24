@@ -42,6 +42,7 @@ sequenceDiagram
 Clients create a new session by calling the `session/new` method with:
 
 - The [working directory](#working-directory) for the session
+- Optional [additional directories](#additional-directories) for the session workspace
 - A list of [MCP servers](#mcp-servers) the Agent should connect to
 
 ```json
@@ -51,6 +52,7 @@ Clients create a new session by calling the `session/new` method with:
   "method": "session/new",
   "params": {
     "cwd": "/home/user/project",
+    "additionalDirectories": ["/home/user/shared", "/home/user/common"],
     "mcpServers": [
       {
         "name": "filesystem",
@@ -62,6 +64,8 @@ Clients create a new session by calling the `session/new` method with:
   }
 }
 ```
+
+Clients **MUST** send `additionalDirectories` only when the Agent advertises `sessionCapabilities.additionalDirectories`.
 
 The Agent **MUST** respond with a unique [Session ID](#session-id) that identifies this conversation:
 
@@ -105,6 +109,7 @@ To load an existing session, Clients **MUST** call the `session/load` method wit
 - The [Session ID](#session-id) to resume
 - [MCP servers](#mcp-servers) to connect to
 - The [working directory](#working-directory)
+- The full intended [additional directories](#additional-directories) list when the Agent supports multi-root workspaces
 
 ```json
 {
@@ -114,6 +119,7 @@ To load an existing session, Clients **MUST** call the `session/load` method wit
   "params": {
     "sessionId": "sess_789xyz",
     "cwd": "/home/user/project",
+    "additionalDirectories": ["/home/user/shared", "/home/user/.agent/skills"],
     "mcpServers": [
       {
         "name": "filesystem",
@@ -190,11 +196,26 @@ Clients use this ID to:
 
 ## Working Directory
 
-The `cwd` (current working directory) parameter establishes the file system context for the session. This directory:
+The `cwd` (current working directory) parameter establishes the primary file system context for the session. This directory:
 
 - **MUST** be an absolute path
 - **MUST** be used for the session regardless of where the Agent subprocess was spawned
-- **SHOULD** serve as a boundary for tool operations on the file system
+- **MUST** remain the base for relative path resolution
+- **SHOULD** be treated as the primary root in the session workspace
+
+## Additional Directories
+
+Agents that advertise `sessionCapabilities.additionalDirectories` accept an optional `additionalDirectories` array on `session/new` and `session/load`.
+
+Each entry in `additionalDirectories`:
+
+- **MUST** be an absolute path
+- Extends the session's filesystem scope without replacing `cwd`
+- Becomes part of the session's effective ordered root set: `[cwd, ...additionalDirectories]`
+
+Relative paths continue to resolve against `cwd` only.
+
+On `session/load`, Clients **MUST** resend the full intended `additionalDirectories` list. If the field is omitted, the loaded session activates no additional directories. When [`session/list`](./session-list) is available, `SessionInfo.additionalDirectories` provides the authoritative current list for a session.
 
 ## MCP Servers
 
