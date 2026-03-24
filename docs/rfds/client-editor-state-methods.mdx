@@ -1,0 +1,182 @@
+---
+title: "Client Editor State Methods"
+---
+
+- Author(s): [@anna239](https://github.com/anna239)
+
+## Elevator pitch
+
+Add three optional client methods that expose the current editor state to the agent:
+
+1. `workspace/open_documents` for opened files
+2. `workspace/recent_documents` for recent files
+3. `workspace/active_document` for the currently focused file
+
+These methods are intentionally shaped to match VS Code concepts (`workspace.textDocuments`, `window.activeTextEditor`, and VS Code's internal recently-opened model) while preserving ACP conventions and capability-based opt-in. All three methods live under the `workspace/` prefix for consistency.
+
+## Status quo
+
+Today ACP lets an agent read and write files (`fs/read_text_file`, `fs/write_text_file`) when it already knows a path, but there is no standard way to ask:
+
+1. Which files are currently opened in the editor?
+2. Which files were recently opened?
+3. Which file currently has focus?
+
+This causes practical issues:
+
+1. Agents must infer context from prompt text or external heuristics.
+2. Clients add context unconditionally, which can decrease the agent's performance.
+
+## What we propose to do about it
+
+Introduce three optional `client` methods and corresponding capabilities:
+
+1. `workspace/open_documents`
+2. `workspace/recent_documents`
+3. `workspace/active_document`
+
+Agents must check capability flags before calling these methods.
+
+### Capability advertisement
+
+```json
+{
+  "clientCapabilities": {
+    "workspace": {
+      "openDocuments": {},
+      "recentDocuments": {},
+      "activeDocument": {}
+    }
+  }
+}
+```
+
+### URI rules
+
+All returned `uri` values **MUST** use the `file:///` scheme with absolute paths.
+
+### Method: `workspace/open_documents`
+
+Returns currently open text documents that map to absolute file paths.
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 11,
+  "method": "workspace/open_documents",
+  "params": {
+    "sessionId": "sess_abc123def456"
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 11,
+  "result": {
+    "documents": [
+      {
+        "uri": "file:///Users/alice/dev/acp/src/client.rs",
+        "languageId": "rust"
+      },
+      {
+        "uri": "file:///Users/alice/dev/acp/docs/protocol/file-system.mdx",
+        "languageId": "markdown"
+      }
+    ]
+  }
+}
+```
+
+### Method: `workspace/recent_documents`
+
+Returns recently opened files (absolute paths), optionally bounded by `limit`.
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 12,
+  "method": "workspace/recent_documents",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "limit": 50
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 12,
+  "result": {
+    "documents": [
+      {
+        "uri": "file:///Users/alice/dev/acp/src/rpc.rs",
+        "languageId": "rust"
+      },
+      {
+        "uri": "file:///Users/alice/dev/acp/docs/protocol/session-setup.mdx",
+        "languageId": "markdown"
+      }
+    ]
+  }
+}
+```
+
+### Method: `workspace/active_document`
+
+Returns the currently focused text editor file, or `null` when no file-backed text editor is focused.
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 13,
+  "method": "workspace/active_document",
+  "params": {
+    "sessionId": "sess_abc123def456"
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 13,
+  "result": {
+    "document": {
+      "uri": "file:///Users/alice/dev/acp/src/client.rs",
+      "languageId": "rust"
+    }
+  }
+}
+```
+
+## Further development
+
+Once this exists:
+
+1. Agents can implement their own logic for context gathering.
+2. `workspace/active_document` can be extended with additional fields such as `visibleRange` and cursor `position` to provide richer editor context.
+
+## Frequently asked questions
+
+1. Why `workspace`?
+
+Was looking for something general enough that would work not only for IDEs.
+
+## Revision history
+
+- 2026-03-17: Initial draft.

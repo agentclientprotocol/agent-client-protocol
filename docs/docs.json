@@ -125,7 +125,8 @@
               "rfds/boolean-config-option",
               "rfds/elicitation",
               "rfds/session-close",
-              "rfds/next-edit-suggestions"
+              "rfds/next-edit-suggestions",
+              "rfds/client-editor-state-methods"
             ]
           },
           {
