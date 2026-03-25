@@ -1476,13 +1476,6 @@
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
         },
-        "additionalDirectories": {
-          "description": "Filter sessions by the exact ordered additional workspace roots. Each path must be absolute.",
-          "items": {
-            "type": "string"
-          },
-          "type": ["array", "null"]
-        },
         "cursor": {
           "description": "Opaque cursor token from a previous response's nextCursor field for cursor-based pagination",
           "type": ["string", "null"]
@@ -1528,13 +1521,6 @@
           "additionalProperties": true,
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
-        },
-        "additionalDirectories": {
-          "description": "Additional workspace roots to activate for this session. Each path must be absolute.",
-          "items": {
-            "type": "string"
-          },
-          "type": ["array", "null"]
         },
         "cwd": {
           "description": "The working directory for this session.",
@@ -1754,13 +1740,6 @@
           "additionalProperties": true,
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
-        },
-        "additionalDirectories": {
-          "description": "Additional workspace roots for this session. Each path must be absolute.\n\nThese expand the session's filesystem scope without changing `cwd`, which\nremains the base for relative paths.",
-          "items": {
-            "type": "string"
-          },
-          "type": ["array", "null"]
         },
         "cwd": {
           "description": "The working directory for this session. Must be an absolute path.",
@@ -2327,17 +2306,6 @@
       "required": ["optionId"],
       "type": "object"
     },
-    "SessionAdditionalDirectoriesCapabilities": {
-      "description": "Capabilities for additional session directories support.\n\nBy supplying `{}` it means that the agent supports the `additionalDirectories` field on\nsession lifecycle requests and `session/list`.",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"]
-        }
-      },
-      "type": "object"
-    },
     "SessionCapabilities": {
       "description": "Session capabilities supported by the agent.\n\nAs a baseline, all Agents **MUST** support `session/new`, `session/prompt`, `session/cancel`, and `session/update`.\n\nOptionally, they **MAY** support other session methods and notifications by specifying additional capabilities.\n\nNote: `session/load` is still handled by the top-level `load_session` capability. This will be unified in future versions of the protocol.\n\nSee protocol docs: [Session Capabilities](https://agentclientprotocol.com/protocol/initialization#session-capabilities)",
       "properties": {
@@ -2345,17 +2313,6 @@
           "additionalProperties": true,
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
-        },
-        "additionalDirectories": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/SessionAdditionalDirectoriesCapabilities"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "Whether the agent supports `additionalDirectories` on session lifecycle requests and `session/list`."
         },
         "list": {
           "anyOf": [
@@ -2582,13 +2539,6 @@
           "additionalProperties": true,
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
-        },
-        "additionalDirectories": {
-          "description": "Authoritative ordered additional workspace roots for this session. Each path must be absolute.",
-          "items": {
-            "type": "string"
-          },
-          "type": ["array", "null"]
         },
         "cwd": {
           "description": "The working directory for this session. Must be an absolute path.",

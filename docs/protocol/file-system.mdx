@@ -5,8 +5,6 @@ description: "Client filesystem access methods"
 
 The filesystem methods allow Agents to read and write text files within the Client's environment. These methods enable Agents to access unsaved editor state and allow Clients to track file modifications made during agent execution.
 
-Filesystem `path` values are always absolute. If a session was created with [`additionalDirectories`](./session-setup#additional-directories), Clients that enforce workspace boundaries **MUST** authorize `fs/*` requests against the full ordered root set `[cwd, ...additionalDirectories]`, not `cwd` alone.
-
 ## Checking Support
 
 Before attempting to use filesystem methods, Agents **MUST** verify that the Client supports these capabilities by checking the [Client Capabilities](./initialization#client-capabilities) field in the `initialize` response:
@@ -52,8 +50,7 @@ The `fs/read_text_file` method allows Agents to read text file contents from the
 </ParamField>
 
 <ParamField path="path" type="string" required>
-  Absolute path to the file to read. Clients that enforce session workspace
-  boundaries validate this path against the session's effective root set.
+  Absolute path to the file to read
 </ParamField>
 
 <ParamField path="line" type="number">
@@ -101,8 +98,6 @@ The `fs/write_text_file` method allows Agents to write or update text files in t
 Absolute path to the file to write.
 
 The Client **MUST** create the file if it doesn't exist.
-
-Clients that enforce session workspace boundaries validate this path against the session's effective root set.
 
 </ParamField>
 

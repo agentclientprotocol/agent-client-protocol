@@ -893,10 +893,15 @@ impl AuthMethodTerminal {
 pub struct NewSessionRequest {
     /// The working directory for this session. Must be an absolute path.
     pub cwd: PathBuf,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
     /// Additional workspace roots for this session. Each path must be absolute.
     ///
     /// These expand the session's filesystem scope without changing `cwd`, which
     /// remains the base for relative paths.
+    #[cfg(feature = "unstable_additional_directories")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub additional_directories: Option<Vec<PathBuf>>,
     /// List of MCP (Model Context Protocol) servers the agent should connect to.
@@ -915,13 +920,19 @@ impl NewSessionRequest {
     pub fn new(cwd: impl Into<PathBuf>) -> Self {
         Self {
             cwd: cwd.into(),
+            #[cfg(feature = "unstable_additional_directories")]
             additional_directories: None,
             mcp_servers: vec![],
             meta: None,
         }
     }
 
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
     /// Additional workspace roots for this session. Each path must be absolute.
+    #[cfg(feature = "unstable_additional_directories")]
     #[must_use]
     pub fn additional_directories(
         mut self,
@@ -1059,7 +1070,12 @@ pub struct LoadSessionRequest {
     pub mcp_servers: Vec<McpServer>,
     /// The working directory for this session.
     pub cwd: PathBuf,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
     /// Additional workspace roots to activate for this session. Each path must be absolute.
+    #[cfg(feature = "unstable_additional_directories")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub additional_directories: Option<Vec<PathBuf>>,
     /// The ID of the session to load.
@@ -1079,13 +1095,19 @@ impl LoadSessionRequest {
         Self {
             mcp_servers: vec![],
             cwd: cwd.into(),
+            #[cfg(feature = "unstable_additional_directories")]
             additional_directories: None,
             session_id: session_id.into(),
             meta: None,
         }
     }
 
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
     /// Additional workspace roots to activate for this session. Each path must be absolute.
+    #[cfg(feature = "unstable_additional_directories")]
     #[must_use]
     pub fn additional_directories(
         mut self,
@@ -1216,7 +1238,12 @@ pub struct ForkSessionRequest {
     pub session_id: SessionId,
     /// The working directory for this session.
     pub cwd: PathBuf,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
     /// Additional workspace roots to activate for this session. Each path must be absolute.
+    #[cfg(feature = "unstable_additional_directories")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub additional_directories: Option<Vec<PathBuf>>,
     /// List of MCP servers to connect to for this session.
@@ -1238,13 +1265,19 @@ impl ForkSessionRequest {
         Self {
             session_id: session_id.into(),
             cwd: cwd.into(),
+            #[cfg(feature = "unstable_additional_directories")]
             additional_directories: None,
             mcp_servers: vec![],
             meta: None,
         }
     }
 
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
     /// Additional workspace roots to activate for this session. Each path must be absolute.
+    #[cfg(feature = "unstable_additional_directories")]
     #[must_use]
     pub fn additional_directories(
         mut self,
@@ -1390,7 +1423,12 @@ pub struct ResumeSessionRequest {
     pub session_id: SessionId,
     /// The working directory for this session.
     pub cwd: PathBuf,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
     /// Additional workspace roots to activate for this session. Each path must be absolute.
+    #[cfg(feature = "unstable_additional_directories")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub additional_directories: Option<Vec<PathBuf>>,
     /// List of MCP servers to connect to for this session.
@@ -1412,13 +1450,19 @@ impl ResumeSessionRequest {
         Self {
             session_id: session_id.into(),
             cwd: cwd.into(),
+            #[cfg(feature = "unstable_additional_directories")]
             additional_directories: None,
             mcp_servers: vec![],
             meta: None,
         }
     }
 
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
     /// Additional workspace roots to activate for this session. Each path must be absolute.
+    #[cfg(feature = "unstable_additional_directories")]
     #[must_use]
     pub fn additional_directories(
         mut self,
@@ -1637,7 +1681,12 @@ pub struct ListSessionsRequest {
     /// Filter sessions by working directory. Must be an absolute path.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cwd: Option<PathBuf>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
     /// Filter sessions by the exact ordered additional workspace roots. Each path must be absolute.
+    #[cfg(feature = "unstable_additional_directories")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub additional_directories: Option<Vec<PathBuf>>,
     /// Opaque cursor token from a previous response's nextCursor field for cursor-based pagination
@@ -1665,7 +1714,12 @@ impl ListSessionsRequest {
         self
     }
 
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
     /// Filter sessions by the exact ordered additional workspace roots. Each path must be absolute.
+    #[cfg(feature = "unstable_additional_directories")]
     #[must_use]
     pub fn additional_directories(
         mut self,
@@ -1752,7 +1806,12 @@ pub struct SessionInfo {
     pub session_id: SessionId,
     /// The working directory for this session. Must be an absolute path.
     pub cwd: PathBuf,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
     /// Authoritative ordered additional workspace roots for this session. Each path must be absolute.
+    #[cfg(feature = "unstable_additional_directories")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub additional_directories: Option<Vec<PathBuf>>,
     /// Human-readable title for the session
@@ -1776,6 +1835,7 @@ impl SessionInfo {
         Self {
             session_id: session_id.into(),
             cwd: cwd.into(),
+            #[cfg(feature = "unstable_additional_directories")]
             additional_directories: None,
             title: None,
             updated_at: None,
@@ -1783,7 +1843,12 @@ impl SessionInfo {
         }
     }
 
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
     /// Authoritative ordered additional workspace roots for this session. Each path must be absolute.
+    #[cfg(feature = "unstable_additional_directories")]
     #[must_use]
     pub fn additional_directories(
         mut self,
@@ -3412,7 +3477,12 @@ pub struct SessionCapabilities {
     /// Whether the agent supports `session/list`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub list: Option<SessionListCapabilities>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
     /// Whether the agent supports `additionalDirectories` on session lifecycle requests and `session/list`.
+    #[cfg(feature = "unstable_additional_directories")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub additional_directories: Option<SessionAdditionalDirectoriesCapabilities>,
     /// **UNSTABLE**
@@ -3461,7 +3531,12 @@ impl SessionCapabilities {
         self
     }
 
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
     /// Whether the agent supports `additionalDirectories` on session lifecycle requests and `session/list`.
+    #[cfg(feature = "unstable_additional_directories")]
     #[must_use]
     pub fn additional_directories(
         mut self,
@@ -3540,10 +3615,15 @@ impl SessionListCapabilities {
     }
 }
 
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
 /// Capabilities for additional session directories support.
 ///
 /// By supplying `{}` it means that the agent supports the `additionalDirectories` field on
 /// session lifecycle requests and `session/list`.
+#[cfg(feature = "unstable_additional_directories")]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct SessionAdditionalDirectoriesCapabilities {
@@ -3556,6 +3636,7 @@ pub struct SessionAdditionalDirectoriesCapabilities {
     pub meta: Option<Meta>,
 }
 
+#[cfg(feature = "unstable_additional_directories")]
 impl SessionAdditionalDirectoriesCapabilities {
     #[must_use]
     pub fn new() -> Self {
@@ -4468,6 +4549,7 @@ mod test_serialization {
         assert!(matches!(deserialized, AuthMethod::Agent(_)));
     }
 
+    #[cfg(feature = "unstable_additional_directories")]
     #[test]
     fn test_session_additional_directories_serialization() {
         assert_eq!(
@@ -4525,6 +4607,7 @@ mod test_serialization {
         );
     }
 
+    #[cfg(feature = "unstable_additional_directories")]
     #[test]
     fn test_session_additional_directories_capabilities_serialization() {
         assert_eq!(

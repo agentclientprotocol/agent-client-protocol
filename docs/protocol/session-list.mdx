@@ -3,7 +3,7 @@ title: "Session List"
 description: "Discovering existing sessions"
 ---
 
-The `session/list` method allows Clients to discover sessions known to an Agent. Clients can use this to display session history, recover authoritative workspace roots, and switch between sessions.
+The `session/list` method allows Clients to discover sessions known to an Agent. Clients can use this to display session history and switch between sessions.
 
 Agents can also push session metadata updates to Clients in real-time via the `session_info_update` notification, keeping session titles and metadata in sync without polling.
 
@@ -36,7 +36,7 @@ sequenceDiagram
 
 Before attempting to list sessions, Clients **MUST** verify that the Agent supports this capability by checking the `sessionCapabilities.list` field in the `initialize` response:
 
-```json highlight={7-10}
+```json highlight={7-9}
 {
   "jsonrpc": "2.0",
   "id": 0,
@@ -44,8 +44,7 @@ Before attempting to list sessions, Clients **MUST** verify that the Agent suppo
     "protocolVersion": 1,
     "agentCapabilities": {
       "sessionCapabilities": {
-        "list": {},
-        "additionalDirectories": {}
+        "list": {}
       }
     }
   }
@@ -53,8 +52,6 @@ Before attempting to list sessions, Clients **MUST** verify that the Agent suppo
 ```
 
 If `sessionCapabilities.list` is not present, the Agent does not support listing sessions and Clients **MUST NOT** attempt to call `session/list`.
-
-If `sessionCapabilities.additionalDirectories` is present, Clients **MAY** use the `additionalDirectories` filter and rely on `SessionInfo.additionalDirectories` in the response.
 
 ## Listing Sessions
 
@@ -67,7 +64,6 @@ Clients discover existing sessions by calling the `session/list` method with opt
   "method": "session/list",
   "params": {
     "cwd": "/home/user/project",
-    "additionalDirectories": ["/home/user/shared", "/home/user/.agent/skills"],
     "cursor": "eyJwYWdlIjogMn0="
   }
 }
@@ -80,19 +76,10 @@ All parameters are optional. A request with an empty `params` object returns the
   with a matching `cwd` are returned.
 </ParamField>
 
-<ParamField path="additionalDirectories" type="string[]">
-  Filter sessions by the exact ordered `additionalDirectories` list. Each path
-  must be absolute. An empty array matches only sessions with no additional
-  directories. Clients **MUST** only send this field when the Agent advertises
-  `sessionCapabilities.additionalDirectories`.
-</ParamField>
-
 <ParamField path="cursor" type="string">
   Opaque cursor token from a previous response's `nextCursor` field for
   cursor-based pagination. See [Pagination](#pagination).
 </ParamField>
-
-When the Agent advertises `sessionCapabilities.additionalDirectories`, each returned `SessionInfo.additionalDirectories` value is the authoritative ordered additional-root list for that session.
 
 The Agent **MUST** respond with a list of sessions and optional pagination metadata:
 
@@ -105,10 +92,6 @@ The Agent **MUST** respond with a list of sessions and optional pagination metad
       {
         "sessionId": "sess_abc123def456",
         "cwd": "/home/user/project",
-        "additionalDirectories": [
-          "/home/user/shared",
-          "/home/user/.agent/skills"
-        ],
         "title": "Implement session list API",
         "updatedAt": "2025-10-29T14:22:15Z",
         "_meta": {
@@ -119,14 +102,12 @@ The Agent **MUST** respond with a list of sessions and optional pagination metad
       {
         "sessionId": "sess_xyz789ghi012",
         "cwd": "/home/user/another-project",
-        "additionalDirectories": [],
         "title": "Debug authentication flow",
         "updatedAt": "2025-10-28T16:45:30Z"
       },
       {
         "sessionId": "sess_uvw345rst678",
         "cwd": "/home/user/project",
-        "additionalDirectories": ["/home/user/shared"],
         "updatedAt": "2025-10-27T15:30:00Z"
       }
     ],
@@ -144,11 +125,6 @@ The Agent **MUST** respond with a list of sessions and optional pagination metad
     </ResponseField>
     <ResponseField name="cwd" type="string" required>
       Working directory for the session. Always an absolute path.
-    </ResponseField>
-    <ResponseField name="additionalDirectories" type="string[]">
-      Authoritative ordered additional workspace roots for the session. When
-      the Agent advertises `sessionCapabilities.additionalDirectories`, this
-      field is present and `[]` means the session has no additional roots.
     </ResponseField>
     <ResponseField name="title" type="string">
       Human-readable title for the session. May be auto-generated from the first prompt.
@@ -214,7 +190,7 @@ All fields are optional. Only include fields that have changed — omitted field
   Agent-specific metadata. See [Extensibility](./extensibility).
 </ResponseField>
 
-The `sessionId`, `cwd`, and `additionalDirectories` fields are **not** included in the update — `sessionId` is already in the notification's `params`, `cwd` is immutable, and this method does not define mid-session mutation of additional roots. Agents typically send this notification after the first meaningful exchange to auto-generate a title.
+The `sessionId` and `cwd` fields are **not** included in the update — `sessionId` is already in the notification's `params`, and `cwd` is immutable (set during [`session/new`](./session-setup#creating-a-session)). Agents typically send this notification after the first meaningful exchange to auto-generate a title.
 
 ## Interaction with Other Session Methods
 

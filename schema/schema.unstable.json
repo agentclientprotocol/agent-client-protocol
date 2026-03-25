@@ -2127,7 +2127,7 @@
           "type": ["object", "null"]
         },
         "additionalDirectories": {
-          "description": "Additional workspace roots to activate for this session. Each path must be absolute.",
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAdditional workspace roots to activate for this session. Each path must be absolute.",
           "items": {
             "type": "string"
           },
@@ -2475,7 +2475,7 @@
           "type": ["object", "null"]
         },
         "additionalDirectories": {
-          "description": "Filter sessions by the exact ordered additional workspace roots. Each path must be absolute.",
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nFilter sessions by the exact ordered additional workspace roots. Each path must be absolute.",
           "items": {
             "type": "string"
           },
@@ -2528,7 +2528,7 @@
           "type": ["object", "null"]
         },
         "additionalDirectories": {
-          "description": "Additional workspace roots to activate for this session. Each path must be absolute.",
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAdditional workspace roots to activate for this session. Each path must be absolute.",
           "items": {
             "type": "string"
           },
@@ -2899,7 +2899,7 @@
           "type": ["object", "null"]
         },
         "additionalDirectories": {
-          "description": "Additional workspace roots for this session. Each path must be absolute.\n\nThese expand the session's filesystem scope without changing `cwd`, which\nremains the base for relative paths.",
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAdditional workspace roots for this session. Each path must be absolute.\n\nThese expand the session's filesystem scope without changing `cwd`, which\nremains the base for relative paths.",
           "items": {
             "type": "string"
           },
@@ -3513,7 +3513,7 @@
           "type": ["object", "null"]
         },
         "additionalDirectories": {
-          "description": "Additional workspace roots to activate for this session. Each path must be absolute.",
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAdditional workspace roots to activate for this session. Each path must be absolute.",
           "items": {
             "type": "string"
           },
@@ -3612,7 +3612,7 @@
       "type": "object"
     },
     "SessionAdditionalDirectoriesCapabilities": {
-      "description": "Capabilities for additional session directories support.\n\nBy supplying `{}` it means that the agent supports the `additionalDirectories` field on\nsession lifecycle requests and `session/list`.",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapabilities for additional session directories support.\n\nBy supplying `{}` it means that the agent supports the `additionalDirectories` field on\nsession lifecycle requests and `session/list`.",
       "properties": {
         "_meta": {
           "additionalProperties": true,
@@ -3639,7 +3639,7 @@
               "type": "null"
             }
           ],
-          "description": "Whether the agent supports `additionalDirectories` on session lifecycle requests and `session/list`."
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nWhether the agent supports `additionalDirectories` on session lifecycle requests and `session/list`."
         },
         "close": {
           "anyOf": [
@@ -3950,7 +3950,7 @@
           "type": ["object", "null"]
         },
         "additionalDirectories": {
-          "description": "Authoritative ordered additional workspace roots for this session. Each path must be absolute.",
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAuthoritative ordered additional workspace roots for this session. Each path must be absolute.",
           "items": {
             "type": "string"
           },

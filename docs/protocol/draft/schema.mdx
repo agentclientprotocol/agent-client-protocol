@@ -357,7 +357,12 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
 </ResponseField>
 <ResponseField name="additionalDirectories" type={<><span><><span>"string"</span><span>[]</span></></span><span> | null</span></>} >
-  Additional workspace roots to activate for this session. Each path must be absolute.
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Additional workspace roots to activate for this session. Each path must be absolute.
+
 </ResponseField>
 <ResponseField name="cwd" type={"string"} required>
   The working directory for this session.
@@ -438,7 +443,12 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
 </ResponseField>
 <ResponseField name="additionalDirectories" type={<><span><><span>"string"</span><span>[]</span></></span><span> | null</span></>} >
-  Filter sessions by the exact ordered additional workspace roots. Each path must be absolute.
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Filter sessions by the exact ordered additional workspace roots. Each path must be absolute.
+
 </ResponseField>
 <ResponseField name="cursor" type={"string | null"} >
   Opaque cursor token from a previous response's nextCursor field for cursor-based pagination
@@ -507,7 +517,12 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
 </ResponseField>
 <ResponseField name="additionalDirectories" type={<><span><><span>"string"</span><span>[]</span></></span><span> | null</span></>} >
-  Additional workspace roots to activate for this session. Each path must be absolute.
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Additional workspace roots to activate for this session. Each path must be absolute.
+
 </ResponseField>
 <ResponseField name="cwd" type={"string"} required>
   The working directory for this session.
@@ -589,7 +604,11 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
 </ResponseField>
 <ResponseField name="additionalDirectories" type={<><span><><span>"string"</span><span>[]</span></></span><span> | null</span></>} >
-  Additional workspace roots for this session. Each path must be absolute.
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Additional workspace roots for this session. Each path must be absolute.
 
 These expand the session's filesystem scope without changing `cwd`, which
 remains the base for relative paths.
@@ -794,7 +813,12 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
 </ResponseField>
 <ResponseField name="additionalDirectories" type={<><span><><span>"string"</span><span>[]</span></></span><span> | null</span></>} >
-  Additional workspace roots to activate for this session. Each path must be absolute.
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Additional workspace roots to activate for this session. Each path must be absolute.
+
 </ResponseField>
 <ResponseField name="cwd" type={"string"} required>
   The working directory for this session.
@@ -4186,6 +4210,10 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
 ## <span class="font-mono">SessionAdditionalDirectoriesCapabilities</span>
 
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
 Capabilities for additional session directories support.
 
 By supplying `\{\}` it means that the agent supports the `additionalDirectories` field on
@@ -4229,7 +4257,12 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
 </ResponseField>
 <ResponseField name="additionalDirectories" type={<><span><a href="#sessionadditionaldirectoriescapabilities">SessionAdditionalDirectoriesCapabilities</a></span><span> | null</span></>} >
-  Whether the agent supports `additionalDirectories` on session lifecycle requests and `session/list`.
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Whether the agent supports `additionalDirectories` on session lifecycle requests and `session/list`.
+
 </ResponseField>
 <ResponseField name="close" type={<><span><a href="#sessionclosecapabilities">SessionCloseCapabilities</a></span><span> | null</span></>} >
   **UNSTABLE**
@@ -4537,7 +4570,12 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
 </ResponseField>
 <ResponseField name="additionalDirectories" type={<><span><><span>"string"</span><span>[]</span></></span><span> | null</span></>} >
-  Authoritative ordered additional workspace roots for this session. Each path must be absolute.
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Authoritative ordered additional workspace roots for this session. Each path must be absolute.
+
 </ResponseField>
 <ResponseField name="cwd" type={"string"} required>
   The working directory for this session. Must be an absolute path.

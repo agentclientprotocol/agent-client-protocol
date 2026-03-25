@@ -223,9 +223,6 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
 </ResponseField>
-<ResponseField name="additionalDirectories" type={<><span><><span>"string"</span><span>[]</span></></span><span> | null</span></>} >
-  Filter sessions by the exact ordered additional workspace roots. Each path must be absolute.
-</ResponseField>
 <ResponseField name="cursor" type={"string | null"} >
   Opaque cursor token from a previous response's nextCursor field for cursor-based pagination
 </ResponseField>
@@ -291,9 +288,6 @@ these keys.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
-</ResponseField>
-<ResponseField name="additionalDirectories" type={<><span><><span>"string"</span><span>[]</span></></span><span> | null</span></>} >
-  Additional workspace roots to activate for this session. Each path must be absolute.
 </ResponseField>
 <ResponseField name="cwd" type={"string"} required>
   The working directory for this session.
@@ -364,13 +358,6 @@ metadata to their interactions. Implementations MUST NOT make assumptions about 
 these keys.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-
-</ResponseField>
-<ResponseField name="additionalDirectories" type={<><span><><span>"string"</span><span>[]</span></></span><span> | null</span></>} >
-  Additional workspace roots for this session. Each path must be absolute.
-
-These expand the session's filesystem scope without changing `cwd`, which
-remains the base for relative paths.
 
 </ResponseField>
 <ResponseField name="cwd" type={"string"} required>
@@ -2580,26 +2567,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
   The ID of the option the user selected.
 </ResponseField>
 
-## <span class="font-mono">SessionAdditionalDirectoriesCapabilities</span>
-
-Capabilities for additional session directories support.
-
-By supplying `\{\}` it means that the agent supports the `additionalDirectories` field on
-session lifecycle requests and `session/list`.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-
-</ResponseField>
-
 ## <span class="font-mono">SessionCapabilities</span>
 
 Session capabilities supported by the agent.
@@ -2623,9 +2590,6 @@ these keys.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
-</ResponseField>
-<ResponseField name="additionalDirectories" type={<><span><a href="#sessionadditionaldirectoriescapabilities">SessionAdditionalDirectoriesCapabilities</a></span><span> | null</span></>} >
-  Whether the agent supports `additionalDirectories` on session lifecycle requests and `session/list`.
 </ResponseField>
 <ResponseField name="list" type={<><span><a href="#sessionlistcapabilities">SessionListCapabilities</a></span><span> | null</span></>} >
   Whether the agent supports `session/list`.
@@ -2822,9 +2786,6 @@ these keys.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
-</ResponseField>
-<ResponseField name="additionalDirectories" type={<><span><><span>"string"</span><span>[]</span></></span><span> | null</span></>} >
-  Authoritative ordered additional workspace roots for this session. Each path must be absolute.
 </ResponseField>
 <ResponseField name="cwd" type={"string"} required>
   The working directory for this session. Must be an absolute path.
