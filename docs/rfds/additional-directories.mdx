@@ -150,8 +150,8 @@ When an agent supports both `sessionCapabilities.additionalDirectories` and `ses
   "id": 5,
   "method": "session/list",
   "params": {
-    "cwd": "/workspace/app",
-    "additionalDirectories": ["/workspace/libs/shared", "/workspace/skills"]
+    "cwd": "/home/user/project",
+    "additionalDirectories": ["/home/user/shared-lib", "/home/user/product-docs"]
   }
 }
 ```
@@ -164,10 +164,10 @@ When an agent supports both `sessionCapabilities.additionalDirectories` and `ses
     "sessions": [
       {
         "sessionId": "sess_abc123",
-        "cwd": "/workspace/app",
+        "cwd": "/home/user/project",
         "additionalDirectories": [
-          "/workspace/libs/shared",
-          "/workspace/skills"
+          "/home/user/shared-lib",
+          "/home/user/product-docs"
         ],
         "updatedAt": "2026-03-24T12:00:00Z"
       }
@@ -303,8 +303,8 @@ If a client launches an agent with direct filesystem access, `additionalDirector
   "id": 1,
   "method": "session/new",
   "params": {
-    "cwd": "/workspace/app",
-    "additionalDirectories": ["/workspace/libs/shared", "/workspace/skills"],
+    "cwd": "/home/user/project",
+    "additionalDirectories": ["/home/user/shared-lib", "/home/user/product-docs"],
     "mcpServers": []
   }
 }
@@ -319,8 +319,8 @@ If a client launches an agent with direct filesystem access, `additionalDirector
   "method": "session/load",
   "params": {
     "sessionId": "sess_abc123",
-    "cwd": "/workspace/app",
-    "additionalDirectories": ["/workspace/libs/shared", "/workspace/skills"],
+    "cwd": "/home/user/project",
+    "additionalDirectories": ["/home/user/shared-lib", "/home/user/product-docs"],
     "mcpServers": []
   }
 }
@@ -335,8 +335,8 @@ If a client launches an agent with direct filesystem access, `additionalDirector
   "method": "session/resume",
   "params": {
     "sessionId": "sess_abc123",
-    "cwd": "/workspace/app",
-    "additionalDirectories": ["/workspace/libs/shared", "/workspace/skills"],
+    "cwd": "/home/user/project",
+    "additionalDirectories": ["/home/user/shared-lib", "/home/user/product-docs"],
     "mcpServers": []
   }
 }
@@ -351,8 +351,8 @@ If a client launches an agent with direct filesystem access, `additionalDirector
   "method": "session/fork",
   "params": {
     "sessionId": "sess_abc123",
-    "cwd": "/workspace/app",
-    "additionalDirectories": ["/workspace/libs/shared", "/workspace/skills"],
+    "cwd": "/home/user/project",
+    "additionalDirectories": ["/home/user/shared-lib", "/home/user/product-docs"],
     "mcpServers": []
   }
 }

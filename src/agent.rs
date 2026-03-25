@@ -4553,25 +4553,25 @@ mod test_serialization {
     #[test]
     fn test_session_additional_directories_serialization() {
         assert_eq!(
-            serde_json::to_value(NewSessionRequest::new("/workspace/app")).unwrap(),
+            serde_json::to_value(NewSessionRequest::new("/home/user/project")).unwrap(),
             json!({
-                "cwd": "/workspace/app",
+                "cwd": "/home/user/project",
                 "mcpServers": []
             })
         );
         assert_eq!(
             serde_json::to_value(
-                NewSessionRequest::new("/workspace/app").additional_directories(vec![
-                    PathBuf::from("/workspace/libs/shared"),
-                    PathBuf::from("/workspace/skills"),
+                NewSessionRequest::new("/home/user/project").additional_directories(vec![
+                    PathBuf::from("/home/user/shared-lib"),
+                    PathBuf::from("/home/user/product-docs"),
                 ])
             )
             .unwrap(),
             json!({
-                "cwd": "/workspace/app",
+                "cwd": "/home/user/project",
                 "additionalDirectories": [
-                    "/workspace/libs/shared",
-                    "/workspace/skills"
+                    "/home/user/shared-lib",
+                    "/home/user/product-docs"
                 ],
                 "mcpServers": []
             })
@@ -4587,13 +4587,13 @@ mod test_serialization {
         );
         assert_eq!(
             serde_json::to_value(
-                SessionInfo::new("sess_abc123", "/workspace/app")
+                SessionInfo::new("sess_abc123", "/home/user/project")
                     .additional_directories(Vec::<PathBuf>::new())
             )
             .unwrap(),
             json!({
                 "sessionId": "sess_abc123",
-                "cwd": "/workspace/app",
+                "cwd": "/home/user/project",
                 "additionalDirectories": []
             })
         );
