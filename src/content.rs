@@ -505,3 +505,73 @@ pub enum Role {
     Assistant,
     User,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_text_content_roundtrip() {
+        let content = TextContent::new("hello world");
+        let json = serde_json::to_value(&content).unwrap();
+        let parsed: TextContent = serde_json::from_value(json).unwrap();
+        assert_eq!(content, parsed);
+    }
+
+    #[test]
+    fn test_text_content_omits_optional_fields() {
+        let content = TextContent::new("hello");
+        let json = serde_json::to_value(&content).unwrap();
+        assert!(!json.as_object().unwrap().contains_key("annotations"));
+        assert!(!json.as_object().unwrap().contains_key("meta"));
+    }
+
+    #[test]
+    fn test_text_content_from_string() {
+        let block: ContentBlock = "hello".into();
+        match block {
+            ContentBlock::Text(c) => assert_eq!(c.text, "hello"),
+            _ => panic!("Expected Text variant"),
+        }
+    }
+
+    #[test]
+    fn test_image_content_roundtrip() {
+        let content = ImageContent::new("base64data", "image/png");
+        let json = serde_json::to_value(&content).unwrap();
+        let parsed: ImageContent = serde_json::from_value(json).unwrap();
+        assert_eq!(content, parsed);
+    }
+
+    #[test]
+    fn test_image_content_omits_optional_fields() {
+        let content = ImageContent::new("data", "image/png");
+        let json = serde_json::to_value(&content).unwrap();
+        assert!(!json.as_object().unwrap().contains_key("uri"));
+        assert!(!json.as_object().unwrap().contains_key("annotations"));
+        assert!(!json.as_object().unwrap().contains_key("meta"));
+    }
+
+    #[test]
+    fn test_image_content_with_uri() {
+        let content = ImageContent::new("data", "image/png").uri("https://example.com/image.png");
+        let json = serde_json::to_value(&content).unwrap();
+        assert_eq!(json["uri"], "https://example.com/image.png");
+    }
+
+    #[test]
+    fn test_audio_content_roundtrip() {
+        let content = AudioContent::new("base64audio", "audio/mp3");
+        let json = serde_json::to_value(&content).unwrap();
+        let parsed: AudioContent = serde_json::from_value(json).unwrap();
+        assert_eq!(content, parsed);
+    }
+
+    #[test]
+    fn test_audio_content_omits_optional_fields() {
+        let content = AudioContent::new("data", "audio/mp3");
+        let json = serde_json::to_value(&content).unwrap();
+        assert!(!json.as_object().unwrap().contains_key("annotations"));
+        assert!(!json.as_object().unwrap().contains_key("meta"));
+    }
+}
