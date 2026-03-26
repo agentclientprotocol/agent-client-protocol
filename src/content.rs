@@ -505,3 +505,43 @@ pub enum Role {
     Assistant,
     User,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_role_assistant_serialize() {
+        let role = Role::Assistant;
+        let json = serde_json::to_value(role).unwrap();
+        assert_eq!(json, serde_json::json!("assistant"));
+    }
+
+    #[test]
+    fn test_role_user_serialize() {
+        let role = Role::User;
+        let json = serde_json::to_value(role).unwrap();
+        assert_eq!(json, serde_json::json!("user"));
+    }
+
+    #[test]
+    fn test_role_assistant_deserialize() {
+        let role: Role = serde_json::from_value(serde_json::json!("assistant")).unwrap();
+        assert_eq!(role, Role::Assistant);
+    }
+
+    #[test]
+    fn test_role_user_deserialize() {
+        let role: Role = serde_json::from_value(serde_json::json!("user")).unwrap();
+        assert_eq!(role, Role::User);
+    }
+
+    #[test]
+    fn test_role_roundtrip() {
+        for role in [Role::Assistant, Role::User] {
+            let json = serde_json::to_value(&role).unwrap();
+            let parsed: Role = serde_json::from_value(json).unwrap();
+            assert_eq!(role, parsed);
+        }
+    }
+}
