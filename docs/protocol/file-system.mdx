@@ -5,6 +5,19 @@ description: "Client filesystem access methods"
 
 The filesystem methods allow Agents to read and write text files within the Client's environment. These methods enable Agents to access unsaved editor state and allow Clients to track file modifications made during agent execution.
 
+## Session Root Scope
+
+Filesystem methods always operate on absolute paths, but the Client **MUST**
+authorize those paths against the session's effective root set.
+
+- by default, the effective root set is just `cwd`
+- if the unstable `sessionCapabilities.additionalDirectories` capability is in use, the effective root set becomes `[cwd, ...additionalDirectories]`
+- `cwd` remains the base for relative paths; additional roots only expand filesystem scope
+- when a Client discovers a session through `session/list`, it SHOULD treat `cwd` plus `SessionInfo.additionalDirectories` as the authoritative current root set until a later lifecycle request changes it
+
+Because ACP filesystem methods are client-mediated, the Client remains
+responsible for enforcing those root boundaries.
+
 ## Checking Support
 
 Before attempting to use filesystem methods, Agents **MUST** verify that the Client supports these capabilities by checking the [Client Capabilities](./initialization#client-capabilities) field in the `initialize` response:
@@ -46,7 +59,8 @@ The `fs/read_text_file` method allows Agents to read text file contents from the
 ```
 
 <ParamField path="sessionId" type="SessionId" required>
-  The [Session ID](./session-setup#session-id) for this request
+  The [Session ID](./session-setup#session-id) for this request. The session
+  determines which filesystem roots are in scope for the path.
 </ParamField>
 
 <ParamField path="path" type="string" required>
@@ -91,7 +105,8 @@ The `fs/write_text_file` method allows Agents to write or update text files in t
 ```
 
 <ParamField path="sessionId" type="SessionId" required>
-  The [Session ID](./session-setup#session-id) for this request
+  The [Session ID](./session-setup#session-id) for this request. The session
+  determines which filesystem roots are in scope for the path.
 </ParamField>
 
 <ParamField path="path" type="string" required>
