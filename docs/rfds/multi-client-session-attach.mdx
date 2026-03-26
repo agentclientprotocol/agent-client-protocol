@@ -16,7 +16,7 @@ ACP currently assumes a **1:1 relationship** between a client and an agent sessi
 
 1. **No unified oversight** — Each agent session is bound to the frontend that started it. If you start Claude Code in terminal A, you can only respond to its permission requests from terminal A.
 2. **Permission requests go unanswered** — When an agent blocks on `request_permission`, the developer must find the correct terminal/tab/window to respond. With multiple concurrent sessions, this becomes a significant context-switching tax.
-3. **No observation without control** — There is no way to passively monitor an active session from a secondary client (e.g., a mobile device, a web dashboard, or a notification center).
+3. **No secondary access** — There is no way to monitor or interact with an active session from a secondary client (e.g., a mobile device, a web dashboard, or a notification center).
 4. **Session handoff is sequential, not concurrent** — `session/load` allows a new client to resume a previous session, but the original client must have disconnected first. There is no mechanism for a second client to "attach" to a live, in-progress session.
 
 ### Current workarounds
@@ -45,30 +45,13 @@ Add a `session/attach` method that allows a client to connect to an **active, in
 1. A replay of conversation history, controlled by the `historyPolicy` parameter (see below)
 2. A live stream of `session/update` notifications going forward
 3. The ability to respond to `request_permission` prompts
-4. Optionally, the ability to send `session/prompt` messages
+4. The ability to send `session/prompt` messages
 
-### Capability negotiation
+### No role distinction
 
-Agents (or proxies) advertise multi-client support during initialization:
+All connected clients are equal participants — any client can send prompts, respond to permission requests, or passively observe. There is no role distinction enforced by the proxy. Clients that do not wish to handle certain events (e.g., permission requests or elicitation) simply ignore them. This keeps the proxy simple: it broadcasts every event to every client without needing per-event filtering rules, and avoids the need to revisit routing logic whenever a new event type is added to the protocol.
 
-```json
-{
-  "agentCapabilities": {
-    "sessionCapabilities": {
-      "attach": {
-        "roles": ["controller", "observer"]
-      }
-    }
-  }
-}
-```
-
-### Client roles
-
-- **Controller** — Can send prompts, respond to permission requests, cancel operations. The original client is always a controller.
-- **Observer** — Receives `session/update` notifications and can see pending `request_permission` prompts, but cannot act on them unless promoted via a future `session/promote` extension.
-
-A client specifies its requested role and history policy when attaching:
+A client specifies its history policy when attaching:
 
 ```json
 {
@@ -77,7 +60,6 @@ A client specifies its requested role and history policy when attaching:
   "method": "session/attach",
   "params": {
     "sessionId": "sess_abc123def456",
-    "role": "controller",
     "historyPolicy": "full",
     "clientId": "d290f1ee-6c54-4b01-90e6-d701748f0851",
     "clientInfo": {
@@ -94,7 +76,7 @@ The `historyPolicy` parameter controls what history is replayed on attach:
 
 - `"full"` (default) — Replay the complete conversation history, matching the behaviour of `session/load`. Best for IDE and desktop clients.
 - `"pending_only"` — Replay only events that require action (e.g., pending `request_permission` prompts). Best for notification clients.
-- `"none"` — No history replay; receive only future `session/update` events. Best for lightweight observer or logging clients.
+- `"none"` — No history replay; receive only future `session/update` events. Best for lightweight monitoring or logging clients.
 - `"after_message"` — Replay history starting after the message identified by `afterMessageId`. Best for reconnecting clients that already have partial history and only need the delta. Requires the [Message ID RFD](./message-id) to be adopted.
 
 When using `"after_message"`, the client includes an `afterMessageId` field:
@@ -106,7 +88,6 @@ When using `"after_message"`, the client includes an `afterMessageId` field:
   "method": "session/attach",
   "params": {
     "sessionId": "sess_abc123def456",
-    "role": "controller",
     "historyPolicy": "after_message",
     "afterMessageId": "ea87d0e7-beb8-484a-a404-94a30b78a5a8",
     "clientId": "d290f1ee-6c54-4b01-90e6-d701748f0851",
@@ -128,7 +109,6 @@ The response follows standard ACP patterns, returning session metadata. When `hi
   "id": 5,
   "result": {
     "sessionId": "sess_abc123def456",
-    "role": "controller",
     "history": [
       {
         "type": "prompt",
@@ -146,8 +126,7 @@ The response follows standard ACP patterns, returning session metadata. When `hi
       {
         "clientId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
         "name": "Claude Code",
-        "version": "1.0.0",
-        "role": "controller"
+        "version": "1.0.0"
       }
     ]
   }
@@ -184,7 +163,7 @@ The proxy returns a JSON-RPC error when attach cannot be completed:
 ```
 
 ```json
-// Session does not support attach (capability absent)
+// Proxy does not support multi-client attach
 {
   "jsonrpc": "2.0",
   "id": 5,
@@ -197,7 +176,7 @@ The proxy returns a JSON-RPC error when attach cannot be completed:
 
 ### Permission request routing
 
-When an agent emits `request_permission`, it is broadcast to **all connected controller clients**. The first client to respond wins (first-writer-wins semantics). The agent then notifies all other clients that the permission was resolved:
+When an agent emits `request_permission`, it is broadcast to **all connected clients**. The first client to respond wins (first-writer-wins semantics). The agent then notifies all other clients that the permission was resolved:
 
 ```json
 {
@@ -219,17 +198,17 @@ When an agent emits `request_permission`, it is broadcast to **all connected con
 }
 ```
 
-### Pending permission replay for attaching controllers
+### Pending permission replay on attach
 
-When a controller attaches with `historyPolicy: "full"` or `"pending_only"`, pending `request_permission` items appear in the history replay. However, history entries are informational — they give the client display context but do not provide a mechanism to *respond*.
+When a client attaches with `historyPolicy: "full"` or `"pending_only"`, pending `request_permission` items appear in the history replay. However, history entries are informational — they give the client display context but do not provide a mechanism to *respond*.
 
-To make pending permissions actionable, the proxy re-issues any unresolved `request_permission` calls as standard JSON-RPC requests to the newly-attached controller **after** the `session/attach` response is sent. From the client's perspective, these are indistinguishable from fresh permission requests — no special handling is required.
+To make pending permissions actionable, the proxy re-issues any unresolved `request_permission` calls as standard JSON-RPC requests to the newly-attached client **after** the `session/attach` response is sent. From the client's perspective, these are indistinguishable from fresh permission requests — no special handling is required.
 
-The proxy continues to enforce first-writer-wins semantics: if another client resolves the permission before the new controller responds, the proxy discards the late response and sends the new client a `permission_resolved` notification. This two-step approach (history for display context, re-issued RPC for actionability) keeps client implementation simple while ensuring no pending permission goes unactionable.
+The proxy continues to enforce first-writer-wins semantics: if another client resolves the permission before the new client responds, the proxy discards the late response and sends the new client a `permission_resolved` notification. This two-step approach (history for display context, re-issued RPC for actionability) keeps client implementation simple while ensuring no pending permission goes unactionable.
 
 ### Turn completion notification
 
-When a controller sends a `session/prompt` and the agent finishes processing that turn, the proxy broadcasts a `turn_complete` notification to all connected clients. This is essential for multiplexed clients — without it, secondary clients have no reliable way to know when the agent has finished responding and is ready for the next prompt.
+When a client sends a `session/prompt` and the agent finishes processing that turn, the proxy broadcasts a `turn_complete` notification to all connected clients. This is essential for multiplexed clients — without it, secondary clients have no reliable way to know when the agent has finished responding and is ready for the next prompt.
 
 ```json
 {
@@ -252,7 +231,7 @@ Note: The primary client (the one that sent the prompt) already receives this si
 
 ### Prompt echoing
 
-When a controller sends a `session/prompt`, the proxy echoes that prompt to all **other** connected clients via a `prompt_received` session update. Without this, secondary clients would see the agent's response stream without knowing what question or instruction triggered it.
+When a client sends a `session/prompt`, the proxy echoes that prompt to all **other** connected clients via a `prompt_received` session update. Without this, secondary clients would see the agent's response stream without knowing what question or instruction triggered it.
 
 ```json
 {
@@ -286,7 +265,7 @@ The prompt is echoed *before* the agent begins streaming its response, so client
 The current stdio transport is inherently single-client. Multi-client attach requires a **network-capable transport**. We propose this works over:
 
 - **WebSocket** — For persistent, bidirectional connections from multiple clients
-- **HTTP + SSE** — For observer-only clients that only need to receive updates
+- **HTTP + SSE** — For clients that only need to receive updates
 
 The agent (or an ACP proxy) would listen on a network port. This is consistent with the direction of the **[Proxy Chains RFD](./proxy-chains)**, where a proxy mediates between clients and agents.
 
@@ -303,12 +282,12 @@ Agent (Claude Code) ←(stdio)→ ACP Proxy ←(WebSocket)→ Client A (Toad/IDE
 The proxy:
 - Holds the single stdio connection to the agent
 - Fans out `session/update` notifications to all connected clients
-- Broadcasts `request_permission` to all controllers
-- Re-issues pending `request_permission` calls to newly-attached controllers
+- Broadcasts `request_permission` to all clients
+- Re-issues pending `request_permission` calls to newly-attached clients
 - Routes the first response back to the agent (first-writer-wins)
-- Echoes `session/prompt` from one controller to all other clients as `prompt_received`
+- Echoes `session/prompt` from one client to all other clients as `prompt_received`
 - Broadcasts `turn_complete` to all non-prompting clients when a turn finishes
-- Tracks client roles, `clientId`s, and connection state
+- Tracks `clientId`s and connection state
 - Buffers message history for `after_message` replay on reconnect
 
 This means existing agents work **unchanged** — the proxy handles all multi-client logic. This approach aligns perfectly with the proxy-chains architecture, where proxies sit between clients and agents to extend functionality without modifying the core agent implementation.
@@ -341,7 +320,7 @@ On success, the proxy confirms the detach:
 
 Lifecycle rules:
 - Clients can detach voluntarily via `session/detach`
-- If the original (owning) client detaches, the session continues as long as at least one controller remains
+- If the original (owning) client detaches, the session continues as long as at least one client remains
 - If all clients detach, the agent MAY keep the session alive for a configurable timeout (allowing reconnection)
 - Agents notify remaining clients when a peer disconnects via a `client_disconnected` session update:
 
@@ -356,8 +335,7 @@ Lifecycle rules:
       "client": {
         "clientId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
         "name": "Claude Code",
-        "version": "1.0.0",
-        "role": "controller"
+        "version": "1.0.0"
       },
       "timestamp": "2026-02-18T15:30:00Z"
     }
@@ -372,44 +350,42 @@ With multi-client session attach:
 1. **Unified notification dashboard** — A single web or mobile app shows all pending permission requests across all your running agent sessions. You tap "approve" on your phone while the agent continues in your terminal.
 2. **Pair programming with agents** — Two developers attach to the same agent session. One focuses on reviewing the agent's output while the other provides guidance.
 3. **IDE + terminal coexistence** — Start a session in Toad or your terminal, but have your IDE also attached for inline diff display and file navigation.
-4. **Monitoring and audit** — Observer clients can log all agent actions for compliance or debugging without interfering with the workflow.
+4. **Monitoring and audit** — Clients can passively log all agent actions for compliance or debugging without interfering with the workflow.
 5. **Graceful client recovery** — If your terminal crashes, you attach from a new terminal and pick up exactly where you were — no `session/load` replay delay because the session never stopped.
 6. **Cross-device continuity** — Start a coding session on your desktop, get a permission request notification on your phone, approve it while commuting, then review the results on your laptop when you get home.
-7. **Configurable client limits** — Proxies could advertise a `maxClients` cap in their `attach` capability, allowing operators to limit concurrent connections per session for resource or security reasons.
+7. **Configurable client limits** — Proxies could limit concurrent connections per session for resource or security reasons.
 
 ## Implementation details and plan
 
 ### Phase 1: Protocol specification
 1. Add `session/attach` and `session/detach` methods to schema.json
-2. Define `attach` capability in `sessionCapabilities` with a `roles` field
-3. Define client roles (controller/observer) and their semantics
-4. Specify `permission_resolved`, `client_disconnected`, `turn_complete`, and `prompt_received` session update variants
-5. Document interaction with existing `session/load` and `session/resume`
+2. Specify `permission_resolved`, `client_disconnected`, `turn_complete`, and `prompt_received` session update variants
+3. Document interaction with existing `session/load` and `session/resume`
 
 ### Phase 2: Reference proxy implementation
-6. Build a reference multi-client proxy (potentially extending `sacp-conductor` from the proxy-chains RFD) that:
+4. Build a reference multi-client proxy (potentially extending `sacp-conductor` from the proxy-chains RFD) that:
    - Spawns an agent subprocess over stdio
    - Accepts multiple client connections over WebSocket
    - Implements attach/detach and permission routing logic
    - Handles MCP-over-ACP for any MCP servers the agent provides
-7. Test with Claude Code, Gemini CLI, and Codex as backend agents
+5. Test with Claude Code, Gemini CLI, and Codex as backend agents
 
 ### Phase 3: Client integration
-8. Add attach support to at least one ACP client (Toad, Zed, or a purpose-built dashboard)
-9. Build a minimal "notification center" client that demonstrates the core use case
+6. Add attach support to at least one ACP client (Toad, Zed, or a purpose-built dashboard)
+7. Build a minimal "notification center" client that demonstrates the core use case
 
 ### Compatibility considerations
-- **Fully backward compatible** — Agents that don't advertise `attach` capability work exactly as today
+- **Fully backward compatible** — Agents that don't support multi-client attach work exactly as today
 - **Proxy-based approach** means no changes required to existing agents
-- **Optional for clients** — Clients that don't need multi-client support ignore the capability
+- **Optional for clients** — Clients that don't need multi-client support simply don't call `session/attach`
 - **Works with session/list** — Clients can discover sessions via `session/list` (if supported) before attempting to attach
 
 ### Security considerations
 - **Authentication** — Attaching clients MUST authenticate with the same identity as the session owner (or be explicitly authorized). The proxy is responsible for enforcing this policy.
-- **Role enforcement** — Observer clients MUST NOT be able to send prompts or respond to permissions. The proxy enforces role restrictions.
+- **Equal participation** — All connected clients can send prompts and respond to permissions. Clients that do not wish to handle certain events simply ignore them.
 - **Audit trail** — Permission resolutions SHOULD include which client responded (for accountability), as shown in the `resolvedBy` field.
 - **Transport security** — WebSocket connections MUST use TLS in non-localhost scenarios.
-- **Authorization model** — Future extensions could support fine-grained permissions (e.g., allow specific users to attach as observers but not controllers).
+- **Authorization model** — Future extensions could support fine-grained permissions (e.g., restricting which users can attach to a given session).
 
 ## Frequently asked questions
 
@@ -438,34 +414,9 @@ Multi-client session attach specifies one concrete capability a proxy should sup
 
 The reference implementation would likely extend the `sacp-conductor` from the proxy-chains work to add multi-client multiplexing capabilities.
 
-### What happens if two controllers respond to the same permission request?
+### What happens if two clients respond to the same permission request?
 
 First-writer-wins. The agent (or proxy) accepts the first valid response and ignores subsequent ones. All clients receive a `permission_resolved` notification indicating the outcome and which client provided the response. This is a simple, well-understood concurrency model that avoids complex conflict resolution.
-
-### Could observer clients be promoted to controllers?
-
-Yes, this could be supported via a `session/promote` method (future extension). For the initial proposal, roles are fixed at attach time to keep the design simple.
-
-A future `session/promote` request might look like:
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 7,
-  "method": "session/promote",
-  "params": {
-    "sessionId": "sess_abc123def456",
-    "targetClient": {
-      "clientId": "f7e8d9c0-b1a2-3456-7890-abcdef123456",
-      "name": "mobile-app",
-      "version": "1.0.0"
-    },
-    "newRole": "controller"
-  }
-}
-```
-
-This would require authorization from an existing controller.
 
 ### How does this work with MCP servers?
 
@@ -484,9 +435,9 @@ The proxy can implement rate limiting policies to prevent a misbehaving client f
 
 Yes! Mobile clients would connect via WebSocket (likely over TLS for security). A mobile app could:
 1. Discover sessions via `session/list` (if the proxy supports it)
-2. Attach as an observer to monitor progress
+2. Attach to monitor progress
 3. Receive push notifications for `request_permission` events
-4. Upgrade to controller role (via future `session/promote`) to respond
+4. Respond to permission requests or send prompts as needed
 
 This enables the "approve on phone" use case described in the shiny future section.
 
@@ -510,6 +461,7 @@ The typical flow for a dashboard client would be:
 
 ## Revision history
 
-- **2026-02-27**: Added optional `clientId` field for disambiguating multiple instances of the same client; clarified pending permission request replay mechanism for attaching controllers
-- **2026-02-24**: Added `after_message` history policy with `afterMessageId` for delta sync on reconnect; added `turn_complete` notification for secondary clients; added `prompt_received` echoing so all clients see prompts sent by other controllers
+- **2026-03-27**: Removed controller/observer role distinction and capability negotiation — all clients are equal participants, simplifying proxy routing and future extensibility
+- **2026-02-27**: Added optional `clientId` field for disambiguating multiple instances of the same client; clarified pending permission request replay mechanism for attaching clients
+- **2026-02-24**: Added `after_message` history policy with `afterMessageId` for delta sync on reconnect; added `turn_complete` notification for secondary clients; added `prompt_received` echoing so all clients see prompts sent by other clients
 - **2026-02-18**: Initial proposal
