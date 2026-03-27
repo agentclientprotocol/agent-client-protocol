@@ -363,6 +363,10 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 Additional workspace roots to activate for this session. Each path must be absolute.
 
+When omitted or empty, no additional roots are activated. When non-empty,
+this is the complete resulting additional-root list for the forked
+session.
+
 </ResponseField>
 <ResponseField name="cwd" type={"string"} required>
   The working directory for this session.
@@ -449,6 +453,9 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 Filter sessions by the exact ordered additional workspace roots. Each path must be absolute.
 
+This filter applies only when the field is present and non-empty. When
+omitted or empty, no additional-root filter is applied.
+
 </ResponseField>
 <ResponseField name="cursor" type={"string | null"} >
   Opaque cursor token from a previous response's nextCursor field for cursor-based pagination
@@ -522,6 +529,10 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Additional workspace roots to activate for this session. Each path must be absolute.
+
+When omitted or empty, no additional roots are activated. When non-empty,
+this is the complete resulting additional-root list for the loaded
+session.
 
 </ResponseField>
 <ResponseField name="cwd" type={"string"} required>
@@ -611,7 +622,8 @@ This capability is not part of the spec yet, and may be removed or changed at an
 Additional workspace roots for this session. Each path must be absolute.
 
 These expand the session's filesystem scope without changing `cwd`, which
-remains the base for relative paths.
+remains the base for relative paths. When omitted or empty, no
+additional roots are activated for the new session.
 
 </ResponseField>
 <ResponseField name="cwd" type={"string"} required>
@@ -818,6 +830,10 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Additional workspace roots to activate for this session. Each path must be absolute.
+
+When omitted or empty, no additional roots are activated. When non-empty,
+this is the complete resulting additional-root list for the resumed
+session.
 
 </ResponseField>
 <ResponseField name="cwd" type={"string"} required>
@@ -4217,7 +4233,7 @@ This capability is not part of the spec yet, and may be removed or changed at an
 Capabilities for additional session directories support.
 
 By supplying `\{\}` it means that the agent supports the `additionalDirectories` field on
-session lifecycle requests and `session/list`.
+supported session lifecycle requests and `session/list`.
 
 **Type:** Object
 
@@ -4261,7 +4277,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
 This capability is not part of the spec yet, and may be removed or changed at any point.
 
-Whether the agent supports `additionalDirectories` on session lifecycle requests and `session/list`.
+Whether the agent supports `additionalDirectories` on supported session lifecycle requests and `session/list`.
 
 </ResponseField>
 <ResponseField name="close" type={<><span><a href="#sessionclosecapabilities">SessionCloseCapabilities</a></span><span> | null</span></>} >
@@ -4575,6 +4591,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Authoritative ordered additional workspace roots for this session. Each path must be absolute.
+
+When omitted or empty, there are no additional roots for the session.
 
 </ResponseField>
 <ResponseField name="cwd" type={"string"} required>

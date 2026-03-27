@@ -82,6 +82,9 @@
                 "group": "Draft: In Progress and May Change",
                 "hidden": true,
                 "pages": [
+                  "protocol/draft/session-setup",
+                  "protocol/draft/session-list",
+                  "protocol/draft/file-system",
                   "protocol/draft/cancellation",
                   "protocol/draft/schema"
                 ]

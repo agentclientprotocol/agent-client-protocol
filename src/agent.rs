@@ -900,7 +900,8 @@ pub struct NewSessionRequest {
     /// Additional workspace roots for this session. Each path must be absolute.
     ///
     /// These expand the session's filesystem scope without changing `cwd`, which
-    /// remains the base for relative paths.
+    /// remains the base for relative paths. When omitted or empty, no
+    /// additional roots are activated for the new session.
     #[cfg(feature = "unstable_session_additional_directories")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<PathBuf>,
@@ -1072,6 +1073,10 @@ pub struct LoadSessionRequest {
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
     /// Additional workspace roots to activate for this session. Each path must be absolute.
+    ///
+    /// When omitted or empty, no additional roots are activated. When non-empty,
+    /// this is the complete resulting additional-root list for the loaded
+    /// session.
     #[cfg(feature = "unstable_session_additional_directories")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<PathBuf>,
@@ -1237,6 +1242,10 @@ pub struct ForkSessionRequest {
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
     /// Additional workspace roots to activate for this session. Each path must be absolute.
+    ///
+    /// When omitted or empty, no additional roots are activated. When non-empty,
+    /// this is the complete resulting additional-root list for the forked
+    /// session.
     #[cfg(feature = "unstable_session_additional_directories")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<PathBuf>,
@@ -1419,6 +1428,10 @@ pub struct ResumeSessionRequest {
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
     /// Additional workspace roots to activate for this session. Each path must be absolute.
+    ///
+    /// When omitted or empty, no additional roots are activated. When non-empty,
+    /// this is the complete resulting additional-root list for the resumed
+    /// session.
     #[cfg(feature = "unstable_session_additional_directories")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<PathBuf>,
@@ -1674,6 +1687,9 @@ pub struct ListSessionsRequest {
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
     /// Filter sessions by the exact ordered additional workspace roots. Each path must be absolute.
+    ///
+    /// This filter applies only when the field is present and non-empty. When
+    /// omitted or empty, no additional-root filter is applied.
     #[cfg(feature = "unstable_session_additional_directories")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<PathBuf>,
@@ -1796,6 +1812,8 @@ pub struct SessionInfo {
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
     /// Authoritative ordered additional workspace roots for this session. Each path must be absolute.
+    ///
+    /// When omitted or empty, there are no additional roots for the session.
     #[cfg(feature = "unstable_session_additional_directories")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<PathBuf>,
@@ -3464,7 +3482,7 @@ pub struct SessionCapabilities {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
-    /// Whether the agent supports `additionalDirectories` on session lifecycle requests and `session/list`.
+    /// Whether the agent supports `additionalDirectories` on supported session lifecycle requests and `session/list`.
     #[cfg(feature = "unstable_session_additional_directories")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub additional_directories: Option<SessionAdditionalDirectoriesCapabilities>,
@@ -3518,7 +3536,7 @@ impl SessionCapabilities {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
-    /// Whether the agent supports `additionalDirectories` on session lifecycle requests and `session/list`.
+    /// Whether the agent supports `additionalDirectories` on supported session lifecycle requests and `session/list`.
     #[cfg(feature = "unstable_session_additional_directories")]
     #[must_use]
     pub fn additional_directories(
@@ -3605,7 +3623,7 @@ impl SessionListCapabilities {
 /// Capabilities for additional session directories support.
 ///
 /// By supplying `{}` it means that the agent supports the `additionalDirectories` field on
-/// session lifecycle requests and `session/list`.
+/// supported session lifecycle requests and `session/list`.
 #[cfg(feature = "unstable_session_additional_directories")]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[non_exhaustive]

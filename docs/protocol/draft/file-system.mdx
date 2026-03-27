@@ -20,7 +20,7 @@ responsible for enforcing those root boundaries.
 
 ## Checking Support
 
-Before attempting to use filesystem methods, Agents **MUST** verify that the Client supports these capabilities by checking the [Client Capabilities](./initialization#client-capabilities) field in the `initialize` response:
+Before attempting to use filesystem methods, Agents **MUST** verify that the Client supports these capabilities by checking the [Client Capabilities](/protocol/initialization#client-capabilities) field in the `initialize` response:
 
 ```json highlight={8,9}
 {
@@ -59,8 +59,8 @@ The `fs/read_text_file` method allows Agents to read text file contents from the
 ```
 
 <ParamField path="sessionId" type="SessionId" required>
-  The [Session ID](./session-setup#session-id) for this request. The session
-  determines which filesystem roots are in scope for the path.
+  The [Session ID](/protocol/session-setup#session-id) for this request. The
+  session determines which filesystem roots are in scope for the path.
 </ParamField>
 
 <ParamField path="path" type="string" required>
@@ -105,8 +105,8 @@ The `fs/write_text_file` method allows Agents to write or update text files in t
 ```
 
 <ParamField path="sessionId" type="SessionId" required>
-  The [Session ID](./session-setup#session-id) for this request. The session
-  determines which filesystem roots are in scope for the path.
+  The [Session ID](/protocol/session-setup#session-id) for this request. The
+  session determines which filesystem roots are in scope for the path.
 </ParamField>
 
 <ParamField path="path" type="string" required>
