@@ -91,6 +91,13 @@ Notification sent when a file is edited.
 >
   The content changes.
 </ResponseField>
+<ResponseField
+  name="sessionId"
+  type={<a href="#sessionid">SessionId</a>}
+  required
+>
+  The session ID for this notification.
+</ResponseField>
 <ResponseField name="uri" type={"string"} required>
   The URI of the changed document.
 </ResponseField>
@@ -116,6 +123,13 @@ Notification sent when a file is closed.
 <ResponseField name="_meta" type={"object | null"}>
   The _meta property is reserved by ACP.
 </ResponseField>
+<ResponseField
+  name="sessionId"
+  type={<a href="#sessionid">SessionId</a>}
+  required
+>
+  The session ID for this notification.
+</ResponseField>
 <ResponseField name="uri" type={"string"} required>
   The URI of the closed document.
 </ResponseField>
@@ -140,6 +154,13 @@ Notification sent when a file becomes the active editor tab.
 </ResponseField>
 <ResponseField name="position" type={<a href="#position">Position</a>} required>
   The current cursor position.
+</ResponseField>
+<ResponseField
+  name="sessionId"
+  type={<a href="#sessionid">SessionId</a>}
+  required
+>
+  The session ID for this notification.
 </ResponseField>
 <ResponseField name="uri" type={"string"} required>
   The URI of the focused document.
@@ -172,6 +193,13 @@ Notification sent when a file is opened in the editor.
 <ResponseField name="languageId" type={"string"} required>
   The language identifier of the document (e.g., "rust", "python").
 </ResponseField>
+<ResponseField
+  name="sessionId"
+  type={<a href="#sessionid">SessionId</a>}
+  required
+>
+  The session ID for this notification.
+</ResponseField>
 <ResponseField name="text" type={"string"} required>
   The full text content of the document.
 </ResponseField>
@@ -199,6 +227,13 @@ Notification sent when a file is saved.
 
 <ResponseField name="_meta" type={"object | null"}>
   The _meta property is reserved by ACP.
+</ResponseField>
+<ResponseField
+  name="sessionId"
+  type={<a href="#sessionid">SessionId</a>}
+  required
+>
+  The session ID for this notification.
 </ResponseField>
 <ResponseField name="uri" type={"string"} required>
   The URI of the saved document.
@@ -376,6 +411,13 @@ Notification sent when a suggestion is accepted.
 <ResponseField name="id" type={"string"} required>
   The ID of the accepted suggestion.
 </ResponseField>
+<ResponseField
+  name="sessionId"
+  type={<a href="#sessionid">SessionId</a>}
+  required
+>
+  The session ID for this notification.
+</ResponseField>
 
 <a id="nes-reject"></a>
 ### <span class="font-mono">nes/reject</span>
@@ -410,6 +452,13 @@ Notification sent when a suggestion is rejected.
   }
 >
   The reason for rejection.
+</ResponseField>
+<ResponseField
+  name="sessionId"
+  type={<a href="#sessionid">SessionId</a>}
+  required
+>
+  The session ID for this notification.
 </ResponseField>
 
 <a id="nes-start"></a>
@@ -475,7 +524,7 @@ Response to `nes/start`.
 </ResponseField>
 <ResponseField
   name="sessionId"
-  type={<a href="#nessessionid">NesSessionId</a>}
+  type={<a href="#sessionid">SessionId</a>}
   required
 >
   The session ID for the newly started NES session.
@@ -529,6 +578,13 @@ Request for a code suggestion.
   }
 >
   The current text selection range, if any.
+</ResponseField>
+<ResponseField
+  name="sessionId"
+  type={<a href="#sessionid">SessionId</a>}
+  required
+>
+  The session ID for this request.
 </ResponseField>
 <ResponseField
   name="triggerKind"
@@ -2678,20 +2734,20 @@ Determines which file operations the agent can request.
     - Default: `{"readTextFile":false,"writeTextFile":false}`
 
 </ResponseField>
-<ResponseField name="general" type={<><span><a href="#generalcapabilities">GeneralCapabilities</a></span><span> | null</span></>} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-General client capabilities (e.g. position encodings).
-
-</ResponseField>
 <ResponseField name="nes" type={<><span><a href="#clientnescapabilities">ClientNesCapabilities</a></span><span> | null</span></>} >
   **UNSTABLE**
 
 This capability is not part of the spec yet, and may be removed or changed at any point.
 
 NES (Next Edit Suggestions) capabilities supported by the client.
+
+</ResponseField>
+<ResponseField name="positionEncoding" type={<><span><a href="#positionencodingkind">PositionEncodingKind</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+The position encoding selected by the agent from the client's supported encodings.
 
 </ResponseField>
 <ResponseField name="terminal" type={"boolean"} >
@@ -3722,32 +3778,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
     - Default: `false`
 
-</ResponseField>
-
-## <span class="font-mono">GeneralCapabilities</span>
-
-General client capabilities (not specific to a particular feature).
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"}>
-  The _meta property is reserved by ACP.
-</ResponseField>
-<ResponseField
-  name="positionEncodings"
-  type={
-    <>
-      <span>
-        <a href="#positionencodingkind">PositionEncodingKind[]</a>
-      </span>
-      <span> | null</span>
-    </>
-  }
->
-  Position encodings supported by the client, in order of preference. If
-  omitted, defaults to UTF-16.
 </ResponseField>
 
 ## <span class="font-mono">HttpHeader</span>
@@ -4925,12 +4955,6 @@ Marker for search and replace action support.
 <ResponseField name="_meta" type={"object | null"}>
   The _meta property is reserved by ACP.
 </ResponseField>
-
-## <span class="font-mono">NesSessionId</span>
-
-A unique identifier for an NES session, distinct from chat `SessionId`.
-
-**Type:** `string`
 
 ## <span class="font-mono">NesSuggestContext</span>
 

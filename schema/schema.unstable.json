@@ -888,17 +888,6 @@
           },
           "description": "File system capabilities supported by the client.\nDetermines which file operations the agent can request."
         },
-        "general": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/GeneralCapabilities"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nGeneral client capabilities (e.g. position encodings)."
-        },
         "nes": {
           "anyOf": [
             {
@@ -909,6 +898,17 @@
             }
           ],
           "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNES (Next Edit Suggestions) capabilities supported by the client."
+        },
+        "positionEncoding": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PositionEncodingKind"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nThe position encoding selected by the agent from the client's supported encodings."
         },
         "terminal": {
           "default": false,
@@ -1654,6 +1654,14 @@
           },
           "type": "array"
         },
+        "sessionId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ],
+          "description": "The session ID for this notification."
+        },
         "uri": {
           "description": "The URI of the changed document.",
           "type": "string"
@@ -1664,7 +1672,7 @@
           "type": "integer"
         }
       },
-      "required": ["uri", "version", "contentChanges"],
+      "required": ["sessionId", "uri", "version", "contentChanges"],
       "type": "object",
       "x-method": "document/didChange",
       "x-side": "agent"
@@ -1677,12 +1685,20 @@
           "description": "The _meta property is reserved by ACP.",
           "type": ["object", "null"]
         },
+        "sessionId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ],
+          "description": "The session ID for this notification."
+        },
         "uri": {
           "description": "The URI of the closed document.",
           "type": "string"
         }
       },
-      "required": ["uri"],
+      "required": ["sessionId", "uri"],
       "type": "object",
       "x-method": "document/didClose",
       "x-side": "agent"
@@ -1703,6 +1719,14 @@
           ],
           "description": "The current cursor position."
         },
+        "sessionId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ],
+          "description": "The session ID for this notification."
+        },
         "uri": {
           "description": "The URI of the focused document.",
           "type": "string"
@@ -1721,7 +1745,7 @@
           "description": "The portion of the file currently visible in the editor viewport."
         }
       },
-      "required": ["uri", "version", "position", "visibleRange"],
+      "required": ["sessionId", "uri", "version", "position", "visibleRange"],
       "type": "object",
       "x-method": "document/didFocus",
       "x-side": "agent"
@@ -1738,6 +1762,14 @@
           "description": "The language identifier of the document (e.g., \"rust\", \"python\").",
           "type": "string"
         },
+        "sessionId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ],
+          "description": "The session ID for this notification."
+        },
         "text": {
           "description": "The full text content of the document.",
           "type": "string"
@@ -1752,7 +1784,7 @@
           "type": "integer"
         }
       },
-      "required": ["uri", "languageId", "version", "text"],
+      "required": ["sessionId", "uri", "languageId", "version", "text"],
       "type": "object",
       "x-method": "document/didOpen",
       "x-side": "agent"
@@ -1765,12 +1797,20 @@
           "description": "The _meta property is reserved by ACP.",
           "type": ["object", "null"]
         },
+        "sessionId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ],
+          "description": "The session ID for this notification."
+        },
         "uri": {
           "description": "The URI of the saved document.",
           "type": "string"
         }
       },
-      "required": ["uri"],
+      "required": ["sessionId", "uri"],
       "type": "object",
       "x-method": "document/didSave",
       "x-side": "agent"
@@ -2501,24 +2541,6 @@
       "x-method": "session/fork",
       "x-side": "agent"
     },
-    "GeneralCapabilities": {
-      "description": "General client capabilities (not specific to a particular feature).",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP.",
-          "type": ["object", "null"]
-        },
-        "positionEncodings": {
-          "description": "Position encodings supported by the client, in order of preference.\nIf omitted, defaults to UTF-16.",
-          "items": {
-            "$ref": "#/$defs/PositionEncodingKind"
-          },
-          "type": ["array", "null"]
-        }
-      },
-      "type": "object"
-    },
     "HttpHeader": {
       "description": "An HTTP header to set when making requests to the MCP server.",
       "properties": {
@@ -3197,9 +3219,17 @@
         "id": {
           "description": "The ID of the accepted suggestion.",
           "type": "string"
+        },
+        "sessionId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ],
+          "description": "The session ID for this notification."
         }
       },
-      "required": ["id"],
+      "required": ["sessionId", "id"],
       "type": "object",
       "x-method": "nes/accept",
       "x-side": "agent"
@@ -3798,9 +3828,17 @@
             }
           ],
           "description": "The reason for rejection."
+        },
+        "sessionId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ],
+          "description": "The session ID for this notification."
         }
       },
-      "required": ["id"],
+      "required": ["sessionId", "id"],
       "type": "object",
       "x-method": "nes/reject",
       "x-side": "agent"
@@ -3900,10 +3938,6 @@
       },
       "type": "object"
     },
-    "NesSessionId": {
-      "description": "A unique identifier for an NES session, distinct from chat `SessionId`.",
-      "type": "string"
-    },
     "NesStartRequest": {
       "description": "Request to start an NES session.",
       "properties": {
@@ -3950,7 +3984,7 @@
         "sessionId": {
           "allOf": [
             {
-              "$ref": "#/$defs/NesSessionId"
+              "$ref": "#/$defs/SessionId"
             }
           ],
           "description": "The session ID for the newly started NES session."
@@ -4052,6 +4086,14 @@
           ],
           "description": "The current text selection range, if any."
         },
+        "sessionId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ],
+          "description": "The session ID for this request."
+        },
         "triggerKind": {
           "allOf": [
             {
@@ -4070,7 +4112,7 @@
           "type": "integer"
         }
       },
-      "required": ["uri", "version", "position", "triggerKind"],
+      "required": ["sessionId", "uri", "version", "position", "triggerKind"],
       "type": "object",
       "x-method": "nes/suggest",
       "x-side": "agent"

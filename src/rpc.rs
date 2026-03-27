@@ -474,6 +474,7 @@ mod nes_rpc_tests {
     #[test]
     fn test_decode_nes_suggest_request() {
         let params = serde_json::to_string(&json!({
+            "sessionId": "session_123",
             "uri": "file:///path/to/file.rs",
             "version": 2,
             "position": { "line": 5, "character": 12 },
@@ -488,6 +489,7 @@ mod nes_rpc_tests {
     #[test]
     fn test_decode_document_did_open_notification() {
         let params = serde_json::to_string(&json!({
+            "sessionId": "session_123",
             "uri": "file:///path/to/file.rs",
             "languageId": "rust",
             "version": 1,
@@ -505,6 +507,7 @@ mod nes_rpc_tests {
     #[test]
     fn test_decode_document_did_change_notification() {
         let params = serde_json::to_string(&json!({
+            "sessionId": "session_123",
             "uri": "file:///path/to/file.rs",
             "version": 2,
             "contentChanges": [{ "text": "fn main() { let x = 1; }" }]
@@ -522,6 +525,7 @@ mod nes_rpc_tests {
     #[test]
     fn test_decode_document_did_close_notification() {
         let params = serde_json::to_string(&json!({
+            "sessionId": "session_123",
             "uri": "file:///path/to/file.rs"
         }))
         .unwrap();
@@ -536,6 +540,7 @@ mod nes_rpc_tests {
     #[test]
     fn test_decode_document_did_save_notification() {
         let params = serde_json::to_string(&json!({
+            "sessionId": "session_123",
             "uri": "file:///path/to/file.rs"
         }))
         .unwrap();
@@ -550,6 +555,7 @@ mod nes_rpc_tests {
     #[test]
     fn test_decode_document_did_focus_notification() {
         let params = serde_json::to_string(&json!({
+            "sessionId": "session_123",
             "uri": "file:///path/to/file.rs",
             "version": 2,
             "position": { "line": 5, "character": 12 },
@@ -570,6 +576,7 @@ mod nes_rpc_tests {
     #[test]
     fn test_decode_nes_accept_notification() {
         let params = serde_json::to_string(&json!({
+            "sessionId": "session_123",
             "id": "sugg_001"
         }))
         .unwrap();
@@ -584,6 +591,7 @@ mod nes_rpc_tests {
     #[test]
     fn test_decode_nes_reject_notification() {
         let params = serde_json::to_string(&json!({
+            "sessionId": "session_123",
             "id": "sugg_001",
             "reason": "rejected"
         }))

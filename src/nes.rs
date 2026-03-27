@@ -4,13 +4,10 @@
 //! document events, and a suggestion request/response flow. NES sessions are
 //! independent of chat sessions and have their own lifecycle.
 
-use std::sync::Arc;
-
-use derive_more::{Display, From};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{IntoOption, Meta};
+use crate::{IntoOption, Meta, SessionId};
 
 // Method name constants
 
@@ -628,6 +625,8 @@ pub struct NesSearchAndReplaceActionCapabilities {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct DocumentDidOpenNotification {
+    /// The session ID for this notification.
+    pub session_id: SessionId,
     /// The URI of the opened document.
     pub uri: String,
     /// The language identifier of the document (e.g., "rust", "python").
@@ -644,12 +643,14 @@ pub struct DocumentDidOpenNotification {
 impl DocumentDidOpenNotification {
     #[must_use]
     pub fn new(
+        session_id: impl Into<SessionId>,
         uri: impl Into<String>,
         language_id: impl Into<String>,
         version: i64,
         text: impl Into<String>,
     ) -> Self {
         Self {
+            session_id: session_id.into(),
             uri: uri.into(),
             language_id: language_id.into(),
             version,
@@ -671,6 +672,8 @@ impl DocumentDidOpenNotification {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct DocumentDidChangeNotification {
+    /// The session ID for this notification.
+    pub session_id: SessionId,
     /// The URI of the changed document.
     pub uri: String,
     /// The new version number of the document.
@@ -685,11 +688,13 @@ pub struct DocumentDidChangeNotification {
 impl DocumentDidChangeNotification {
     #[must_use]
     pub fn new(
+        session_id: impl Into<SessionId>,
         uri: impl Into<String>,
         version: i64,
         content_changes: Vec<TextDocumentContentChangeEvent>,
     ) -> Self {
         Self {
+            session_id: session_id.into(),
             uri: uri.into(),
             version,
             content_changes,
@@ -743,6 +748,8 @@ impl TextDocumentContentChangeEvent {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct DocumentDidCloseNotification {
+    /// The session ID for this notification.
+    pub session_id: SessionId,
     /// The URI of the closed document.
     pub uri: String,
     /// The _meta property is reserved by ACP.
@@ -752,8 +759,9 @@ pub struct DocumentDidCloseNotification {
 
 impl DocumentDidCloseNotification {
     #[must_use]
-    pub fn new(uri: impl Into<String>) -> Self {
+    pub fn new(session_id: impl Into<SessionId>, uri: impl Into<String>) -> Self {
         Self {
+            session_id: session_id.into(),
             uri: uri.into(),
             meta: None,
         }
@@ -772,6 +780,8 @@ impl DocumentDidCloseNotification {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct DocumentDidSaveNotification {
+    /// The session ID for this notification.
+    pub session_id: SessionId,
     /// The URI of the saved document.
     pub uri: String,
     /// The _meta property is reserved by ACP.
@@ -781,8 +791,9 @@ pub struct DocumentDidSaveNotification {
 
 impl DocumentDidSaveNotification {
     #[must_use]
-    pub fn new(uri: impl Into<String>) -> Self {
+    pub fn new(session_id: impl Into<SessionId>, uri: impl Into<String>) -> Self {
         Self {
+            session_id: session_id.into(),
             uri: uri.into(),
             meta: None,
         }
@@ -801,6 +812,8 @@ impl DocumentDidSaveNotification {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct DocumentDidFocusNotification {
+    /// The session ID for this notification.
+    pub session_id: SessionId,
     /// The URI of the focused document.
     pub uri: String,
     /// The version number of the document.
@@ -817,12 +830,14 @@ pub struct DocumentDidFocusNotification {
 impl DocumentDidFocusNotification {
     #[must_use]
     pub fn new(
+        session_id: impl Into<SessionId>,
         uri: impl Into<String>,
         version: i64,
         position: Position,
         visible_range: Range,
     ) -> Self {
         Self {
+            session_id: session_id.into(),
             uri: uri.into(),
             version,
             position,
@@ -839,20 +854,6 @@ impl DocumentDidFocusNotification {
 }
 
 // NES session start
-
-/// A unique identifier for an NES session, distinct from chat `SessionId`.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
-#[serde(transparent)]
-#[from(Arc<str>, String, &'static str)]
-#[non_exhaustive]
-pub struct NesSessionId(pub Arc<str>);
-
-impl NesSessionId {
-    #[must_use]
-    pub fn new(id: impl Into<Arc<str>>) -> Self {
-        Self(id.into())
-    }
-}
 
 /// Request to start an NES session.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -975,7 +976,7 @@ impl NesRepository {
 #[non_exhaustive]
 pub struct NesStartResponse {
     /// The session ID for the newly started NES session.
-    pub session_id: NesSessionId,
+    pub session_id: SessionId,
     /// The _meta property is reserved by ACP.
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<Meta>,
@@ -983,7 +984,7 @@ pub struct NesStartResponse {
 
 impl NesStartResponse {
     #[must_use]
-    pub fn new(session_id: impl Into<NesSessionId>) -> Self {
+    pub fn new(session_id: impl Into<SessionId>) -> Self {
         Self {
             session_id: session_id.into(),
             meta: None,
@@ -1020,6 +1021,8 @@ pub enum NesTriggerKind {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesSuggestRequest {
+    /// The session ID for this request.
+    pub session_id: SessionId,
     /// The URI of the document to suggest for.
     pub uri: String,
     /// The version number of the document.
@@ -1042,12 +1045,14 @@ pub struct NesSuggestRequest {
 impl NesSuggestRequest {
     #[must_use]
     pub fn new(
+        session_id: impl Into<SessionId>,
         uri: impl Into<String>,
         version: i64,
         position: Position,
         trigger_kind: NesTriggerKind,
     ) -> Self {
         Self {
+            session_id: session_id.into(),
             uri: uri.into(),
             version,
             position,
@@ -1538,6 +1543,8 @@ impl NesActionSuggestion {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesAcceptNotification {
+    /// The session ID for this notification.
+    pub session_id: SessionId,
     /// The ID of the accepted suggestion.
     pub id: String,
     /// The _meta property is reserved by ACP.
@@ -1547,8 +1554,9 @@ pub struct NesAcceptNotification {
 
 impl NesAcceptNotification {
     #[must_use]
-    pub fn new(id: impl Into<String>) -> Self {
+    pub fn new(session_id: impl Into<SessionId>, id: impl Into<String>) -> Self {
         Self {
+            session_id: session_id.into(),
             id: id.into(),
             meta: None,
         }
@@ -1567,6 +1575,8 @@ impl NesAcceptNotification {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesRejectNotification {
+    /// The session ID for this notification.
+    pub session_id: SessionId,
     /// The ID of the rejected suggestion.
     pub id: String,
     /// The reason for rejection.
@@ -1579,8 +1589,9 @@ pub struct NesRejectNotification {
 
 impl NesRejectNotification {
     #[must_use]
-    pub fn new(id: impl Into<String>) -> Self {
+    pub fn new(session_id: impl Into<SessionId>, id: impl Into<String>) -> Self {
         Self {
+            session_id: session_id.into(),
             id: id.into(),
             reason: None,
             meta: None,
@@ -1750,6 +1761,7 @@ mod tests {
     #[test]
     fn test_document_did_open_serialization() {
         let notification = DocumentDidOpenNotification::new(
+            "session_123",
             "file:///path/to/file.rs",
             "rust",
             1,
@@ -1760,6 +1772,7 @@ mod tests {
         assert_eq!(
             json,
             json!({
+                "sessionId": "session_123",
                 "uri": "file:///path/to/file.rs",
                 "languageId": "rust",
                 "version": 1,
@@ -1774,6 +1787,7 @@ mod tests {
     #[test]
     fn test_document_did_change_incremental_serialization() {
         let notification = DocumentDidChangeNotification::new(
+            "session_123",
             "file:///path/to/file.rs",
             2,
             vec![TextDocumentContentChangeEvent::incremental(
@@ -1786,6 +1800,7 @@ mod tests {
         assert_eq!(
             json,
             json!({
+                "sessionId": "session_123",
                 "uri": "file:///path/to/file.rs",
                 "version": 2,
                 "contentChanges": [
@@ -1804,6 +1819,7 @@ mod tests {
     #[test]
     fn test_document_did_change_full_serialization() {
         let notification = DocumentDidChangeNotification::new(
+            "session_123",
             "file:///path/to/file.rs",
             2,
             vec![TextDocumentContentChangeEvent::full(
@@ -1815,6 +1831,7 @@ mod tests {
         assert_eq!(
             json,
             json!({
+                "sessionId": "session_123",
                 "uri": "file:///path/to/file.rs",
                 "version": 2,
                 "contentChanges": [
@@ -1828,21 +1845,30 @@ mod tests {
 
     #[test]
     fn test_document_did_close_serialization() {
-        let notification = DocumentDidCloseNotification::new("file:///path/to/file.rs");
+        let notification =
+            DocumentDidCloseNotification::new("session_123", "file:///path/to/file.rs");
         let json = serde_json::to_value(&notification).unwrap();
-        assert_eq!(json, json!({ "uri": "file:///path/to/file.rs" }));
+        assert_eq!(
+            json,
+            json!({ "sessionId": "session_123", "uri": "file:///path/to/file.rs" })
+        );
     }
 
     #[test]
     fn test_document_did_save_serialization() {
-        let notification = DocumentDidSaveNotification::new("file:///path/to/file.rs");
+        let notification =
+            DocumentDidSaveNotification::new("session_123", "file:///path/to/file.rs");
         let json = serde_json::to_value(&notification).unwrap();
-        assert_eq!(json, json!({ "uri": "file:///path/to/file.rs" }));
+        assert_eq!(
+            json,
+            json!({ "sessionId": "session_123", "uri": "file:///path/to/file.rs" })
+        );
     }
 
     #[test]
     fn test_document_did_focus_serialization() {
         let notification = DocumentDidFocusNotification::new(
+            "session_123",
             "file:///path/to/file.rs",
             2,
             Position::new(5, 12),
@@ -1853,6 +1879,7 @@ mod tests {
         assert_eq!(
             json,
             json!({
+                "sessionId": "session_123",
                 "uri": "file:///path/to/file.rs",
                 "version": 2,
                 "position": { "line": 5, "character": 12 },
@@ -2033,21 +2060,29 @@ mod tests {
 
     #[test]
     fn test_nes_accept_notification_serialization() {
-        let notification = NesAcceptNotification::new("sugg_001");
+        let notification = NesAcceptNotification::new("session_123", "sugg_001");
         let json = serde_json::to_value(&notification).unwrap();
-        assert_eq!(json, json!({ "id": "sugg_001" }));
+        assert_eq!(
+            json,
+            json!({ "sessionId": "session_123", "id": "sugg_001" })
+        );
     }
 
     #[test]
     fn test_nes_reject_notification_serialization() {
-        let notification = NesRejectNotification::new("sugg_001").reason(NesRejectReason::Rejected);
+        let notification =
+            NesRejectNotification::new("session_123", "sugg_001").reason(NesRejectReason::Rejected);
         let json = serde_json::to_value(&notification).unwrap();
-        assert_eq!(json, json!({ "id": "sugg_001", "reason": "rejected" }));
+        assert_eq!(
+            json,
+            json!({ "sessionId": "session_123", "id": "sugg_001", "reason": "rejected" })
+        );
     }
 
     #[test]
     fn test_nes_suggest_request_with_context_serialization() {
         let request = NesSuggestRequest::new(
+            "session_123",
             "file:///path/to/file.rs",
             2,
             Position::new(5, 12),
@@ -2070,6 +2105,7 @@ mod tests {
         );
 
         let json = serde_json::to_value(&request).unwrap();
+        assert_eq!(json["sessionId"], "session_123");
         assert_eq!(json["uri"], "file:///path/to/file.rs");
         assert_eq!(json["version"], 2);
         assert_eq!(json["triggerKind"], "automatic");
