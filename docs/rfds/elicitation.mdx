@@ -74,8 +74,9 @@ This proposal follows MCP's draft elicitation specification. See [MCP Elicitatio
 
 Key differences from MCP:
 
-- MCP elicitation is tool-call-scoped; ACP elicitation may be request-scoped, session-scoped, or standalone
+- MCP elicitation is tool-call-scoped; ACP elicitation may be tool-call-scoped, session-scoped, or request-scoped
 - ACP uses `elicitation/create` method (same as MCP)
+- ACP includes an optional `toolCallId` field to support tool-call-scoped elicitations (e.g., when an agent receives an MCP elicitation during a tool call and needs to redirect it to the user)
 - ACP must integrate with existing Session Config Options (which also use schema constraints)
 
 ### Elicitation Request Structure
@@ -357,7 +358,7 @@ The agent sends an `elicitation/create` request when it needs information from t
   "method": "elicitation/create",
   "params": {
     "sessionId": "...",
-    "requestId": 43,
+    "toolCallId": "tc_123",
     "mode": "form",
     "message": "How would you like me to approach this refactoring?",
     "requestedSchema": {
@@ -396,7 +397,13 @@ The agent sends an `elicitation/create` request when it needs information from t
 }
 ```
 
-`sessionId` and `requestId` are both optional. In general, elicitation is not required to be tied to any specific session or request.
+`sessionId`, `requestId`, and `toolCallId` are all optional. Elicitation supports three scoping variants:
+
+- **Session elicitation**: `sessionId` is set — tied to a specific session.
+- **Tool call elicitation**: `sessionId` and `toolCallId` are both set — tied to a specific tool call within a session. This is useful when an agent receives an elicitation request from an MCP server during a tool call and needs to redirect it to the user.
+- **Request elicitation**: `requestId` is set — tied to a specific JSON-RPC request outside of a session (e.g., auth/configuration phases before any session is started).
+
+An elicitation may also be sent without any of these fields, in which case it is standalone and not tied to any specific scope.
 
 The client presents the elicitation UI to the user. For form mode, the client generates appropriate input UI based on the JSON Schema. For URL mode, the client opens the URL in a secure browser context.
 
