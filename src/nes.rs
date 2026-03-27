@@ -1302,8 +1302,10 @@ pub struct NesOpenFile {
     /// The language identifier.
     pub language_id: String,
     /// The visible range in the editor, if any.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub visible_range: Option<Range>,
     /// Timestamp in milliseconds since epoch of when the file was last focused.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub last_focused_ms: Option<u64>,
 }
 
