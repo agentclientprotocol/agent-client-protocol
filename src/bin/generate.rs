@@ -66,7 +66,7 @@ fn main() {
         schema_dir.join(schema_file),
         serde_json::to_string_pretty(&schema_value).unwrap(),
     )
-    .expect("Failed to write {schema_file}");
+    .unwrap_or_else(|e| panic!("Failed to write {schema_file}: {e}"));
 
     // Create a combined metadata object
     #[cfg(not(feature = "unstable_cancel_request"))]
@@ -92,7 +92,7 @@ fn main() {
         schema_dir.join(meta_file),
         serde_json::to_string_pretty(&metadata).unwrap(),
     )
-    .expect("Failed to write {meta_file}");
+    .unwrap_or_else(|e| panic!("Failed to write {meta_file}: {e}"));
 
     // Generate markdown documentation
     let mut markdown_gen = MarkdownGenerator::new();
@@ -104,7 +104,8 @@ fn main() {
         "schema.mdx"
     };
 
-    fs::write(docs_protocol_dir.join(doc_file), markdown_doc).expect("Failed to write {doc_file}");
+    fs::write(docs_protocol_dir.join(doc_file), markdown_doc)
+        .unwrap_or_else(|e| panic!("Failed to write {doc_file}: {e}"));
 
     println!("✓ Generated {schema_file}");
     println!("✓ Generated {meta_file}");
