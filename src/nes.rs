@@ -2006,14 +2006,15 @@ mod tests {
 
     #[test]
     fn test_nes_suggestion_search_and_replace_action_serialization() {
-        let suggestion =
-            NesSuggestion::SearchAndReplace(NesSearchAndReplaceActionSuggestion::new(
+        let suggestion = NesSuggestion::SearchAndReplace(
+            NesSearchAndReplaceActionSuggestion::new(
                 "sugg_004",
                 "file:///path/to/file.rs",
                 "oldFunction",
                 "newFunction",
             )
-            .is_regex(false));
+            .is_regex(false),
+        );
 
         let json = serde_json::to_value(&suggestion).unwrap();
         assert_eq!(

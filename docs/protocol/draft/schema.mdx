@@ -2769,17 +2769,45 @@ NES capabilities advertised by the client during initialization.
   The _meta property is reserved by ACP.
 </ResponseField>
 <ResponseField
-  name="ideActions"
+  name="jump"
   type={
     <>
       <span>
-        <a href="#nesideactionscapabilities">NesIdeActionsCapabilities</a>
+        <a href="#nesjumpcapabilities">NesJumpCapabilities</a>
       </span>
       <span> | null</span>
     </>
   }
 >
-  IDE actions the client supports.
+  Whether the client supports the `jump` suggestion kind.
+</ResponseField>
+<ResponseField
+  name="rename"
+  type={
+    <>
+      <span>
+        <a href="#nesrenameactioncapabilities">NesRenameActionCapabilities</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Whether the client supports the `rename` suggestion kind.
+</ResponseField>
+<ResponseField
+  name="searchAndReplace"
+  type={
+    <>
+      <span>
+        <a href="#nessearchandreplaceactioncapabilities">
+          NesSearchAndReplaceActionCapabilities
+        </a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Whether the client supports the `searchAndReplace` suggestion kind.
 </ResponseField>
 
 ## <span class="font-mono">ConfigOptionUpdate</span>
@@ -4246,24 +4274,6 @@ Schema for multi-select (array) properties in an elicitation form.
   Optional title for the property.
 </ResponseField>
 
-## <span class="font-mono">NesActionSuggestion</span>
-
-An IDE action suggestion.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="actionId" type={"string"} required>
-  The IDE action to perform (must match a client-advertised action).
-</ResponseField>
-<ResponseField name="arguments" type={"object"}>
-  Action parameters matching the schema from the client's capability.
-</ResponseField>
-<ResponseField name="id" type={"string"} required>
-  Unique identifier for accept/reject tracking.
-</ResponseField>
-
 ## <span class="font-mono">NesCapabilities</span>
 
 NES capabilities advertised by the agent during initialization.
@@ -4725,9 +4735,9 @@ A code excerpt from a file.
   The text content of the excerpt.
 </ResponseField>
 
-## <span class="font-mono">NesIdeActionsCapabilities</span>
+## <span class="font-mono">NesJumpCapabilities</span>
 
-IDE actions the client can perform.
+Marker for jump suggestion support.
 
 **Type:** Object
 
@@ -4735,34 +4745,6 @@ IDE actions the client can perform.
 
 <ResponseField name="_meta" type={"object | null"}>
   The _meta property is reserved by ACP.
-</ResponseField>
-<ResponseField
-  name="rename"
-  type={
-    <>
-      <span>
-        <a href="#nesrenameactioncapabilities">NesRenameActionCapabilities</a>
-      </span>
-      <span> | null</span>
-    </>
-  }
->
-  Whether the client supports the `rename` action.
-</ResponseField>
-<ResponseField
-  name="searchAndReplace"
-  type={
-    <>
-      <span>
-        <a href="#nessearchandreplaceactioncapabilities">
-          NesSearchAndReplaceActionCapabilities
-        </a>
-      </span>
-      <span> | null</span>
-    </>
-  }
->
-  Whether the client supports the `searchAndReplace` action.
 </ResponseField>
 
 ## <span class="font-mono">NesJumpSuggestion</span>
@@ -4920,6 +4902,27 @@ Marker for rename action support.
   The _meta property is reserved by ACP.
 </ResponseField>
 
+## <span class="font-mono">NesRenameActionSuggestion</span>
+
+A rename symbol suggestion.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="id" type={"string"} required>
+  Unique identifier for accept/reject tracking.
+</ResponseField>
+<ResponseField name="newName" type={"string"} required>
+  The new name for the symbol.
+</ResponseField>
+<ResponseField name="position" type={<a href="#position">Position</a>} required>
+  The position of the symbol to rename.
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The file URI containing the symbol.
+</ResponseField>
+
 ## <span class="font-mono">NesRepository</span>
 
 Repository metadata for an NES session.
@@ -4948,6 +4951,30 @@ Marker for search and replace action support.
 
 <ResponseField name="_meta" type={"object | null"}>
   The _meta property is reserved by ACP.
+</ResponseField>
+
+## <span class="font-mono">NesSearchAndReplaceActionSuggestion</span>
+
+A search-and-replace suggestion.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="id" type={"string"} required>
+  Unique identifier for accept/reject tracking.
+</ResponseField>
+<ResponseField name="isRegex" type={"boolean | null"}>
+  Whether `search` is a regular expression. Defaults to `false`.
+</ResponseField>
+<ResponseField name="replace" type={"string"} required>
+  The replacement text.
+</ResponseField>
+<ResponseField name="search" type={"string"} required>
+  The text or pattern to find.
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The file URI to search within.
 </ResponseField>
 
 ## <span class="font-mono">NesSuggestContext</span>
@@ -5105,22 +5132,52 @@ A jump-to-location suggestion.
 </Expandable>
 </ResponseField>
 
-<ResponseField name="action" type="object">
-An IDE action suggestion.
+<ResponseField name="rename" type="object">
+A rename symbol suggestion.
 
 <Expandable title="Properties">
 
-<ResponseField name="actionId" type={"string"} required>
-  The IDE action to perform (must match a client-advertised action).
-</ResponseField>
-<ResponseField name="arguments" type={"object"}>
-  Action parameters matching the schema from the client's capability.
-</ResponseField>
 <ResponseField name="id" type={"string"} required>
   Unique identifier for accept/reject tracking.
 </ResponseField>
 <ResponseField name="kind" type={"string"} required>
-  The discriminator value. Must be `"action"`.
+  The discriminator value. Must be `"rename"`.
+</ResponseField>
+<ResponseField name="newName" type={"string"} required>
+  The new name for the symbol.
+</ResponseField>
+<ResponseField name="position" type={<a href="#position">Position</a>} required>
+  The position of the symbol to rename.
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The file URI containing the symbol.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="searchAndReplace" type="object">
+A search-and-replace suggestion.
+
+<Expandable title="Properties">
+
+<ResponseField name="id" type={"string"} required>
+  Unique identifier for accept/reject tracking.
+</ResponseField>
+<ResponseField name="isRegex" type={"boolean | null"}>
+  Whether `search` is a regular expression. Defaults to `false`.
+</ResponseField>
+<ResponseField name="kind" type={"string"} required>
+  The discriminator value. Must be `"searchAndReplace"`.
+</ResponseField>
+<ResponseField name="replace" type={"string"} required>
+  The replacement text.
+</ResponseField>
+<ResponseField name="search" type={"string"} required>
+  The text or pattern to find.
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The file URI to search within.
 </ResponseField>
 
 </Expandable>

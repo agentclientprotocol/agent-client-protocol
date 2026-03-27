@@ -922,16 +922,38 @@
           "description": "The _meta property is reserved by ACP.",
           "type": ["object", "null"]
         },
-        "ideActions": {
+        "jump": {
           "anyOf": [
             {
-              "$ref": "#/$defs/NesIdeActionsCapabilities"
+              "$ref": "#/$defs/NesJumpCapabilities"
             },
             {
               "type": "null"
             }
           ],
-          "description": "IDE actions the client supports."
+          "description": "Whether the client supports the `jump` suggestion kind."
+        },
+        "rename": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesRenameActionCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Whether the client supports the `rename` suggestion kind."
+        },
+        "searchAndReplace": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesSearchAndReplaceActionCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Whether the client supports the `searchAndReplace` suggestion kind."
         }
       },
       "type": "object"
@@ -3230,24 +3252,6 @@
       "x-method": "nes/accept",
       "x-side": "agent"
     },
-    "NesActionSuggestion": {
-      "description": "An IDE action suggestion.",
-      "properties": {
-        "actionId": {
-          "description": "The IDE action to perform (must match a client-advertised action).",
-          "type": "string"
-        },
-        "arguments": {
-          "description": "Action parameters matching the schema from the client's capability."
-        },
-        "id": {
-          "description": "Unique identifier for accept/reject tracking.",
-          "type": "string"
-        }
-      },
-      "required": ["id", "actionId"],
-      "type": "object"
-    },
     "NesCapabilities": {
       "description": "NES capabilities advertised by the agent during initialization.",
       "properties": {
@@ -3665,35 +3669,13 @@
       "required": ["startLine", "endLine", "text"],
       "type": "object"
     },
-    "NesIdeActionsCapabilities": {
-      "description": "IDE actions the client can perform.",
+    "NesJumpCapabilities": {
+      "description": "Marker for jump suggestion support.",
       "properties": {
         "_meta": {
           "additionalProperties": true,
           "description": "The _meta property is reserved by ACP.",
           "type": ["object", "null"]
-        },
-        "rename": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/NesRenameActionCapabilities"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "Whether the client supports the `rename` action."
-        },
-        "searchAndReplace": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/NesSearchAndReplaceActionCapabilities"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "Whether the client supports the `searchAndReplace` action."
         }
       },
       "type": "object"
@@ -3902,6 +3884,33 @@
       },
       "type": "object"
     },
+    "NesRenameActionSuggestion": {
+      "description": "A rename symbol suggestion.",
+      "properties": {
+        "id": {
+          "description": "Unique identifier for accept/reject tracking.",
+          "type": "string"
+        },
+        "newName": {
+          "description": "The new name for the symbol.",
+          "type": "string"
+        },
+        "position": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/Position"
+            }
+          ],
+          "description": "The position of the symbol to rename."
+        },
+        "uri": {
+          "description": "The file URI containing the symbol.",
+          "type": "string"
+        }
+      },
+      "required": ["id", "uri", "position", "newName"],
+      "type": "object"
+    },
     "NesRepository": {
       "description": "Repository metadata for an NES session.",
       "properties": {
@@ -3930,6 +3939,33 @@
           "type": ["object", "null"]
         }
       },
+      "type": "object"
+    },
+    "NesSearchAndReplaceActionSuggestion": {
+      "description": "A search-and-replace suggestion.",
+      "properties": {
+        "id": {
+          "description": "Unique identifier for accept/reject tracking.",
+          "type": "string"
+        },
+        "isRegex": {
+          "description": "Whether `search` is a regular expression. Defaults to `false`.",
+          "type": ["boolean", "null"]
+        },
+        "replace": {
+          "description": "The replacement text.",
+          "type": "string"
+        },
+        "search": {
+          "description": "The text or pattern to find.",
+          "type": "string"
+        },
+        "uri": {
+          "description": "The file URI to search within.",
+          "type": "string"
+        }
+      },
+      "required": ["id", "uri", "search", "replace"],
       "type": "object"
     },
     "NesStartRequest": {
@@ -4170,13 +4206,29 @@
         {
           "allOf": [
             {
-              "$ref": "#/$defs/NesActionSuggestion"
+              "$ref": "#/$defs/NesRenameActionSuggestion"
             }
           ],
-          "description": "An IDE action suggestion.",
+          "description": "A rename symbol suggestion.",
           "properties": {
             "kind": {
-              "const": "action",
+              "const": "rename",
+              "type": "string"
+            }
+          },
+          "required": ["kind"],
+          "type": "object"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/NesSearchAndReplaceActionSuggestion"
+            }
+          ],
+          "description": "A search-and-replace suggestion.",
+          "properties": {
+            "kind": {
+              "const": "searchAndReplace",
               "type": "string"
             }
           },
