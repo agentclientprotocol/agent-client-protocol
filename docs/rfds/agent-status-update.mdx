@@ -1,0 +1,161 @@
+---
+title: "Agent Status Update"
+---
+
+Author(s): [anaslimem](https://github.com/anaslimem)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Add standardized agent status reporting to the Agent Client Protocol, enabling agents to communicate what they are currently doing (thinking, reading, writing, waiting, idle) through `session/update` notifications.
+
+This provides users with visibility into agent activity during long-running tasks, so they can distinguish between an agent that is actively working versus one that is stuck or waiting.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+Currently, when users run agents for long operations:
+
+1. **No visibility** - Users have no way to know what the agent is doing
+2. **Uncertainty** - Users cannot tell if the agent is working, stuck, or waiting
+3. **Poor UX** - Long-running tasks feel unresponsive because there is no feedback
+
+The protocol currently supports:
+
+- `ToolCallStatus` - Status of individual tool calls (pending, in_progress, completed, failed)
+- `Plan` + `PlanEntryStatus` - Execution plan status
+- `UsageUpdate` - Token usage and cost tracking
+
+However, there is no way for the agent to report its overall status at the agent level (vs individual tool calls).
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+We propose adding an `AgentStatusUpdate` variant to the `SessionUpdate` enum that allows agents to report their current activity.
+
+### Proposed Status Values
+
+| Status     | Description                                 |
+| ---------- | ------------------------------------------- |
+| `thinking` | Agent is processing/思考 the user's request |
+| `reading`  | Agent is reading files or resources         |
+| `writing`  | Agent is writing or generating content      |
+| `waiting`  | Agent is waiting for user input or approval |
+| `idle`     | Agent is not currently active               |
+
+### Wire Format Example
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123",
+    "sessionUpdate": "agent_status_update",
+    "status": "reading",
+    "message": "Reading codebase structure...",
+    "currentTask": "Step 2/5: Finding Rust files"
+  }
+}
+```
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+Once implemented, clients can display agent status in their UI:
+
+| Agent Status | UI Display                       |
+| ------------ | -------------------------------- |
+| `thinking`   | "Agent is thinking..."           |
+| `reading`    | "Reading file.rs (45/120 files)" |
+| `writing`    | "Writing updated files..."       |
+| `waiting`    | "Waiting for your approval..."   |
+| `idle`       | "Idle"                           |
+
+This provides:
+
+- **Transparency** - Users know agent is working, not stuck
+- **Progress** - Shows current task in multi-step operations
+- **Trust** - Users more likely to trust agent when they see activity
+- **Interactivity** - Shows when agent is waiting for user input
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+### Phase 1: Schema Changes
+
+Add to `src/client.rs`:
+
+```rust
+/// Agent status values
+#[derive(Clone, Debug, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum AgentStatus {
+    Thinking,
+    Reading,
+    Writing,
+    Waiting,
+    Idle,
+}
+
+/// Agent status update notification
+#[cfg(feature = "unstable_agent_status")]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct AgentStatusUpdate {
+    pub status: AgentStatus,
+    pub message: Option<String>,
+    pub current_task: Option<String>,
+    pub meta: Option<Meta>,
+}
+```
+
+Add to `SessionUpdate` enum:
+
+```rust
+#[cfg(feature = "unstable_agent_status")]
+AgentStatusUpdate(AgentStatusUpdate),
+```
+
+### Phase 2: RPC Handling
+
+Add decode logic in `src/rpc.rs` for the new session update type.
+
+### Phase 3: Documentation
+
+Update protocol documentation to reflect the new notification type.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### How is this different from MCP progress notifications?
+
+MCP progress notifications track progress on individual MCP tool requests (e.g., "tool X is 50% complete"). Agent status tracks what the agent as a whole is doing (e.g., "agent is reading files"). They serve different purposes - MCP is tool-level, Agent status is agent-level.
+
+### Does this overlap with existing tool call status?
+
+`ToolCallStatus` tracks individual tool calls. Agent status is higher-level - it tells you what the agent is doing overall, which may involve multiple tool calls or no tool calls at all (e.g., "thinking").
+
+### Is this similar to the existing Plan feature?
+
+The `Plan` feature shows the overall execution plan. Agent status is more granular - it shows the current activity at any moment, even without a plan.
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+We considered:
+
+1. **Extending ToolCallStatus** - But that is specific to tools, not the agent itself
+2. **Using Plan for status** - But plans are structural, not real-time activity
+3. **Doing nothing** - But users need visibility into agent activity
+
+We settled on a dedicated `AgentStatusUpdate` because it provides the right level of abstraction for user-facing status without coupling to tools or plans.
+
+## Revision history
+
+<!-- If there have been major updates to this RFD, you can include the git revisions and a summary of the changes. -->
