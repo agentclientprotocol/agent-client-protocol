@@ -21,8 +21,8 @@ use crate::{
 use crate::{
     DocumentDidChangeNotification, DocumentDidCloseNotification, DocumentDidFocusNotification,
     DocumentDidOpenNotification, DocumentDidSaveNotification, NesAcceptNotification,
-    NesCapabilities, NesRejectNotification, NesStartRequest, NesStartResponse, NesSuggestRequest,
-    NesSuggestResponse, PositionEncodingKind,
+    NesCapabilities, NesCloseRequest, NesCloseResponse, NesRejectNotification, NesStartRequest,
+    NesStartResponse, NesSuggestRequest, NesSuggestResponse, PositionEncodingKind,
 };
 
 // Initialize
@@ -3787,6 +3787,9 @@ pub struct AgentMethodNames {
     /// Notification for rejecting a suggestion.
     #[cfg(feature = "unstable_nes")]
     pub nes_reject: &'static str,
+    /// Method for closing an NES session.
+    #[cfg(feature = "unstable_nes")]
+    pub nes_close: &'static str,
     /// Notification for document open events.
     #[cfg(feature = "unstable_nes")]
     pub document_did_open: &'static str,
@@ -3834,6 +3837,8 @@ pub const AGENT_METHOD_NAMES: AgentMethodNames = AgentMethodNames {
     #[cfg(feature = "unstable_nes")]
     nes_reject: NES_REJECT_METHOD_NAME,
     #[cfg(feature = "unstable_nes")]
+    nes_close: NES_CLOSE_METHOD_NAME,
+    #[cfg(feature = "unstable_nes")]
     document_did_open: DOCUMENT_DID_OPEN_METHOD_NAME,
     #[cfg(feature = "unstable_nes")]
     document_did_change: DOCUMENT_DID_CHANGE_METHOD_NAME,
@@ -3849,7 +3854,8 @@ pub const AGENT_METHOD_NAMES: AgentMethodNames = AgentMethodNames {
 use crate::nes::{
     DOCUMENT_DID_CHANGE_METHOD_NAME, DOCUMENT_DID_CLOSE_METHOD_NAME,
     DOCUMENT_DID_FOCUS_METHOD_NAME, DOCUMENT_DID_OPEN_METHOD_NAME, DOCUMENT_DID_SAVE_METHOD_NAME,
-    NES_ACCEPT_METHOD_NAME, NES_REJECT_METHOD_NAME, NES_START_METHOD_NAME, NES_SUGGEST_METHOD_NAME,
+    NES_ACCEPT_METHOD_NAME, NES_CLOSE_METHOD_NAME, NES_REJECT_METHOD_NAME, NES_START_METHOD_NAME,
+    NES_SUGGEST_METHOD_NAME,
 };
 
 /// Method name for the initialize request.
@@ -4045,6 +4051,16 @@ pub enum ClientRequest {
     ///
     /// Requests a code suggestion.
     NesSuggestRequest(NesSuggestRequest),
+    #[cfg(feature = "unstable_nes")]
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Closes an active NES session and frees up any resources associated with it.
+    ///
+    /// The agent must cancel any ongoing work and then free up any resources
+    /// associated with the NES session.
+    NesCloseRequest(NesCloseRequest),
     /// Handles extension method requests from the client.
     ///
     /// Extension methods provide a way to add custom functionality while maintaining
@@ -4081,6 +4097,8 @@ impl ClientRequest {
             Self::NesStartRequest(_) => AGENT_METHOD_NAMES.nes_start,
             #[cfg(feature = "unstable_nes")]
             Self::NesSuggestRequest(_) => AGENT_METHOD_NAMES.nes_suggest,
+            #[cfg(feature = "unstable_nes")]
+            Self::NesCloseRequest(_) => AGENT_METHOD_NAMES.nes_close,
             Self::ExtMethodRequest(ext_request) => &ext_request.method,
         }
     }
@@ -4120,6 +4138,8 @@ pub enum AgentResponse {
     NesStartResponse(NesStartResponse),
     #[cfg(feature = "unstable_nes")]
     NesSuggestResponse(NesSuggestResponse),
+    #[cfg(feature = "unstable_nes")]
+    NesCloseResponse(#[serde(default)] NesCloseResponse),
     ExtMethodResponse(ExtResponse),
 }
 

@@ -1034,6 +1034,7 @@ starting with '$/' it is free to ignore the notification."
                 "logout" => self.agent.get("LogoutRequest").unwrap(),
                 "nes/start" => self.agent.get("NesStartRequest").unwrap(),
                 "nes/suggest" => self.agent.get("NesSuggestRequest").unwrap(),
+                "nes/close" => self.agent.get("NesCloseRequest").unwrap(),
                 "nes/accept" => self.agent.get("NesAcceptNotification").unwrap(),
                 "nes/reject" => self.agent.get("NesRejectNotification").unwrap(),
                 "document/didOpen" => self.agent.get("DocumentDidOpenNotification").unwrap(),

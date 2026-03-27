@@ -419,6 +419,58 @@ Notification sent when a suggestion is accepted.
   The session ID for this notification.
 </ResponseField>
 
+<a id="nes-close"></a>
+### <span class="font-mono">nes/close</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Closes an active NES session and frees up any resources associated with it.
+
+The agent must cancel any ongoing work and then free up any resources
+associated with the NES session.
+
+#### <span class="font-mono">NesCloseRequest</span>
+
+Request to close an NES session.
+
+The agent **must** cancel any ongoing work related to the NES session
+and then free up any resources associated with the session.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The ID of the NES session to close.
+</ResponseField>
+
+#### <span class="font-mono">NesCloseResponse</span>
+
+Response from closing an NES session.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+
 <a id="nes-reject"></a>
 ### <span class="font-mono">nes/reject</span>
 

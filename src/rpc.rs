@@ -335,6 +335,10 @@ impl Side for AgentSide {
             m if m == NES_METHOD_NAMES.nes_suggest => serde_json::from_str(params.get())
                 .map(ClientRequest::NesSuggestRequest)
                 .map_err(Into::into),
+            #[cfg(feature = "unstable_nes")]
+            m if m == NES_METHOD_NAMES.nes_close => serde_json::from_str(params.get())
+                .map(ClientRequest::NesCloseRequest)
+                .map_err(Into::into),
             _ => {
                 if let Some(custom_method) = method.strip_prefix('_') {
                     Ok(ClientRequest::ExtMethodRequest(ExtRequest {

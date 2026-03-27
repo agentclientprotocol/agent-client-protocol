@@ -9,6 +9,7 @@
     "initialize": "initialize",
     "logout": "logout",
     "nes_accept": "nes/accept",
+    "nes_close": "nes/close",
     "nes_reject": "nes/reject",
     "nes_start": "nes/start",
     "nes_suggest": "nes/suggest",

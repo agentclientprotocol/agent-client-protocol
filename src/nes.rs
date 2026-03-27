@@ -19,6 +19,8 @@ pub(crate) const NES_SUGGEST_METHOD_NAME: &str = "nes/suggest";
 pub(crate) const NES_ACCEPT_METHOD_NAME: &str = "nes/accept";
 /// Method name for rejecting a suggestion.
 pub(crate) const NES_REJECT_METHOD_NAME: &str = "nes/reject";
+/// Method name for closing an NES session.
+pub(crate) const NES_CLOSE_METHOD_NAME: &str = "nes/close";
 /// Notification name for document open events.
 pub(crate) const DOCUMENT_DID_OPEN_METHOD_NAME: &str = "document/didOpen";
 /// Notification name for document change events.
@@ -42,6 +44,8 @@ pub struct NesMethodNames {
     pub nes_accept: &'static str,
     /// Notification for rejecting a suggestion.
     pub nes_reject: &'static str,
+    /// Method for closing an NES session.
+    pub nes_close: &'static str,
     /// Notification for document open events.
     pub document_did_open: &'static str,
     /// Notification for document change events.
@@ -60,6 +64,7 @@ pub const NES_METHOD_NAMES: NesMethodNames = NesMethodNames {
     nes_suggest: NES_SUGGEST_METHOD_NAME,
     nes_accept: NES_ACCEPT_METHOD_NAME,
     nes_reject: NES_REJECT_METHOD_NAME,
+    nes_close: NES_CLOSE_METHOD_NAME,
     document_did_open: DOCUMENT_DID_OPEN_METHOD_NAME,
     document_did_change: DOCUMENT_DID_CHANGE_METHOD_NAME,
     document_did_close: DOCUMENT_DID_CLOSE_METHOD_NAME,
@@ -974,6 +979,82 @@ impl NesStartResponse {
         }
     }
 
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+// NES session close
+
+/// Request to close an NES session.
+///
+/// The agent **must** cancel any ongoing work related to the NES session
+/// and then free up any resources associated with the session.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[schemars(extend("x-side" = "agent", "x-method" = NES_CLOSE_METHOD_NAME))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct NesCloseRequest {
+    /// The ID of the NES session to close.
+    pub session_id: SessionId,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl NesCloseRequest {
+    #[must_use]
+    pub fn new(session_id: impl Into<SessionId>) -> Self {
+        Self {
+            session_id: session_id.into(),
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// Response from closing an NES session.
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[schemars(extend("x-side" = "agent", "x-method" = NES_CLOSE_METHOD_NAME))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct NesCloseResponse {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl NesCloseResponse {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();

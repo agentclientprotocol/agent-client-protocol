@@ -398,6 +398,14 @@
                 {
                   "allOf": [
                     {
+                      "$ref": "#/$defs/NesCloseResponse"
+                    }
+                  ],
+                  "title": "NesCloseResponse"
+                },
+                {
+                  "allOf": [
+                    {
                       "$ref": "#/$defs/ExtResponse"
                     }
                   ],
@@ -1207,6 +1215,15 @@
                   ],
                   "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequests a code suggestion.",
                   "title": "NesSuggestRequest"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/NesCloseRequest"
+                    }
+                  ],
+                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCloses an active NES session and frees up any resources associated with it.\n\nThe agent must cancel any ongoing work and then free up any resources\nassociated with the NES session.",
+                  "title": "NesCloseRequest"
                 },
                 {
                   "allOf": [
@@ -3284,6 +3301,41 @@
         }
       },
       "type": "object"
+    },
+    "NesCloseRequest": {
+      "description": "Request to close an NES session.\n\nThe agent **must** cancel any ongoing work related to the NES session\nand then free up any resources associated with the session.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "sessionId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ],
+          "description": "The ID of the NES session to close."
+        }
+      },
+      "required": ["sessionId"],
+      "type": "object",
+      "x-method": "nes/close",
+      "x-side": "agent"
+    },
+    "NesCloseResponse": {
+      "description": "Response from closing an NES session.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object",
+      "x-method": "nes/close",
+      "x-side": "agent"
     },
     "NesContextCapabilities": {
       "description": "Context capabilities the agent wants attached to each suggestion request.",
