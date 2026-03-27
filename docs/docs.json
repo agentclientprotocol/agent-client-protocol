@@ -126,7 +126,8 @@
               "rfds/elicitation",
               "rfds/session-close",
               "rfds/next-edit-suggestions",
-              "rfds/additional-directories"
+              "rfds/additional-directories",
+              "rfds/custom-llm-endpoint"
             ]
           },
           {
