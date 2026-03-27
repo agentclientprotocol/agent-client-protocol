@@ -1807,6 +1807,17 @@
             }
           ],
           "description": "Optional session ID if this elicitation is tied to a specific session."
+        },
+        "toolCallId": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ToolCallId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional tool call ID if this elicitation originated during a tool call.\nWhen present, `session_id` should also be set."
         }
       },
       "required": ["message"],
