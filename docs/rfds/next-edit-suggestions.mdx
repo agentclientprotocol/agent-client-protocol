@@ -69,22 +69,21 @@ All fields under `events` and `context` are optional — an agent advertises onl
 
 #### Client capabilities
 
-The **client** advertises its own NES-related capabilities in the `initialize` request. Currently, the client can declare which well-known IDE actions it supports by advertising them as keys under `clientCapabilities.nes.ideActions`. The agent reads these and may later include `"action"` kind suggestions that reference them.
+The **client** advertises its own NES-related capabilities in the `initialize` request. The client declares which suggestion kinds it supports beyond the basic `edit` kind. Agents should only suggest kinds that the client has advertised.
 
 ```json
 {
   "clientCapabilities": {
     "nes": {
-      "ideActions": {
-        "rename": {},
-        "searchAndReplace": {}
-      }
+      "jump": {},
+      "rename": {},
+      "searchAndReplace": {}
     }
   }
 }
 ```
 
-Each key in `ideActions` is the ID of a well-known action (see [Well-known IDE actions](#well-known-ide-actions) below). Agents should only suggest actions that the client has advertised.
+Each entry corresponds to a suggestion kind (see [Suggestion kinds](#suggestion-kinds) below). If a kind is absent, the agent must not produce suggestions of that kind.
 
 ### Session lifecycle
 
@@ -359,7 +358,7 @@ The client requests a suggestion by calling `nes/suggest`. Context fields are in
 
 ### Suggestion response
 
-A suggestion is one of three kinds: an **edit** (text changes), a **jump** (navigate to a different file), or an **action** (trigger an IDE action).
+A suggestion is one of several kinds, each identified by the `kind` field. The `edit` kind is always supported; other kinds (`jump`, `rename`, `searchAndReplace`) require the client to advertise support in its capabilities.
 
 **Edit suggestion:**
 
@@ -408,7 +407,7 @@ A suggestion is one of three kinds: an **edit** (text changes), a **jump** (navi
 }
 ```
 
-**Action suggestion:**
+**Rename suggestion:**
 
 ```json
 {
@@ -418,33 +417,47 @@ A suggestion is one of three kinds: an **edit** (text changes), a **jump** (navi
     "suggestions": [
       {
         "id": "sugg_003",
-        "kind": "action",
-        "actionId": "rename",
-        "arguments": {
-          "uri": "file:///path/to/file.rs",
-          "position": { "line": 5, "character": 10 },
-          "newName": "calculateTotal"
-        }
+        "kind": "rename",
+        "uri": "file:///path/to/file.rs",
+        "position": { "line": 5, "character": 10 },
+        "newName": "calculateTotal"
       }
     ]
   }
 }
 ```
 
-Action suggestions reference an IDE action that the client previously advertised in its capabilities:
+**Search-and-replace suggestion:**
 
-- `actionId` — matches an `id` from the client's advertised `ideActions`.
-- `arguments` — matches the parameter schema declared by the client for that action.
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": {
+    "suggestions": [
+      {
+        "id": "sugg_004",
+        "kind": "searchAndReplace",
+        "uri": "file:///path/to/file.rs",
+        "search": "oldFunction",
+        "replace": "newFunction",
+        "isRegex": false
+      }
+    ]
+  }
+}
+```
 
-A response may contain a mix of edit, jump, and action suggestions. The client decides how to present them (e.g. inline ghost text for edits, a navigation hint for jumps).
+A response may contain a mix of suggestion kinds. The client decides how to present them (e.g. inline ghost text for edits, a navigation hint for jumps). Agents must only include suggestion kinds that the client has advertised in its capabilities (except `edit`, which is always supported).
 
 Each suggestion contains:
 
 - `id` — unique identifier for accept/reject tracking.
-- `kind` — `"edit"`, `"jump"`, or `"action"`.
+- `kind` — the suggestion kind (see [Suggestion kinds](#suggestion-kinds) below).
 
 Edit suggestions additionally contain:
 
+- `uri` — the file to edit.
 - `edits` — one or more text edits to apply.
 - `cursorPosition` — optional suggested cursor position after applying edits.
 
@@ -453,10 +466,18 @@ Jump suggestions additionally contain:
 - `uri` — the file to navigate to.
 - `position` — the target position within that file.
 
-Action suggestions additionally contain:
+Rename suggestions additionally contain:
 
-- `actionId` — the IDE action to perform (must match a client-advertised action `id`).
-- `arguments` — action parameters matching the schema from the client's capability.
+- `uri` — the file URI containing the symbol.
+- `position` — the position of the symbol to rename.
+- `newName` — the new name for the symbol.
+
+Search-and-replace suggestions additionally contain:
+
+- `uri` — the file URI to search within. Can be a folder, then operation is performed in all the files in this folder.
+- `search` — the text or pattern to find.
+- `replace` — the replacement text.
+- `isRegex` (`boolean`, optional) — whether `search` is a regular expression. Defaults to `false`.
 
 ### Accept / Reject
 
@@ -554,28 +575,16 @@ The agent may reject `nes/start` with an error. In particular, agents that requi
 
 Clients **must** be prepared to handle `auth_required` errors on `nes/start`. The recommended behavior is to prompt the user to authenticate (e.g. sign in or provide credentials) and retry the `nes/start` call after authentication succeeds. Clients should not silently ignore this error or assume NES is unavailable — the agent may be fully functional once the user authenticates.
 
-### Well-known IDE actions
+### Suggestion kinds
 
-The following actions are well-known and have standardized parameter schemas. Clients that support these actions should use the IDs and parameter shapes defined here.
+The `kind` field in each suggestion identifies its type. The following kinds are defined:
 
-**`rename`** — Rename a symbol across the workspace.
+- **`edit`** — A text edit suggestion. Always supported; does not require a client capability.
+- **`jump`** — Navigate to a different file/position. Requires `jump` in client capabilities.
+- **`rename`** — Rename a symbol across the workspace. Requires `rename` in client capabilities.
+- **`searchAndReplace`** — Search and replace text within a file/folder. Requires `searchAndReplace` in client capabilities.
 
-Parameters:
-
-- `uri` (`string`) — the file URI containing the symbol.
-- `position` (`Position`) — the position of the symbol to rename.
-- `newName` (`string`) — the new name for the symbol.
-
-**`searchAndReplace`** — Search and replace text within a file.
-
-Parameters:
-
-- `uri` (`string`) — the file URI to search within.
-- `search` (`string`) — the text or pattern to find.
-- `replace` (`string`) — the replacement text.
-- `isRegex` (`boolean`, optional) — whether `search` is a regular expression. Defaults to `false`.
-
-Additional well-known actions may be added to the protocol in the future. Agents should only suggest actions whose `id` matches an entry the client has advertised.
+Additional suggestion kinds may be added to the protocol in the future. Agents must only produce suggestions whose `kind` the client has advertised (except `edit`, which is always supported).
 
 ### Config options
 

@@ -522,9 +522,15 @@ pub struct NesDiagnosticsCapabilities {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ClientNesCapabilities {
-    /// IDE actions the client supports.
+    /// Whether the client supports the `jump` suggestion kind.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub ide_actions: Option<NesIdeActionsCapabilities>,
+    pub jump: Option<NesJumpCapabilities>,
+    /// Whether the client supports the `rename` suggestion kind.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rename: Option<NesRenameActionCapabilities>,
+    /// Whether the client supports the `searchAndReplace` suggestion kind.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub search_and_replace: Option<NesSearchAndReplaceActionCapabilities>,
     /// The _meta property is reserved by ACP.
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<Meta>,
@@ -537,38 +543,9 @@ impl ClientNesCapabilities {
     }
 
     #[must_use]
-    pub fn ide_actions(mut self, ide_actions: impl IntoOption<NesIdeActionsCapabilities>) -> Self {
-        self.ide_actions = ide_actions.into_option();
+    pub fn jump(mut self, jump: impl IntoOption<NesJumpCapabilities>) -> Self {
+        self.jump = jump.into_option();
         self
-    }
-
-    #[must_use]
-    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
-        self.meta = meta.into_option();
-        self
-    }
-}
-
-/// IDE actions the client can perform.
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-#[non_exhaustive]
-pub struct NesIdeActionsCapabilities {
-    /// Whether the client supports the `rename` action.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub rename: Option<NesRenameActionCapabilities>,
-    /// Whether the client supports the `searchAndReplace` action.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub search_and_replace: Option<NesSearchAndReplaceActionCapabilities>,
-    /// The _meta property is reserved by ACP.
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
-    pub meta: Option<Meta>,
-}
-
-impl NesIdeActionsCapabilities {
-    #[must_use]
-    pub fn new() -> Self {
-        Self::default()
     }
 
     #[must_use]
@@ -591,6 +568,16 @@ impl NesIdeActionsCapabilities {
         self.meta = meta.into_option();
         self
     }
+}
+
+/// Marker for jump suggestion support.
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct NesJumpCapabilities {
+    /// The _meta property is reserved by ACP.
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<Meta>,
 }
 
 /// Marker for rename action support.
@@ -1419,8 +1406,10 @@ pub enum NesSuggestion {
     Edit(NesEditSuggestion),
     /// A jump-to-location suggestion.
     Jump(NesJumpSuggestion),
-    /// An IDE action suggestion.
-    Action(NesActionSuggestion),
+    /// A rename symbol suggestion.
+    Rename(NesRenameActionSuggestion),
+    /// A search-and-replace suggestion.
+    SearchAndReplace(NesSearchAndReplaceActionSuggestion),
 }
 
 /// A text edit suggestion.
@@ -1502,33 +1491,76 @@ impl NesJumpSuggestion {
     }
 }
 
-/// An IDE action suggestion.
+/// A rename symbol suggestion.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct NesActionSuggestion {
+pub struct NesRenameActionSuggestion {
     /// Unique identifier for accept/reject tracking.
     pub id: String,
-    /// The IDE action to perform (must match a client-advertised action).
-    pub action_id: String,
-    /// Action parameters matching the schema from the client's capability.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub arguments: Option<serde_json::Value>,
+    /// The file URI containing the symbol.
+    pub uri: String,
+    /// The position of the symbol to rename.
+    pub position: Position,
+    /// The new name for the symbol.
+    pub new_name: String,
 }
 
-impl NesActionSuggestion {
+impl NesRenameActionSuggestion {
     #[must_use]
-    pub fn new(id: impl Into<String>, action_id: impl Into<String>) -> Self {
+    pub fn new(
+        id: impl Into<String>,
+        uri: impl Into<String>,
+        position: Position,
+        new_name: impl Into<String>,
+    ) -> Self {
         Self {
             id: id.into(),
-            action_id: action_id.into(),
-            arguments: None,
+            uri: uri.into(),
+            position,
+            new_name: new_name.into(),
+        }
+    }
+}
+
+/// A search-and-replace suggestion.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct NesSearchAndReplaceActionSuggestion {
+    /// Unique identifier for accept/reject tracking.
+    pub id: String,
+    /// The file URI to search within.
+    pub uri: String,
+    /// The text or pattern to find.
+    pub search: String,
+    /// The replacement text.
+    pub replace: String,
+    /// Whether `search` is a regular expression. Defaults to `false`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_regex: Option<bool>,
+}
+
+impl NesSearchAndReplaceActionSuggestion {
+    #[must_use]
+    pub fn new(
+        id: impl Into<String>,
+        uri: impl Into<String>,
+        search: impl Into<String>,
+        replace: impl Into<String>,
+    ) -> Self {
+        Self {
+            id: id.into(),
+            uri: uri.into(),
+            search: search.into(),
+            replace: replace.into(),
+            is_regex: None,
         }
     }
 
     #[must_use]
-    pub fn arguments(mut self, arguments: impl IntoOption<serde_json::Value>) -> Self {
-        self.arguments = arguments.into_option();
+    pub fn is_regex(mut self, is_regex: impl IntoOption<bool>) -> Self {
+        self.is_regex = is_regex.into_option();
         self
     }
 }
@@ -1734,20 +1766,18 @@ mod tests {
 
     #[test]
     fn test_client_nes_capabilities_serialization() {
-        let caps = ClientNesCapabilities::new().ide_actions(
-            NesIdeActionsCapabilities::new()
-                .rename(NesRenameActionCapabilities::default())
-                .search_and_replace(NesSearchAndReplaceActionCapabilities::default()),
-        );
+        let caps = ClientNesCapabilities::new()
+            .jump(NesJumpCapabilities::default())
+            .rename(NesRenameActionCapabilities::default())
+            .search_and_replace(NesSearchAndReplaceActionCapabilities::default());
 
         let json = serde_json::to_value(&caps).unwrap();
         assert_eq!(
             json,
             json!({
-                "ideActions": {
-                    "rename": {},
-                    "searchAndReplace": {}
-                }
+                "jump": {},
+                "rename": {},
+                "searchAndReplace": {}
             })
         );
 
@@ -1950,27 +1980,51 @@ mod tests {
     }
 
     #[test]
-    fn test_nes_suggestion_action_serialization() {
-        let suggestion = NesSuggestion::Action(
-            NesActionSuggestion::new("sugg_003", "rename").arguments(json!({
-                "uri": "file:///path/to/file.rs",
-                "position": { "line": 5, "character": 10 },
-                "newName": "calculateTotal"
-            })),
-        );
+    fn test_nes_suggestion_rename_action_serialization() {
+        let suggestion = NesSuggestion::Rename(NesRenameActionSuggestion::new(
+            "sugg_003",
+            "file:///path/to/file.rs",
+            Position::new(5, 10),
+            "calculateTotal",
+        ));
 
         let json = serde_json::to_value(&suggestion).unwrap();
         assert_eq!(
             json,
             json!({
-                "kind": "action",
+                "kind": "rename",
                 "id": "sugg_003",
-                "actionId": "rename",
-                "arguments": {
-                    "uri": "file:///path/to/file.rs",
-                    "position": { "line": 5, "character": 10 },
-                    "newName": "calculateTotal"
-                }
+                "uri": "file:///path/to/file.rs",
+                "position": { "line": 5, "character": 10 },
+                "newName": "calculateTotal"
+            })
+        );
+
+        let deserialized: NesSuggestion = serde_json::from_value(json).unwrap();
+        assert_eq!(deserialized, suggestion);
+    }
+
+    #[test]
+    fn test_nes_suggestion_search_and_replace_action_serialization() {
+        let suggestion =
+            NesSuggestion::SearchAndReplace(NesSearchAndReplaceActionSuggestion::new(
+                "sugg_004",
+                "file:///path/to/file.rs",
+                "oldFunction",
+                "newFunction",
+            )
+            .is_regex(false));
+
+        let json = serde_json::to_value(&suggestion).unwrap();
+        assert_eq!(
+            json,
+            json!({
+                "kind": "searchAndReplace",
+                "id": "sugg_004",
+                "uri": "file:///path/to/file.rs",
+                "search": "oldFunction",
+                "replace": "newFunction",
+                "isRegex": false
             })
         );
 
