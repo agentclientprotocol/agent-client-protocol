@@ -2742,12 +2742,12 @@ This capability is not part of the spec yet, and may be removed or changed at an
 NES (Next Edit Suggestions) capabilities supported by the client.
 
 </ResponseField>
-<ResponseField name="positionEncoding" type={<><span><a href="#positionencodingkind">PositionEncodingKind</a></span><span> | null</span></>} >
+<ResponseField name="positionEncodings" type={<a href="#positionencodingkind">PositionEncodingKind[]</a>} >
   **UNSTABLE**
 
 This capability is not part of the spec yet, and may be removed or changed at any point.
 
-The position encoding selected by the agent from the client's supported encodings.
+The position encodings supported by the client, in order of preference.
 
 </ResponseField>
 <ResponseField name="terminal" type={"boolean"} >
@@ -4467,14 +4467,8 @@ Capabilities for `document/didChange` events.
 </ResponseField>
 <ResponseField
   name="syncKind"
-  type={
-    <>
-      <span>
-        <a href="#textdocumentsynckind">TextDocumentSyncKind</a>
-      </span>
-      <span> | null</span>
-    </>
-  }
+  type={<a href="#textdocumentsynckind">TextDocumentSyncKind</a>}
+  required
 >
   The sync kind the agent wants: `"full"` or `"incremental"`.
 </ResponseField>

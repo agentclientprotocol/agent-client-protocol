@@ -288,13 +288,12 @@ pub struct NesDocumentDidOpenCapabilities {
 }
 
 /// Capabilities for `document/didChange` events.
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesDocumentDidChangeCapabilities {
     /// The sync kind the agent wants: `"full"` or `"incremental"`.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub sync_kind: Option<TextDocumentSyncKind>,
+    pub sync_kind: TextDocumentSyncKind,
     /// The _meta property is reserved by ACP.
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<Meta>,
@@ -302,14 +301,11 @@ pub struct NesDocumentDidChangeCapabilities {
 
 impl NesDocumentDidChangeCapabilities {
     #[must_use]
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    #[must_use]
-    pub fn sync_kind(mut self, sync_kind: impl IntoOption<TextDocumentSyncKind>) -> Self {
-        self.sync_kind = sync_kind.into_option();
-        self
+    pub fn new(sync_kind: TextDocumentSyncKind) -> Self {
+        Self {
+            sync_kind,
+            meta: None,
+        }
     }
 
     #[must_use]
@@ -1672,10 +1668,9 @@ mod tests {
                 NesEventCapabilities::new().document(
                     NesDocumentEventCapabilities::new()
                         .did_open(NesDocumentDidOpenCapabilities::default())
-                        .did_change(
-                            NesDocumentDidChangeCapabilities::new()
-                                .sync_kind(TextDocumentSyncKind::Incremental),
-                        )
+                        .did_change(NesDocumentDidChangeCapabilities::new(
+                            TextDocumentSyncKind::Incremental,
+                        ))
                         .did_close(NesDocumentDidCloseCapabilities::default())
                         .did_save(NesDocumentDidSaveCapabilities::default())
                         .did_focus(NesDocumentDidFocusCapabilities::default()),
@@ -2128,6 +2123,11 @@ mod tests {
             serde_json::to_value(&TextDocumentSyncKind::Incremental).unwrap(),
             json!("incremental")
         );
+    }
+
+    #[test]
+    fn test_document_did_change_capabilities_requires_sync_kind() {
+        assert!(serde_json::from_value::<NesDocumentDidChangeCapabilities>(json!({})).is_err());
     }
 
     #[test]

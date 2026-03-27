@@ -106,16 +106,14 @@ Three encoding kinds are supported:
 - `"utf-32"` — character offsets count Unicode code points.
 - `"utf-8"` — character offsets count UTF-8 code units (bytes).
 
-**Negotiation:** The client declares which encodings it supports in the `initialize` request via `general.positionEncodings`, listed in order of preference. The agent selects one from the client's list and declares it in its `initialize` response as `positionEncoding`. If the client omits `positionEncodings`, or the agent omits `positionEncoding` in its response, both sides default to `"utf-16"`.
+**Negotiation:** The client may declare the position encodings it supports in the `initialize` request via `clientCapabilities.positionEncodings`, listed in order of preference. The agent selects one from the client's list and declares it in its `initialize` response as `agentCapabilities.positionEncoding`. If the client omits `positionEncodings`, or the agent omits `positionEncoding` in its response, both sides default to `"utf-16"`.
 
 Client `initialize` request (excerpt):
 
 ```json
 {
   "clientCapabilities": {
-    "general": {
-      "positionEncodings": ["utf-32", "utf-16"]
-    }
+    "positionEncodings": ["utf-32", "utf-16"]
   }
 }
 ```

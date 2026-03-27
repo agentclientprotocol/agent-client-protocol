@@ -899,16 +899,12 @@
           ],
           "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNES (Next Edit Suggestions) capabilities supported by the client."
         },
-        "positionEncoding": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/PositionEncodingKind"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nThe position encoding selected by the agent from the client's supported encodings."
+        "positionEncodings": {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nThe position encodings supported by the client, in order of preference.",
+          "items": {
+            "$ref": "#/$defs/PositionEncodingKind"
+          },
+          "type": "array"
         },
         "terminal": {
           "default": false,
@@ -3438,17 +3434,15 @@
           "type": ["object", "null"]
         },
         "syncKind": {
-          "anyOf": [
+          "allOf": [
             {
               "$ref": "#/$defs/TextDocumentSyncKind"
-            },
-            {
-              "type": "null"
             }
           ],
           "description": "The sync kind the agent wants: `\"full\"` or `\"incremental\"`."
         }
       },
+      "required": ["syncKind"],
       "type": "object"
     },
     "NesDocumentDidCloseCapabilities": {

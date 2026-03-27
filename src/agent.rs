@@ -3334,7 +3334,7 @@ impl AgentCapabilities {
 
     /// **UNSTABLE**
     ///
-    /// The position encoding selected by the agent.
+    /// The position encoding selected by the agent from the client's supported encodings.
     #[cfg(feature = "unstable_nes")]
     #[must_use]
     pub fn position_encoding(

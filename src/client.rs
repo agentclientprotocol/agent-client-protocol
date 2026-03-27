@@ -1515,10 +1515,11 @@ pub struct ClientCapabilities {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
-    /// The position encoding selected by the agent from the client's supported encodings.
+    /// The position encodings supported by the client, in order of preference.
     #[cfg(feature = "unstable_nes")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub position_encoding: Option<PositionEncodingKind>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub position_encodings: Vec<PositionEncodingKind>,
+
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -1588,14 +1589,11 @@ impl ClientCapabilities {
 
     /// **UNSTABLE**
     ///
-    /// The position encoding selected by the agent.
+    /// The position encodings supported by the client, in order of preference.
     #[cfg(feature = "unstable_nes")]
     #[must_use]
-    pub fn position_encoding(
-        mut self,
-        position_encoding: impl IntoOption<PositionEncodingKind>,
-    ) -> Self {
-        self.position_encoding = position_encoding.into_option();
+    pub fn position_encodings(mut self, position_encodings: Vec<PositionEncodingKind>) -> Self {
+        self.position_encodings = position_encodings;
         self
     }
 
@@ -2061,5 +2059,19 @@ mod tests {
             .unwrap(),
             json!({})
         );
+    }
+
+    #[cfg(feature = "unstable_nes")]
+    #[test]
+    fn test_client_capabilities_position_encodings_serialization() {
+        use serde_json::json;
+
+        let capabilities = ClientCapabilities::new().position_encodings(vec![
+            PositionEncodingKind::Utf32,
+            PositionEncodingKind::Utf16,
+        ]);
+        let json = serde_json::to_value(&capabilities).unwrap();
+
+        assert_eq!(json["positionEncodings"], json!(["utf-32", "utf-16"]));
     }
 }
