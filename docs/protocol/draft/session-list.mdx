@@ -53,6 +53,14 @@ Before attempting to list sessions, Clients **MUST** verify that the Agent suppo
 
 If `sessionCapabilities.list` is not present, the Agent does not support listing sessions and Clients **MUST NOT** attempt to call `session/list`.
 
+<Note>
+  If the Agent also advertises the unstable
+  `sessionCapabilities.additionalDirectories` capability, `session/list`
+  supports filtering by `additionalDirectories`, and any returned
+  `SessionInfo.additionalDirectories` value is the authoritative additional-root
+  list for that session.
+</Note>
+
 ## Listing Sessions
 
 Clients discover existing sessions by calling the `session/list` method with optional filtering and pagination parameters:
@@ -74,6 +82,13 @@ All parameters are optional. A request with an empty `params` object returns the
 <ParamField path="cwd" type="string">
   Filter sessions by working directory. Must be an absolute path. Only sessions
   with a matching `cwd` are returned.
+</ParamField>
+
+<ParamField path="additionalDirectories" type="string[] | null">
+  If the Agent advertises `sessionCapabilities.additionalDirectories`, filter
+  sessions by the exact ordered additional-root list. Omit the field or set it
+  to `null` to avoid filtering on additional roots. An empty array matches only
+  sessions whose authoritative additional-root list is empty.
 </ParamField>
 
 <ParamField path="cursor" type="string">
@@ -126,6 +141,13 @@ The Agent **MUST** respond with a list of sessions and optional pagination metad
     <ResponseField name="cwd" type="string" required>
       Working directory for the session. Always an absolute path.
     </ResponseField>
+    <ResponseField name="additionalDirectories" type="string[]">
+      If the Agent advertises `sessionCapabilities.additionalDirectories`, this
+      is the authoritative ordered additional-root list for the session when
+      present. Omitting the field or returning `[]` means there are no
+      additional roots.
+    </ResponseField>
+
     <ResponseField name="title" type="string">
       Human-readable title for the session. May be auto-generated from the first prompt.
     </ResponseField>
@@ -135,6 +157,7 @@ The Agent **MUST** respond with a list of sessions and optional pagination metad
     <ResponseField name="_meta" type="object">
       Agent-specific metadata. See [Extensibility](./extensibility).
     </ResponseField>
+
   </Expandable>
 </ResponseField>
 
@@ -190,7 +213,11 @@ All fields are optional. Only include fields that have changed — omitted field
   Agent-specific metadata. See [Extensibility](./extensibility).
 </ResponseField>
 
-The `sessionId` and `cwd` fields are **not** included in the update — `sessionId` is already in the notification's `params`, and `cwd` is immutable (set during [`session/new`](./session-setup#creating-a-session)). Agents typically send this notification after the first meaningful exchange to auto-generate a title.
+The `sessionId`, `cwd`, and `additionalDirectories` fields are **not** included
+in the update. `sessionId` is already in the notification's `params`, `cwd` is
+immutable after session setup, and ACP does not currently define mid-session
+mutation for `additionalDirectories`. Agents typically send this notification
+after the first meaningful exchange to auto-generate a title.
 
 ## Interaction with Other Session Methods
 

@@ -2131,7 +2131,7 @@
           "items": {
             "type": "string"
           },
-          "type": ["array", "null"]
+          "type": "array"
         },
         "cwd": {
           "description": "The working directory for this session.",
@@ -2479,7 +2479,7 @@
           "items": {
             "type": "string"
           },
-          "type": ["array", "null"]
+          "type": "array"
         },
         "cursor": {
           "description": "Opaque cursor token from a previous response's nextCursor field for cursor-based pagination",
@@ -2532,7 +2532,7 @@
           "items": {
             "type": "string"
           },
-          "type": ["array", "null"]
+          "type": "array"
         },
         "cwd": {
           "description": "The working directory for this session.",
@@ -2903,7 +2903,7 @@
           "items": {
             "type": "string"
           },
-          "type": ["array", "null"]
+          "type": "array"
         },
         "cwd": {
           "description": "The working directory for this session. Must be an absolute path.",
@@ -3517,7 +3517,7 @@
           "items": {
             "type": "string"
           },
-          "type": ["array", "null"]
+          "type": "array"
         },
         "cwd": {
           "description": "The working directory for this session.",
@@ -3954,7 +3954,7 @@
           "items": {
             "type": "string"
           },
-          "type": ["array", "null"]
+          "type": "array"
         },
         "cwd": {
           "description": "The working directory for this session. Must be an absolute path.",

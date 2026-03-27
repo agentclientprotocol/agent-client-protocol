@@ -902,8 +902,8 @@ pub struct NewSessionRequest {
     /// These expand the session's filesystem scope without changing `cwd`, which
     /// remains the base for relative paths.
     #[cfg(feature = "unstable_session_additional_directories")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub additional_directories: Option<Vec<PathBuf>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub additional_directories: Vec<PathBuf>,
     /// List of MCP (Model Context Protocol) servers the agent should connect to.
     pub mcp_servers: Vec<McpServer>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -921,7 +921,7 @@ impl NewSessionRequest {
         Self {
             cwd: cwd.into(),
             #[cfg(feature = "unstable_session_additional_directories")]
-            additional_directories: None,
+            additional_directories: vec![],
             mcp_servers: vec![],
             meta: None,
         }
@@ -934,11 +934,8 @@ impl NewSessionRequest {
     /// Additional workspace roots for this session. Each path must be absolute.
     #[cfg(feature = "unstable_session_additional_directories")]
     #[must_use]
-    pub fn additional_directories(
-        mut self,
-        additional_directories: impl IntoOption<Vec<PathBuf>>,
-    ) -> Self {
-        self.additional_directories = additional_directories.into_option();
+    pub fn additional_directories(mut self, additional_directories: Vec<PathBuf>) -> Self {
+        self.additional_directories = additional_directories;
         self
     }
 
@@ -1076,8 +1073,8 @@ pub struct LoadSessionRequest {
     ///
     /// Additional workspace roots to activate for this session. Each path must be absolute.
     #[cfg(feature = "unstable_session_additional_directories")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub additional_directories: Option<Vec<PathBuf>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub additional_directories: Vec<PathBuf>,
     /// The ID of the session to load.
     pub session_id: SessionId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1096,7 +1093,7 @@ impl LoadSessionRequest {
             mcp_servers: vec![],
             cwd: cwd.into(),
             #[cfg(feature = "unstable_session_additional_directories")]
-            additional_directories: None,
+            additional_directories: vec![],
             session_id: session_id.into(),
             meta: None,
         }
@@ -1109,11 +1106,8 @@ impl LoadSessionRequest {
     /// Additional workspace roots to activate for this session. Each path must be absolute.
     #[cfg(feature = "unstable_session_additional_directories")]
     #[must_use]
-    pub fn additional_directories(
-        mut self,
-        additional_directories: impl IntoOption<Vec<PathBuf>>,
-    ) -> Self {
-        self.additional_directories = additional_directories.into_option();
+    pub fn additional_directories(mut self, additional_directories: Vec<PathBuf>) -> Self {
+        self.additional_directories = additional_directories;
         self
     }
 
@@ -1244,8 +1238,8 @@ pub struct ForkSessionRequest {
     ///
     /// Additional workspace roots to activate for this session. Each path must be absolute.
     #[cfg(feature = "unstable_session_additional_directories")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub additional_directories: Option<Vec<PathBuf>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub additional_directories: Vec<PathBuf>,
     /// List of MCP servers to connect to for this session.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mcp_servers: Vec<McpServer>,
@@ -1266,7 +1260,7 @@ impl ForkSessionRequest {
             session_id: session_id.into(),
             cwd: cwd.into(),
             #[cfg(feature = "unstable_session_additional_directories")]
-            additional_directories: None,
+            additional_directories: vec![],
             mcp_servers: vec![],
             meta: None,
         }
@@ -1279,11 +1273,8 @@ impl ForkSessionRequest {
     /// Additional workspace roots to activate for this session. Each path must be absolute.
     #[cfg(feature = "unstable_session_additional_directories")]
     #[must_use]
-    pub fn additional_directories(
-        mut self,
-        additional_directories: impl IntoOption<Vec<PathBuf>>,
-    ) -> Self {
-        self.additional_directories = additional_directories.into_option();
+    pub fn additional_directories(mut self, additional_directories: Vec<PathBuf>) -> Self {
+        self.additional_directories = additional_directories;
         self
     }
 
@@ -1429,8 +1420,8 @@ pub struct ResumeSessionRequest {
     ///
     /// Additional workspace roots to activate for this session. Each path must be absolute.
     #[cfg(feature = "unstable_session_additional_directories")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub additional_directories: Option<Vec<PathBuf>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub additional_directories: Vec<PathBuf>,
     /// List of MCP servers to connect to for this session.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mcp_servers: Vec<McpServer>,
@@ -1451,7 +1442,7 @@ impl ResumeSessionRequest {
             session_id: session_id.into(),
             cwd: cwd.into(),
             #[cfg(feature = "unstable_session_additional_directories")]
-            additional_directories: None,
+            additional_directories: vec![],
             mcp_servers: vec![],
             meta: None,
         }
@@ -1464,11 +1455,8 @@ impl ResumeSessionRequest {
     /// Additional workspace roots to activate for this session. Each path must be absolute.
     #[cfg(feature = "unstable_session_additional_directories")]
     #[must_use]
-    pub fn additional_directories(
-        mut self,
-        additional_directories: impl IntoOption<Vec<PathBuf>>,
-    ) -> Self {
-        self.additional_directories = additional_directories.into_option();
+    pub fn additional_directories(mut self, additional_directories: Vec<PathBuf>) -> Self {
+        self.additional_directories = additional_directories;
         self
     }
 
@@ -1687,8 +1675,8 @@ pub struct ListSessionsRequest {
     ///
     /// Filter sessions by the exact ordered additional workspace roots. Each path must be absolute.
     #[cfg(feature = "unstable_session_additional_directories")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub additional_directories: Option<Vec<PathBuf>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub additional_directories: Vec<PathBuf>,
     /// Opaque cursor token from a previous response's nextCursor field for cursor-based pagination
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cursor: Option<String>,
@@ -1721,11 +1709,8 @@ impl ListSessionsRequest {
     /// Filter sessions by the exact ordered additional workspace roots. Each path must be absolute.
     #[cfg(feature = "unstable_session_additional_directories")]
     #[must_use]
-    pub fn additional_directories(
-        mut self,
-        additional_directories: impl IntoOption<Vec<PathBuf>>,
-    ) -> Self {
-        self.additional_directories = additional_directories.into_option();
+    pub fn additional_directories(mut self, additional_directories: Vec<PathBuf>) -> Self {
+        self.additional_directories = additional_directories;
         self
     }
 
@@ -1812,8 +1797,9 @@ pub struct SessionInfo {
     ///
     /// Authoritative ordered additional workspace roots for this session. Each path must be absolute.
     #[cfg(feature = "unstable_session_additional_directories")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub additional_directories: Option<Vec<PathBuf>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub additional_directories: Vec<PathBuf>,
+
     /// Human-readable title for the session
     #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
@@ -1836,7 +1822,7 @@ impl SessionInfo {
             session_id: session_id.into(),
             cwd: cwd.into(),
             #[cfg(feature = "unstable_session_additional_directories")]
-            additional_directories: None,
+            additional_directories: vec![],
             title: None,
             updated_at: None,
             meta: None,
@@ -1850,11 +1836,8 @@ impl SessionInfo {
     /// Authoritative ordered additional workspace roots for this session. Each path must be absolute.
     #[cfg(feature = "unstable_session_additional_directories")]
     #[must_use]
-    pub fn additional_directories(
-        mut self,
-        additional_directories: impl IntoOption<Vec<PathBuf>>,
-    ) -> Self {
-        self.additional_directories = additional_directories.into_option();
+    pub fn additional_directories(mut self, additional_directories: Vec<PathBuf>) -> Self {
+        self.additional_directories = additional_directories;
         self
     }
 
@@ -4586,24 +4569,46 @@ mod test_serialization {
             })
         );
         assert_eq!(
+            serde_json::to_value(SessionInfo::new("sess_abc123", "/home/user/project")).unwrap(),
+            json!({
+                "sessionId": "sess_abc123",
+                "cwd": "/home/user/project"
+            })
+        );
+        assert_eq!(
             serde_json::to_value(
-                SessionInfo::new("sess_abc123", "/home/user/project")
-                    .additional_directories(Vec::<PathBuf>::new())
+                SessionInfo::new("sess_abc123", "/home/user/project").additional_directories(vec![
+                    PathBuf::from("/home/user/shared-lib"),
+                    PathBuf::from("/home/user/product-docs"),
+                ])
             )
             .unwrap(),
             json!({
                 "sessionId": "sess_abc123",
                 "cwd": "/home/user/project",
-                "additionalDirectories": []
+                "additionalDirectories": [
+                    "/home/user/shared-lib",
+                    "/home/user/product-docs"
+                ]
             })
         );
+        assert_eq!(
+            serde_json::from_value::<SessionInfo>(json!({
+                "sessionId": "sess_abc123",
+                "cwd": "/home/user/project"
+            }))
+            .unwrap()
+            .additional_directories,
+            Vec::<PathBuf>::new()
+        );
+
         assert_eq!(
             serde_json::from_value::<ListSessionsRequest>(json!({
                 "additionalDirectories": []
             }))
             .unwrap()
             .additional_directories,
-            Some(vec![])
+            Vec::<PathBuf>::new()
         );
     }
 

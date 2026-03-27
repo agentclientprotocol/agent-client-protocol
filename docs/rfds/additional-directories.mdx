@@ -14,7 +14,7 @@ ACP currently standardizes `cwd` on session lifecycle requests, but does not def
 This RFD proposes an optional field:
 
 ```ts
-additionalDirectories?: string[] | null
+additionalDirectories?: string[]
 ```
 
 on:
@@ -44,7 +44,7 @@ Without a standardized field, clients and agents must rely on implementation-spe
 
 > What are you proposing to improve the situation?
 
-Add `additionalDirectories?: string[] | null` to the session lifecycle request schemas listed above and to `session/list`, and define protocol-level validation and semantics for it.
+Add `additionalDirectories?: string[]` to the session lifecycle request schemas listed above and to `session/list`, and define protocol-level validation and semantics for it.
 
 The proposal is scoped to session lifecycle requests, session discovery requests, and session discovery metadata only:
 
@@ -54,7 +54,7 @@ The proposal is scoped to session lifecycle requests, session discovery requests
 
 Agents advertise support with `sessionCapabilities.additionalDirectories`. Clients MUST gate usage on that capability.
 
-This proposal also extends `SessionInfo` returned by `session/list` with authoritative `additionalDirectories` state, and allows `session/list` to filter on `cwd` plus `additionalDirectories`, so clients that support session discovery can recover and query the active root set for listed sessions. `session/load` and `session/resume` nevertheless remain explicit-list only: omitted or `null` `additionalDirectories` means no additional roots are activated for the resulting session, while an array-valued `additionalDirectories` becomes the complete resulting additional-root list for that request.
+This proposal also extends `SessionInfo` returned by `session/list` with authoritative `additionalDirectories` state, and allows `session/list` to filter on `cwd` plus `additionalDirectories`, so clients that support session discovery can recover and query the active root set for listed sessions. `session/load` and `session/resume` nevertheless remain explicit-list only: omitted `additionalDirectories` means no additional roots are activated for the resulting session, while an array-valued `additionalDirectories` becomes the complete resulting additional-root list for that request.
 
 ## Shiny future
 
@@ -94,19 +94,19 @@ Security boundaries remain explicit: declared roots communicate intended scope, 
 The following optional property is added to each request type named above:
 
 ```ts
-additionalDirectories?: string[] | null
+additionalDirectories?: string[]
 ```
 
 The following optional property is also added to `ListSessionsRequest`:
 
 ```ts
-additionalDirectories?: string[] | null
+additionalDirectories?: string[]
 ```
 
 The following optional property is also added to `SessionInfo`:
 
 ```ts
-additionalDirectories?: string[] | null
+additionalDirectories?: string[]
 ```
 
 The following capability is added to `SessionCapabilities`:
@@ -117,9 +117,9 @@ additionalDirectories?: {}
 
 Clients MUST send `additionalDirectories` only when `sessionCapabilities.additionalDirectories` is present.
 
-If an agent advertises `sessionCapabilities.additionalDirectories` and also supports `session/list`, each `SessionInfo` it returns MUST include `additionalDirectories` as the authoritative ordered additional-root list for that session. Agents SHOULD encode "no additional roots" as `[]` rather than `null`. Clients MUST treat `null` the same as `[]`.
+If an agent advertises `sessionCapabilities.additionalDirectories` and also supports `session/list`, any `SessionInfo.additionalDirectories` value it returns is the authoritative ordered additional-root list for that session. Agents MAY omit the field when there are no additional roots, and clients MUST treat an omitted field the same as `[]`.
 
-If an agent advertises `sessionCapabilities.additionalDirectories` and also supports `session/list`, `ListSessionsRequest.additionalDirectories` filters sessions by exact match on the authoritative ordered additional-root list. When both `cwd` and `additionalDirectories` are present on `session/list`, both filters apply. An empty `additionalDirectories` filter matches only sessions whose authoritative additional-root list is `[]`. A `null` filter is equivalent to omitting the field.
+If an agent advertises `sessionCapabilities.additionalDirectories` and also supports `session/list`, `ListSessionsRequest.additionalDirectories` filters sessions by exact match on the authoritative ordered additional-root list. When both `cwd` and `additionalDirectories` are present on `session/list`, both filters apply. An empty `additionalDirectories` filter matches only sessions whose authoritative additional-root list is `[]`.
 
 If adopted, the session-setup, session-list, and filesystem documentation will need corresponding updates so they describe the effective root set rather than `cwd` alone as the session filesystem context or boundary.
 
@@ -183,11 +183,10 @@ When an agent supports both `sessionCapabilities.additionalDirectories` and `ses
 
 `additionalDirectories` has the following properties:
 
-- The field MAY be omitted, set to `null`, or set to an array of strings.
-- `null` is equivalent to omitting the field.
-- Each array entry MUST be an absolute path under the same platform path rules used for `cwd`.
+- The field MUST be an array of strings when present.
+- Each entry MUST be an absolute path under the same platform path rules used for `cwd`.
 - Empty strings MUST be rejected.
-- `null` is not a valid array entry.
+- `null` is not a valid value for the field or for any entry.
 
 ACP does not define a wire-level lexical normalization algorithm for `cwd` or `additionalDirectories`.
 
@@ -230,14 +229,14 @@ For `NewSessionRequest`, the resulting additional root list is:
 For `LoadSessionRequest` and `ResumeSessionRequest`:
 
 - when `additionalDirectories` is present with an array value, it is the complete resulting list of additional roots for the active session, even if that list differs from the session's previously stored additional roots;
-- when omitted or set to `null`, the resulting additional root list is `[]`.
+- when omitted, the resulting additional root list is `[]`.
 
 Agents MUST NOT implicitly reactivate stored additional roots that were not supplied on the `session/load` or `session/resume` request. Supplying `additionalDirectories` on `session/load` or `session/resume` is always allowed when the capability is advertised, and doing so may preserve, replace, reduce, or expand the session's previously stored additional-root list for the resulting active session, subject to validation and policy checks. Clients that need to preserve a session's additional roots across restarts or across client instances MUST obtain, persist, or reconstruct the full list and resend it on load or resume. When `session/list` is available, `SessionInfo.additionalDirectories` provides the authoritative current additional-root list for that purpose.
 
 For `ForkSessionRequest`:
 
 - when `additionalDirectories` is present with an array value, it is a full replacement list for the forked session;
-- when omitted or set to `null`, the resulting additional root list is `[]`.
+- when omitted, the resulting additional root list is `[]`.
 
 Agents MUST NOT implicitly inherit additional roots from the source session unless the implementation can prove that the active root list is already authoritative to the requesting client on the current connection. Otherwise, the agent MUST fail the request or require the client to provide the full list explicitly.
 
@@ -268,7 +267,7 @@ An agent receiving a session lifecycle request with `additionalDirectories` MUST
 
 The agent MUST reject the request if:
 
-- `additionalDirectories` is neither `null` nor an array;
+- `additionalDirectories` is not an array;
 - any entry is not a string;
 - any entry is empty;
 - any entry is not absolute.
@@ -387,7 +386,7 @@ Because ACP does not define directory contents, agents SHOULD avoid assuming tha
 
 ### Backward compatibility
 
-This proposal is additive at the schema level. Requests that omit `additionalDirectories` or set it to `null` behave exactly as they do today. Existing clients that do not need multi-root support require no changes.
+This proposal is additive at the schema level. Requests that omit `additionalDirectories` behave exactly as they do today. Existing clients that do not need multi-root support require no changes.
 
 Updated agents MUST continue to accept requests that do not include the field.
 
@@ -430,7 +429,7 @@ Clients MUST gate `additionalDirectories` on `sessionCapabilities.additionalDire
 
 ### Why not restore stored roots on `session/load` or `session/resume` when the field is omitted?
 
-Even with `SessionInfo.additionalDirectories` available through `session/list`, implicit restoration would still let an agent reactivate filesystem scope that the current request did not state explicitly. That is undesirable for clients that do not use `session/list`, for clients resuming a session by ID without first listing it, and for clients that want request-time control over the active root set. This proposal therefore keeps load and resume explicit-list only for additional roots: omitting the field or sending `null` activates none, while supplying an array is explicitly allowed and sets the complete resulting additional-root list for that request.
+Even with `SessionInfo.additionalDirectories` available through `session/list`, implicit restoration would still let an agent reactivate filesystem scope that the current request did not state explicitly. That is undesirable for clients that do not use `session/list`, for clients resuming a session by ID without first listing it, and for clients that want request-time control over the active root set. This proposal therefore keeps load and resume explicit-list only for additional roots: omitting the field activates none, while supplying an array is explicitly allowed and sets the complete resulting additional-root list for that request.
 
 ### What alternative approaches did you consider, and why did you settle on this one?
 
