@@ -29,11 +29,11 @@ The client inspects these declarations and provides only what was requested, min
 
 ### Capability advertisement
 
-During `initialize`, the agent includes a `nes` field in its capabilities:
+During `initialize`, the agent includes a `nes` field in `agentCapabilities`:
 
 ```json
 {
-  "capabilities": {
+  "agentCapabilities": {
     "nes": {
       "events": {
         "document": {
@@ -69,11 +69,11 @@ All fields under `events` and `context` are optional — an agent advertises onl
 
 #### Client capabilities
 
-The **client** advertises its own NES-related capabilities in the `initialize` request. Currently, the client can declare which well-known IDE actions it supports by listing their IDs. The agent reads these and may later include `"action"` kind suggestions that reference them.
+The **client** advertises its own NES-related capabilities in the `initialize` request. Currently, the client can declare which well-known IDE actions it supports by advertising them as keys under `clientCapabilities.nes.ideActions`. The agent reads these and may later include `"action"` kind suggestions that reference them.
 
 ```json
 {
-  "capabilities": {
+  "clientCapabilities": {
     "nes": {
       "ideActions": {
         "rename": {},
@@ -84,7 +84,7 @@ The **client** advertises its own NES-related capabilities in the `initialize` r
 }
 ```
 
-Each entry in `ideActions` is the ID of a well-known action (see [Well-known IDE actions](#well-known-ide-actions) below). Agents should only suggest actions that the client has advertised.
+Each key in `ideActions` is the ID of a well-known action (see [Well-known IDE actions](#well-known-ide-actions) below). Agents should only suggest actions that the client has advertised.
 
 ### Session lifecycle
 
@@ -112,7 +112,7 @@ Client `initialize` request (excerpt):
 
 ```json
 {
-  "capabilities": {
+  "clientCapabilities": {
     "general": {
       "positionEncodings": ["utf-32", "utf-16"]
     }
@@ -124,7 +124,7 @@ Agent `initialize` response (excerpt):
 
 ```json
 {
-  "capabilities": {
+  "agentCapabilities": {
     "nes": { ... },
     "positionEncoding": "utf-32"
   }
@@ -135,7 +135,7 @@ The negotiated encoding applies to all `Position` and `Range` values exchanged w
 
 ### Events
 
-Events are fire-and-forget notifications from client to agent. The client sends them only if the corresponding key is present in the agent's advertised `events` capability (e.g. `nes.events.document` for NES).
+Events are fire-and-forget notifications from client to agent. Every event is scoped to the NES session identified by the `sessionId` returned from `nes/start`. The client sends them only if the corresponding key is present in the agent's advertised `events` capability (e.g. `nes.events.document` for NES).
 
 #### `document/didOpen`
 
@@ -146,6 +146,7 @@ Sent when a file is opened in the editor.
   "jsonrpc": "2.0",
   "method": "document/didOpen",
   "params": {
+    "sessionId": "session_abc123",
     "uri": "file:///path/to/file.rs",
     "languageId": "rust",
     "version": 1,
@@ -168,6 +169,7 @@ Sent when a file is edited. Supports two sync modes declared by the agent:
   "jsonrpc": "2.0",
   "method": "document/didChange",
   "params": {
+    "sessionId": "session_abc123",
     "uri": "file:///path/to/file.rs",
     "version": 2,
     "contentChanges": [
@@ -190,6 +192,7 @@ Sent when a file is edited. Supports two sync modes declared by the agent:
   "jsonrpc": "2.0",
   "method": "document/didChange",
   "params": {
+    "sessionId": "session_abc123",
     "uri": "file:///path/to/file.rs",
     "version": 2,
     "contentChanges": [
@@ -210,6 +213,7 @@ Sent when a file is closed.
   "jsonrpc": "2.0",
   "method": "document/didClose",
   "params": {
+    "sessionId": "session_abc123",
     "uri": "file:///path/to/file.rs"
   }
 }
@@ -224,6 +228,7 @@ Sent when a file is saved.
   "jsonrpc": "2.0",
   "method": "document/didSave",
   "params": {
+    "sessionId": "session_abc123",
     "uri": "file:///path/to/file.rs"
   }
 }
@@ -238,6 +243,7 @@ Sent when a file becomes the active editor tab. Unlike `document/didOpen` (which
   "jsonrpc": "2.0",
   "method": "document/didFocus",
   "params": {
+    "sessionId": "session_abc123",
     "uri": "file:///path/to/file.rs",
     "version": 2,
     "position": { "line": 5, "character": 12 },
@@ -261,6 +267,7 @@ The client requests a suggestion by calling `nes/suggest`. Context fields are in
   "id": 42,
   "method": "nes/suggest",
   "params": {
+    "sessionId": "session_abc123",
     "uri": "file:///path/to/file.rs",
     "version": 2,
     "position": { "line": 5, "character": 12 },
@@ -460,6 +467,7 @@ Action suggestions additionally contain:
   "jsonrpc": "2.0",
   "method": "nes/accept",
   "params": {
+    "sessionId": "session_abc123",
     "id": "sugg_001"
   }
 }
@@ -470,6 +478,7 @@ Action suggestions additionally contain:
   "jsonrpc": "2.0",
   "method": "nes/reject",
   "params": {
+    "sessionId": "session_abc123",
     "id": "sugg_001",
     "reason": "rejected"
   }
@@ -520,10 +529,12 @@ Response:
   "jsonrpc": "2.0",
   "id": 1,
   "result": {
-    "sessionId": "nes_abc123"
+    "sessionId": "session_abc123"
   }
 }
 ```
+
+The returned `sessionId` scopes all subsequent NES events, requests, and notifications for that session.
 
 #### Error handling
 
