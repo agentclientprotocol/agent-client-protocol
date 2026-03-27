@@ -12,6 +12,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::client::{ELICITATION_COMPLETE, ELICITATION_CREATE_METHOD_NAME};
+use crate::tool_call::ToolCallId;
 use crate::{IntoOption, Meta, RequestId, SessionId};
 
 /// **UNSTABLE**
@@ -882,6 +883,10 @@ pub struct ElicitationRequest {
     /// Optional request ID if this elicitation is tied to a specific request.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub request_id: Option<RequestId>,
+    /// Optional tool call ID if this elicitation originated during a tool call.
+    /// When present, `session_id` should also be set.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_call_id: Option<ToolCallId>,
     /// The elicitation mode and its mode-specific fields.
     #[serde(flatten)]
     pub mode: ElicitationMode,
@@ -902,6 +907,7 @@ impl ElicitationRequest {
         Self {
             session_id: None,
             request_id: None,
+            tool_call_id: None,
             mode,
             message: message.into(),
             meta: None,
@@ -917,6 +923,12 @@ impl ElicitationRequest {
     #[must_use]
     pub fn request_id(mut self, request_id: impl Into<RequestId>) -> Self {
         self.request_id = Some(request_id.into());
+        self
+    }
+
+    #[must_use]
+    pub fn tool_call_id(mut self, tool_call_id: impl Into<ToolCallId>) -> Self {
+        self.tool_call_id = Some(tool_call_id.into());
         self
     }
 
@@ -1272,6 +1284,7 @@ mod tests {
         let json = serde_json::to_value(&req).unwrap();
         assert!(json.get("sessionId").is_none());
         assert!(json.get("requestId").is_none());
+        assert!(json.get("toolCallId").is_none());
         assert_eq!(json["mode"], "form");
         assert_eq!(json["message"], "Please enter your name");
         assert!(json["requestedSchema"].is_object());
@@ -1284,6 +1297,7 @@ mod tests {
         let roundtripped: ElicitationRequest = serde_json::from_value(json).unwrap();
         assert_eq!(roundtripped.session_id, None);
         assert_eq!(roundtripped.request_id, None);
+        assert_eq!(roundtripped.tool_call_id, None);
         assert_eq!(roundtripped.message, "Please enter your name");
         assert!(matches!(roundtripped.mode, ElicitationMode::Form(_)));
     }
@@ -1298,11 +1312,13 @@ mod tests {
             "Please authenticate",
         )
         .session_id("sess_2")
-        .request_id(42i64);
+        .request_id(42i64)
+        .tool_call_id("tc_1");
 
         let json = serde_json::to_value(&req).unwrap();
         assert_eq!(json["sessionId"], "sess_2");
         assert_eq!(json["requestId"], 42);
+        assert_eq!(json["toolCallId"], "tc_1");
         assert_eq!(json["mode"], "url");
         assert_eq!(json["elicitationId"], "elic_1");
         assert_eq!(json["url"], "https://example.com/auth");
@@ -1311,6 +1327,7 @@ mod tests {
         let roundtripped: ElicitationRequest = serde_json::from_value(json).unwrap();
         assert_eq!(roundtripped.session_id, Some(SessionId::new("sess_2")));
         assert_eq!(roundtripped.request_id, Some(RequestId::Number(42)));
+        assert_eq!(roundtripped.tool_call_id, Some(ToolCallId::new("tc_1")));
         assert!(matches!(roundtripped.mode, ElicitationMode::Url(_)));
     }
 
