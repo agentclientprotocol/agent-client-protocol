@@ -5227,17 +5227,8 @@ A user action (typing, cursor movement, etc.).
 <ResponseField name="action" type={"string"} required>
   The kind of action (e.g., "insertChar", "cursorMovement").
 </ResponseField>
-<ResponseField name="line" type={"uint32"} required>
-  The line number where the action occurred.
-
-    - Minimum: `0`
-
-</ResponseField>
-<ResponseField name="offset" type={"uint32"} required>
-  The character offset where the action occurred.
-
-    - Minimum: `0`
-
+<ResponseField name="position" type={<a href="#position">Position</a>} required>
+  The position where the action occurred.
 </ResponseField>
 <ResponseField name="timestampMs" type={"uint64"} required>
   Timestamp in milliseconds since epoch.

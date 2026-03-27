@@ -303,15 +303,13 @@ The client requests a suggestion by calling `nes/suggest`. Context fields are in
         {
           "action": "insertChar",
           "uri": "file:///path/to/file.rs",
-          "line": 5,
-          "offset": 12,
+          "position": { "line": 5, "character": 12 },
           "timestampMs": 1719400000000
         },
         {
           "action": "cursorMovement",
           "uri": "file:///path/to/file.rs",
-          "line": 10,
-          "offset": 0,
+          "position": { "line": 10, "character": 0 },
           "timestampMs": 1719400001200
         }
       ],

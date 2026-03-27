@@ -1248,10 +1248,8 @@ pub struct NesUserAction {
     pub action: String,
     /// The URI of the file where the action occurred.
     pub uri: String,
-    /// The line number where the action occurred.
-    pub line: u32,
-    /// The character offset where the action occurred.
-    pub offset: u32,
+    /// The position where the action occurred.
+    pub position: Position,
     /// Timestamp in milliseconds since epoch.
     pub timestamp_ms: u64,
 }
@@ -1261,15 +1259,13 @@ impl NesUserAction {
     pub fn new(
         action: impl Into<String>,
         uri: impl Into<String>,
-        line: u32,
-        offset: u32,
+        position: Position,
         timestamp_ms: u64,
     ) -> Self {
         Self {
             action: action.into(),
             uri: uri.into(),
-            line,
-            offset,
+            position,
             timestamp_ms,
         }
     }

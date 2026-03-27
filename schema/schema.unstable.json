@@ -4283,17 +4283,13 @@
           "description": "The kind of action (e.g., \"insertChar\", \"cursorMovement\").",
           "type": "string"
         },
-        "line": {
-          "description": "The line number where the action occurred.",
-          "format": "uint32",
-          "minimum": 0,
-          "type": "integer"
-        },
-        "offset": {
-          "description": "The character offset where the action occurred.",
-          "format": "uint32",
-          "minimum": 0,
-          "type": "integer"
+        "position": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/Position"
+            }
+          ],
+          "description": "The position where the action occurred."
         },
         "timestampMs": {
           "description": "Timestamp in milliseconds since epoch.",
@@ -4306,7 +4302,7 @@
           "type": "string"
         }
       },
-      "required": ["action", "uri", "line", "offset", "timestampMs"],
+      "required": ["action", "uri", "position", "timestampMs"],
       "type": "object"
     },
     "NesUserActionsCapabilities": {
