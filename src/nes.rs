@@ -620,44 +620,6 @@ pub struct NesSearchAndReplaceActionCapabilities {
     pub meta: Option<Meta>,
 }
 
-// General client capabilities
-
-/// General client capabilities (not specific to a particular feature).
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-#[non_exhaustive]
-pub struct GeneralCapabilities {
-    /// Position encodings supported by the client, in order of preference.
-    /// If omitted, defaults to UTF-16.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub position_encodings: Option<Vec<PositionEncodingKind>>,
-    /// The _meta property is reserved by ACP.
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
-    pub meta: Option<Meta>,
-}
-
-impl GeneralCapabilities {
-    #[must_use]
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    #[must_use]
-    pub fn position_encodings(
-        mut self,
-        position_encodings: impl IntoOption<Vec<PositionEncodingKind>>,
-    ) -> Self {
-        self.position_encodings = position_encodings.into_option();
-        self
-    }
-
-    #[must_use]
-    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
-        self.meta = meta.into_option();
-        self
-    }
-}
-
 // Document event notifications (client -> agent)
 
 /// Notification sent when a file is opened in the editor.
@@ -2116,22 +2078,6 @@ mod tests {
             "file:///path/to/utils.rs"
         );
         assert_eq!(json["context"]["diagnostics"][0]["severity"], "error");
-    }
-
-    #[test]
-    fn test_general_capabilities_serialization() {
-        let caps = GeneralCapabilities::new().position_encodings(vec![
-            PositionEncodingKind::Utf32,
-            PositionEncodingKind::Utf16,
-        ]);
-
-        let json = serde_json::to_value(&caps).unwrap();
-        assert_eq!(
-            json,
-            json!({
-                "positionEncodings": ["utf-32", "utf-16"]
-            })
-        );
     }
 
     #[test]

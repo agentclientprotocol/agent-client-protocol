@@ -21,7 +21,7 @@ use crate::{
 use crate::{IntoMaybeUndefined, MaybeUndefined};
 
 #[cfg(feature = "unstable_nes")]
-use crate::{ClientNesCapabilities, GeneralCapabilities};
+use crate::{ClientNesCapabilities, PositionEncodingKind};
 
 // Session updates
 
@@ -1515,10 +1515,10 @@ pub struct ClientCapabilities {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
-    /// General client capabilities (e.g. position encodings).
+    /// The position encoding selected by the agent from the client's supported encodings.
     #[cfg(feature = "unstable_nes")]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub general: Option<GeneralCapabilities>,
+    pub position_encoding: Option<PositionEncodingKind>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -1588,11 +1588,14 @@ impl ClientCapabilities {
 
     /// **UNSTABLE**
     ///
-    /// General client capabilities (e.g. position encodings).
+    /// The position encoding selected by the agent.
     #[cfg(feature = "unstable_nes")]
     #[must_use]
-    pub fn general(mut self, general: impl IntoOption<GeneralCapabilities>) -> Self {
-        self.general = general.into_option();
+    pub fn position_encoding(
+        mut self,
+        position_encoding: impl IntoOption<PositionEncodingKind>,
+    ) -> Self {
+        self.position_encoding = position_encoding.into_option();
         self
     }
 
