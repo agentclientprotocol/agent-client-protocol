@@ -84,11 +84,11 @@ All parameters are optional. A request with an empty `params` object returns the
   with a matching `cwd` are returned.
 </ParamField>
 
-<ParamField path="additionalDirectories" type="string[] | null">
+<ParamField path="additionalDirectories" type="string[]">
   If the Agent advertises `sessionCapabilities.additionalDirectories`, filter
-  sessions by the exact ordered additional-root list. Omit the field or set it
-  to `null` to avoid filtering on additional roots. An empty array matches only
-  sessions whose authoritative additional-root list is empty.
+  sessions by the exact ordered additional-root list when this field is present
+  and non-empty. Omitting the field or providing an empty array means no
+  additional-root filter is applied.
 </ParamField>
 
 <ParamField path="cursor" type="string">
@@ -144,7 +144,7 @@ The Agent **MUST** respond with a list of sessions and optional pagination metad
     <ResponseField name="additionalDirectories" type="string[]">
       If the Agent advertises `sessionCapabilities.additionalDirectories`, this
       is the authoritative ordered additional-root list for the session when
-      present. Omitting the field or returning `[]` means there are no
+      present. Omitting the field or returning an empty array means there are no
       additional roots.
     </ResponseField>
 

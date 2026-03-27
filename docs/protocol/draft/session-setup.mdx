@@ -213,8 +213,8 @@ When present, `additionalDirectories` has the following behavior:
 
 - `cwd` remains the primary working directory and the base for relative paths
 - each `additionalDirectories` entry **MUST** be an absolute path
-- omitting the field or setting it to `null` activates no additional roots for the resulting session
-- on `session/load`, Clients must send the full intended additional-root list again because omitted or `null` does not restore stored roots implicitly
+- omitting the field or providing an empty array activates no additional roots for the resulting session
+- on `session/load`, Clients must send the full intended additional-root list again because omitting the field or providing an empty array does not restore stored roots implicitly
 
 ## Session ID
 

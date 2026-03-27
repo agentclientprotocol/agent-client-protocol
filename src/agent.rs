@@ -4564,9 +4564,7 @@ mod test_serialization {
                 ListSessionsRequest::new().additional_directories(Vec::<PathBuf>::new())
             )
             .unwrap(),
-            json!({
-                "additionalDirectories": []
-            })
+            json!({})
         );
         assert_eq!(
             serde_json::to_value(SessionInfo::new("sess_abc123", "/home/user/project")).unwrap(),
@@ -4599,6 +4597,13 @@ mod test_serialization {
             }))
             .unwrap()
             .additional_directories,
+            Vec::<PathBuf>::new()
+        );
+
+        assert_eq!(
+            serde_json::from_value::<ListSessionsRequest>(json!({}))
+                .unwrap()
+                .additional_directories,
             Vec::<PathBuf>::new()
         );
 
