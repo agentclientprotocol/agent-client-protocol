@@ -20,6 +20,7 @@ unstable = [
     "unstable_elicitation",
     "unstable_logout",
     "unstable_nes",
+    "unstable_session_additional_directories",
     "unstable_session_fork",
     "unstable_session_model",
     "unstable_session_resume",
@@ -33,6 +34,7 @@ unstable_cancel_request = []
 unstable_elicitation = []
 unstable_logout = []
 unstable_nes = []
+unstable_session_additional_directories = []
 unstable_session_fork = []
 unstable_session_model = []
 unstable_session_resume = []
