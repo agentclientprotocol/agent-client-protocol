@@ -10,9 +10,6 @@ use crate::{
     ClientNotification, ClientRequest, ClientResponse, Error, ExtNotification, ExtRequest, Result,
 };
 
-#[cfg(feature = "unstable_nes")]
-use crate::NES_METHOD_NAMES;
-
 /// JSON RPC Request Id
 ///
 /// An identifier established by the Client that MUST contain a String, Number, or NULL value if included. If it is not included it is assumed to be a notification. The value SHOULD normally not be Null [1] and Numbers SHOULD NOT contain fractional parts [2]
@@ -328,16 +325,16 @@ impl Side for AgentSide {
                 .map(ClientRequest::PromptRequest)
                 .map_err(Into::into),
             #[cfg(feature = "unstable_nes")]
-            m if m == NES_METHOD_NAMES.nes_start => serde_json::from_str(params.get())
-                .map(ClientRequest::NesStartRequest)
+            m if m == AGENT_METHOD_NAMES.nes_start => serde_json::from_str(params.get())
+                .map(ClientRequest::StartNesRequest)
                 .map_err(Into::into),
             #[cfg(feature = "unstable_nes")]
-            m if m == NES_METHOD_NAMES.nes_suggest => serde_json::from_str(params.get())
-                .map(ClientRequest::NesSuggestRequest)
+            m if m == AGENT_METHOD_NAMES.nes_suggest => serde_json::from_str(params.get())
+                .map(ClientRequest::SuggestNesRequest)
                 .map_err(Into::into),
             #[cfg(feature = "unstable_nes")]
-            m if m == NES_METHOD_NAMES.nes_close => serde_json::from_str(params.get())
-                .map(ClientRequest::NesCloseRequest)
+            m if m == AGENT_METHOD_NAMES.nes_close => serde_json::from_str(params.get())
+                .map(ClientRequest::CloseNesRequest)
                 .map_err(Into::into),
             _ => {
                 if let Some(custom_method) = method.strip_prefix('_') {
@@ -360,32 +357,32 @@ impl Side for AgentSide {
                 .map(ClientNotification::CancelNotification)
                 .map_err(Into::into),
             #[cfg(feature = "unstable_nes")]
-            m if m == NES_METHOD_NAMES.document_did_open => serde_json::from_str(params.get())
+            m if m == AGENT_METHOD_NAMES.document_did_open => serde_json::from_str(params.get())
                 .map(ClientNotification::DocumentDidOpenNotification)
                 .map_err(Into::into),
             #[cfg(feature = "unstable_nes")]
-            m if m == NES_METHOD_NAMES.document_did_change => serde_json::from_str(params.get())
+            m if m == AGENT_METHOD_NAMES.document_did_change => serde_json::from_str(params.get())
                 .map(ClientNotification::DocumentDidChangeNotification)
                 .map_err(Into::into),
             #[cfg(feature = "unstable_nes")]
-            m if m == NES_METHOD_NAMES.document_did_close => serde_json::from_str(params.get())
+            m if m == AGENT_METHOD_NAMES.document_did_close => serde_json::from_str(params.get())
                 .map(ClientNotification::DocumentDidCloseNotification)
                 .map_err(Into::into),
             #[cfg(feature = "unstable_nes")]
-            m if m == NES_METHOD_NAMES.document_did_save => serde_json::from_str(params.get())
+            m if m == AGENT_METHOD_NAMES.document_did_save => serde_json::from_str(params.get())
                 .map(ClientNotification::DocumentDidSaveNotification)
                 .map_err(Into::into),
             #[cfg(feature = "unstable_nes")]
-            m if m == NES_METHOD_NAMES.document_did_focus => serde_json::from_str(params.get())
+            m if m == AGENT_METHOD_NAMES.document_did_focus => serde_json::from_str(params.get())
                 .map(ClientNotification::DocumentDidFocusNotification)
                 .map_err(Into::into),
             #[cfg(feature = "unstable_nes")]
-            m if m == NES_METHOD_NAMES.nes_accept => serde_json::from_str(params.get())
-                .map(ClientNotification::NesAcceptNotification)
+            m if m == AGENT_METHOD_NAMES.nes_accept => serde_json::from_str(params.get())
+                .map(ClientNotification::AcceptNesNotification)
                 .map_err(Into::into),
             #[cfg(feature = "unstable_nes")]
-            m if m == NES_METHOD_NAMES.nes_reject => serde_json::from_str(params.get())
-                .map(ClientNotification::NesRejectNotification)
+            m if m == AGENT_METHOD_NAMES.nes_reject => serde_json::from_str(params.get())
+                .map(ClientNotification::RejectNesNotification)
                 .map_err(Into::into),
             _ => {
                 if let Some(custom_method) = method.strip_prefix('_') {
@@ -472,7 +469,7 @@ mod nes_rpc_tests {
         .unwrap();
         let raw = serde_json::value::RawValue::from_string(params).unwrap();
         let request = AgentSide::decode_request("nes/start", Some(&raw)).unwrap();
-        assert!(matches!(request, ClientRequest::NesStartRequest(_)));
+        assert!(matches!(request, ClientRequest::StartNesRequest(_)));
     }
 
     #[test]
@@ -487,7 +484,7 @@ mod nes_rpc_tests {
         .unwrap();
         let raw = serde_json::value::RawValue::from_string(params).unwrap();
         let request = AgentSide::decode_request("nes/suggest", Some(&raw)).unwrap();
-        assert!(matches!(request, ClientRequest::NesSuggestRequest(_)));
+        assert!(matches!(request, ClientRequest::SuggestNesRequest(_)));
     }
 
     #[test]
@@ -588,7 +585,7 @@ mod nes_rpc_tests {
         let notification = AgentSide::decode_notification("nes/accept", Some(&raw)).unwrap();
         assert!(matches!(
             notification,
-            ClientNotification::NesAcceptNotification(_)
+            ClientNotification::AcceptNesNotification(_)
         ));
     }
 
@@ -604,7 +601,7 @@ mod nes_rpc_tests {
         let notification = AgentSide::decode_notification("nes/reject", Some(&raw)).unwrap();
         assert!(matches!(
             notification,
-            ClientNotification::NesRejectNotification(_)
+            ClientNotification::RejectNesNotification(_)
         ));
     }
 }

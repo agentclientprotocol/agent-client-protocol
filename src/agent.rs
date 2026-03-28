@@ -19,10 +19,18 @@ use crate::{
 
 #[cfg(feature = "unstable_nes")]
 use crate::{
-    DocumentDidChangeNotification, DocumentDidCloseNotification, DocumentDidFocusNotification,
-    DocumentDidOpenNotification, DocumentDidSaveNotification, NesAcceptNotification,
-    NesCapabilities, NesCloseRequest, NesCloseResponse, NesRejectNotification, NesStartRequest,
-    NesStartResponse, NesSuggestRequest, NesSuggestResponse, PositionEncodingKind,
+    AcceptNesNotification, CloseNesRequest, CloseNesResponse, DocumentDidChangeNotification,
+    DocumentDidCloseNotification, DocumentDidFocusNotification, DocumentDidOpenNotification,
+    DocumentDidSaveNotification, NesCapabilities, PositionEncodingKind, RejectNesNotification,
+    StartNesRequest, StartNesResponse, SuggestNesRequest, SuggestNesResponse,
+};
+
+#[cfg(feature = "unstable_nes")]
+use crate::nes::{
+    DOCUMENT_DID_CHANGE_METHOD_NAME, DOCUMENT_DID_CLOSE_METHOD_NAME,
+    DOCUMENT_DID_FOCUS_METHOD_NAME, DOCUMENT_DID_OPEN_METHOD_NAME, DOCUMENT_DID_SAVE_METHOD_NAME,
+    NES_ACCEPT_METHOD_NAME, NES_CLOSE_METHOD_NAME, NES_REJECT_METHOD_NAME, NES_START_METHOD_NAME,
+    NES_SUGGEST_METHOD_NAME,
 };
 
 // Initialize
@@ -3850,14 +3858,6 @@ pub const AGENT_METHOD_NAMES: AgentMethodNames = AgentMethodNames {
     document_did_focus: DOCUMENT_DID_FOCUS_METHOD_NAME,
 };
 
-#[cfg(feature = "unstable_nes")]
-use crate::nes::{
-    DOCUMENT_DID_CHANGE_METHOD_NAME, DOCUMENT_DID_CLOSE_METHOD_NAME,
-    DOCUMENT_DID_FOCUS_METHOD_NAME, DOCUMENT_DID_OPEN_METHOD_NAME, DOCUMENT_DID_SAVE_METHOD_NAME,
-    NES_ACCEPT_METHOD_NAME, NES_CLOSE_METHOD_NAME, NES_REJECT_METHOD_NAME, NES_START_METHOD_NAME,
-    NES_SUGGEST_METHOD_NAME,
-};
-
 /// Method name for the initialize request.
 pub(crate) const INITIALIZE_METHOD_NAME: &str = "initialize";
 /// Method name for the authenticate request.
@@ -4043,14 +4043,14 @@ pub enum ClientRequest {
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
     /// Starts an NES session.
-    NesStartRequest(NesStartRequest),
+    StartNesRequest(StartNesRequest),
     #[cfg(feature = "unstable_nes")]
     /// **UNSTABLE**
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
     /// Requests a code suggestion.
-    NesSuggestRequest(NesSuggestRequest),
+    SuggestNesRequest(SuggestNesRequest),
     #[cfg(feature = "unstable_nes")]
     /// **UNSTABLE**
     ///
@@ -4060,7 +4060,7 @@ pub enum ClientRequest {
     ///
     /// The agent must cancel any ongoing work and then free up any resources
     /// associated with the NES session.
-    NesCloseRequest(NesCloseRequest),
+    CloseNesRequest(CloseNesRequest),
     /// Handles extension method requests from the client.
     ///
     /// Extension methods provide a way to add custom functionality while maintaining
@@ -4094,11 +4094,11 @@ impl ClientRequest {
             #[cfg(feature = "unstable_session_model")]
             Self::SetSessionModelRequest(_) => AGENT_METHOD_NAMES.session_set_model,
             #[cfg(feature = "unstable_nes")]
-            Self::NesStartRequest(_) => AGENT_METHOD_NAMES.nes_start,
+            Self::StartNesRequest(_) => AGENT_METHOD_NAMES.nes_start,
             #[cfg(feature = "unstable_nes")]
-            Self::NesSuggestRequest(_) => AGENT_METHOD_NAMES.nes_suggest,
+            Self::SuggestNesRequest(_) => AGENT_METHOD_NAMES.nes_suggest,
             #[cfg(feature = "unstable_nes")]
-            Self::NesCloseRequest(_) => AGENT_METHOD_NAMES.nes_close,
+            Self::CloseNesRequest(_) => AGENT_METHOD_NAMES.nes_close,
             Self::ExtMethodRequest(ext_request) => &ext_request.method,
         }
     }
@@ -4135,11 +4135,11 @@ pub enum AgentResponse {
     #[cfg(feature = "unstable_session_model")]
     SetSessionModelResponse(#[serde(default)] SetSessionModelResponse),
     #[cfg(feature = "unstable_nes")]
-    NesStartResponse(NesStartResponse),
+    StartNesResponse(StartNesResponse),
     #[cfg(feature = "unstable_nes")]
-    NesSuggestResponse(NesSuggestResponse),
+    SuggestNesResponse(SuggestNesResponse),
     #[cfg(feature = "unstable_nes")]
-    NesCloseResponse(#[serde(default)] NesCloseResponse),
+    CloseNesResponse(#[serde(default)] CloseNesResponse),
     ExtMethodResponse(ExtResponse),
 }
 
@@ -4195,12 +4195,12 @@ pub enum ClientNotification {
     /// **UNSTABLE**
     ///
     /// Notification sent when a suggestion is accepted.
-    NesAcceptNotification(NesAcceptNotification),
+    AcceptNesNotification(AcceptNesNotification),
     #[cfg(feature = "unstable_nes")]
     /// **UNSTABLE**
     ///
     /// Notification sent when a suggestion is rejected.
-    NesRejectNotification(NesRejectNotification),
+    RejectNesNotification(RejectNesNotification),
     /// Handles extension notifications from the client.
     ///
     /// Extension notifications provide a way to send one-way messages for custom functionality
@@ -4227,9 +4227,9 @@ impl ClientNotification {
             #[cfg(feature = "unstable_nes")]
             Self::DocumentDidFocusNotification(_) => AGENT_METHOD_NAMES.document_did_focus,
             #[cfg(feature = "unstable_nes")]
-            Self::NesAcceptNotification(_) => AGENT_METHOD_NAMES.nes_accept,
+            Self::AcceptNesNotification(_) => AGENT_METHOD_NAMES.nes_accept,
             #[cfg(feature = "unstable_nes")]
-            Self::NesRejectNotification(_) => AGENT_METHOD_NAMES.nes_reject,
+            Self::RejectNesNotification(_) => AGENT_METHOD_NAMES.nes_reject,
             Self::ExtNotification(ext_notification) => &ext_notification.method,
         }
     }

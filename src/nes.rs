@@ -32,46 +32,6 @@ pub(crate) const DOCUMENT_DID_SAVE_METHOD_NAME: &str = "document/didSave";
 /// Notification name for document focus events.
 pub(crate) const DOCUMENT_DID_FOCUS_METHOD_NAME: &str = "document/didFocus";
 
-/// Names of all NES-related methods.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[non_exhaustive]
-pub struct NesMethodNames {
-    /// Method for starting an NES session.
-    pub nes_start: &'static str,
-    /// Method for requesting a suggestion.
-    pub nes_suggest: &'static str,
-    /// Notification for accepting a suggestion.
-    pub nes_accept: &'static str,
-    /// Notification for rejecting a suggestion.
-    pub nes_reject: &'static str,
-    /// Method for closing an NES session.
-    pub nes_close: &'static str,
-    /// Notification for document open events.
-    pub document_did_open: &'static str,
-    /// Notification for document change events.
-    pub document_did_change: &'static str,
-    /// Notification for document close events.
-    pub document_did_close: &'static str,
-    /// Notification for document save events.
-    pub document_did_save: &'static str,
-    /// Notification for document focus events.
-    pub document_did_focus: &'static str,
-}
-
-/// Constant containing all NES method names.
-pub const NES_METHOD_NAMES: NesMethodNames = NesMethodNames {
-    nes_start: NES_START_METHOD_NAME,
-    nes_suggest: NES_SUGGEST_METHOD_NAME,
-    nes_accept: NES_ACCEPT_METHOD_NAME,
-    nes_reject: NES_REJECT_METHOD_NAME,
-    nes_close: NES_CLOSE_METHOD_NAME,
-    document_did_open: DOCUMENT_DID_OPEN_METHOD_NAME,
-    document_did_change: DOCUMENT_DID_CHANGE_METHOD_NAME,
-    document_did_close: DOCUMENT_DID_CLOSE_METHOD_NAME,
-    document_did_save: DOCUMENT_DID_SAVE_METHOD_NAME,
-    document_did_focus: DOCUMENT_DID_FOCUS_METHOD_NAME,
-};
-
 // Position primitives
 
 /// The encoding used for character offsets in positions.
@@ -143,7 +103,10 @@ pub struct NesCapabilities {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub context: Option<NesContextCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions.
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -166,6 +129,11 @@ impl NesCapabilities {
         self
     }
 
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -181,7 +149,11 @@ pub struct NesEventCapabilities {
     /// Document event capabilities.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub document: Option<NesDocumentEventCapabilities>,
-    /// The _meta property is reserved by ACP.
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -198,6 +170,11 @@ impl NesEventCapabilities {
         self
     }
 
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -225,7 +202,11 @@ pub struct NesDocumentEventCapabilities {
     /// Whether the agent wants `document/didFocus` events.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub did_focus: Option<NesDocumentDidFocusCapabilities>,
-    /// The _meta property is reserved by ACP.
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -275,6 +256,11 @@ impl NesDocumentEventCapabilities {
         self
     }
 
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -287,7 +273,11 @@ impl NesDocumentEventCapabilities {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesDocumentDidOpenCapabilities {
-    /// The _meta property is reserved by ACP.
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -299,7 +289,11 @@ pub struct NesDocumentDidOpenCapabilities {
 pub struct NesDocumentDidChangeCapabilities {
     /// The sync kind the agent wants: `"full"` or `"incremental"`.
     pub sync_kind: TextDocumentSyncKind,
-    /// The _meta property is reserved by ACP.
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -313,6 +307,11 @@ impl NesDocumentDidChangeCapabilities {
         }
     }
 
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -337,7 +336,11 @@ pub enum TextDocumentSyncKind {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesDocumentDidCloseCapabilities {
-    /// The _meta property is reserved by ACP.
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -347,7 +350,11 @@ pub struct NesDocumentDidCloseCapabilities {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesDocumentDidSaveCapabilities {
-    /// The _meta property is reserved by ACP.
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -357,7 +364,11 @@ pub struct NesDocumentDidSaveCapabilities {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesDocumentDidFocusCapabilities {
-    /// The _meta property is reserved by ACP.
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -385,7 +396,11 @@ pub struct NesContextCapabilities {
     /// Whether the agent wants diagnostics context.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub diagnostics: Option<NesDiagnosticsCapabilities>,
-    /// The _meta property is reserved by ACP.
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -444,6 +459,11 @@ impl NesContextCapabilities {
         self
     }
 
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -459,7 +479,11 @@ pub struct NesRecentFilesCapabilities {
     /// Maximum number of recent files the agent can use.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub max_count: Option<u32>,
-    /// The _meta property is reserved by ACP.
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -469,7 +493,11 @@ pub struct NesRecentFilesCapabilities {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesRelatedSnippetsCapabilities {
-    /// The _meta property is reserved by ACP.
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -482,7 +510,11 @@ pub struct NesEditHistoryCapabilities {
     /// Maximum number of edit history entries the agent can use.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub max_count: Option<u32>,
-    /// The _meta property is reserved by ACP.
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -495,7 +527,11 @@ pub struct NesUserActionsCapabilities {
     /// Maximum number of user actions the agent can use.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub max_count: Option<u32>,
-    /// The _meta property is reserved by ACP.
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -505,7 +541,11 @@ pub struct NesUserActionsCapabilities {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesOpenFilesCapabilities {
-    /// The _meta property is reserved by ACP.
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -515,7 +555,11 @@ pub struct NesOpenFilesCapabilities {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesDiagnosticsCapabilities {
-    /// The _meta property is reserved by ACP.
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -536,7 +580,11 @@ pub struct ClientNesCapabilities {
     /// Whether the client supports the `searchAndReplace` suggestion kind.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub search_and_replace: Option<NesSearchAndReplaceActionCapabilities>,
-    /// The _meta property is reserved by ACP.
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -568,6 +616,11 @@ impl ClientNesCapabilities {
         self
     }
 
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -580,7 +633,11 @@ impl ClientNesCapabilities {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesJumpCapabilities {
-    /// The _meta property is reserved by ACP.
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -590,7 +647,11 @@ pub struct NesJumpCapabilities {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesRenameActionCapabilities {
-    /// The _meta property is reserved by ACP.
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -600,7 +661,11 @@ pub struct NesRenameActionCapabilities {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesSearchAndReplaceActionCapabilities {
-    /// The _meta property is reserved by ACP.
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -623,7 +688,11 @@ pub struct DocumentDidOpenNotification {
     pub version: i64,
     /// The full text content of the document.
     pub text: String,
-    /// The _meta property is reserved by ACP.
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -647,6 +716,11 @@ impl DocumentDidOpenNotification {
         }
     }
 
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -668,7 +742,11 @@ pub struct DocumentDidChangeNotification {
     pub version: i64,
     /// The content changes.
     pub content_changes: Vec<TextDocumentContentChangeEvent>,
-    /// The _meta property is reserved by ACP.
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -690,6 +768,11 @@ impl DocumentDidChangeNotification {
         }
     }
 
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -740,7 +823,11 @@ pub struct DocumentDidCloseNotification {
     pub session_id: SessionId,
     /// The URI of the closed document.
     pub uri: String,
-    /// The _meta property is reserved by ACP.
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -755,6 +842,11 @@ impl DocumentDidCloseNotification {
         }
     }
 
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -772,7 +864,11 @@ pub struct DocumentDidSaveNotification {
     pub session_id: SessionId,
     /// The URI of the saved document.
     pub uri: String,
-    /// The _meta property is reserved by ACP.
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -787,6 +883,11 @@ impl DocumentDidSaveNotification {
         }
     }
 
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -810,7 +911,11 @@ pub struct DocumentDidFocusNotification {
     pub position: Position,
     /// The portion of the file currently visible in the editor viewport.
     pub visible_range: Range,
-    /// The _meta property is reserved by ACP.
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -834,6 +939,11 @@ impl DocumentDidFocusNotification {
         }
     }
 
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -848,7 +958,7 @@ impl DocumentDidFocusNotification {
 #[schemars(extend("x-side" = "agent", "x-method" = NES_START_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct NesStartRequest {
+pub struct StartNesRequest {
     /// The root URI of the workspace.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub workspace_uri: Option<String>,
@@ -858,12 +968,16 @@ pub struct NesStartRequest {
     /// Repository metadata, if the workspace is a git repository.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub repository: Option<NesRepository>,
-    /// The _meta property is reserved by ACP.
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
-impl NesStartRequest {
+impl StartNesRequest {
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -895,6 +1009,11 @@ impl NesStartRequest {
         self
     }
 
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -902,7 +1021,7 @@ impl NesStartRequest {
     }
 }
 
-impl Default for NesStartRequest {
+impl Default for StartNesRequest {
     fn default() -> Self {
         Self::new()
     }
@@ -962,15 +1081,19 @@ impl NesRepository {
 #[schemars(extend("x-side" = "agent", "x-method" = NES_START_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct NesStartResponse {
+pub struct StartNesResponse {
     /// The session ID for the newly started NES session.
     pub session_id: SessionId,
-    /// The _meta property is reserved by ACP.
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
-impl NesStartResponse {
+impl StartNesResponse {
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>) -> Self {
         Self {
@@ -979,6 +1102,11 @@ impl NesStartResponse {
         }
     }
 
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -996,7 +1124,7 @@ impl NesStartResponse {
 #[schemars(extend("x-side" = "agent", "x-method" = NES_CLOSE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct NesCloseRequest {
+pub struct CloseNesRequest {
     /// The ID of the NES session to close.
     pub session_id: SessionId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1008,7 +1136,7 @@ pub struct NesCloseRequest {
     pub meta: Option<Meta>,
 }
 
-impl NesCloseRequest {
+impl CloseNesRequest {
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>) -> Self {
         Self {
@@ -1017,6 +1145,11 @@ impl NesCloseRequest {
         }
     }
 
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -1034,7 +1167,7 @@ impl NesCloseRequest {
 #[schemars(extend("x-side" = "agent", "x-method" = NES_CLOSE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct NesCloseResponse {
+pub struct CloseNesResponse {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -1044,12 +1177,17 @@ pub struct NesCloseResponse {
     pub meta: Option<Meta>,
 }
 
-impl NesCloseResponse {
+impl CloseNesResponse {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -1084,7 +1222,7 @@ pub enum NesTriggerKind {
 #[schemars(extend("x-side" = "agent", "x-method" = NES_SUGGEST_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct NesSuggestRequest {
+pub struct SuggestNesRequest {
     /// The session ID for this request.
     pub session_id: SessionId,
     /// The URI of the document to suggest for.
@@ -1101,12 +1239,16 @@ pub struct NesSuggestRequest {
     /// Context for the suggestion, included based on agent capabilities.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub context: Option<NesSuggestContext>,
-    /// The _meta property is reserved by ACP.
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
-impl NesSuggestRequest {
+impl SuggestNesRequest {
     #[must_use]
     pub fn new(
         session_id: impl Into<SessionId>,
@@ -1139,6 +1281,11 @@ impl NesSuggestRequest {
         self
     }
 
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -1169,7 +1316,11 @@ pub struct NesSuggestContext {
     /// Current diagnostics (errors, warnings).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub diagnostics: Option<Vec<NesDiagnostic>>,
-    /// The _meta property is reserved by ACP.
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -1219,6 +1370,11 @@ impl NesSuggestContext {
         self
     }
 
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -1450,15 +1606,19 @@ pub enum NesDiagnosticSeverity {
 #[schemars(extend("x-side" = "agent", "x-method" = NES_SUGGEST_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct NesSuggestResponse {
+pub struct SuggestNesResponse {
     /// The list of suggestions.
     pub suggestions: Vec<NesSuggestion>,
-    /// The _meta property is reserved by ACP.
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
-impl NesSuggestResponse {
+impl SuggestNesResponse {
     #[must_use]
     pub fn new(suggestions: Vec<NesSuggestion>) -> Self {
         Self {
@@ -1467,6 +1627,11 @@ impl NesSuggestResponse {
         }
     }
 
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -1649,17 +1814,21 @@ impl NesSearchAndReplaceActionSuggestion {
 #[schemars(extend("x-side" = "agent", "x-method" = NES_ACCEPT_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct NesAcceptNotification {
+pub struct AcceptNesNotification {
     /// The session ID for this notification.
     pub session_id: SessionId,
     /// The ID of the accepted suggestion.
     pub id: String,
-    /// The _meta property is reserved by ACP.
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
-impl NesAcceptNotification {
+impl AcceptNesNotification {
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>, id: impl Into<String>) -> Self {
         Self {
@@ -1669,6 +1838,11 @@ impl NesAcceptNotification {
         }
     }
 
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -1681,7 +1855,7 @@ impl NesAcceptNotification {
 #[schemars(extend("x-side" = "agent", "x-method" = NES_REJECT_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct NesRejectNotification {
+pub struct RejectNesNotification {
     /// The session ID for this notification.
     pub session_id: SessionId,
     /// The ID of the rejected suggestion.
@@ -1689,12 +1863,16 @@ pub struct NesRejectNotification {
     /// The reason for rejection.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub reason: Option<NesRejectReason>,
-    /// The _meta property is reserved by ACP.
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
-impl NesRejectNotification {
+impl RejectNesNotification {
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>, id: impl Into<String>) -> Self {
         Self {
@@ -1711,6 +1889,11 @@ impl NesRejectNotification {
         self
     }
 
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -2112,7 +2295,7 @@ mod tests {
 
     #[test]
     fn test_nes_start_request_serialization() {
-        let request = NesStartRequest::new()
+        let request = StartNesRequest::new()
             .workspace_uri("file:///Users/alice/projects/my-app")
             .workspace_folders(vec![WorkspaceFolder::new(
                 "file:///Users/alice/projects/my-app",
@@ -2146,7 +2329,7 @@ mod tests {
 
     #[test]
     fn test_nes_start_response_serialization() {
-        let response = NesStartResponse::new("nes_abc123");
+        let response = StartNesResponse::new("nes_abc123");
         let json = serde_json::to_value(&response).unwrap();
         assert_eq!(json, json!({ "sessionId": "nes_abc123" }));
     }
@@ -2189,7 +2372,7 @@ mod tests {
 
     #[test]
     fn test_nes_accept_notification_serialization() {
-        let notification = NesAcceptNotification::new("session_123", "sugg_001");
+        let notification = AcceptNesNotification::new("session_123", "sugg_001");
         let json = serde_json::to_value(&notification).unwrap();
         assert_eq!(
             json,
@@ -2200,7 +2383,7 @@ mod tests {
     #[test]
     fn test_nes_reject_notification_serialization() {
         let notification =
-            NesRejectNotification::new("session_123", "sugg_001").reason(NesRejectReason::Rejected);
+            RejectNesNotification::new("session_123", "sugg_001").reason(NesRejectReason::Rejected);
         let json = serde_json::to_value(&notification).unwrap();
         assert_eq!(
             json,
@@ -2210,7 +2393,7 @@ mod tests {
 
     #[test]
     fn test_nes_suggest_request_with_context_serialization() {
-        let request = NesSuggestRequest::new(
+        let request = SuggestNesRequest::new(
             "session_123",
             "file:///path/to/file.rs",
             2,
@@ -2264,7 +2447,7 @@ mod tests {
 
     #[test]
     fn test_nes_suggest_response_serialization() {
-        let response = NesSuggestResponse::new(vec![
+        let response = SuggestNesResponse::new(vec![
             NesSuggestion::Edit(NesEditSuggestion::new(
                 "sugg_001",
                 "file:///path/to/file.rs",

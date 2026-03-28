@@ -1,5 +1,31 @@
 {
   "$defs": {
+    "AcceptNesNotification": {
+      "description": "Notification sent when a suggestion is accepted.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "id": {
+          "description": "The ID of the accepted suggestion.",
+          "type": "string"
+        },
+        "sessionId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ],
+          "description": "The session ID for this notification."
+        }
+      },
+      "required": ["sessionId", "id"],
+      "type": "object",
+      "x-method": "nes/accept",
+      "x-side": "agent"
+    },
     "AgentAuthCapabilities": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAuthentication-related capabilities supported by the agent.",
       "properties": {
@@ -382,26 +408,26 @@
                 {
                   "allOf": [
                     {
-                      "$ref": "#/$defs/NesStartResponse"
+                      "$ref": "#/$defs/StartNesResponse"
                     }
                   ],
-                  "title": "NesStartResponse"
+                  "title": "StartNesResponse"
                 },
                 {
                   "allOf": [
                     {
-                      "$ref": "#/$defs/NesSuggestResponse"
+                      "$ref": "#/$defs/SuggestNesResponse"
                     }
                   ],
-                  "title": "NesSuggestResponse"
+                  "title": "SuggestNesResponse"
                 },
                 {
                   "allOf": [
                     {
-                      "$ref": "#/$defs/NesCloseResponse"
+                      "$ref": "#/$defs/CloseNesResponse"
                     }
                   ],
-                  "title": "NesCloseResponse"
+                  "title": "CloseNesResponse"
                 },
                 {
                   "allOf": [
@@ -927,7 +953,7 @@
       "properties": {
         "_meta": {
           "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP.",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
         },
         "jump": {
@@ -1032,20 +1058,20 @@
                 {
                   "allOf": [
                     {
-                      "$ref": "#/$defs/NesAcceptNotification"
+                      "$ref": "#/$defs/AcceptNesNotification"
                     }
                   ],
                   "description": "**UNSTABLE**\n\nNotification sent when a suggestion is accepted.",
-                  "title": "NesAcceptNotification"
+                  "title": "AcceptNesNotification"
                 },
                 {
                   "allOf": [
                     {
-                      "$ref": "#/$defs/NesRejectNotification"
+                      "$ref": "#/$defs/RejectNesNotification"
                     }
                   ],
                   "description": "**UNSTABLE**\n\nNotification sent when a suggestion is rejected.",
-                  "title": "NesRejectNotification"
+                  "title": "RejectNesNotification"
                 },
                 {
                   "allOf": [
@@ -1201,29 +1227,29 @@
                 {
                   "allOf": [
                     {
-                      "$ref": "#/$defs/NesStartRequest"
+                      "$ref": "#/$defs/StartNesRequest"
                     }
                   ],
                   "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nStarts an NES session.",
-                  "title": "NesStartRequest"
+                  "title": "StartNesRequest"
                 },
                 {
                   "allOf": [
                     {
-                      "$ref": "#/$defs/NesSuggestRequest"
+                      "$ref": "#/$defs/SuggestNesRequest"
                     }
                   ],
                   "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequests a code suggestion.",
-                  "title": "NesSuggestRequest"
+                  "title": "SuggestNesRequest"
                 },
                 {
                   "allOf": [
                     {
-                      "$ref": "#/$defs/NesCloseRequest"
+                      "$ref": "#/$defs/CloseNesRequest"
                     }
                   ],
                   "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCloses an active NES session and frees up any resources associated with it.\n\nThe agent must cancel any ongoing work and then free up any resources\nassociated with the NES session.",
-                  "title": "NesCloseRequest"
+                  "title": "CloseNesRequest"
                 },
                 {
                   "allOf": [
@@ -1359,6 +1385,41 @@
         }
       ],
       "x-docs-ignore": true
+    },
+    "CloseNesRequest": {
+      "description": "Request to close an NES session.\n\nThe agent **must** cancel any ongoing work related to the NES session\nand then free up any resources associated with the session.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "sessionId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ],
+          "description": "The ID of the NES session to close."
+        }
+      },
+      "required": ["sessionId"],
+      "type": "object",
+      "x-method": "nes/close",
+      "x-side": "agent"
+    },
+    "CloseNesResponse": {
+      "description": "Response from closing an NES session.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object",
+      "x-method": "nes/close",
+      "x-side": "agent"
     },
     "CloseSessionRequest": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for closing an active session.\n\nIf supported, the agent **must** cancel any ongoing work related to the session\n(treat it as if `session/cancel` was called) and then free up any resources\nassociated with the session.\n\nOnly available if the Agent supports the `session.close` capability.",
@@ -1679,7 +1740,7 @@
       "properties": {
         "_meta": {
           "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP.",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
         },
         "contentChanges": {
@@ -1717,7 +1778,7 @@
       "properties": {
         "_meta": {
           "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP.",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
         },
         "sessionId": {
@@ -1743,7 +1804,7 @@
       "properties": {
         "_meta": {
           "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP.",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
         },
         "position": {
@@ -1790,7 +1851,7 @@
       "properties": {
         "_meta": {
           "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP.",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
         },
         "languageId": {
@@ -1829,7 +1890,7 @@
       "properties": {
         "_meta": {
           "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP.",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
         },
         "sessionId": {
@@ -3243,38 +3304,12 @@
       "required": ["items"],
       "type": "object"
     },
-    "NesAcceptNotification": {
-      "description": "Notification sent when a suggestion is accepted.",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP.",
-          "type": ["object", "null"]
-        },
-        "id": {
-          "description": "The ID of the accepted suggestion.",
-          "type": "string"
-        },
-        "sessionId": {
-          "allOf": [
-            {
-              "$ref": "#/$defs/SessionId"
-            }
-          ],
-          "description": "The session ID for this notification."
-        }
-      },
-      "required": ["sessionId", "id"],
-      "type": "object",
-      "x-method": "nes/accept",
-      "x-side": "agent"
-    },
     "NesCapabilities": {
       "description": "NES capabilities advertised by the agent during initialization.",
       "properties": {
         "_meta": {
           "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions.",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
         },
         "context": {
@@ -3302,47 +3337,12 @@
       },
       "type": "object"
     },
-    "NesCloseRequest": {
-      "description": "Request to close an NES session.\n\nThe agent **must** cancel any ongoing work related to the NES session\nand then free up any resources associated with the session.",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"]
-        },
-        "sessionId": {
-          "allOf": [
-            {
-              "$ref": "#/$defs/SessionId"
-            }
-          ],
-          "description": "The ID of the NES session to close."
-        }
-      },
-      "required": ["sessionId"],
-      "type": "object",
-      "x-method": "nes/close",
-      "x-side": "agent"
-    },
-    "NesCloseResponse": {
-      "description": "Response from closing an NES session.",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"]
-        }
-      },
-      "type": "object",
-      "x-method": "nes/close",
-      "x-side": "agent"
-    },
     "NesContextCapabilities": {
       "description": "Context capabilities the agent wants attached to each suggestion request.",
       "properties": {
         "_meta": {
           "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP.",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
         },
         "diagnostics": {
@@ -3475,7 +3475,7 @@
       "properties": {
         "_meta": {
           "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP.",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
         }
       },
@@ -3486,7 +3486,7 @@
       "properties": {
         "_meta": {
           "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP.",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
         },
         "syncKind": {
@@ -3506,7 +3506,7 @@
       "properties": {
         "_meta": {
           "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP.",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
         }
       },
@@ -3517,7 +3517,7 @@
       "properties": {
         "_meta": {
           "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP.",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
         }
       },
@@ -3528,7 +3528,7 @@
       "properties": {
         "_meta": {
           "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP.",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
         }
       },
@@ -3539,7 +3539,7 @@
       "properties": {
         "_meta": {
           "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP.",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
         }
       },
@@ -3550,7 +3550,7 @@
       "properties": {
         "_meta": {
           "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP.",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
         },
         "didChange": {
@@ -3616,7 +3616,7 @@
       "properties": {
         "_meta": {
           "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP.",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
         },
         "maxCount": {
@@ -3681,7 +3681,7 @@
       "properties": {
         "_meta": {
           "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP.",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
         },
         "document": {
@@ -3726,7 +3726,7 @@
       "properties": {
         "_meta": {
           "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP.",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
         }
       },
@@ -3792,7 +3792,7 @@
       "properties": {
         "_meta": {
           "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP.",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
         }
       },
@@ -3822,7 +3822,7 @@
       "properties": {
         "_meta": {
           "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP.",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
         },
         "maxCount": {
@@ -3833,43 +3833,6 @@
         }
       },
       "type": "object"
-    },
-    "NesRejectNotification": {
-      "description": "Notification sent when a suggestion is rejected.",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP.",
-          "type": ["object", "null"]
-        },
-        "id": {
-          "description": "The ID of the rejected suggestion.",
-          "type": "string"
-        },
-        "reason": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/NesRejectReason"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "The reason for rejection."
-        },
-        "sessionId": {
-          "allOf": [
-            {
-              "$ref": "#/$defs/SessionId"
-            }
-          ],
-          "description": "The session ID for this notification."
-        }
-      },
-      "required": ["sessionId", "id"],
-      "type": "object",
-      "x-method": "nes/reject",
-      "x-side": "agent"
     },
     "NesRejectReason": {
       "description": "The reason a suggestion was rejected.",
@@ -3919,7 +3882,7 @@
       "properties": {
         "_meta": {
           "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP.",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
         }
       },
@@ -3930,7 +3893,7 @@
       "properties": {
         "_meta": {
           "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP.",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
         }
       },
@@ -3987,7 +3950,7 @@
       "properties": {
         "_meta": {
           "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP.",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
         }
       },
@@ -4020,69 +3983,12 @@
       "required": ["id", "uri", "search", "replace"],
       "type": "object"
     },
-    "NesStartRequest": {
-      "description": "Request to start an NES session.",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP.",
-          "type": ["object", "null"]
-        },
-        "repository": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/NesRepository"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "Repository metadata, if the workspace is a git repository."
-        },
-        "workspaceFolders": {
-          "description": "The workspace folders.",
-          "items": {
-            "$ref": "#/$defs/WorkspaceFolder"
-          },
-          "type": ["array", "null"]
-        },
-        "workspaceUri": {
-          "description": "The root URI of the workspace.",
-          "type": ["string", "null"]
-        }
-      },
-      "type": "object",
-      "x-method": "nes/start",
-      "x-side": "agent"
-    },
-    "NesStartResponse": {
-      "description": "Response to `nes/start`.",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP.",
-          "type": ["object", "null"]
-        },
-        "sessionId": {
-          "allOf": [
-            {
-              "$ref": "#/$defs/SessionId"
-            }
-          ],
-          "description": "The session ID for the newly started NES session."
-        }
-      },
-      "required": ["sessionId"],
-      "type": "object",
-      "x-method": "nes/start",
-      "x-side": "agent"
-    },
     "NesSuggestContext": {
       "description": "Context attached to a suggestion request.",
       "properties": {
         "_meta": {
           "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP.",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
         },
         "diagnostics": {
@@ -4129,96 +4035,6 @@
         }
       },
       "type": "object"
-    },
-    "NesSuggestRequest": {
-      "description": "Request for a code suggestion.",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP.",
-          "type": ["object", "null"]
-        },
-        "context": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/NesSuggestContext"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "Context for the suggestion, included based on agent capabilities."
-        },
-        "position": {
-          "allOf": [
-            {
-              "$ref": "#/$defs/Position"
-            }
-          ],
-          "description": "The current cursor position."
-        },
-        "selection": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/Range"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "The current text selection range, if any."
-        },
-        "sessionId": {
-          "allOf": [
-            {
-              "$ref": "#/$defs/SessionId"
-            }
-          ],
-          "description": "The session ID for this request."
-        },
-        "triggerKind": {
-          "allOf": [
-            {
-              "$ref": "#/$defs/NesTriggerKind"
-            }
-          ],
-          "description": "What triggered this suggestion request."
-        },
-        "uri": {
-          "description": "The URI of the document to suggest for.",
-          "type": "string"
-        },
-        "version": {
-          "description": "The version number of the document.",
-          "format": "int64",
-          "type": "integer"
-        }
-      },
-      "required": ["sessionId", "uri", "version", "position", "triggerKind"],
-      "type": "object",
-      "x-method": "nes/suggest",
-      "x-side": "agent"
-    },
-    "NesSuggestResponse": {
-      "description": "Response to `nes/suggest`.",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP.",
-          "type": ["object", "null"]
-        },
-        "suggestions": {
-          "description": "The list of suggestions.",
-          "items": {
-            "$ref": "#/$defs/NesSuggestion"
-          },
-          "type": "array"
-        }
-      },
-      "required": ["suggestions"],
-      "type": "object",
-      "x-method": "nes/suggest",
-      "x-side": "agent"
     },
     "NesSuggestion": {
       "description": "A suggestion returned by the agent.",
@@ -4362,7 +4178,7 @@
       "properties": {
         "_meta": {
           "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP.",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
         },
         "maxCount": {
@@ -4850,6 +4666,43 @@
       "type": "object",
       "x-method": "fs/read_text_file",
       "x-side": "client"
+    },
+    "RejectNesNotification": {
+      "description": "Notification sent when a suggestion is rejected.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "id": {
+          "description": "The ID of the rejected suggestion.",
+          "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesRejectReason"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The reason for rejection."
+        },
+        "sessionId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ],
+          "description": "The session ID for this notification."
+        }
+      },
+      "required": ["sessionId", "id"],
+      "type": "object",
+      "x-method": "nes/reject",
+      "x-side": "agent"
     },
     "ReleaseTerminalRequest": {
       "description": "Request to release a terminal and free its resources.",
@@ -5987,6 +5840,63 @@
       "x-method": "session/set_model",
       "x-side": "agent"
     },
+    "StartNesRequest": {
+      "description": "Request to start an NES session.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "repository": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesRepository"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Repository metadata, if the workspace is a git repository."
+        },
+        "workspaceFolders": {
+          "description": "The workspace folders.",
+          "items": {
+            "$ref": "#/$defs/WorkspaceFolder"
+          },
+          "type": ["array", "null"]
+        },
+        "workspaceUri": {
+          "description": "The root URI of the workspace.",
+          "type": ["string", "null"]
+        }
+      },
+      "type": "object",
+      "x-method": "nes/start",
+      "x-side": "agent"
+    },
+    "StartNesResponse": {
+      "description": "Response to `nes/start`.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "sessionId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ],
+          "description": "The session ID for the newly started NES session."
+        }
+      },
+      "required": ["sessionId"],
+      "type": "object",
+      "x-method": "nes/start",
+      "x-side": "agent"
+    },
     "StopReason": {
       "description": "Reasons why an agent stops processing a prompt turn.\n\nSee protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/prompt-turn#stop-reasons)",
       "oneOf": [
@@ -6100,6 +6010,96 @@
         }
       },
       "type": "object"
+    },
+    "SuggestNesRequest": {
+      "description": "Request for a code suggestion.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "context": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesSuggestContext"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Context for the suggestion, included based on agent capabilities."
+        },
+        "position": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/Position"
+            }
+          ],
+          "description": "The current cursor position."
+        },
+        "selection": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Range"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The current text selection range, if any."
+        },
+        "sessionId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ],
+          "description": "The session ID for this request."
+        },
+        "triggerKind": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/NesTriggerKind"
+            }
+          ],
+          "description": "What triggered this suggestion request."
+        },
+        "uri": {
+          "description": "The URI of the document to suggest for.",
+          "type": "string"
+        },
+        "version": {
+          "description": "The version number of the document.",
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": ["sessionId", "uri", "version", "position", "triggerKind"],
+      "type": "object",
+      "x-method": "nes/suggest",
+      "x-side": "agent"
+    },
+    "SuggestNesResponse": {
+      "description": "Response to `nes/suggest`.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "suggestions": {
+          "description": "The list of suggestions.",
+          "items": {
+            "$ref": "#/$defs/NesSuggestion"
+          },
+          "type": "array"
+        }
+      },
+      "required": ["suggestions"],
+      "type": "object",
+      "x-method": "nes/suggest",
+      "x-side": "agent"
     },
     "Terminal": {
       "description": "Embed a terminal created with `terminal/create` by its id.\n\nThe terminal must be added before calling `terminal/release`.\n\nSee protocol docs: [Terminal](https://agentclientprotocol.com/protocol/terminals)",
