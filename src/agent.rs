@@ -19,9 +19,9 @@ use crate::{
 
 #[cfg(feature = "unstable_nes")]
 use crate::{
-    AcceptNesNotification, CloseNesRequest, CloseNesResponse, DocumentDidChangeNotification,
-    DocumentDidCloseNotification, DocumentDidFocusNotification, DocumentDidOpenNotification,
-    DocumentDidSaveNotification, NesCapabilities, PositionEncodingKind, RejectNesNotification,
+    AcceptNesNotification, CloseNesRequest, CloseNesResponse, DidChangeDocumentNotification,
+    DidCloseDocumentNotification, DidFocusDocumentNotification, DidOpenDocumentNotification,
+    DidSaveDocumentNotification, NesCapabilities, PositionEncodingKind, RejectNesNotification,
     StartNesRequest, StartNesResponse, SuggestNesRequest, SuggestNesResponse,
 };
 
@@ -4387,27 +4387,27 @@ pub enum ClientNotification {
     /// **UNSTABLE**
     ///
     /// Notification sent when a file is opened in the editor.
-    DocumentDidOpenNotification(DocumentDidOpenNotification),
+    DidOpenDocumentNotification(DidOpenDocumentNotification),
     #[cfg(feature = "unstable_nes")]
     /// **UNSTABLE**
     ///
     /// Notification sent when a file is edited.
-    DocumentDidChangeNotification(DocumentDidChangeNotification),
+    DidChangeDocumentNotification(DidChangeDocumentNotification),
     #[cfg(feature = "unstable_nes")]
     /// **UNSTABLE**
     ///
     /// Notification sent when a file is closed.
-    DocumentDidCloseNotification(DocumentDidCloseNotification),
+    DidCloseDocumentNotification(DidCloseDocumentNotification),
     #[cfg(feature = "unstable_nes")]
     /// **UNSTABLE**
     ///
     /// Notification sent when a file is saved.
-    DocumentDidSaveNotification(DocumentDidSaveNotification),
+    DidSaveDocumentNotification(DidSaveDocumentNotification),
     #[cfg(feature = "unstable_nes")]
     /// **UNSTABLE**
     ///
     /// Notification sent when a file becomes the active editor tab.
-    DocumentDidFocusNotification(DocumentDidFocusNotification),
+    DidFocusDocumentNotification(DidFocusDocumentNotification),
     #[cfg(feature = "unstable_nes")]
     /// **UNSTABLE**
     ///
@@ -4434,15 +4434,15 @@ impl ClientNotification {
         match self {
             Self::CancelNotification(_) => AGENT_METHOD_NAMES.session_cancel,
             #[cfg(feature = "unstable_nes")]
-            Self::DocumentDidOpenNotification(_) => AGENT_METHOD_NAMES.document_did_open,
+            Self::DidOpenDocumentNotification(_) => AGENT_METHOD_NAMES.document_did_open,
             #[cfg(feature = "unstable_nes")]
-            Self::DocumentDidChangeNotification(_) => AGENT_METHOD_NAMES.document_did_change,
+            Self::DidChangeDocumentNotification(_) => AGENT_METHOD_NAMES.document_did_change,
             #[cfg(feature = "unstable_nes")]
-            Self::DocumentDidCloseNotification(_) => AGENT_METHOD_NAMES.document_did_close,
+            Self::DidCloseDocumentNotification(_) => AGENT_METHOD_NAMES.document_did_close,
             #[cfg(feature = "unstable_nes")]
-            Self::DocumentDidSaveNotification(_) => AGENT_METHOD_NAMES.document_did_save,
+            Self::DidSaveDocumentNotification(_) => AGENT_METHOD_NAMES.document_did_save,
             #[cfg(feature = "unstable_nes")]
-            Self::DocumentDidFocusNotification(_) => AGENT_METHOD_NAMES.document_did_focus,
+            Self::DidFocusDocumentNotification(_) => AGENT_METHOD_NAMES.document_did_focus,
             #[cfg(feature = "unstable_nes")]
             Self::AcceptNesNotification(_) => AGENT_METHOD_NAMES.nes_accept,
             #[cfg(feature = "unstable_nes")]

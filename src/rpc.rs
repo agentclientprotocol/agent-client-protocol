@@ -358,23 +358,23 @@ impl Side for AgentSide {
                 .map_err(Into::into),
             #[cfg(feature = "unstable_nes")]
             m if m == AGENT_METHOD_NAMES.document_did_open => serde_json::from_str(params.get())
-                .map(ClientNotification::DocumentDidOpenNotification)
+                .map(ClientNotification::DidOpenDocumentNotification)
                 .map_err(Into::into),
             #[cfg(feature = "unstable_nes")]
             m if m == AGENT_METHOD_NAMES.document_did_change => serde_json::from_str(params.get())
-                .map(ClientNotification::DocumentDidChangeNotification)
+                .map(ClientNotification::DidChangeDocumentNotification)
                 .map_err(Into::into),
             #[cfg(feature = "unstable_nes")]
             m if m == AGENT_METHOD_NAMES.document_did_close => serde_json::from_str(params.get())
-                .map(ClientNotification::DocumentDidCloseNotification)
+                .map(ClientNotification::DidCloseDocumentNotification)
                 .map_err(Into::into),
             #[cfg(feature = "unstable_nes")]
             m if m == AGENT_METHOD_NAMES.document_did_save => serde_json::from_str(params.get())
-                .map(ClientNotification::DocumentDidSaveNotification)
+                .map(ClientNotification::DidSaveDocumentNotification)
                 .map_err(Into::into),
             #[cfg(feature = "unstable_nes")]
             m if m == AGENT_METHOD_NAMES.document_did_focus => serde_json::from_str(params.get())
-                .map(ClientNotification::DocumentDidFocusNotification)
+                .map(ClientNotification::DidFocusDocumentNotification)
                 .map_err(Into::into),
             #[cfg(feature = "unstable_nes")]
             m if m == AGENT_METHOD_NAMES.nes_accept => serde_json::from_str(params.get())
@@ -501,7 +501,7 @@ mod nes_rpc_tests {
         let notification = AgentSide::decode_notification("document/didOpen", Some(&raw)).unwrap();
         assert!(matches!(
             notification,
-            ClientNotification::DocumentDidOpenNotification(_)
+            ClientNotification::DidOpenDocumentNotification(_)
         ));
     }
 
@@ -519,7 +519,7 @@ mod nes_rpc_tests {
             AgentSide::decode_notification("document/didChange", Some(&raw)).unwrap();
         assert!(matches!(
             notification,
-            ClientNotification::DocumentDidChangeNotification(_)
+            ClientNotification::DidChangeDocumentNotification(_)
         ));
     }
 
@@ -534,7 +534,7 @@ mod nes_rpc_tests {
         let notification = AgentSide::decode_notification("document/didClose", Some(&raw)).unwrap();
         assert!(matches!(
             notification,
-            ClientNotification::DocumentDidCloseNotification(_)
+            ClientNotification::DidCloseDocumentNotification(_)
         ));
     }
 
@@ -549,7 +549,7 @@ mod nes_rpc_tests {
         let notification = AgentSide::decode_notification("document/didSave", Some(&raw)).unwrap();
         assert!(matches!(
             notification,
-            ClientNotification::DocumentDidSaveNotification(_)
+            ClientNotification::DidSaveDocumentNotification(_)
         ));
     }
 
@@ -570,7 +570,7 @@ mod nes_rpc_tests {
         let notification = AgentSide::decode_notification("document/didFocus", Some(&raw)).unwrap();
         assert!(matches!(
             notification,
-            ClientNotification::DocumentDidFocusNotification(_)
+            ClientNotification::DidFocusDocumentNotification(_)
         ));
     }
 

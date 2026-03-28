@@ -282,6 +282,13 @@ pub struct NesDocumentDidOpenCapabilities {
     pub meta: Option<Meta>,
 }
 
+impl NesDocumentDidOpenCapabilities {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
 /// Capabilities for `document/didChange` events.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -345,6 +352,13 @@ pub struct NesDocumentDidCloseCapabilities {
     pub meta: Option<Meta>,
 }
 
+impl NesDocumentDidCloseCapabilities {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
 /// Marker for `document/didSave` capability support.
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -359,6 +373,13 @@ pub struct NesDocumentDidSaveCapabilities {
     pub meta: Option<Meta>,
 }
 
+impl NesDocumentDidSaveCapabilities {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
 /// Marker for `document/didFocus` capability support.
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -371,6 +392,13 @@ pub struct NesDocumentDidFocusCapabilities {
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<Meta>,
+}
+
+impl NesDocumentDidFocusCapabilities {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
 }
 
 /// Context capabilities the agent wants attached to each suggestion request.
@@ -488,6 +516,13 @@ pub struct NesRecentFilesCapabilities {
     pub meta: Option<Meta>,
 }
 
+impl NesRecentFilesCapabilities {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
 /// Capabilities for related snippets context.
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -500,6 +535,13 @@ pub struct NesRelatedSnippetsCapabilities {
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<Meta>,
+}
+
+impl NesRelatedSnippetsCapabilities {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
 }
 
 /// Capabilities for edit history context.
@@ -519,6 +561,13 @@ pub struct NesEditHistoryCapabilities {
     pub meta: Option<Meta>,
 }
 
+impl NesEditHistoryCapabilities {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
 /// Capabilities for user actions context.
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -536,6 +585,13 @@ pub struct NesUserActionsCapabilities {
     pub meta: Option<Meta>,
 }
 
+impl NesUserActionsCapabilities {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
 /// Capabilities for open files context.
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -550,6 +606,13 @@ pub struct NesOpenFilesCapabilities {
     pub meta: Option<Meta>,
 }
 
+impl NesOpenFilesCapabilities {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
 /// Capabilities for diagnostics context.
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -562,6 +625,13 @@ pub struct NesDiagnosticsCapabilities {
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<Meta>,
+}
+
+impl NesDiagnosticsCapabilities {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
 }
 
 // Client NES capabilities
@@ -642,6 +712,13 @@ pub struct NesJumpCapabilities {
     pub meta: Option<Meta>,
 }
 
+impl NesJumpCapabilities {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
 /// Marker for rename action support.
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -654,6 +731,13 @@ pub struct NesRenameActionCapabilities {
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<Meta>,
+}
+
+impl NesRenameActionCapabilities {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
 }
 
 /// Marker for search and replace action support.
@@ -670,6 +754,13 @@ pub struct NesSearchAndReplaceActionCapabilities {
     pub meta: Option<Meta>,
 }
 
+impl NesSearchAndReplaceActionCapabilities {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
 // Document event notifications (client -> agent)
 
 /// Notification sent when a file is opened in the editor.
@@ -677,7 +768,7 @@ pub struct NesSearchAndReplaceActionCapabilities {
 #[schemars(extend("x-side" = "agent", "x-method" = DOCUMENT_DID_OPEN_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct DocumentDidOpenNotification {
+pub struct DidOpenDocumentNotification {
     /// The session ID for this notification.
     pub session_id: SessionId,
     /// The URI of the opened document.
@@ -697,7 +788,7 @@ pub struct DocumentDidOpenNotification {
     pub meta: Option<Meta>,
 }
 
-impl DocumentDidOpenNotification {
+impl DidOpenDocumentNotification {
     #[must_use]
     pub fn new(
         session_id: impl Into<SessionId>,
@@ -733,7 +824,7 @@ impl DocumentDidOpenNotification {
 #[schemars(extend("x-side" = "agent", "x-method" = DOCUMENT_DID_CHANGE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct DocumentDidChangeNotification {
+pub struct DidChangeDocumentNotification {
     /// The session ID for this notification.
     pub session_id: SessionId,
     /// The URI of the changed document.
@@ -751,7 +842,7 @@ pub struct DocumentDidChangeNotification {
     pub meta: Option<Meta>,
 }
 
-impl DocumentDidChangeNotification {
+impl DidChangeDocumentNotification {
     #[must_use]
     pub fn new(
         session_id: impl Into<SessionId>,
@@ -818,7 +909,7 @@ impl TextDocumentContentChangeEvent {
 #[schemars(extend("x-side" = "agent", "x-method" = DOCUMENT_DID_CLOSE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct DocumentDidCloseNotification {
+pub struct DidCloseDocumentNotification {
     /// The session ID for this notification.
     pub session_id: SessionId,
     /// The URI of the closed document.
@@ -832,7 +923,7 @@ pub struct DocumentDidCloseNotification {
     pub meta: Option<Meta>,
 }
 
-impl DocumentDidCloseNotification {
+impl DidCloseDocumentNotification {
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>, uri: impl Into<String>) -> Self {
         Self {
@@ -859,7 +950,7 @@ impl DocumentDidCloseNotification {
 #[schemars(extend("x-side" = "agent", "x-method" = DOCUMENT_DID_SAVE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct DocumentDidSaveNotification {
+pub struct DidSaveDocumentNotification {
     /// The session ID for this notification.
     pub session_id: SessionId,
     /// The URI of the saved document.
@@ -873,7 +964,7 @@ pub struct DocumentDidSaveNotification {
     pub meta: Option<Meta>,
 }
 
-impl DocumentDidSaveNotification {
+impl DidSaveDocumentNotification {
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>, uri: impl Into<String>) -> Self {
         Self {
@@ -900,7 +991,7 @@ impl DocumentDidSaveNotification {
 #[schemars(extend("x-side" = "agent", "x-method" = DOCUMENT_DID_FOCUS_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct DocumentDidFocusNotification {
+pub struct DidFocusDocumentNotification {
     /// The session ID for this notification.
     pub session_id: SessionId,
     /// The URI of the focused document.
@@ -920,7 +1011,7 @@ pub struct DocumentDidFocusNotification {
     pub meta: Option<Meta>,
 }
 
-impl DocumentDidFocusNotification {
+impl DidFocusDocumentNotification {
     #[must_use]
     pub fn new(
         session_id: impl Into<SessionId>,
@@ -1150,11 +1241,6 @@ impl CloseNesRequest {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -1183,11 +1269,6 @@ impl CloseNesResponse {
         Self::default()
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -1642,6 +1723,7 @@ impl SuggestNesResponse {
 /// A suggestion returned by the agent.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(tag = "kind", rename_all = "camelCase")]
+#[schemars(extend("discriminator" = {"propertyName": "kind"}))]
 #[non_exhaustive]
 pub enum NesSuggestion {
     /// A text edit suggestion.
@@ -2047,7 +2129,7 @@ mod tests {
 
     #[test]
     fn test_document_did_open_serialization() {
-        let notification = DocumentDidOpenNotification::new(
+        let notification = DidOpenDocumentNotification::new(
             "session_123",
             "file:///path/to/file.rs",
             "rust",
@@ -2067,13 +2149,13 @@ mod tests {
             })
         );
 
-        let deserialized: DocumentDidOpenNotification = serde_json::from_value(json).unwrap();
+        let deserialized: DidOpenDocumentNotification = serde_json::from_value(json).unwrap();
         assert_eq!(deserialized, notification);
     }
 
     #[test]
     fn test_document_did_change_incremental_serialization() {
-        let notification = DocumentDidChangeNotification::new(
+        let notification = DidChangeDocumentNotification::new(
             "session_123",
             "file:///path/to/file.rs",
             2,
@@ -2105,7 +2187,7 @@ mod tests {
 
     #[test]
     fn test_document_did_change_full_serialization() {
-        let notification = DocumentDidChangeNotification::new(
+        let notification = DidChangeDocumentNotification::new(
             "session_123",
             "file:///path/to/file.rs",
             2,
@@ -2133,7 +2215,7 @@ mod tests {
     #[test]
     fn test_document_did_close_serialization() {
         let notification =
-            DocumentDidCloseNotification::new("session_123", "file:///path/to/file.rs");
+            DidCloseDocumentNotification::new("session_123", "file:///path/to/file.rs");
         let json = serde_json::to_value(&notification).unwrap();
         assert_eq!(
             json,
@@ -2144,7 +2226,7 @@ mod tests {
     #[test]
     fn test_document_did_save_serialization() {
         let notification =
-            DocumentDidSaveNotification::new("session_123", "file:///path/to/file.rs");
+            DidSaveDocumentNotification::new("session_123", "file:///path/to/file.rs");
         let json = serde_json::to_value(&notification).unwrap();
         assert_eq!(
             json,
@@ -2154,7 +2236,7 @@ mod tests {
 
     #[test]
     fn test_document_did_focus_serialization() {
-        let notification = DocumentDidFocusNotification::new(
+        let notification = DidFocusDocumentNotification::new(
             "session_123",
             "file:///path/to/file.rs",
             2,

@@ -1013,47 +1013,47 @@
                 {
                   "allOf": [
                     {
-                      "$ref": "#/$defs/DocumentDidOpenNotification"
+                      "$ref": "#/$defs/DidOpenDocumentNotification"
                     }
                   ],
                   "description": "**UNSTABLE**\n\nNotification sent when a file is opened in the editor.",
-                  "title": "DocumentDidOpenNotification"
+                  "title": "DidOpenDocumentNotification"
                 },
                 {
                   "allOf": [
                     {
-                      "$ref": "#/$defs/DocumentDidChangeNotification"
+                      "$ref": "#/$defs/DidChangeDocumentNotification"
                     }
                   ],
                   "description": "**UNSTABLE**\n\nNotification sent when a file is edited.",
-                  "title": "DocumentDidChangeNotification"
+                  "title": "DidChangeDocumentNotification"
                 },
                 {
                   "allOf": [
                     {
-                      "$ref": "#/$defs/DocumentDidCloseNotification"
+                      "$ref": "#/$defs/DidCloseDocumentNotification"
                     }
                   ],
                   "description": "**UNSTABLE**\n\nNotification sent when a file is closed.",
-                  "title": "DocumentDidCloseNotification"
+                  "title": "DidCloseDocumentNotification"
                 },
                 {
                   "allOf": [
                     {
-                      "$ref": "#/$defs/DocumentDidSaveNotification"
+                      "$ref": "#/$defs/DidSaveDocumentNotification"
                     }
                   ],
                   "description": "**UNSTABLE**\n\nNotification sent when a file is saved.",
-                  "title": "DocumentDidSaveNotification"
+                  "title": "DidSaveDocumentNotification"
                 },
                 {
                   "allOf": [
                     {
-                      "$ref": "#/$defs/DocumentDidFocusNotification"
+                      "$ref": "#/$defs/DidFocusDocumentNotification"
                     }
                   ],
                   "description": "**UNSTABLE**\n\nNotification sent when a file becomes the active editor tab.",
-                  "title": "DocumentDidFocusNotification"
+                  "title": "DidFocusDocumentNotification"
                 },
                 {
                   "allOf": [
@@ -1711,31 +1711,7 @@
       "required": ["currentModeId"],
       "type": "object"
     },
-    "Diff": {
-      "description": "A diff representing file modifications.\n\nShows changes to files in a format suitable for display in the client UI.\n\nSee protocol docs: [Content](https://agentclientprotocol.com/protocol/tool-calls#content)",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"]
-        },
-        "newText": {
-          "description": "The new content after modification.",
-          "type": "string"
-        },
-        "oldText": {
-          "description": "The original content (None for new files).",
-          "type": ["string", "null"]
-        },
-        "path": {
-          "description": "The file path being modified.",
-          "type": "string"
-        }
-      },
-      "required": ["path", "newText"],
-      "type": "object"
-    },
-    "DocumentDidChangeNotification": {
+    "DidChangeDocumentNotification": {
       "description": "Notification sent when a file is edited.",
       "properties": {
         "_meta": {
@@ -1773,7 +1749,7 @@
       "x-method": "document/didChange",
       "x-side": "agent"
     },
-    "DocumentDidCloseNotification": {
+    "DidCloseDocumentNotification": {
       "description": "Notification sent when a file is closed.",
       "properties": {
         "_meta": {
@@ -1799,7 +1775,7 @@
       "x-method": "document/didClose",
       "x-side": "agent"
     },
-    "DocumentDidFocusNotification": {
+    "DidFocusDocumentNotification": {
       "description": "Notification sent when a file becomes the active editor tab.",
       "properties": {
         "_meta": {
@@ -1846,7 +1822,7 @@
       "x-method": "document/didFocus",
       "x-side": "agent"
     },
-    "DocumentDidOpenNotification": {
+    "DidOpenDocumentNotification": {
       "description": "Notification sent when a file is opened in the editor.",
       "properties": {
         "_meta": {
@@ -1885,7 +1861,7 @@
       "x-method": "document/didOpen",
       "x-side": "agent"
     },
-    "DocumentDidSaveNotification": {
+    "DidSaveDocumentNotification": {
       "description": "Notification sent when a file is saved.",
       "properties": {
         "_meta": {
@@ -1910,6 +1886,30 @@
       "type": "object",
       "x-method": "document/didSave",
       "x-side": "agent"
+    },
+    "Diff": {
+      "description": "A diff representing file modifications.\n\nShows changes to files in a format suitable for display in the client UI.\n\nSee protocol docs: [Content](https://agentclientprotocol.com/protocol/tool-calls#content)",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "newText": {
+          "description": "The new content after modification.",
+          "type": "string"
+        },
+        "oldText": {
+          "description": "The original content (None for new files).",
+          "type": ["string", "null"]
+        },
+        "path": {
+          "description": "The file path being modified.",
+          "type": "string"
+        }
+      },
+      "required": ["path", "newText"],
+      "type": "object"
     },
     "ElicitationAcceptAction": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nThe user accepted the elicitation and provided content.",
@@ -4059,6 +4059,9 @@
     },
     "NesSuggestion": {
       "description": "A suggestion returned by the agent.",
+      "discriminator": {
+        "propertyName": "kind"
+      },
       "oneOf": [
         {
           "allOf": [
