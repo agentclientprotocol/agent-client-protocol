@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.11.4](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.11.3...v0.11.4) - 2026-03-28
+
+### Added
+
+- *(unstable)* initial unstable nes implementation ([#754](https://github.com/agentclientprotocol/agent-client-protocol/pull/754))
+- *(unstable)* initial additional directories implementation ([#838](https://github.com/agentclientprotocol/agent-client-protocol/pull/838))
+
+### Other
+
+- properly interpolate variables in generate.rs error messages ([#862](https://github.com/agentclientprotocol/agent-client-protocol/pull/862))
+- add tests for content file ([#850](https://github.com/agentclientprotocol/agent-client-protocol/pull/850))
+- Update README.md ([#836](https://github.com/agentclientprotocol/agent-client-protocol/pull/836))
+
 ## [0.11.3](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.11.2...v0.11.3) - 2026-03-18
 
 ### Added
