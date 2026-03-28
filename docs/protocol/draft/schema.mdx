@@ -2840,10 +2840,10 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 <ResponseField name="jump" type={<><span><a href="#nesjumpcapabilities">NesJumpCapabilities</a></span><span> | null</span></>} >
   Whether the client supports the `jump` suggestion kind.
 </ResponseField>
-<ResponseField name="rename" type={<><span><a href="#nesrenameactioncapabilities">NesRenameActionCapabilities</a></span><span> | null</span></>} >
+<ResponseField name="rename" type={<><span><a href="#nesrenamecapabilities">NesRenameCapabilities</a></span><span> | null</span></>} >
   Whether the client supports the `rename` suggestion kind.
 </ResponseField>
-<ResponseField name="searchAndReplace" type={<><span><a href="#nessearchandreplaceactioncapabilities">NesSearchAndReplaceActionCapabilities</a></span><span> | null</span></>} >
+<ResponseField name="searchAndReplace" type={<><span><a href="#nessearchandreplacecapabilities">NesSearchAndReplaceCapabilities</a></span><span> | null</span></>} >
   Whether the client supports the `searchAndReplace` suggestion kind.
 </ResponseField>
 
@@ -4845,9 +4845,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
 </ResponseField>
 
-## <span class="font-mono">NesRenameActionCapabilities</span>
+## <span class="font-mono">NesRenameCapabilities</span>
 
-Marker for rename action support.
+Marker for rename suggestion support.
 
 **Type:** Object
 
@@ -4862,7 +4862,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
 </ResponseField>
 
-## <span class="font-mono">NesRenameActionSuggestion</span>
+## <span class="font-mono">NesRenameSuggestion</span>
 
 A rename symbol suggestion.
 
@@ -4901,9 +4901,9 @@ Repository metadata for an NES session.
   The remote URL of the repository.
 </ResponseField>
 
-## <span class="font-mono">NesSearchAndReplaceActionCapabilities</span>
+## <span class="font-mono">NesSearchAndReplaceCapabilities</span>
 
-Marker for search and replace action support.
+Marker for search and replace suggestion support.
 
 **Type:** Object
 
@@ -4918,7 +4918,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
 </ResponseField>
 
-## <span class="font-mono">NesSearchAndReplaceActionSuggestion</span>
+## <span class="font-mono">NesSearchAndReplaceSuggestion</span>
 
 A search-and-replace suggestion.
 

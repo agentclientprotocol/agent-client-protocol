@@ -646,10 +646,10 @@ pub struct ClientNesCapabilities {
     pub jump: Option<NesJumpCapabilities>,
     /// Whether the client supports the `rename` suggestion kind.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub rename: Option<NesRenameActionCapabilities>,
+    pub rename: Option<NesRenameCapabilities>,
     /// Whether the client supports the `searchAndReplace` suggestion kind.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub search_and_replace: Option<NesSearchAndReplaceActionCapabilities>,
+    pub search_and_replace: Option<NesSearchAndReplaceCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -672,7 +672,7 @@ impl ClientNesCapabilities {
     }
 
     #[must_use]
-    pub fn rename(mut self, rename: impl IntoOption<NesRenameActionCapabilities>) -> Self {
+    pub fn rename(mut self, rename: impl IntoOption<NesRenameCapabilities>) -> Self {
         self.rename = rename.into_option();
         self
     }
@@ -680,7 +680,7 @@ impl ClientNesCapabilities {
     #[must_use]
     pub fn search_and_replace(
         mut self,
-        search_and_replace: impl IntoOption<NesSearchAndReplaceActionCapabilities>,
+        search_and_replace: impl IntoOption<NesSearchAndReplaceCapabilities>,
     ) -> Self {
         self.search_and_replace = search_and_replace.into_option();
         self
@@ -719,11 +719,11 @@ impl NesJumpCapabilities {
     }
 }
 
-/// Marker for rename action support.
+/// Marker for rename suggestion support.
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct NesRenameActionCapabilities {
+pub struct NesRenameCapabilities {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -733,18 +733,18 @@ pub struct NesRenameActionCapabilities {
     pub meta: Option<Meta>,
 }
 
-impl NesRenameActionCapabilities {
+impl NesRenameCapabilities {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 }
 
-/// Marker for search and replace action support.
+/// Marker for search and replace suggestion support.
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct NesSearchAndReplaceActionCapabilities {
+pub struct NesSearchAndReplaceCapabilities {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -754,7 +754,7 @@ pub struct NesSearchAndReplaceActionCapabilities {
     pub meta: Option<Meta>,
 }
 
-impl NesSearchAndReplaceActionCapabilities {
+impl NesSearchAndReplaceCapabilities {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -1731,9 +1731,9 @@ pub enum NesSuggestion {
     /// A jump-to-location suggestion.
     Jump(NesJumpSuggestion),
     /// A rename symbol suggestion.
-    Rename(NesRenameActionSuggestion),
+    Rename(NesRenameSuggestion),
     /// A search-and-replace suggestion.
-    SearchAndReplace(NesSearchAndReplaceActionSuggestion),
+    SearchAndReplace(NesSearchAndReplaceSuggestion),
 }
 
 /// A text edit suggestion.
@@ -1819,7 +1819,7 @@ impl NesJumpSuggestion {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct NesRenameActionSuggestion {
+pub struct NesRenameSuggestion {
     /// Unique identifier for accept/reject tracking.
     pub id: String,
     /// The file URI containing the symbol.
@@ -1830,7 +1830,7 @@ pub struct NesRenameActionSuggestion {
     pub new_name: String,
 }
 
-impl NesRenameActionSuggestion {
+impl NesRenameSuggestion {
     #[must_use]
     pub fn new(
         id: impl Into<String>,
@@ -1851,7 +1851,7 @@ impl NesRenameActionSuggestion {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct NesSearchAndReplaceActionSuggestion {
+pub struct NesSearchAndReplaceSuggestion {
     /// Unique identifier for accept/reject tracking.
     pub id: String,
     /// The file URI to search within.
@@ -1865,7 +1865,7 @@ pub struct NesSearchAndReplaceActionSuggestion {
     pub is_regex: Option<bool>,
 }
 
-impl NesSearchAndReplaceActionSuggestion {
+impl NesSearchAndReplaceSuggestion {
     #[must_use]
     pub fn new(
         id: impl Into<String>,
@@ -2110,8 +2110,8 @@ mod tests {
     fn test_client_nes_capabilities_serialization() {
         let caps = ClientNesCapabilities::new()
             .jump(NesJumpCapabilities::default())
-            .rename(NesRenameActionCapabilities::default())
-            .search_and_replace(NesSearchAndReplaceActionCapabilities::default());
+            .rename(NesRenameCapabilities::default())
+            .search_and_replace(NesSearchAndReplaceCapabilities::default());
 
         let json = serde_json::to_value(&caps).unwrap();
         assert_eq!(
@@ -2322,8 +2322,8 @@ mod tests {
     }
 
     #[test]
-    fn test_nes_suggestion_rename_action_serialization() {
-        let suggestion = NesSuggestion::Rename(NesRenameActionSuggestion::new(
+    fn test_nes_suggestion_rename_serialization() {
+        let suggestion = NesSuggestion::Rename(NesRenameSuggestion::new(
             "sugg_003",
             "file:///path/to/file.rs",
             Position::new(5, 10),
@@ -2347,9 +2347,9 @@ mod tests {
     }
 
     #[test]
-    fn test_nes_suggestion_search_and_replace_action_serialization() {
+    fn test_nes_suggestion_search_and_replace_serialization() {
         let suggestion = NesSuggestion::SearchAndReplace(
-            NesSearchAndReplaceActionSuggestion::new(
+            NesSearchAndReplaceSuggestion::new(
                 "sugg_004",
                 "file:///path/to/file.rs",
                 "oldFunction",
@@ -2411,9 +2411,9 @@ mod tests {
 
     #[test]
     fn test_nes_start_response_serialization() {
-        let response = StartNesResponse::new("nes_abc123");
+        let response = StartNesResponse::new("session_abc123");
         let json = serde_json::to_value(&response).unwrap();
-        assert_eq!(json, json!({ "sessionId": "nes_abc123" }));
+        assert_eq!(json, json!({ "sessionId": "session_abc123" }));
     }
 
     #[test]

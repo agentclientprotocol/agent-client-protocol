@@ -488,6 +488,17 @@ mod nes_rpc_tests {
     }
 
     #[test]
+    fn test_decode_nes_close_request() {
+        let params = serde_json::to_string(&json!({
+            "sessionId": "session_123"
+        }))
+        .unwrap();
+        let raw = serde_json::value::RawValue::from_string(params).unwrap();
+        let request = AgentSide::decode_request("nes/close", Some(&raw)).unwrap();
+        assert!(matches!(request, ClientRequest::CloseNesRequest(_)));
+    }
+
+    #[test]
     fn test_decode_document_did_open_notification() {
         let params = serde_json::to_string(&json!({
             "sessionId": "session_123",

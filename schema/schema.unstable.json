@@ -970,7 +970,7 @@
         "rename": {
           "anyOf": [
             {
-              "$ref": "#/$defs/NesRenameActionCapabilities"
+              "$ref": "#/$defs/NesRenameCapabilities"
             },
             {
               "type": "null"
@@ -981,7 +981,7 @@
         "searchAndReplace": {
           "anyOf": [
             {
-              "$ref": "#/$defs/NesSearchAndReplaceActionCapabilities"
+              "$ref": "#/$defs/NesSearchAndReplaceCapabilities"
             },
             {
               "type": "null"
@@ -3909,8 +3909,8 @@
       },
       "type": "object"
     },
-    "NesRenameActionCapabilities": {
-      "description": "Marker for rename action support.",
+    "NesRenameCapabilities": {
+      "description": "Marker for rename suggestion support.",
       "properties": {
         "_meta": {
           "additionalProperties": true,
@@ -3920,7 +3920,7 @@
       },
       "type": "object"
     },
-    "NesRenameActionSuggestion": {
+    "NesRenameSuggestion": {
       "description": "A rename symbol suggestion.",
       "properties": {
         "id": {
@@ -3966,8 +3966,8 @@
       "required": ["name", "owner", "remoteUrl"],
       "type": "object"
     },
-    "NesSearchAndReplaceActionCapabilities": {
-      "description": "Marker for search and replace action support.",
+    "NesSearchAndReplaceCapabilities": {
+      "description": "Marker for search and replace suggestion support.",
       "properties": {
         "_meta": {
           "additionalProperties": true,
@@ -3977,7 +3977,7 @@
       },
       "type": "object"
     },
-    "NesSearchAndReplaceActionSuggestion": {
+    "NesSearchAndReplaceSuggestion": {
       "description": "A search-and-replace suggestion.",
       "properties": {
         "id": {
@@ -4098,7 +4098,7 @@
         {
           "allOf": [
             {
-              "$ref": "#/$defs/NesRenameActionSuggestion"
+              "$ref": "#/$defs/NesRenameSuggestion"
             }
           ],
           "description": "A rename symbol suggestion.",
@@ -4114,7 +4114,7 @@
         {
           "allOf": [
             {
-              "$ref": "#/$defs/NesSearchAndReplaceActionSuggestion"
+              "$ref": "#/$defs/NesSearchAndReplaceSuggestion"
             }
           ],
           "description": "A search-and-replace suggestion.",
