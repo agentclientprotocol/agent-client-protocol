@@ -2492,7 +2492,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 <ResponseField name="description" type={"string | null"} >
   Optional description providing more details about this authentication method.
 </ResponseField>
-<ResponseField name="env" type={"object"} >
+<ResponseField name="env" type={<a href="#envvariable">EnvVariable[]</a>} >
   Additional environment variables to set when running the agent binary for terminal auth.
 </ResponseField>
 <ResponseField name="id" type={"string"} required>
@@ -2630,7 +2630,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 <ResponseField name="description" type={"string | null"} >
   Optional description providing more details about this authentication method.
 </ResponseField>
-<ResponseField name="env" type={"object"} >
+<ResponseField name="env" type={<a href="#envvariable">EnvVariable[]</a>} >
   Additional environment variables to set when running the agent binary for terminal auth.
 </ResponseField>
 <ResponseField name="id" type={"string"} required>
