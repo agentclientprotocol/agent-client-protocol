@@ -23,6 +23,9 @@ pub type Meta = serde_json::Map<String, serde_json::Value>;
 #[serde(transparent)]
 #[non_exhaustive]
 pub struct ExtRequest {
+    /// Wire method name for this extension request.
+    ///
+    /// Extension method names must start with `_`, and the name is preserved exactly.
     #[serde(skip)] // this is used for routing, but when serializing we only want the params
     pub method: Arc<str>,
     #[schemars(with = "serde_json::Value")]
@@ -65,6 +68,9 @@ impl ExtResponse {
 #[serde(transparent)]
 #[non_exhaustive]
 pub struct ExtNotification {
+    /// Wire method name for this extension notification.
+    ///
+    /// Extension method names must start with `_`, and the name is preserved exactly.
     #[serde(skip)] // this is used for routing, but when serializing we only want the params
     pub method: Arc<str>,
     #[schemars(with = "serde_json::Value")]
