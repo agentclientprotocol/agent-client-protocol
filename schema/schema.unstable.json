@@ -69,6 +69,17 @@
           },
           "description": "Prompt capabilities supported by the agent."
         },
+        "providers": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ProvidersCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nProvider configuration capabilities supported by the agent.\n\nBy supplying `{}` it means that the agent supports provider configuration methods."
+        },
         "sessionCapabilities": {
           "allOf": [
             {
@@ -268,6 +279,30 @@
                     }
                   ],
                   "title": "AuthenticateResponse"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/ListProvidersResponse"
+                    }
+                  ],
+                  "title": "ListProvidersResponse"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/SetProvidersResponse"
+                    }
+                  ],
+                  "title": "SetProvidersResponse"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/DisableProvidersResponse"
+                    }
+                  ],
+                  "title": "DisableProvidersResponse"
                 },
                 {
                   "allOf": [
@@ -931,6 +966,33 @@
                 {
                   "allOf": [
                     {
+                      "$ref": "#/$defs/ListProvidersRequest"
+                    }
+                  ],
+                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nLists providers that can be configured by the client.",
+                  "title": "ListProvidersRequest"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/SetProvidersRequest"
+                    }
+                  ],
+                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nReplaces the configuration for a provider.",
+                  "title": "SetProvidersRequest"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/DisableProvidersRequest"
+                    }
+                  ],
+                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nDisables a provider.",
+                  "title": "DisableProvidersRequest"
+                },
+                {
+                  "allOf": [
+                    {
                       "$ref": "#/$defs/LogoutRequest"
                     }
                   ],
@@ -1475,6 +1537,37 @@
       },
       "required": ["path", "newText"],
       "type": "object"
+    },
+    "DisableProvidersRequest": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for `providers/disable`.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "id": {
+          "description": "Provider id to disable.",
+          "type": "string"
+        }
+      },
+      "required": ["id"],
+      "type": "object",
+      "x-method": "providers/disable",
+      "x-side": "agent"
+    },
+    "DisableProvidersResponse": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nResponse to `providers/disable`.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object",
+      "x-method": "providers/disable",
+      "x-side": "agent"
     },
     "ElicitationAcceptAction": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nThe user accepted the elicitation and provided content.",
@@ -2459,6 +2552,40 @@
       "x-method": "terminal/kill",
       "x-side": "client"
     },
+    "ListProvidersRequest": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for `providers/list`.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object",
+      "x-method": "providers/list",
+      "x-side": "agent"
+    },
+    "ListProvidersResponse": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nResponse to `providers/list`.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "providers": {
+          "description": "Configurable providers with current routing info suitable for UI display.",
+          "items": {
+            "$ref": "#/$defs/ProviderInfo"
+          },
+          "type": "array"
+        }
+      },
+      "required": ["providers"],
+      "type": "object",
+      "x-method": "providers/list",
+      "x-side": "agent"
+    },
     "ListSessionsRequest": {
       "description": "Request parameters for listing existing sessions.\n\nOnly available if the Agent supports the `sessionCapabilities.list` capability.",
       "properties": {
@@ -2504,6 +2631,41 @@
       "type": "object",
       "x-method": "session/list",
       "x-side": "agent"
+    },
+    "LlmProtocol": {
+      "anyOf": [
+        {
+          "const": "anthropic",
+          "description": "Anthropic API protocol.",
+          "type": "string"
+        },
+        {
+          "const": "openai",
+          "description": "OpenAI API protocol.",
+          "type": "string"
+        },
+        {
+          "const": "azure",
+          "description": "Azure OpenAI API protocol.",
+          "type": "string"
+        },
+        {
+          "const": "vertex",
+          "description": "Google Vertex AI API protocol.",
+          "type": "string"
+        },
+        {
+          "const": "bedrock",
+          "description": "AWS Bedrock API protocol.",
+          "type": "string"
+        },
+        {
+          "description": "Unknown or custom protocol.",
+          "title": "other",
+          "type": "string"
+        }
+      ],
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nWell-known API protocol identifiers for LLM providers."
     },
     "LoadSessionRequest": {
       "description": "Request parameters for loading an existing session.\n\nOnly available if the Agent supports the `loadSession` capability.\n\nSee protocol docs: [Loading Sessions](https://agentclientprotocol.com/protocol/session-setup#loading-sessions)",
@@ -3228,6 +3390,74 @@
       "maximum": 65535,
       "minimum": 0,
       "type": "integer"
+    },
+    "ProviderCurrentConfig": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCurrent effective non-secret routing configuration for a provider.",
+      "properties": {
+        "apiType": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/LlmProtocol"
+            }
+          ],
+          "description": "Protocol currently used by this provider."
+        },
+        "baseUrl": {
+          "description": "Base URL currently used by this provider.",
+          "type": "string"
+        }
+      },
+      "required": ["apiType", "baseUrl"],
+      "type": "object"
+    },
+    "ProviderInfo": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nInformation about a configurable LLM provider.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "current": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ProviderCurrentConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Current effective non-secret routing config.\nNull means provider is disabled."
+        },
+        "id": {
+          "description": "Provider identifier, for example \"main\" or \"openai\".",
+          "type": "string"
+        },
+        "required": {
+          "description": "Whether this provider is mandatory and cannot be disabled via `providers/disable`.\nIf true, clients must not call `providers/disable` for this id.",
+          "type": "boolean"
+        },
+        "supported": {
+          "description": "Supported protocol types for this provider.",
+          "items": {
+            "$ref": "#/$defs/LlmProtocol"
+          },
+          "type": "array"
+        }
+      },
+      "required": ["id", "supported", "required", "current"],
+      "type": "object"
+    },
+    "ProvidersCapabilities": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nProvider configuration capabilities supported by the agent.\n\nBy supplying `{}` it means that the agent supports provider configuration methods.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object"
     },
     "ReadTextFileRequest": {
       "description": "Request to read content from a text file.\n\nOnly available if the client supports the `fs.readTextFile` capability.",
@@ -4249,6 +4479,56 @@
           "type": "object"
         }
       ]
+    },
+    "SetProvidersRequest": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for `providers/set`.\n\nReplaces the full configuration for one provider id.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "apiType": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/LlmProtocol"
+            }
+          ],
+          "description": "Protocol type for this provider."
+        },
+        "baseUrl": {
+          "description": "Base URL for requests sent through this provider.",
+          "type": "string"
+        },
+        "headers": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Full headers map for this provider.\nMay include authorization, routing, or other integration-specific headers.",
+          "type": "object"
+        },
+        "id": {
+          "description": "Provider id to configure.",
+          "type": "string"
+        }
+      },
+      "required": ["id", "apiType", "baseUrl"],
+      "type": "object",
+      "x-method": "providers/set",
+      "x-side": "agent"
+    },
+    "SetProvidersResponse": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nResponse to `providers/set`.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object",
+      "x-method": "providers/set",
+      "x-side": "agent"
     },
     "SetSessionConfigOptionRequest": {
       "anyOf": [

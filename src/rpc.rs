@@ -284,6 +284,18 @@ impl Side for AgentSide {
             m if m == AGENT_METHOD_NAMES.authenticate => serde_json::from_str(params.get())
                 .map(ClientRequest::AuthenticateRequest)
                 .map_err(Into::into),
+            #[cfg(feature = "unstable_llm_providers")]
+            m if m == AGENT_METHOD_NAMES.providers_list => serde_json::from_str(params.get())
+                .map(ClientRequest::ListProvidersRequest)
+                .map_err(Into::into),
+            #[cfg(feature = "unstable_llm_providers")]
+            m if m == AGENT_METHOD_NAMES.providers_set => serde_json::from_str(params.get())
+                .map(ClientRequest::SetProvidersRequest)
+                .map_err(Into::into),
+            #[cfg(feature = "unstable_llm_providers")]
+            m if m == AGENT_METHOD_NAMES.providers_disable => serde_json::from_str(params.get())
+                .map(ClientRequest::DisableProvidersRequest)
+                .map_err(Into::into),
             #[cfg(feature = "unstable_logout")]
             m if m == AGENT_METHOD_NAMES.logout => serde_json::from_str(params.get())
                 .map(ClientRequest::LogoutRequest)
