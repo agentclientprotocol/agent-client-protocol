@@ -26,11 +26,12 @@ Introduce a new `plan_update` session update type that supports multiple plan fo
 
 Add a new `SessionUpdate` variant — `plan_update` — that carries a `plan` field. The `plan` field is a tagged union (discriminated by `type`) with the following variants:
 
-| Type | Description | Specific fields |
-|------|-------------|-----------------|
-| `items` | Structured entries (same semantics as today's `plan`) | `entries: PlanEntry[]` |
-| `file` | Agent provides a file URI containing the plan | `uri: string` |
-| `markdown` | Agent provides raw markdown text | `content: string` |
+| Type       | Description                                           | Specific fields        |
+| ---------- | ----------------------------------------------------- | ---------------------- |
+| `items`    | Structured entries (same semantics as today's `plan`) | `entries: PlanEntry[]` |
+| `file`     | Agent provides a file URI containing the plan         | `uri: string`          |
+| `markdown` | Agent provides raw markdown text                      | `content: string`      |
+
 All variants carry a required `id: string` that identifies the plan, and an optional `_meta` for extensibility.
 
 Additionally, introduce a `plan_removed` session update type that carries only a plan `id` to signal dismissal. This keeps `plan_update` focused purely on content updates and makes removal a distinct, self-describing event.
@@ -50,6 +51,7 @@ When present (`{}`), signals the client supports the `plan_update` and `plan_rem
 ### Multiple Plans
 
 The `id` field on every plan variant identifies a specific plan.
+
 - Each `plan_update` targets the plan with the given `id`
 - Client tracks plans by ID; updates replace the content of that specific plan
 - Different plans may use different types (e.g., one `items` plan and one `markdown` plan)
@@ -71,16 +73,16 @@ Agents will be able to present plans in the format most natural to them — stru
 ### Json Format Examples
 
 Existing `plan` (unchanged):
+
 ```json
 {
   "sessionUpdate": "plan",
-  "entries": [
-    {"content": "Step 1", "priority": "high", "status": "pending"}
-  ]
+  "entries": [{ "content": "Step 1", "priority": "high", "status": "pending" }]
 }
 ```
 
 Item-based (`plan_update`):
+
 ```json
 {
   "sessionUpdate": "plan_update",
@@ -88,13 +90,14 @@ Item-based (`plan_update`):
     "type": "items",
     "id": "plan-1",
     "entries": [
-      {"content": "Step 1", "priority": "high", "status": "pending"}
+      { "content": "Step 1", "priority": "high", "status": "pending" }
     ]
   }
 }
 ```
 
 Markdown:
+
 ```json
 {
   "sessionUpdate": "plan_update",
@@ -107,6 +110,7 @@ Markdown:
 ```
 
 File-based:
+
 ```json
 {
   "sessionUpdate": "plan_update",
@@ -119,6 +123,7 @@ File-based:
 ```
 
 Removal:
+
 ```json
 {
   "sessionUpdate": "plan_removed",
