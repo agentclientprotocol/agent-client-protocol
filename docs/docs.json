@@ -108,6 +108,7 @@
         "tab": "RFDs",
         "pages": [
           "rfds/about",
+          "rfds/updates",
           {
             "group": "Draft",
             "pages": [
@@ -165,7 +166,20 @@
       },
       {
         "tab": "Updates",
-        "pages": ["updates"]
+        "pages": [
+          "updates",
+          {
+            "group": "Announcements",
+            "pages": [
+              "announcements/acp-agent-registry-stabilized",
+              "announcements/session-info-update-stabilized",
+              "announcements/session-list-stabilized",
+              "announcements/sergey-ignatov-lead-maintainer",
+              "announcements/session-config-options-stabilized",
+              "announcements/implementation-information"
+            ]
+          }
+        ]
       },
       {
         "tab": "Brand",
