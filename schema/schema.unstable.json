@@ -2022,7 +2022,7 @@
       },
       "required": ["elicitationId"],
       "type": "object",
-      "x-method": "session/elicitation/complete",
+      "x-method": "elicitation/complete",
       "x-side": "client"
     },
     "ElicitationContentValue": {
@@ -2173,7 +2173,7 @@
       ]
     },
     "ElicitationRequest": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest from the agent to elicit structured user input.\n\nThe agent sends this to the client to request information from the user,\neither via a form or by directing them to a URL.",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest from the agent to elicit structured user input.\n\nThe agent sends this to the client to request information from the user,\neither via a form or by directing them to a URL.\nElicitations may be tied to a session/request, or sent without either scope.",
       "discriminator": {
         "propertyName": "mode"
       },
@@ -2221,18 +2221,43 @@
           "description": "A human-readable message describing what input is needed.",
           "type": "string"
         },
-        "sessionId": {
-          "allOf": [
+        "requestId": {
+          "anyOf": [
             {
-              "$ref": "#/$defs/SessionId"
+              "$ref": "#/$defs/RequestId"
+            },
+            {
+              "type": "null"
             }
           ],
-          "description": "The session ID for this request."
+          "description": "Optional request ID if this elicitation is tied to a specific request."
+        },
+        "sessionId": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional session ID if this elicitation is tied to a specific session."
+        },
+        "toolCallId": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ToolCallId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional tool call ID if this elicitation originated during a tool call.\nWhen present, `session_id` should also be set."
         }
       },
-      "required": ["sessionId", "message"],
+      "required": ["message"],
       "type": "object",
-      "x-method": "session/elicitation",
+      "x-method": "elicitation/create",
       "x-side": "client"
     },
     "ElicitationResponse": {
@@ -2254,7 +2279,7 @@
       },
       "required": ["action"],
       "type": "object",
-      "x-method": "session/elicitation",
+      "x-method": "elicitation/create",
       "x-side": "client"
     },
     "ElicitationSchema": {
