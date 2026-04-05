@@ -5,9 +5,6 @@
 
 use std::{path::PathBuf, sync::Arc};
 
-#[cfg(feature = "unstable_auth_methods")]
-use std::collections::HashMap;
-
 use derive_more::{Display, From};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -839,8 +836,8 @@ pub struct AuthMethodTerminal {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub args: Vec<String>,
     /// Additional environment variables to set when running the agent binary for terminal auth.
-    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
-    pub env: HashMap<String, String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub env: Vec<EnvVariable>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -859,7 +856,7 @@ impl AuthMethodTerminal {
             name: name.into(),
             description: None,
             args: Vec::new(),
-            env: HashMap::new(),
+            env: Vec::new(),
             meta: None,
         }
     }
@@ -873,7 +870,7 @@ impl AuthMethodTerminal {
 
     /// Additional environment variables to set when running the agent binary for terminal auth.
     #[must_use]
-    pub fn env(mut self, env: HashMap<String, String>) -> Self {
+    pub fn env(mut self, env: Vec<EnvVariable>) -> Self {
         self.env = env;
         self
     }
@@ -5004,11 +5001,7 @@ mod test_serialization {
     #[cfg(feature = "unstable_auth_methods")]
     #[test]
     fn test_auth_method_terminal_with_args_and_env_serialization() {
-        use std::collections::HashMap;
-
-        let mut env = HashMap::new();
-        env.insert("TERM".to_string(), "xterm-256color".to_string());
-
+        let env = vec![EnvVariable::new("TERM", "xterm-256color")];
         let method = AuthMethod::Terminal(
             AuthMethodTerminal::new("tui-auth", "Terminal Auth")
                 .args(vec!["--interactive".to_string(), "--color".to_string()])
@@ -5023,9 +5016,9 @@ mod test_serialization {
                 "name": "Terminal Auth",
                 "type": "terminal",
                 "args": ["--interactive", "--color"],
-                "env": {
-                    "TERM": "xterm-256color"
-                }
+                "env": [
+                    { "name": "TERM", "value": "xterm-256color" }
+                ]
             })
         );
 
@@ -5034,7 +5027,8 @@ mod test_serialization {
             AuthMethod::Terminal(AuthMethodTerminal { args, env, .. }) => {
                 assert_eq!(args, vec!["--interactive", "--color"]);
                 assert_eq!(env.len(), 1);
-                assert_eq!(env.get("TERM").unwrap(), "xterm-256color");
+                assert_eq!(env[0].name, "TERM");
+                assert_eq!(env[0].value, "xterm-256color");
             }
             _ => panic!("Expected Terminal variant"),
         }

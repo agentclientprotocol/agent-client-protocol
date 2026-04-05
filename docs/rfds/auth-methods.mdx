@@ -123,12 +123,15 @@ This requires the client to be able to run an interactive terminal for the user 
   "description": "Setup Label",
   "type": "terminal",
   "args": ["--setup"],
-  "env": { "VAR1": "value1", "VAR2": "value2" }
+  "env": [
+    { "name": "VAR1", "value": "value1" },
+    { "name": "VAR2", "value": "value2" }
+  ]
 }
 ```
 
 - `args` (optional, default `[]`): Additional arguments to pass when running the agent binary.
-- `env` (optional, default `{}`): Additional environment variables to set.
+- `env` (optional, default `[]`): Additional environment variables to set, as an array of objects with `name` and `value` fields.
 
 The `command` cannot be specified, the client will invoke the exact same binary with the exact same setup. The agent can supply additional arguments and environment variables as necessary. These will be supplied in **addition** to any args/env supplied by default when the server is started. So agents will need to have a way to kickoff their interactive login flow even if normal acp commands/arguments are supplied as well.
 
