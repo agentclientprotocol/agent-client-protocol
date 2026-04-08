@@ -3225,13 +3225,14 @@ impl SetSessionModelResponse {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
+#[expect(clippy::doc_markdown)]
 pub enum LlmProtocol {
     /// Anthropic API protocol.
     Anthropic,
-    /// `OpenAI` API protocol.
+    /// OpenAI API protocol.
     #[serde(rename = "openai")]
     OpenAi,
-    /// Azure `OpenAI` API protocol.
+    /// Azure OpenAI API protocol.
     Azure,
     /// Google Vertex AI API protocol.
     Vertex,
@@ -3301,22 +3302,19 @@ pub struct ProviderInfo {
 #[cfg(feature = "unstable_llm_providers")]
 impl ProviderInfo {
     #[must_use]
-    pub fn new(id: impl Into<String>, supported: Vec<LlmProtocol>, required: bool) -> Self {
+    pub fn new(
+        id: impl Into<String>,
+        supported: Vec<LlmProtocol>,
+        required: bool,
+        current: impl Into<Nullable<ProviderCurrentConfig>>,
+    ) -> Self {
         Self {
             id: id.into(),
             supported,
             required,
-            current: Nullable::default(),
+            current: current.into(),
             meta: None,
         }
-    }
-
-    /// Current effective non-secret routing config.
-    /// Null means provider is disabled.
-    #[must_use]
-    pub fn current(mut self, current: impl IntoOption<ProviderCurrentConfig>) -> Self {
-        self.current = current.into_option().into();
-        self
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -3422,7 +3420,7 @@ impl ListProvidersResponse {
 ///
 /// Replaces the full configuration for one provider id.
 #[cfg(feature = "unstable_llm_providers")]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[derive(Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = PROVIDERS_SET_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -3444,6 +3442,26 @@ pub struct SetProvidersRequest {
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_llm_providers")]
+impl std::fmt::Debug for SetProvidersRequest {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SetProvidersRequest")
+            .field("id", &self.id)
+            .field("api_type", &self.api_type)
+            .field("base_url", &self.base_url)
+            .field(
+                "headers",
+                &self
+                    .headers
+                    .keys()
+                    .map(|k| (k.as_str(), "[REDACTED]"))
+                    .collect::<Vec<_>>(),
+            )
+            .field("meta", &self.meta)
+            .finish()
+    }
 }
 
 #[cfg(feature = "unstable_llm_providers")]

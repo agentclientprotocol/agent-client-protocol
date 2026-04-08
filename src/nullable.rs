@@ -144,7 +144,7 @@ mod tests {
 
     #[test]
     fn missing_key_fails() {
-        assert!(from_str::<Example>(r#"{}"#).is_err());
+        assert!(from_str::<Example>(r"{}").is_err());
     }
 
     #[test]
