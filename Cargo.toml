@@ -17,8 +17,8 @@ include = ["/src/**/*.rs", "/README.md", "/LICENSE", "/Cargo.toml"]
 unstable = [
     "unstable_auth_methods",
     "unstable_cancel_request",
-    "unstable_llm_providers",
     "unstable_elicitation",
+    "unstable_llm_providers",
     "unstable_logout",
     "unstable_session_fork",
     "unstable_session_model",
@@ -30,8 +30,8 @@ unstable = [
 ]
 unstable_auth_methods = []
 unstable_cancel_request = []
-unstable_llm_providers = []
 unstable_elicitation = []
+unstable_llm_providers = []
 unstable_logout = []
 unstable_session_fork = []
 unstable_session_model = []

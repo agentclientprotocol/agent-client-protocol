@@ -12,6 +12,8 @@ use derive_more::{Display, From};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "unstable_llm_providers")]
+use crate::Nullable;
 use crate::{
     ClientCapabilities, ContentBlock, ExtNotification, ExtRequest, ExtResponse, IntoOption, Meta,
     ProtocolVersion, SessionId,
@@ -3226,9 +3228,10 @@ impl SetSessionModelResponse {
 pub enum LlmProtocol {
     /// Anthropic API protocol.
     Anthropic,
-    /// OpenAI API protocol.
-    Openai,
-    /// Azure OpenAI API protocol.
+    /// `OpenAI` API protocol.
+    #[serde(rename = "openai")]
+    OpenAi,
+    /// Azure `OpenAI` API protocol.
     Azure,
     /// Google Vertex AI API protocol.
     Vertex,
@@ -3270,41 +3273,6 @@ impl ProviderCurrentConfig {
 ///
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
-/// Required field wrapper for nullable provider current config.
-///
-/// On the wire this is encoded exactly as `ProviderCurrentConfig | null`.
-#[cfg(feature = "unstable_llm_providers")]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[serde(transparent)]
-#[schemars(with = "Option<ProviderCurrentConfig>", inline)]
-#[non_exhaustive]
-pub struct RequiredProviderCurrentConfig(pub Option<ProviderCurrentConfig>);
-
-#[cfg(feature = "unstable_llm_providers")]
-impl From<Option<ProviderCurrentConfig>> for RequiredProviderCurrentConfig {
-    fn from(value: Option<ProviderCurrentConfig>) -> Self {
-        Self(value)
-    }
-}
-
-#[cfg(feature = "unstable_llm_providers")]
-impl From<ProviderCurrentConfig> for RequiredProviderCurrentConfig {
-    fn from(value: ProviderCurrentConfig) -> Self {
-        Self(Some(value))
-    }
-}
-
-#[cfg(feature = "unstable_llm_providers")]
-impl From<RequiredProviderCurrentConfig> for Option<ProviderCurrentConfig> {
-    fn from(value: RequiredProviderCurrentConfig) -> Self {
-        value.0
-    }
-}
-
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Information about a configurable LLM provider.
 #[cfg(feature = "unstable_llm_providers")]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -3320,7 +3288,7 @@ pub struct ProviderInfo {
     pub required: bool,
     /// Current effective non-secret routing config.
     /// Null means provider is disabled.
-    pub current: RequiredProviderCurrentConfig,
+    pub current: Nullable<ProviderCurrentConfig>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -3338,7 +3306,7 @@ impl ProviderInfo {
             id: id.into(),
             supported,
             required,
-            current: RequiredProviderCurrentConfig::default(),
+            current: Nullable::default(),
             meta: None,
         }
     }

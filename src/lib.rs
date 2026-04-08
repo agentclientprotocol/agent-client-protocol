@@ -58,6 +58,7 @@ mod elicitation;
 mod error;
 mod ext;
 mod maybe_undefined;
+mod nullable;
 mod plan;
 #[cfg(feature = "unstable_cancel_request")]
 mod protocol_level;
@@ -74,6 +75,7 @@ pub use elicitation::*;
 pub use error::*;
 pub use ext::*;
 pub use maybe_undefined::*;
+pub use nullable::*;
 pub use plan::*;
 #[cfg(feature = "unstable_cancel_request")]
 pub use protocol_level::*;
