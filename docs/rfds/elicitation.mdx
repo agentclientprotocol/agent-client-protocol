@@ -415,17 +415,17 @@ An elicitation may also be sent without any of these fields, in which case it is
   "params": {
     "requestId": 12,
     "mode": "form",
-    "message": "Please provide your API key to continue setup.",
+    "message": "Please provide your workspace name to continue setup.",
     "requestedSchema": {
       "type": "object",
       "properties": {
-        "apiKey": {
+        "workspaceName": {
           "type": "string",
-          "title": "API Key",
-          "description": "Your API key for authentication"
+          "title": "Workspace Name",
+          "description": "The name of your workspace"
         }
       },
-      "required": ["apiKey"]
+      "required": ["workspaceName"]
     }
   }
 }

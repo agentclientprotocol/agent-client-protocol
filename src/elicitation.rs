@@ -927,8 +927,17 @@ impl CreateElicitationRequest {
         self
     }
 
+    /// Sets both `session_id` and `tool_call_id` for a tool-call-scoped elicitation.
+    ///
+    /// This is the recommended way to create a tool-call-scoped elicitation,
+    /// since `tool_call_id` should always be accompanied by a `session_id`.
     #[must_use]
-    pub fn tool_call_id(mut self, tool_call_id: impl Into<ToolCallId>) -> Self {
+    pub fn for_tool_call(
+        mut self,
+        session_id: impl Into<SessionId>,
+        tool_call_id: impl Into<ToolCallId>,
+    ) -> Self {
+        self.session_id = Some(session_id.into());
         self.tool_call_id = Some(tool_call_id.into());
         self
     }
@@ -1054,7 +1063,7 @@ impl CreateElicitationResponse {
 /// The user's action in response to an elicitation.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[serde(tag = "action", rename_all = "snake_case")]
-#[schemars(extend("discriminator" = {"propertyName": "action"}))]
+#[schemars(inline, extend("discriminator" = {"propertyName": "action"}))]
 #[non_exhaustive]
 pub enum ElicitationAction {
     /// The user accepted and provided content.
@@ -1071,6 +1080,7 @@ pub enum ElicitationAction {
 ///
 /// The user accepted the elicitation and provided content.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[schemars(inline)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ElicitationAcceptAction {
@@ -1315,7 +1325,7 @@ mod tests {
         )
         .session_id("sess_2")
         .request_id(42i64)
-        .tool_call_id("tc_1");
+        .for_tool_call("sess_2", "tc_1");
 
         let json = serde_json::to_value(&req).unwrap();
         assert_eq!(json["sessionId"], "sess_2");
@@ -1376,6 +1386,68 @@ mod tests {
 
         let roundtripped: CreateElicitationResponse = serde_json::from_value(json).unwrap();
         assert!(matches!(roundtripped.action, ElicitationAction::Cancel));
+    }
+
+    #[test]
+    fn session_only_request_serialization() {
+        let req = CreateElicitationRequest::new(
+            ElicitationMode::Form(ElicitationFormMode::new(
+                ElicitationSchema::new().string("name", true),
+            )),
+            "Enter your name",
+        )
+        .session_id("sess_1");
+
+        let json = serde_json::to_value(&req).unwrap();
+        assert_eq!(json["sessionId"], "sess_1");
+        assert!(json.get("requestId").is_none());
+        assert!(json.get("toolCallId").is_none());
+
+        let roundtripped: CreateElicitationRequest = serde_json::from_value(json).unwrap();
+        assert_eq!(roundtripped.session_id, Some(SessionId::new("sess_1")));
+        assert_eq!(roundtripped.request_id, None);
+        assert_eq!(roundtripped.tool_call_id, None);
+    }
+
+    #[test]
+    fn request_only_request_serialization() {
+        let req = CreateElicitationRequest::new(
+            ElicitationMode::Form(ElicitationFormMode::new(
+                ElicitationSchema::new().string("workspace", true),
+            )),
+            "Enter workspace name",
+        )
+        .request_id(99i64);
+
+        let json = serde_json::to_value(&req).unwrap();
+        assert!(json.get("sessionId").is_none());
+        assert_eq!(json["requestId"], 99);
+        assert!(json.get("toolCallId").is_none());
+
+        let roundtripped: CreateElicitationRequest = serde_json::from_value(json).unwrap();
+        assert_eq!(roundtripped.session_id, None);
+        assert_eq!(roundtripped.request_id, Some(RequestId::Number(99)));
+        assert_eq!(roundtripped.tool_call_id, None);
+    }
+
+    #[test]
+    fn for_tool_call_sets_both_ids() {
+        let req = CreateElicitationRequest::new(
+            ElicitationMode::Form(ElicitationFormMode::new(
+                ElicitationSchema::new().string("name", true),
+            )),
+            "Enter name",
+        )
+        .for_tool_call("sess_1", "tc_42");
+
+        assert_eq!(req.session_id, Some(SessionId::new("sess_1")));
+        assert_eq!(req.tool_call_id, Some(ToolCallId::new("tc_42")));
+        assert_eq!(req.request_id, None);
+
+        let json = serde_json::to_value(&req).unwrap();
+        assert_eq!(json["sessionId"], "sess_1");
+        assert_eq!(json["toolCallId"], "tc_42");
+        assert!(json.get("requestId").is_none());
     }
 
     #[test]
