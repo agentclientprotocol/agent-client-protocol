@@ -915,22 +915,33 @@ impl CreateElicitationRequest {
         }
     }
 
-    #[must_use]
-    pub fn session_id(mut self, session_id: impl Into<SessionId>) -> Self {
-        self.session_id = Some(session_id.into());
-        self
-    }
-
-    #[must_use]
-    pub fn request_id(mut self, request_id: impl Into<RequestId>) -> Self {
-        self.request_id = Some(request_id.into());
-        self
-    }
-
-    /// Sets both `session_id` and `tool_call_id` for a tool-call-scoped elicitation.
+    /// Sets the session scope for this elicitation.
     ///
-    /// This is the recommended way to create a tool-call-scoped elicitation,
-    /// since `tool_call_id` should always be accompanied by a `session_id`.
+    /// Clears `request_id` and `tool_call_id` since scopes are mutually exclusive.
+    /// Use [`for_tool_call`](Self::for_tool_call) if you also need a `tool_call_id`.
+    #[must_use]
+    pub fn for_session(mut self, session_id: impl Into<SessionId>) -> Self {
+        self.session_id = Some(session_id.into());
+        self.request_id = None;
+        self.tool_call_id = None;
+        self
+    }
+
+    /// Sets the request scope for this elicitation.
+    ///
+    /// Clears `session_id` and `tool_call_id` since scopes are mutually exclusive.
+    #[must_use]
+    pub fn for_request(mut self, request_id: impl Into<RequestId>) -> Self {
+        self.request_id = Some(request_id.into());
+        self.session_id = None;
+        self.tool_call_id = None;
+        self
+    }
+
+    /// Sets the tool-call scope for this elicitation.
+    ///
+    /// Sets both `session_id` and `tool_call_id`, and clears `request_id`,
+    /// since scopes are mutually exclusive and `tool_call_id` requires a `session_id`.
     #[must_use]
     pub fn for_tool_call(
         mut self,
@@ -939,6 +950,7 @@ impl CreateElicitationRequest {
     ) -> Self {
         self.session_id = Some(session_id.into());
         self.tool_call_id = Some(tool_call_id.into());
+        self.request_id = None;
         self
     }
 
@@ -1323,13 +1335,11 @@ mod tests {
             )),
             "Please authenticate",
         )
-        .session_id("sess_2")
-        .request_id(42i64)
         .for_tool_call("sess_2", "tc_1");
 
         let json = serde_json::to_value(&req).unwrap();
         assert_eq!(json["sessionId"], "sess_2");
-        assert_eq!(json["requestId"], 42);
+        assert!(json.get("requestId").is_none());
         assert_eq!(json["toolCallId"], "tc_1");
         assert_eq!(json["mode"], "url");
         assert_eq!(json["elicitationId"], "elic_1");
@@ -1338,7 +1348,7 @@ mod tests {
 
         let roundtripped: CreateElicitationRequest = serde_json::from_value(json).unwrap();
         assert_eq!(roundtripped.session_id, Some(SessionId::new("sess_2")));
-        assert_eq!(roundtripped.request_id, Some(RequestId::Number(42)));
+        assert_eq!(roundtripped.request_id, None);
         assert_eq!(roundtripped.tool_call_id, Some(ToolCallId::new("tc_1")));
         assert!(matches!(roundtripped.mode, ElicitationMode::Url(_)));
     }
@@ -1396,7 +1406,7 @@ mod tests {
             )),
             "Enter your name",
         )
-        .session_id("sess_1");
+        .for_session("sess_1");
 
         let json = serde_json::to_value(&req).unwrap();
         assert_eq!(json["sessionId"], "sess_1");
@@ -1417,7 +1427,7 @@ mod tests {
             )),
             "Enter workspace name",
         )
-        .request_id(99i64);
+        .for_request(99i64);
 
         let json = serde_json::to_value(&req).unwrap();
         assert!(json.get("sessionId").is_none());
@@ -1448,6 +1458,36 @@ mod tests {
         assert_eq!(json["sessionId"], "sess_1");
         assert_eq!(json["toolCallId"], "tc_42");
         assert!(json.get("requestId").is_none());
+    }
+
+    #[test]
+    fn scope_setters_are_mutually_exclusive() {
+        let base = || {
+            CreateElicitationRequest::new(
+                ElicitationMode::Form(ElicitationFormMode::new(
+                    ElicitationSchema::new().string("name", true),
+                )),
+                "msg",
+            )
+        };
+
+        // session_id clears request_id and tool_call_id
+        let req = base().for_request(1i64).for_session("s1");
+        assert_eq!(req.session_id, Some(SessionId::new("s1")));
+        assert_eq!(req.request_id, None);
+        assert_eq!(req.tool_call_id, None);
+
+        // request_id clears session_id and tool_call_id
+        let req = base().for_tool_call("s1", "tc1").for_request(2i64);
+        assert_eq!(req.request_id, Some(RequestId::Number(2)));
+        assert_eq!(req.session_id, None);
+        assert_eq!(req.tool_call_id, None);
+
+        // for_tool_call clears request_id
+        let req = base().for_request(3i64).for_tool_call("s2", "tc2");
+        assert_eq!(req.session_id, Some(SessionId::new("s2")));
+        assert_eq!(req.tool_call_id, Some(ToolCallId::new("tc2")));
+        assert_eq!(req.request_id, None);
     }
 
     #[test]
