@@ -339,6 +339,17 @@ starting with '$/' it is free to ignore the notification."
             writeln!(&mut self.output, "**Type:** Union").unwrap();
             writeln!(&mut self.output).unwrap();
 
+            if let Some(shared_props) = definition.get("properties").and_then(|v| v.as_object())
+                && !shared_props.is_empty()
+            {
+                writeln!(&mut self.output, "**Shared properties:**").unwrap();
+                writeln!(&mut self.output).unwrap();
+                self.document_properties_as_fields(shared_props, definition, 0);
+                writeln!(&mut self.output).unwrap();
+                writeln!(&mut self.output, "**Variants:**").unwrap();
+                writeln!(&mut self.output).unwrap();
+            }
+
             let variants = definition
                 .get("oneOf")
                 .or_else(|| definition.get("anyOf"))
@@ -1061,10 +1072,10 @@ starting with '$/' it is free to ignore the notification."
                 "terminal/wait_for_exit" => self.client.get("WaitForTerminalExitRequest").unwrap(),
                 "terminal/kill" => self.client.get("KillTerminalRequest").unwrap(),
                 #[cfg(feature = "unstable_elicitation")]
-                "elicitation/create" => self.client.get("ElicitationRequest").unwrap(),
+                "elicitation/create" => self.client.get("CreateElicitationRequest").unwrap(),
                 #[cfg(feature = "unstable_elicitation")]
                 "elicitation/complete" => {
-                    self.client.get("ElicitationCompleteNotification").unwrap()
+                    self.client.get("CompleteElicitationNotification").unwrap()
                 }
                 _ => panic!("Introduced a method? Add it here :)"),
             }
@@ -1189,5 +1200,71 @@ starting with '$/' it is free to ignore the notification."
         }
 
         side_docs
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::MarkdownGenerator;
+        use serde_json::json;
+
+        #[test]
+        fn document_union_includes_shared_properties() {
+            let mut generator = MarkdownGenerator::new();
+            let definition = json!({
+                "description": "Example union.",
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "description": "Shared message."
+                    }
+                },
+                "required": ["message"],
+                "oneOf": [
+                    {
+                        "description": "First variant.",
+                        "properties": {
+                            "mode": {
+                                "const": "form",
+                                "type": "string"
+                            }
+                        },
+                        "required": ["mode"],
+                        "type": "object"
+                    },
+                    {
+                        "description": "Second variant.",
+                        "properties": {
+                            "mode": {
+                                "const": "url",
+                                "type": "string"
+                            }
+                        },
+                        "required": ["mode"],
+                        "type": "object"
+                    }
+                ]
+            });
+
+            generator.document_type(4, "ExampleUnion", &definition);
+
+            assert!(generator.output.contains("**Shared properties:**"));
+            assert!(
+                generator
+                    .output
+                    .contains("<ResponseField name=\"message\" type={\"string\"} required>")
+            );
+            assert!(generator.output.contains("Shared message."));
+            assert!(generator.output.contains("**Variants:**"));
+            assert!(
+                generator
+                    .output
+                    .contains("<ResponseField name=\"form\" type=\"object\">")
+            );
+            assert!(
+                generator
+                    .output
+                    .contains("<ResponseField name=\"url\" type=\"object\">")
+            );
+        }
     }
 }

@@ -149,11 +149,11 @@
                 {
                   "allOf": [
                     {
-                      "$ref": "#/$defs/ElicitationCompleteNotification"
+                      "$ref": "#/$defs/CompleteElicitationNotification"
                     }
                   ],
                   "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNotification that a URL-based elicitation has completed.",
-                  "title": "ElicitationCompleteNotification"
+                  "title": "CompleteElicitationNotification"
                 },
                 {
                   "allOf": [
@@ -264,11 +264,11 @@
                 {
                   "allOf": [
                     {
-                      "$ref": "#/$defs/ElicitationRequest"
+                      "$ref": "#/$defs/CreateElicitationRequest"
                     }
                   ],
                   "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequests structured user input via a form or URL.",
-                  "title": "ElicitationRequest"
+                  "title": "CreateElicitationRequest"
                 },
                 {
                   "allOf": [
@@ -1349,10 +1349,10 @@
                 {
                   "allOf": [
                     {
-                      "$ref": "#/$defs/ElicitationResponse"
+                      "$ref": "#/$defs/CreateElicitationResponse"
                     }
                   ],
-                  "title": "ElicitationResponse"
+                  "title": "CreateElicitationResponse"
                 },
                 {
                   "allOf": [
@@ -1455,6 +1455,28 @@
       "type": "object",
       "x-method": "session/close",
       "x-side": "agent"
+    },
+    "CompleteElicitationNotification": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNotification sent by the agent when a URL-based elicitation is complete.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "elicitationId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ElicitationId"
+            }
+          ],
+          "description": "The ID of the elicitation that completed."
+        }
+      },
+      "required": ["elicitationId"],
+      "type": "object",
+      "x-method": "elicitation/complete",
+      "x-side": "client"
     },
     "ConfigOptionUpdate": {
       "description": "Session configuration options have been updated.",
@@ -1622,6 +1644,150 @@
       },
       "required": ["amount", "currency"],
       "type": "object"
+    },
+    "CreateElicitationRequest": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest from the agent to elicit structured user input.\n\nThe agent sends this to the client to request information from the user,\neither via a form or by directing them to a URL.\nElicitations may be tied to a session, request, or tool call,\nor sent without a specific scope.",
+      "discriminator": {
+        "propertyName": "mode"
+      },
+      "oneOf": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ElicitationFormMode"
+            }
+          ],
+          "description": "Form-based elicitation where the client renders a form from the provided schema.",
+          "properties": {
+            "mode": {
+              "const": "form",
+              "type": "string"
+            }
+          },
+          "required": ["mode"],
+          "type": "object"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ElicitationUrlMode"
+            }
+          ],
+          "description": "URL-based elicitation where the client directs the user to a URL.",
+          "properties": {
+            "mode": {
+              "const": "url",
+              "type": "string"
+            }
+          },
+          "required": ["mode"],
+          "type": "object"
+        }
+      ],
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "message": {
+          "description": "A human-readable message describing what input is needed.",
+          "type": "string"
+        },
+        "requestId": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RequestId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional request ID if this elicitation is tied to a specific request."
+        },
+        "sessionId": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional session ID if this elicitation is tied to a specific session."
+        },
+        "toolCallId": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ToolCallId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional tool call ID if this elicitation is tied to a specific tool call.\nWhen present, `sessionId` should also be set."
+        }
+      },
+      "required": ["message"],
+      "type": "object",
+      "x-method": "elicitation/create",
+      "x-side": "client"
+    },
+    "CreateElicitationResponse": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nResponse from the client to an elicitation request.",
+      "discriminator": {
+        "propertyName": "action"
+      },
+      "oneOf": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ElicitationAcceptAction"
+            }
+          ],
+          "description": "The user accepted and provided content.",
+          "properties": {
+            "action": {
+              "const": "accept",
+              "type": "string"
+            }
+          },
+          "required": ["action"],
+          "type": "object"
+        },
+        {
+          "description": "The user declined the elicitation.",
+          "properties": {
+            "action": {
+              "const": "decline",
+              "type": "string"
+            }
+          },
+          "required": ["action"],
+          "type": "object"
+        },
+        {
+          "description": "The elicitation was cancelled.",
+          "properties": {
+            "action": {
+              "const": "cancel",
+              "type": "string"
+            }
+          },
+          "required": ["action"],
+          "type": "object"
+        }
+      ],
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object",
+      "x-method": "elicitation/create",
+      "x-side": "client"
     },
     "CreateTerminalRequest": {
       "description": "Request to create a new terminal and execute a command.",
@@ -1924,52 +2090,6 @@
       },
       "type": "object"
     },
-    "ElicitationAction": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nThe user's action in response to an elicitation.",
-      "discriminator": {
-        "propertyName": "action"
-      },
-      "oneOf": [
-        {
-          "allOf": [
-            {
-              "$ref": "#/$defs/ElicitationAcceptAction"
-            }
-          ],
-          "description": "The user accepted and provided content.",
-          "properties": {
-            "action": {
-              "const": "accept",
-              "type": "string"
-            }
-          },
-          "required": ["action"],
-          "type": "object"
-        },
-        {
-          "description": "The user declined the elicitation.",
-          "properties": {
-            "action": {
-              "const": "decline",
-              "type": "string"
-            }
-          },
-          "required": ["action"],
-          "type": "object"
-        },
-        {
-          "description": "The elicitation was cancelled.",
-          "properties": {
-            "action": {
-              "const": "cancel",
-              "type": "string"
-            }
-          },
-          "required": ["action"],
-          "type": "object"
-        }
-      ]
-    },
     "ElicitationCapabilities": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nElicitation capabilities supported by the client.",
       "properties": {
@@ -2002,28 +2122,6 @@
         }
       },
       "type": "object"
-    },
-    "ElicitationCompleteNotification": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNotification sent by the agent when a URL-based elicitation is complete.",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"]
-        },
-        "elicitationId": {
-          "allOf": [
-            {
-              "$ref": "#/$defs/ElicitationId"
-            }
-          ],
-          "description": "The ID of the elicitation that completed."
-        }
-      },
-      "required": ["elicitationId"],
-      "type": "object",
-      "x-method": "elicitation/complete",
-      "x-side": "client"
     },
     "ElicitationContentValue": {
       "anyOf": [
@@ -2171,116 +2269,6 @@
           "type": "object"
         }
       ]
-    },
-    "ElicitationRequest": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest from the agent to elicit structured user input.\n\nThe agent sends this to the client to request information from the user,\neither via a form or by directing them to a URL.\nElicitations may be tied to a session/request, or sent without either scope.",
-      "discriminator": {
-        "propertyName": "mode"
-      },
-      "oneOf": [
-        {
-          "allOf": [
-            {
-              "$ref": "#/$defs/ElicitationFormMode"
-            }
-          ],
-          "description": "Form-based elicitation where the client renders a form from the provided schema.",
-          "properties": {
-            "mode": {
-              "const": "form",
-              "type": "string"
-            }
-          },
-          "required": ["mode"],
-          "type": "object"
-        },
-        {
-          "allOf": [
-            {
-              "$ref": "#/$defs/ElicitationUrlMode"
-            }
-          ],
-          "description": "URL-based elicitation where the client directs the user to a URL.",
-          "properties": {
-            "mode": {
-              "const": "url",
-              "type": "string"
-            }
-          },
-          "required": ["mode"],
-          "type": "object"
-        }
-      ],
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"]
-        },
-        "message": {
-          "description": "A human-readable message describing what input is needed.",
-          "type": "string"
-        },
-        "requestId": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/RequestId"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "Optional request ID if this elicitation is tied to a specific request."
-        },
-        "sessionId": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/SessionId"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "Optional session ID if this elicitation is tied to a specific session."
-        },
-        "toolCallId": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/ToolCallId"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "Optional tool call ID if this elicitation originated during a tool call.\nWhen present, `session_id` should also be set."
-        }
-      },
-      "required": ["message"],
-      "type": "object",
-      "x-method": "elicitation/create",
-      "x-side": "client"
-    },
-    "ElicitationResponse": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nResponse from the client to an elicitation request.",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"]
-        },
-        "action": {
-          "allOf": [
-            {
-              "$ref": "#/$defs/ElicitationAction"
-            }
-          ],
-          "description": "The user's action in response to the elicitation."
-        }
-      },
-      "required": ["action"],
-      "type": "object",
-      "x-method": "elicitation/create",
-      "x-side": "client"
     },
     "ElicitationSchema": {
       "description": "Type-safe elicitation schema for requesting structured user input.\n\nThis represents a JSON Schema object with primitive-typed properties,\nas required by the elicitation specification.",

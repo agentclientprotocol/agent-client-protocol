@@ -1306,6 +1306,25 @@ Request parameters for setting a session configuration option.
 
 **Type:** Union
 
+**Shared properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="configId" type={<a href="#sessionconfigid">SessionConfigId</a>} required>
+  The ID of the configuration option to set.
+</ResponseField>
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The ID of the session to set the configuration option for.
+</ResponseField>
+
+**Variants:**
+
 <ResponseField name="boolean" type="object">
 A boolean value (`type: "boolean"`).
 
@@ -1492,7 +1511,7 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 Notification that a URL-based elicitation has completed.
 
-#### <span class="font-mono">ElicitationCompleteNotification</span>
+#### <span class="font-mono">CompleteElicitationNotification</span>
 
 **UNSTABLE**
 
@@ -1525,7 +1544,7 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 Requests structured user input via a form or URL.
 
-#### <span class="font-mono">ElicitationRequest</span>
+#### <span class="font-mono">CreateElicitationRequest</span>
 
 **UNSTABLE**
 
@@ -1535,9 +1554,36 @@ Request from the agent to elicit structured user input.
 
 The agent sends this to the client to request information from the user,
 either via a form or by directing them to a URL.
-Elicitations may be tied to a session/request, or sent without either scope.
+Elicitations may be tied to a session, request, or tool call,
+or sent without a specific scope.
 
 **Type:** Union
+
+**Shared properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="message" type={"string"} required>
+  A human-readable message describing what input is needed.
+</ResponseField>
+<ResponseField name="requestId" type={<><span><a href="#requestid">RequestId</a></span><span> | null</span></>} >
+  Optional request ID if this elicitation is tied to a specific request.
+</ResponseField>
+<ResponseField name="sessionId" type={<><span><a href="#sessionid">SessionId</a></span><span> | null</span></>} >
+  Optional session ID if this elicitation is tied to a specific session.
+</ResponseField>
+<ResponseField name="toolCallId" type={<><span><a href="#toolcallid">ToolCallId</a></span><span> | null</span></>} >
+  Optional tool call ID if this elicitation is tied to a specific tool call.
+When present, `sessionId` should also be set.
+</ResponseField>
+
+**Variants:**
 
 <ResponseField name="form" type="object">
 Form-based elicitation where the client renders a form from the provided schema.
@@ -1580,7 +1626,7 @@ URL-based elicitation where the client directs the user to a URL.
 </Expandable>
 </ResponseField>
 
-#### <span class="font-mono">ElicitationResponse</span>
+#### <span class="font-mono">CreateElicitationResponse</span>
 
 **UNSTABLE**
 
@@ -1588,9 +1634,9 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 Response from the client to an elicitation request.
 
-**Type:** Object
+**Type:** Union
 
-**Properties:**
+**Shared properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1600,8 +1646,46 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
 </ResponseField>
-<ResponseField name="action" type={<a href="#elicitationaction">ElicitationAction</a>} required>
-  The user's action in response to the elicitation.
+
+**Variants:**
+
+<ResponseField name="accept" type="object">
+The user accepted and provided content.
+
+<Expandable title="Properties">
+
+<ResponseField name="action" type={"string"} required>
+  The discriminator value. Must be `"accept"`.
+</ResponseField>
+<ResponseField name="content" type={"object | null"}>
+  The user-provided content, if any, as an object matching the requested schema.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="decline" type="object">
+The user declined the elicitation.
+
+<Expandable title="Properties">
+
+<ResponseField name="action" type={"string"} required>
+  The discriminator value. Must be `"decline"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="cancel" type="object">
+The elicitation was cancelled.
+
+<Expandable title="Properties">
+
+<ResponseField name="action" type={"string"} required>
+  The discriminator value. Must be `"cancel"`.
+</ResponseField>
+
+</Expandable>
 </ResponseField>
 
 <a id="fs-read_text_file"></a>
@@ -3174,55 +3258,6 @@ The user accepted the elicitation and provided content.
 
 <ResponseField name="content" type={"object | null"}>
   The user-provided content, if any, as an object matching the requested schema.
-</ResponseField>
-
-## <span class="font-mono">ElicitationAction</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-The user's action in response to an elicitation.
-
-**Type:** Union
-
-<ResponseField name="accept" type="object">
-The user accepted and provided content.
-
-<Expandable title="Properties">
-
-<ResponseField name="action" type={"string"} required>
-  The discriminator value. Must be `"accept"`.
-</ResponseField>
-<ResponseField name="content" type={"object | null"}>
-  The user-provided content, if any, as an object matching the requested schema.
-</ResponseField>
-
-</Expandable>
-</ResponseField>
-
-<ResponseField name="decline" type="object">
-The user declined the elicitation.
-
-<Expandable title="Properties">
-
-<ResponseField name="action" type={"string"} required>
-  The discriminator value. Must be `"decline"`.
-</ResponseField>
-
-</Expandable>
-</ResponseField>
-
-<ResponseField name="cancel" type="object">
-The elicitation was cancelled.
-
-<Expandable title="Properties">
-
-<ResponseField name="action" type={"string"} required>
-  The discriminator value. Must be `"cancel"`.
-</ResponseField>
-
-</Expandable>
 </ResponseField>
 
 ## <span class="font-mono">ElicitationCapabilities</span>
@@ -5754,6 +5789,31 @@ Unique identifier for a session configuration option.
 A session configuration option selector and its current state.
 
 **Type:** Union
+
+**Shared properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="category" type={<><span><a href="#sessionconfigoptioncategory">SessionConfigOptionCategory</a></span><span> | null</span></>} >
+  Optional semantic category for this option (UX only).
+</ResponseField>
+<ResponseField name="description" type={"string | null"} >
+  Optional description for the Client to display to the user.
+</ResponseField>
+<ResponseField name="id" type={<a href="#sessionconfigid">SessionConfigId</a>} required>
+  Unique identifier for the configuration option.
+</ResponseField>
+<ResponseField name="name" type={"string"} required>
+  Human-readable label for the option.
+</ResponseField>
+
+**Variants:**
 
 <ResponseField name="select" type="object">
 Single-value selector (dropdown).

@@ -405,6 +405,32 @@ The agent sends an `elicitation/create` request when it needs information from t
 
 An elicitation may also be sent without any of these fields, in which case it is standalone and not tied to any specific scope.
 
+**Request-scoped example:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 45,
+  "method": "elicitation/create",
+  "params": {
+    "requestId": 12,
+    "mode": "form",
+    "message": "Please provide your API key to continue setup.",
+    "requestedSchema": {
+      "type": "object",
+      "properties": {
+        "apiKey": {
+          "type": "string",
+          "title": "API Key",
+          "description": "Your API key for authentication"
+        }
+      },
+      "required": ["apiKey"]
+    }
+  }
+}
+```
+
 The client presents the elicitation UI to the user. For form mode, the client generates appropriate input UI based on the JSON Schema. For URL mode, the client opens the URL in a secure browser context.
 
 ### User Response

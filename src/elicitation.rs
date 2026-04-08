@@ -11,7 +11,7 @@ use derive_more::{Display, From};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::client::{ELICITATION_COMPLETE, ELICITATION_CREATE_METHOD_NAME};
+use crate::client::{ELICITATION_COMPLETE_NOTIFICATION, ELICITATION_CREATE_METHOD_NAME};
 use crate::tool_call::ToolCallId;
 use crate::{IntoOption, Meta, RequestId, SessionId};
 
@@ -871,20 +871,21 @@ impl ElicitationUrlCapabilities {
 ///
 /// The agent sends this to the client to request information from the user,
 /// either via a form or by directing them to a URL.
-/// Elicitations may be tied to a session/request, or sent without either scope.
+/// Elicitations may be tied to a session, request, or tool call,
+/// or sent without a specific scope.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[schemars(extend("x-side" = "client", "x-method" = ELICITATION_CREATE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct ElicitationRequest {
+pub struct CreateElicitationRequest {
     /// Optional session ID if this elicitation is tied to a specific session.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub session_id: Option<SessionId>,
     /// Optional request ID if this elicitation is tied to a specific request.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub request_id: Option<RequestId>,
-    /// Optional tool call ID if this elicitation originated during a tool call.
-    /// When present, `session_id` should also be set.
+    /// Optional tool call ID if this elicitation is tied to a specific tool call.
+    /// When present, `sessionId` should also be set.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tool_call_id: Option<ToolCallId>,
     /// The elicitation mode and its mode-specific fields.
@@ -901,7 +902,7 @@ pub struct ElicitationRequest {
     pub meta: Option<Meta>,
 }
 
-impl ElicitationRequest {
+impl CreateElicitationRequest {
     #[must_use]
     pub fn new(mode: ElicitationMode, message: impl Into<String>) -> Self {
         Self {
@@ -1015,8 +1016,9 @@ impl ElicitationUrlMode {
 #[schemars(extend("x-side" = "client", "x-method" = ELICITATION_CREATE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct ElicitationResponse {
+pub struct CreateElicitationResponse {
     /// The user's action in response to the elicitation.
+    #[serde(flatten)]
     pub action: ElicitationAction,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -1027,7 +1029,7 @@ pub struct ElicitationResponse {
     pub meta: Option<Meta>,
 }
 
-impl ElicitationResponse {
+impl CreateElicitationResponse {
     #[must_use]
     pub fn new(action: ElicitationAction) -> Self {
         Self { action, meta: None }
@@ -1165,10 +1167,10 @@ impl Default for ElicitationAcceptAction {
 ///
 /// Notification sent by the agent when a URL-based elicitation is complete.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "client", "x-method" = ELICITATION_COMPLETE))]
+#[schemars(extend("x-side" = "client", "x-method" = ELICITATION_COMPLETE_NOTIFICATION))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct ElicitationCompleteNotification {
+pub struct CompleteElicitationNotification {
     /// The ID of the elicitation that completed.
     pub elicitation_id: ElicitationId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1180,7 +1182,7 @@ pub struct ElicitationCompleteNotification {
     pub meta: Option<Meta>,
 }
 
-impl ElicitationCompleteNotification {
+impl CompleteElicitationNotification {
     #[must_use]
     pub fn new(elicitation_id: impl Into<ElicitationId>) -> Self {
         Self {
@@ -1276,7 +1278,7 @@ mod tests {
     #[test]
     fn form_mode_request_serialization() {
         let schema = ElicitationSchema::new().string("name", true);
-        let req = ElicitationRequest::new(
+        let req = CreateElicitationRequest::new(
             ElicitationMode::Form(ElicitationFormMode::new(schema)),
             "Please enter your name",
         );
@@ -1294,7 +1296,7 @@ mod tests {
             "string"
         );
 
-        let roundtripped: ElicitationRequest = serde_json::from_value(json).unwrap();
+        let roundtripped: CreateElicitationRequest = serde_json::from_value(json).unwrap();
         assert_eq!(roundtripped.session_id, None);
         assert_eq!(roundtripped.request_id, None);
         assert_eq!(roundtripped.tool_call_id, None);
@@ -1304,7 +1306,7 @@ mod tests {
 
     #[test]
     fn url_mode_request_serialization() {
-        let req = ElicitationRequest::new(
+        let req = CreateElicitationRequest::new(
             ElicitationMode::Url(ElicitationUrlMode::new(
                 "elic_1",
                 "https://example.com/auth",
@@ -1324,7 +1326,7 @@ mod tests {
         assert_eq!(json["url"], "https://example.com/auth");
         assert_eq!(json["message"], "Please authenticate");
 
-        let roundtripped: ElicitationRequest = serde_json::from_value(json).unwrap();
+        let roundtripped: CreateElicitationRequest = serde_json::from_value(json).unwrap();
         assert_eq!(roundtripped.session_id, Some(SessionId::new("sess_2")));
         assert_eq!(roundtripped.request_id, Some(RequestId::Number(42)));
         assert_eq!(roundtripped.tool_call_id, Some(ToolCallId::new("tc_1")));
@@ -1333,7 +1335,7 @@ mod tests {
 
     #[test]
     fn response_accept_serialization() {
-        let resp = ElicitationResponse::new(ElicitationAction::Accept(
+        let resp = CreateElicitationResponse::new(ElicitationAction::Accept(
             ElicitationAcceptAction::new().content(BTreeMap::from([(
                 "name".to_string(),
                 ElicitationContentValue::from("Alice"),
@@ -1341,10 +1343,10 @@ mod tests {
         ));
 
         let json = serde_json::to_value(&resp).unwrap();
-        assert_eq!(json["action"]["action"], "accept");
-        assert_eq!(json["action"]["content"]["name"], "Alice");
+        assert_eq!(json["action"], "accept");
+        assert_eq!(json["content"]["name"], "Alice");
 
-        let roundtripped: ElicitationResponse = serde_json::from_value(json).unwrap();
+        let roundtripped: CreateElicitationResponse = serde_json::from_value(json).unwrap();
         assert!(matches!(
             roundtripped.action,
             ElicitationAction::Accept(ElicitationAcceptAction {
@@ -1356,34 +1358,34 @@ mod tests {
 
     #[test]
     fn response_decline_serialization() {
-        let resp = ElicitationResponse::new(ElicitationAction::Decline);
+        let resp = CreateElicitationResponse::new(ElicitationAction::Decline);
 
         let json = serde_json::to_value(&resp).unwrap();
-        assert_eq!(json["action"]["action"], "decline");
+        assert_eq!(json["action"], "decline");
 
-        let roundtripped: ElicitationResponse = serde_json::from_value(json).unwrap();
+        let roundtripped: CreateElicitationResponse = serde_json::from_value(json).unwrap();
         assert!(matches!(roundtripped.action, ElicitationAction::Decline));
     }
 
     #[test]
     fn response_cancel_serialization() {
-        let resp = ElicitationResponse::new(ElicitationAction::Cancel);
+        let resp = CreateElicitationResponse::new(ElicitationAction::Cancel);
 
         let json = serde_json::to_value(&resp).unwrap();
-        assert_eq!(json["action"]["action"], "cancel");
+        assert_eq!(json["action"], "cancel");
 
-        let roundtripped: ElicitationResponse = serde_json::from_value(json).unwrap();
+        let roundtripped: CreateElicitationResponse = serde_json::from_value(json).unwrap();
         assert!(matches!(roundtripped.action, ElicitationAction::Cancel));
     }
 
     #[test]
     fn completion_notification_serialization() {
-        let notif = ElicitationCompleteNotification::new("elic_1");
+        let notif = CompleteElicitationNotification::new("elic_1");
 
         let json = serde_json::to_value(&notif).unwrap();
         assert_eq!(json["elicitationId"], "elic_1");
 
-        let roundtripped: ElicitationCompleteNotification = serde_json::from_value(json).unwrap();
+        let roundtripped: CompleteElicitationNotification = serde_json::from_value(json).unwrap();
         assert_eq!(roundtripped.elicitation_id, ElicitationId::new("elic_1"));
     }
 
@@ -1677,11 +1679,9 @@ mod tests {
 
     #[test]
     fn response_accept_rejects_non_object_content() {
-        let err = serde_json::from_value::<ElicitationResponse>(json!({
-            "action": {
-                "action": "accept",
-                "content": "Alice"
-            }
+        let err = serde_json::from_value::<CreateElicitationResponse>(json!({
+            "action": "accept",
+            "content": "Alice"
         }))
         .unwrap_err();
 
@@ -1690,13 +1690,11 @@ mod tests {
 
     #[test]
     fn response_accept_rejects_nested_object_content() {
-        let err = serde_json::from_value::<ElicitationResponse>(json!({
-            "action": {
-                "action": "accept",
-                "content": {
-                    "profile": {
-                        "name": "Alice"
-                    }
+        let err = serde_json::from_value::<CreateElicitationResponse>(json!({
+            "action": "accept",
+            "content": {
+                "profile": {
+                    "name": "Alice"
                 }
             }
         }))
@@ -1707,7 +1705,7 @@ mod tests {
 
     #[test]
     fn response_accept_allows_primitive_and_string_array_content() {
-        let response = ElicitationResponse::new(ElicitationAction::Accept(
+        let response = CreateElicitationResponse::new(ElicitationAction::Accept(
             ElicitationAcceptAction::new().content(BTreeMap::from([
                 ("name".to_string(), ElicitationContentValue::from("Alice")),
                 ("age".to_string(), ElicitationContentValue::from(30_i32)),
@@ -1724,11 +1722,12 @@ mod tests {
         ));
 
         let json = serde_json::to_value(&response).unwrap();
-        assert_eq!(json["action"]["content"]["name"], "Alice");
-        assert_eq!(json["action"]["content"]["age"], 30);
-        assert_eq!(json["action"]["content"]["score"], 9.5);
-        assert_eq!(json["action"]["content"]["subscribed"], true);
-        assert_eq!(json["action"]["content"]["tags"][0], "rust");
-        assert_eq!(json["action"]["content"]["tags"][1], "acp");
+        assert_eq!(json["action"], "accept");
+        assert_eq!(json["content"]["name"], "Alice");
+        assert_eq!(json["content"]["age"], 30);
+        assert_eq!(json["content"]["score"], 9.5);
+        assert_eq!(json["content"]["subscribed"], true);
+        assert_eq!(json["content"]["tags"][0], "rust");
+        assert_eq!(json["content"]["tags"][1], "acp");
     }
 }
