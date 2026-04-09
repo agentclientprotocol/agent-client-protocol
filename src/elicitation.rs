@@ -867,6 +867,37 @@ impl ElicitationUrlCapabilities {
 ///
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
+/// The scope of an elicitation request, determining what context it's tied to.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[serde(untagged)]
+#[non_exhaustive]
+pub enum ElicitationScope {
+    /// Tied to a session, optionally to a specific tool call within that session.
+    ///
+    /// When `tool_call_id` is set, the elicitation is tied to a specific tool call.
+    /// This is useful when an agent receives an elicitation from an MCP server
+    /// during a tool call and needs to redirect it to the user.
+    #[serde(rename_all = "camelCase")]
+    Session {
+        /// The session this elicitation is tied to.
+        session_id: SessionId,
+        /// Optional tool call within the session.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        tool_call_id: Option<ToolCallId>,
+    },
+    /// Tied to a specific JSON-RPC request outside of a session
+    /// (e.g., during auth/configuration phases before any session is started).
+    #[serde(rename_all = "camelCase")]
+    Request {
+        /// The request this elicitation is tied to.
+        request_id: RequestId,
+    },
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
 /// Request from the agent to elicit structured user input.
 ///
 /// The agent sends this to the client to request information from the user,
@@ -878,16 +909,10 @@ impl ElicitationUrlCapabilities {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct CreateElicitationRequest {
-    /// Optional session ID if this elicitation is tied to a specific session.
+    /// Optional scope for this elicitation.
+    /// When absent, the elicitation is standalone and not tied to any specific context.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub session_id: Option<SessionId>,
-    /// Optional request ID if this elicitation is tied to a specific request.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub request_id: Option<RequestId>,
-    /// Optional tool call ID if this elicitation is tied to a specific tool call.
-    /// When present, `sessionId` should also be set.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub tool_call_id: Option<ToolCallId>,
+    pub scope: Option<ElicitationScope>,
     /// The elicitation mode and its mode-specific fields.
     #[serde(flatten)]
     pub mode: ElicitationMode,
@@ -906,51 +931,18 @@ impl CreateElicitationRequest {
     #[must_use]
     pub fn new(mode: ElicitationMode, message: impl Into<String>) -> Self {
         Self {
-            session_id: None,
-            request_id: None,
-            tool_call_id: None,
+            scope: None,
             mode,
             message: message.into(),
             meta: None,
         }
     }
 
-    /// Sets the session scope for this elicitation.
-    ///
-    /// Clears `request_id` and `tool_call_id` since scopes are mutually exclusive.
-    /// Use [`for_tool_call`](Self::for_tool_call) if you also need a `tool_call_id`.
+    /// Optional scope for this elicitation.
+    /// When absent, the elicitation is standalone and not tied to any specific context.
     #[must_use]
-    pub fn for_session(mut self, session_id: impl Into<SessionId>) -> Self {
-        self.session_id = Some(session_id.into());
-        self.request_id = None;
-        self.tool_call_id = None;
-        self
-    }
-
-    /// Sets the request scope for this elicitation.
-    ///
-    /// Clears `session_id` and `tool_call_id` since scopes are mutually exclusive.
-    #[must_use]
-    pub fn for_request(mut self, request_id: impl Into<RequestId>) -> Self {
-        self.request_id = Some(request_id.into());
-        self.session_id = None;
-        self.tool_call_id = None;
-        self
-    }
-
-    /// Sets the tool-call scope for this elicitation.
-    ///
-    /// Sets both `session_id` and `tool_call_id`, and clears `request_id`,
-    /// since scopes are mutually exclusive and `tool_call_id` requires a `session_id`.
-    #[must_use]
-    pub fn for_tool_call(
-        mut self,
-        session_id: impl Into<SessionId>,
-        tool_call_id: impl Into<ToolCallId>,
-    ) -> Self {
-        self.session_id = Some(session_id.into());
-        self.tool_call_id = Some(tool_call_id.into());
-        self.request_id = None;
+    pub fn scope(mut self, scope: impl IntoOption<ElicitationScope>) -> Self {
+        self.scope = scope.into_option();
         self
     }
 
@@ -1306,9 +1298,7 @@ mod tests {
         );
 
         let json = serde_json::to_value(&req).unwrap();
-        assert!(json.get("sessionId").is_none());
-        assert!(json.get("requestId").is_none());
-        assert!(json.get("toolCallId").is_none());
+        assert!(json.get("scope").is_none());
         assert_eq!(json["mode"], "form");
         assert_eq!(json["message"], "Please enter your name");
         assert!(json["requestedSchema"].is_object());
@@ -1319,9 +1309,7 @@ mod tests {
         );
 
         let roundtripped: CreateElicitationRequest = serde_json::from_value(json).unwrap();
-        assert_eq!(roundtripped.session_id, None);
-        assert_eq!(roundtripped.request_id, None);
-        assert_eq!(roundtripped.tool_call_id, None);
+        assert_eq!(roundtripped.scope, None);
         assert_eq!(roundtripped.message, "Please enter your name");
         assert!(matches!(roundtripped.mode, ElicitationMode::Form(_)));
     }
@@ -1335,21 +1323,27 @@ mod tests {
             )),
             "Please authenticate",
         )
-        .for_tool_call("sess_2", "tc_1");
+        .scope(ElicitationScope::Session {
+            session_id: SessionId::new("sess_2"),
+            tool_call_id: Some(ToolCallId::new("tc_1")),
+        });
 
         let json = serde_json::to_value(&req).unwrap();
-        assert_eq!(json["sessionId"], "sess_2");
-        assert!(json.get("requestId").is_none());
-        assert_eq!(json["toolCallId"], "tc_1");
+        assert_eq!(json["scope"]["sessionId"], "sess_2");
+        assert_eq!(json["scope"]["toolCallId"], "tc_1");
         assert_eq!(json["mode"], "url");
         assert_eq!(json["elicitationId"], "elic_1");
         assert_eq!(json["url"], "https://example.com/auth");
         assert_eq!(json["message"], "Please authenticate");
 
         let roundtripped: CreateElicitationRequest = serde_json::from_value(json).unwrap();
-        assert_eq!(roundtripped.session_id, Some(SessionId::new("sess_2")));
-        assert_eq!(roundtripped.request_id, None);
-        assert_eq!(roundtripped.tool_call_id, Some(ToolCallId::new("tc_1")));
+        assert_eq!(
+            roundtripped.scope,
+            Some(ElicitationScope::Session {
+                session_id: SessionId::new("sess_2"),
+                tool_call_id: Some(ToolCallId::new("tc_1")),
+            })
+        );
         assert!(matches!(roundtripped.mode, ElicitationMode::Url(_)));
     }
 
@@ -1406,17 +1400,23 @@ mod tests {
             )),
             "Enter your name",
         )
-        .for_session("sess_1");
+        .scope(ElicitationScope::Session {
+            session_id: SessionId::new("sess_1"),
+            tool_call_id: None,
+        });
 
         let json = serde_json::to_value(&req).unwrap();
-        assert_eq!(json["sessionId"], "sess_1");
-        assert!(json.get("requestId").is_none());
-        assert!(json.get("toolCallId").is_none());
+        assert_eq!(json["scope"]["sessionId"], "sess_1");
+        assert!(json["scope"].get("toolCallId").is_none());
 
         let roundtripped: CreateElicitationRequest = serde_json::from_value(json).unwrap();
-        assert_eq!(roundtripped.session_id, Some(SessionId::new("sess_1")));
-        assert_eq!(roundtripped.request_id, None);
-        assert_eq!(roundtripped.tool_call_id, None);
+        assert_eq!(
+            roundtripped.scope,
+            Some(ElicitationScope::Session {
+                session_id: SessionId::new("sess_1"),
+                tool_call_id: None,
+            })
+        );
     }
 
     #[test]
@@ -1427,41 +1427,24 @@ mod tests {
             )),
             "Enter workspace name",
         )
-        .for_request(99i64);
+        .scope(ElicitationScope::Request {
+            request_id: RequestId::Number(99),
+        });
 
         let json = serde_json::to_value(&req).unwrap();
-        assert!(json.get("sessionId").is_none());
-        assert_eq!(json["requestId"], 99);
-        assert!(json.get("toolCallId").is_none());
+        assert_eq!(json["scope"]["requestId"], 99);
 
         let roundtripped: CreateElicitationRequest = serde_json::from_value(json).unwrap();
-        assert_eq!(roundtripped.session_id, None);
-        assert_eq!(roundtripped.request_id, Some(RequestId::Number(99)));
-        assert_eq!(roundtripped.tool_call_id, None);
+        assert_eq!(
+            roundtripped.scope,
+            Some(ElicitationScope::Request {
+                request_id: RequestId::Number(99),
+            })
+        );
     }
 
     #[test]
-    fn for_tool_call_sets_both_ids() {
-        let req = CreateElicitationRequest::new(
-            ElicitationMode::Form(ElicitationFormMode::new(
-                ElicitationSchema::new().string("name", true),
-            )),
-            "Enter name",
-        )
-        .for_tool_call("sess_1", "tc_42");
-
-        assert_eq!(req.session_id, Some(SessionId::new("sess_1")));
-        assert_eq!(req.tool_call_id, Some(ToolCallId::new("tc_42")));
-        assert_eq!(req.request_id, None);
-
-        let json = serde_json::to_value(&req).unwrap();
-        assert_eq!(json["sessionId"], "sess_1");
-        assert_eq!(json["toolCallId"], "tc_42");
-        assert!(json.get("requestId").is_none());
-    }
-
-    #[test]
-    fn scope_setters_are_mutually_exclusive() {
+    fn scope_builder_sets_and_replaces() {
         let base = || {
             CreateElicitationRequest::new(
                 ElicitationMode::Form(ElicitationFormMode::new(
@@ -1471,23 +1454,88 @@ mod tests {
             )
         };
 
-        // session_id clears request_id and tool_call_id
-        let req = base().for_request(1i64).for_session("s1");
-        assert_eq!(req.session_id, Some(SessionId::new("s1")));
-        assert_eq!(req.request_id, None);
-        assert_eq!(req.tool_call_id, None);
+        // scope builder sets session scope
+        let req = base().scope(ElicitationScope::Session {
+            session_id: SessionId::new("s1"),
+            tool_call_id: None,
+        });
+        assert_eq!(
+            req.scope,
+            Some(ElicitationScope::Session {
+                session_id: SessionId::new("s1"),
+                tool_call_id: None,
+            })
+        );
 
-        // request_id clears session_id and tool_call_id
-        let req = base().for_tool_call("s1", "tc1").for_request(2i64);
-        assert_eq!(req.request_id, Some(RequestId::Number(2)));
-        assert_eq!(req.session_id, None);
-        assert_eq!(req.tool_call_id, None);
+        // calling scope again replaces the previous value
+        let req = base()
+            .scope(ElicitationScope::Request {
+                request_id: RequestId::Number(1),
+            })
+            .scope(ElicitationScope::Session {
+                session_id: SessionId::new("s2"),
+                tool_call_id: Some(ToolCallId::new("tc1")),
+            });
+        assert_eq!(
+            req.scope,
+            Some(ElicitationScope::Session {
+                session_id: SessionId::new("s2"),
+                tool_call_id: Some(ToolCallId::new("tc1")),
+            })
+        );
+    }
 
-        // for_tool_call clears request_id
-        let req = base().for_request(3i64).for_tool_call("s2", "tc2");
-        assert_eq!(req.session_id, Some(SessionId::new("s2")));
-        assert_eq!(req.tool_call_id, Some(ToolCallId::new("tc2")));
-        assert_eq!(req.request_id, None);
+    /// `ClientResponse` is `#[serde(untagged)]` with `WriteTextFileResponse` (which has
+    /// `#[serde(default)]`) listed first, so standalone deserialization is ambiguous.
+    /// In practice, the RPC layer selects the correct variant based on the originating
+    /// request method. These tests verify that serialization through `ClientResponse`
+    /// produces the correct flattened wire format and round-trips back via the
+    /// concrete `CreateElicitationResponse` type.
+    #[test]
+    fn client_response_serialization_accept() {
+        use crate::ClientResponse;
+
+        let resp = ClientResponse::CreateElicitationResponse(CreateElicitationResponse::new(
+            ElicitationAction::Accept(ElicitationAcceptAction::new().content(BTreeMap::from([(
+                "name".to_string(),
+                ElicitationContentValue::from("Alice"),
+            )]))),
+        ));
+        let json = serde_json::to_value(&resp).unwrap();
+        assert_eq!(json["action"], "accept");
+        assert_eq!(json["content"]["name"], "Alice");
+
+        // Round-trip back through the concrete type
+        let roundtripped: CreateElicitationResponse = serde_json::from_value(json).unwrap();
+        assert!(matches!(roundtripped.action, ElicitationAction::Accept(_)));
+    }
+
+    #[test]
+    fn client_response_serialization_decline() {
+        use crate::ClientResponse;
+
+        let resp = ClientResponse::CreateElicitationResponse(CreateElicitationResponse::new(
+            ElicitationAction::Decline,
+        ));
+        let json = serde_json::to_value(&resp).unwrap();
+        assert_eq!(json["action"], "decline");
+
+        let roundtripped: CreateElicitationResponse = serde_json::from_value(json).unwrap();
+        assert!(matches!(roundtripped.action, ElicitationAction::Decline));
+    }
+
+    #[test]
+    fn client_response_serialization_cancel() {
+        use crate::ClientResponse;
+
+        let resp = ClientResponse::CreateElicitationResponse(CreateElicitationResponse::new(
+            ElicitationAction::Cancel,
+        ));
+        let json = serde_json::to_value(&resp).unwrap();
+        assert_eq!(json["action"], "cancel");
+
+        let roundtripped: CreateElicitationResponse = serde_json::from_value(json).unwrap();
+        assert!(matches!(roundtripped.action, ElicitationAction::Cancel));
     }
 
     #[test]

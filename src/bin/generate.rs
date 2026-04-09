@@ -339,15 +339,29 @@ starting with '$/' it is free to ignore the notification."
             writeln!(&mut self.output, "**Type:** Union").unwrap();
             writeln!(&mut self.output).unwrap();
 
-            if let Some(shared_props) = definition.get("properties").and_then(|v| v.as_object())
-                && !shared_props.is_empty()
-            {
-                writeln!(&mut self.output, "**Shared properties:**").unwrap();
-                writeln!(&mut self.output).unwrap();
-                self.document_properties_as_fields(shared_props, definition, 0);
-                writeln!(&mut self.output).unwrap();
-                writeln!(&mut self.output, "**Variants:**").unwrap();
-                writeln!(&mut self.output).unwrap();
+            let discriminator_prop = definition
+                .get("discriminator")
+                .and_then(|d| d.get("propertyName"))
+                .and_then(|p| p.as_str());
+
+            // Union types with top-level "properties" alongside "oneOf"/"anyOf" use them
+            // as shared properties that apply to all variants (e.g., _meta, message).
+            // The discriminator property (if any) is excluded since it's per-variant.
+            if let Some(shared_props) = definition.get("properties").and_then(|v| v.as_object()) {
+                let filtered_props: serde_json::Map<String, Value> = shared_props
+                    .iter()
+                    .filter(|(key, _)| Some(key.as_str()) != discriminator_prop)
+                    .map(|(k, v)| (k.clone(), v.clone()))
+                    .collect();
+
+                if !filtered_props.is_empty() {
+                    writeln!(&mut self.output, "**Shared properties:**").unwrap();
+                    writeln!(&mut self.output).unwrap();
+                    self.document_properties_as_fields(&filtered_props, definition, 0);
+                    writeln!(&mut self.output).unwrap();
+                    writeln!(&mut self.output, "**Variants:**").unwrap();
+                    writeln!(&mut self.output).unwrap();
+                }
             }
 
             let variants = definition
@@ -1212,13 +1226,20 @@ starting with '$/' it is free to ignore the notification."
             let mut generator = MarkdownGenerator::new();
             let definition = json!({
                 "description": "Example union.",
+                "discriminator": {
+                    "propertyName": "mode"
+                },
                 "properties": {
                     "message": {
                         "type": "string",
                         "description": "Shared message."
+                    },
+                    "mode": {
+                        "type": "string",
+                        "description": "The discriminator."
                     }
                 },
-                "required": ["message"],
+                "required": ["message", "mode"],
                 "oneOf": [
                     {
                         "description": "First variant.",
@@ -1263,7 +1284,12 @@ starting with '$/' it is free to ignore the notification."
             assert!(
                 generator
                     .output
-                    .contains("<ResponseField name=\"url\" type=\"object\">")
+                    .contains("<ResponseField name=\"url\" type=\"object\">"),
+            );
+            let shared_section = generator.output.split("**Variants:**").next().unwrap_or("");
+            assert!(
+                !shared_section.contains("<ResponseField name=\"mode\""),
+                "discriminator property 'mode' should not appear in shared properties"
             );
         }
     }
