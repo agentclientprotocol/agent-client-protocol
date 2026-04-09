@@ -1057,7 +1057,7 @@ impl CreateElicitationResponse {
 /// The user's action in response to an elicitation.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[serde(tag = "action", rename_all = "snake_case")]
-#[schemars(inline, extend("discriminator" = {"propertyName": "action"}))]
+#[schemars(extend("discriminator" = {"propertyName": "action"}))]
 #[non_exhaustive]
 pub enum ElicitationAction {
     /// The user accepted and provided content.
@@ -1074,7 +1074,6 @@ pub enum ElicitationAction {
 ///
 /// The user accepted the elicitation and provided content.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
-#[schemars(inline)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ElicitationAcceptAction {

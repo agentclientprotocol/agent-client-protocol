@@ -1752,18 +1752,16 @@
       },
       "oneOf": [
         {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ElicitationAcceptAction"
+            }
+          ],
           "description": "The user accepted and provided content.",
           "properties": {
             "action": {
               "const": "accept",
               "type": "string"
-            },
-            "content": {
-              "additionalProperties": {
-                "$ref": "#/$defs/ElicitationContentValue"
-              },
-              "description": "The user-provided content, if any, as an object matching the requested schema.",
-              "type": ["object", "null"]
             }
           },
           "required": ["action"],
@@ -2089,6 +2087,19 @@
         }
       },
       "required": ["path", "newText"],
+      "type": "object"
+    },
+    "ElicitationAcceptAction": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nThe user accepted the elicitation and provided content.",
+      "properties": {
+        "content": {
+          "additionalProperties": {
+            "$ref": "#/$defs/ElicitationContentValue"
+          },
+          "description": "The user-provided content, if any, as an object matching the requested schema.",
+          "type": ["object", "null"]
+        }
+      },
       "type": "object"
     },
     "ElicitationCapabilities": {
