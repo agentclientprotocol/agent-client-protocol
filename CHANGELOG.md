@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.11.5](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.11.4...v0.11.5) - 2026-04-09
+
+### Added
+
+- *(unstable)* elicitation for session, tool call, and requests ([#792](https://github.com/agentclientprotocol/agent-client-protocol/pull/792))
+
 ## [0.11.4](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.11.3...v0.11.4) - 2026-03-28
 
 ### Added
