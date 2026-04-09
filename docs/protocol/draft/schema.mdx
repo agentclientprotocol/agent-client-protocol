@@ -1572,7 +1572,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
   A human-readable message describing what input is needed.
 </ResponseField>
 
-**One of:**
+**Variants:**
 
 <ResponseField name="Session" type="object">
 Tied to a session, optionally to a specific tool call within that session.
@@ -1623,8 +1623,6 @@ Tied to a specific JSON-RPC request outside of a session
 
 </Expandable>
 </ResponseField>
-
-**Variants:**
 
 <ResponseField name="form" type="object">
 Form-based elicitation where the client renders a form from the provided schema.

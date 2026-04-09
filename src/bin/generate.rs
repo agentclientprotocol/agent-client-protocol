@@ -372,21 +372,15 @@ starting with '$/' it is free to ignore the notification."
                 false
             };
 
-            // When both anyOf and oneOf exist (e.g. a flattened untagged enum
-            // alongside a flattened tagged enum), render the anyOf variants
-            // first since they represent additional constraints (like scope)
-            // before the main discriminated variants.
+            // Print a single "Variants:" label before all variant groups when
+            // there is surrounding context that benefits from a separator
+            // (shared properties above, or multiple variant groups).
+            if has_shared_props || (any_of.is_some() && one_of.is_some()) {
+                writeln!(&mut self.output, "**Variants:**").unwrap();
+                writeln!(&mut self.output).unwrap();
+            }
+
             if let Some(variants) = any_of {
-                // Label when there are other sections around this one.
-                if has_shared_props || one_of.is_some() {
-                    let label = if one_of.is_some() {
-                        "**One of:**"
-                    } else {
-                        "**Variants:**"
-                    };
-                    writeln!(&mut self.output, "{label}").unwrap();
-                    writeln!(&mut self.output).unwrap();
-                }
                 for variant in variants {
                     self.document_variant_table_row(variant);
                 }
@@ -394,11 +388,6 @@ starting with '$/' it is free to ignore the notification."
             }
 
             if let Some(variants) = one_of {
-                // Label when there are other sections above.
-                if has_shared_props || any_of.is_some() {
-                    writeln!(&mut self.output, "**Variants:**").unwrap();
-                    writeln!(&mut self.output).unwrap();
-                }
                 for variant in variants {
                     self.document_variant_table_row(variant);
                 }
@@ -1383,10 +1372,6 @@ starting with '$/' it is free to ignore the notification."
 
             // anyOf scope variants use title, not "Object"
             assert!(
-                generator.output.contains("**One of:**"),
-                "anyOf variants should be labeled 'One of:' when oneOf also exists"
-            );
-            assert!(
                 generator
                     .output
                     .contains("<ResponseField name=\"Session\" type=\"object\">"),
@@ -1404,14 +1389,12 @@ starting with '$/' it is free to ignore the notification."
             assert!(generator.output.contains("<ResponseField name=\"form\""));
             assert!(generator.output.contains("<ResponseField name=\"url\""));
 
-            // Verify ordering: One of → Session/Request → Variants → form/url
-            let one_of_pos = generator.output.find("**One of:**").unwrap();
-            let session_pos = generator.output.find("\"Session\"").unwrap();
+            // Verify ordering: Variants → Session/Request → form/url
             let variants_pos = generator.output.find("**Variants:**").unwrap();
+            let session_pos = generator.output.find("\"Session\"").unwrap();
             let form_pos = generator.output.find("\"form\"").unwrap();
-            assert!(one_of_pos < session_pos);
-            assert!(session_pos < variants_pos);
-            assert!(variants_pos < form_pos);
+            assert!(variants_pos < session_pos);
+            assert!(session_pos < form_pos);
         }
     }
 }

@@ -1498,6 +1498,37 @@ mod tests {
         assert!(matches!(roundtripped.action, ElicitationAction::Cancel));
     }
 
+    /// Guard against serde regressions with the `flatten` + `untagged` + `flatten` (tagged)
+    /// combination. Extra fields in the JSON must not cause deserialization failures.
+    #[test]
+    fn request_tolerates_extra_fields() {
+        let json = json!({
+            "sessionId": "sess_1",
+            "mode": "form",
+            "message": "Enter your name",
+            "requestedSchema": {
+                "type": "object",
+                "properties": {
+                    "name": { "type": "string", "title": "Name" }
+                },
+                "required": ["name"]
+            },
+            "unknownStringField": "hello",
+            "unknownNumberField": 42
+        });
+
+        let req: CreateElicitationRequest = serde_json::from_value(json).unwrap();
+        assert_eq!(
+            req.scope,
+            ElicitationScope::Session {
+                session_id: SessionId::new("sess_1"),
+                tool_call_id: None,
+            }
+        );
+        assert_eq!(req.message, "Enter your name");
+        assert!(matches!(req.mode, ElicitationMode::Form(_)));
+    }
+
     #[test]
     fn completion_notification_serialization() {
         let notif = CompleteElicitationNotification::new("elic_1");
