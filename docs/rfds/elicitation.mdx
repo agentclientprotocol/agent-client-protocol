@@ -357,10 +357,8 @@ The agent sends an `elicitation/create` request when it needs information from t
   "id": 43,
   "method": "elicitation/create",
   "params": {
-    "scope": {
-      "sessionId": "...",
-      "toolCallId": "tc_123"
-    },
+    "sessionId": "...",
+    "toolCallId": "tc_123",
     "mode": "form",
     "message": "How would you like me to approach this refactoring?",
     "requestedSchema": {
@@ -391,6 +389,7 @@ The agent sends an `elicitation/create` request when it needs information from t
   "id": 44,
   "method": "elicitation/create",
   "params": {
+    "requestId": 12,
     "mode": "url",
     "elicitationId": "github-oauth-001",
     "url": "https://agent.example.com/connect?elicitationId=github-oauth-001",
@@ -399,12 +398,10 @@ The agent sends an `elicitation/create` request when it needs information from t
 }
 ```
 
-The optional `scope` field determines what context the elicitation is tied to. Elicitation supports two scoping variants:
+The scope fields are flattened at the top level of the request. Elicitation supports two scoping variants:
 
-- **Session scope**: `scope.sessionId` is set — tied to a specific session. Optionally includes `scope.toolCallId` when tied to a specific tool call within that session (e.g., when an agent receives an elicitation from an MCP server during a tool call and needs to redirect it to the user).
-- **Request scope**: `scope.requestId` is set — tied to a specific JSON-RPC request outside of a session (e.g., auth/configuration phases before any session is started).
-
-When `scope` is omitted entirely, the elicitation is standalone and not tied to any specific context.
+- **Session scope**: `sessionId` is set — tied to a specific session. Optionally includes `toolCallId` when tied to a specific tool call within that session (e.g., when an agent receives an elicitation from an MCP server during a tool call and needs to redirect it to the user).
+- **Request scope**: `requestId` is set — tied to a specific JSON-RPC request outside of a session (e.g., auth/configuration phases before any session is started).
 
 **Request-scoped example:**
 
@@ -414,9 +411,7 @@ When `scope` is omitted entirely, the elicitation is standalone and not tied to 
   "id": 45,
   "method": "elicitation/create",
   "params": {
-    "scope": {
-      "requestId": 12
-    },
+    "requestId": 12,
     "mode": "form",
     "message": "Please provide your workspace name to continue setup.",
     "requestedSchema": {

@@ -344,32 +344,61 @@ starting with '$/' it is free to ignore the notification."
                 .and_then(|d| d.get("propertyName"))
                 .and_then(|p| p.as_str());
 
+            let any_of = definition.get("anyOf").and_then(|v| v.as_array());
+            let one_of = definition.get("oneOf").and_then(|v| v.as_array());
+
             // Union types with top-level "properties" alongside "oneOf"/"anyOf" use them
             // as shared properties that apply to all variants (e.g., _meta, message).
             // The discriminator property (if any) is excluded since it's per-variant.
-            if let Some(shared_props) = definition.get("properties").and_then(|v| v.as_object()) {
+            let has_shared_props = if let Some(shared_props) =
+                definition.get("properties").and_then(|v| v.as_object())
+            {
                 let filtered_props: serde_json::Map<String, Value> = shared_props
                     .iter()
                     .filter(|(key, _)| Some(key.as_str()) != discriminator_prop)
                     .map(|(k, v)| (k.clone(), v.clone()))
                     .collect();
 
-                if !filtered_props.is_empty() {
+                if filtered_props.is_empty() {
+                    false
+                } else {
                     writeln!(&mut self.output, "**Shared properties:**").unwrap();
                     writeln!(&mut self.output).unwrap();
                     self.document_properties_as_fields(&filtered_props, definition, 0);
                     writeln!(&mut self.output).unwrap();
+                    true
+                }
+            } else {
+                false
+            };
+
+            // When both anyOf and oneOf exist (e.g. a flattened untagged enum
+            // alongside a flattened tagged enum), render the anyOf variants
+            // first since they represent additional constraints (like scope)
+            // before the main discriminated variants.
+            if let Some(variants) = any_of {
+                // Label when there are other sections around this one.
+                if has_shared_props || one_of.is_some() {
+                    let label = if one_of.is_some() {
+                        "**One of:**"
+                    } else {
+                        "**Variants:**"
+                    };
+                    writeln!(&mut self.output, "{label}").unwrap();
+                    writeln!(&mut self.output).unwrap();
+                }
+                for variant in variants {
+                    self.document_variant_table_row(variant);
+                }
+                writeln!(&mut self.output).unwrap();
+            }
+
+            if let Some(variants) = one_of {
+                // Label when there are other sections above.
+                if has_shared_props || any_of.is_some() {
                     writeln!(&mut self.output, "**Variants:**").unwrap();
                     writeln!(&mut self.output).unwrap();
                 }
-            }
-
-            let variants = definition
-                .get("oneOf")
-                .or_else(|| definition.get("anyOf"))
-                .and_then(|v| v.as_array());
-
-            if let Some(variants) = variants {
                 for variant in variants {
                     self.document_variant_table_row(variant);
                 }
@@ -402,6 +431,8 @@ starting with '$/' it is free to ignore the notification."
 
                 if let Some(const_val) = discriminator {
                     write!(&mut self.output, "{const_val}").unwrap();
+                } else if let Some(title) = variant.get("title").and_then(|t| t.as_str()) {
+                    write!(&mut self.output, "{title}").unwrap();
                 } else {
                     write!(&mut self.output, "Object").unwrap();
                 }
@@ -1291,6 +1322,96 @@ starting with '$/' it is free to ignore the notification."
                 !shared_section.contains("<ResponseField name=\"mode\""),
                 "discriminator property 'mode' should not appear in shared properties"
             );
+        }
+
+        #[test]
+        fn document_union_renders_both_any_of_and_one_of() {
+            let mut generator = MarkdownGenerator::new();
+            let definition = json!({
+                "description": "Request with scope and mode.",
+                "anyOf": [
+                    {
+                        "description": "Session scope.",
+                        "properties": {
+                            "sessionId": { "type": "string" }
+                        },
+                        "required": ["sessionId"],
+                        "title": "Session",
+                        "type": "object"
+                    },
+                    {
+                        "description": "Request scope.",
+                        "properties": {
+                            "requestId": { "type": "integer" }
+                        },
+                        "required": ["requestId"],
+                        "title": "Request",
+                        "type": "object"
+                    }
+                ],
+                "discriminator": { "propertyName": "mode" },
+                "oneOf": [
+                    {
+                        "description": "Form variant.",
+                        "properties": {
+                            "mode": { "const": "form", "type": "string" }
+                        },
+                        "required": ["mode"],
+                        "type": "object"
+                    },
+                    {
+                        "description": "URL variant.",
+                        "properties": {
+                            "mode": { "const": "url", "type": "string" }
+                        },
+                        "required": ["mode"],
+                        "type": "object"
+                    }
+                ],
+                "properties": {
+                    "message": { "type": "string", "description": "A message." }
+                },
+                "required": ["message"],
+                "type": "object"
+            });
+
+            generator.document_type(4, "TestRequest", &definition);
+
+            // Shared properties rendered
+            assert!(generator.output.contains("**Shared properties:**"));
+            assert!(generator.output.contains("<ResponseField name=\"message\""));
+
+            // anyOf scope variants use title, not "Object"
+            assert!(
+                generator.output.contains("**One of:**"),
+                "anyOf variants should be labeled 'One of:' when oneOf also exists"
+            );
+            assert!(
+                generator
+                    .output
+                    .contains("<ResponseField name=\"Session\" type=\"object\">"),
+                "should use title 'Session' not 'Object'"
+            );
+            assert!(
+                generator
+                    .output
+                    .contains("<ResponseField name=\"Request\" type=\"object\">"),
+                "should use title 'Request' not 'Object'"
+            );
+
+            // oneOf mode variants rendered under Variants
+            assert!(generator.output.contains("**Variants:**"));
+            assert!(generator.output.contains("<ResponseField name=\"form\""));
+            assert!(generator.output.contains("<ResponseField name=\"url\""));
+
+            // Verify ordering: One of → Session/Request → Variants → form/url
+            let one_of_pos = generator.output.find("**One of:**").unwrap();
+            let session_pos = generator.output.find("\"Session\"").unwrap();
+            let variants_pos = generator.output.find("**Variants:**").unwrap();
+            let form_pos = generator.output.find("\"form\"").unwrap();
+            assert!(one_of_pos < session_pos);
+            assert!(session_pos < variants_pos);
+            assert!(variants_pos < form_pos);
         }
     }
 }

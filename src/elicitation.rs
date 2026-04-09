@@ -902,17 +902,15 @@ pub enum ElicitationScope {
 ///
 /// The agent sends this to the client to request information from the user,
 /// either via a form or by directing them to a URL.
-/// Elicitations may be tied to a session, request, or tool call,
-/// or sent without a specific scope.
+/// Elicitations are tied to a session (optionally a tool call) or a request.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[schemars(extend("x-side" = "client", "x-method" = ELICITATION_CREATE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct CreateElicitationRequest {
-    /// Optional scope for this elicitation.
-    /// When absent, the elicitation is standalone and not tied to any specific context.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub scope: Option<ElicitationScope>,
+    /// The scope this elicitation is tied to.
+    #[serde(flatten)]
+    pub scope: ElicitationScope,
     /// The elicitation mode and its mode-specific fields.
     #[serde(flatten)]
     pub mode: ElicitationMode,
@@ -929,21 +927,13 @@ pub struct CreateElicitationRequest {
 
 impl CreateElicitationRequest {
     #[must_use]
-    pub fn new(mode: ElicitationMode, message: impl Into<String>) -> Self {
+    pub fn new(scope: ElicitationScope, mode: ElicitationMode, message: impl Into<String>) -> Self {
         Self {
-            scope: None,
+            scope,
             mode,
             message: message.into(),
             meta: None,
         }
-    }
-
-    /// Optional scope for this elicitation.
-    /// When absent, the elicitation is standalone and not tied to any specific context.
-    #[must_use]
-    pub fn scope(mut self, scope: impl IntoOption<ElicitationScope>) -> Self {
-        self.scope = scope.into_option();
-        self
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1293,12 +1283,17 @@ mod tests {
     fn form_mode_request_serialization() {
         let schema = ElicitationSchema::new().string("name", true);
         let req = CreateElicitationRequest::new(
+            ElicitationScope::Session {
+                session_id: SessionId::new("sess_1"),
+                tool_call_id: None,
+            },
             ElicitationMode::Form(ElicitationFormMode::new(schema)),
             "Please enter your name",
         );
 
         let json = serde_json::to_value(&req).unwrap();
-        assert!(json.get("scope").is_none());
+        assert_eq!(json["sessionId"], "sess_1");
+        assert!(json.get("toolCallId").is_none());
         assert_eq!(json["mode"], "form");
         assert_eq!(json["message"], "Please enter your name");
         assert!(json["requestedSchema"].is_object());
@@ -1309,7 +1304,13 @@ mod tests {
         );
 
         let roundtripped: CreateElicitationRequest = serde_json::from_value(json).unwrap();
-        assert_eq!(roundtripped.scope, None);
+        assert_eq!(
+            roundtripped.scope,
+            ElicitationScope::Session {
+                session_id: SessionId::new("sess_1"),
+                tool_call_id: None,
+            }
+        );
         assert_eq!(roundtripped.message, "Please enter your name");
         assert!(matches!(roundtripped.mode, ElicitationMode::Form(_)));
     }
@@ -1317,20 +1318,20 @@ mod tests {
     #[test]
     fn url_mode_request_serialization() {
         let req = CreateElicitationRequest::new(
+            ElicitationScope::Session {
+                session_id: SessionId::new("sess_2"),
+                tool_call_id: Some(ToolCallId::new("tc_1")),
+            },
             ElicitationMode::Url(ElicitationUrlMode::new(
                 "elic_1",
                 "https://example.com/auth",
             )),
             "Please authenticate",
-        )
-        .scope(ElicitationScope::Session {
-            session_id: SessionId::new("sess_2"),
-            tool_call_id: Some(ToolCallId::new("tc_1")),
-        });
+        );
 
         let json = serde_json::to_value(&req).unwrap();
-        assert_eq!(json["scope"]["sessionId"], "sess_2");
-        assert_eq!(json["scope"]["toolCallId"], "tc_1");
+        assert_eq!(json["sessionId"], "sess_2");
+        assert_eq!(json["toolCallId"], "tc_1");
         assert_eq!(json["mode"], "url");
         assert_eq!(json["elicitationId"], "elic_1");
         assert_eq!(json["url"], "https://example.com/auth");
@@ -1339,10 +1340,10 @@ mod tests {
         let roundtripped: CreateElicitationRequest = serde_json::from_value(json).unwrap();
         assert_eq!(
             roundtripped.scope,
-            Some(ElicitationScope::Session {
+            ElicitationScope::Session {
                 session_id: SessionId::new("sess_2"),
                 tool_call_id: Some(ToolCallId::new("tc_1")),
-            })
+            }
         );
         assert!(matches!(roundtripped.mode, ElicitationMode::Url(_)));
     }
@@ -1395,93 +1396,52 @@ mod tests {
     #[test]
     fn session_only_request_serialization() {
         let req = CreateElicitationRequest::new(
+            ElicitationScope::Session {
+                session_id: SessionId::new("sess_1"),
+                tool_call_id: None,
+            },
             ElicitationMode::Form(ElicitationFormMode::new(
                 ElicitationSchema::new().string("name", true),
             )),
             "Enter your name",
-        )
-        .scope(ElicitationScope::Session {
-            session_id: SessionId::new("sess_1"),
-            tool_call_id: None,
-        });
+        );
 
         let json = serde_json::to_value(&req).unwrap();
-        assert_eq!(json["scope"]["sessionId"], "sess_1");
-        assert!(json["scope"].get("toolCallId").is_none());
+        assert_eq!(json["sessionId"], "sess_1");
+        assert!(json.get("toolCallId").is_none());
 
         let roundtripped: CreateElicitationRequest = serde_json::from_value(json).unwrap();
         assert_eq!(
             roundtripped.scope,
-            Some(ElicitationScope::Session {
+            ElicitationScope::Session {
                 session_id: SessionId::new("sess_1"),
                 tool_call_id: None,
-            })
+            }
         );
     }
 
     #[test]
-    fn request_only_request_serialization() {
+    fn request_scope_request_serialization() {
         let req = CreateElicitationRequest::new(
+            ElicitationScope::Request {
+                request_id: RequestId::Number(99),
+            },
             ElicitationMode::Form(ElicitationFormMode::new(
                 ElicitationSchema::new().string("workspace", true),
             )),
             "Enter workspace name",
-        )
-        .scope(ElicitationScope::Request {
-            request_id: RequestId::Number(99),
-        });
+        );
 
         let json = serde_json::to_value(&req).unwrap();
-        assert_eq!(json["scope"]["requestId"], 99);
+        assert_eq!(json["requestId"], 99);
+        assert!(json.get("sessionId").is_none());
 
         let roundtripped: CreateElicitationRequest = serde_json::from_value(json).unwrap();
         assert_eq!(
             roundtripped.scope,
-            Some(ElicitationScope::Request {
+            ElicitationScope::Request {
                 request_id: RequestId::Number(99),
-            })
-        );
-    }
-
-    #[test]
-    fn scope_builder_sets_and_replaces() {
-        let base = || {
-            CreateElicitationRequest::new(
-                ElicitationMode::Form(ElicitationFormMode::new(
-                    ElicitationSchema::new().string("name", true),
-                )),
-                "msg",
-            )
-        };
-
-        // scope builder sets session scope
-        let req = base().scope(ElicitationScope::Session {
-            session_id: SessionId::new("s1"),
-            tool_call_id: None,
-        });
-        assert_eq!(
-            req.scope,
-            Some(ElicitationScope::Session {
-                session_id: SessionId::new("s1"),
-                tool_call_id: None,
-            })
-        );
-
-        // calling scope again replaces the previous value
-        let req = base()
-            .scope(ElicitationScope::Request {
-                request_id: RequestId::Number(1),
-            })
-            .scope(ElicitationScope::Session {
-                session_id: SessionId::new("s2"),
-                tool_call_id: Some(ToolCallId::new("tc1")),
-            });
-        assert_eq!(
-            req.scope,
-            Some(ElicitationScope::Session {
-                session_id: SessionId::new("s2"),
-                tool_call_id: Some(ToolCallId::new("tc1")),
-            })
+            }
         );
     }
 

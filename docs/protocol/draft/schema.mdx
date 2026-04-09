@@ -1340,7 +1340,7 @@ A boolean value (`type: "boolean"`).
 </Expandable>
 </ResponseField>
 
-<ResponseField name="Object" type="object">
+<ResponseField name="value_id" type="object">
 A `SessionConfigValueId` string value.
 
 This is the default when `type` is absent on the wire. Unknown `type`
@@ -1554,8 +1554,7 @@ Request from the agent to elicit structured user input.
 
 The agent sends this to the client to request information from the user,
 either via a form or by directing them to a URL.
-Elicitations may be tied to a session, request, or tool call,
-or sent without a specific scope.
+Elicitations are tied to a session (optionally a tool call) or a request.
 
 **Type:** Union
 
@@ -1572,9 +1571,57 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 <ResponseField name="message" type={"string"} required>
   A human-readable message describing what input is needed.
 </ResponseField>
-<ResponseField name="scope" type={<><span><a href="#elicitationscope">ElicitationScope</a></span><span> | null</span></>} >
-  Optional scope for this elicitation.
-When absent, the elicitation is standalone and not tied to any specific context.
+
+**One of:**
+
+<ResponseField name="Session" type="object">
+Tied to a session, optionally to a specific tool call within that session.
+
+When `tool_call_id` is set, the elicitation is tied to a specific tool call.
+This is useful when an agent receives an elicitation from an MCP server
+during a tool call and needs to redirect it to the user.
+
+<Expandable title="Properties">
+
+<ResponseField
+  name="sessionId"
+  type={<a href="#sessionid">SessionId</a>}
+  required
+>
+  The session this elicitation is tied to.
+</ResponseField>
+<ResponseField
+  name="toolCallId"
+  type={
+    <>
+      <span>
+        <a href="#toolcallid">ToolCallId</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Optional tool call within the session.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="Request" type="object">
+Tied to a specific JSON-RPC request outside of a session
+(e.g., during auth/configuration phases before any session is started).
+
+<Expandable title="Properties">
+
+<ResponseField
+  name="requestId"
+  type={<a href="#requestid">RequestId</a>}
+  required
+>
+  The request this elicitation is tied to.
+</ResponseField>
+
+</Expandable>
 </ResponseField>
 
 **Variants:**
@@ -3547,66 +3594,6 @@ Type discriminator for elicitation schemas.
 
 <ResponseField name="object" type="string">
   Object schema type.
-</ResponseField>
-
-## <span class="font-mono">ElicitationScope</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-The scope of an elicitation request, determining what context it's tied to.
-
-**Type:** Union
-
-<ResponseField name="Object" type="object">
-Tied to a session, optionally to a specific tool call within that session.
-
-When `tool_call_id` is set, the elicitation is tied to a specific tool call.
-This is useful when an agent receives an elicitation from an MCP server
-during a tool call and needs to redirect it to the user.
-
-<Expandable title="Properties">
-
-<ResponseField
-  name="sessionId"
-  type={<a href="#sessionid">SessionId</a>}
-  required
->
-  The session this elicitation is tied to.
-</ResponseField>
-<ResponseField
-  name="toolCallId"
-  type={
-    <>
-      <span>
-        <a href="#toolcallid">ToolCallId</a>
-      </span>
-      <span> | null</span>
-    </>
-  }
->
-  Optional tool call within the session.
-</ResponseField>
-
-</Expandable>
-</ResponseField>
-
-<ResponseField name="Object" type="object">
-Tied to a specific JSON-RPC request outside of a session
-(e.g., during auth/configuration phases before any session is started).
-
-<Expandable title="Properties">
-
-<ResponseField
-  name="requestId"
-  type={<a href="#requestid">RequestId</a>}
-  required
->
-  The request this elicitation is tied to.
-</ResponseField>
-
-</Expandable>
 </ResponseField>
 
 ## <span class="font-mono">ElicitationStringType</span>
