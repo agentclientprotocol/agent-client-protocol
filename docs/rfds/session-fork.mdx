@@ -12,6 +12,9 @@ title: "Forking of existing sessions"
 We propose adding the ability to "fork" a new session based on an existing one.
 This will allow us to use the current conversation as context to generate pull
 request descriptions, summaries, etc. without polluting the user history.
+Additionally, agents may optionally support forking at a specific message
+boundary by accepting a `messageId`, allowing clients to branch the conversation
+from an earlier point instead of only from the current session head.
 
 ## Status quo
 
@@ -25,7 +28,8 @@ Therefore we want to be able to fork a session, issue additional messages, and t
 
 > What are you proposing to improve the situation?
 
-To add a "session/fork" method.
+To add a `session/fork` method, with an optional `messageId` branch point when
+the agent advertises support for message-scoped forks.
 
 ## Shiny future
 
@@ -34,17 +38,35 @@ To add a "session/fork" method.
 We will be able to implement functionality that requires using the current chat
 without polluting its history, ranging from summaries to potentially subagents.
 
-I can also see this feature being extended in the future to support an optional
-message ID, so the fork happens at a specific message, allowing clients to implement
-functionality like editing previous messages and similar.
+When message-scoped forks are supported, clients will also be able to branch an
+existing session from a specific message boundary. That makes features such as
+"edit and retry from here", alternate continuations, and what-if exploration
+possible without mutating the original session.
 
 ## Implementation details and plan
 
 > Tell me more about your implementation. What is your detailed implementation plan?
 
-We propose to add a new "session/fork" method. Agents must declare this option is
-available by returning `session: { fork : {} }` in its capabilities. The object is reserved
-to declare future capabilities, such as forking from a specific message, a tool call, or similar.
+We propose to add a new `session/fork` method. Agents must declare this option
+is available by returning `session: { fork: {} }` in its capabilities.
+
+Agents that additionally support forking from a specific message boundary
+advertise:
+
+```json
+{
+  "agentCapabilities": {
+    "session": {
+      "fork": {
+        "messageId": {}
+      }
+    }
+  }
+}
+```
+
+Clients MUST send `messageId` on `session/fork` only when
+`session.fork.messageId` is present.
 
 Then the client would be able to request a fork of the given session:
 
@@ -68,6 +90,63 @@ Similarly, the agent would respond with optional data such as config options, th
 Agents may reply with an error if forking of that specific session or with the given options is not supported,
 for example if the agent does not support forking with a different working directory than the initial session.
 
+### Message-scoped forks
+
+When the agent advertises `session.fork.messageId`, the client may include an
+optional `messageId` field in `session/fork`:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "session/fork",
+  "params": {
+    "sessionId": "sess_789xyz",
+    "messageId": "4c12d49b-729c-4086-bfed-5b82e9a53400",
+    "cwd": "...",
+    "mcpServers": [...]
+  }
+}
+```
+
+The `messageId` identifies the first message that is **not** copied into the
+forked session. In other words, the fork branches immediately before the
+referenced message:
+
+- if `messageId` is omitted, the fork is created from the current head of the
+  source session;
+- if `messageId` is present, the fork contains all replayable conversation
+  state before that message boundary and excludes the referenced message and all
+  later history from the new session.
+
+This semantics is chosen because it composes cleanly with the
+[`messageId` RFD](/rfds/message-id) and directly supports edit-style workflows:
+a client that wants to replace a previously sent message can fork at that
+message's ID, then send the replacement prompt into the new session.
+
+Agents that support `messageId`-scoped forking:
+
+- SHOULD accept `messageId` values that were previously surfaced in the source
+  session as `userMessageId` acknowledgments or replayed/emitted
+  `user_message_chunk` and `agent_message_chunk` IDs;
+- MUST treat the ID as a message-boundary selector for the whole message, not
+  for an individual chunk;
+- MUST reject unknown or unsupported `messageId` values with an error;
+- SHOULD NOT treat `agent_thought_chunk` IDs as valid fork anchors unless they
+  intentionally expose thought history as replayable branch points.
+
+The `session.fork.messageId` capability is intentionally coarse-grained. It
+means the agent can evaluate message-scoped fork requests, but it does not
+guarantee that every surfaced message is a valid fork anchor. Agents MAY reject
+individual message IDs when their history cannot be replayed safely from that
+point. A future extension may allow agents to advertise or stream per-message
+forkability.
+
+Clients MUST follow the `messageId` acknowledgment rules from the
+[`messageId` RFD](/rfds/message-id): if a prompt response omitted
+`userMessageId`, the client MUST assume that user message ID was not recorded
+and MUST NOT use it as a `session/fork` anchor.
+
 ## Frequently asked questions
 
 > What questions have arisen over the course of authoring this document or during subsequent discussions?
@@ -78,6 +157,28 @@ They must be different because they will effectively require different options.
 For example, "session/new" has options such as capabilities and MCP which are not
 recommended to be set when forking, as the context being forked was built with other
 tools, and forking may accept a messageId for checkpoints.
+
+**Q: Why use `messageId` instead of a numeric message index?**
+
+`messageId` builds directly on the draft message-identification work and avoids
+index drift across streaming, replay, deduplication, and partial history
+loading. A stable message identifier is also easier for clients to persist than
+an implementation-defined ordinal.
+
+**Q: Why does `messageId` mean "branch before this message" instead of "include this message"?**
+
+This choice makes the feature immediately useful for editing and retry flows.
+If a client wants an alternate continuation from after a given message, it can
+use the next message's ID as the branch point, or omit `messageId` entirely when
+branching from the current session head.
+
+**Q: Does advertising `session.fork.messageId` mean every message is forkable?**
+
+No. The capability only means the agent understands message-scoped fork
+requests. Agents MAY still reject specific `messageId` values if replaying from
+that point would be unsafe, lossy, or otherwise unsupported. This keeps the
+initial proposal simple while leaving room for a future per-message forkability
+signal.
 
 **Q: Should fork only accept the `sessionId` or also other options, similar to `session/load`?**
 
@@ -95,6 +196,9 @@ None. This proposal is inspired by the abilities exposed in Claude Agent SDK. It
 
 ## Revision history
 
+- 2026-04-10: Added an optional `messageId` branch point, capability gating,
+  branch semantics aligned with the `message-id` RFD, and clarified that
+  message-fork support is coarse-grained rather than guaranteed per message.
 - 2025-11-17: Mentioned capabilities format, updated FAQ.
 - 2025-11-20: Added request format and updated capabilities format.
 - 2025-12-10: Adjust fork options to align with `session/load`.
