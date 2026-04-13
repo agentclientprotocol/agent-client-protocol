@@ -235,7 +235,7 @@ Overall, this isn't a huge lift on schema definition, but it is a large, **break
 
 Depending on how the rest of v2 testing goes, we can either:
 
-1. Make this an opt-in "future-flag" capability on v1 so people can experiement, but it would be an unstable feature regardless.
+1. Make this an opt-in "future-flag" capability on v1 so people can experiment, but it would be an unstable feature regardless.
 2. We establish a preview/beta flow for v2
 
 We definitely need 2 regardless, and can likely handle this in a similar "unstable" manner as we do for current unstabilized features. It's likely timing will work out that we can just do it that way. If for some reason the timing doesn't work out, we can start experimenting with an unstable capability or some `_meta` flag.
@@ -254,7 +254,7 @@ Since we are moving away from a user-initiated turn lifecycle, it begs the quest
 
 This would require the agents to emit more of these at various points. But perhaps there is value in allowing the agent more explicit indications of the current status.
 
-#### Should we more closely associate errros with specific client notifications?
+#### Should we more closely associate errors with specific client notifications?
 
 Or is it ok to have errors just occur in the stream and the lack of a replayed user message will mean it wasn't accepted?
 
