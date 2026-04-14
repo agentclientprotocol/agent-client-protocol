@@ -1064,11 +1064,8 @@ starting with '$/' it is free to ignore the notification."
             match method_name {
                 "initialize" => self.agent.get("InitializeRequest").unwrap(),
                 "authenticate" => self.agent.get("AuthenticateRequest").unwrap(),
-                #[cfg(feature = "unstable_llm_providers")]
                 "providers/list" => self.agent.get("ListProvidersRequest").unwrap(),
-                #[cfg(feature = "unstable_llm_providers")]
                 "providers/set" => self.agent.get("SetProvidersRequest").unwrap(),
-                #[cfg(feature = "unstable_llm_providers")]
                 "providers/disable" => self.agent.get("DisableProvidersRequest").unwrap(),
                 "session/new" => self.agent.get("NewSessionRequest").unwrap(),
                 "session/load" => self.agent.get("LoadSessionRequest").unwrap(),
@@ -1111,9 +1108,7 @@ starting with '$/' it is free to ignore the notification."
                 "terminal/release" => self.client.get("ReleaseTerminalRequest").unwrap(),
                 "terminal/wait_for_exit" => self.client.get("WaitForTerminalExitRequest").unwrap(),
                 "terminal/kill" => self.client.get("KillTerminalRequest").unwrap(),
-                #[cfg(feature = "unstable_elicitation")]
                 "elicitation/create" => self.client.get("CreateElicitationRequest").unwrap(),
-                #[cfg(feature = "unstable_elicitation")]
                 "elicitation/complete" => {
                     self.client.get("CompleteElicitationNotification").unwrap()
                 }

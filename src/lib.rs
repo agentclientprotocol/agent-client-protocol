@@ -60,6 +60,7 @@ mod ext;
 mod maybe_undefined;
 #[cfg(feature = "unstable_nes")]
 mod nes;
+#[cfg(feature = "unstable_llm_providers")]
 mod nullable;
 mod plan;
 #[cfg(feature = "unstable_cancel_request")]
@@ -79,6 +80,7 @@ pub use ext::*;
 pub use maybe_undefined::*;
 #[cfg(feature = "unstable_nes")]
 pub use nes::*;
+#[cfg(feature = "unstable_llm_providers")]
 pub use nullable::*;
 pub use plan::*;
 #[cfg(feature = "unstable_cancel_request")]

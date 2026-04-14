@@ -100,6 +100,12 @@ impl<T> Nullable<T> {
         self.0.as_ref()
     }
 
+    /// Returns a mutable reference to the contained value, if present.
+    #[must_use]
+    pub fn value_mut(&mut self) -> Option<&mut T> {
+        self.0.as_mut()
+    }
+
     /// Converts into the inner `Option<T>`.
     #[must_use]
     pub fn into_inner(self) -> Option<T> {
