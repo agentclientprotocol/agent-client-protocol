@@ -1477,6 +1477,33 @@ mod tests {
     }
 
     #[test]
+    fn url_mode_request_scope_serialization() {
+        let req = CreateElicitationRequest::new(
+            ElicitationMode::Url(ElicitationUrlMode::new(
+                ElicitationScope::Request(ElicitationRequestScope::new(RequestId::Number(42))),
+                "elic_2",
+                "https://example.com/setup",
+            )),
+            "Please complete setup",
+        );
+
+        let json = serde_json::to_value(&req).unwrap();
+        assert_eq!(json["requestId"], 42);
+        assert!(json.get("sessionId").is_none());
+        assert_eq!(json["mode"], "url");
+        assert_eq!(json["elicitationId"], "elic_2");
+        assert_eq!(json["url"], "https://example.com/setup");
+        assert_eq!(json["message"], "Please complete setup");
+
+        let roundtripped: CreateElicitationRequest = serde_json::from_value(json).unwrap();
+        assert_eq!(
+            *roundtripped.scope(),
+            ElicitationScope::Request(ElicitationRequestScope::new(RequestId::Number(42)))
+        );
+        assert!(matches!(roundtripped.mode, ElicitationMode::Url(_)));
+    }
+
+    #[test]
     fn request_scope_request_serialization() {
         let req = CreateElicitationRequest::new(
             ElicitationMode::Form(ElicitationFormMode::new(
