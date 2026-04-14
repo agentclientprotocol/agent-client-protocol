@@ -28,7 +28,8 @@ could be used as a mechanism for proxies and adapter libraries to emulate "sessi
 
 > What are you proposing to improve the situation?
 
-Add a "session/resume" command and a capability `{ session: { resume: {} }`.
+Add a "session/resume" command and a capability
+`{ sessionCapabilities: { resume: {} } }`.
 
 ## Shiny future
 
@@ -82,4 +83,5 @@ This argues "session/resume" is the basic primitive which "session/load" builds 
 
 ## Revision history
 
+- 2026-04-14: Update capability shape to `sessionCapabilities.resume`
 - 2025-11-24: Update FAQ to mention session/resume vs session/load
