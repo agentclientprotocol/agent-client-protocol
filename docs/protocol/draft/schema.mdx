@@ -1205,7 +1205,7 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 Resumes an existing session without returning previous messages.
 
-This method is only available if the agent advertises the `session.resume` capability.
+This method is only available if the agent advertises the `sessionCapabilities.resume` capability.
 
 The agent should resume the session context, allowing the conversation to continue
 without replaying the message history (unlike `session/load`).
@@ -1221,7 +1221,7 @@ Request parameters for resuming an existing session.
 Resumes an existing session without returning previous messages (unlike `session/load`).
 This is useful for agents that can resume sessions but don't implement full session loading.
 
-Only available if the Agent supports the `session.resume` capability.
+Only available if the Agent supports the `sessionCapabilities.resume` capability.
 
 **Type:** Object
 

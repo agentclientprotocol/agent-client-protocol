@@ -1428,7 +1428,7 @@ impl ForkSessionResponse {
 /// Resumes an existing session without returning previous messages (unlike `session/load`).
 /// This is useful for agents that can resume sessions but don't implement full session loading.
 ///
-/// Only available if the Agent supports the `session.resume` capability.
+/// Only available if the Agent supports the `sessionCapabilities.resume` capability.
 #[cfg(feature = "unstable_session_resume")]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_RESUME_METHOD_NAME))]
@@ -4202,7 +4202,7 @@ pub enum ClientRequest {
     ///
     /// Resumes an existing session without returning previous messages.
     ///
-    /// This method is only available if the agent advertises the `session.resume` capability.
+    /// This method is only available if the agent advertises the `sessionCapabilities.resume` capability.
     ///
     /// The agent should resume the session context, allowing the conversation to continue
     /// without replaying the message history (unlike `session/load`).

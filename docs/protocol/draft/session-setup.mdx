@@ -30,6 +30,11 @@ sequenceDiagram
         Agent->>Client: session/update
         Note over Agent,Client: All content streamed
         Agent-->>Client: session/load response
+    else
+        Client->>Agent: session/resume (sessionId)
+        Note over Agent: Restore session context
+        Note over Agent: Connect to MCP servers
+        Agent-->>Client: session/resume response
     end
 
     Note over Client,Agent: Ready for prompts
@@ -77,7 +82,7 @@ The Agent **MUST** respond with a unique [Session ID](#session-id) that identifi
 
 ## Loading Sessions
 
-Agents that support the `loadSession` capability allow Clients to resume previous conversations. This feature enables persistence across restarts and sharing sessions between different Client instances.
+Agents that support the `loadSession` capability allow Clients to resume previous conversations with history replay. This feature enables persistence across restarts and sharing sessions between different Client instances.
 
 ### Checking Support
 
@@ -166,17 +171,102 @@ Followed by the agent's response:
 }
 ```
 
-When **all** the conversation entries have been streamed to the Client, the Agent **MUST** respond to the original `session/load` request.
+When **all** the conversation entries have been streamed to the Client, the
+Agent **MUST** respond to the original `session/load` request.
 
 ```json
 {
   "jsonrpc": "2.0",
   "id": 1,
-  "result": null
+  "result": {}
 }
 ```
 
-The Client can then continue sending prompts as if the session was never interrupted.
+The response **MAY** also include initial mode, model, or session configuration
+state when those features are supported by the Agent.
+
+The Client can then continue sending prompts as if the session was never
+interrupted.
+
+## Resuming Sessions
+
+<Note>
+  This section describes the preview `session/resume` method. Clients MUST gate
+  usage on the `sessionCapabilities.resume` capability being present during
+  initialization.
+</Note>
+
+Agents that advertise `sessionCapabilities.resume` allow Clients to reconnect to
+an existing session without replaying the conversation history.
+
+### Checking Support
+
+Before attempting to resume a session, Clients **MUST** verify that the Agent
+supports this capability by checking for the `sessionCapabilities.resume` field
+in the `initialize` response:
+
+```json highlight={8-10}
+{
+  "jsonrpc": "2.0",
+  "id": 0,
+  "result": {
+    "protocolVersion": 1,
+    "agentCapabilities": {
+      "sessionCapabilities": {
+        "resume": {}
+      }
+    }
+  }
+}
+```
+
+If `sessionCapabilities.resume` is not present, the Agent does not support
+resuming sessions and Clients **MUST NOT** attempt to call `session/resume`.
+
+### Resuming a Session
+
+To resume an existing session without replaying prior messages, Clients
+**MUST** call the `session/resume` method with:
+
+- The [Session ID](#session-id) to resume
+- [MCP servers](#mcp-servers) to connect to
+- The [working directory](#working-directory)
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "session/resume",
+  "params": {
+    "sessionId": "sess_789xyz",
+    "cwd": "/home/user/project",
+    "mcpServers": [
+      {
+        "name": "filesystem",
+        "command": "/path/to/mcp-server",
+        "args": ["--mode", "filesystem"],
+        "env": []
+      }
+    ]
+  }
+}
+```
+
+Unlike `session/load`, the Agent **MUST NOT** replay the conversation history
+via `session/update` notifications before responding. Instead, it restores the
+session context, reconnects to the requested MCP servers, and returns once the
+session is ready to continue.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {}
+}
+```
+
+The response **MAY** also include initial mode, model, or session configuration
+state when those features are supported by the Agent.
 
 ## Additional Workspace Roots
 
@@ -214,7 +304,7 @@ When present, `additionalDirectories` has the following behavior:
 - `cwd` remains the primary working directory and the base for relative paths
 - each `additionalDirectories` entry **MUST** be an absolute path
 - omitting the field or providing an empty array activates no additional roots for the resulting session
-- on `session/load`, Clients must send the full intended additional-root list again because omitting the field or providing an empty array does not restore stored roots implicitly
+- on `session/load` and `session/resume`, Clients must send the full intended additional-root list again because omitting the field or providing an empty array does not restore stored roots implicitly
 
 ## Session ID
 
@@ -225,6 +315,7 @@ Clients use this ID to:
 - Send prompt requests via `session/prompt`
 - Cancel ongoing operations via `session/cancel`
 - Load previous sessions via `session/load` (if the Agent supports the `loadSession` capability)
+- Resume previous sessions via `session/resume` (if the Agent supports the preview `sessionCapabilities.resume` capability)
 
 ## Working Directory
 
