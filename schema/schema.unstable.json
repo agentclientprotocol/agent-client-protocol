@@ -91,7 +91,7 @@
               "type": "null"
             }
           ],
-          "description": "NES (Next Edit Suggestions) capabilities supported by the agent."
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNES (Next Edit Suggestions) capabilities supported by the agent."
         },
         "positionEncoding": {
           "anyOf": [

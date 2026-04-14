@@ -3828,6 +3828,10 @@ pub struct AgentCapabilities {
     #[cfg(feature = "unstable_llm_providers")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub providers: Option<ProvidersCapabilities>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
     /// NES (Next Edit Suggestions) capabilities supported by the agent.
     #[cfg(feature = "unstable_nes")]
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -3907,6 +3911,10 @@ impl AgentCapabilities {
         self
     }
 
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
     /// NES (Next Edit Suggestions) capabilities supported by the agent.
     #[cfg(feature = "unstable_nes")]
     #[must_use]
