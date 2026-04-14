@@ -868,7 +868,7 @@ impl ElicitationUrlCapabilities {
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
 /// The scope of an elicitation request, determining what context it's tied to.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(untagged)]
 #[non_exhaustive]
 pub enum ElicitationScope {
@@ -908,9 +908,6 @@ pub enum ElicitationScope {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct CreateElicitationRequest {
-    /// The scope this elicitation is tied to.
-    #[serde(flatten)]
-    pub scope: ElicitationScope,
     /// The elicitation mode and its mode-specific fields.
     #[serde(flatten)]
     pub mode: ElicitationMode,
@@ -927,13 +924,18 @@ pub struct CreateElicitationRequest {
 
 impl CreateElicitationRequest {
     #[must_use]
-    pub fn new(scope: ElicitationScope, mode: ElicitationMode, message: impl Into<String>) -> Self {
+    pub fn new(mode: ElicitationMode, message: impl Into<String>) -> Self {
         Self {
-            scope,
             mode,
             message: message.into(),
             meta: None,
         }
+    }
+
+    /// Returns the scope this elicitation is tied to.
+    #[must_use]
+    pub fn scope(&self) -> &ElicitationScope {
+        self.mode.scope()
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -964,6 +966,17 @@ pub enum ElicitationMode {
     Url(ElicitationUrlMode),
 }
 
+impl ElicitationMode {
+    /// Returns the scope this elicitation mode is tied to.
+    #[must_use]
+    pub fn scope(&self) -> &ElicitationScope {
+        match self {
+            Self::Form(f) => &f.scope,
+            Self::Url(u) => &u.scope,
+        }
+    }
+}
+
 /// **UNSTABLE**
 ///
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -973,14 +986,20 @@ pub enum ElicitationMode {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ElicitationFormMode {
+    /// The scope this elicitation is tied to.
+    #[serde(flatten)]
+    pub scope: ElicitationScope,
     /// A JSON Schema describing the form fields to present to the user.
     pub requested_schema: ElicitationSchema,
 }
 
 impl ElicitationFormMode {
     #[must_use]
-    pub fn new(requested_schema: ElicitationSchema) -> Self {
-        Self { requested_schema }
+    pub fn new(scope: ElicitationScope, requested_schema: ElicitationSchema) -> Self {
+        Self {
+            scope,
+            requested_schema,
+        }
     }
 }
 
@@ -993,6 +1012,9 @@ impl ElicitationFormMode {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ElicitationUrlMode {
+    /// The scope this elicitation is tied to.
+    #[serde(flatten)]
+    pub scope: ElicitationScope,
     /// The unique identifier for this elicitation.
     pub elicitation_id: ElicitationId,
     /// The URL to direct the user to.
@@ -1002,8 +1024,13 @@ pub struct ElicitationUrlMode {
 
 impl ElicitationUrlMode {
     #[must_use]
-    pub fn new(elicitation_id: impl Into<ElicitationId>, url: impl Into<String>) -> Self {
+    pub fn new(
+        scope: ElicitationScope,
+        elicitation_id: impl Into<ElicitationId>,
+        url: impl Into<String>,
+    ) -> Self {
         Self {
+            scope,
             elicitation_id: elicitation_id.into(),
             url: url.into(),
         }
@@ -1282,11 +1309,13 @@ mod tests {
     fn form_mode_request_serialization() {
         let schema = ElicitationSchema::new().string("name", true);
         let req = CreateElicitationRequest::new(
-            ElicitationScope::Session {
-                session_id: SessionId::new("sess_1"),
-                tool_call_id: None,
-            },
-            ElicitationMode::Form(ElicitationFormMode::new(schema)),
+            ElicitationMode::Form(ElicitationFormMode::new(
+                ElicitationScope::Session {
+                    session_id: SessionId::new("sess_1"),
+                    tool_call_id: None,
+                },
+                schema,
+            )),
             "Please enter your name",
         );
 
@@ -1304,7 +1333,7 @@ mod tests {
 
         let roundtripped: CreateElicitationRequest = serde_json::from_value(json).unwrap();
         assert_eq!(
-            roundtripped.scope,
+            *roundtripped.scope(),
             ElicitationScope::Session {
                 session_id: SessionId::new("sess_1"),
                 tool_call_id: None,
@@ -1317,11 +1346,11 @@ mod tests {
     #[test]
     fn url_mode_request_serialization() {
         let req = CreateElicitationRequest::new(
-            ElicitationScope::Session {
-                session_id: SessionId::new("sess_2"),
-                tool_call_id: Some(ToolCallId::new("tc_1")),
-            },
             ElicitationMode::Url(ElicitationUrlMode::new(
+                ElicitationScope::Session {
+                    session_id: SessionId::new("sess_2"),
+                    tool_call_id: Some(ToolCallId::new("tc_1")),
+                },
                 "elic_1",
                 "https://example.com/auth",
             )),
@@ -1338,7 +1367,7 @@ mod tests {
 
         let roundtripped: CreateElicitationRequest = serde_json::from_value(json).unwrap();
         assert_eq!(
-            roundtripped.scope,
+            *roundtripped.scope(),
             ElicitationScope::Session {
                 session_id: SessionId::new("sess_2"),
                 tool_call_id: Some(ToolCallId::new("tc_1")),
@@ -1395,11 +1424,11 @@ mod tests {
     #[test]
     fn session_only_request_serialization() {
         let req = CreateElicitationRequest::new(
-            ElicitationScope::Session {
-                session_id: SessionId::new("sess_1"),
-                tool_call_id: None,
-            },
             ElicitationMode::Form(ElicitationFormMode::new(
+                ElicitationScope::Session {
+                    session_id: SessionId::new("sess_1"),
+                    tool_call_id: None,
+                },
                 ElicitationSchema::new().string("name", true),
             )),
             "Enter your name",
@@ -1411,7 +1440,7 @@ mod tests {
 
         let roundtripped: CreateElicitationRequest = serde_json::from_value(json).unwrap();
         assert_eq!(
-            roundtripped.scope,
+            *roundtripped.scope(),
             ElicitationScope::Session {
                 session_id: SessionId::new("sess_1"),
                 tool_call_id: None,
@@ -1422,10 +1451,10 @@ mod tests {
     #[test]
     fn request_scope_request_serialization() {
         let req = CreateElicitationRequest::new(
-            ElicitationScope::Request {
-                request_id: RequestId::Number(99),
-            },
             ElicitationMode::Form(ElicitationFormMode::new(
+                ElicitationScope::Request {
+                    request_id: RequestId::Number(99),
+                },
                 ElicitationSchema::new().string("workspace", true),
             )),
             "Enter workspace name",
@@ -1437,7 +1466,7 @@ mod tests {
 
         let roundtripped: CreateElicitationRequest = serde_json::from_value(json).unwrap();
         assert_eq!(
-            roundtripped.scope,
+            *roundtripped.scope(),
             ElicitationScope::Request {
                 request_id: RequestId::Number(99),
             }
@@ -1518,7 +1547,7 @@ mod tests {
 
         let req: CreateElicitationRequest = serde_json::from_value(json).unwrap();
         assert_eq!(
-            req.scope,
+            *req.scope(),
             ElicitationScope::Session {
                 session_id: SessionId::new("sess_1"),
                 tool_call_id: None,

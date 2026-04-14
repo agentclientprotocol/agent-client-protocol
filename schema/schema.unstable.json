@@ -1646,51 +1646,6 @@
       "type": "object"
     },
     "CreateElicitationRequest": {
-      "anyOf": [
-        {
-          "description": "Tied to a session, optionally to a specific tool call within that session.\n\nWhen `tool_call_id` is set, the elicitation is tied to a specific tool call.\nThis is useful when an agent receives an elicitation from an MCP server\nduring a tool call and needs to redirect it to the user.",
-          "properties": {
-            "sessionId": {
-              "allOf": [
-                {
-                  "$ref": "#/$defs/SessionId"
-                }
-              ],
-              "description": "The session this elicitation is tied to."
-            },
-            "toolCallId": {
-              "anyOf": [
-                {
-                  "$ref": "#/$defs/ToolCallId"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Optional tool call within the session."
-            }
-          },
-          "required": ["sessionId"],
-          "title": "Session",
-          "type": "object"
-        },
-        {
-          "description": "Tied to a specific JSON-RPC request outside of a session\n(e.g., during auth/configuration phases before any session is started).",
-          "properties": {
-            "requestId": {
-              "allOf": [
-                {
-                  "$ref": "#/$defs/RequestId"
-                }
-              ],
-              "description": "The request this elicitation is tied to."
-            }
-          },
-          "required": ["requestId"],
-          "title": "Request",
-          "type": "object"
-        }
-      ],
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest from the agent to elicit structured user input.\n\nThe agent sends this to the client to request information from the user,\neither via a form or by directing them to a URL.\nElicitations are tied to a session (optionally a tool call) or a request.",
       "discriminator": {
         "propertyName": "mode"
@@ -2176,6 +2131,51 @@
       "type": "object"
     },
     "ElicitationFormMode": {
+      "anyOf": [
+        {
+          "description": "Tied to a session, optionally to a specific tool call within that session.\n\nWhen `tool_call_id` is set, the elicitation is tied to a specific tool call.\nThis is useful when an agent receives an elicitation from an MCP server\nduring a tool call and needs to redirect it to the user.",
+          "properties": {
+            "sessionId": {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/SessionId"
+                }
+              ],
+              "description": "The session this elicitation is tied to."
+            },
+            "toolCallId": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/ToolCallId"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional tool call within the session."
+            }
+          },
+          "required": ["sessionId"],
+          "title": "Session",
+          "type": "object"
+        },
+        {
+          "description": "Tied to a specific JSON-RPC request outside of a session\n(e.g., during auth/configuration phases before any session is started).",
+          "properties": {
+            "requestId": {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/RequestId"
+                }
+              ],
+              "description": "The request this elicitation is tied to."
+            }
+          },
+          "required": ["requestId"],
+          "title": "Request",
+          "type": "object"
+        }
+      ],
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nForm-based elicitation mode where the client renders a form from the provided schema.",
       "properties": {
         "requestedSchema": {
@@ -2352,6 +2352,51 @@
       "type": "object"
     },
     "ElicitationUrlMode": {
+      "anyOf": [
+        {
+          "description": "Tied to a session, optionally to a specific tool call within that session.\n\nWhen `tool_call_id` is set, the elicitation is tied to a specific tool call.\nThis is useful when an agent receives an elicitation from an MCP server\nduring a tool call and needs to redirect it to the user.",
+          "properties": {
+            "sessionId": {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/SessionId"
+                }
+              ],
+              "description": "The session this elicitation is tied to."
+            },
+            "toolCallId": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/ToolCallId"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional tool call within the session."
+            }
+          },
+          "required": ["sessionId"],
+          "title": "Session",
+          "type": "object"
+        },
+        {
+          "description": "Tied to a specific JSON-RPC request outside of a session\n(e.g., during auth/configuration phases before any session is started).",
+          "properties": {
+            "requestId": {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/RequestId"
+                }
+              ],
+              "description": "The request this elicitation is tied to."
+            }
+          },
+          "required": ["requestId"],
+          "title": "Request",
+          "type": "object"
+        }
+      ],
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nURL-based elicitation mode where the client directs the user to a URL.",
       "properties": {
         "elicitationId": {
