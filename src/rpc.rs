@@ -629,6 +629,61 @@ mod nes_rpc_tests {
     }
 }
 
+#[cfg(feature = "unstable_llm_providers")]
+#[cfg(test)]
+mod providers_rpc_tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn test_decode_providers_list_request() {
+        let params = serde_json::to_string(&json!({})).unwrap();
+        let raw = serde_json::value::RawValue::from_string(params).unwrap();
+        let request = AgentSide::decode_request("providers/list", Some(&raw)).unwrap();
+        assert!(matches!(request, ClientRequest::ListProvidersRequest(_)));
+    }
+
+    #[test]
+    fn test_decode_providers_set_request() {
+        let params = serde_json::to_string(&json!({
+            "id": "main",
+            "apiType": "anthropic",
+            "baseUrl": "https://api.anthropic.com"
+        }))
+        .unwrap();
+        let raw = serde_json::value::RawValue::from_string(params).unwrap();
+        let request = AgentSide::decode_request("providers/set", Some(&raw)).unwrap();
+        assert!(matches!(request, ClientRequest::SetProvidersRequest(_)));
+    }
+
+    #[test]
+    fn test_decode_providers_set_request_with_headers() {
+        let params = serde_json::to_string(&json!({
+            "id": "main",
+            "apiType": "openai",
+            "baseUrl": "https://api.openai.com/v1",
+            "headers": {
+                "Authorization": "Bearer sk-test"
+            }
+        }))
+        .unwrap();
+        let raw = serde_json::value::RawValue::from_string(params).unwrap();
+        let request = AgentSide::decode_request("providers/set", Some(&raw)).unwrap();
+        assert!(matches!(request, ClientRequest::SetProvidersRequest(_)));
+    }
+
+    #[test]
+    fn test_decode_providers_disable_request() {
+        let params = serde_json::to_string(&json!({
+            "id": "secondary"
+        }))
+        .unwrap();
+        let raw = serde_json::value::RawValue::from_string(params).unwrap();
+        let request = AgentSide::decode_request("providers/disable", Some(&raw)).unwrap();
+        assert!(matches!(request, ClientRequest::DisableProvidersRequest(_)));
+    }
+}
+
 #[test]
 fn test_notification_wire_format() {
     use super::*;

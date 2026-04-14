@@ -5809,4 +5809,281 @@ mod test_serialization {
             _ => panic!("Expected Select kind"),
         }
     }
+
+    #[cfg(feature = "unstable_llm_providers")]
+    #[test]
+    fn test_llm_protocol_known_variants() {
+        assert_eq!(
+            serde_json::to_value(&LlmProtocol::Anthropic).unwrap(),
+            json!("anthropic")
+        );
+        assert_eq!(
+            serde_json::to_value(&LlmProtocol::OpenAi).unwrap(),
+            json!("openai")
+        );
+        assert_eq!(
+            serde_json::to_value(&LlmProtocol::Azure).unwrap(),
+            json!("azure")
+        );
+        assert_eq!(
+            serde_json::to_value(&LlmProtocol::Vertex).unwrap(),
+            json!("vertex")
+        );
+        assert_eq!(
+            serde_json::to_value(&LlmProtocol::Bedrock).unwrap(),
+            json!("bedrock")
+        );
+
+        assert_eq!(
+            serde_json::from_str::<LlmProtocol>("\"anthropic\"").unwrap(),
+            LlmProtocol::Anthropic
+        );
+        assert_eq!(
+            serde_json::from_str::<LlmProtocol>("\"openai\"").unwrap(),
+            LlmProtocol::OpenAi
+        );
+        assert_eq!(
+            serde_json::from_str::<LlmProtocol>("\"azure\"").unwrap(),
+            LlmProtocol::Azure
+        );
+        assert_eq!(
+            serde_json::from_str::<LlmProtocol>("\"vertex\"").unwrap(),
+            LlmProtocol::Vertex
+        );
+        assert_eq!(
+            serde_json::from_str::<LlmProtocol>("\"bedrock\"").unwrap(),
+            LlmProtocol::Bedrock
+        );
+    }
+
+    #[cfg(feature = "unstable_llm_providers")]
+    #[test]
+    fn test_llm_protocol_unknown_variant() {
+        let unknown: LlmProtocol = serde_json::from_str("\"cohere\"").unwrap();
+        assert_eq!(unknown, LlmProtocol::Other("cohere".to_string()));
+
+        let json = serde_json::to_value(&unknown).unwrap();
+        assert_eq!(json, json!("cohere"));
+    }
+
+    #[cfg(feature = "unstable_llm_providers")]
+    #[test]
+    fn test_provider_current_config_serialization() {
+        let config =
+            ProviderCurrentConfig::new(LlmProtocol::Anthropic, "https://api.anthropic.com");
+
+        let json = serde_json::to_value(&config).unwrap();
+        assert_eq!(
+            json,
+            json!({
+                "apiType": "anthropic",
+                "baseUrl": "https://api.anthropic.com"
+            })
+        );
+
+        let deserialized: ProviderCurrentConfig = serde_json::from_value(json).unwrap();
+        assert_eq!(deserialized.api_type, LlmProtocol::Anthropic);
+        assert_eq!(deserialized.base_url, "https://api.anthropic.com");
+    }
+
+    #[cfg(feature = "unstable_llm_providers")]
+    #[test]
+    fn test_provider_info_with_current_config() {
+        let info = ProviderInfo::new(
+            "main",
+            vec![LlmProtocol::Anthropic, LlmProtocol::OpenAi],
+            true,
+            Some(ProviderCurrentConfig::new(
+                LlmProtocol::Anthropic,
+                "https://api.anthropic.com",
+            )),
+        );
+
+        let json = serde_json::to_value(&info).unwrap();
+        assert_eq!(
+            json,
+            json!({
+                "id": "main",
+                "supported": ["anthropic", "openai"],
+                "required": true,
+                "current": {
+                    "apiType": "anthropic",
+                    "baseUrl": "https://api.anthropic.com"
+                }
+            })
+        );
+
+        let deserialized: ProviderInfo = serde_json::from_value(json).unwrap();
+        assert_eq!(deserialized.id, "main");
+        assert_eq!(deserialized.supported.len(), 2);
+        assert!(deserialized.required);
+        assert!(deserialized.current.is_value());
+        assert_eq!(
+            deserialized.current.value().unwrap().api_type,
+            LlmProtocol::Anthropic
+        );
+    }
+
+    #[cfg(feature = "unstable_llm_providers")]
+    #[test]
+    fn test_provider_info_disabled() {
+        let info = ProviderInfo::new(
+            "secondary",
+            vec![LlmProtocol::OpenAi],
+            false,
+            Nullable::<ProviderCurrentConfig>::null(),
+        );
+
+        let json = serde_json::to_value(&info).unwrap();
+        assert_eq!(
+            json,
+            json!({
+                "id": "secondary",
+                "supported": ["openai"],
+                "required": false,
+                "current": null
+            })
+        );
+
+        let deserialized: ProviderInfo = serde_json::from_value(json).unwrap();
+        assert_eq!(deserialized.id, "secondary");
+        assert!(!deserialized.required);
+        assert!(deserialized.current.is_null());
+    }
+
+    #[cfg(feature = "unstable_llm_providers")]
+    #[test]
+    fn test_provider_info_missing_current_fails() {
+        // current is required-but-nullable — omitting it entirely must fail
+        let json = json!({
+            "id": "main",
+            "supported": ["anthropic"],
+            "required": true
+        });
+        assert!(serde_json::from_value::<ProviderInfo>(json).is_err());
+    }
+
+    #[cfg(feature = "unstable_llm_providers")]
+    #[test]
+    fn test_list_providers_response_serialization() {
+        let response = ListProvidersResponse::new(vec![ProviderInfo::new(
+            "main",
+            vec![LlmProtocol::Anthropic],
+            true,
+            Some(ProviderCurrentConfig::new(
+                LlmProtocol::Anthropic,
+                "https://api.anthropic.com",
+            )),
+        )]);
+
+        let json = serde_json::to_value(&response).unwrap();
+        assert_eq!(json["providers"].as_array().unwrap().len(), 1);
+        assert_eq!(json["providers"][0]["id"], "main");
+
+        let deserialized: ListProvidersResponse = serde_json::from_value(json).unwrap();
+        assert_eq!(deserialized.providers.len(), 1);
+    }
+
+    #[cfg(feature = "unstable_llm_providers")]
+    #[test]
+    fn test_set_providers_request_serialization() {
+        use std::collections::HashMap;
+
+        let mut headers = HashMap::new();
+        headers.insert("Authorization".to_string(), "Bearer sk-test".to_string());
+
+        let request =
+            SetProvidersRequest::new("main", LlmProtocol::OpenAi, "https://api.openai.com/v1")
+                .headers(headers);
+
+        let json = serde_json::to_value(&request).unwrap();
+        assert_eq!(
+            json,
+            json!({
+                "id": "main",
+                "apiType": "openai",
+                "baseUrl": "https://api.openai.com/v1",
+                "headers": {
+                    "Authorization": "Bearer sk-test"
+                }
+            })
+        );
+
+        let deserialized: SetProvidersRequest = serde_json::from_value(json).unwrap();
+        assert_eq!(deserialized.id, "main");
+        assert_eq!(deserialized.api_type, LlmProtocol::OpenAi);
+        assert_eq!(deserialized.base_url, "https://api.openai.com/v1");
+        assert_eq!(deserialized.headers.len(), 1);
+        assert_eq!(
+            deserialized.headers.get("Authorization").unwrap(),
+            "Bearer sk-test"
+        );
+    }
+
+    #[cfg(feature = "unstable_llm_providers")]
+    #[test]
+    fn test_set_providers_request_omits_empty_headers() {
+        let request =
+            SetProvidersRequest::new("main", LlmProtocol::Anthropic, "https://api.anthropic.com");
+
+        let json = serde_json::to_value(&request).unwrap();
+        // headers should be omitted when empty
+        assert!(!json.as_object().unwrap().contains_key("headers"));
+    }
+
+    #[cfg(feature = "unstable_llm_providers")]
+    #[test]
+    fn test_set_providers_request_debug_redacts_headers() {
+        use std::collections::HashMap;
+
+        let mut headers = HashMap::new();
+        headers.insert(
+            "Authorization".to_string(),
+            "Bearer sk-secret-key".to_string(),
+        );
+
+        let request =
+            SetProvidersRequest::new("main", LlmProtocol::Anthropic, "https://api.anthropic.com")
+                .headers(headers);
+
+        let debug = format!("{:?}", request);
+        assert!(debug.contains("[REDACTED]"));
+        assert!(!debug.contains("sk-secret-key"));
+    }
+
+    #[cfg(feature = "unstable_llm_providers")]
+    #[test]
+    fn test_disable_providers_request_serialization() {
+        let request = DisableProvidersRequest::new("secondary");
+
+        let json = serde_json::to_value(&request).unwrap();
+        assert_eq!(json, json!({ "id": "secondary" }));
+
+        let deserialized: DisableProvidersRequest = serde_json::from_value(json).unwrap();
+        assert_eq!(deserialized.id, "secondary");
+    }
+
+    #[cfg(feature = "unstable_llm_providers")]
+    #[test]
+    fn test_providers_capabilities_serialization() {
+        let caps = ProvidersCapabilities::new();
+
+        let json = serde_json::to_value(&caps).unwrap();
+        assert_eq!(json, json!({}));
+
+        let deserialized: ProvidersCapabilities = serde_json::from_value(json).unwrap();
+        assert!(deserialized.meta.is_none());
+    }
+
+    #[cfg(feature = "unstable_llm_providers")]
+    #[test]
+    fn test_agent_capabilities_with_providers() {
+        let caps = AgentCapabilities::new().providers(ProvidersCapabilities::new());
+
+        let json = serde_json::to_value(&caps).unwrap();
+        assert_eq!(json["providers"], json!({}));
+
+        let deserialized: AgentCapabilities = serde_json::from_value(json).unwrap();
+        assert!(deserialized.providers.is_some());
+    }
 }
