@@ -1247,7 +1247,7 @@
                       "$ref": "#/$defs/CloseSessionRequest"
                     }
                   ],
-                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCloses an active session and frees up any resources associated with it.\n\nThis method is only available if the agent advertises the `session.close` capability.\n\nThe agent must cancel any ongoing work (as if `session/cancel` was called)\nand then free up any resources associated with the session.",
+                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCloses an active session and frees up any resources associated with it.\n\nThis method is only available if the agent advertises the `sessionCapabilities.close` capability.\n\nThe agent must cancel any ongoing work (as if `session/cancel` was called)\nand then free up any resources associated with the session.",
                   "title": "CloseSessionRequest"
                 },
                 {
@@ -1484,7 +1484,7 @@
       "x-side": "agent"
     },
     "CloseSessionRequest": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for closing an active session.\n\nIf supported, the agent **must** cancel any ongoing work related to the session\n(treat it as if `session/cancel` was called) and then free up any resources\nassociated with the session.\n\nOnly available if the Agent supports the `session.close` capability.",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for closing an active session.\n\nIf supported, the agent **must** cancel any ongoing work related to the session\n(treat it as if `session/cancel` was called) and then free up any resources\nassociated with the session.\n\nOnly available if the Agent supports the `sessionCapabilities.close` capability.",
       "properties": {
         "_meta": {
           "additionalProperties": true,

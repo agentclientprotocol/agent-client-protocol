@@ -268,6 +268,79 @@ session is ready to continue.
 The response **MAY** also include initial mode, model, or session configuration
 state when those features are supported by the Agent.
 
+## Closing Active Sessions
+
+<Note>
+  This section describes the preview `sessionCapabilities.close` capability.
+  Clients MUST gate usage on that capability being present during
+  initialization.
+</Note>
+
+When advertised, Clients MAY call `session/close` to tell the Agent to cancel
+any ongoing work for a session and free any resources associated with that
+active session.
+
+### Checking Support
+
+Before attempting to close a session, Clients **MUST** verify that the Agent
+supports this capability by checking the `sessionCapabilities.close` field in
+the `initialize` response:
+
+```json highlight={8-10}
+{
+  "jsonrpc": "2.0",
+  "id": 0,
+  "result": {
+    "protocolVersion": 1,
+    "agentCapabilities": {
+      "sessionCapabilities": {
+        "close": {}
+      }
+    }
+  }
+}
+```
+
+If `sessionCapabilities.close` is not present, the Agent does not support
+closing sessions and Clients **MUST NOT** attempt to call `session/close`.
+
+### Closing a Session
+
+To close an active session, Clients **MUST** call the `session/close` method
+with the session ID:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "session/close",
+  "params": {
+    "sessionId": "sess_789xyz"
+  }
+}
+```
+
+<ParamField path="sessionId" type="SessionId" required>
+  The ID of the active session to close.
+</ParamField>
+
+The Agent **MUST** cancel any ongoing work for that session as if
+[`session/cancel`](../prompt-turn#cancellation) had been called, then free the
+resources associated with the session.
+
+On success, the Agent responds with an empty result object:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {}
+}
+```
+
+Agents MAY return an error if the session does not exist or is not currently
+active.
+
 ## Additional Workspace Roots
 
 <Note>

@@ -1608,7 +1608,7 @@ impl ResumeSessionResponse {
 /// (treat it as if `session/cancel` was called) and then free up any resources
 /// associated with the session.
 ///
-/// Only available if the Agent supports the `session.close` capability.
+/// Only available if the Agent supports the `sessionCapabilities.close` capability.
 #[cfg(feature = "unstable_session_close")]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_CLOSE_METHOD_NAME))]
@@ -4714,7 +4714,7 @@ pub enum ClientRequest {
     ///
     /// Closes an active session and frees up any resources associated with it.
     ///
-    /// This method is only available if the agent advertises the `session.close` capability.
+    /// This method is only available if the agent advertises the `sessionCapabilities.close` capability.
     ///
     /// The agent must cancel any ongoing work (as if `session/cancel` was called)
     /// and then free up any resources associated with the session.

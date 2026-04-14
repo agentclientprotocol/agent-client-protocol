@@ -44,8 +44,8 @@ Clients can track what sessions are actively used by a user and automatically cl
 > Tell me more about your implementation. What is your detailed implementation plan?
 
 We propose to add a new `"session/close"` method. Agents must declare this option is
-available by returning `session: { close : {} }` in their capabilities. The object is reserved
-to declare future capabilities.
+available by returning `sessionCapabilities: { close: {} }` in their capabilities. The object is
+reserved to declare future capabilities.
 
 Then the client would be able to close a specific session with:
 
@@ -76,5 +76,6 @@ seems like a good idea.
 
 ## Revision history
 
+2026-04-14: Move to preview and update capability docs to `sessionCapabilities.close`
 2026-03-09: Rename from session/stop to session/close
 2026-02-24: Initial draft

@@ -127,7 +127,6 @@
               "rfds/diff-delete",
               "rfds/boolean-config-option",
               "rfds/elicitation",
-              "rfds/session-close",
               "rfds/next-edit-suggestions",
               "rfds/additional-directories",
               "rfds/custom-llm-endpoint"
@@ -135,7 +134,7 @@
           },
           {
             "group": "Preview",
-            "pages": ["rfds/session-resume"]
+            "pages": ["rfds/session-close", "rfds/session-resume"]
           },
           {
             "group": "Completed",
