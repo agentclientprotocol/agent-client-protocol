@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.11.6](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.11.5...v0.11.6) - 2026-04-14
+
+### Fixed
+
+- *(unstable)* Move elicitation scope into mode variants ([#966](https://github.com/agentclientprotocol/agent-client-protocol/pull/966))
+
 ## [0.11.5](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.11.4...v0.11.5) - 2026-04-09
 
 ### Added
