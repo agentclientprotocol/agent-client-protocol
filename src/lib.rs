@@ -58,6 +58,8 @@ mod elicitation;
 mod error;
 mod ext;
 mod maybe_undefined;
+#[cfg(feature = "unstable_nes")]
+mod nes;
 mod nullable;
 mod plan;
 #[cfg(feature = "unstable_cancel_request")]
@@ -75,6 +77,8 @@ pub use elicitation::*;
 pub use error::*;
 pub use ext::*;
 pub use maybe_undefined::*;
+#[cfg(feature = "unstable_nes")]
+pub use nes::*;
 pub use nullable::*;
 pub use plan::*;
 #[cfg(feature = "unstable_cancel_request")]
@@ -182,6 +186,12 @@ impl IntoOption<PathBuf> for Box<Path> {
 impl IntoOption<PathBuf> for Cow<'_, Path> {
     fn into_option(self) -> Option<PathBuf> {
         Some(self.into())
+    }
+}
+
+impl IntoOption<ToolCallId> for &str {
+    fn into_option(self) -> Option<ToolCallId> {
+        Some(ToolCallId::new(self))
     }
 }
 

@@ -19,6 +19,22 @@ use crate::{
     ProtocolVersion, SessionId,
 };
 
+#[cfg(feature = "unstable_nes")]
+use crate::{
+    AcceptNesNotification, CloseNesRequest, CloseNesResponse, DidChangeDocumentNotification,
+    DidCloseDocumentNotification, DidFocusDocumentNotification, DidOpenDocumentNotification,
+    DidSaveDocumentNotification, NesCapabilities, PositionEncodingKind, RejectNesNotification,
+    StartNesRequest, StartNesResponse, SuggestNesRequest, SuggestNesResponse,
+};
+
+#[cfg(feature = "unstable_nes")]
+use crate::nes::{
+    DOCUMENT_DID_CHANGE_METHOD_NAME, DOCUMENT_DID_CLOSE_METHOD_NAME,
+    DOCUMENT_DID_FOCUS_METHOD_NAME, DOCUMENT_DID_OPEN_METHOD_NAME, DOCUMENT_DID_SAVE_METHOD_NAME,
+    NES_ACCEPT_METHOD_NAME, NES_CLOSE_METHOD_NAME, NES_REJECT_METHOD_NAME, NES_START_METHOD_NAME,
+    NES_SUGGEST_METHOD_NAME,
+};
+
 // Initialize
 
 /// Request parameters for the initialize method.
@@ -895,6 +911,18 @@ impl AuthMethodTerminal {
 pub struct NewSessionRequest {
     /// The working directory for this session. Must be an absolute path.
     pub cwd: PathBuf,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Additional workspace roots for this session. Each path must be absolute.
+    ///
+    /// These expand the session's filesystem scope without changing `cwd`, which
+    /// remains the base for relative paths. When omitted or empty, no
+    /// additional roots are activated for the new session.
+    #[cfg(feature = "unstable_session_additional_directories")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub additional_directories: Vec<PathBuf>,
     /// List of MCP (Model Context Protocol) servers the agent should connect to.
     pub mcp_servers: Vec<McpServer>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -911,9 +939,23 @@ impl NewSessionRequest {
     pub fn new(cwd: impl Into<PathBuf>) -> Self {
         Self {
             cwd: cwd.into(),
+            #[cfg(feature = "unstable_session_additional_directories")]
+            additional_directories: vec![],
             mcp_servers: vec![],
             meta: None,
         }
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Additional workspace roots for this session. Each path must be absolute.
+    #[cfg(feature = "unstable_session_additional_directories")]
+    #[must_use]
+    pub fn additional_directories(mut self, additional_directories: Vec<PathBuf>) -> Self {
+        self.additional_directories = additional_directories;
+        self
     }
 
     /// List of MCP (Model Context Protocol) servers the agent should connect to.
@@ -1044,6 +1086,18 @@ pub struct LoadSessionRequest {
     pub mcp_servers: Vec<McpServer>,
     /// The working directory for this session.
     pub cwd: PathBuf,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Additional workspace roots to activate for this session. Each path must be absolute.
+    ///
+    /// When omitted or empty, no additional roots are activated. When non-empty,
+    /// this is the complete resulting additional-root list for the loaded
+    /// session.
+    #[cfg(feature = "unstable_session_additional_directories")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub additional_directories: Vec<PathBuf>,
     /// The ID of the session to load.
     pub session_id: SessionId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1061,9 +1115,23 @@ impl LoadSessionRequest {
         Self {
             mcp_servers: vec![],
             cwd: cwd.into(),
+            #[cfg(feature = "unstable_session_additional_directories")]
+            additional_directories: vec![],
             session_id: session_id.into(),
             meta: None,
         }
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Additional workspace roots to activate for this session. Each path must be absolute.
+    #[cfg(feature = "unstable_session_additional_directories")]
+    #[must_use]
+    pub fn additional_directories(mut self, additional_directories: Vec<PathBuf>) -> Self {
+        self.additional_directories = additional_directories;
+        self
     }
 
     /// List of MCP servers to connect to for this session.
@@ -1187,6 +1255,18 @@ pub struct ForkSessionRequest {
     pub session_id: SessionId,
     /// The working directory for this session.
     pub cwd: PathBuf,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Additional workspace roots to activate for this session. Each path must be absolute.
+    ///
+    /// When omitted or empty, no additional roots are activated. When non-empty,
+    /// this is the complete resulting additional-root list for the forked
+    /// session.
+    #[cfg(feature = "unstable_session_additional_directories")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub additional_directories: Vec<PathBuf>,
     /// List of MCP servers to connect to for this session.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mcp_servers: Vec<McpServer>,
@@ -1206,9 +1286,23 @@ impl ForkSessionRequest {
         Self {
             session_id: session_id.into(),
             cwd: cwd.into(),
+            #[cfg(feature = "unstable_session_additional_directories")]
+            additional_directories: vec![],
             mcp_servers: vec![],
             meta: None,
         }
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Additional workspace roots to activate for this session. Each path must be absolute.
+    #[cfg(feature = "unstable_session_additional_directories")]
+    #[must_use]
+    pub fn additional_directories(mut self, additional_directories: Vec<PathBuf>) -> Self {
+        self.additional_directories = additional_directories;
+        self
     }
 
     /// List of MCP servers to connect to for this session.
@@ -1347,6 +1441,18 @@ pub struct ResumeSessionRequest {
     pub session_id: SessionId,
     /// The working directory for this session.
     pub cwd: PathBuf,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Additional workspace roots to activate for this session. Each path must be absolute.
+    ///
+    /// When omitted or empty, no additional roots are activated. When non-empty,
+    /// this is the complete resulting additional-root list for the resumed
+    /// session.
+    #[cfg(feature = "unstable_session_additional_directories")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub additional_directories: Vec<PathBuf>,
     /// List of MCP servers to connect to for this session.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mcp_servers: Vec<McpServer>,
@@ -1366,9 +1472,23 @@ impl ResumeSessionRequest {
         Self {
             session_id: session_id.into(),
             cwd: cwd.into(),
+            #[cfg(feature = "unstable_session_additional_directories")]
+            additional_directories: vec![],
             mcp_servers: vec![],
             meta: None,
         }
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Additional workspace roots to activate for this session. Each path must be absolute.
+    #[cfg(feature = "unstable_session_additional_directories")]
+    #[must_use]
+    pub fn additional_directories(mut self, additional_directories: Vec<PathBuf>) -> Self {
+        self.additional_directories = additional_directories;
+        self
     }
 
     /// List of MCP servers to connect to for this session.
@@ -1580,6 +1700,17 @@ pub struct ListSessionsRequest {
     /// Filter sessions by working directory. Must be an absolute path.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cwd: Option<PathBuf>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Filter sessions by the exact ordered additional workspace roots. Each path must be absolute.
+    ///
+    /// This filter applies only when the field is present and non-empty. When
+    /// omitted or empty, no additional-root filter is applied.
+    #[cfg(feature = "unstable_session_additional_directories")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub additional_directories: Vec<PathBuf>,
     /// Opaque cursor token from a previous response's nextCursor field for cursor-based pagination
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cursor: Option<String>,
@@ -1602,6 +1733,18 @@ impl ListSessionsRequest {
     #[must_use]
     pub fn cwd(mut self, cwd: impl IntoOption<PathBuf>) -> Self {
         self.cwd = cwd.into_option();
+        self
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Filter sessions by the exact ordered additional workspace roots. Each path must be absolute.
+    #[cfg(feature = "unstable_session_additional_directories")]
+    #[must_use]
+    pub fn additional_directories(mut self, additional_directories: Vec<PathBuf>) -> Self {
+        self.additional_directories = additional_directories;
         self
     }
 
@@ -1682,6 +1825,17 @@ pub struct SessionInfo {
     pub session_id: SessionId,
     /// The working directory for this session. Must be an absolute path.
     pub cwd: PathBuf,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Authoritative ordered additional workspace roots for this session. Each path must be absolute.
+    ///
+    /// When omitted or empty, there are no additional roots for the session.
+    #[cfg(feature = "unstable_session_additional_directories")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub additional_directories: Vec<PathBuf>,
+
     /// Human-readable title for the session
     #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
@@ -1703,10 +1857,24 @@ impl SessionInfo {
         Self {
             session_id: session_id.into(),
             cwd: cwd.into(),
+            #[cfg(feature = "unstable_session_additional_directories")]
+            additional_directories: vec![],
             title: None,
             updated_at: None,
             meta: None,
         }
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Authoritative ordered additional workspace roots for this session. Each path must be absolute.
+    #[cfg(feature = "unstable_session_additional_directories")]
+    #[must_use]
+    pub fn additional_directories(mut self, additional_directories: Vec<PathBuf>) -> Self {
+        self.additional_directories = additional_directories;
+        self
     }
 
     /// Human-readable title for the session
@@ -3660,6 +3828,18 @@ pub struct AgentCapabilities {
     #[cfg(feature = "unstable_llm_providers")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub providers: Option<ProvidersCapabilities>,
+    /// NES (Next Edit Suggestions) capabilities supported by the agent.
+    #[cfg(feature = "unstable_nes")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub nes: Option<NesCapabilities>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// The position encoding selected by the agent from the client's supported encodings.
+    #[cfg(feature = "unstable_nes")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub position_encoding: Option<PositionEncodingKind>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -3727,6 +3907,27 @@ impl AgentCapabilities {
         self
     }
 
+    /// NES (Next Edit Suggestions) capabilities supported by the agent.
+    #[cfg(feature = "unstable_nes")]
+    #[must_use]
+    pub fn nes(mut self, nes: impl IntoOption<NesCapabilities>) -> Self {
+        self.nes = nes.into_option();
+        self
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// The position encoding selected by the agent from the client's supported encodings.
+    #[cfg(feature = "unstable_nes")]
+    #[must_use]
+    pub fn position_encoding(
+        mut self,
+        position_encoding: impl IntoOption<PositionEncodingKind>,
+    ) -> Self {
+        self.position_encoding = position_encoding.into_option();
+        self
+    }
+
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -3788,11 +3989,20 @@ impl ProvidersCapabilities {
 ///
 /// See protocol docs: [Session Capabilities](https://agentclientprotocol.com/protocol/initialization#session-capabilities)
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SessionCapabilities {
     /// Whether the agent supports `session/list`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub list: Option<SessionListCapabilities>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Whether the agent supports `additionalDirectories` on supported session lifecycle requests and `session/list`.
+    #[cfg(feature = "unstable_session_additional_directories")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub additional_directories: Option<SessionAdditionalDirectoriesCapabilities>,
     /// **UNSTABLE**
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -3836,6 +4046,21 @@ impl SessionCapabilities {
     #[must_use]
     pub fn list(mut self, list: impl IntoOption<SessionListCapabilities>) -> Self {
         self.list = list.into_option();
+        self
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Whether the agent supports `additionalDirectories` on supported session lifecycle requests and `session/list`.
+    #[cfg(feature = "unstable_session_additional_directories")]
+    #[must_use]
+    pub fn additional_directories(
+        mut self,
+        additional_directories: impl IntoOption<SessionAdditionalDirectoriesCapabilities>,
+    ) -> Self {
+        self.additional_directories = additional_directories.into_option();
         self
     }
 
@@ -3895,6 +4120,47 @@ impl SessionListCapabilities {
     pub fn new() -> Self {
         Self::default()
     }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Capabilities for additional session directories support.
+///
+/// By supplying `{}` it means that the agent supports the `additionalDirectories` field on
+/// supported session lifecycle requests and `session/list`.
+#[cfg(feature = "unstable_session_additional_directories")]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct SessionAdditionalDirectoriesCapabilities {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_additional_directories")]
+impl SessionAdditionalDirectoriesCapabilities {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -4205,6 +4471,36 @@ pub struct AgentMethodNames {
     /// Method for logging out of an authenticated session.
     #[cfg(feature = "unstable_logout")]
     pub logout: &'static str,
+    /// Method for starting an NES session.
+    #[cfg(feature = "unstable_nes")]
+    pub nes_start: &'static str,
+    /// Method for requesting a suggestion.
+    #[cfg(feature = "unstable_nes")]
+    pub nes_suggest: &'static str,
+    /// Notification for accepting a suggestion.
+    #[cfg(feature = "unstable_nes")]
+    pub nes_accept: &'static str,
+    /// Notification for rejecting a suggestion.
+    #[cfg(feature = "unstable_nes")]
+    pub nes_reject: &'static str,
+    /// Method for closing an NES session.
+    #[cfg(feature = "unstable_nes")]
+    pub nes_close: &'static str,
+    /// Notification for document open events.
+    #[cfg(feature = "unstable_nes")]
+    pub document_did_open: &'static str,
+    /// Notification for document change events.
+    #[cfg(feature = "unstable_nes")]
+    pub document_did_change: &'static str,
+    /// Notification for document close events.
+    #[cfg(feature = "unstable_nes")]
+    pub document_did_close: &'static str,
+    /// Notification for document save events.
+    #[cfg(feature = "unstable_nes")]
+    pub document_did_save: &'static str,
+    /// Notification for document focus events.
+    #[cfg(feature = "unstable_nes")]
+    pub document_did_focus: &'static str,
 }
 
 /// Constant containing all agent method names.
@@ -4234,6 +4530,26 @@ pub const AGENT_METHOD_NAMES: AgentMethodNames = AgentMethodNames {
     session_close: SESSION_CLOSE_METHOD_NAME,
     #[cfg(feature = "unstable_logout")]
     logout: LOGOUT_METHOD_NAME,
+    #[cfg(feature = "unstable_nes")]
+    nes_start: NES_START_METHOD_NAME,
+    #[cfg(feature = "unstable_nes")]
+    nes_suggest: NES_SUGGEST_METHOD_NAME,
+    #[cfg(feature = "unstable_nes")]
+    nes_accept: NES_ACCEPT_METHOD_NAME,
+    #[cfg(feature = "unstable_nes")]
+    nes_reject: NES_REJECT_METHOD_NAME,
+    #[cfg(feature = "unstable_nes")]
+    nes_close: NES_CLOSE_METHOD_NAME,
+    #[cfg(feature = "unstable_nes")]
+    document_did_open: DOCUMENT_DID_OPEN_METHOD_NAME,
+    #[cfg(feature = "unstable_nes")]
+    document_did_change: DOCUMENT_DID_CHANGE_METHOD_NAME,
+    #[cfg(feature = "unstable_nes")]
+    document_did_close: DOCUMENT_DID_CLOSE_METHOD_NAME,
+    #[cfg(feature = "unstable_nes")]
+    document_did_save: DOCUMENT_DID_SAVE_METHOD_NAME,
+    #[cfg(feature = "unstable_nes")]
+    document_did_focus: DOCUMENT_DID_FOCUS_METHOD_NAME,
 };
 
 /// Method name for the initialize request.
@@ -4445,6 +4761,30 @@ pub enum ClientRequest {
     ///
     /// Select a model for a given session.
     SetSessionModelRequest(SetSessionModelRequest),
+    #[cfg(feature = "unstable_nes")]
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Starts an NES session.
+    StartNesRequest(StartNesRequest),
+    #[cfg(feature = "unstable_nes")]
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Requests a code suggestion.
+    SuggestNesRequest(SuggestNesRequest),
+    #[cfg(feature = "unstable_nes")]
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Closes an active NES session and frees up any resources associated with it.
+    ///
+    /// The agent must cancel any ongoing work and then free up any resources
+    /// associated with the NES session.
+    CloseNesRequest(CloseNesRequest),
     /// Handles extension method requests from the client.
     ///
     /// Extension methods provide a way to add custom functionality while maintaining
@@ -4483,6 +4823,12 @@ impl ClientRequest {
             Self::PromptRequest(_) => AGENT_METHOD_NAMES.session_prompt,
             #[cfg(feature = "unstable_session_model")]
             Self::SetSessionModelRequest(_) => AGENT_METHOD_NAMES.session_set_model,
+            #[cfg(feature = "unstable_nes")]
+            Self::StartNesRequest(_) => AGENT_METHOD_NAMES.nes_start,
+            #[cfg(feature = "unstable_nes")]
+            Self::SuggestNesRequest(_) => AGENT_METHOD_NAMES.nes_suggest,
+            #[cfg(feature = "unstable_nes")]
+            Self::CloseNesRequest(_) => AGENT_METHOD_NAMES.nes_close,
             Self::ExtMethodRequest(ext_request) => &ext_request.method,
         }
     }
@@ -4524,6 +4870,12 @@ pub enum AgentResponse {
     PromptResponse(PromptResponse),
     #[cfg(feature = "unstable_session_model")]
     SetSessionModelResponse(#[serde(default)] SetSessionModelResponse),
+    #[cfg(feature = "unstable_nes")]
+    StartNesResponse(StartNesResponse),
+    #[cfg(feature = "unstable_nes")]
+    SuggestNesResponse(SuggestNesResponse),
+    #[cfg(feature = "unstable_nes")]
+    CloseNesResponse(#[serde(default)] CloseNesResponse),
     ExtMethodResponse(ExtResponse),
 }
 
@@ -4550,6 +4902,41 @@ pub enum ClientNotification {
     ///
     /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-turn#cancellation)
     CancelNotification(CancelNotification),
+    #[cfg(feature = "unstable_nes")]
+    /// **UNSTABLE**
+    ///
+    /// Notification sent when a file is opened in the editor.
+    DidOpenDocumentNotification(DidOpenDocumentNotification),
+    #[cfg(feature = "unstable_nes")]
+    /// **UNSTABLE**
+    ///
+    /// Notification sent when a file is edited.
+    DidChangeDocumentNotification(DidChangeDocumentNotification),
+    #[cfg(feature = "unstable_nes")]
+    /// **UNSTABLE**
+    ///
+    /// Notification sent when a file is closed.
+    DidCloseDocumentNotification(DidCloseDocumentNotification),
+    #[cfg(feature = "unstable_nes")]
+    /// **UNSTABLE**
+    ///
+    /// Notification sent when a file is saved.
+    DidSaveDocumentNotification(DidSaveDocumentNotification),
+    #[cfg(feature = "unstable_nes")]
+    /// **UNSTABLE**
+    ///
+    /// Notification sent when a file becomes the active editor tab.
+    DidFocusDocumentNotification(DidFocusDocumentNotification),
+    #[cfg(feature = "unstable_nes")]
+    /// **UNSTABLE**
+    ///
+    /// Notification sent when a suggestion is accepted.
+    AcceptNesNotification(AcceptNesNotification),
+    #[cfg(feature = "unstable_nes")]
+    /// **UNSTABLE**
+    ///
+    /// Notification sent when a suggestion is rejected.
+    RejectNesNotification(RejectNesNotification),
     /// Handles extension notifications from the client.
     ///
     /// Extension notifications provide a way to send one-way messages for custom functionality
@@ -4565,6 +4952,20 @@ impl ClientNotification {
     pub fn method(&self) -> &str {
         match self {
             Self::CancelNotification(_) => AGENT_METHOD_NAMES.session_cancel,
+            #[cfg(feature = "unstable_nes")]
+            Self::DidOpenDocumentNotification(_) => AGENT_METHOD_NAMES.document_did_open,
+            #[cfg(feature = "unstable_nes")]
+            Self::DidChangeDocumentNotification(_) => AGENT_METHOD_NAMES.document_did_change,
+            #[cfg(feature = "unstable_nes")]
+            Self::DidCloseDocumentNotification(_) => AGENT_METHOD_NAMES.document_did_close,
+            #[cfg(feature = "unstable_nes")]
+            Self::DidSaveDocumentNotification(_) => AGENT_METHOD_NAMES.document_did_save,
+            #[cfg(feature = "unstable_nes")]
+            Self::DidFocusDocumentNotification(_) => AGENT_METHOD_NAMES.document_did_focus,
+            #[cfg(feature = "unstable_nes")]
+            Self::AcceptNesNotification(_) => AGENT_METHOD_NAMES.nes_accept,
+            #[cfg(feature = "unstable_nes")]
+            Self::RejectNesNotification(_) => AGENT_METHOD_NAMES.nes_reject,
             Self::ExtNotification(ext_notification) => &ext_notification.method,
         }
     }
@@ -4856,6 +5257,106 @@ mod test_serialization {
 
         let deserialized: AuthMethod = serde_json::from_value(json).unwrap();
         assert!(matches!(deserialized, AuthMethod::Agent(_)));
+    }
+
+    #[cfg(feature = "unstable_session_additional_directories")]
+    #[test]
+    fn test_session_additional_directories_serialization() {
+        assert_eq!(
+            serde_json::to_value(NewSessionRequest::new("/home/user/project")).unwrap(),
+            json!({
+                "cwd": "/home/user/project",
+                "mcpServers": []
+            })
+        );
+        assert_eq!(
+            serde_json::to_value(
+                NewSessionRequest::new("/home/user/project").additional_directories(vec![
+                    PathBuf::from("/home/user/shared-lib"),
+                    PathBuf::from("/home/user/product-docs"),
+                ])
+            )
+            .unwrap(),
+            json!({
+                "cwd": "/home/user/project",
+                "additionalDirectories": [
+                    "/home/user/shared-lib",
+                    "/home/user/product-docs"
+                ],
+                "mcpServers": []
+            })
+        );
+        assert_eq!(
+            serde_json::to_value(
+                ListSessionsRequest::new().additional_directories(Vec::<PathBuf>::new())
+            )
+            .unwrap(),
+            json!({})
+        );
+        assert_eq!(
+            serde_json::to_value(SessionInfo::new("sess_abc123", "/home/user/project")).unwrap(),
+            json!({
+                "sessionId": "sess_abc123",
+                "cwd": "/home/user/project"
+            })
+        );
+        assert_eq!(
+            serde_json::to_value(
+                SessionInfo::new("sess_abc123", "/home/user/project").additional_directories(vec![
+                    PathBuf::from("/home/user/shared-lib"),
+                    PathBuf::from("/home/user/product-docs"),
+                ])
+            )
+            .unwrap(),
+            json!({
+                "sessionId": "sess_abc123",
+                "cwd": "/home/user/project",
+                "additionalDirectories": [
+                    "/home/user/shared-lib",
+                    "/home/user/product-docs"
+                ]
+            })
+        );
+        assert_eq!(
+            serde_json::from_value::<SessionInfo>(json!({
+                "sessionId": "sess_abc123",
+                "cwd": "/home/user/project"
+            }))
+            .unwrap()
+            .additional_directories,
+            Vec::<PathBuf>::new()
+        );
+
+        assert_eq!(
+            serde_json::from_value::<ListSessionsRequest>(json!({}))
+                .unwrap()
+                .additional_directories,
+            Vec::<PathBuf>::new()
+        );
+
+        assert_eq!(
+            serde_json::from_value::<ListSessionsRequest>(json!({
+                "additionalDirectories": []
+            }))
+            .unwrap()
+            .additional_directories,
+            Vec::<PathBuf>::new()
+        );
+    }
+
+    #[cfg(feature = "unstable_session_additional_directories")]
+    #[test]
+    fn test_session_additional_directories_capabilities_serialization() {
+        assert_eq!(
+            serde_json::to_value(
+                SessionCapabilities::new()
+                    .additional_directories(SessionAdditionalDirectoriesCapabilities::new())
+            )
+            .unwrap(),
+            json!({
+                "additionalDirectories": {}
+            })
+        );
     }
 
     #[cfg(feature = "unstable_auth_methods")]

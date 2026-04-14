@@ -29,11 +29,11 @@ The client inspects these declarations and provides only what was requested, min
 
 ### Capability advertisement
 
-During `initialize`, the agent includes a `nes` field in its capabilities:
+During `initialize`, the agent includes a `nes` field in `agentCapabilities`:
 
 ```json
 {
-  "capabilities": {
+  "agentCapabilities": {
     "nes": {
       "events": {
         "document": {
@@ -69,26 +69,25 @@ All fields under `events` and `context` are optional — an agent advertises onl
 
 #### Client capabilities
 
-The **client** advertises its own NES-related capabilities in the `initialize` request. Currently, the client can declare which well-known IDE actions it supports by listing their IDs. The agent reads these and may later include `"action"` kind suggestions that reference them.
+The **client** advertises its own NES-related capabilities in the `initialize` request. The client declares which suggestion kinds it supports beyond the basic `edit` kind. Agents should only suggest kinds that the client has advertised.
 
 ```json
 {
-  "capabilities": {
+  "clientCapabilities": {
     "nes": {
-      "ideActions": {
-        "rename": {},
-        "searchAndReplace": {}
-      }
+      "jump": {},
+      "rename": {},
+      "searchAndReplace": {}
     }
   }
 }
 ```
 
-Each entry in `ideActions` is the ID of a well-known action (see [Well-known IDE actions](#well-known-ide-actions) below). Agents should only suggest actions that the client has advertised.
+Each entry corresponds to a suggestion kind (see [Suggestion kinds](#suggestion-kinds) below). If a kind is absent, the agent must not produce suggestions of that kind.
 
 ### Session lifecycle
 
-If the `nes` capability is present, the client may call `nes/start` to begin an NES session. An NES session is **separate from and independent of** the ACP chat session — it has its own session ID, its own lifecycle, and its own stream of events and requests. A single ACP connection may have any number of active NES sessions alongside any number of chat sessions. The NES session is started and stopped independently via `nes/start`; it does not inherit state from, or share context with, chat sessions.
+If the `nes` capability is present, the client may call `nes/start` to begin an NES session. An NES session is **separate from and independent of** the ACP chat session — it has its own session ID, its own lifecycle, and its own stream of events and requests. A single ACP connection may have any number of active NES sessions alongside any number of chat sessions. The NES session is started via `nes/start` and closed via `nes/close`; it does not inherit state from, or share context with, chat sessions.
 
 The agent can also use the existing `configOptions` mechanism to expose NES-related settings (model selection, debounce preferences, enabled/disabled state, etc.).
 
@@ -106,16 +105,14 @@ Three encoding kinds are supported:
 - `"utf-32"` — character offsets count Unicode code points.
 - `"utf-8"` — character offsets count UTF-8 code units (bytes).
 
-**Negotiation:** The client declares which encodings it supports in the `initialize` request via `general.positionEncodings`, listed in order of preference. The agent selects one from the client's list and declares it in its `initialize` response as `positionEncoding`. If the client omits `positionEncodings`, or the agent omits `positionEncoding` in its response, both sides default to `"utf-16"`.
+**Negotiation:** The client may declare the position encodings it supports in the `initialize` request via `clientCapabilities.positionEncodings`, listed in order of preference. The agent selects one from the client's list and declares it in its `initialize` response as `agentCapabilities.positionEncoding`. If the client omits `positionEncodings`, or the agent omits `positionEncoding` in its response, both sides default to `"utf-16"`.
 
 Client `initialize` request (excerpt):
 
 ```json
 {
-  "capabilities": {
-    "general": {
-      "positionEncodings": ["utf-32", "utf-16"]
-    }
+  "clientCapabilities": {
+    "positionEncodings": ["utf-32", "utf-16"]
   }
 }
 ```
@@ -124,7 +121,7 @@ Agent `initialize` response (excerpt):
 
 ```json
 {
-  "capabilities": {
+  "agentCapabilities": {
     "nes": { ... },
     "positionEncoding": "utf-32"
   }
@@ -135,7 +132,7 @@ The negotiated encoding applies to all `Position` and `Range` values exchanged w
 
 ### Events
 
-Events are fire-and-forget notifications from client to agent. The client sends them only if the corresponding key is present in the agent's advertised `events` capability (e.g. `nes.events.document` for NES).
+Events are fire-and-forget notifications from client to agent. Every event is scoped to the NES session identified by the `sessionId` returned from `nes/start`. The client sends them only if the corresponding key is present in the agent's advertised `events` capability (e.g. `nes.events.document` for NES).
 
 #### `document/didOpen`
 
@@ -146,6 +143,7 @@ Sent when a file is opened in the editor.
   "jsonrpc": "2.0",
   "method": "document/didOpen",
   "params": {
+    "sessionId": "session_abc123",
     "uri": "file:///path/to/file.rs",
     "languageId": "rust",
     "version": 1,
@@ -168,6 +166,7 @@ Sent when a file is edited. Supports two sync modes declared by the agent:
   "jsonrpc": "2.0",
   "method": "document/didChange",
   "params": {
+    "sessionId": "session_abc123",
     "uri": "file:///path/to/file.rs",
     "version": 2,
     "contentChanges": [
@@ -190,6 +189,7 @@ Sent when a file is edited. Supports two sync modes declared by the agent:
   "jsonrpc": "2.0",
   "method": "document/didChange",
   "params": {
+    "sessionId": "session_abc123",
     "uri": "file:///path/to/file.rs",
     "version": 2,
     "contentChanges": [
@@ -210,6 +210,7 @@ Sent when a file is closed.
   "jsonrpc": "2.0",
   "method": "document/didClose",
   "params": {
+    "sessionId": "session_abc123",
     "uri": "file:///path/to/file.rs"
   }
 }
@@ -224,6 +225,7 @@ Sent when a file is saved.
   "jsonrpc": "2.0",
   "method": "document/didSave",
   "params": {
+    "sessionId": "session_abc123",
     "uri": "file:///path/to/file.rs"
   }
 }
@@ -238,6 +240,7 @@ Sent when a file becomes the active editor tab. Unlike `document/didOpen` (which
   "jsonrpc": "2.0",
   "method": "document/didFocus",
   "params": {
+    "sessionId": "session_abc123",
     "uri": "file:///path/to/file.rs",
     "version": 2,
     "position": { "line": 5, "character": 12 },
@@ -261,6 +264,7 @@ The client requests a suggestion by calling `nes/suggest`. Context fields are in
   "id": 42,
   "method": "nes/suggest",
   "params": {
+    "sessionId": "session_abc123",
     "uri": "file:///path/to/file.rs",
     "version": 2,
     "position": { "line": 5, "character": 12 },
@@ -299,15 +303,13 @@ The client requests a suggestion by calling `nes/suggest`. Context fields are in
         {
           "action": "insertChar",
           "uri": "file:///path/to/file.rs",
-          "line": 5,
-          "offset": 12,
+          "position": { "line": 5, "character": 12 },
           "timestampMs": 1719400000000
         },
         {
           "action": "cursorMovement",
           "uri": "file:///path/to/file.rs",
-          "line": 10,
-          "offset": 0,
+          "position": { "line": 10, "character": 0 },
           "timestampMs": 1719400001200
         }
       ],
@@ -354,7 +356,7 @@ The client requests a suggestion by calling `nes/suggest`. Context fields are in
 
 ### Suggestion response
 
-A suggestion is one of three kinds: an **edit** (text changes), a **jump** (navigate to a different file), or an **action** (trigger an IDE action).
+A suggestion is one of several kinds, each identified by the `kind` field. The `edit` kind is always supported; other kinds (`jump`, `rename`, `searchAndReplace`) require the client to advertise support in its capabilities.
 
 **Edit suggestion:**
 
@@ -403,7 +405,7 @@ A suggestion is one of three kinds: an **edit** (text changes), a **jump** (navi
 }
 ```
 
-**Action suggestion:**
+**Rename suggestion:**
 
 ```json
 {
@@ -413,33 +415,47 @@ A suggestion is one of three kinds: an **edit** (text changes), a **jump** (navi
     "suggestions": [
       {
         "id": "sugg_003",
-        "kind": "action",
-        "actionId": "rename",
-        "arguments": {
-          "uri": "file:///path/to/file.rs",
-          "position": { "line": 5, "character": 10 },
-          "newName": "calculateTotal"
-        }
+        "kind": "rename",
+        "uri": "file:///path/to/file.rs",
+        "position": { "line": 5, "character": 10 },
+        "newName": "calculateTotal"
       }
     ]
   }
 }
 ```
 
-Action suggestions reference an IDE action that the client previously advertised in its capabilities:
+**Search-and-replace suggestion:**
 
-- `actionId` — matches an `id` from the client's advertised `ideActions`.
-- `arguments` — matches the parameter schema declared by the client for that action.
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": {
+    "suggestions": [
+      {
+        "id": "sugg_004",
+        "kind": "searchAndReplace",
+        "uri": "file:///path/to/file.rs",
+        "search": "oldFunction",
+        "replace": "newFunction",
+        "isRegex": false
+      }
+    ]
+  }
+}
+```
 
-A response may contain a mix of edit, jump, and action suggestions. The client decides how to present them (e.g. inline ghost text for edits, a navigation hint for jumps).
+A response may contain a mix of suggestion kinds. The client decides how to present them (e.g. inline ghost text for edits, a navigation hint for jumps). Agents must only include suggestion kinds that the client has advertised in its capabilities (except `edit`, which is always supported).
 
 Each suggestion contains:
 
 - `id` — unique identifier for accept/reject tracking.
-- `kind` — `"edit"`, `"jump"`, or `"action"`.
+- `kind` — the suggestion kind (see [Suggestion kinds](#suggestion-kinds) below).
 
 Edit suggestions additionally contain:
 
+- `uri` — the file to edit.
 - `edits` — one or more text edits to apply.
 - `cursorPosition` — optional suggested cursor position after applying edits.
 
@@ -448,10 +464,18 @@ Jump suggestions additionally contain:
 - `uri` — the file to navigate to.
 - `position` — the target position within that file.
 
-Action suggestions additionally contain:
+Rename suggestions additionally contain:
 
-- `actionId` — the IDE action to perform (must match a client-advertised action `id`).
-- `arguments` — action parameters matching the schema from the client's capability.
+- `uri` — the file URI containing the symbol.
+- `position` — the position of the symbol to rename.
+- `newName` — the new name for the symbol.
+
+Search-and-replace suggestions additionally contain:
+
+- `uri` — the file URI to search within. Can be a folder, then operation is performed in all the files in this folder.
+- `search` — the text or pattern to find.
+- `replace` — the replacement text.
+- `isRegex` (`boolean`, optional) — whether `search` is a regular expression. Defaults to `false`.
 
 ### Accept / Reject
 
@@ -460,6 +484,7 @@ Action suggestions additionally contain:
   "jsonrpc": "2.0",
   "method": "nes/accept",
   "params": {
+    "sessionId": "session_abc123",
     "id": "sugg_001"
   }
 }
@@ -470,6 +495,7 @@ Action suggestions additionally contain:
   "jsonrpc": "2.0",
   "method": "nes/reject",
   "params": {
+    "sessionId": "session_abc123",
     "id": "sugg_001",
     "reason": "rejected"
   }
@@ -520,10 +546,12 @@ Response:
   "jsonrpc": "2.0",
   "id": 1,
   "result": {
-    "sessionId": "nes_abc123"
+    "sessionId": "session_abc123"
   }
 }
 ```
+
+The returned `sessionId` scopes all subsequent NES events, requests, and notifications for that session.
 
 #### Error handling
 
@@ -534,7 +562,7 @@ The agent may reject `nes/start` with an error. In particular, agents that requi
   "jsonrpc": "2.0",
   "id": 1,
   "error": {
-    "code": -32001,
+    "code": -32000,
     "message": "Authentication required",
     "data": {
       "reason": "auth_required"
@@ -545,28 +573,41 @@ The agent may reject `nes/start` with an error. In particular, agents that requi
 
 Clients **must** be prepared to handle `auth_required` errors on `nes/start`. The recommended behavior is to prompt the user to authenticate (e.g. sign in or provide credentials) and retry the `nes/start` call after authentication succeeds. Clients should not silently ignore this error or assume NES is unavailable — the agent may be fully functional once the user authenticates.
 
-### Well-known IDE actions
+### NES session close
 
-The following actions are well-known and have standardized parameter schemas. Clients that support these actions should use the IDs and parameter shapes defined here.
+The client closes an NES session by calling `nes/close`. The agent **must** cancel any ongoing work related to the NES session and free up any resources associated with it.
 
-**`rename`** — Rename a symbol across the workspace.
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "nes/close",
+  "params": {
+    "sessionId": "session_abc123"
+  }
+}
+```
 
-Parameters:
+Response:
 
-- `uri` (`string`) — the file URI containing the symbol.
-- `position` (`Position`) — the position of the symbol to rename.
-- `newName` (`string`) — the new name for the symbol.
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {}
+}
+```
 
-**`searchAndReplace`** — Search and replace text within a file.
+### Suggestion kinds
 
-Parameters:
+The `kind` field in each suggestion identifies its type. The following kinds are defined:
 
-- `uri` (`string`) — the file URI to search within.
-- `search` (`string`) — the text or pattern to find.
-- `replace` (`string`) — the replacement text.
-- `isRegex` (`boolean`, optional) — whether `search` is a regular expression. Defaults to `false`.
+- **`edit`** — A text edit suggestion. Always supported; does not require a client capability.
+- **`jump`** — Navigate to a different file/position. Requires `jump` in client capabilities.
+- **`rename`** — Rename a symbol across the workspace. Requires `rename` in client capabilities.
+- **`searchAndReplace`** — Search and replace text within a file/folder. Requires `searchAndReplace` in client capabilities.
 
-Additional well-known actions may be added to the protocol in the future. Agents should only suggest actions whose `id` matches an entry the client has advertised.
+Additional suggestion kinds may be added to the protocol in the future. Agents must only produce suggestions whose `kind` the client has advertised (except `edit`, which is always supported).
 
 ### Config options
 

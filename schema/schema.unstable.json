@@ -1,5 +1,31 @@
 {
   "$defs": {
+    "AcceptNesNotification": {
+      "description": "Notification sent when a suggestion is accepted.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "id": {
+          "description": "The ID of the accepted suggestion.",
+          "type": "string"
+        },
+        "sessionId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ],
+          "description": "The session ID for this notification."
+        }
+      },
+      "required": ["sessionId", "id"],
+      "type": "object",
+      "x-method": "nes/accept",
+      "x-side": "agent"
+    },
     "AgentAuthCapabilities": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAuthentication-related capabilities supported by the agent.",
       "properties": {
@@ -55,6 +81,28 @@
             "sse": false
           },
           "description": "MCP capabilities supported by the agent."
+        },
+        "nes": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "NES (Next Edit Suggestions) capabilities supported by the agent."
+        },
+        "positionEncoding": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PositionEncodingKind"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nThe position encoding selected by the agent from the client's supported encodings."
         },
         "promptCapabilities": {
           "allOf": [
@@ -112,11 +160,11 @@
                 {
                   "allOf": [
                     {
-                      "$ref": "#/$defs/ElicitationCompleteNotification"
+                      "$ref": "#/$defs/CompleteElicitationNotification"
                     }
                   ],
                   "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNotification that a URL-based elicitation has completed.",
-                  "title": "ElicitationCompleteNotification"
+                  "title": "CompleteElicitationNotification"
                 },
                 {
                   "allOf": [
@@ -227,11 +275,11 @@
                 {
                   "allOf": [
                     {
-                      "$ref": "#/$defs/ElicitationRequest"
+                      "$ref": "#/$defs/CreateElicitationRequest"
                     }
                   ],
                   "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequests structured user input via a form or URL.",
-                  "title": "ElicitationRequest"
+                  "title": "CreateElicitationRequest"
                 },
                 {
                   "allOf": [
@@ -391,6 +439,30 @@
                     }
                   ],
                   "title": "SetSessionModelResponse"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/StartNesResponse"
+                    }
+                  ],
+                  "title": "StartNesResponse"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/SuggestNesResponse"
+                    }
+                  ],
+                  "title": "SuggestNesResponse"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/CloseNesResponse"
+                    }
+                  ],
+                  "title": "CloseNesResponse"
                 },
                 {
                   "allOf": [
@@ -885,10 +957,72 @@
           },
           "description": "File system capabilities supported by the client.\nDetermines which file operations the agent can request."
         },
+        "nes": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ClientNesCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNES (Next Edit Suggestions) capabilities supported by the client."
+        },
+        "positionEncodings": {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nThe position encodings supported by the client, in order of preference.",
+          "items": {
+            "$ref": "#/$defs/PositionEncodingKind"
+          },
+          "type": "array"
+        },
         "terminal": {
           "default": false,
           "description": "Whether the Client support all `terminal/*` methods.",
           "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "ClientNesCapabilities": {
+      "description": "NES capabilities advertised by the client during initialization.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "jump": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesJumpCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Whether the client supports the `jump` suggestion kind."
+        },
+        "rename": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesRenameCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Whether the client supports the `rename` suggestion kind."
+        },
+        "searchAndReplace": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesSearchAndReplaceCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Whether the client supports the `searchAndReplace` suggestion kind."
         }
       },
       "type": "object"
@@ -910,6 +1044,69 @@
                   ],
                   "description": "Cancels ongoing operations for a session.\n\nThis is a notification sent by the client to cancel an ongoing prompt turn.\n\nUpon receiving this notification, the Agent SHOULD:\n- Stop all language model requests as soon as possible\n- Abort all tool call invocations in progress\n- Send any pending `session/update` notifications\n- Respond to the original `session/prompt` request with `StopReason::Cancelled`\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-turn#cancellation)",
                   "title": "CancelNotification"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/DidOpenDocumentNotification"
+                    }
+                  ],
+                  "description": "**UNSTABLE**\n\nNotification sent when a file is opened in the editor.",
+                  "title": "DidOpenDocumentNotification"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/DidChangeDocumentNotification"
+                    }
+                  ],
+                  "description": "**UNSTABLE**\n\nNotification sent when a file is edited.",
+                  "title": "DidChangeDocumentNotification"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/DidCloseDocumentNotification"
+                    }
+                  ],
+                  "description": "**UNSTABLE**\n\nNotification sent when a file is closed.",
+                  "title": "DidCloseDocumentNotification"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/DidSaveDocumentNotification"
+                    }
+                  ],
+                  "description": "**UNSTABLE**\n\nNotification sent when a file is saved.",
+                  "title": "DidSaveDocumentNotification"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/DidFocusDocumentNotification"
+                    }
+                  ],
+                  "description": "**UNSTABLE**\n\nNotification sent when a file becomes the active editor tab.",
+                  "title": "DidFocusDocumentNotification"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/AcceptNesNotification"
+                    }
+                  ],
+                  "description": "**UNSTABLE**\n\nNotification sent when a suggestion is accepted.",
+                  "title": "AcceptNesNotification"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/RejectNesNotification"
+                    }
+                  ],
+                  "description": "**UNSTABLE**\n\nNotification sent when a suggestion is rejected.",
+                  "title": "RejectNesNotification"
                 },
                 {
                   "allOf": [
@@ -1092,6 +1289,33 @@
                 {
                   "allOf": [
                     {
+                      "$ref": "#/$defs/StartNesRequest"
+                    }
+                  ],
+                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nStarts an NES session.",
+                  "title": "StartNesRequest"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/SuggestNesRequest"
+                    }
+                  ],
+                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequests a code suggestion.",
+                  "title": "SuggestNesRequest"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/CloseNesRequest"
+                    }
+                  ],
+                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCloses an active NES session and frees up any resources associated with it.\n\nThe agent must cancel any ongoing work and then free up any resources\nassociated with the NES session.",
+                  "title": "CloseNesRequest"
+                },
+                {
+                  "allOf": [
+                    {
                       "$ref": "#/$defs/ExtRequest"
                     }
                   ],
@@ -1187,10 +1411,10 @@
                 {
                   "allOf": [
                     {
-                      "$ref": "#/$defs/ElicitationResponse"
+                      "$ref": "#/$defs/CreateElicitationResponse"
                     }
                   ],
-                  "title": "ElicitationResponse"
+                  "title": "CreateElicitationResponse"
                 },
                 {
                   "allOf": [
@@ -1223,6 +1447,41 @@
         }
       ],
       "x-docs-ignore": true
+    },
+    "CloseNesRequest": {
+      "description": "Request to close an NES session.\n\nThe agent **must** cancel any ongoing work related to the NES session\nand then free up any resources associated with the session.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "sessionId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ],
+          "description": "The ID of the NES session to close."
+        }
+      },
+      "required": ["sessionId"],
+      "type": "object",
+      "x-method": "nes/close",
+      "x-side": "agent"
+    },
+    "CloseNesResponse": {
+      "description": "Response from closing an NES session.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object",
+      "x-method": "nes/close",
+      "x-side": "agent"
     },
     "CloseSessionRequest": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for closing an active session.\n\nIf supported, the agent **must** cancel any ongoing work related to the session\n(treat it as if `session/cancel` was called) and then free up any resources\nassociated with the session.\n\nOnly available if the Agent supports the `session.close` capability.",
@@ -1258,6 +1517,28 @@
       "type": "object",
       "x-method": "session/close",
       "x-side": "agent"
+    },
+    "CompleteElicitationNotification": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNotification sent by the agent when a URL-based elicitation is complete.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "elicitationId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ElicitationId"
+            }
+          ],
+          "description": "The ID of the elicitation that completed."
+        }
+      },
+      "required": ["elicitationId"],
+      "type": "object",
+      "x-method": "elicitation/complete",
+      "x-side": "client"
     },
     "ConfigOptionUpdate": {
       "description": "Session configuration options have been updated.",
@@ -1426,6 +1707,117 @@
       "required": ["amount", "currency"],
       "type": "object"
     },
+    "CreateElicitationRequest": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest from the agent to elicit structured user input.\n\nThe agent sends this to the client to request information from the user,\neither via a form or by directing them to a URL.\nElicitations are tied to a session (optionally a tool call) or a request.",
+      "discriminator": {
+        "propertyName": "mode"
+      },
+      "oneOf": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ElicitationFormMode"
+            }
+          ],
+          "description": "Form-based elicitation where the client renders a form from the provided schema.",
+          "properties": {
+            "mode": {
+              "const": "form",
+              "type": "string"
+            }
+          },
+          "required": ["mode"],
+          "type": "object"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ElicitationUrlMode"
+            }
+          ],
+          "description": "URL-based elicitation where the client directs the user to a URL.",
+          "properties": {
+            "mode": {
+              "const": "url",
+              "type": "string"
+            }
+          },
+          "required": ["mode"],
+          "type": "object"
+        }
+      ],
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "message": {
+          "description": "A human-readable message describing what input is needed.",
+          "type": "string"
+        }
+      },
+      "required": ["message"],
+      "type": "object",
+      "x-method": "elicitation/create",
+      "x-side": "client"
+    },
+    "CreateElicitationResponse": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nResponse from the client to an elicitation request.",
+      "discriminator": {
+        "propertyName": "action"
+      },
+      "oneOf": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ElicitationAcceptAction"
+            }
+          ],
+          "description": "The user accepted and provided content.",
+          "properties": {
+            "action": {
+              "const": "accept",
+              "type": "string"
+            }
+          },
+          "required": ["action"],
+          "type": "object"
+        },
+        {
+          "description": "The user declined the elicitation.",
+          "properties": {
+            "action": {
+              "const": "decline",
+              "type": "string"
+            }
+          },
+          "required": ["action"],
+          "type": "object"
+        },
+        {
+          "description": "The elicitation was cancelled.",
+          "properties": {
+            "action": {
+              "const": "cancel",
+              "type": "string"
+            }
+          },
+          "required": ["action"],
+          "type": "object"
+        }
+      ],
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object",
+      "x-method": "elicitation/create",
+      "x-side": "client"
+    },
     "CreateTerminalRequest": {
       "description": "Request to create a new terminal and execute a command.",
       "properties": {
@@ -1514,6 +1906,182 @@
       "required": ["currentModeId"],
       "type": "object"
     },
+    "DidChangeDocumentNotification": {
+      "description": "Notification sent when a file is edited.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "contentChanges": {
+          "description": "The content changes.",
+          "items": {
+            "$ref": "#/$defs/TextDocumentContentChangeEvent"
+          },
+          "type": "array"
+        },
+        "sessionId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ],
+          "description": "The session ID for this notification."
+        },
+        "uri": {
+          "description": "The URI of the changed document.",
+          "type": "string"
+        },
+        "version": {
+          "description": "The new version number of the document.",
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": ["sessionId", "uri", "version", "contentChanges"],
+      "type": "object",
+      "x-method": "document/didChange",
+      "x-side": "agent"
+    },
+    "DidCloseDocumentNotification": {
+      "description": "Notification sent when a file is closed.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "sessionId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ],
+          "description": "The session ID for this notification."
+        },
+        "uri": {
+          "description": "The URI of the closed document.",
+          "type": "string"
+        }
+      },
+      "required": ["sessionId", "uri"],
+      "type": "object",
+      "x-method": "document/didClose",
+      "x-side": "agent"
+    },
+    "DidFocusDocumentNotification": {
+      "description": "Notification sent when a file becomes the active editor tab.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "position": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/Position"
+            }
+          ],
+          "description": "The current cursor position."
+        },
+        "sessionId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ],
+          "description": "The session ID for this notification."
+        },
+        "uri": {
+          "description": "The URI of the focused document.",
+          "type": "string"
+        },
+        "version": {
+          "description": "The version number of the document.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "visibleRange": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/Range"
+            }
+          ],
+          "description": "The portion of the file currently visible in the editor viewport."
+        }
+      },
+      "required": ["sessionId", "uri", "version", "position", "visibleRange"],
+      "type": "object",
+      "x-method": "document/didFocus",
+      "x-side": "agent"
+    },
+    "DidOpenDocumentNotification": {
+      "description": "Notification sent when a file is opened in the editor.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "languageId": {
+          "description": "The language identifier of the document (e.g., \"rust\", \"python\").",
+          "type": "string"
+        },
+        "sessionId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ],
+          "description": "The session ID for this notification."
+        },
+        "text": {
+          "description": "The full text content of the document.",
+          "type": "string"
+        },
+        "uri": {
+          "description": "The URI of the opened document.",
+          "type": "string"
+        },
+        "version": {
+          "description": "The version number of the document.",
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": ["sessionId", "uri", "languageId", "version", "text"],
+      "type": "object",
+      "x-method": "document/didOpen",
+      "x-side": "agent"
+    },
+    "DidSaveDocumentNotification": {
+      "description": "Notification sent when a file is saved.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "sessionId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ],
+          "description": "The session ID for this notification."
+        },
+        "uri": {
+          "description": "The URI of the saved document.",
+          "type": "string"
+        }
+      },
+      "required": ["sessionId", "uri"],
+      "type": "object",
+      "x-method": "document/didSave",
+      "x-side": "agent"
+    },
     "Diff": {
       "description": "A diff representing file modifications.\n\nShows changes to files in a format suitable for display in the client UI.\n\nSee protocol docs: [Content](https://agentclientprotocol.com/protocol/tool-calls#content)",
       "properties": {
@@ -1582,52 +2150,6 @@
       },
       "type": "object"
     },
-    "ElicitationAction": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nThe user's action in response to an elicitation.",
-      "discriminator": {
-        "propertyName": "action"
-      },
-      "oneOf": [
-        {
-          "allOf": [
-            {
-              "$ref": "#/$defs/ElicitationAcceptAction"
-            }
-          ],
-          "description": "The user accepted and provided content.",
-          "properties": {
-            "action": {
-              "const": "accept",
-              "type": "string"
-            }
-          },
-          "required": ["action"],
-          "type": "object"
-        },
-        {
-          "description": "The user declined the elicitation.",
-          "properties": {
-            "action": {
-              "const": "decline",
-              "type": "string"
-            }
-          },
-          "required": ["action"],
-          "type": "object"
-        },
-        {
-          "description": "The elicitation was cancelled.",
-          "properties": {
-            "action": {
-              "const": "cancel",
-              "type": "string"
-            }
-          },
-          "required": ["action"],
-          "type": "object"
-        }
-      ]
-    },
     "ElicitationCapabilities": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nElicitation capabilities supported by the client.",
       "properties": {
@@ -1660,28 +2182,6 @@
         }
       },
       "type": "object"
-    },
-    "ElicitationCompleteNotification": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNotification sent by the agent when a URL-based elicitation is complete.",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"]
-        },
-        "elicitationId": {
-          "allOf": [
-            {
-              "$ref": "#/$defs/ElicitationId"
-            }
-          ],
-          "description": "The ID of the elicitation that completed."
-        }
-      },
-      "required": ["elicitationId"],
-      "type": "object",
-      "x-method": "session/elicitation/complete",
-      "x-side": "client"
     },
     "ElicitationContentValue": {
       "anyOf": [
@@ -1724,6 +2224,26 @@
       "type": "object"
     },
     "ElicitationFormMode": {
+      "anyOf": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ElicitationSessionScope"
+            }
+          ],
+          "description": "Tied to a session, optionally to a specific tool call within that session.",
+          "title": "Session"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ElicitationRequestScope"
+            }
+          ],
+          "description": "Tied to a specific JSON-RPC request outside of a session\n(e.g., during auth/configuration phases before any session is started).",
+          "title": "Request"
+        }
+      ],
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nForm-based elicitation mode where the client renders a form from the provided schema.",
       "properties": {
         "requestedSchema": {
@@ -1830,90 +2350,20 @@
         }
       ]
     },
-    "ElicitationRequest": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest from the agent to elicit structured user input.\n\nThe agent sends this to the client to request information from the user,\neither via a form or by directing them to a URL.",
-      "discriminator": {
-        "propertyName": "mode"
-      },
-      "oneOf": [
-        {
-          "allOf": [
-            {
-              "$ref": "#/$defs/ElicitationFormMode"
-            }
-          ],
-          "description": "Form-based elicitation where the client renders a form from the provided schema.",
-          "properties": {
-            "mode": {
-              "const": "form",
-              "type": "string"
-            }
-          },
-          "required": ["mode"],
-          "type": "object"
-        },
-        {
-          "allOf": [
-            {
-              "$ref": "#/$defs/ElicitationUrlMode"
-            }
-          ],
-          "description": "URL-based elicitation where the client directs the user to a URL.",
-          "properties": {
-            "mode": {
-              "const": "url",
-              "type": "string"
-            }
-          },
-          "required": ["mode"],
-          "type": "object"
-        }
-      ],
+    "ElicitationRequestScope": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest-scoped elicitation, tied to a specific JSON-RPC request outside of a session\n(e.g., during auth/configuration phases before any session is started).",
       "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"]
-        },
-        "message": {
-          "description": "A human-readable message describing what input is needed.",
-          "type": "string"
-        },
-        "sessionId": {
+        "requestId": {
           "allOf": [
             {
-              "$ref": "#/$defs/SessionId"
+              "$ref": "#/$defs/RequestId"
             }
           ],
-          "description": "The session ID for this request."
+          "description": "The request this elicitation is tied to."
         }
       },
-      "required": ["sessionId", "message"],
-      "type": "object",
-      "x-method": "session/elicitation",
-      "x-side": "client"
-    },
-    "ElicitationResponse": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nResponse from the client to an elicitation request.",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"]
-        },
-        "action": {
-          "allOf": [
-            {
-              "$ref": "#/$defs/ElicitationAction"
-            }
-          ],
-          "description": "The user's action in response to the elicitation."
-        }
-      },
-      "required": ["action"],
-      "type": "object",
-      "x-method": "session/elicitation",
-      "x-side": "client"
+      "required": ["requestId"],
+      "type": "object"
     },
     "ElicitationSchema": {
       "description": "Type-safe elicitation schema for requesting structured user input.\n\nThis represents a JSON Schema object with primitive-typed properties,\nas required by the elicitation specification.",
@@ -1963,6 +2413,32 @@
         }
       ]
     },
+    "ElicitationSessionScope": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSession-scoped elicitation, optionally tied to a specific tool call.\n\nWhen `tool_call_id` is set, the elicitation is tied to a specific tool call.\nThis is useful when an agent receives an elicitation from an MCP server\nduring a tool call and needs to redirect it to the user.",
+      "properties": {
+        "sessionId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ],
+          "description": "The session this elicitation is tied to."
+        },
+        "toolCallId": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ToolCallId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional tool call within the session."
+        }
+      },
+      "required": ["sessionId"],
+      "type": "object"
+    },
     "ElicitationStringType": {
       "description": "Items definition for untitled multi-select enum properties.",
       "oneOf": [
@@ -1985,6 +2461,26 @@
       "type": "object"
     },
     "ElicitationUrlMode": {
+      "anyOf": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ElicitationSessionScope"
+            }
+          ],
+          "description": "Tied to a session, optionally to a specific tool call within that session.",
+          "title": "Session"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ElicitationRequestScope"
+            }
+          ],
+          "description": "Tied to a specific JSON-RPC request outside of a session\n(e.g., during auth/configuration phases before any session is started).",
+          "title": "Request"
+        }
+      ],
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nURL-based elicitation mode where the client directs the user to a URL.",
       "properties": {
         "elicitationId": {
@@ -2218,6 +2714,13 @@
           "additionalProperties": true,
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
+        },
+        "additionalDirectories": {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAdditional workspace roots to activate for this session. Each path must be absolute.\n\nWhen omitted or empty, no additional roots are activated. When non-empty,\nthis is the complete resulting additional-root list for the forked\nsession.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "cwd": {
           "description": "The working directory for this session.",
@@ -2594,6 +3097,13 @@
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
         },
+        "additionalDirectories": {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nFilter sessions by the exact ordered additional workspace roots. Each path must be absolute.\n\nThis filter applies only when the field is present and non-empty. When\nomitted or empty, no additional-root filter is applied.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "cursor": {
           "description": "Opaque cursor token from a previous response's nextCursor field for cursor-based pagination",
           "type": ["string", "null"]
@@ -2674,6 +3184,13 @@
           "additionalProperties": true,
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
+        },
+        "additionalDirectories": {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAdditional workspace roots to activate for this session. Each path must be absolute.\n\nWhen omitted or empty, no additional roots are activated. When non-empty,\nthis is the complete resulting additional-root list for the loaded\nsession.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "cwd": {
           "description": "The working directory for this session.",
@@ -3031,6 +3548,895 @@
       "required": ["items"],
       "type": "object"
     },
+    "NesCapabilities": {
+      "description": "NES capabilities advertised by the agent during initialization.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "context": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesContextCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Context the agent wants attached to each suggestion request."
+        },
+        "events": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesEventCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Events the agent wants to receive."
+        }
+      },
+      "type": "object"
+    },
+    "NesContextCapabilities": {
+      "description": "Context capabilities the agent wants attached to each suggestion request.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "diagnostics": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesDiagnosticsCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Whether the agent wants diagnostics context."
+        },
+        "editHistory": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesEditHistoryCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Whether the agent wants edit history context."
+        },
+        "openFiles": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesOpenFilesCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Whether the agent wants open files context."
+        },
+        "recentFiles": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesRecentFilesCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Whether the agent wants recent files context."
+        },
+        "relatedSnippets": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesRelatedSnippetsCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Whether the agent wants related snippets context."
+        },
+        "userActions": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesUserActionsCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Whether the agent wants user actions context."
+        }
+      },
+      "type": "object"
+    },
+    "NesDiagnostic": {
+      "description": "A diagnostic (error, warning, etc.).",
+      "properties": {
+        "message": {
+          "description": "The diagnostic message.",
+          "type": "string"
+        },
+        "range": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/Range"
+            }
+          ],
+          "description": "The range of the diagnostic."
+        },
+        "severity": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/NesDiagnosticSeverity"
+            }
+          ],
+          "description": "The severity of the diagnostic."
+        },
+        "uri": {
+          "description": "The URI of the file containing the diagnostic.",
+          "type": "string"
+        }
+      },
+      "required": ["uri", "range", "severity", "message"],
+      "type": "object"
+    },
+    "NesDiagnosticSeverity": {
+      "description": "Severity of a diagnostic.",
+      "oneOf": [
+        {
+          "const": "error",
+          "description": "An error.",
+          "type": "string"
+        },
+        {
+          "const": "warning",
+          "description": "A warning.",
+          "type": "string"
+        },
+        {
+          "const": "information",
+          "description": "An informational message.",
+          "type": "string"
+        },
+        {
+          "const": "hint",
+          "description": "A hint.",
+          "type": "string"
+        }
+      ]
+    },
+    "NesDiagnosticsCapabilities": {
+      "description": "Capabilities for diagnostics context.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object"
+    },
+    "NesDocumentDidChangeCapabilities": {
+      "description": "Capabilities for `document/didChange` events.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "syncKind": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/TextDocumentSyncKind"
+            }
+          ],
+          "description": "The sync kind the agent wants: `\"full\"` or `\"incremental\"`."
+        }
+      },
+      "required": ["syncKind"],
+      "type": "object"
+    },
+    "NesDocumentDidCloseCapabilities": {
+      "description": "Marker for `document/didClose` capability support.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object"
+    },
+    "NesDocumentDidFocusCapabilities": {
+      "description": "Marker for `document/didFocus` capability support.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object"
+    },
+    "NesDocumentDidOpenCapabilities": {
+      "description": "Marker for `document/didOpen` capability support.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object"
+    },
+    "NesDocumentDidSaveCapabilities": {
+      "description": "Marker for `document/didSave` capability support.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object"
+    },
+    "NesDocumentEventCapabilities": {
+      "description": "Document event capabilities the agent wants to receive.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "didChange": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesDocumentDidChangeCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Whether the agent wants `document/didChange` events, and the sync kind."
+        },
+        "didClose": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesDocumentDidCloseCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Whether the agent wants `document/didClose` events."
+        },
+        "didFocus": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesDocumentDidFocusCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Whether the agent wants `document/didFocus` events."
+        },
+        "didOpen": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesDocumentDidOpenCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Whether the agent wants `document/didOpen` events."
+        },
+        "didSave": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesDocumentDidSaveCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Whether the agent wants `document/didSave` events."
+        }
+      },
+      "type": "object"
+    },
+    "NesEditHistoryCapabilities": {
+      "description": "Capabilities for edit history context.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "maxCount": {
+          "description": "Maximum number of edit history entries the agent can use.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": ["integer", "null"]
+        }
+      },
+      "type": "object"
+    },
+    "NesEditHistoryEntry": {
+      "description": "An entry in the edit history.",
+      "properties": {
+        "diff": {
+          "description": "A diff representing the edit.",
+          "type": "string"
+        },
+        "uri": {
+          "description": "The URI of the edited file.",
+          "type": "string"
+        }
+      },
+      "required": ["uri", "diff"],
+      "type": "object"
+    },
+    "NesEditSuggestion": {
+      "description": "A text edit suggestion.",
+      "properties": {
+        "cursorPosition": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Position"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional suggested cursor position after applying edits."
+        },
+        "edits": {
+          "description": "The text edits to apply.",
+          "items": {
+            "$ref": "#/$defs/NesTextEdit"
+          },
+          "type": "array"
+        },
+        "id": {
+          "description": "Unique identifier for accept/reject tracking.",
+          "type": "string"
+        },
+        "uri": {
+          "description": "The URI of the file to edit.",
+          "type": "string"
+        }
+      },
+      "required": ["id", "uri", "edits"],
+      "type": "object"
+    },
+    "NesEventCapabilities": {
+      "description": "Event capabilities the agent can consume.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "document": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesDocumentEventCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Document event capabilities."
+        }
+      },
+      "type": "object"
+    },
+    "NesExcerpt": {
+      "description": "A code excerpt from a file.",
+      "properties": {
+        "endLine": {
+          "description": "The end line of the excerpt (zero-based).",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "startLine": {
+          "description": "The start line of the excerpt (zero-based).",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "text": {
+          "description": "The text content of the excerpt.",
+          "type": "string"
+        }
+      },
+      "required": ["startLine", "endLine", "text"],
+      "type": "object"
+    },
+    "NesJumpCapabilities": {
+      "description": "Marker for jump suggestion support.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object"
+    },
+    "NesJumpSuggestion": {
+      "description": "A jump-to-location suggestion.",
+      "properties": {
+        "id": {
+          "description": "Unique identifier for accept/reject tracking.",
+          "type": "string"
+        },
+        "position": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/Position"
+            }
+          ],
+          "description": "The target position within the file."
+        },
+        "uri": {
+          "description": "The file to navigate to.",
+          "type": "string"
+        }
+      },
+      "required": ["id", "uri", "position"],
+      "type": "object"
+    },
+    "NesOpenFile": {
+      "description": "An open file in the editor.",
+      "properties": {
+        "languageId": {
+          "description": "The language identifier.",
+          "type": "string"
+        },
+        "lastFocusedMs": {
+          "description": "Timestamp in milliseconds since epoch of when the file was last focused.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": ["integer", "null"]
+        },
+        "uri": {
+          "description": "The URI of the file.",
+          "type": "string"
+        },
+        "visibleRange": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Range"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The visible range in the editor, if any."
+        }
+      },
+      "required": ["uri", "languageId"],
+      "type": "object"
+    },
+    "NesOpenFilesCapabilities": {
+      "description": "Capabilities for open files context.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object"
+    },
+    "NesRecentFile": {
+      "description": "A recently accessed file.",
+      "properties": {
+        "languageId": {
+          "description": "The language identifier.",
+          "type": "string"
+        },
+        "text": {
+          "description": "The full text content of the file.",
+          "type": "string"
+        },
+        "uri": {
+          "description": "The URI of the file.",
+          "type": "string"
+        }
+      },
+      "required": ["uri", "languageId", "text"],
+      "type": "object"
+    },
+    "NesRecentFilesCapabilities": {
+      "description": "Capabilities for recent files context.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "maxCount": {
+          "description": "Maximum number of recent files the agent can use.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": ["integer", "null"]
+        }
+      },
+      "type": "object"
+    },
+    "NesRejectReason": {
+      "description": "The reason a suggestion was rejected.",
+      "oneOf": [
+        {
+          "const": "rejected",
+          "description": "The user explicitly dismissed the suggestion.",
+          "type": "string"
+        },
+        {
+          "const": "ignored",
+          "description": "The suggestion was shown but the user continued editing without interacting.",
+          "type": "string"
+        },
+        {
+          "const": "replaced",
+          "description": "The suggestion was superseded by a newer suggestion.",
+          "type": "string"
+        },
+        {
+          "const": "cancelled",
+          "description": "The request was cancelled before the agent returned a response.",
+          "type": "string"
+        }
+      ]
+    },
+    "NesRelatedSnippet": {
+      "description": "A related code snippet from a file.",
+      "properties": {
+        "excerpts": {
+          "description": "The code excerpts.",
+          "items": {
+            "$ref": "#/$defs/NesExcerpt"
+          },
+          "type": "array"
+        },
+        "uri": {
+          "description": "The URI of the file containing the snippets.",
+          "type": "string"
+        }
+      },
+      "required": ["uri", "excerpts"],
+      "type": "object"
+    },
+    "NesRelatedSnippetsCapabilities": {
+      "description": "Capabilities for related snippets context.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object"
+    },
+    "NesRenameCapabilities": {
+      "description": "Marker for rename suggestion support.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object"
+    },
+    "NesRenameSuggestion": {
+      "description": "A rename symbol suggestion.",
+      "properties": {
+        "id": {
+          "description": "Unique identifier for accept/reject tracking.",
+          "type": "string"
+        },
+        "newName": {
+          "description": "The new name for the symbol.",
+          "type": "string"
+        },
+        "position": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/Position"
+            }
+          ],
+          "description": "The position of the symbol to rename."
+        },
+        "uri": {
+          "description": "The file URI containing the symbol.",
+          "type": "string"
+        }
+      },
+      "required": ["id", "uri", "position", "newName"],
+      "type": "object"
+    },
+    "NesRepository": {
+      "description": "Repository metadata for an NES session.",
+      "properties": {
+        "name": {
+          "description": "The repository name.",
+          "type": "string"
+        },
+        "owner": {
+          "description": "The repository owner.",
+          "type": "string"
+        },
+        "remoteUrl": {
+          "description": "The remote URL of the repository.",
+          "type": "string"
+        }
+      },
+      "required": ["name", "owner", "remoteUrl"],
+      "type": "object"
+    },
+    "NesSearchAndReplaceCapabilities": {
+      "description": "Marker for search and replace suggestion support.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object"
+    },
+    "NesSearchAndReplaceSuggestion": {
+      "description": "A search-and-replace suggestion.",
+      "properties": {
+        "id": {
+          "description": "Unique identifier for accept/reject tracking.",
+          "type": "string"
+        },
+        "isRegex": {
+          "description": "Whether `search` is a regular expression. Defaults to `false`.",
+          "type": ["boolean", "null"]
+        },
+        "replace": {
+          "description": "The replacement text.",
+          "type": "string"
+        },
+        "search": {
+          "description": "The text or pattern to find.",
+          "type": "string"
+        },
+        "uri": {
+          "description": "The file URI to search within.",
+          "type": "string"
+        }
+      },
+      "required": ["id", "uri", "search", "replace"],
+      "type": "object"
+    },
+    "NesSuggestContext": {
+      "description": "Context attached to a suggestion request.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "diagnostics": {
+          "description": "Current diagnostics (errors, warnings).",
+          "items": {
+            "$ref": "#/$defs/NesDiagnostic"
+          },
+          "type": ["array", "null"]
+        },
+        "editHistory": {
+          "description": "Recent edit history.",
+          "items": {
+            "$ref": "#/$defs/NesEditHistoryEntry"
+          },
+          "type": ["array", "null"]
+        },
+        "openFiles": {
+          "description": "Currently open files in the editor.",
+          "items": {
+            "$ref": "#/$defs/NesOpenFile"
+          },
+          "type": ["array", "null"]
+        },
+        "recentFiles": {
+          "description": "Recently accessed files.",
+          "items": {
+            "$ref": "#/$defs/NesRecentFile"
+          },
+          "type": ["array", "null"]
+        },
+        "relatedSnippets": {
+          "description": "Related code snippets.",
+          "items": {
+            "$ref": "#/$defs/NesRelatedSnippet"
+          },
+          "type": ["array", "null"]
+        },
+        "userActions": {
+          "description": "Recent user actions (typing, navigation, etc.).",
+          "items": {
+            "$ref": "#/$defs/NesUserAction"
+          },
+          "type": ["array", "null"]
+        }
+      },
+      "type": "object"
+    },
+    "NesSuggestion": {
+      "description": "A suggestion returned by the agent.",
+      "discriminator": {
+        "propertyName": "kind"
+      },
+      "oneOf": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/NesEditSuggestion"
+            }
+          ],
+          "description": "A text edit suggestion.",
+          "properties": {
+            "kind": {
+              "const": "edit",
+              "type": "string"
+            }
+          },
+          "required": ["kind"],
+          "type": "object"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/NesJumpSuggestion"
+            }
+          ],
+          "description": "A jump-to-location suggestion.",
+          "properties": {
+            "kind": {
+              "const": "jump",
+              "type": "string"
+            }
+          },
+          "required": ["kind"],
+          "type": "object"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/NesRenameSuggestion"
+            }
+          ],
+          "description": "A rename symbol suggestion.",
+          "properties": {
+            "kind": {
+              "const": "rename",
+              "type": "string"
+            }
+          },
+          "required": ["kind"],
+          "type": "object"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/NesSearchAndReplaceSuggestion"
+            }
+          ],
+          "description": "A search-and-replace suggestion.",
+          "properties": {
+            "kind": {
+              "const": "searchAndReplace",
+              "type": "string"
+            }
+          },
+          "required": ["kind"],
+          "type": "object"
+        }
+      ]
+    },
+    "NesTextEdit": {
+      "description": "A text edit within a suggestion.",
+      "properties": {
+        "newText": {
+          "description": "The replacement text.",
+          "type": "string"
+        },
+        "range": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/Range"
+            }
+          ],
+          "description": "The range to replace."
+        }
+      },
+      "required": ["range", "newText"],
+      "type": "object"
+    },
+    "NesTriggerKind": {
+      "description": "What triggered the suggestion request.",
+      "oneOf": [
+        {
+          "const": "automatic",
+          "description": "Triggered by user typing or cursor movement.",
+          "type": "string"
+        },
+        {
+          "const": "diagnostic",
+          "description": "Triggered by a diagnostic appearing at or near the cursor.",
+          "type": "string"
+        },
+        {
+          "const": "manual",
+          "description": "Triggered by an explicit user action (keyboard shortcut).",
+          "type": "string"
+        }
+      ]
+    },
+    "NesUserAction": {
+      "description": "A user action (typing, cursor movement, etc.).",
+      "properties": {
+        "action": {
+          "description": "The kind of action (e.g., \"insertChar\", \"cursorMovement\").",
+          "type": "string"
+        },
+        "position": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/Position"
+            }
+          ],
+          "description": "The position where the action occurred."
+        },
+        "timestampMs": {
+          "description": "Timestamp in milliseconds since epoch.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "uri": {
+          "description": "The URI of the file where the action occurred.",
+          "type": "string"
+        }
+      },
+      "required": ["action", "uri", "position", "timestampMs"],
+      "type": "object"
+    },
+    "NesUserActionsCapabilities": {
+      "description": "Capabilities for user actions context.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "maxCount": {
+          "description": "Maximum number of user actions the agent can use.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": ["integer", "null"]
+        }
+      },
+      "type": "object"
+    },
     "NewSessionRequest": {
       "description": "Request parameters for creating a new session.\n\nSee protocol docs: [Creating a Session](https://agentclientprotocol.com/protocol/session-setup#creating-a-session)",
       "properties": {
@@ -3038,6 +4444,13 @@
           "additionalProperties": true,
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
+        },
+        "additionalDirectories": {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAdditional workspace roots for this session. Each path must be absolute.\n\nThese expand the session's filesystem scope without changing `cwd`, which\nremains the base for relative paths. When omitted or empty, no\nadditional roots are activated for the new session.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "cwd": {
           "description": "The working directory for this session. Must be an absolute path.",
@@ -3288,6 +4701,45 @@
         }
       ]
     },
+    "Position": {
+      "description": "A zero-based position in a text document.\n\nThe meaning of `character` depends on the negotiated position encoding.",
+      "properties": {
+        "character": {
+          "description": "Zero-based character offset (encoding-dependent).",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "line": {
+          "description": "Zero-based line number.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": ["line", "character"],
+      "type": "object"
+    },
+    "PositionEncodingKind": {
+      "description": "The encoding used for character offsets in positions.\n\nFollows the same conventions as LSP 3.17. The default is UTF-16.",
+      "oneOf": [
+        {
+          "const": "utf-16",
+          "description": "Character offsets count UTF-16 code units. This is the default.",
+          "type": "string"
+        },
+        {
+          "const": "utf-32",
+          "description": "Character offsets count Unicode code points.",
+          "type": "string"
+        },
+        {
+          "const": "utf-8",
+          "description": "Character offsets count UTF-8 code units (bytes).",
+          "type": "string"
+        }
+      ]
+    },
     "PromptCapabilities": {
       "description": "Prompt capabilities supported by the agent in `session/prompt` requests.\n\nBaseline agent functionality requires support for [`ContentBlock::Text`]\nand [`ContentBlock::ResourceLink`] in prompt requests.\n\nOther variants must be explicitly opted in to.\nCapabilities for different types of content in prompt requests.\n\nIndicates which content types beyond the baseline (text and resource links)\nthe agent can process.\n\nSee protocol docs: [Prompt Capabilities](https://agentclientprotocol.com/protocol/initialization#prompt-capabilities)",
       "properties": {
@@ -3459,6 +4911,29 @@
       },
       "type": "object"
     },
+    "Range": {
+      "description": "A range in a text document, expressed as start and end positions.",
+      "properties": {
+        "end": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/Position"
+            }
+          ],
+          "description": "The end position (exclusive)."
+        },
+        "start": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/Position"
+            }
+          ],
+          "description": "The start position (inclusive)."
+        }
+      },
+      "required": ["start", "end"],
+      "type": "object"
+    },
     "ReadTextFileRequest": {
       "description": "Request to read content from a text file.\n\nOnly available if the client supports the `fs.readTextFile` capability.",
       "properties": {
@@ -3513,6 +4988,43 @@
       "type": "object",
       "x-method": "fs/read_text_file",
       "x-side": "client"
+    },
+    "RejectNesNotification": {
+      "description": "Notification sent when a suggestion is rejected.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "id": {
+          "description": "The ID of the rejected suggestion.",
+          "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesRejectReason"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The reason for rejection."
+        },
+        "sessionId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ],
+          "description": "The session ID for this notification."
+        }
+      },
+      "required": ["sessionId", "id"],
+      "type": "object",
+      "x-method": "nes/reject",
+      "x-side": "agent"
     },
     "ReleaseTerminalRequest": {
       "description": "Request to release a terminal and free its resources.",
@@ -3714,6 +5226,13 @@
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
         },
+        "additionalDirectories": {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAdditional workspace roots to activate for this session. Each path must be absolute.\n\nWhen omitted or empty, no additional roots are activated. When non-empty,\nthis is the complete resulting additional-root list for the resumed\nsession.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "cwd": {
           "description": "The working directory for this session.",
           "type": "string"
@@ -3806,6 +5325,17 @@
       "required": ["optionId"],
       "type": "object"
     },
+    "SessionAdditionalDirectoriesCapabilities": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapabilities for additional session directories support.\n\nBy supplying `{}` it means that the agent supports the `additionalDirectories` field on\nsupported session lifecycle requests and `session/list`.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object"
+    },
     "SessionCapabilities": {
       "description": "Session capabilities supported by the agent.\n\nAs a baseline, all Agents **MUST** support `session/new`, `session/prompt`, `session/cancel`, and `session/update`.\n\nOptionally, they **MAY** support other session methods and notifications by specifying additional capabilities.\n\nNote: `session/load` is still handled by the top-level `load_session` capability. This will be unified in future versions of the protocol.\n\nSee protocol docs: [Session Capabilities](https://agentclientprotocol.com/protocol/initialization#session-capabilities)",
       "properties": {
@@ -3813,6 +5343,17 @@
           "additionalProperties": true,
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
+        },
+        "additionalDirectories": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SessionAdditionalDirectoriesCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nWhether the agent supports `additionalDirectories` on supported session lifecycle requests and `session/list`."
         },
         "close": {
           "anyOf": [
@@ -4121,6 +5662,13 @@
           "additionalProperties": true,
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
+        },
+        "additionalDirectories": {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAuthoritative ordered additional workspace roots for this session. Each path must be absolute.\n\nWhen omitted or empty, there are no additional roots for the session.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "cwd": {
           "description": "The working directory for this session. Must be an absolute path.",
@@ -4700,6 +6248,63 @@
       "x-method": "session/set_model",
       "x-side": "agent"
     },
+    "StartNesRequest": {
+      "description": "Request to start an NES session.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "repository": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesRepository"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Repository metadata, if the workspace is a git repository."
+        },
+        "workspaceFolders": {
+          "description": "The workspace folders.",
+          "items": {
+            "$ref": "#/$defs/WorkspaceFolder"
+          },
+          "type": ["array", "null"]
+        },
+        "workspaceUri": {
+          "description": "The root URI of the workspace.",
+          "type": ["string", "null"]
+        }
+      },
+      "type": "object",
+      "x-method": "nes/start",
+      "x-side": "agent"
+    },
+    "StartNesResponse": {
+      "description": "Response to `nes/start`.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "sessionId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ],
+          "description": "The session ID for the newly started NES session."
+        }
+      },
+      "required": ["sessionId"],
+      "type": "object",
+      "x-method": "nes/start",
+      "x-side": "agent"
+    },
     "StopReason": {
       "description": "Reasons why an agent stops processing a prompt turn.\n\nSee protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/prompt-turn#stop-reasons)",
       "oneOf": [
@@ -4813,6 +6418,96 @@
         }
       },
       "type": "object"
+    },
+    "SuggestNesRequest": {
+      "description": "Request for a code suggestion.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "context": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NesSuggestContext"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Context for the suggestion, included based on agent capabilities."
+        },
+        "position": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/Position"
+            }
+          ],
+          "description": "The current cursor position."
+        },
+        "selection": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Range"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The current text selection range, if any."
+        },
+        "sessionId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ],
+          "description": "The session ID for this request."
+        },
+        "triggerKind": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/NesTriggerKind"
+            }
+          ],
+          "description": "What triggered this suggestion request."
+        },
+        "uri": {
+          "description": "The URI of the document to suggest for.",
+          "type": "string"
+        },
+        "version": {
+          "description": "The version number of the document.",
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": ["sessionId", "uri", "version", "position", "triggerKind"],
+      "type": "object",
+      "x-method": "nes/suggest",
+      "x-side": "agent"
+    },
+    "SuggestNesResponse": {
+      "description": "Response to `nes/suggest`.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "suggestions": {
+          "description": "The list of suggestions.",
+          "items": {
+            "$ref": "#/$defs/NesSuggestion"
+          },
+          "type": "array"
+        }
+      },
+      "required": ["suggestions"],
+      "type": "object",
+      "x-method": "nes/suggest",
+      "x-side": "agent"
     },
     "Terminal": {
       "description": "Embed a terminal created with `terminal/create` by its id.\n\nThe terminal must be added before calling `terminal/release`.\n\nSee protocol docs: [Terminal](https://agentclientprotocol.com/protocol/terminals)",
@@ -4933,6 +6628,43 @@
       },
       "required": ["text"],
       "type": "object"
+    },
+    "TextDocumentContentChangeEvent": {
+      "description": "A content change event for a document.\n\nWhen `range` is `None`, `text` is the full content of the document.\nWhen `range` is `Some`, `text` replaces the given range.",
+      "properties": {
+        "range": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Range"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The range of the document that changed. If `None`, the entire content is replaced."
+        },
+        "text": {
+          "description": "The new text for the range, or the full document content if `range` is `None`.",
+          "type": "string"
+        }
+      },
+      "required": ["text"],
+      "type": "object"
+    },
+    "TextDocumentSyncKind": {
+      "description": "How the agent wants document changes delivered.",
+      "oneOf": [
+        {
+          "const": "full",
+          "description": "Client sends the entire file content on each change.",
+          "type": "string"
+        },
+        {
+          "const": "incremental",
+          "description": "Client sends only the changed ranges.",
+          "type": "string"
+        }
+      ]
     },
     "TextResourceContents": {
       "description": "Text-based resource contents.",
@@ -5421,6 +7153,21 @@
       "type": "object",
       "x-method": "terminal/wait_for_exit",
       "x-side": "client"
+    },
+    "WorkspaceFolder": {
+      "description": "A workspace folder.",
+      "properties": {
+        "name": {
+          "description": "The display name of the folder.",
+          "type": "string"
+        },
+        "uri": {
+          "description": "The URI of the folder.",
+          "type": "string"
+        }
+      },
+      "required": ["uri", "name"],
+      "type": "object"
     },
     "WriteTextFileRequest": {
       "description": "Request to write content to a text file.\n\nOnly available if the client supports the `fs.writeTextFile` capability.",

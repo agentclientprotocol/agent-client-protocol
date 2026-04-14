@@ -216,8 +216,8 @@ impl Side for ClientSide {
                     .map_err(Into::into)
             }
             #[cfg(feature = "unstable_elicitation")]
-            m if m == CLIENT_METHOD_NAMES.session_elicitation => serde_json::from_str(params.get())
-                .map(AgentRequest::ElicitationRequest)
+            m if m == CLIENT_METHOD_NAMES.elicitation_create => serde_json::from_str(params.get())
+                .map(AgentRequest::CreateElicitationRequest)
                 .map_err(Into::into),
             _ => {
                 if let Some(custom_method) = method.strip_prefix('_') {
@@ -240,9 +240,9 @@ impl Side for ClientSide {
                 .map(AgentNotification::SessionNotification)
                 .map_err(Into::into),
             #[cfg(feature = "unstable_elicitation")]
-            m if m == CLIENT_METHOD_NAMES.session_elicitation_complete => {
+            m if m == CLIENT_METHOD_NAMES.elicitation_complete => {
                 serde_json::from_str(params.get())
-                    .map(AgentNotification::ElicitationCompleteNotification)
+                    .map(AgentNotification::CompleteElicitationNotification)
                     .map_err(Into::into)
             }
             _ => {
@@ -336,6 +336,18 @@ impl Side for AgentSide {
             m if m == AGENT_METHOD_NAMES.session_prompt => serde_json::from_str(params.get())
                 .map(ClientRequest::PromptRequest)
                 .map_err(Into::into),
+            #[cfg(feature = "unstable_nes")]
+            m if m == AGENT_METHOD_NAMES.nes_start => serde_json::from_str(params.get())
+                .map(ClientRequest::StartNesRequest)
+                .map_err(Into::into),
+            #[cfg(feature = "unstable_nes")]
+            m if m == AGENT_METHOD_NAMES.nes_suggest => serde_json::from_str(params.get())
+                .map(ClientRequest::SuggestNesRequest)
+                .map_err(Into::into),
+            #[cfg(feature = "unstable_nes")]
+            m if m == AGENT_METHOD_NAMES.nes_close => serde_json::from_str(params.get())
+                .map(ClientRequest::CloseNesRequest)
+                .map_err(Into::into),
             _ => {
                 if let Some(custom_method) = method.strip_prefix('_') {
                     Ok(ClientRequest::ExtMethodRequest(ExtRequest {
@@ -355,6 +367,34 @@ impl Side for AgentSide {
         match method {
             m if m == AGENT_METHOD_NAMES.session_cancel => serde_json::from_str(params.get())
                 .map(ClientNotification::CancelNotification)
+                .map_err(Into::into),
+            #[cfg(feature = "unstable_nes")]
+            m if m == AGENT_METHOD_NAMES.document_did_open => serde_json::from_str(params.get())
+                .map(ClientNotification::DidOpenDocumentNotification)
+                .map_err(Into::into),
+            #[cfg(feature = "unstable_nes")]
+            m if m == AGENT_METHOD_NAMES.document_did_change => serde_json::from_str(params.get())
+                .map(ClientNotification::DidChangeDocumentNotification)
+                .map_err(Into::into),
+            #[cfg(feature = "unstable_nes")]
+            m if m == AGENT_METHOD_NAMES.document_did_close => serde_json::from_str(params.get())
+                .map(ClientNotification::DidCloseDocumentNotification)
+                .map_err(Into::into),
+            #[cfg(feature = "unstable_nes")]
+            m if m == AGENT_METHOD_NAMES.document_did_save => serde_json::from_str(params.get())
+                .map(ClientNotification::DidSaveDocumentNotification)
+                .map_err(Into::into),
+            #[cfg(feature = "unstable_nes")]
+            m if m == AGENT_METHOD_NAMES.document_did_focus => serde_json::from_str(params.get())
+                .map(ClientNotification::DidFocusDocumentNotification)
+                .map_err(Into::into),
+            #[cfg(feature = "unstable_nes")]
+            m if m == AGENT_METHOD_NAMES.nes_accept => serde_json::from_str(params.get())
+                .map(ClientNotification::AcceptNesNotification)
+                .map_err(Into::into),
+            #[cfg(feature = "unstable_nes")]
+            m if m == AGENT_METHOD_NAMES.nes_reject => serde_json::from_str(params.get())
+                .map(ClientNotification::RejectNesNotification)
                 .map_err(Into::into),
             _ => {
                 if let Some(custom_method) = method.strip_prefix('_') {
@@ -421,6 +461,171 @@ mod tests {
 
         let id = RequestId::Str("id".to_owned());
         assert_eq!(id.to_string(), "id");
+    }
+}
+
+#[cfg(feature = "unstable_nes")]
+#[cfg(test)]
+mod nes_rpc_tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn test_decode_nes_start_request() {
+        let params = serde_json::to_string(&json!({
+            "workspaceUri": "file:///Users/alice/projects/my-app",
+            "workspaceFolders": [
+                { "uri": "file:///Users/alice/projects/my-app", "name": "my-app" }
+            ]
+        }))
+        .unwrap();
+        let raw = serde_json::value::RawValue::from_string(params).unwrap();
+        let request = AgentSide::decode_request("nes/start", Some(&raw)).unwrap();
+        assert!(matches!(request, ClientRequest::StartNesRequest(_)));
+    }
+
+    #[test]
+    fn test_decode_nes_suggest_request() {
+        let params = serde_json::to_string(&json!({
+            "sessionId": "session_123",
+            "uri": "file:///path/to/file.rs",
+            "version": 2,
+            "position": { "line": 5, "character": 12 },
+            "triggerKind": "automatic"
+        }))
+        .unwrap();
+        let raw = serde_json::value::RawValue::from_string(params).unwrap();
+        let request = AgentSide::decode_request("nes/suggest", Some(&raw)).unwrap();
+        assert!(matches!(request, ClientRequest::SuggestNesRequest(_)));
+    }
+
+    #[test]
+    fn test_decode_nes_close_request() {
+        let params = serde_json::to_string(&json!({
+            "sessionId": "session_123"
+        }))
+        .unwrap();
+        let raw = serde_json::value::RawValue::from_string(params).unwrap();
+        let request = AgentSide::decode_request("nes/close", Some(&raw)).unwrap();
+        assert!(matches!(request, ClientRequest::CloseNesRequest(_)));
+    }
+
+    #[test]
+    fn test_decode_document_did_open_notification() {
+        let params = serde_json::to_string(&json!({
+            "sessionId": "session_123",
+            "uri": "file:///path/to/file.rs",
+            "languageId": "rust",
+            "version": 1,
+            "text": "fn main() {}"
+        }))
+        .unwrap();
+        let raw = serde_json::value::RawValue::from_string(params).unwrap();
+        let notification = AgentSide::decode_notification("document/didOpen", Some(&raw)).unwrap();
+        assert!(matches!(
+            notification,
+            ClientNotification::DidOpenDocumentNotification(_)
+        ));
+    }
+
+    #[test]
+    fn test_decode_document_did_change_notification() {
+        let params = serde_json::to_string(&json!({
+            "sessionId": "session_123",
+            "uri": "file:///path/to/file.rs",
+            "version": 2,
+            "contentChanges": [{ "text": "fn main() { let x = 1; }" }]
+        }))
+        .unwrap();
+        let raw = serde_json::value::RawValue::from_string(params).unwrap();
+        let notification =
+            AgentSide::decode_notification("document/didChange", Some(&raw)).unwrap();
+        assert!(matches!(
+            notification,
+            ClientNotification::DidChangeDocumentNotification(_)
+        ));
+    }
+
+    #[test]
+    fn test_decode_document_did_close_notification() {
+        let params = serde_json::to_string(&json!({
+            "sessionId": "session_123",
+            "uri": "file:///path/to/file.rs"
+        }))
+        .unwrap();
+        let raw = serde_json::value::RawValue::from_string(params).unwrap();
+        let notification = AgentSide::decode_notification("document/didClose", Some(&raw)).unwrap();
+        assert!(matches!(
+            notification,
+            ClientNotification::DidCloseDocumentNotification(_)
+        ));
+    }
+
+    #[test]
+    fn test_decode_document_did_save_notification() {
+        let params = serde_json::to_string(&json!({
+            "sessionId": "session_123",
+            "uri": "file:///path/to/file.rs"
+        }))
+        .unwrap();
+        let raw = serde_json::value::RawValue::from_string(params).unwrap();
+        let notification = AgentSide::decode_notification("document/didSave", Some(&raw)).unwrap();
+        assert!(matches!(
+            notification,
+            ClientNotification::DidSaveDocumentNotification(_)
+        ));
+    }
+
+    #[test]
+    fn test_decode_document_did_focus_notification() {
+        let params = serde_json::to_string(&json!({
+            "sessionId": "session_123",
+            "uri": "file:///path/to/file.rs",
+            "version": 2,
+            "position": { "line": 5, "character": 12 },
+            "visibleRange": {
+                "start": { "line": 0, "character": 0 },
+                "end": { "line": 45, "character": 0 }
+            }
+        }))
+        .unwrap();
+        let raw = serde_json::value::RawValue::from_string(params).unwrap();
+        let notification = AgentSide::decode_notification("document/didFocus", Some(&raw)).unwrap();
+        assert!(matches!(
+            notification,
+            ClientNotification::DidFocusDocumentNotification(_)
+        ));
+    }
+
+    #[test]
+    fn test_decode_nes_accept_notification() {
+        let params = serde_json::to_string(&json!({
+            "sessionId": "session_123",
+            "id": "sugg_001"
+        }))
+        .unwrap();
+        let raw = serde_json::value::RawValue::from_string(params).unwrap();
+        let notification = AgentSide::decode_notification("nes/accept", Some(&raw)).unwrap();
+        assert!(matches!(
+            notification,
+            ClientNotification::AcceptNesNotification(_)
+        ));
+    }
+
+    #[test]
+    fn test_decode_nes_reject_notification() {
+        let params = serde_json::to_string(&json!({
+            "sessionId": "session_123",
+            "id": "sugg_001",
+            "reason": "rejected"
+        }))
+        .unwrap();
+        let raw = serde_json::value::RawValue::from_string(params).unwrap();
+        let notification = AgentSide::decode_notification("nes/reject", Some(&raw)).unwrap();
+        assert!(matches!(
+            notification,
+            ClientNotification::RejectNesNotification(_)
+        ));
     }
 }
 
