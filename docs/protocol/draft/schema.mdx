@@ -3343,12 +3343,8 @@ Form-based elicitation mode where the client renders a form from the provided sc
 
 **Variants:**
 
-<ResponseField name="Session" type="object">
+<ResponseField name="Session">
 Tied to a session, optionally to a specific tool call within that session.
-
-When `tool_call_id` is set, the elicitation is tied to a specific tool call.
-This is useful when an agent receives an elicitation from an MCP server
-during a tool call and needs to redirect it to the user.
 
 <Expandable title="Properties">
 
@@ -3376,7 +3372,7 @@ during a tool call and needs to redirect it to the user.
 </Expandable>
 </ResponseField>
 
-<ResponseField name="Request" type="object">
+<ResponseField name="Request">
 Tied to a specific JSON-RPC request outside of a session
 (e.g., during auth/configuration phases before any session is started).
 
@@ -3569,6 +3565,27 @@ Multi-select array property.
 </Expandable>
 </ResponseField>
 
+## <span class="font-mono">ElicitationRequestScope</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Request-scoped elicitation, tied to a specific JSON-RPC request outside of a session
+(e.g., during auth/configuration phases before any session is started).
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField
+  name="requestId"
+  type={<a href="#requestid">RequestId</a>}
+  required
+>
+  The request this elicitation is tied to.
+</ResponseField>
+
 ## <span class="font-mono">ElicitationSchema</span>
 
 Type-safe elicitation schema for requesting structured user input.
@@ -3610,6 +3627,43 @@ Type discriminator for elicitation schemas.
 
 <ResponseField name="object" type="string">
   Object schema type.
+</ResponseField>
+
+## <span class="font-mono">ElicitationSessionScope</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Session-scoped elicitation, optionally tied to a specific tool call.
+
+When `tool_call_id` is set, the elicitation is tied to a specific tool call.
+This is useful when an agent receives an elicitation from an MCP server
+during a tool call and needs to redirect it to the user.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField
+  name="sessionId"
+  type={<a href="#sessionid">SessionId</a>}
+  required
+>
+  The session this elicitation is tied to.
+</ResponseField>
+<ResponseField
+  name="toolCallId"
+  type={
+    <>
+      <span>
+        <a href="#toolcallid">ToolCallId</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Optional tool call within the session.
 </ResponseField>
 
 ## <span class="font-mono">ElicitationStringType</span>
@@ -3668,12 +3722,8 @@ URL-based elicitation mode where the client directs the user to a URL.
 
 **Variants:**
 
-<ResponseField name="Session" type="object">
+<ResponseField name="Session">
 Tied to a session, optionally to a specific tool call within that session.
-
-When `tool_call_id` is set, the elicitation is tied to a specific tool call.
-This is useful when an agent receives an elicitation from an MCP server
-during a tool call and needs to redirect it to the user.
 
 <Expandable title="Properties">
 
@@ -3701,7 +3751,7 @@ during a tool call and needs to redirect it to the user.
 </Expandable>
 </ResponseField>
 
-<ResponseField name="Request" type="object">
+<ResponseField name="Request">
 Tied to a specific JSON-RPC request outside of a session
 (e.g., during auth/configuration phases before any session is started).
 
