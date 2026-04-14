@@ -909,8 +909,8 @@ impl ElicitationSessionScope {
     }
 
     #[must_use]
-    pub fn tool_call_id(mut self, tool_call_id: impl Into<ToolCallId>) -> Self {
-        self.tool_call_id = Some(tool_call_id.into());
+    pub fn tool_call_id(mut self, tool_call_id: impl IntoOption<ToolCallId>) -> Self {
+        self.tool_call_id = tool_call_id.into_option();
         self
     }
 }

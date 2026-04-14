@@ -187,6 +187,12 @@ impl IntoOption<PathBuf> for Cow<'_, Path> {
     }
 }
 
+impl IntoOption<ToolCallId> for &str {
+    fn into_option(self) -> Option<ToolCallId> {
+        Some(ToolCallId::new(self))
+    }
+}
+
 impl IntoOption<serde_json::Value> for &str {
     fn into_option(self) -> Option<serde_json::Value> {
         Some(self.into())
