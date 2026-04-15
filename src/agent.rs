@@ -3593,7 +3593,7 @@ impl ListProvidersResponse {
 ///
 /// Replaces the full configuration for one provider id.
 #[cfg(feature = "unstable_llm_providers")]
-#[derive(Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[derive(Clone, Debug, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = PROVIDERS_SET_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -3615,26 +3615,6 @@ pub struct SetProvidersRequest {
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
     pub meta: Option<Meta>,
-}
-
-#[cfg(feature = "unstable_llm_providers")]
-impl std::fmt::Debug for SetProvidersRequest {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("SetProvidersRequest")
-            .field("id", &self.id)
-            .field("api_type", &self.api_type)
-            .field("base_url", &self.base_url)
-            .field(
-                "headers",
-                &self
-                    .headers
-                    .keys()
-                    .map(|k| (k.as_str(), "[REDACTED]"))
-                    .collect::<Vec<_>>(),
-            )
-            .field("meta", &self.meta)
-            .finish()
-    }
 }
 
 #[cfg(feature = "unstable_llm_providers")]
