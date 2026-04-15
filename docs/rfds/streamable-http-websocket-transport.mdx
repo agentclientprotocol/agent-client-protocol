@@ -36,9 +36,9 @@ ACP only has stdio (inherited from MCP). There is no standard remote transport, 
 
 Follows the MCP 2025-11-25 Streamable HTTP spec with these adaptations:
 
-- Connection header: `Acp-Connection-Id` (replaces `Mcp-Session-Id`)
+- Connection header: `Acp-Connection-Id` (similar to `Mcp-Session-Id`)
 - Session header: `Acp-Session-Id` (new, no MCP equivalent)
-- Protocol version header: `Acp-Protocol-Version` (not `MCP-Protocol-Version`)
+- Protocol version header: `Acp-Protocol-Version`
 - Endpoint path: conventionally `/acp`
 
 ### 2. Separates connection identity from session identity with two headers
@@ -71,7 +71,7 @@ Clients MUST accept, store, and return cookies set by the server on all HTTP-bas
 
 ### 6. Preserves the full ACP lifecycle
 
-The `initialize` → `initialized` → messages → close lifecycle is identical regardless of transport. The `Acp-Connection-Id` header binds requests to the initialized connection and its negotiated capabilities. The `Acp-Session-Id` header (introduced after `session/new`) identifies the active ACP session. Both are transport-agnostic concepts.
+The `initialize` → `initialized` → messages → close lifecycle is identical regardless of transport. The `Acp-Connection-Id` header binds requests to the initialized connection and its negotiated capabilities. The `Acp-Session-Id` header (introduced after `session/new`) identifies an active ACP session.
 
 ## Shiny future
 
@@ -128,7 +128,7 @@ Client                              Server
   │─── POST /acp ─────────────────────>│  { method: "initialize", id: 1 }
   │    Accept: application/json,       │  (no Acp-Connection-Id header)
   │            text/event-stream       │
-  │              ┌─────────────────────│  Server creates connection, opens SSE stream
+  │              ┌─────────────────────│  Server creates connection
   │              │ (SSE stream open)   │
   │<─────────────│─ SSE event ─────────│  { id: 1, result: { capabilities } }
   │              │                     │  Response includes Acp-Connection-Id header
@@ -377,3 +377,4 @@ Clients SHOULD include it on all requests after initialization. Not yet implemen
 
 - **2025-03-10**: Initial draft based on the RFC template and goose reference implementation.
 - **2026-04-01**: Introduced a two-header identity model: `Acp-Connection-Id` (returned at `initialize`, binds to the connection) and `Acp-Session-Id` (returned at `session/new`, scopes to a session). This addresses feedback that the original single `Acp-Session-Id` conflated transport binding with ACP session identity, and enables session-scoped GET listener streams for targeted server-to-client event delivery. Removed connection-scoped GET streams — all GET SSE listeners now require both `Acp-Connection-Id` and `Acp-Session-Id`.
+- **2026-04-15**: Minor edits
