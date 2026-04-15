@@ -368,6 +368,12 @@ impl ToolCallId {
     }
 }
 
+impl IntoOption<ToolCallId> for &str {
+    fn into_option(self) -> Option<ToolCallId> {
+        Some(ToolCallId::new(self))
+    }
+}
+
 /// Categories of tools that can be invoked.
 ///
 /// Tool kinds help clients choose appropriate icons and optimize how they

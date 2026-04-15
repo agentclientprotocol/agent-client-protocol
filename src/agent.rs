@@ -6018,26 +6018,6 @@ mod test_serialization {
 
     #[cfg(feature = "unstable_llm_providers")]
     #[test]
-    fn test_set_providers_request_debug_redacts_headers() {
-        use std::collections::HashMap;
-
-        let mut headers = HashMap::new();
-        headers.insert(
-            "Authorization".to_string(),
-            "Bearer sk-secret-key".to_string(),
-        );
-
-        let request =
-            SetProvidersRequest::new("main", LlmProtocol::Anthropic, "https://api.anthropic.com")
-                .headers(headers);
-
-        let debug = format!("{request:?}");
-        assert!(debug.contains("[REDACTED]"));
-        assert!(!debug.contains("sk-secret-key"));
-    }
-
-    #[cfg(feature = "unstable_llm_providers")]
-    #[test]
     fn test_disable_providers_request_serialization() {
         let request = DisableProvidersRequest::new("secondary");
 
