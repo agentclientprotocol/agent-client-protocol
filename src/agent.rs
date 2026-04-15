@@ -13,7 +13,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "unstable_llm_providers")]
-use crate::Nullable;
+use crate::RequiredNullable;
 use crate::{
     ClientCapabilities, ContentBlock, ExtNotification, ExtRequest, ExtResponse, IntoOption, Meta,
     ProtocolVersion, SessionId,
@@ -3462,7 +3462,7 @@ pub struct ProviderInfo {
     pub required: bool,
     /// Current effective non-secret routing config.
     /// Null means provider is disabled.
-    pub current: Nullable<ProviderCurrentConfig>,
+    pub current: RequiredNullable<ProviderCurrentConfig>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -3479,7 +3479,7 @@ impl ProviderInfo {
         id: impl Into<String>,
         supported: Vec<LlmProtocol>,
         required: bool,
-        current: impl Into<Nullable<ProviderCurrentConfig>>,
+        current: impl Into<RequiredNullable<ProviderCurrentConfig>>,
     ) -> Self {
         Self {
             id: id.into(),
@@ -5916,7 +5916,7 @@ mod test_serialization {
             "secondary",
             vec![LlmProtocol::OpenAi],
             false,
-            Nullable::<ProviderCurrentConfig>::null(),
+            RequiredNullable::<ProviderCurrentConfig>::null(),
         );
 
         let json = serde_json::to_value(&info).unwrap();

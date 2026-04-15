@@ -3,7 +3,7 @@
 //! ## Types
 //!
 //! - [`MaybeUndefined<T>`] — three-state: undefined (key absent), null, or value.
-//! - [`Nullable<T>`] — required-but-nullable: key must be present, value may be null.
+//! - [`RequiredNullable<T>`] — required-but-nullable: key must be present, value may be null.
 //!
 //! ## Builder traits
 //!
@@ -458,12 +458,12 @@ impl IntoMaybeUndefined<serde_json::Value> for Cow<'_, str> {
     }
 }
 
-// ---- Nullable<T> ----
+// ---- RequiredNullable<T> ----
 
 /// A value that must be present on the wire but whose value may be `null`.
 ///
 /// Unlike `Option<T>`, which serde treats as an implicitly optional field
-/// (defaulting to `None` when absent), `Nullable<T>` requires the key to be
+/// (defaulting to `None` when absent), `RequiredNullable<T>` requires the key to be
 /// present during deserialization. A missing field will produce a
 /// deserialization error rather than silently defaulting to `None`.
 ///
@@ -476,22 +476,22 @@ impl IntoMaybeUndefined<serde_json::Value> for Cow<'_, str> {
 /// # Example
 ///
 /// ```rust
-/// use agent_client_protocol_schema::Nullable;
+/// use agent_client_protocol_schema::RequiredNullable;
 /// use serde::{Serialize, Deserialize};
 ///
 /// #[derive(Serialize, Deserialize, Debug, PartialEq)]
 /// struct Config {
 ///     // MUST be present in JSON, but its value can be null
-///     value: Nullable<String>,
+///     value: RequiredNullable<String>,
 /// }
 ///
 /// // ✅ Present with a value
 /// let c: Config = serde_json::from_str(r#"{"value":"hello"}"#).unwrap();
-/// assert_eq!(c.value, Nullable::new("hello".to_string()));
+/// assert_eq!(c.value, RequiredNullable::new("hello".to_string()));
 ///
 /// // ✅ Present as null
 /// let c: Config = serde_json::from_str(r#"{"value":null}"#).unwrap();
-/// assert_eq!(c.value, Nullable::null());
+/// assert_eq!(c.value, RequiredNullable::null());
 ///
 /// // ❌ Missing key — deserialization error
 /// assert!(serde_json::from_str::<Config>(r#"{}"#).is_err());
@@ -500,48 +500,48 @@ impl IntoMaybeUndefined<serde_json::Value> for Cow<'_, str> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, JsonSchema)]
 #[schemars(with = "Option<T>", inline)]
 #[non_exhaustive]
-pub struct Nullable<T>(pub Option<T>);
+pub struct RequiredNullable<T>(pub Option<T>);
 
 #[cfg(feature = "unstable_llm_providers")]
-impl<T> Default for Nullable<T> {
+impl<T> Default for RequiredNullable<T> {
     fn default() -> Self {
         Self(None)
     }
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl<T: Serialize> Serialize for Nullable<T> {
+impl<T: Serialize> Serialize for RequiredNullable<T> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         self.0.serialize(serializer)
     }
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl<'de, T: Deserialize<'de>> Deserialize<'de> for Nullable<T> {
+impl<'de, T: Deserialize<'de>> Deserialize<'de> for RequiredNullable<T> {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         // Deserialize via serde_json::Value so that `deserialize_any` is called.
         // serde's MissingFieldDeserializer errors on `deserialize_any` (good — the
         // field is required), whereas `deserialize_option` silently returns None.
         let value = serde_json::Value::deserialize(deserializer)?;
         if value.is_null() {
-            Ok(Nullable(None))
+            Ok(RequiredNullable(None))
         } else {
             T::deserialize(value)
-                .map(Nullable::new)
+                .map(RequiredNullable::new)
                 .map_err(serde::de::Error::custom)
         }
     }
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl<T> Nullable<T> {
-    /// Creates a `Nullable` containing a value.
+impl<T> RequiredNullable<T> {
+    /// Creates a `RequiredNullable` containing a value.
     #[must_use]
     pub fn new(value: T) -> Self {
         Self(Some(value))
     }
 
-    /// Creates a `Nullable` representing `null`.
+    /// Creates a `RequiredNullable` representing `null`.
     #[must_use]
     pub fn null() -> Self {
         Self(None)
@@ -579,15 +579,15 @@ impl<T> Nullable<T> {
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl<T> From<Option<T>> for Nullable<T> {
+impl<T> From<Option<T>> for RequiredNullable<T> {
     fn from(value: Option<T>) -> Self {
         Self(value)
     }
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl<T> From<Nullable<T>> for Option<T> {
-    fn from(value: Nullable<T>) -> Self {
+impl<T> From<RequiredNullable<T>> for Option<T> {
+    fn from(value: RequiredNullable<T>) -> Self {
         value.0
     }
 }
@@ -786,7 +786,7 @@ mod tests {
         assert_eq!(value.transpose(), Err("error"));
     }
 
-    // ---- Nullable tests ----
+    // ---- RequiredNullable tests ----
 
     #[cfg(feature = "unstable_llm_providers")]
     mod nullable_tests {
@@ -795,19 +795,19 @@ mod tests {
 
         #[derive(Serialize, Deserialize, Debug, PartialEq)]
         struct Example {
-            value: Nullable<String>,
+            value: RequiredNullable<String>,
         }
 
         #[test]
         fn present_with_value() {
             let example: Example = from_str(r#"{"value":"hello"}"#).unwrap();
-            assert_eq!(example.value, Nullable(Some("hello".to_string())));
+            assert_eq!(example.value, RequiredNullable(Some("hello".to_string())));
         }
 
         #[test]
         fn present_as_null() {
             let example: Example = from_str(r#"{"value":null}"#).unwrap();
-            assert_eq!(example.value, Nullable(None));
+            assert_eq!(example.value, RequiredNullable(None));
         }
 
         #[test]
@@ -818,7 +818,7 @@ mod tests {
         #[test]
         fn serialize_value() {
             let example = Example {
-                value: Nullable(Some("hello".to_string())),
+                value: RequiredNullable(Some("hello".to_string())),
             };
             assert_eq!(to_value(&example).unwrap(), json!({"value": "hello"}));
         }
@@ -826,38 +826,38 @@ mod tests {
         #[test]
         fn serialize_null() {
             let example = Example {
-                value: Nullable(None),
+                value: RequiredNullable(None),
             };
             assert_eq!(to_value(&example).unwrap(), json!({"value": null}));
         }
 
         #[test]
         fn from_option() {
-            let nullable: Nullable<i32> = Some(42).into();
-            assert_eq!(nullable, Nullable(Some(42)));
+            let nullable: RequiredNullable<i32> = Some(42).into();
+            assert_eq!(nullable, RequiredNullable(Some(42)));
 
-            let nullable: Nullable<i32> = None.into();
-            assert_eq!(nullable, Nullable(None));
+            let nullable: RequiredNullable<i32> = None.into();
+            assert_eq!(nullable, RequiredNullable(None));
         }
 
         #[test]
         fn into_option() {
-            let option: Option<i32> = Nullable(Some(42)).into();
+            let option: Option<i32> = RequiredNullable(Some(42)).into();
             assert_eq!(option, Some(42));
 
-            let option: Option<i32> = Nullable(None).into();
+            let option: Option<i32> = RequiredNullable(None).into();
             assert_eq!(option, None);
         }
 
         #[test]
         fn methods() {
-            let value = Nullable::new(42);
+            let value = RequiredNullable::new(42);
             assert!(value.is_value());
             assert!(!value.is_null());
             assert_eq!(value.value(), Some(&42));
             assert_eq!(value.into_inner(), Some(42));
 
-            let null: Nullable<i32> = Nullable::null();
+            let null: RequiredNullable<i32> = RequiredNullable::null();
             assert!(!null.is_value());
             assert!(null.is_null());
             assert_eq!(null.value(), None);
@@ -866,8 +866,8 @@ mod tests {
 
         #[test]
         fn default_is_null() {
-            let nullable: Nullable<i32> = Nullable::default();
-            assert_eq!(nullable, Nullable(None));
+            let nullable: RequiredNullable<i32> = RequiredNullable::default();
+            assert_eq!(nullable, RequiredNullable(None));
         }
     }
 }
