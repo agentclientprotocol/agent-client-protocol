@@ -221,10 +221,10 @@ impl Side for ClientSide {
                 .map_err(Into::into),
             _ => {
                 if is_valid_ext_method(method) {
-                    Ok(AgentRequest::ExtMethodRequest(ExtRequest {
-                        method: method.into(),
-                        params: params.to_owned().into(),
-                    }))
+                    Ok(AgentRequest::ExtMethodRequest(ExtRequest::new(
+                        method,
+                        params.to_owned().into(),
+                    )))
                 } else {
                     Err(Error::method_not_found())
                 }
@@ -247,10 +247,10 @@ impl Side for ClientSide {
             }
             _ => {
                 if is_valid_ext_method(method) {
-                    Ok(AgentNotification::ExtNotification(ExtNotification {
-                        method: method.into(),
-                        params: params.to_owned().into(),
-                    }))
+                    Ok(AgentNotification::ExtNotification(ExtNotification::new(
+                        method,
+                        params.to_owned().into(),
+                    )))
                 } else {
                     Err(Error::method_not_found())
                 }
@@ -338,10 +338,10 @@ impl Side for AgentSide {
                 .map_err(Into::into),
             _ => {
                 if is_valid_ext_method(method) {
-                    Ok(ClientRequest::ExtMethodRequest(ExtRequest {
-                        method: method.into(),
-                        params: params.to_owned().into(),
-                    }))
+                    Ok(ClientRequest::ExtMethodRequest(ExtRequest::new(
+                        method,
+                        params.to_owned().into(),
+                    )))
                 } else {
                     Err(Error::method_not_found())
                 }
@@ -386,10 +386,10 @@ impl Side for AgentSide {
                 .map_err(Into::into),
             _ => {
                 if is_valid_ext_method(method) {
-                    Ok(ClientNotification::ExtNotification(ExtNotification {
-                        method: method.into(),
-                        params: params.to_owned().into(),
-                    }))
+                    Ok(ClientNotification::ExtNotification(ExtNotification::new(
+                        method,
+                        params.to_owned().into(),
+                    )))
                 } else {
                     Err(Error::method_not_found())
                 }
@@ -407,7 +407,7 @@ mod tests {
     use super::*;
 
     use crate::ErrorCode;
-    use serde_json::{Number, Value, json};
+    use serde_json::{Number, Value};
 
     #[test]
     fn id_deserialization() {
@@ -488,8 +488,18 @@ mod tests {
 
     #[test]
     fn decode_rejects_empty_ext_method_name() {
-        let raw = serde_json::value::RawValue::from_string(json!({}).to_string()).unwrap();
+        let raw = serde_json::value::RawValue::from_string(r#"{}"#.to_string()).unwrap();
+
         let err = ClientSide::decode_request("_", Some(&raw)).unwrap_err();
+        assert_eq!(err.code, ErrorCode::MethodNotFound);
+
+        let err = ClientSide::decode_notification("_", Some(&raw)).unwrap_err();
+        assert_eq!(err.code, ErrorCode::MethodNotFound);
+
+        let err = AgentSide::decode_request("_", Some(&raw)).unwrap_err();
+        assert_eq!(err.code, ErrorCode::MethodNotFound);
+
+        let err = AgentSide::decode_notification("_", Some(&raw)).unwrap_err();
         assert_eq!(err.code, ErrorCode::MethodNotFound);
     }
 }
