@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.11.7](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.11.6...v0.11.7) - 2026-04-15
+
+### Added
+
+- *(unstable)* Initial implementation of providers ([#899](https://github.com/agentclientprotocol/agent-client-protocol/pull/899))
+
+### Other
+
+- *(rfd)* Move session/close to Preview ([#970](https://github.com/agentclientprotocol/agent-client-protocol/pull/970))
+- *(rfd)* Move session/resume to Preview ([#969](https://github.com/agentclientprotocol/agent-client-protocol/pull/969))
+
 ## [0.11.6](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.11.5...v0.11.6) - 2026-04-14
 
 ### Fixed
