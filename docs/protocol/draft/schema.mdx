@@ -4322,6 +4322,11 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 Well-known API protocol identifiers for LLM providers.
 
+Agents and clients MUST handle unknown protocol identifiers gracefully.
+
+Protocol names beginning with `_` are free for custom use, like other ACP extension methods.
+Protocol names that do not begin with `_` are reserved for the ACP spec.
+
 **Type:** Union
 
 <ResponseField name="anthropic" type="string">

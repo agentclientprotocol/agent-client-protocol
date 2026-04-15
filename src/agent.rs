@@ -3389,6 +3389,11 @@ impl SetSessionModelResponse {
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
 /// Well-known API protocol identifiers for LLM providers.
+///
+/// Agents and clients MUST handle unknown protocol identifiers gracefully.
+///
+/// Protocol names beginning with `_` are free for custom use, like other ACP extension methods.
+/// Protocol names that do not begin with `_` are reserved for the ACP spec.
 #[cfg(feature = "unstable_llm_providers")]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -6046,7 +6051,7 @@ mod test_serialization {
             SetProvidersRequest::new("main", LlmProtocol::Anthropic, "https://api.anthropic.com")
                 .headers(headers);
 
-        let debug = format!("{:?}", request);
+        let debug = format!("{request:?}");
         assert!(debug.contains("[REDACTED]"));
         assert!(!debug.contains("sk-secret-key"));
     }
