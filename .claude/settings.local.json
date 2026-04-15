@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /Users/charles_coveybrandt/development/agent-client-protocol remote -v)",
+      "Bash(wc:*)",
+      "Bash(gh repo view:*)",
+      "Bash(gh api:*)",
+      "WebFetch(domain:spec.modelcontextprotocol.io)",
+      "mcp__airbnb-core__fetch",
+      "WebFetch(domain:a2a-protocol.org)",
+      "Bash(git checkout:*)",
+      "Bash(git push:*)",
+      "Bash(git pull:*)",
+      "Bash(gh pr view:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(grep:*)",
+      "Bash(git log:*)",
+      "Bash(find:*)",
+      "Bash(for hash in 473ceae 2c79061 33687a0 7075952 e7b1611)",
+      "Bash(do echo \"=== $hash ===\")",
+      "Bash(git show:*)",
+      "Bash(done)",
+      "Bash(git fetch:*)",
+      "Bash(git rebase:*)",
+      "Bash(gh pr list:*)",
+      "WebFetch(domain:drnick.d.musta.ch)",
+      "WebFetch(domain:npm.d.musta.ch)",
+      "WebFetch(domain:git.musta.ch)",
+      "Bash(cd /Users/charles_coveybrandt/development/ergo/projects/airchat-sdk/typescript && pnpm vitest run integration-tests/__tests__/elicitation.test.ts 2>&1)",
+      "Bash(pnpm vitest:*)",
+      "Bash(cd /Users/charles_coveybrandt/development/ergo/projects/airchat-sdk/typescript && pnpm tsc --noEmit 2>&1 && pnpm vitest run packages/airchat-sdk-claude-code/__tests__/elicitation.integration.test.ts integration-tests/__tests__/elicitation.test.ts 2>&1 | tail -8)",
+      "mcp__airbnb-core__sourcegraph_grep",
+      "mcp__airbnb-core__extract",
+      "WebFetch(domain:docs.claude.com)",
+      "WebFetch(domain:telescope-otlp.obs.musta.ch)"
+    ],
+    "additionalDirectories": [
+      "/Users/charles_coveybrandt/development/ergo"
+    ]
+  }
+}
