@@ -19,7 +19,6 @@ All paths in the protocol should be absolute
 
 - Add constants for the method names
 - Add variants to {Agent|Client}{Request|Response} enums
-- Handle the new method in the `Side::decode_request`/`Side::decode_notification` implementation
 - Add the method to markdown_generator.rs SideDocs functions
 - Run `npm run generate` and fix any issues that appear
 - Run `npm run check`
