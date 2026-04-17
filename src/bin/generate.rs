@@ -1,6 +1,7 @@
 use agent_client_protocol_schema::{
-    AGENT_METHOD_NAMES, AgentSide, CLIENT_METHOD_NAMES, ClientSide, JsonRpcMessage,
-    OutgoingMessage, ProtocolVersion,
+    AGENT_METHOD_NAMES, AgentNotification, AgentRequest, AgentResponse, CLIENT_METHOD_NAMES,
+    ClientNotification, ClientRequest, ClientResponse, JsonRpcMessage, Notification,
+    ProtocolVersion, Request, Response,
 };
 #[cfg(feature = "unstable_cancel_request")]
 use agent_client_protocol_schema::{PROTOCOL_LEVEL_METHOD_NAMES, ProtocolLevelNotification};
@@ -9,19 +10,32 @@ use schemars::{
     generate::SchemaSettings,
     transform::{RemoveRefSiblings, ReplaceBoolSchemas},
 };
+use serde::{Deserialize, Serialize};
 use std::{env, fs, path::Path};
 
 use markdown_generator::MarkdownGenerator;
 
-#[expect(dead_code)]
-#[derive(JsonSchema)]
+/// All messages that an agent can send to a client.
+#[derive(Serialize, Deserialize, JsonSchema)]
+#[serde(untagged)]
 #[schemars(inline)]
-struct AgentOutgoingMessage(JsonRpcMessage<OutgoingMessage<AgentSide, ClientSide>>);
+#[allow(clippy::large_enum_variant)]
+enum AgentOutgoingMessage {
+    Request(Request<AgentRequest>),
+    Response(Response<AgentResponse>),
+    Notification(Notification<AgentNotification>),
+}
 
-#[expect(dead_code)]
-#[derive(JsonSchema)]
+/// All messages that a client can send to an agent.
+#[derive(Serialize, Deserialize, JsonSchema)]
+#[serde(untagged)]
 #[schemars(inline)]
-struct ClientOutgoingMessage(JsonRpcMessage<OutgoingMessage<ClientSide, AgentSide>>);
+#[allow(clippy::large_enum_variant)]
+enum ClientOutgoingMessage {
+    Request(Request<ClientRequest>),
+    Response(Response<ClientResponse>),
+    Notification(Notification<ClientNotification>),
+}
 
 #[expect(dead_code)]
 #[derive(JsonSchema)]
@@ -29,8 +43,8 @@ struct ClientOutgoingMessage(JsonRpcMessage<OutgoingMessage<ClientSide, AgentSid
 #[schemars(title = "Agent Client Protocol")]
 #[allow(clippy::large_enum_variant)]
 enum AcpTypes {
-    Agent(AgentOutgoingMessage),
-    Client(ClientOutgoingMessage),
+    Agent(JsonRpcMessage<AgentOutgoingMessage>),
+    Client(JsonRpcMessage<ClientOutgoingMessage>),
     #[cfg(feature = "unstable_cancel_request")]
     ProtocolLevel(ProtocolLevelNotification),
 }
