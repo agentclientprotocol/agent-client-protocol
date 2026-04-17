@@ -459,7 +459,7 @@ impl ResourceLink {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct Annotations {
-    #[serde_as(deserialize_as = "Option<VecSkipError<_, SkipListener>>")]
+    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
     #[serde(default)]
     pub audience: Option<Vec<Role>>,
     pub last_modified: Option<String>,

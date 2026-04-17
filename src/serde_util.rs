@@ -63,7 +63,7 @@ mod skip_listener_tests {
 
     use serde::{Deserialize, Serialize};
     use serde_json::json;
-    use serde_with::{VecSkipError, serde_as};
+    use serde_with::{DefaultOnError, VecSkipError, serde_as};
 
     thread_local! {
         static SKIP_COUNT: Cell<u32> = const { Cell::new(0) };
@@ -93,6 +93,103 @@ mod skip_listener_tests {
         let wrapper: Wrapper = serde_json::from_value(input).unwrap();
 
         assert_eq!(wrapper.values, vec![1, 2, 3]);
+        assert_eq!(SKIP_COUNT.with(Cell::get), 2);
+    }
+
+    /// Mirrors the pattern applied to every required `Vec<T>` field in the
+    /// protocol: `DefaultOnError<VecSkipError<_, ...>>` + `#[serde(default)]`.
+    /// Element-level failures are skipped; any outer shape error (`null`, a
+    /// string, a map, etc.) collapses to `Default::default()` (i.e. `vec![]`).
+    #[serde_as]
+    #[derive(Deserialize, Debug, PartialEq)]
+    struct ResilientVec {
+        #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, CountingListener>>")]
+        #[serde(default)]
+        values: Vec<u32>,
+    }
+
+    #[test]
+    fn resilient_vec_tolerates_missing_null_and_wrong_type() {
+        // Missing field -> `#[serde(default)]` supplies `vec![]`.
+        let r: ResilientVec = serde_json::from_value(json!({})).unwrap();
+        assert_eq!(r.values, Vec::<u32>::new());
+
+        // Explicit null -> `DefaultOnError` swallows the type error.
+        let r: ResilientVec = serde_json::from_value(json!({"values": null})).unwrap();
+        assert_eq!(r.values, Vec::<u32>::new());
+
+        // Wrong outer type (string) -> `DefaultOnError` swallows.
+        let r: ResilientVec = serde_json::from_value(json!({"values": "oops"})).unwrap();
+        assert_eq!(r.values, Vec::<u32>::new());
+
+        // Wrong outer type (object) -> `DefaultOnError` swallows.
+        let r: ResilientVec = serde_json::from_value(json!({"values": {"k": 1}})).unwrap();
+        assert_eq!(r.values, Vec::<u32>::new());
+
+        // Valid array with element errors -> `VecSkipError` skips per-element.
+        SKIP_COUNT.with(|c| c.set(0));
+        let r: ResilientVec =
+            serde_json::from_value(json!({"values": [1, "oops", 2, {}, 3]})).unwrap();
+        assert_eq!(r.values, vec![1, 2, 3]);
+        assert_eq!(SKIP_COUNT.with(Cell::get), 2);
+    }
+
+    #[test]
+    fn resilient_vec_does_not_invoke_inspector_on_outer_failure() {
+        SKIP_COUNT.with(|c| c.set(0));
+
+        // Outer failures are swallowed silently by `DefaultOnError`; the
+        // inspector only sees per-element failures inside a valid array.
+        let _r: ResilientVec = serde_json::from_value(json!({"values": null})).unwrap();
+        let _r: ResilientVec = serde_json::from_value(json!({"values": "oops"})).unwrap();
+        let _r: ResilientVec = serde_json::from_value(json!({"values": {}})).unwrap();
+
+        assert_eq!(SKIP_COUNT.with(Cell::get), 0);
+    }
+
+    /// Mirrors the pattern applied to every optional `Option<Vec<T>>` field:
+    /// `DefaultOnError<Option<VecSkipError<_, ...>>>` + `#[serde(default)]`.
+    /// `null` becomes `None`; outer shape errors also collapse to `None`;
+    /// element-level failures are skipped inside the array.
+    #[serde_as]
+    #[derive(Deserialize, Debug, PartialEq)]
+    struct ResilientOptionVec {
+        #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, CountingListener>>>")]
+        #[serde(default)]
+        values: Option<Vec<u32>>,
+    }
+
+    #[test]
+    fn resilient_option_vec_tolerates_missing_null_and_wrong_type() {
+        // Missing field -> `None`.
+        let r: ResilientOptionVec = serde_json::from_value(json!({})).unwrap();
+        assert_eq!(r.values, None);
+
+        // Explicit null -> `None`.
+        let r: ResilientOptionVec = serde_json::from_value(json!({"values": null})).unwrap();
+        assert_eq!(r.values, None);
+
+        // Empty array -> `Some(vec![])`.
+        let r: ResilientOptionVec = serde_json::from_value(json!({"values": []})).unwrap();
+        assert_eq!(r.values, Some(Vec::<u32>::new()));
+
+        // Valid array -> `Some(vec)`.
+        let r: ResilientOptionVec = serde_json::from_value(json!({"values": [1, 2, 3]})).unwrap();
+        assert_eq!(r.values, Some(vec![1, 2, 3]));
+
+        // Wrong outer type (string) -> `DefaultOnError` collapses to `None`.
+        let r: ResilientOptionVec = serde_json::from_value(json!({"values": "oops"})).unwrap();
+        assert_eq!(r.values, None);
+
+        // Wrong outer type (object) -> `DefaultOnError` collapses to `None`.
+        let r: ResilientOptionVec = serde_json::from_value(json!({"values": {"k": 1}})).unwrap();
+        assert_eq!(r.values, None);
+
+        // Valid array with element errors -> `VecSkipError` skips per-element.
+        SKIP_COUNT.with(|c| c.set(0));
+        let r: ResilientOptionVec =
+            serde_json::from_value(json!({"values": [1, "oops", 2, {}, 3]})).unwrap();
+        assert_eq!(r.values, Some(vec![1, 2, 3]));
         assert_eq!(SKIP_COUNT.with(Cell::get), 2);
     }
 }
