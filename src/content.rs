@@ -11,7 +11,7 @@
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use serde_with::{DefaultOnError, VecSkipError, serde_as};
+use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
 use crate::{IntoOption, Meta};
 
@@ -61,11 +61,12 @@ pub enum ContentBlock {
 
 /// Text provided to or from an LLM.
 #[serde_as]
+#[skip_serializing_none]
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
 #[non_exhaustive]
 pub struct TextContent {
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub annotations: Option<Annotations>,
     pub text: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -73,7 +74,7 @@ pub struct TextContent {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -113,23 +114,23 @@ impl<T: Into<String>> From<T> for ContentBlock {
 
 /// An image provided to or from an LLM.
 #[serde_as]
+#[skip_serializing_none]
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ImageContent {
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub annotations: Option<Annotations>,
     pub data: String,
     pub mime_type: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub uri: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -171,12 +172,13 @@ impl ImageContent {
 
 /// Audio provided to or from an LLM.
 #[serde_as]
+#[skip_serializing_none]
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct AudioContent {
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub annotations: Option<Annotations>,
     pub data: String,
     pub mime_type: String,
@@ -185,7 +187,7 @@ pub struct AudioContent {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -220,11 +222,12 @@ impl AudioContent {
 
 /// The contents of a resource, embedded into a prompt or tool call result.
 #[serde_as]
+#[skip_serializing_none]
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
 #[non_exhaustive]
 pub struct EmbeddedResource {
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub annotations: Option<Annotations>,
     pub resource: EmbeddedResourceResource,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -232,7 +235,7 @@ pub struct EmbeddedResource {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -274,11 +277,11 @@ pub enum EmbeddedResourceResource {
 }
 
 /// Text-based resource contents.
+#[skip_serializing_none]
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct TextResourceContents {
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub mime_type: Option<String>,
     pub text: String,
     pub uri: String,
@@ -287,7 +290,7 @@ pub struct TextResourceContents {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -321,12 +324,12 @@ impl TextResourceContents {
 }
 
 /// Binary resource contents.
+#[skip_serializing_none]
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct BlobResourceContents {
     pub blob: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub mime_type: Option<String>,
     pub uri: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -334,7 +337,7 @@ pub struct BlobResourceContents {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -369,21 +372,18 @@ impl BlobResourceContents {
 
 /// A resource that the server is capable of reading, included in a prompt or tool call result.
 #[serde_as]
+#[skip_serializing_none]
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ResourceLink {
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub annotations: Option<Annotations>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub mime_type: Option<String>,
     pub name: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub size: Option<i64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
     pub uri: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -391,7 +391,7 @@ pub struct ResourceLink {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -454,23 +454,22 @@ impl ResourceLink {
 
 /// Optional annotations for the client. The client can use annotations to inform how objects are used or displayed
 #[serde_as]
+#[skip_serializing_none]
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema, Default)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct Annotations {
     #[serde_as(deserialize_as = "Option<VecSkipError<_>>")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub audience: Option<Vec<Role>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub last_modified: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub priority: Option<f64>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 

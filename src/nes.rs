@@ -6,7 +6,7 @@
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use serde_with::{DefaultOnError, VecSkipError, serde_as};
+use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
 use crate::{IntoOption, Meta, SessionId};
 
@@ -94,24 +94,25 @@ impl Range {
 
 /// NES capabilities advertised by the agent during initialization.
 #[serde_as]
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesCapabilities {
     /// Events the agent wants to receive.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub events: Option<NesEventCapabilities>,
     /// Context the agent wants attached to each suggestion request.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub context: Option<NesContextCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -147,20 +148,21 @@ impl NesCapabilities {
 
 /// Event capabilities the agent can consume.
 #[serde_as]
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesEventCapabilities {
     /// Document event capabilities.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub document: Option<NesDocumentEventCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -190,36 +192,37 @@ impl NesEventCapabilities {
 
 /// Document event capabilities the agent wants to receive.
 #[serde_as]
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesDocumentEventCapabilities {
     /// Whether the agent wants `document/didOpen` events.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub did_open: Option<NesDocumentDidOpenCapabilities>,
     /// Whether the agent wants `document/didChange` events, and the sync kind.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub did_change: Option<NesDocumentDidChangeCapabilities>,
     /// Whether the agent wants `document/didClose` events.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub did_close: Option<NesDocumentDidCloseCapabilities>,
     /// Whether the agent wants `document/didSave` events.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub did_save: Option<NesDocumentDidSaveCapabilities>,
     /// Whether the agent wants `document/didFocus` events.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub did_focus: Option<NesDocumentDidFocusCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -281,6 +284,7 @@ impl NesDocumentEventCapabilities {
 }
 
 /// Marker for `document/didOpen` capability support.
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -290,7 +294,7 @@ pub struct NesDocumentDidOpenCapabilities {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -302,6 +306,7 @@ impl NesDocumentDidOpenCapabilities {
 }
 
 /// Capabilities for `document/didChange` events.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -313,7 +318,7 @@ pub struct NesDocumentDidChangeCapabilities {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -351,6 +356,7 @@ pub enum TextDocumentSyncKind {
 }
 
 /// Marker for `document/didClose` capability support.
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -360,7 +366,7 @@ pub struct NesDocumentDidCloseCapabilities {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -372,6 +378,7 @@ impl NesDocumentDidCloseCapabilities {
 }
 
 /// Marker for `document/didSave` capability support.
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -381,7 +388,7 @@ pub struct NesDocumentDidSaveCapabilities {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -393,6 +400,7 @@ impl NesDocumentDidSaveCapabilities {
 }
 
 /// Marker for `document/didFocus` capability support.
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -402,7 +410,7 @@ pub struct NesDocumentDidFocusCapabilities {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -415,40 +423,41 @@ impl NesDocumentDidFocusCapabilities {
 
 /// Context capabilities the agent wants attached to each suggestion request.
 #[serde_as]
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesContextCapabilities {
     /// Whether the agent wants recent files context.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub recent_files: Option<NesRecentFilesCapabilities>,
     /// Whether the agent wants related snippets context.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub related_snippets: Option<NesRelatedSnippetsCapabilities>,
     /// Whether the agent wants edit history context.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub edit_history: Option<NesEditHistoryCapabilities>,
     /// Whether the agent wants user actions context.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub user_actions: Option<NesUserActionsCapabilities>,
     /// Whether the agent wants open files context.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub open_files: Option<NesOpenFilesCapabilities>,
     /// Whether the agent wants diagnostics context.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub diagnostics: Option<NesDiagnosticsCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -519,19 +528,19 @@ impl NesContextCapabilities {
 }
 
 /// Capabilities for recent files context.
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesRecentFilesCapabilities {
     /// Maximum number of recent files the agent can use.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub max_count: Option<u32>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -543,6 +552,7 @@ impl NesRecentFilesCapabilities {
 }
 
 /// Capabilities for related snippets context.
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -552,7 +562,7 @@ pub struct NesRelatedSnippetsCapabilities {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -564,19 +574,19 @@ impl NesRelatedSnippetsCapabilities {
 }
 
 /// Capabilities for edit history context.
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesEditHistoryCapabilities {
     /// Maximum number of edit history entries the agent can use.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub max_count: Option<u32>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -588,19 +598,19 @@ impl NesEditHistoryCapabilities {
 }
 
 /// Capabilities for user actions context.
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesUserActionsCapabilities {
     /// Maximum number of user actions the agent can use.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub max_count: Option<u32>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -612,6 +622,7 @@ impl NesUserActionsCapabilities {
 }
 
 /// Capabilities for open files context.
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -621,7 +632,7 @@ pub struct NesOpenFilesCapabilities {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -633,6 +644,7 @@ impl NesOpenFilesCapabilities {
 }
 
 /// Capabilities for diagnostics context.
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -642,7 +654,7 @@ pub struct NesDiagnosticsCapabilities {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -657,28 +669,29 @@ impl NesDiagnosticsCapabilities {
 
 /// NES capabilities advertised by the client during initialization.
 #[serde_as]
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ClientNesCapabilities {
     /// Whether the client supports the `jump` suggestion kind.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub jump: Option<NesJumpCapabilities>,
     /// Whether the client supports the `rename` suggestion kind.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub rename: Option<NesRenameCapabilities>,
     /// Whether the client supports the `searchAndReplace` suggestion kind.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub search_and_replace: Option<NesSearchAndReplaceCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -722,6 +735,7 @@ impl ClientNesCapabilities {
 }
 
 /// Marker for jump suggestion support.
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -731,7 +745,7 @@ pub struct NesJumpCapabilities {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -743,6 +757,7 @@ impl NesJumpCapabilities {
 }
 
 /// Marker for rename suggestion support.
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -752,7 +767,7 @@ pub struct NesRenameCapabilities {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -764,6 +779,7 @@ impl NesRenameCapabilities {
 }
 
 /// Marker for search and replace suggestion support.
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -773,7 +789,7 @@ pub struct NesSearchAndReplaceCapabilities {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -787,6 +803,7 @@ impl NesSearchAndReplaceCapabilities {
 // Document event notifications (client -> agent)
 
 /// Notification sent when a file is opened in the editor.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = DOCUMENT_DID_OPEN_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -807,7 +824,7 @@ pub struct DidOpenDocumentNotification {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -843,6 +860,7 @@ impl DidOpenDocumentNotification {
 }
 
 /// Notification sent when a file is edited.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = DOCUMENT_DID_CHANGE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -861,7 +879,7 @@ pub struct DidChangeDocumentNotification {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -898,12 +916,12 @@ impl DidChangeDocumentNotification {
 ///
 /// When `range` is `None`, `text` is the full content of the document.
 /// When `range` is `Some`, `text` replaces the given range.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct TextDocumentContentChangeEvent {
     /// The range of the document that changed. If `None`, the entire content is replaced.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub range: Option<Range>,
     /// The new text for the range, or the full document content if `range` is `None`.
     pub text: String,
@@ -928,6 +946,7 @@ impl TextDocumentContentChangeEvent {
 }
 
 /// Notification sent when a file is closed.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = DOCUMENT_DID_CLOSE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -942,7 +961,7 @@ pub struct DidCloseDocumentNotification {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -969,6 +988,7 @@ impl DidCloseDocumentNotification {
 }
 
 /// Notification sent when a file is saved.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = DOCUMENT_DID_SAVE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -983,7 +1003,7 @@ pub struct DidSaveDocumentNotification {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1010,6 +1030,7 @@ impl DidSaveDocumentNotification {
 }
 
 /// Notification sent when a file becomes the active editor tab.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = DOCUMENT_DID_FOCUS_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -1030,7 +1051,7 @@ pub struct DidFocusDocumentNotification {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1069,28 +1090,28 @@ impl DidFocusDocumentNotification {
 
 /// Request to start an NES session.
 #[serde_as]
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = NES_START_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct StartNesRequest {
     /// The root URI of the workspace.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub workspace_uri: Option<String>,
     /// The workspace folders.
     #[serde_as(deserialize_as = "Option<VecSkipError<_>>")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub workspace_folders: Option<Vec<WorkspaceFolder>>,
     /// Repository metadata, if the workspace is a git repository.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub repository: Option<NesRepository>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1194,6 +1215,7 @@ impl NesRepository {
 }
 
 /// Response to `nes/start`.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = NES_START_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -1206,7 +1228,7 @@ pub struct StartNesResponse {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1237,6 +1259,7 @@ impl StartNesResponse {
 ///
 /// The agent **must** cancel any ongoing work related to the NES session
 /// and then free up any resources associated with the session.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = NES_CLOSE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -1249,7 +1272,7 @@ pub struct CloseNesRequest {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1275,6 +1298,7 @@ impl CloseNesRequest {
 }
 
 /// Response from closing an NES session.
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = NES_CLOSE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -1285,7 +1309,7 @@ pub struct CloseNesResponse {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1326,6 +1350,7 @@ pub enum NesTriggerKind {
 
 /// Request for a code suggestion.
 #[serde_as]
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = NES_SUGGEST_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -1341,20 +1366,20 @@ pub struct SuggestNesRequest {
     pub position: Position,
     /// The current text selection range, if any.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub selection: Option<Range>,
     /// What triggered this suggestion request.
     pub trigger_kind: NesTriggerKind,
     /// Context for the suggestion, included based on agent capabilities.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub context: Option<NesSuggestContext>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1405,40 +1430,41 @@ impl SuggestNesRequest {
 
 /// Context attached to a suggestion request.
 #[serde_as]
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesSuggestContext {
     /// Recently accessed files.
     #[serde_as(deserialize_as = "Option<VecSkipError<_>>")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub recent_files: Option<Vec<NesRecentFile>>,
     /// Related code snippets.
     #[serde_as(deserialize_as = "Option<VecSkipError<_>>")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub related_snippets: Option<Vec<NesRelatedSnippet>>,
     /// Recent edit history.
     #[serde_as(deserialize_as = "Option<VecSkipError<_>>")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub edit_history: Option<Vec<NesEditHistoryEntry>>,
     /// Recent user actions (typing, navigation, etc.).
     #[serde_as(deserialize_as = "Option<VecSkipError<_>>")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub user_actions: Option<Vec<NesUserAction>>,
     /// Currently open files in the editor.
     #[serde_as(deserialize_as = "Option<VecSkipError<_>>")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub open_files: Option<Vec<NesOpenFile>>,
     /// Current diagnostics (errors, warnings).
     #[serde_as(deserialize_as = "Option<VecSkipError<_>>")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub diagnostics: Option<Vec<NesDiagnostic>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1627,6 +1653,7 @@ impl NesUserAction {
 
 /// An open file in the editor.
 #[serde_as]
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -1637,11 +1664,11 @@ pub struct NesOpenFile {
     pub language_id: String,
     /// The visible range in the editor, if any.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub visible_range: Option<Range>,
     /// Timestamp in milliseconds since epoch of when the file was last focused.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub last_focused_ms: Option<u64>,
 }
 
@@ -1723,6 +1750,7 @@ pub enum NesDiagnosticSeverity {
 
 /// Response to `nes/suggest`.
 #[serde_as]
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = NES_SUGGEST_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -1736,7 +1764,7 @@ pub struct SuggestNesResponse {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1779,6 +1807,7 @@ pub enum NesSuggestion {
 
 /// A text edit suggestion.
 #[serde_as]
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -1791,7 +1820,7 @@ pub struct NesEditSuggestion {
     pub edits: Vec<NesTextEdit>,
     /// Optional suggested cursor position after applying edits.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub cursor_position: Option<Position>,
 }
 
@@ -1891,6 +1920,7 @@ impl NesRenameSuggestion {
 }
 
 /// A search-and-replace suggestion.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -1904,7 +1934,6 @@ pub struct NesSearchAndReplaceSuggestion {
     /// The replacement text.
     pub replace: String,
     /// Whether `search` is a regular expression. Defaults to `false`.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub is_regex: Option<bool>,
 }
 
@@ -1935,6 +1964,7 @@ impl NesSearchAndReplaceSuggestion {
 // NES accept/reject notifications
 
 /// Notification sent when a suggestion is accepted.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = NES_ACCEPT_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -1949,7 +1979,7 @@ pub struct AcceptNesNotification {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1977,6 +2007,7 @@ impl AcceptNesNotification {
 
 /// Notification sent when a suggestion is rejected.
 #[serde_as]
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = NES_REJECT_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -1988,14 +2019,14 @@ pub struct RejectNesNotification {
     pub id: String,
     /// The reason for rejection.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub reason: Option<NesRejectReason>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 

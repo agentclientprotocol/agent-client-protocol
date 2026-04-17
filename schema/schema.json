@@ -442,7 +442,6 @@
               "type": "null"
             }
           ],
-          "default": null,
           "description": "Input for the command if required"
         },
         "name": {

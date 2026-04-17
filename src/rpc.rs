@@ -4,6 +4,7 @@ use derive_more::{Display, From};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use serde_json::value::RawValue;
+use serde_with::skip_serializing_none;
 
 use crate::{
     AGENT_METHOD_NAMES, AgentNotification, AgentRequest, AgentResponse, CLIENT_METHOD_NAMES,
@@ -52,10 +53,10 @@ pub enum RequestId {
     reason = "This comes from the JSON-RPC specification itself"
 )]
 #[schemars(rename = "{Params}", extend("x-docs-ignore" = true))]
+#[skip_serializing_none]
 pub struct Request<Params> {
     pub id: RequestId,
     pub method: Arc<str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub params: Option<Params>,
 }
 
@@ -93,9 +94,9 @@ impl<R> Response<R> {
     reason = "This comes from the JSON-RPC specification itself"
 )]
 #[schemars(rename = "{Params}", extend("x-docs-ignore" = true))]
+#[skip_serializing_none]
 pub struct Notification<Params> {
     pub method: Arc<str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub params: Option<Params>,
 }
 
