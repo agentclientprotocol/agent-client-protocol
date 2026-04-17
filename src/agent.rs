@@ -17,7 +17,7 @@ use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 use crate::RequiredNullable;
 use crate::{
     ClientCapabilities, ContentBlock, ExtNotification, ExtRequest, ExtResponse, IntoOption, Meta,
-    ProtocolVersion, SessionId,
+    ProtocolVersion, SessionId, SkipListener,
 };
 
 #[cfg(feature = "unstable_nes")]
@@ -128,7 +128,7 @@ pub struct InitializeResponse {
     #[serde(default)]
     pub agent_capabilities: AgentCapabilities,
     /// Authentication methods supported by the agent.
-    #[serde_as(deserialize_as = "VecSkipError<_>")]
+    #[serde_as(deserialize_as = "VecSkipError<_, SkipListener>")]
     #[serde(default)]
     pub auth_methods: Vec<AuthMethod>,
     /// Information about the Agent name and version sent to the Client.
@@ -1024,7 +1024,7 @@ pub struct NewSessionResponse {
     #[serde(default)]
     pub models: Option<SessionModelState>,
     /// Initial session configuration options if supported by the Agent.
-    #[serde_as(deserialize_as = "Option<VecSkipError<_>>")]
+    #[serde_as(deserialize_as = "Option<VecSkipError<_, SkipListener>>")]
     #[serde(default)]
     pub config_options: Option<Vec<SessionConfigOption>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1200,7 +1200,7 @@ pub struct LoadSessionResponse {
     #[serde(default)]
     pub models: Option<SessionModelState>,
     /// Initial session configuration options if supported by the Agent.
-    #[serde_as(deserialize_as = "Option<VecSkipError<_>>")]
+    #[serde_as(deserialize_as = "Option<VecSkipError<_, SkipListener>>")]
     #[serde(default)]
     pub config_options: Option<Vec<SessionConfigOption>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1384,7 +1384,7 @@ pub struct ForkSessionResponse {
     #[serde(default)]
     pub models: Option<SessionModelState>,
     /// Initial session configuration options if supported by the Agent.
-    #[serde_as(deserialize_as = "Option<VecSkipError<_>>")]
+    #[serde_as(deserialize_as = "Option<VecSkipError<_, SkipListener>>")]
     #[serde(default)]
     pub config_options: Option<Vec<SessionConfigOption>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1574,7 +1574,7 @@ pub struct ResumeSessionResponse {
     #[serde(default)]
     pub models: Option<SessionModelState>,
     /// Initial session configuration options if supported by the Agent.
-    #[serde_as(deserialize_as = "Option<VecSkipError<_>>")]
+    #[serde_as(deserialize_as = "Option<VecSkipError<_, SkipListener>>")]
     #[serde(default)]
     pub config_options: Option<Vec<SessionConfigOption>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1817,7 +1817,7 @@ impl ListSessionsRequest {
 #[non_exhaustive]
 pub struct ListSessionsResponse {
     /// Array of session information objects
-    #[serde_as(deserialize_as = "VecSkipError<_>")]
+    #[serde_as(deserialize_as = "VecSkipError<_, SkipListener>")]
     pub sessions: Vec<SessionInfo>,
     /// Opaque cursor token. If present, pass this in the next request's cursor parameter
     /// to fetch the next page. If absent, there are no more results.
@@ -1962,7 +1962,7 @@ pub struct SessionModeState {
     /// The current mode the Agent is in.
     pub current_mode_id: SessionModeId,
     /// The set of modes that the Agent can operate in
-    #[serde_as(deserialize_as = "VecSkipError<_>")]
+    #[serde_as(deserialize_as = "VecSkipError<_, SkipListener>")]
     pub available_modes: Vec<SessionMode>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -2663,7 +2663,7 @@ impl SetSessionConfigOptionRequest {
 #[non_exhaustive]
 pub struct SetSessionConfigOptionResponse {
     /// The full set of configuration options and their current values.
-    #[serde_as(deserialize_as = "VecSkipError<_>")]
+    #[serde_as(deserialize_as = "VecSkipError<_, SkipListener>")]
     pub config_options: Vec<SessionConfigOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -3255,7 +3255,7 @@ pub struct SessionModelState {
     /// The current model the Agent is in.
     pub current_model_id: ModelId,
     /// The set of models that the Agent can use
-    #[serde_as(deserialize_as = "VecSkipError<_>")]
+    #[serde_as(deserialize_as = "VecSkipError<_, SkipListener>")]
     pub available_models: Vec<ModelInfo>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -3531,7 +3531,7 @@ pub struct ProviderInfo {
     /// Provider identifier, for example "main" or "openai".
     pub id: String,
     /// Supported protocol types for this provider.
-    #[serde_as(deserialize_as = "VecSkipError<_>")]
+    #[serde_as(deserialize_as = "VecSkipError<_, SkipListener>")]
     pub supported: Vec<LlmProtocol>,
     /// Whether this provider is mandatory and cannot be disabled via `providers/disable`.
     /// If true, clients must not call `providers/disable` for this id.
@@ -3632,7 +3632,7 @@ impl ListProvidersRequest {
 #[non_exhaustive]
 pub struct ListProvidersResponse {
     /// Configurable providers with current routing info suitable for UI display.
-    #[serde_as(deserialize_as = "VecSkipError<_>")]
+    #[serde_as(deserialize_as = "VecSkipError<_, SkipListener>")]
     pub providers: Vec<ProviderInfo>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at

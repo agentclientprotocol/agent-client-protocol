@@ -4,6 +4,8 @@
 //!
 //! - [`MaybeUndefined<T>`] — three-state: undefined (key absent), null, or value.
 //! - [`RequiredNullable<T>`] — required-but-nullable: key must be present, value may be null.
+//! - [`SkipListener`] — [`serde_with::InspectError`] hook used by every
+//!   `VecSkipError` call site in the protocol types.
 //!
 //! ## Builder traits
 //!
@@ -21,6 +23,79 @@ use std::{
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+// ---- SkipListener ----
+
+/// Inspector passed to every `VecSkipError<_, SkipListener>` in the protocol
+/// types so that malformed list entries dropped during deserialization are
+/// surfaced to observability tooling rather than vanishing silently.
+///
+/// - With the `tracing` feature enabled, this is a zero-sized type whose
+///   [`InspectError`](serde_with::InspectError) implementation emits a
+///   [`tracing::warn!`] event on every skipped entry.
+/// - With the feature disabled (the default), it resolves to `()` — which
+///   `serde_with` ships with a no-op `InspectError` implementation — so call
+///   sites incur zero runtime cost.
+#[cfg(feature = "tracing")]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub struct SkipListener;
+
+#[cfg(feature = "tracing")]
+impl serde_with::InspectError for SkipListener {
+    fn inspect_error(error: impl serde::de::Error) {
+        tracing::warn!(
+            %error,
+            "skipped malformed list entry during deserialization",
+        );
+    }
+}
+
+/// Zero-cost stand-in for [`SkipListener`] when the `tracing` feature is
+/// disabled. Resolves to `()`, which `serde_with` already ships with a no-op
+/// `InspectError` implementation.
+#[cfg(not(feature = "tracing"))]
+pub type SkipListener = ();
+
+#[cfg(test)]
+mod skip_listener_tests {
+    use std::cell::Cell;
+
+    use serde::{Deserialize, Serialize};
+    use serde_json::json;
+    use serde_with::{VecSkipError, serde_as};
+
+    thread_local! {
+        static SKIP_COUNT: Cell<u32> = const { Cell::new(0) };
+    }
+
+    /// Test-only inspector that counts skipped entries.
+    struct CountingListener;
+
+    impl serde_with::InspectError for CountingListener {
+        fn inspect_error(_error: impl serde::de::Error) {
+            SKIP_COUNT.with(|c| c.set(c.get() + 1));
+        }
+    }
+
+    #[serde_as]
+    #[derive(Serialize, Deserialize, Debug, PartialEq)]
+    struct Wrapper {
+        #[serde_as(deserialize_as = "VecSkipError<_, CountingListener>")]
+        values: Vec<u32>,
+    }
+
+    #[test]
+    fn inspector_runs_for_each_skipped_entry() {
+        SKIP_COUNT.with(|c| c.set(0));
+
+        let input = json!({"values": [1, "oops", 2, {}, 3]});
+        let wrapper: Wrapper = serde_json::from_value(input).unwrap();
+
+        assert_eq!(wrapper.values, vec![1, 2, 3]);
+        assert_eq!(SKIP_COUNT.with(Cell::get), 2);
+    }
+}
 
 // ---- IntoOption ----
 

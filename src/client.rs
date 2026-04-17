@@ -17,7 +17,7 @@ use crate::elicitation::{
 };
 use crate::{
     ContentBlock, ExtNotification, ExtRequest, ExtResponse, IntoOption, Meta, Plan,
-    SessionConfigOption, SessionId, SessionModeId, ToolCall, ToolCallUpdate,
+    SessionConfigOption, SessionId, SessionModeId, SkipListener, ToolCall, ToolCallUpdate,
 };
 use crate::{IntoMaybeUndefined, MaybeUndefined};
 
@@ -162,7 +162,7 @@ impl CurrentModeUpdate {
 #[non_exhaustive]
 pub struct ConfigOptionUpdate {
     /// The full set of configuration options and their current values.
-    #[serde_as(deserialize_as = "VecSkipError<_>")]
+    #[serde_as(deserialize_as = "VecSkipError<_, SkipListener>")]
     pub config_options: Vec<SessionConfigOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -412,7 +412,7 @@ impl ContentChunk {
 #[non_exhaustive]
 pub struct AvailableCommandsUpdate {
     /// Commands the agent can execute
-    #[serde_as(deserialize_as = "VecSkipError<_>")]
+    #[serde_as(deserialize_as = "VecSkipError<_, SkipListener>")]
     pub available_commands: Vec<AvailableCommand>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -1554,7 +1554,7 @@ pub struct ClientCapabilities {
     ///
     /// The position encodings supported by the client, in order of preference.
     #[cfg(feature = "unstable_nes")]
-    #[serde_as(deserialize_as = "VecSkipError<_>")]
+    #[serde_as(deserialize_as = "VecSkipError<_, SkipListener>")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub position_encodings: Vec<PositionEncodingKind>,
 

@@ -11,7 +11,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
-use crate::{ContentBlock, Error, IntoOption, Meta, TerminalId};
+use crate::{ContentBlock, Error, IntoOption, Meta, SkipListener, TerminalId};
 
 /// Represents a tool call that the language model has requested.
 ///
@@ -37,12 +37,12 @@ pub struct ToolCall {
     #[serde(default, skip_serializing_if = "ToolCallStatus::is_default")]
     pub status: ToolCallStatus,
     /// Content produced by the tool call.
-    #[serde_as(deserialize_as = "VecSkipError<_>")]
+    #[serde_as(deserialize_as = "VecSkipError<_, SkipListener>")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub content: Vec<ToolCallContent>,
     /// File locations affected by this tool call.
     /// Enables "follow-along" features in clients.
-    #[serde_as(deserialize_as = "VecSkipError<_>")]
+    #[serde_as(deserialize_as = "VecSkipError<_, SkipListener>")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub locations: Vec<ToolCallLocation>,
     /// Raw input parameters sent to the tool.
@@ -226,11 +226,11 @@ pub struct ToolCallUpdateFields {
     /// Update the human-readable title.
     pub title: Option<String>,
     /// Replace the content collection.
-    #[serde_as(deserialize_as = "Option<VecSkipError<_>>")]
+    #[serde_as(deserialize_as = "Option<VecSkipError<_, SkipListener>>")]
     #[serde(default)]
     pub content: Option<Vec<ToolCallContent>>,
     /// Replace the locations collection.
-    #[serde_as(deserialize_as = "Option<VecSkipError<_>>")]
+    #[serde_as(deserialize_as = "Option<VecSkipError<_, SkipListener>>")]
     #[serde(default)]
     pub locations: Option<Vec<ToolCallLocation>>,
     /// Update the raw input.

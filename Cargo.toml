@@ -45,6 +45,11 @@ unstable_session_usage = []
 unstable_message_id = []
 unstable_boolean_config = []
 
+# Emit `tracing::warn!` events when `VecSkipError` drops a malformed list
+# entry during deserialization. When disabled (the default), the inspector
+# hook compiles down to serde_with's built-in no-op and has zero runtime cost.
+tracing = ["dep:tracing"]
+
 [[bin]]
 name = "generate"
 path = "src/bin/generate.rs"
@@ -57,6 +62,7 @@ serde = { version = "1", features = ["derive", "rc"] }
 serde_json = { version = "1", features = ["raw_value"] }
 serde_with = { version = "3.18.0", features = ["json", "schemars_1"] }
 strum = { version = "0.28", features = ["derive"] }
+tracing = { version = "0.1", default-features = false, optional = true }
 
 [lints.rust]
 future_incompatible = { level = "warn", priority = -1 }

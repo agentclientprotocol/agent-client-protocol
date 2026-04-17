@@ -13,7 +13,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
-use crate::{IntoOption, Meta};
+use crate::{IntoOption, Meta, SkipListener};
 
 /// Content blocks represent displayable information in the Agent Client Protocol.
 ///
@@ -459,7 +459,7 @@ impl ResourceLink {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct Annotations {
-    #[serde_as(deserialize_as = "Option<VecSkipError<_>>")]
+    #[serde_as(deserialize_as = "Option<VecSkipError<_, SkipListener>>")]
     #[serde(default)]
     pub audience: Option<Vec<Role>>,
     pub last_modified: Option<String>,

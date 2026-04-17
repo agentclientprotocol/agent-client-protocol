@@ -8,7 +8,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
-use crate::{IntoOption, Meta, SessionId};
+use crate::{IntoOption, Meta, SessionId, SkipListener};
 
 // Method name constants
 
@@ -1099,7 +1099,7 @@ pub struct StartNesRequest {
     /// The root URI of the workspace.
     pub workspace_uri: Option<String>,
     /// The workspace folders.
-    #[serde_as(deserialize_as = "Option<VecSkipError<_>>")]
+    #[serde_as(deserialize_as = "Option<VecSkipError<_, SkipListener>>")]
     #[serde(default)]
     pub workspace_folders: Option<Vec<WorkspaceFolder>>,
     /// Repository metadata, if the workspace is a git repository.
@@ -1436,27 +1436,27 @@ impl SuggestNesRequest {
 #[non_exhaustive]
 pub struct NesSuggestContext {
     /// Recently accessed files.
-    #[serde_as(deserialize_as = "Option<VecSkipError<_>>")]
+    #[serde_as(deserialize_as = "Option<VecSkipError<_, SkipListener>>")]
     #[serde(default)]
     pub recent_files: Option<Vec<NesRecentFile>>,
     /// Related code snippets.
-    #[serde_as(deserialize_as = "Option<VecSkipError<_>>")]
+    #[serde_as(deserialize_as = "Option<VecSkipError<_, SkipListener>>")]
     #[serde(default)]
     pub related_snippets: Option<Vec<NesRelatedSnippet>>,
     /// Recent edit history.
-    #[serde_as(deserialize_as = "Option<VecSkipError<_>>")]
+    #[serde_as(deserialize_as = "Option<VecSkipError<_, SkipListener>>")]
     #[serde(default)]
     pub edit_history: Option<Vec<NesEditHistoryEntry>>,
     /// Recent user actions (typing, navigation, etc.).
-    #[serde_as(deserialize_as = "Option<VecSkipError<_>>")]
+    #[serde_as(deserialize_as = "Option<VecSkipError<_, SkipListener>>")]
     #[serde(default)]
     pub user_actions: Option<Vec<NesUserAction>>,
     /// Currently open files in the editor.
-    #[serde_as(deserialize_as = "Option<VecSkipError<_>>")]
+    #[serde_as(deserialize_as = "Option<VecSkipError<_, SkipListener>>")]
     #[serde(default)]
     pub open_files: Option<Vec<NesOpenFile>>,
     /// Current diagnostics (errors, warnings).
-    #[serde_as(deserialize_as = "Option<VecSkipError<_>>")]
+    #[serde_as(deserialize_as = "Option<VecSkipError<_, SkipListener>>")]
     #[serde(default)]
     pub diagnostics: Option<Vec<NesDiagnostic>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1757,7 +1757,7 @@ pub enum NesDiagnosticSeverity {
 #[non_exhaustive]
 pub struct SuggestNesResponse {
     /// The list of suggestions.
-    #[serde_as(deserialize_as = "VecSkipError<_>")]
+    #[serde_as(deserialize_as = "VecSkipError<_, SkipListener>")]
     pub suggestions: Vec<NesSuggestion>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at

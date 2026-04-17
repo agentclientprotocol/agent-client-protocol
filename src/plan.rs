@@ -9,7 +9,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_with::{VecSkipError, serde_as, skip_serializing_none};
 
-use crate::{IntoOption, Meta};
+use crate::{IntoOption, Meta, SkipListener};
 
 /// An execution plan for accomplishing complex tasks.
 ///
@@ -28,7 +28,7 @@ pub struct Plan {
     ///
     /// When updating a plan, the agent must send a complete list of all entries
     /// with their current status. The client replaces the entire plan with each update.
-    #[serde_as(deserialize_as = "VecSkipError<_>")]
+    #[serde_as(deserialize_as = "VecSkipError<_, SkipListener>")]
     pub entries: Vec<PlanEntry>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
