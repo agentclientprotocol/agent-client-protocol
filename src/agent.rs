@@ -11,6 +11,7 @@ use std::collections::HashMap;
 use derive_more::{Display, From};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use serde_with::{DefaultOnError, VecSkipError, serde_as};
 
 #[cfg(feature = "unstable_llm_providers")]
 use crate::RequiredNullable;
@@ -42,6 +43,7 @@ use crate::nes::{
 /// Sent by the client to establish connection and negotiate capabilities.
 ///
 /// See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)
+#[serde_as]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = INITIALIZE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -55,7 +57,8 @@ pub struct InitializeRequest {
     /// Information about the Client name and version sent to the Agent.
     ///
     /// Note: in future versions of the protocol, this will be required.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub client_info: Option<Implementation>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -108,6 +111,7 @@ impl InitializeRequest {
 /// Contains the negotiated protocol version and agent capabilities.
 ///
 /// See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)
+#[serde_as]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = INITIALIZE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -122,12 +126,14 @@ pub struct InitializeResponse {
     #[serde(default)]
     pub agent_capabilities: AgentCapabilities,
     /// Authentication methods supported by the agent.
+    #[serde_as(deserialize_as = "VecSkipError<_>")]
     #[serde(default)]
     pub auth_methods: Vec<AuthMethod>,
     /// Information about the Agent name and version sent to the Client.
     ///
     /// Note: in future versions of the protocol, this will be required.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub agent_info: Option<Implementation>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -407,6 +413,7 @@ impl LogoutResponse {
 ///
 /// Authentication-related capabilities supported by the agent.
 #[cfg(feature = "unstable_logout")]
+#[serde_as]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -414,7 +421,8 @@ pub struct AgentAuthCapabilities {
     /// Whether the agent supports the logout method.
     ///
     /// By supplying `{}` it means that the agent supports the logout method.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub logout: Option<LogoutCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -980,6 +988,7 @@ impl NewSessionRequest {
 /// Response from creating a new session.
 ///
 /// See protocol docs: [Creating a Session](https://agentclientprotocol.com/protocol/session-setup#creating-a-session)
+#[serde_as]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_NEW_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -992,7 +1001,8 @@ pub struct NewSessionResponse {
     /// Initial mode state if supported by the Agent
     ///
     /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub modes: Option<SessionModeState>,
     /// **UNSTABLE**
     ///
@@ -1000,10 +1010,12 @@ pub struct NewSessionResponse {
     ///
     /// Initial model state if supported by the Agent
     #[cfg(feature = "unstable_session_model")]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub models: Option<SessionModelState>,
     /// Initial session configuration options if supported by the Agent.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "Option<VecSkipError<_>>")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub config_options: Option<Vec<SessionConfigOption>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -1154,6 +1166,7 @@ impl LoadSessionRequest {
 }
 
 /// Response from loading an existing session.
+#[serde_as]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_LOAD_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -1162,6 +1175,7 @@ pub struct LoadSessionResponse {
     /// Initial mode state if supported by the Agent
     ///
     /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
+    #[serde_as(deserialize_as = "DefaultOnError")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub modes: Option<SessionModeState>,
     /// **UNSTABLE**
@@ -1170,9 +1184,11 @@ pub struct LoadSessionResponse {
     ///
     /// Initial model state if supported by the Agent
     #[cfg(feature = "unstable_session_model")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub models: Option<SessionModelState>,
     /// Initial session configuration options if supported by the Agent.
+    #[serde_as(deserialize_as = "Option<VecSkipError<_>>")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub config_options: Option<Vec<SessionConfigOption>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1330,6 +1346,7 @@ impl ForkSessionRequest {
 ///
 /// Response from forking an existing session.
 #[cfg(feature = "unstable_session_fork")]
+#[serde_as]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_FORK_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -1340,7 +1357,8 @@ pub struct ForkSessionResponse {
     /// Initial mode state if supported by the Agent
     ///
     /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub modes: Option<SessionModeState>,
     /// **UNSTABLE**
     ///
@@ -1348,10 +1366,12 @@ pub struct ForkSessionResponse {
     ///
     /// Initial model state if supported by the Agent
     #[cfg(feature = "unstable_session_model")]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub models: Option<SessionModelState>,
     /// Initial session configuration options if supported by the Agent.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "Option<VecSkipError<_>>")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub config_options: Option<Vec<SessionConfigOption>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -1516,6 +1536,7 @@ impl ResumeSessionRequest {
 ///
 /// Response from resuming an existing session.
 #[cfg(feature = "unstable_session_resume")]
+#[serde_as]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_RESUME_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -1524,6 +1545,7 @@ pub struct ResumeSessionResponse {
     /// Initial mode state if supported by the Agent
     ///
     /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
+    #[serde_as(deserialize_as = "DefaultOnError")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub modes: Option<SessionModeState>,
     /// **UNSTABLE**
@@ -1532,9 +1554,11 @@ pub struct ResumeSessionResponse {
     ///
     /// Initial model state if supported by the Agent
     #[cfg(feature = "unstable_session_model")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub models: Option<SessionModelState>,
     /// Initial session configuration options if supported by the Agent.
+    #[serde_as(deserialize_as = "Option<VecSkipError<_>>")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub config_options: Option<Vec<SessionConfigOption>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1768,12 +1792,14 @@ impl ListSessionsRequest {
 }
 
 /// Response from listing sessions.
+#[serde_as]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_LIST_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ListSessionsResponse {
     /// Array of session information objects
+    #[serde_as(deserialize_as = "VecSkipError<_>")]
     pub sessions: Vec<SessionInfo>,
     /// Opaque cursor token. If present, pass this in the next request's cursor parameter
     /// to fetch the next page. If absent, there are no more results.
@@ -1817,6 +1843,7 @@ impl ListSessionsResponse {
 }
 
 /// Information about a session returned by session/list
+#[serde_as]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -1837,10 +1864,12 @@ pub struct SessionInfo {
     pub additional_directories: Vec<PathBuf>,
 
     /// Human-readable title for the session
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
     /// ISO 8601 timestamp of last activity
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub updated_at: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -1906,6 +1935,7 @@ impl SessionInfo {
 // Session modes
 
 /// The set of modes and the one currently active.
+#[serde_as]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -1913,6 +1943,7 @@ pub struct SessionModeState {
     /// The current mode the Agent is in.
     pub current_mode_id: SessionModeId,
     /// The set of modes that the Agent can operate in
+    #[serde_as(deserialize_as = "VecSkipError<_>")]
     pub available_modes: Vec<SessionMode>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -2332,6 +2363,7 @@ pub enum SessionConfigKind {
 }
 
 /// A session configuration option selector and its current state.
+#[serde_as]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -2344,6 +2376,7 @@ pub struct SessionConfigOption {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     /// Optional semantic category for this option (UX only).
+    #[serde_as(deserialize_as = "DefaultOnError")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub category: Option<SessionConfigOptionCategory>,
     /// Type-specific fields for this configuration option.
@@ -2596,12 +2629,14 @@ impl SetSessionConfigOptionRequest {
 }
 
 /// Response to `session/set_config_option` method.
+#[serde_as]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_SET_CONFIG_OPTION_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SetSessionConfigOptionResponse {
     /// The full set of configuration options and their current values.
+    #[serde_as(deserialize_as = "VecSkipError<_>")]
     pub config_options: Vec<SessionConfigOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -2992,6 +3027,7 @@ impl PromptRequest {
 /// Response from processing a user prompt.
 ///
 /// See protocol docs: [Check for Completion](https://agentclientprotocol.com/protocol/prompt-turn#4-check-for-completion)
+#[serde_as]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_PROMPT_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -3017,7 +3053,8 @@ pub struct PromptResponse {
     ///
     /// Token usage for this turn (optional).
     #[cfg(feature = "unstable_session_usage")]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub usage: Option<Usage>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -3179,6 +3216,7 @@ impl Usage {
 ///
 /// The set of models and the one currently active.
 #[cfg(feature = "unstable_session_model")]
+#[serde_as]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -3186,6 +3224,7 @@ pub struct SessionModelState {
     /// The current model the Agent is in.
     pub current_model_id: ModelId,
     /// The set of models that the Agent can use
+    #[serde_as(deserialize_as = "VecSkipError<_>")]
     pub available_models: Vec<ModelInfo>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -3449,6 +3488,7 @@ impl ProviderCurrentConfig {
 ///
 /// Information about a configurable LLM provider.
 #[cfg(feature = "unstable_llm_providers")]
+#[serde_as]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -3456,6 +3496,7 @@ pub struct ProviderInfo {
     /// Provider identifier, for example "main" or "openai".
     pub id: String,
     /// Supported protocol types for this provider.
+    #[serde_as(deserialize_as = "VecSkipError<_>")]
     pub supported: Vec<LlmProtocol>,
     /// Whether this provider is mandatory and cannot be disabled via `providers/disable`.
     /// If true, clients must not call `providers/disable` for this id.
@@ -3547,12 +3588,14 @@ impl ListProvidersRequest {
 ///
 /// Response to `providers/list`.
 #[cfg(feature = "unstable_llm_providers")]
+#[serde_as]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = PROVIDERS_LIST_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ListProvidersResponse {
     /// Configurable providers with current routing info suitable for UI display.
+    #[serde_as(deserialize_as = "VecSkipError<_>")]
     pub providers: Vec<ProviderInfo>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -3780,6 +3823,7 @@ impl DisableProvidersResponse {
 /// available features and content types.
 ///
 /// See protocol docs: [Agent Capabilities](https://agentclientprotocol.com/protocol/initialization#agent-capabilities)
+#[serde_as]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -3811,7 +3855,8 @@ pub struct AgentCapabilities {
     ///
     /// By supplying `{}` it means that the agent supports provider configuration methods.
     #[cfg(feature = "unstable_llm_providers")]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub providers: Option<ProvidersCapabilities>,
     /// **UNSTABLE**
     ///
@@ -3819,7 +3864,8 @@ pub struct AgentCapabilities {
     ///
     /// NES (Next Edit Suggestions) capabilities supported by the agent.
     #[cfg(feature = "unstable_nes")]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub nes: Option<NesCapabilities>,
     /// **UNSTABLE**
     ///
@@ -3827,7 +3873,8 @@ pub struct AgentCapabilities {
     ///
     /// The position encoding selected by the agent from the client's supported encodings.
     #[cfg(feature = "unstable_nes")]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub position_encoding: Option<PositionEncodingKind>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -3981,12 +4028,14 @@ impl ProvidersCapabilities {
 /// Note: `session/load` is still handled by the top-level `load_session` capability. This will be unified in future versions of the protocol.
 ///
 /// See protocol docs: [Session Capabilities](https://agentclientprotocol.com/protocol/initialization#session-capabilities)
+#[serde_as]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SessionCapabilities {
     /// Whether the agent supports `session/list`.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub list: Option<SessionListCapabilities>,
     /// **UNSTABLE**
     ///
@@ -3994,7 +4043,8 @@ pub struct SessionCapabilities {
     ///
     /// Whether the agent supports `additionalDirectories` on supported session lifecycle requests and `session/list`.
     #[cfg(feature = "unstable_session_additional_directories")]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub additional_directories: Option<SessionAdditionalDirectoriesCapabilities>,
     /// **UNSTABLE**
     ///
@@ -4002,7 +4052,8 @@ pub struct SessionCapabilities {
     ///
     /// Whether the agent supports `session/fork`.
     #[cfg(feature = "unstable_session_fork")]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub fork: Option<SessionForkCapabilities>,
     /// **UNSTABLE**
     ///
@@ -4010,7 +4061,8 @@ pub struct SessionCapabilities {
     ///
     /// Whether the agent supports `session/resume`.
     #[cfg(feature = "unstable_session_resume")]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub resume: Option<SessionResumeCapabilities>,
     /// **UNSTABLE**
     ///
@@ -4018,7 +4070,8 @@ pub struct SessionCapabilities {
     ///
     /// Whether the agent supports `session/close`.
     #[cfg(feature = "unstable_session_close")]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub close: Option<SessionCloseCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at

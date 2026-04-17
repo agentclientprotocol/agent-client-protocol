@@ -9,6 +9,7 @@ use std::{path::PathBuf, sync::Arc};
 use derive_more::{Display, From};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use serde_with::{DefaultOnError, VecSkipError, serde_as};
 
 use crate::{ContentBlock, Error, IntoOption, Meta, TerminalId};
 
@@ -18,6 +19,7 @@ use crate::{ContentBlock, Error, IntoOption, Meta, TerminalId};
 /// such as reading files, executing code, or fetching data from external sources.
 ///
 /// See protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/tool-calls)
+#[serde_as]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -34,10 +36,12 @@ pub struct ToolCall {
     #[serde(default, skip_serializing_if = "ToolCallStatus::is_default")]
     pub status: ToolCallStatus,
     /// Content produced by the tool call.
+    #[serde_as(deserialize_as = "VecSkipError<_>")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub content: Vec<ToolCallContent>,
     /// File locations affected by this tool call.
     /// Enables "follow-along" features in clients.
+    #[serde_as(deserialize_as = "VecSkipError<_>")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub locations: Vec<ToolCallLocation>,
     /// Raw input parameters sent to the tool.
@@ -205,24 +209,29 @@ impl ToolCallUpdate {
 /// Collections (content, locations) are overwritten, not extended.
 ///
 /// See protocol docs: [Updating](https://agentclientprotocol.com/protocol/tool-calls#updating)
+#[serde_as]
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ToolCallUpdateFields {
     /// Update the tool kind.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub kind: Option<ToolKind>,
     /// Update the execution status.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub status: Option<ToolCallStatus>,
     /// Update the human-readable title.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
     /// Replace the content collection.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "Option<VecSkipError<_>>")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub content: Option<Vec<ToolCallContent>>,
     /// Replace the locations collection.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "Option<VecSkipError<_>>")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub locations: Option<Vec<ToolCallLocation>>,
     /// Update the raw input.
     #[serde(skip_serializing_if = "Option::is_none")]

@@ -55,6 +55,7 @@ derive_more = { version = "2", features = ["from", "display"] }
 schemars = { version = "1" }
 serde = { version = "1", features = ["derive", "rc"] }
 serde_json = { version = "1", features = ["raw_value"] }
+serde_with = { version = "3.18.0", features = ["json", "schemars_1"] }
 strum = { version = "0.28", features = ["derive"] }
 
 [lints.rust]

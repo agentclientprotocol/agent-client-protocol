@@ -10,6 +10,7 @@ use std::{collections::BTreeMap, sync::Arc};
 use derive_more::{Display, From};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use serde_with::{DefaultOnError, serde_as};
 
 use crate::client::{ELICITATION_COMPLETE_NOTIFICATION, ELICITATION_CREATE_METHOD_NAME};
 use crate::tool_call::ToolCallId;
@@ -740,14 +741,17 @@ impl ElicitationSchema {
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
 /// Elicitation capabilities supported by the client.
+#[serde_as]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ElicitationCapabilities {
     /// Whether the client supports form-based elicitation.
+    #[serde_as(deserialize_as = "DefaultOnError")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub form: Option<ElicitationFormCapabilities>,
     /// Whether the client supports URL-based elicitation.
+    #[serde_as(deserialize_as = "DefaultOnError")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub url: Option<ElicitationUrlCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional

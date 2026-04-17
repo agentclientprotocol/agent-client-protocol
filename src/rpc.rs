@@ -500,7 +500,7 @@ mod tests {
 
     #[test]
     fn decode_rejects_empty_ext_method_name() {
-        let raw = serde_json::value::RawValue::from_string(r#"{}"#.to_string()).unwrap();
+        let raw = serde_json::value::RawValue::from_string(r"{}".to_string()).unwrap();
 
         let err = ClientSide::decode_request("_", Some(&raw)).unwrap_err();
         assert_eq!(err.code, ErrorCode::MethodNotFound);

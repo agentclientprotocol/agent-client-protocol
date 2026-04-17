@@ -6,6 +6,7 @@
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use serde_with::{DefaultOnError, VecSkipError, serde_as};
 
 use crate::{IntoOption, Meta, SessionId};
 
@@ -92,15 +93,18 @@ impl Range {
 // Agent NES capabilities
 
 /// NES capabilities advertised by the agent during initialization.
+#[serde_as]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesCapabilities {
     /// Events the agent wants to receive.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub events: Option<NesEventCapabilities>,
     /// Context the agent wants attached to each suggestion request.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub context: Option<NesContextCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -142,12 +146,14 @@ impl NesCapabilities {
 }
 
 /// Event capabilities the agent can consume.
+#[serde_as]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesEventCapabilities {
     /// Document event capabilities.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub document: Option<NesDocumentEventCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -183,24 +189,30 @@ impl NesEventCapabilities {
 }
 
 /// Document event capabilities the agent wants to receive.
+#[serde_as]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesDocumentEventCapabilities {
     /// Whether the agent wants `document/didOpen` events.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub did_open: Option<NesDocumentDidOpenCapabilities>,
     /// Whether the agent wants `document/didChange` events, and the sync kind.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub did_change: Option<NesDocumentDidChangeCapabilities>,
     /// Whether the agent wants `document/didClose` events.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub did_close: Option<NesDocumentDidCloseCapabilities>,
     /// Whether the agent wants `document/didSave` events.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub did_save: Option<NesDocumentDidSaveCapabilities>,
     /// Whether the agent wants `document/didFocus` events.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub did_focus: Option<NesDocumentDidFocusCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -402,27 +414,34 @@ impl NesDocumentDidFocusCapabilities {
 }
 
 /// Context capabilities the agent wants attached to each suggestion request.
+#[serde_as]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesContextCapabilities {
     /// Whether the agent wants recent files context.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub recent_files: Option<NesRecentFilesCapabilities>,
     /// Whether the agent wants related snippets context.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub related_snippets: Option<NesRelatedSnippetsCapabilities>,
     /// Whether the agent wants edit history context.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub edit_history: Option<NesEditHistoryCapabilities>,
     /// Whether the agent wants user actions context.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub user_actions: Option<NesUserActionsCapabilities>,
     /// Whether the agent wants open files context.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub open_files: Option<NesOpenFilesCapabilities>,
     /// Whether the agent wants diagnostics context.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub diagnostics: Option<NesDiagnosticsCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -637,18 +656,22 @@ impl NesDiagnosticsCapabilities {
 // Client NES capabilities
 
 /// NES capabilities advertised by the client during initialization.
+#[serde_as]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ClientNesCapabilities {
     /// Whether the client supports the `jump` suggestion kind.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub jump: Option<NesJumpCapabilities>,
     /// Whether the client supports the `rename` suggestion kind.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rename: Option<NesRenameCapabilities>,
     /// Whether the client supports the `searchAndReplace` suggestion kind.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub search_and_replace: Option<NesSearchAndReplaceCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -1045,6 +1068,7 @@ impl DidFocusDocumentNotification {
 // NES session start
 
 /// Request to start an NES session.
+#[serde_as]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = NES_START_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -1054,10 +1078,12 @@ pub struct StartNesRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub workspace_uri: Option<String>,
     /// The workspace folders.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "Option<VecSkipError<_>>")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub workspace_folders: Option<Vec<WorkspaceFolder>>,
     /// Repository metadata, if the workspace is a git repository.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub repository: Option<NesRepository>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -1299,6 +1325,7 @@ pub enum NesTriggerKind {
 }
 
 /// Request for a code suggestion.
+#[serde_as]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = NES_SUGGEST_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -1313,12 +1340,14 @@ pub struct SuggestNesRequest {
     /// The current cursor position.
     pub position: Position,
     /// The current text selection range, if any.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub selection: Option<Range>,
     /// What triggered this suggestion request.
     pub trigger_kind: NesTriggerKind,
     /// Context for the suggestion, included based on agent capabilities.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub context: Option<NesSuggestContext>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -1375,27 +1404,34 @@ impl SuggestNesRequest {
 }
 
 /// Context attached to a suggestion request.
+#[serde_as]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesSuggestContext {
     /// Recently accessed files.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "Option<VecSkipError<_>>")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub recent_files: Option<Vec<NesRecentFile>>,
     /// Related code snippets.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "Option<VecSkipError<_>>")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub related_snippets: Option<Vec<NesRelatedSnippet>>,
     /// Recent edit history.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "Option<VecSkipError<_>>")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub edit_history: Option<Vec<NesEditHistoryEntry>>,
     /// Recent user actions (typing, navigation, etc.).
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "Option<VecSkipError<_>>")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub user_actions: Option<Vec<NesUserAction>>,
     /// Currently open files in the editor.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "Option<VecSkipError<_>>")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub open_files: Option<Vec<NesOpenFile>>,
     /// Current diagnostics (errors, warnings).
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "Option<VecSkipError<_>>")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub diagnostics: Option<Vec<NesDiagnostic>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -1590,6 +1626,7 @@ impl NesUserAction {
 }
 
 /// An open file in the editor.
+#[serde_as]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -1599,10 +1636,12 @@ pub struct NesOpenFile {
     /// The language identifier.
     pub language_id: String,
     /// The visible range in the editor, if any.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub visible_range: Option<Range>,
     /// Timestamp in milliseconds since epoch of when the file was last focused.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub last_focused_ms: Option<u64>,
 }
 
@@ -1683,12 +1722,14 @@ pub enum NesDiagnosticSeverity {
 // NES suggest response
 
 /// Response to `nes/suggest`.
+#[serde_as]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = NES_SUGGEST_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SuggestNesResponse {
     /// The list of suggestions.
+    #[serde_as(deserialize_as = "VecSkipError<_>")]
     pub suggestions: Vec<NesSuggestion>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -1737,6 +1778,7 @@ pub enum NesSuggestion {
 }
 
 /// A text edit suggestion.
+#[serde_as]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -1748,7 +1790,8 @@ pub struct NesEditSuggestion {
     /// The text edits to apply.
     pub edits: Vec<NesTextEdit>,
     /// Optional suggested cursor position after applying edits.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cursor_position: Option<Position>,
 }
 
@@ -1933,6 +1976,7 @@ impl AcceptNesNotification {
 }
 
 /// Notification sent when a suggestion is rejected.
+#[serde_as]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = NES_REJECT_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -1943,7 +1987,8 @@ pub struct RejectNesNotification {
     /// The ID of the rejected suggestion.
     pub id: String,
     /// The reason for rejection.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reason: Option<NesRejectReason>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at

@@ -8,6 +8,7 @@ use std::{path::PathBuf, sync::Arc};
 use derive_more::{Display, From};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use serde_with::{DefaultOnError, VecSkipError, serde_as};
 
 #[cfg(feature = "unstable_elicitation")]
 use crate::elicitation::{
@@ -152,11 +153,13 @@ impl CurrentModeUpdate {
 }
 
 /// Session configuration options have been updated.
+#[serde_as]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ConfigOptionUpdate {
     /// The full set of configuration options and their current values.
+    #[serde_as(deserialize_as = "VecSkipError<_>")]
     pub config_options: Vec<SessionConfigOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -249,6 +252,7 @@ impl SessionInfoUpdate {
 ///
 /// Context window and cost update for a session.
 #[cfg(feature = "unstable_session_usage")]
+#[serde_as]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -258,7 +262,8 @@ pub struct UsageUpdate {
     /// Total context window size in tokens.
     pub size: u64,
     /// Cumulative session cost (optional).
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cost: Option<Cost>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -395,11 +400,13 @@ impl ContentChunk {
 }
 
 /// Available commands are ready or have changed
+#[serde_as]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct AvailableCommandsUpdate {
     /// Commands the agent can execute
+    #[serde_as(deserialize_as = "VecSkipError<_>")]
     pub available_commands: Vec<AvailableCommand>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -432,6 +439,7 @@ impl AvailableCommandsUpdate {
 }
 
 /// Information about a command.
+#[serde_as]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -441,6 +449,8 @@ pub struct AvailableCommand {
     /// Human-readable description of what the command does.
     pub description: String,
     /// Input for the command if required
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default)]
     pub input: Option<AvailableCommandInput>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -1473,6 +1483,7 @@ impl TerminalExitStatus {
 /// available features and methods.
 ///
 /// See protocol docs: [Client Capabilities](https://agentclientprotocol.com/protocol/initialization#client-capabilities)
+#[serde_as]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -1501,6 +1512,7 @@ pub struct ClientCapabilities {
     /// Elicitation capabilities supported by the client.
     /// Determines which elicitation modes the agent may use.
     #[cfg(feature = "unstable_elicitation")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub elicitation: Option<ElicitationCapabilities>,
     /// **UNSTABLE**
@@ -1509,7 +1521,8 @@ pub struct ClientCapabilities {
     ///
     /// NES (Next Edit Suggestions) capabilities supported by the client.
     #[cfg(feature = "unstable_nes")]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub nes: Option<ClientNesCapabilities>,
     /// **UNSTABLE**
     ///
@@ -1517,6 +1530,7 @@ pub struct ClientCapabilities {
     ///
     /// The position encodings supported by the client, in order of preference.
     #[cfg(feature = "unstable_nes")]
+    #[serde_as(deserialize_as = "VecSkipError<_>")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub position_encodings: Vec<PositionEncodingKind>,
 

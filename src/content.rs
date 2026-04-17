@@ -11,6 +11,7 @@
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use serde_with::{DefaultOnError, VecSkipError, serde_as};
 
 use crate::{IntoOption, Meta};
 
@@ -59,10 +60,12 @@ pub enum ContentBlock {
 }
 
 /// Text provided to or from an LLM.
+#[serde_as]
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
 #[non_exhaustive]
 pub struct TextContent {
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub annotations: Option<Annotations>,
     pub text: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -109,11 +112,13 @@ impl<T: Into<String>> From<T> for ContentBlock {
 }
 
 /// An image provided to or from an LLM.
+#[serde_as]
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ImageContent {
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub annotations: Option<Annotations>,
     pub data: String,
     pub mime_type: String,
@@ -165,11 +170,13 @@ impl ImageContent {
 }
 
 /// Audio provided to or from an LLM.
+#[serde_as]
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct AudioContent {
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub annotations: Option<Annotations>,
     pub data: String,
     pub mime_type: String,
@@ -212,10 +219,12 @@ impl AudioContent {
 }
 
 /// The contents of a resource, embedded into a prompt or tool call result.
+#[serde_as]
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
 #[non_exhaustive]
 pub struct EmbeddedResource {
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub annotations: Option<Annotations>,
     pub resource: EmbeddedResourceResource,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -359,11 +368,13 @@ impl BlobResourceContents {
 }
 
 /// A resource that the server is capable of reading, included in a prompt or tool call result.
+#[serde_as]
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ResourceLink {
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub annotations: Option<Annotations>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
@@ -442,11 +453,13 @@ impl ResourceLink {
 }
 
 /// Optional annotations for the client. The client can use annotations to inform how objects are used or displayed
+#[serde_as]
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema, Default)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct Annotations {
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "Option<VecSkipError<_>>")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub audience: Option<Vec<Role>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_modified: Option<String>,
