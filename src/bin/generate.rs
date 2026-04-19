@@ -1,6 +1,7 @@
 use agent_client_protocol_schema::{
-    AGENT_METHOD_NAMES, AgentSide, CLIENT_METHOD_NAMES, ClientSide, JsonRpcMessage,
-    OutgoingMessage, ProtocolVersion,
+    AGENT_METHOD_NAMES, AgentNotification, AgentRequest, AgentResponse, CLIENT_METHOD_NAMES,
+    ClientNotification, ClientRequest, ClientResponse, JsonRpcMessage, Notification,
+    ProtocolVersion, Request, Response,
 };
 #[cfg(feature = "unstable_cancel_request")]
 use agent_client_protocol_schema::{PROTOCOL_LEVEL_METHOD_NAMES, ProtocolLevelNotification};
@@ -9,19 +10,32 @@ use schemars::{
     generate::SchemaSettings,
     transform::{RemoveRefSiblings, ReplaceBoolSchemas},
 };
+use serde::{Deserialize, Serialize};
 use std::{env, fs, path::Path};
 
 use markdown_generator::MarkdownGenerator;
 
-#[expect(dead_code)]
-#[derive(JsonSchema)]
+/// All messages that an agent can send to a client.
+#[derive(Serialize, Deserialize, JsonSchema)]
+#[serde(untagged)]
 #[schemars(inline)]
-struct AgentOutgoingMessage(JsonRpcMessage<OutgoingMessage<AgentSide, ClientSide>>);
+#[allow(clippy::large_enum_variant)]
+enum AgentOutgoingMessage {
+    Request(Request<AgentRequest>),
+    Response(Response<AgentResponse>),
+    Notification(Notification<AgentNotification>),
+}
 
-#[expect(dead_code)]
-#[derive(JsonSchema)]
+/// All messages that a client can send to an agent.
+#[derive(Serialize, Deserialize, JsonSchema)]
+#[serde(untagged)]
 #[schemars(inline)]
-struct ClientOutgoingMessage(JsonRpcMessage<OutgoingMessage<ClientSide, AgentSide>>);
+#[allow(clippy::large_enum_variant)]
+enum ClientOutgoingMessage {
+    Request(Request<ClientRequest>),
+    Response(Response<ClientResponse>),
+    Notification(Notification<ClientNotification>),
+}
 
 #[expect(dead_code)]
 #[derive(JsonSchema)]
@@ -29,8 +43,8 @@ struct ClientOutgoingMessage(JsonRpcMessage<OutgoingMessage<ClientSide, AgentSid
 #[schemars(title = "Agent Client Protocol")]
 #[allow(clippy::large_enum_variant)]
 enum AcpTypes {
-    Agent(AgentOutgoingMessage),
-    Client(ClientOutgoingMessage),
+    Agent(JsonRpcMessage<AgentOutgoingMessage>),
+    Client(JsonRpcMessage<ClientOutgoingMessage>),
     #[cfg(feature = "unstable_cancel_request")]
     ProtocolLevel(ProtocolLevelNotification),
 }
@@ -66,7 +80,7 @@ fn main() {
         schema_dir.join(schema_file),
         serde_json::to_string_pretty(&schema_value).unwrap(),
     )
-    .expect("Failed to write {schema_file}");
+    .unwrap_or_else(|e| panic!("Failed to write {schema_file}: {e}"));
 
     // Create a combined metadata object
     #[cfg(not(feature = "unstable_cancel_request"))]
@@ -92,7 +106,7 @@ fn main() {
         schema_dir.join(meta_file),
         serde_json::to_string_pretty(&metadata).unwrap(),
     )
-    .expect("Failed to write {meta_file}");
+    .unwrap_or_else(|e| panic!("Failed to write {meta_file}: {e}"));
 
     // Generate markdown documentation
     let mut markdown_gen = MarkdownGenerator::new();
@@ -104,7 +118,8 @@ fn main() {
         "schema.mdx"
     };
 
-    fs::write(docs_protocol_dir.join(doc_file), markdown_doc).expect("Failed to write {doc_file}");
+    fs::write(docs_protocol_dir.join(doc_file), markdown_doc)
+        .unwrap_or_else(|e| panic!("Failed to write {doc_file}: {e}"));
 
     println!("✓ Generated {schema_file}");
     println!("✓ Generated {meta_file}");
@@ -338,12 +353,55 @@ starting with '$/' it is free to ignore the notification."
             writeln!(&mut self.output, "**Type:** Union").unwrap();
             writeln!(&mut self.output).unwrap();
 
-            let variants = definition
-                .get("oneOf")
-                .or_else(|| definition.get("anyOf"))
-                .and_then(|v| v.as_array());
+            let discriminator_prop = definition
+                .get("discriminator")
+                .and_then(|d| d.get("propertyName"))
+                .and_then(|p| p.as_str());
 
-            if let Some(variants) = variants {
+            let any_of = definition.get("anyOf").and_then(|v| v.as_array());
+            let one_of = definition.get("oneOf").and_then(|v| v.as_array());
+
+            // Union types with top-level "properties" alongside "oneOf"/"anyOf" use them
+            // as shared properties that apply to all variants (e.g., _meta, message).
+            // The discriminator property (if any) is excluded since it's per-variant.
+            let has_shared_props = if let Some(shared_props) =
+                definition.get("properties").and_then(|v| v.as_object())
+            {
+                let filtered_props: serde_json::Map<String, Value> = shared_props
+                    .iter()
+                    .filter(|(key, _)| Some(key.as_str()) != discriminator_prop)
+                    .map(|(k, v)| (k.clone(), v.clone()))
+                    .collect();
+
+                if filtered_props.is_empty() {
+                    false
+                } else {
+                    writeln!(&mut self.output, "**Shared properties:**").unwrap();
+                    writeln!(&mut self.output).unwrap();
+                    self.document_properties_as_fields(&filtered_props, definition, 0);
+                    writeln!(&mut self.output).unwrap();
+                    true
+                }
+            } else {
+                false
+            };
+
+            // Print a single "Variants:" label before all variant groups when
+            // there is surrounding context that benefits from a separator
+            // (shared properties above, or multiple variant groups).
+            if has_shared_props || (any_of.is_some() && one_of.is_some()) {
+                writeln!(&mut self.output, "**Variants:**").unwrap();
+                writeln!(&mut self.output).unwrap();
+            }
+
+            if let Some(variants) = any_of {
+                for variant in variants {
+                    self.document_variant_table_row(variant);
+                }
+                writeln!(&mut self.output).unwrap();
+            }
+
+            if let Some(variants) = one_of {
                 for variant in variants {
                     self.document_variant_table_row(variant);
                 }
@@ -376,6 +434,8 @@ starting with '$/' it is free to ignore the notification."
 
                 if let Some(const_val) = discriminator {
                     write!(&mut self.output, "{const_val}").unwrap();
+                } else if let Some(title) = variant.get("title").and_then(|t| t.as_str()) {
+                    write!(&mut self.output, "{title}").unwrap();
                 } else {
                     write!(&mut self.output, "Object").unwrap();
                 }
@@ -1018,6 +1078,9 @@ starting with '$/' it is free to ignore the notification."
             match method_name {
                 "initialize" => self.agent.get("InitializeRequest").unwrap(),
                 "authenticate" => self.agent.get("AuthenticateRequest").unwrap(),
+                "providers/list" => self.agent.get("ListProvidersRequest").unwrap(),
+                "providers/set" => self.agent.get("SetProvidersRequest").unwrap(),
+                "providers/disable" => self.agent.get("DisableProvidersRequest").unwrap(),
                 "session/new" => self.agent.get("NewSessionRequest").unwrap(),
                 "session/load" => self.agent.get("LoadSessionRequest").unwrap(),
                 "session/list" => self.agent.get("ListSessionsRequest").unwrap(),
@@ -1032,6 +1095,16 @@ starting with '$/' it is free to ignore the notification."
                 "session/set_model" => self.agent.get("SetSessionModelRequest").unwrap(),
                 "session/close" => self.agent.get("CloseSessionRequest").unwrap(),
                 "logout" => self.agent.get("LogoutRequest").unwrap(),
+                "nes/start" => self.agent.get("StartNesRequest").unwrap(),
+                "nes/suggest" => self.agent.get("SuggestNesRequest").unwrap(),
+                "nes/close" => self.agent.get("CloseNesRequest").unwrap(),
+                "nes/accept" => self.agent.get("AcceptNesNotification").unwrap(),
+                "nes/reject" => self.agent.get("RejectNesNotification").unwrap(),
+                "document/didOpen" => self.agent.get("DidOpenDocumentNotification").unwrap(),
+                "document/didChange" => self.agent.get("DidChangeDocumentNotification").unwrap(),
+                "document/didClose" => self.agent.get("DidCloseDocumentNotification").unwrap(),
+                "document/didSave" => self.agent.get("DidSaveDocumentNotification").unwrap(),
+                "document/didFocus" => self.agent.get("DidFocusDocumentNotification").unwrap(),
                 _ => panic!("Introduced a method? Add it here :)"),
             }
         }
@@ -1049,11 +1122,9 @@ starting with '$/' it is free to ignore the notification."
                 "terminal/release" => self.client.get("ReleaseTerminalRequest").unwrap(),
                 "terminal/wait_for_exit" => self.client.get("WaitForTerminalExitRequest").unwrap(),
                 "terminal/kill" => self.client.get("KillTerminalRequest").unwrap(),
-                #[cfg(feature = "unstable_elicitation")]
-                "session/elicitation" => self.client.get("ElicitationRequest").unwrap(),
-                #[cfg(feature = "unstable_elicitation")]
-                "session/elicitation/complete" => {
-                    self.client.get("ElicitationCompleteNotification").unwrap()
+                "elicitation/create" => self.client.get("CreateElicitationRequest").unwrap(),
+                "elicitation/complete" => {
+                    self.client.get("CompleteElicitationNotification").unwrap()
                 }
                 _ => panic!("Introduced a method? Add it here :)"),
             }
@@ -1178,5 +1249,167 @@ starting with '$/' it is free to ignore the notification."
         }
 
         side_docs
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::MarkdownGenerator;
+        use serde_json::json;
+
+        #[test]
+        fn document_union_includes_shared_properties() {
+            let mut generator = MarkdownGenerator::new();
+            let definition = json!({
+                "description": "Example union.",
+                "discriminator": {
+                    "propertyName": "mode"
+                },
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "description": "Shared message."
+                    },
+                    "mode": {
+                        "type": "string",
+                        "description": "The discriminator."
+                    }
+                },
+                "required": ["message", "mode"],
+                "oneOf": [
+                    {
+                        "description": "First variant.",
+                        "properties": {
+                            "mode": {
+                                "const": "form",
+                                "type": "string"
+                            }
+                        },
+                        "required": ["mode"],
+                        "type": "object"
+                    },
+                    {
+                        "description": "Second variant.",
+                        "properties": {
+                            "mode": {
+                                "const": "url",
+                                "type": "string"
+                            }
+                        },
+                        "required": ["mode"],
+                        "type": "object"
+                    }
+                ]
+            });
+
+            generator.document_type(4, "ExampleUnion", &definition);
+
+            assert!(generator.output.contains("**Shared properties:**"));
+            assert!(
+                generator
+                    .output
+                    .contains("<ResponseField name=\"message\" type={\"string\"} required>")
+            );
+            assert!(generator.output.contains("Shared message."));
+            assert!(generator.output.contains("**Variants:**"));
+            assert!(
+                generator
+                    .output
+                    .contains("<ResponseField name=\"form\" type=\"object\">")
+            );
+            assert!(
+                generator
+                    .output
+                    .contains("<ResponseField name=\"url\" type=\"object\">"),
+            );
+            let shared_section = generator.output.split("**Variants:**").next().unwrap_or("");
+            assert!(
+                !shared_section.contains("<ResponseField name=\"mode\""),
+                "discriminator property 'mode' should not appear in shared properties"
+            );
+        }
+
+        #[test]
+        fn document_union_renders_both_any_of_and_one_of() {
+            let mut generator = MarkdownGenerator::new();
+            let definition = json!({
+                "description": "Request with scope and mode.",
+                "anyOf": [
+                    {
+                        "description": "Session scope.",
+                        "properties": {
+                            "sessionId": { "type": "string" }
+                        },
+                        "required": ["sessionId"],
+                        "title": "Session",
+                        "type": "object"
+                    },
+                    {
+                        "description": "Request scope.",
+                        "properties": {
+                            "requestId": { "type": "integer" }
+                        },
+                        "required": ["requestId"],
+                        "title": "Request",
+                        "type": "object"
+                    }
+                ],
+                "discriminator": { "propertyName": "mode" },
+                "oneOf": [
+                    {
+                        "description": "Form variant.",
+                        "properties": {
+                            "mode": { "const": "form", "type": "string" }
+                        },
+                        "required": ["mode"],
+                        "type": "object"
+                    },
+                    {
+                        "description": "URL variant.",
+                        "properties": {
+                            "mode": { "const": "url", "type": "string" }
+                        },
+                        "required": ["mode"],
+                        "type": "object"
+                    }
+                ],
+                "properties": {
+                    "message": { "type": "string", "description": "A message." }
+                },
+                "required": ["message"],
+                "type": "object"
+            });
+
+            generator.document_type(4, "TestRequest", &definition);
+
+            // Shared properties rendered
+            assert!(generator.output.contains("**Shared properties:**"));
+            assert!(generator.output.contains("<ResponseField name=\"message\""));
+
+            // anyOf scope variants use title, not "Object"
+            assert!(
+                generator
+                    .output
+                    .contains("<ResponseField name=\"Session\" type=\"object\">"),
+                "should use title 'Session' not 'Object'"
+            );
+            assert!(
+                generator
+                    .output
+                    .contains("<ResponseField name=\"Request\" type=\"object\">"),
+                "should use title 'Request' not 'Object'"
+            );
+
+            // oneOf mode variants rendered under Variants
+            assert!(generator.output.contains("**Variants:**"));
+            assert!(generator.output.contains("<ResponseField name=\"form\""));
+            assert!(generator.output.contains("<ResponseField name=\"url\""));
+
+            // Verify ordering: Variants → Session/Request → form/url
+            let variants_pos = generator.output.find("**Variants:**").unwrap();
+            let session_pos = generator.output.find("\"Session\"").unwrap();
+            let form_pos = generator.output.find("\"form\"").unwrap();
+            assert!(variants_pos < session_pos);
+            assert!(session_pos < form_pos);
+        }
     }
 }

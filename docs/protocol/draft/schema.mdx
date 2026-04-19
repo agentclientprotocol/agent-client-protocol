@@ -62,6 +62,180 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
 </ResponseField>
 
+<a id="document-didchange"></a>
+### <span class="font-mono">document/didChange</span>
+
+**UNSTABLE**
+
+Notification sent when a file is edited.
+
+#### <span class="font-mono">DidChangeDocumentNotification</span>
+
+Notification sent when a file is edited.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="contentChanges" type={<a href="#textdocumentcontentchangeevent">TextDocumentContentChangeEvent[]</a>} required>
+  The content changes.
+</ResponseField>
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The session ID for this notification.
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The URI of the changed document.
+</ResponseField>
+<ResponseField name="version" type={"int64"} required>
+  The new version number of the document.
+</ResponseField>
+
+<a id="document-didclose"></a>
+### <span class="font-mono">document/didClose</span>
+
+**UNSTABLE**
+
+Notification sent when a file is closed.
+
+#### <span class="font-mono">DidCloseDocumentNotification</span>
+
+Notification sent when a file is closed.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The session ID for this notification.
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The URI of the closed document.
+</ResponseField>
+
+<a id="document-didfocus"></a>
+### <span class="font-mono">document/didFocus</span>
+
+**UNSTABLE**
+
+Notification sent when a file becomes the active editor tab.
+
+#### <span class="font-mono">DidFocusDocumentNotification</span>
+
+Notification sent when a file becomes the active editor tab.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="position" type={<a href="#position">Position</a>} required>
+  The current cursor position.
+</ResponseField>
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The session ID for this notification.
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The URI of the focused document.
+</ResponseField>
+<ResponseField name="version" type={"int64"} required>
+  The version number of the document.
+</ResponseField>
+<ResponseField name="visibleRange" type={<a href="#range">Range</a>} required>
+  The portion of the file currently visible in the editor viewport.
+</ResponseField>
+
+<a id="document-didopen"></a>
+### <span class="font-mono">document/didOpen</span>
+
+**UNSTABLE**
+
+Notification sent when a file is opened in the editor.
+
+#### <span class="font-mono">DidOpenDocumentNotification</span>
+
+Notification sent when a file is opened in the editor.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="languageId" type={"string"} required>
+  The language identifier of the document (e.g., "rust", "python").
+</ResponseField>
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The session ID for this notification.
+</ResponseField>
+<ResponseField name="text" type={"string"} required>
+  The full text content of the document.
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The URI of the opened document.
+</ResponseField>
+<ResponseField name="version" type={"int64"} required>
+  The version number of the document.
+</ResponseField>
+
+<a id="document-didsave"></a>
+### <span class="font-mono">document/didSave</span>
+
+**UNSTABLE**
+
+Notification sent when a file is saved.
+
+#### <span class="font-mono">DidSaveDocumentNotification</span>
+
+Notification sent when a file is saved.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The session ID for this notification.
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The URI of the saved document.
+</ResponseField>
+
 ### <span class="font-mono">initialize</span>
 
 Establishes the connection with a client and negotiates protocol capabilities.
@@ -213,6 +387,417 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
 </ResponseField>
 
+<a id="nes-accept"></a>
+### <span class="font-mono">nes/accept</span>
+
+**UNSTABLE**
+
+Notification sent when a suggestion is accepted.
+
+#### <span class="font-mono">AcceptNesNotification</span>
+
+Notification sent when a suggestion is accepted.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="id" type={"string"} required>
+  The ID of the accepted suggestion.
+</ResponseField>
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The session ID for this notification.
+</ResponseField>
+
+<a id="nes-close"></a>
+### <span class="font-mono">nes/close</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Closes an active NES session and frees up any resources associated with it.
+
+The agent must cancel any ongoing work and then free up any resources
+associated with the NES session.
+
+#### <span class="font-mono">CloseNesRequest</span>
+
+Request to close an NES session.
+
+The agent **must** cancel any ongoing work related to the NES session
+and then free up any resources associated with the session.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The ID of the NES session to close.
+</ResponseField>
+
+#### <span class="font-mono">CloseNesResponse</span>
+
+Response from closing an NES session.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+
+<a id="nes-reject"></a>
+### <span class="font-mono">nes/reject</span>
+
+**UNSTABLE**
+
+Notification sent when a suggestion is rejected.
+
+#### <span class="font-mono">RejectNesNotification</span>
+
+Notification sent when a suggestion is rejected.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="id" type={"string"} required>
+  The ID of the rejected suggestion.
+</ResponseField>
+<ResponseField name="reason" type={<><span><a href="#nesrejectreason">NesRejectReason</a></span><span> | null</span></>} >
+  The reason for rejection.
+</ResponseField>
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The session ID for this notification.
+</ResponseField>
+
+<a id="nes-start"></a>
+### <span class="font-mono">nes/start</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Starts an NES session.
+
+#### <span class="font-mono">StartNesRequest</span>
+
+Request to start an NES session.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="repository" type={<><span><a href="#nesrepository">NesRepository</a></span><span> | null</span></>} >
+  Repository metadata, if the workspace is a git repository.
+</ResponseField>
+<ResponseField name="workspaceFolders" type={<><span><a href="#workspacefolder">WorkspaceFolder[]</a></span><span> | null</span></>} >
+  The workspace folders.
+</ResponseField>
+<ResponseField name="workspaceUri" type={"string | null"} >
+  The root URI of the workspace.
+</ResponseField>
+
+#### <span class="font-mono">StartNesResponse</span>
+
+Response to `nes/start`.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The session ID for the newly started NES session.
+</ResponseField>
+
+<a id="nes-suggest"></a>
+### <span class="font-mono">nes/suggest</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Requests a code suggestion.
+
+#### <span class="font-mono">SuggestNesRequest</span>
+
+Request for a code suggestion.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="context" type={<><span><a href="#nessuggestcontext">NesSuggestContext</a></span><span> | null</span></>} >
+  Context for the suggestion, included based on agent capabilities.
+</ResponseField>
+<ResponseField name="position" type={<a href="#position">Position</a>} required>
+  The current cursor position.
+</ResponseField>
+<ResponseField name="selection" type={<><span><a href="#range">Range</a></span><span> | null</span></>} >
+  The current text selection range, if any.
+</ResponseField>
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The session ID for this request.
+</ResponseField>
+<ResponseField name="triggerKind" type={<a href="#nestriggerkind">NesTriggerKind</a>} required>
+  What triggered this suggestion request.
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The URI of the document to suggest for.
+</ResponseField>
+<ResponseField name="version" type={"int64"} required>
+  The version number of the document.
+</ResponseField>
+
+#### <span class="font-mono">SuggestNesResponse</span>
+
+Response to `nes/suggest`.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="suggestions" type={<a href="#nessuggestion">NesSuggestion[]</a>} required>
+  The list of suggestions.
+</ResponseField>
+
+<a id="providers-disable"></a>
+### <span class="font-mono">providers/disable</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Disables a provider.
+
+#### <span class="font-mono">DisableProvidersRequest</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Request parameters for `providers/disable`.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="id" type={"string"} required>
+  Provider id to disable.
+</ResponseField>
+
+#### <span class="font-mono">DisableProvidersResponse</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Response to `providers/disable`.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+
+<a id="providers-list"></a>
+### <span class="font-mono">providers/list</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Lists providers that can be configured by the client.
+
+#### <span class="font-mono">ListProvidersRequest</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Request parameters for `providers/list`.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+
+#### <span class="font-mono">ListProvidersResponse</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Response to `providers/list`.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="providers" type={<a href="#providerinfo">ProviderInfo[]</a>} required>
+  Configurable providers with current routing info suitable for UI display.
+</ResponseField>
+
+<a id="providers-set"></a>
+### <span class="font-mono">providers/set</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Replaces the configuration for a provider.
+
+#### <span class="font-mono">SetProvidersRequest</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Request parameters for `providers/set`.
+
+Replaces the full configuration for one provider id.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="apiType" type={<a href="#llmprotocol">LlmProtocol</a>} required>
+  Protocol type for this provider.
+</ResponseField>
+<ResponseField name="baseUrl" type={"string"} required>
+  Base URL for requests sent through this provider.
+</ResponseField>
+<ResponseField name="headers" type={"object"} >
+  Full headers map for this provider.
+May include authorization, routing, or other integration-specific headers.
+</ResponseField>
+<ResponseField name="id" type={"string"} required>
+  Provider id to configure.
+</ResponseField>
+
+#### <span class="font-mono">SetProvidersResponse</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Response to `providers/set`.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+
 <a id="session-cancel"></a>
 ### <span class="font-mono">session/cancel</span>
 
@@ -260,7 +845,7 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 Closes an active session and frees up any resources associated with it.
 
-This method is only available if the agent advertises the `session.close` capability.
+This method is only available if the agent advertises the `sessionCapabilities.close` capability.
 
 The agent must cancel any ongoing work (as if `session/cancel` was called)
 and then free up any resources associated with the session.
@@ -277,7 +862,7 @@ If supported, the agent **must** cancel any ongoing work related to the session
 (treat it as if `session/cancel` was called) and then free up any resources
 associated with the session.
 
-Only available if the Agent supports the `session.close` capability.
+Only available if the Agent supports the `sessionCapabilities.close` capability.
 
 **Type:** Object
 
@@ -354,6 +939,18 @@ metadata to their interactions. Implementations MUST NOT make assumptions about 
 these keys.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="additionalDirectories" type={<><span>"string"</span><span>[]</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Additional workspace roots to activate for this session. Each path must be absolute.
+
+When omitted or empty, no additional roots are activated. When non-empty,
+this is the complete resulting additional-root list for the forked
+session.
 
 </ResponseField>
 <ResponseField name="cwd" type={"string"} required>
@@ -434,6 +1031,17 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
 </ResponseField>
+<ResponseField name="additionalDirectories" type={<><span>"string"</span><span>[]</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Filter sessions by the exact ordered additional workspace roots. Each path must be absolute.
+
+This filter applies only when the field is present and non-empty. When
+omitted or empty, no additional-root filter is applied.
+
+</ResponseField>
 <ResponseField name="cursor" type={"string | null"} >
   Opaque cursor token from a previous response's nextCursor field for cursor-based pagination
 </ResponseField>
@@ -498,6 +1106,18 @@ metadata to their interactions. Implementations MUST NOT make assumptions about 
 these keys.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="additionalDirectories" type={<><span>"string"</span><span>[]</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Additional workspace roots to activate for this session. Each path must be absolute.
+
+When omitted or empty, no additional roots are activated. When non-empty,
+this is the complete resulting additional-root list for the loaded
+session.
 
 </ResponseField>
 <ResponseField name="cwd" type={"string"} required>
@@ -577,6 +1197,18 @@ metadata to their interactions. Implementations MUST NOT make assumptions about 
 these keys.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="additionalDirectories" type={<><span>"string"</span><span>[]</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Additional workspace roots for this session. Each path must be absolute.
+
+These expand the session's filesystem scope without changing `cwd`, which
+remains the base for relative paths. When omitted or empty, no
+additional roots are activated for the new session.
 
 </ResponseField>
 <ResponseField name="cwd" type={"string"} required>
@@ -747,7 +1379,7 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 Resumes an existing session without returning previous messages.
 
-This method is only available if the agent advertises the `session.resume` capability.
+This method is only available if the agent advertises the `sessionCapabilities.resume` capability.
 
 The agent should resume the session context, allowing the conversation to continue
 without replaying the message history (unlike `session/load`).
@@ -763,7 +1395,7 @@ Request parameters for resuming an existing session.
 Resumes an existing session without returning previous messages (unlike `session/load`).
 This is useful for agents that can resume sessions but don't implement full session loading.
 
-Only available if the Agent supports the `session.resume` capability.
+Only available if the Agent supports the `sessionCapabilities.resume` capability.
 
 **Type:** Object
 
@@ -775,6 +1407,18 @@ metadata to their interactions. Implementations MUST NOT make assumptions about 
 these keys.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="additionalDirectories" type={<><span>"string"</span><span>[]</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Additional workspace roots to activate for this session. Each path must be absolute.
+
+When omitted or empty, no additional roots are activated. When non-empty,
+this is the complete resulting additional-root list for the resumed
+session.
 
 </ResponseField>
 <ResponseField name="cwd" type={"string"} required>
@@ -836,6 +1480,25 @@ Request parameters for setting a session configuration option.
 
 **Type:** Union
 
+**Shared properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="configId" type={<a href="#sessionconfigid">SessionConfigId</a>} required>
+  The ID of the configuration option to set.
+</ResponseField>
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The ID of the session to set the configuration option for.
+</ResponseField>
+
+**Variants:**
+
 <ResponseField name="boolean" type="object">
 A boolean value (`type: "boolean"`).
 
@@ -851,7 +1514,7 @@ A boolean value (`type: "boolean"`).
 </Expandable>
 </ResponseField>
 
-<ResponseField name="Object" type="object">
+<ResponseField name="value_id" type="object">
 A `SessionConfigValueId` string value.
 
 This is the default when `type` is absent on the wire. Unknown `type`
@@ -1013,6 +1676,181 @@ Clients are typically code editors (IDEs, text editors) that provide the interfa
 between users and AI agents. They manage the environment, handle user interactions,
 and control access to resources.
 
+<a id="elicitation-complete"></a>
+### <span class="font-mono">elicitation/complete</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Notification that a URL-based elicitation has completed.
+
+#### <span class="font-mono">CompleteElicitationNotification</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Notification sent by the agent when a URL-based elicitation is complete.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="elicitationId" type={<a href="#elicitationid">ElicitationId</a>} required>
+  The ID of the elicitation that completed.
+</ResponseField>
+
+<a id="elicitation-create"></a>
+### <span class="font-mono">elicitation/create</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Requests structured user input via a form or URL.
+
+#### <span class="font-mono">CreateElicitationRequest</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Request from the agent to elicit structured user input.
+
+The agent sends this to the client to request information from the user,
+either via a form or by directing them to a URL.
+Elicitations are tied to a session (optionally a tool call) or a request.
+
+**Type:** Union
+
+**Shared properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="message" type={"string"} required>
+  A human-readable message describing what input is needed.
+</ResponseField>
+
+**Variants:**
+
+<ResponseField name="form" type="object">
+Form-based elicitation where the client renders a form from the provided schema.
+
+<Expandable title="Properties">
+
+<ResponseField name="mode" type={"string"} required>
+  The discriminator value. Must be `"form"`.
+</ResponseField>
+<ResponseField
+  name="requestedSchema"
+  type={<a href="#elicitationschema">ElicitationSchema</a>}
+  required
+>
+  A JSON Schema describing the form fields to present to the user.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="url" type="object">
+URL-based elicitation where the client directs the user to a URL.
+
+<Expandable title="Properties">
+
+<ResponseField
+  name="elicitationId"
+  type={<a href="#elicitationid">ElicitationId</a>}
+  required
+>
+  The unique identifier for this elicitation.
+</ResponseField>
+<ResponseField name="mode" type={"string"} required>
+  The discriminator value. Must be `"url"`.
+</ResponseField>
+<ResponseField name="url" type={"string"} required>
+  The URL to direct the user to.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+#### <span class="font-mono">CreateElicitationResponse</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Response from the client to an elicitation request.
+
+**Type:** Union
+
+**Shared properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+
+**Variants:**
+
+<ResponseField name="accept" type="object">
+The user accepted and provided content.
+
+<Expandable title="Properties">
+
+<ResponseField name="action" type={"string"} required>
+  The discriminator value. Must be `"accept"`.
+</ResponseField>
+<ResponseField name="content" type={"object | null"}>
+  The user-provided content, if any, as an object matching the requested schema.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="decline" type="object">
+The user declined the elicitation.
+
+<Expandable title="Properties">
+
+<ResponseField name="action" type={"string"} required>
+  The discriminator value. Must be `"decline"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="cancel" type="object">
+The elicitation was cancelled.
+
+<Expandable title="Properties">
+
+<ResponseField name="action" type={"string"} required>
+  The discriminator value. Must be `"cancel"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 <a id="fs-read_text_file"></a>
 ### <span class="font-mono">fs/read_text_file</span>
 
@@ -1132,126 +1970,6 @@ these keys.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
-</ResponseField>
-
-<a id="session-elicitation"></a>
-### <span class="font-mono">session/elicitation</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Requests structured user input via a form or URL.
-
-#### <span class="font-mono">ElicitationRequest</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Request from the agent to elicit structured user input.
-
-The agent sends this to the client to request information from the user,
-either via a form or by directing them to a URL.
-
-**Type:** Union
-
-<ResponseField name="form" type="object">
-Form-based elicitation where the client renders a form from the provided schema.
-
-<Expandable title="Properties">
-
-<ResponseField name="mode" type={"string"} required>
-  The discriminator value. Must be `"form"`.
-</ResponseField>
-<ResponseField
-  name="requestedSchema"
-  type={<a href="#elicitationschema">ElicitationSchema</a>}
-  required
->
-  A JSON Schema describing the form fields to present to the user.
-</ResponseField>
-
-</Expandable>
-</ResponseField>
-
-<ResponseField name="url" type="object">
-URL-based elicitation where the client directs the user to a URL.
-
-<Expandable title="Properties">
-
-<ResponseField
-  name="elicitationId"
-  type={<a href="#elicitationid">ElicitationId</a>}
-  required
->
-  The unique identifier for this elicitation.
-</ResponseField>
-<ResponseField name="mode" type={"string"} required>
-  The discriminator value. Must be `"url"`.
-</ResponseField>
-<ResponseField name="url" type={"string"} required>
-  The URL to direct the user to.
-</ResponseField>
-
-</Expandable>
-</ResponseField>
-
-#### <span class="font-mono">ElicitationResponse</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Response from the client to an elicitation request.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-
-</ResponseField>
-<ResponseField name="action" type={<a href="#elicitationaction">ElicitationAction</a>} required>
-  The user's action in response to the elicitation.
-</ResponseField>
-
-<a id="session-elicitation-complete"></a>
-### <span class="font-mono">session/elicitation/complete</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Notification that a URL-based elicitation has completed.
-
-#### <span class="font-mono">ElicitationCompleteNotification</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Notification sent by the agent when a URL-based elicitation is complete.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-
-</ResponseField>
-<ResponseField name="elicitationId" type={<a href="#elicitationid">ElicitationId</a>} required>
-  The ID of the elicitation that completed.
 </ResponseField>
 
 <a id="session-request_permission"></a>
@@ -1800,10 +2518,36 @@ Authentication-related capabilities supported by the agent.
     - Default: `{"http":false,"sse":false}`
 
 </ResponseField>
+<ResponseField name="nes" type={<><span><a href="#nescapabilities">NesCapabilities</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+NES (Next Edit Suggestions) capabilities supported by the agent.
+
+</ResponseField>
+<ResponseField name="positionEncoding" type={<><span><a href="#positionencodingkind">PositionEncodingKind</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+The position encoding selected by the agent from the client's supported encodings.
+
+</ResponseField>
 <ResponseField name="promptCapabilities" type={<a href="#promptcapabilities">PromptCapabilities</a>} >
   Prompt capabilities supported by the agent.
 
     - Default: `{"audio":false,"embeddedContext":false,"image":false}`
+
+</ResponseField>
+<ResponseField name="providers" type={<><span><a href="#providerscapabilities">ProvidersCapabilities</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Provider configuration capabilities supported by the agent.
+
+By supplying `\{\}` it means that the agent supports provider configuration methods.
 
 </ResponseField>
 <ResponseField name="sessionCapabilities" type={<a href="#sessioncapabilities">SessionCapabilities</a>} >
@@ -2312,11 +3056,53 @@ Determines which file operations the agent can request.
     - Default: `{"readTextFile":false,"writeTextFile":false}`
 
 </ResponseField>
+<ResponseField name="nes" type={<><span><a href="#clientnescapabilities">ClientNesCapabilities</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+NES (Next Edit Suggestions) capabilities supported by the client.
+
+</ResponseField>
+<ResponseField name="positionEncodings" type={<a href="#positionencodingkind">PositionEncodingKind[]</a>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+The position encodings supported by the client, in order of preference.
+
+</ResponseField>
 <ResponseField name="terminal" type={"boolean"} >
   Whether the Client support all `terminal/*` methods.
 
     - Default: `false`
 
+</ResponseField>
+
+## <span class="font-mono">ClientNesCapabilities</span>
+
+NES capabilities advertised by the client during initialization.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="jump" type={<><span><a href="#nesjumpcapabilities">NesJumpCapabilities</a></span><span> | null</span></>} >
+  Whether the client supports the `jump` suggestion kind.
+</ResponseField>
+<ResponseField name="rename" type={<><span><a href="#nesrenamecapabilities">NesRenameCapabilities</a></span><span> | null</span></>} >
+  Whether the client supports the `rename` suggestion kind.
+</ResponseField>
+<ResponseField name="searchAndReplace" type={<><span><a href="#nessearchandreplacecapabilities">NesSearchAndReplaceCapabilities</a></span><span> | null</span></>} >
+  Whether the client supports the `searchAndReplace` suggestion kind.
 </ResponseField>
 
 ## <span class="font-mono">ConfigOptionUpdate</span>
@@ -2647,55 +3433,6 @@ The user accepted the elicitation and provided content.
   The user-provided content, if any, as an object matching the requested schema.
 </ResponseField>
 
-## <span class="font-mono">ElicitationAction</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-The user's action in response to an elicitation.
-
-**Type:** Union
-
-<ResponseField name="accept" type="object">
-The user accepted and provided content.
-
-<Expandable title="Properties">
-
-<ResponseField name="action" type={"string"} required>
-  The discriminator value. Must be `"accept"`.
-</ResponseField>
-<ResponseField name="content" type={"object | null"}>
-  The user-provided content, if any, as an object matching the requested schema.
-</ResponseField>
-
-</Expandable>
-</ResponseField>
-
-<ResponseField name="decline" type="object">
-The user declined the elicitation.
-
-<Expandable title="Properties">
-
-<ResponseField name="action" type={"string"} required>
-  The discriminator value. Must be `"decline"`.
-</ResponseField>
-
-</Expandable>
-</ResponseField>
-
-<ResponseField name="cancel" type="object">
-The elicitation was cancelled.
-
-<Expandable title="Properties">
-
-<ResponseField name="action" type={"string"} required>
-  The discriminator value. Must be `"cancel"`.
-</ResponseField>
-
-</Expandable>
-</ResponseField>
-
 ## <span class="font-mono">ElicitationCapabilities</span>
 
 **UNSTABLE**
@@ -2776,9 +3513,9 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 Form-based elicitation mode where the client renders a form from the provided schema.
 
-**Type:** Object
+**Type:** Union
 
-**Properties:**
+**Shared properties:**
 
 <ResponseField
   name="requestedSchema"
@@ -2786,6 +3523,54 @@ Form-based elicitation mode where the client renders a form from the provided sc
   required
 >
   A JSON Schema describing the form fields to present to the user.
+</ResponseField>
+
+**Variants:**
+
+<ResponseField name="Session">
+Tied to a session, optionally to a specific tool call within that session.
+
+<Expandable title="Properties">
+
+<ResponseField
+  name="sessionId"
+  type={<a href="#sessionid">SessionId</a>}
+  required
+>
+  The session this elicitation is tied to.
+</ResponseField>
+<ResponseField
+  name="toolCallId"
+  type={
+    <>
+      <span>
+        <a href="#toolcallid">ToolCallId</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Optional tool call within the session.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="Request">
+Tied to a specific JSON-RPC request outside of a session
+(e.g., during auth/configuration phases before any session is started).
+
+<Expandable title="Properties">
+
+<ResponseField
+  name="requestId"
+  type={<a href="#requestid">RequestId</a>}
+  required
+>
+  The request this elicitation is tied to.
+</ResponseField>
+
+</Expandable>
 </ResponseField>
 
 ## <span class="font-mono">ElicitationId</span>
@@ -2964,6 +3749,27 @@ Multi-select array property.
 </Expandable>
 </ResponseField>
 
+## <span class="font-mono">ElicitationRequestScope</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Request-scoped elicitation, tied to a specific JSON-RPC request outside of a session
+(e.g., during auth/configuration phases before any session is started).
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField
+  name="requestId"
+  type={<a href="#requestid">RequestId</a>}
+  required
+>
+  The request this elicitation is tied to.
+</ResponseField>
+
 ## <span class="font-mono">ElicitationSchema</span>
 
 Type-safe elicitation schema for requesting structured user input.
@@ -3007,6 +3813,43 @@ Type discriminator for elicitation schemas.
   Object schema type.
 </ResponseField>
 
+## <span class="font-mono">ElicitationSessionScope</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Session-scoped elicitation, optionally tied to a specific tool call.
+
+When `tool_call_id` is set, the elicitation is tied to a specific tool call.
+This is useful when an agent receives an elicitation from an MCP server
+during a tool call and needs to redirect it to the user.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField
+  name="sessionId"
+  type={<a href="#sessionid">SessionId</a>}
+  required
+>
+  The session this elicitation is tied to.
+</ResponseField>
+<ResponseField
+  name="toolCallId"
+  type={
+    <>
+      <span>
+        <a href="#toolcallid">ToolCallId</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Optional tool call within the session.
+</ResponseField>
+
 ## <span class="font-mono">ElicitationStringType</span>
 
 Items definition for untitled multi-select enum properties.
@@ -3046,9 +3889,9 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 URL-based elicitation mode where the client directs the user to a URL.
 
-**Type:** Object
+**Type:** Union
 
-**Properties:**
+**Shared properties:**
 
 <ResponseField
   name="elicitationId"
@@ -3059,6 +3902,54 @@ URL-based elicitation mode where the client directs the user to a URL.
 </ResponseField>
 <ResponseField name="url" type={"string"} required>
   The URL to direct the user to.
+</ResponseField>
+
+**Variants:**
+
+<ResponseField name="Session">
+Tied to a session, optionally to a specific tool call within that session.
+
+<Expandable title="Properties">
+
+<ResponseField
+  name="sessionId"
+  type={<a href="#sessionid">SessionId</a>}
+  required
+>
+  The session this elicitation is tied to.
+</ResponseField>
+<ResponseField
+  name="toolCallId"
+  type={
+    <>
+      <span>
+        <a href="#toolcallid">ToolCallId</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Optional tool call within the session.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="Request">
+Tied to a specific JSON-RPC request outside of a session
+(e.g., during auth/configuration phases before any session is started).
+
+<Expandable title="Properties">
+
+<ResponseField
+  name="requestId"
+  type={<a href="#requestid">RequestId</a>}
+  required
+>
+  The request this elicitation is tied to.
+</ResponseField>
+
+</Expandable>
 </ResponseField>
 
 ## <span class="font-mono">EmbeddedResource</span>
@@ -3423,6 +4314,45 @@ Schema for integer properties in an elicitation form.
   Optional title for the property.
 </ResponseField>
 
+## <span class="font-mono">LlmProtocol</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Well-known API protocol identifiers for LLM providers.
+
+Agents and clients MUST handle unknown protocol identifiers gracefully.
+
+Protocol names beginning with `_` are free for custom use, like other ACP extension methods.
+Protocol names that do not begin with `_` are reserved for the ACP spec.
+
+**Type:** Union
+
+<ResponseField name="anthropic" type="string">
+  Anthropic API protocol.
+</ResponseField>
+
+<ResponseField name="openai" type="string">
+  OpenAI API protocol.
+</ResponseField>
+
+<ResponseField name="azure" type="string">
+  Azure OpenAI API protocol.
+</ResponseField>
+
+<ResponseField name="vertex" type="string">
+  Google Vertex AI API protocol.
+</ResponseField>
+
+<ResponseField name="bedrock" type="string">
+  AWS Bedrock API protocol.
+</ResponseField>
+
+<ResponseField name="other" type="string">
+  Unknown or custom protocol.
+</ResponseField>
+
 ## <span class="font-mono">LogoutCapabilities</span>
 
 **UNSTABLE**
@@ -3783,6 +4713,868 @@ Schema for multi-select (array) properties in an elicitation form.
   Optional title for the property.
 </ResponseField>
 
+## <span class="font-mono">NesCapabilities</span>
+
+NES capabilities advertised by the agent during initialization.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="context" type={<><span><a href="#nescontextcapabilities">NesContextCapabilities</a></span><span> | null</span></>} >
+  Context the agent wants attached to each suggestion request.
+</ResponseField>
+<ResponseField name="events" type={<><span><a href="#neseventcapabilities">NesEventCapabilities</a></span><span> | null</span></>} >
+  Events the agent wants to receive.
+</ResponseField>
+
+## <span class="font-mono">NesContextCapabilities</span>
+
+Context capabilities the agent wants attached to each suggestion request.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="diagnostics" type={<><span><a href="#nesdiagnosticscapabilities">NesDiagnosticsCapabilities</a></span><span> | null</span></>} >
+  Whether the agent wants diagnostics context.
+</ResponseField>
+<ResponseField name="editHistory" type={<><span><a href="#nesedithistorycapabilities">NesEditHistoryCapabilities</a></span><span> | null</span></>} >
+  Whether the agent wants edit history context.
+</ResponseField>
+<ResponseField name="openFiles" type={<><span><a href="#nesopenfilescapabilities">NesOpenFilesCapabilities</a></span><span> | null</span></>} >
+  Whether the agent wants open files context.
+</ResponseField>
+<ResponseField name="recentFiles" type={<><span><a href="#nesrecentfilescapabilities">NesRecentFilesCapabilities</a></span><span> | null</span></>} >
+  Whether the agent wants recent files context.
+</ResponseField>
+<ResponseField name="relatedSnippets" type={<><span><a href="#nesrelatedsnippetscapabilities">NesRelatedSnippetsCapabilities</a></span><span> | null</span></>} >
+  Whether the agent wants related snippets context.
+</ResponseField>
+<ResponseField name="userActions" type={<><span><a href="#nesuseractionscapabilities">NesUserActionsCapabilities</a></span><span> | null</span></>} >
+  Whether the agent wants user actions context.
+</ResponseField>
+
+## <span class="font-mono">NesDiagnostic</span>
+
+A diagnostic (error, warning, etc.).
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="message" type={"string"} required>
+  The diagnostic message.
+</ResponseField>
+<ResponseField name="range" type={<a href="#range">Range</a>} required>
+  The range of the diagnostic.
+</ResponseField>
+<ResponseField
+  name="severity"
+  type={<a href="#nesdiagnosticseverity">NesDiagnosticSeverity</a>}
+  required
+>
+  The severity of the diagnostic.
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The URI of the file containing the diagnostic.
+</ResponseField>
+
+## <span class="font-mono">NesDiagnosticSeverity</span>
+
+Severity of a diagnostic.
+
+**Type:** Union
+
+<ResponseField name="error" type="string">
+  An error.
+</ResponseField>
+
+<ResponseField name="warning" type="string">
+  A warning.
+</ResponseField>
+
+<ResponseField name="information" type="string">
+  An informational message.
+</ResponseField>
+
+<ResponseField name="hint" type="string">
+  A hint.
+</ResponseField>
+
+## <span class="font-mono">NesDiagnosticsCapabilities</span>
+
+Capabilities for diagnostics context.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+
+## <span class="font-mono">NesDocumentDidChangeCapabilities</span>
+
+Capabilities for `document/didChange` events.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="syncKind" type={<a href="#textdocumentsynckind">TextDocumentSyncKind</a>} required>
+  The sync kind the agent wants: `"full"` or `"incremental"`.
+</ResponseField>
+
+## <span class="font-mono">NesDocumentDidCloseCapabilities</span>
+
+Marker for `document/didClose` capability support.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+
+## <span class="font-mono">NesDocumentDidFocusCapabilities</span>
+
+Marker for `document/didFocus` capability support.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+
+## <span class="font-mono">NesDocumentDidOpenCapabilities</span>
+
+Marker for `document/didOpen` capability support.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+
+## <span class="font-mono">NesDocumentDidSaveCapabilities</span>
+
+Marker for `document/didSave` capability support.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+
+## <span class="font-mono">NesDocumentEventCapabilities</span>
+
+Document event capabilities the agent wants to receive.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="didChange" type={<><span><a href="#nesdocumentdidchangecapabilities">NesDocumentDidChangeCapabilities</a></span><span> | null</span></>} >
+  Whether the agent wants `document/didChange` events, and the sync kind.
+</ResponseField>
+<ResponseField name="didClose" type={<><span><a href="#nesdocumentdidclosecapabilities">NesDocumentDidCloseCapabilities</a></span><span> | null</span></>} >
+  Whether the agent wants `document/didClose` events.
+</ResponseField>
+<ResponseField name="didFocus" type={<><span><a href="#nesdocumentdidfocuscapabilities">NesDocumentDidFocusCapabilities</a></span><span> | null</span></>} >
+  Whether the agent wants `document/didFocus` events.
+</ResponseField>
+<ResponseField name="didOpen" type={<><span><a href="#nesdocumentdidopencapabilities">NesDocumentDidOpenCapabilities</a></span><span> | null</span></>} >
+  Whether the agent wants `document/didOpen` events.
+</ResponseField>
+<ResponseField name="didSave" type={<><span><a href="#nesdocumentdidsavecapabilities">NesDocumentDidSaveCapabilities</a></span><span> | null</span></>} >
+  Whether the agent wants `document/didSave` events.
+</ResponseField>
+
+## <span class="font-mono">NesEditHistoryCapabilities</span>
+
+Capabilities for edit history context.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="maxCount" type={"integer | null"} >
+  Maximum number of edit history entries the agent can use.
+
+    - Minimum: `0`
+
+</ResponseField>
+
+## <span class="font-mono">NesEditHistoryEntry</span>
+
+An entry in the edit history.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="diff" type={"string"} required>
+  A diff representing the edit.
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The URI of the edited file.
+</ResponseField>
+
+## <span class="font-mono">NesEditSuggestion</span>
+
+A text edit suggestion.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField
+  name="cursorPosition"
+  type={
+    <>
+      <span>
+        <a href="#position">Position</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Optional suggested cursor position after applying edits.
+</ResponseField>
+<ResponseField
+  name="edits"
+  type={<a href="#nestextedit">NesTextEdit[]</a>}
+  required
+>
+  The text edits to apply.
+</ResponseField>
+<ResponseField name="id" type={"string"} required>
+  Unique identifier for accept/reject tracking.
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The URI of the file to edit.
+</ResponseField>
+
+## <span class="font-mono">NesEventCapabilities</span>
+
+Event capabilities the agent can consume.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="document" type={<><span><a href="#nesdocumenteventcapabilities">NesDocumentEventCapabilities</a></span><span> | null</span></>} >
+  Document event capabilities.
+</ResponseField>
+
+## <span class="font-mono">NesExcerpt</span>
+
+A code excerpt from a file.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="endLine" type={"uint32"} required>
+  The end line of the excerpt (zero-based).
+
+    - Minimum: `0`
+
+</ResponseField>
+<ResponseField name="startLine" type={"uint32"} required>
+  The start line of the excerpt (zero-based).
+
+    - Minimum: `0`
+
+</ResponseField>
+<ResponseField name="text" type={"string"} required>
+  The text content of the excerpt.
+</ResponseField>
+
+## <span class="font-mono">NesJumpCapabilities</span>
+
+Marker for jump suggestion support.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+
+## <span class="font-mono">NesJumpSuggestion</span>
+
+A jump-to-location suggestion.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="id" type={"string"} required>
+  Unique identifier for accept/reject tracking.
+</ResponseField>
+<ResponseField name="position" type={<a href="#position">Position</a>} required>
+  The target position within the file.
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The file to navigate to.
+</ResponseField>
+
+## <span class="font-mono">NesOpenFile</span>
+
+An open file in the editor.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="languageId" type={"string"} required>
+  The language identifier.
+</ResponseField>
+<ResponseField name="lastFocusedMs" type={"integer | null"} >
+  Timestamp in milliseconds since epoch of when the file was last focused.
+
+    - Minimum: `0`
+
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The URI of the file.
+</ResponseField>
+<ResponseField name="visibleRange" type={<><span><a href="#range">Range</a></span><span> | null</span></>} >
+  The visible range in the editor, if any.
+</ResponseField>
+
+## <span class="font-mono">NesOpenFilesCapabilities</span>
+
+Capabilities for open files context.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+
+## <span class="font-mono">NesRecentFile</span>
+
+A recently accessed file.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="languageId" type={"string"} required>
+  The language identifier.
+</ResponseField>
+<ResponseField name="text" type={"string"} required>
+  The full text content of the file.
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The URI of the file.
+</ResponseField>
+
+## <span class="font-mono">NesRecentFilesCapabilities</span>
+
+Capabilities for recent files context.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="maxCount" type={"integer | null"} >
+  Maximum number of recent files the agent can use.
+
+    - Minimum: `0`
+
+</ResponseField>
+
+## <span class="font-mono">NesRejectReason</span>
+
+The reason a suggestion was rejected.
+
+**Type:** Union
+
+<ResponseField name="rejected" type="string">
+  The user explicitly dismissed the suggestion.
+</ResponseField>
+
+<ResponseField name="ignored" type="string">
+  The suggestion was shown but the user continued editing without interacting.
+</ResponseField>
+
+<ResponseField name="replaced" type="string">
+  The suggestion was superseded by a newer suggestion.
+</ResponseField>
+
+<ResponseField name="cancelled" type="string">
+  The request was cancelled before the agent returned a response.
+</ResponseField>
+
+## <span class="font-mono">NesRelatedSnippet</span>
+
+A related code snippet from a file.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField
+  name="excerpts"
+  type={<a href="#nesexcerpt">NesExcerpt[]</a>}
+  required
+>
+  The code excerpts.
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The URI of the file containing the snippets.
+</ResponseField>
+
+## <span class="font-mono">NesRelatedSnippetsCapabilities</span>
+
+Capabilities for related snippets context.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+
+## <span class="font-mono">NesRenameCapabilities</span>
+
+Marker for rename suggestion support.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+
+## <span class="font-mono">NesRenameSuggestion</span>
+
+A rename symbol suggestion.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="id" type={"string"} required>
+  Unique identifier for accept/reject tracking.
+</ResponseField>
+<ResponseField name="newName" type={"string"} required>
+  The new name for the symbol.
+</ResponseField>
+<ResponseField name="position" type={<a href="#position">Position</a>} required>
+  The position of the symbol to rename.
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The file URI containing the symbol.
+</ResponseField>
+
+## <span class="font-mono">NesRepository</span>
+
+Repository metadata for an NES session.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="name" type={"string"} required>
+  The repository name.
+</ResponseField>
+<ResponseField name="owner" type={"string"} required>
+  The repository owner.
+</ResponseField>
+<ResponseField name="remoteUrl" type={"string"} required>
+  The remote URL of the repository.
+</ResponseField>
+
+## <span class="font-mono">NesSearchAndReplaceCapabilities</span>
+
+Marker for search and replace suggestion support.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+
+## <span class="font-mono">NesSearchAndReplaceSuggestion</span>
+
+A search-and-replace suggestion.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="id" type={"string"} required>
+  Unique identifier for accept/reject tracking.
+</ResponseField>
+<ResponseField name="isRegex" type={"boolean | null"}>
+  Whether `search` is a regular expression. Defaults to `false`.
+</ResponseField>
+<ResponseField name="replace" type={"string"} required>
+  The replacement text.
+</ResponseField>
+<ResponseField name="search" type={"string"} required>
+  The text or pattern to find.
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The file URI to search within.
+</ResponseField>
+
+## <span class="font-mono">NesSuggestContext</span>
+
+Context attached to a suggestion request.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="diagnostics" type={<><span><a href="#nesdiagnostic">NesDiagnostic[]</a></span><span> | null</span></>} >
+  Current diagnostics (errors, warnings).
+</ResponseField>
+<ResponseField name="editHistory" type={<><span><a href="#nesedithistoryentry">NesEditHistoryEntry[]</a></span><span> | null</span></>} >
+  Recent edit history.
+</ResponseField>
+<ResponseField name="openFiles" type={<><span><a href="#nesopenfile">NesOpenFile[]</a></span><span> | null</span></>} >
+  Currently open files in the editor.
+</ResponseField>
+<ResponseField name="recentFiles" type={<><span><a href="#nesrecentfile">NesRecentFile[]</a></span><span> | null</span></>} >
+  Recently accessed files.
+</ResponseField>
+<ResponseField name="relatedSnippets" type={<><span><a href="#nesrelatedsnippet">NesRelatedSnippet[]</a></span><span> | null</span></>} >
+  Related code snippets.
+</ResponseField>
+<ResponseField name="userActions" type={<><span><a href="#nesuseraction">NesUserAction[]</a></span><span> | null</span></>} >
+  Recent user actions (typing, navigation, etc.).
+</ResponseField>
+
+## <span class="font-mono">NesSuggestion</span>
+
+A suggestion returned by the agent.
+
+**Type:** Union
+
+<ResponseField name="edit" type="object">
+A text edit suggestion.
+
+<Expandable title="Properties">
+
+<ResponseField
+  name="cursorPosition"
+  type={
+    <>
+      <span>
+        <a href="#position">Position</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Optional suggested cursor position after applying edits.
+</ResponseField>
+<ResponseField
+  name="edits"
+  type={<a href="#nestextedit">NesTextEdit[]</a>}
+  required
+>
+  The text edits to apply.
+</ResponseField>
+<ResponseField name="id" type={"string"} required>
+  Unique identifier for accept/reject tracking.
+</ResponseField>
+<ResponseField name="kind" type={"string"} required>
+  The discriminator value. Must be `"edit"`.
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The URI of the file to edit.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="jump" type="object">
+A jump-to-location suggestion.
+
+<Expandable title="Properties">
+
+<ResponseField name="id" type={"string"} required>
+  Unique identifier for accept/reject tracking.
+</ResponseField>
+<ResponseField name="kind" type={"string"} required>
+  The discriminator value. Must be `"jump"`.
+</ResponseField>
+<ResponseField name="position" type={<a href="#position">Position</a>} required>
+  The target position within the file.
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The file to navigate to.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="rename" type="object">
+A rename symbol suggestion.
+
+<Expandable title="Properties">
+
+<ResponseField name="id" type={"string"} required>
+  Unique identifier for accept/reject tracking.
+</ResponseField>
+<ResponseField name="kind" type={"string"} required>
+  The discriminator value. Must be `"rename"`.
+</ResponseField>
+<ResponseField name="newName" type={"string"} required>
+  The new name for the symbol.
+</ResponseField>
+<ResponseField name="position" type={<a href="#position">Position</a>} required>
+  The position of the symbol to rename.
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The file URI containing the symbol.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="searchAndReplace" type="object">
+A search-and-replace suggestion.
+
+<Expandable title="Properties">
+
+<ResponseField name="id" type={"string"} required>
+  Unique identifier for accept/reject tracking.
+</ResponseField>
+<ResponseField name="isRegex" type={"boolean | null"}>
+  Whether `search` is a regular expression. Defaults to `false`.
+</ResponseField>
+<ResponseField name="kind" type={"string"} required>
+  The discriminator value. Must be `"searchAndReplace"`.
+</ResponseField>
+<ResponseField name="replace" type={"string"} required>
+  The replacement text.
+</ResponseField>
+<ResponseField name="search" type={"string"} required>
+  The text or pattern to find.
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The file URI to search within.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+## <span class="font-mono">NesTextEdit</span>
+
+A text edit within a suggestion.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="newText" type={"string"} required>
+  The replacement text.
+</ResponseField>
+<ResponseField name="range" type={<a href="#range">Range</a>} required>
+  The range to replace.
+</ResponseField>
+
+## <span class="font-mono">NesTriggerKind</span>
+
+What triggered the suggestion request.
+
+**Type:** Union
+
+<ResponseField name="automatic" type="string">
+  Triggered by user typing or cursor movement.
+</ResponseField>
+
+<ResponseField name="diagnostic" type="string">
+  Triggered by a diagnostic appearing at or near the cursor.
+</ResponseField>
+
+<ResponseField name="manual" type="string">
+  Triggered by an explicit user action (keyboard shortcut).
+</ResponseField>
+
+## <span class="font-mono">NesUserAction</span>
+
+A user action (typing, cursor movement, etc.).
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="action" type={"string"} required>
+  The kind of action (e.g., "insertChar", "cursorMovement").
+</ResponseField>
+<ResponseField name="position" type={<a href="#position">Position</a>} required>
+  The position where the action occurred.
+</ResponseField>
+<ResponseField name="timestampMs" type={"uint64"} required>
+  Timestamp in milliseconds since epoch.
+
+    - Minimum: `0`
+
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The URI of the file where the action occurred.
+</ResponseField>
+
+## <span class="font-mono">NesUserActionsCapabilities</span>
+
+Capabilities for user actions context.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="maxCount" type={"integer | null"} >
+  Maximum number of user actions the agent can use.
+
+    - Minimum: `0`
+
+</ResponseField>
+
 ## <span class="font-mono">NumberPropertySchema</span>
 
 Schema for number (floating-point) properties in an elicitation form.
@@ -3967,6 +5759,49 @@ See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/agent
   The task has been successfully completed.
 </ResponseField>
 
+## <span class="font-mono">Position</span>
+
+A zero-based position in a text document.
+
+The meaning of `character` depends on the negotiated position encoding.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="character" type={"uint32"} required>
+  Zero-based character offset (encoding-dependent).
+
+    - Minimum: `0`
+
+</ResponseField>
+<ResponseField name="line" type={"uint32"} required>
+  Zero-based line number.
+
+    - Minimum: `0`
+
+</ResponseField>
+
+## <span class="font-mono">PositionEncodingKind</span>
+
+The encoding used for character offsets in positions.
+
+Follows the same conventions as LSP 3.17. The default is UTF-16.
+
+**Type:** Union
+
+<ResponseField name="utf-16" type="string">
+  Character offsets count UTF-16 code units. This is the default.
+</ResponseField>
+
+<ResponseField name="utf-32" type="string">
+  Character offsets count Unicode code points.
+</ResponseField>
+
+<ResponseField name="utf-8" type="string">
+  Character offsets count UTF-8 code units (bytes).
+</ResponseField>
+
 ## <span class="font-mono">PromptCapabilities</span>
 
 Prompt capabilities supported by the agent in `session/prompt` requests.
@@ -4029,6 +5864,102 @@ Non-breaking changes should be introduced via capabilities.
 | ---------- | ------- |
 | Minimum    | `0`     |
 | Maximum    | `65535` |
+
+## <span class="font-mono">ProviderCurrentConfig</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Current effective non-secret routing configuration for a provider.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField
+  name="apiType"
+  type={<a href="#llmprotocol">LlmProtocol</a>}
+  required
+>
+  Protocol currently used by this provider.
+</ResponseField>
+<ResponseField name="baseUrl" type={"string"} required>
+  Base URL currently used by this provider.
+</ResponseField>
+
+## <span class="font-mono">ProviderInfo</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Information about a configurable LLM provider.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="current" type={<><span><a href="#providercurrentconfig">ProviderCurrentConfig</a></span><span> | null</span></>} required>
+  Current effective non-secret routing config.
+Null means provider is disabled.
+</ResponseField>
+<ResponseField name="id" type={"string"} required>
+  Provider identifier, for example "main" or "openai".
+</ResponseField>
+<ResponseField name="required" type={"boolean"} required>
+  Whether this provider is mandatory and cannot be disabled via `providers/disable`.
+If true, clients must not call `providers/disable` for this id.
+</ResponseField>
+<ResponseField name="supported" type={<a href="#llmprotocol">LlmProtocol[]</a>} required>
+  Supported protocol types for this provider.
+</ResponseField>
+
+## <span class="font-mono">ProvidersCapabilities</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Provider configuration capabilities supported by the agent.
+
+By supplying `\{\}` it means that the agent supports provider configuration methods.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+
+## <span class="font-mono">Range</span>
+
+A range in a text document, expressed as start and end positions.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="end" type={<a href="#position">Position</a>} required>
+  The end position (exclusive).
+</ResponseField>
+<ResponseField name="start" type={<a href="#position">Position</a>} required>
+  The start position (inclusive).
+</ResponseField>
 
 ## <span class="font-mono">RequestId</span>
 
@@ -4165,6 +6096,30 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
   The ID of the option the user selected.
 </ResponseField>
 
+## <span class="font-mono">SessionAdditionalDirectoriesCapabilities</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Capabilities for additional session directories support.
+
+By supplying `\{\}` it means that the agent supports the `additionalDirectories` field on
+supported session lifecycle requests and `session/list`.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+
 ## <span class="font-mono">SessionCapabilities</span>
 
 Session capabilities supported by the agent.
@@ -4187,6 +6142,14 @@ metadata to their interactions. Implementations MUST NOT make assumptions about 
 these keys.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="additionalDirectories" type={<><span><a href="#sessionadditionaldirectoriescapabilities">SessionAdditionalDirectoriesCapabilities</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Whether the agent supports `additionalDirectories` on supported session lifecycle requests and `session/list`.
 
 </ResponseField>
 <ResponseField name="close" type={<><span><a href="#sessionclosecapabilities">SessionCloseCapabilities</a></span><span> | null</span></>} >
@@ -4273,6 +6236,31 @@ Unique identifier for a session configuration option.
 A session configuration option selector and its current state.
 
 **Type:** Union
+
+**Shared properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="category" type={<><span><a href="#sessionconfigoptioncategory">SessionConfigOptionCategory</a></span><span> | null</span></>} >
+  Optional semantic category for this option (UX only).
+</ResponseField>
+<ResponseField name="description" type={"string | null"} >
+  Optional description for the Client to display to the user.
+</ResponseField>
+<ResponseField name="id" type={<a href="#sessionconfigid">SessionConfigId</a>} required>
+  Unique identifier for the configuration option.
+</ResponseField>
+<ResponseField name="name" type={"string"} required>
+  Human-readable label for the option.
+</ResponseField>
+
+**Variants:**
 
 <ResponseField name="select" type="object">
 Single-value selector (dropdown).
@@ -4492,6 +6480,16 @@ metadata to their interactions. Implementations MUST NOT make assumptions about 
 these keys.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="additionalDirectories" type={<><span>"string"</span><span>[]</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Authoritative ordered additional workspace roots for this session. Each path must be absolute.
+
+When omitted or empty, there are no additional roots for the session.
 
 </ResponseField>
 <ResponseField name="cwd" type={"string"} required>
@@ -5199,6 +7197,49 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 <ResponseField name="text" type={"string"} required>
 </ResponseField>
 
+## <span class="font-mono">TextDocumentContentChangeEvent</span>
+
+A content change event for a document.
+
+When `range` is `None`, `text` is the full content of the document.
+When `range` is `Some`, `text` replaces the given range.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField
+  name="range"
+  type={
+    <>
+      <span>
+        <a href="#range">Range</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  The range of the document that changed. If `None`, the entire content is
+  replaced.
+</ResponseField>
+<ResponseField name="text" type={"string"} required>
+  The new text for the range, or the full document content if `range` is `None`.
+</ResponseField>
+
+## <span class="font-mono">TextDocumentSyncKind</span>
+
+How the agent wants document changes delivered.
+
+**Type:** Union
+
+<ResponseField name="full" type="string">
+  Client sends the entire file content on each change.
+</ResponseField>
+
+<ResponseField name="incremental" type="string">
+  Client sends only the changed ranges.
+</ResponseField>
+
 ## <span class="font-mono">TextResourceContents</span>
 
 Text-based resource contents.
@@ -5667,4 +7708,19 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
     - Minimum: `0`
 
+</ResponseField>
+
+## <span class="font-mono">WorkspaceFolder</span>
+
+A workspace folder.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="name" type={"string"} required>
+  The display name of the folder.
+</ResponseField>
+<ResponseField name="uri" type={"string"} required>
+  The URI of the folder.
 </ResponseField>

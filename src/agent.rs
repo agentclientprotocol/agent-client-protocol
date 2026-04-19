@@ -5,13 +5,35 @@
 
 use std::{path::PathBuf, sync::Arc};
 
+#[cfg(any(feature = "unstable_auth_methods", feature = "unstable_llm_providers"))]
+use std::collections::HashMap;
+
 use derive_more::{Display, From};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
+#[cfg(feature = "unstable_llm_providers")]
+use crate::RequiredNullable;
 use crate::{
     ClientCapabilities, ContentBlock, ExtNotification, ExtRequest, ExtResponse, IntoOption, Meta,
-    ProtocolVersion, SessionId,
+    ProtocolVersion, SessionId, SkipListener,
+};
+
+#[cfg(feature = "unstable_nes")]
+use crate::{
+    AcceptNesNotification, CloseNesRequest, CloseNesResponse, DidChangeDocumentNotification,
+    DidCloseDocumentNotification, DidFocusDocumentNotification, DidOpenDocumentNotification,
+    DidSaveDocumentNotification, NesCapabilities, PositionEncodingKind, RejectNesNotification,
+    StartNesRequest, StartNesResponse, SuggestNesRequest, SuggestNesResponse,
+};
+
+#[cfg(feature = "unstable_nes")]
+use crate::nes::{
+    DOCUMENT_DID_CHANGE_METHOD_NAME, DOCUMENT_DID_CLOSE_METHOD_NAME,
+    DOCUMENT_DID_FOCUS_METHOD_NAME, DOCUMENT_DID_OPEN_METHOD_NAME, DOCUMENT_DID_SAVE_METHOD_NAME,
+    NES_ACCEPT_METHOD_NAME, NES_CLOSE_METHOD_NAME, NES_REJECT_METHOD_NAME, NES_START_METHOD_NAME,
+    NES_SUGGEST_METHOD_NAME,
 };
 
 // Initialize
@@ -21,6 +43,8 @@ use crate::{
 /// Sent by the client to establish connection and negotiate capabilities.
 ///
 /// See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)
+#[serde_as]
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = INITIALIZE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -34,14 +58,15 @@ pub struct InitializeRequest {
     /// Information about the Client name and version sent to the Agent.
     ///
     /// Note: in future versions of the protocol, this will be required.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default)]
     pub client_info: Option<Implementation>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -87,6 +112,8 @@ impl InitializeRequest {
 /// Contains the negotiated protocol version and agent capabilities.
 ///
 /// See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)
+#[serde_as]
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = INITIALIZE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -101,19 +128,21 @@ pub struct InitializeResponse {
     #[serde(default)]
     pub agent_capabilities: AgentCapabilities,
     /// Authentication methods supported by the agent.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
     #[serde(default)]
     pub auth_methods: Vec<AuthMethod>,
     /// Information about the Agent name and version sent to the Client.
     ///
     /// Note: in future versions of the protocol, this will be required.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default)]
     pub agent_info: Option<Implementation>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -165,6 +194,7 @@ impl InitializeResponse {
 /// Metadata about the implementation of the client or agent.
 /// Describes the name and version of an MCP implementation, with an optional
 /// title for UI representation.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -185,7 +215,7 @@ pub struct Implementation {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -227,6 +257,7 @@ impl Implementation {
 /// Request parameters for the authenticate method.
 ///
 /// Specifies which authentication method to use.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = AUTHENTICATE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -240,7 +271,7 @@ pub struct AuthenticateRequest {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -266,6 +297,7 @@ impl AuthenticateRequest {
 }
 
 /// Response to the `authenticate` method.
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = AUTHENTICATE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -276,7 +308,7 @@ pub struct AuthenticateResponse {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -308,6 +340,7 @@ impl AuthenticateResponse {
 ///
 /// Terminates the current authenticated session.
 #[cfg(feature = "unstable_logout")]
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = LOGOUT_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -318,7 +351,7 @@ pub struct LogoutRequest {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -347,6 +380,7 @@ impl LogoutRequest {
 ///
 /// Response to the `logout` method.
 #[cfg(feature = "unstable_logout")]
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = LOGOUT_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -357,7 +391,7 @@ pub struct LogoutResponse {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -386,6 +420,8 @@ impl LogoutResponse {
 ///
 /// Authentication-related capabilities supported by the agent.
 #[cfg(feature = "unstable_logout")]
+#[serde_as]
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -393,14 +429,15 @@ pub struct AgentAuthCapabilities {
     /// Whether the agent supports the logout method.
     ///
     /// By supplying `{}` it means that the agent supports the logout method.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default)]
     pub logout: Option<LogoutCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -438,6 +475,7 @@ impl AgentAuthCapabilities {
 ///
 /// By supplying `{}` it means that the agent supports the logout method.
 #[cfg(feature = "unstable_logout")]
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct LogoutCapabilities {
@@ -446,7 +484,7 @@ pub struct LogoutCapabilities {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -568,6 +606,7 @@ impl AuthMethod {
 /// Agent handles authentication itself.
 ///
 /// This is the default authentication method type.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -577,14 +616,13 @@ pub struct AuthMethodAgent {
     /// Human-readable name of the authentication method.
     pub name: String,
     /// Optional description providing more details about this authentication method.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -626,6 +664,7 @@ impl AuthMethodAgent {
 ///
 /// The user provides credentials that the client passes to the agent as environment variables.
 #[cfg(feature = "unstable_auth_methods")]
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -635,19 +674,17 @@ pub struct AuthMethodEnvVar {
     /// Human-readable name of the authentication method.
     pub name: String,
     /// Optional description providing more details about this authentication method.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     /// The environment variables the client should set.
     pub vars: Vec<AuthEnvVar>,
     /// Optional link to a page where the user can obtain their credentials.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub link: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -701,6 +738,7 @@ impl AuthMethodEnvVar {
 ///
 /// Describes a single environment variable for an [`AuthMethodEnvVar`] authentication method.
 #[cfg(feature = "unstable_auth_methods")]
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -708,7 +746,6 @@ pub struct AuthEnvVar {
     /// The environment variable name (e.g. `"OPENAI_API_KEY"`).
     pub name: String,
     /// Human-readable label for this variable, displayed in client UI.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
     /// Whether this value is a secret (e.g. API key, token).
     /// Clients should use a password-style input for secret vars.
@@ -728,7 +765,7 @@ pub struct AuthEnvVar {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -805,6 +842,7 @@ impl AuthEnvVar {
 ///
 /// The client runs an interactive terminal for the user to authenticate via a TUI.
 #[cfg(feature = "unstable_auth_methods")]
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -814,7 +852,6 @@ pub struct AuthMethodTerminal {
     /// Human-readable name of the authentication method.
     pub name: String,
     /// Optional description providing more details about this authentication method.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     /// Additional arguments to pass when running the agent binary for terminal auth.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -827,7 +864,7 @@ pub struct AuthMethodTerminal {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -883,6 +920,7 @@ impl AuthMethodTerminal {
 /// Request parameters for creating a new session.
 ///
 /// See protocol docs: [Creating a Session](https://agentclientprotocol.com/protocol/session-setup#creating-a-session)
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_NEW_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -890,6 +928,18 @@ impl AuthMethodTerminal {
 pub struct NewSessionRequest {
     /// The working directory for this session. Must be an absolute path.
     pub cwd: PathBuf,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Additional workspace roots for this session. Each path must be absolute.
+    ///
+    /// These expand the session's filesystem scope without changing `cwd`, which
+    /// remains the base for relative paths. When omitted or empty, no
+    /// additional roots are activated for the new session.
+    #[cfg(feature = "unstable_session_additional_directories")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub additional_directories: Vec<PathBuf>,
     /// List of MCP (Model Context Protocol) servers the agent should connect to.
     pub mcp_servers: Vec<McpServer>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -897,7 +947,7 @@ pub struct NewSessionRequest {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -906,9 +956,23 @@ impl NewSessionRequest {
     pub fn new(cwd: impl Into<PathBuf>) -> Self {
         Self {
             cwd: cwd.into(),
+            #[cfg(feature = "unstable_session_additional_directories")]
+            additional_directories: vec![],
             mcp_servers: vec![],
             meta: None,
         }
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Additional workspace roots for this session. Each path must be absolute.
+    #[cfg(feature = "unstable_session_additional_directories")]
+    #[must_use]
+    pub fn additional_directories(mut self, additional_directories: Vec<PathBuf>) -> Self {
+        self.additional_directories = additional_directories;
+        self
     }
 
     /// List of MCP (Model Context Protocol) servers the agent should connect to.
@@ -933,6 +997,8 @@ impl NewSessionRequest {
 /// Response from creating a new session.
 ///
 /// See protocol docs: [Creating a Session](https://agentclientprotocol.com/protocol/session-setup#creating-a-session)
+#[serde_as]
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_NEW_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -945,7 +1011,8 @@ pub struct NewSessionResponse {
     /// Initial mode state if supported by the Agent
     ///
     /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default)]
     pub modes: Option<SessionModeState>,
     /// **UNSTABLE**
     ///
@@ -953,17 +1020,19 @@ pub struct NewSessionResponse {
     ///
     /// Initial model state if supported by the Agent
     #[cfg(feature = "unstable_session_model")]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default)]
     pub models: Option<SessionModelState>,
     /// Initial session configuration options if supported by the Agent.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    #[serde(default)]
     pub config_options: Option<Vec<SessionConfigOption>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1030,6 +1099,7 @@ impl NewSessionResponse {
 /// Only available if the Agent supports the `loadSession` capability.
 ///
 /// See protocol docs: [Loading Sessions](https://agentclientprotocol.com/protocol/session-setup#loading-sessions)
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_LOAD_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -1039,6 +1109,18 @@ pub struct LoadSessionRequest {
     pub mcp_servers: Vec<McpServer>,
     /// The working directory for this session.
     pub cwd: PathBuf,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Additional workspace roots to activate for this session. Each path must be absolute.
+    ///
+    /// When omitted or empty, no additional roots are activated. When non-empty,
+    /// this is the complete resulting additional-root list for the loaded
+    /// session.
+    #[cfg(feature = "unstable_session_additional_directories")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub additional_directories: Vec<PathBuf>,
     /// The ID of the session to load.
     pub session_id: SessionId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1046,7 +1128,7 @@ pub struct LoadSessionRequest {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1056,9 +1138,23 @@ impl LoadSessionRequest {
         Self {
             mcp_servers: vec![],
             cwd: cwd.into(),
+            #[cfg(feature = "unstable_session_additional_directories")]
+            additional_directories: vec![],
             session_id: session_id.into(),
             meta: None,
         }
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Additional workspace roots to activate for this session. Each path must be absolute.
+    #[cfg(feature = "unstable_session_additional_directories")]
+    #[must_use]
+    pub fn additional_directories(mut self, additional_directories: Vec<PathBuf>) -> Self {
+        self.additional_directories = additional_directories;
+        self
     }
 
     /// List of MCP servers to connect to for this session.
@@ -1081,6 +1177,8 @@ impl LoadSessionRequest {
 }
 
 /// Response from loading an existing session.
+#[serde_as]
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_LOAD_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -1089,7 +1187,8 @@ pub struct LoadSessionResponse {
     /// Initial mode state if supported by the Agent
     ///
     /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default)]
     pub modes: Option<SessionModeState>,
     /// **UNSTABLE**
     ///
@@ -1097,17 +1196,19 @@ pub struct LoadSessionResponse {
     ///
     /// Initial model state if supported by the Agent
     #[cfg(feature = "unstable_session_model")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default)]
     pub models: Option<SessionModelState>,
     /// Initial session configuration options if supported by the Agent.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    #[serde(default)]
     pub config_options: Option<Vec<SessionConfigOption>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1173,6 +1274,7 @@ impl LoadSessionResponse {
 ///
 /// Only available if the Agent supports the `session.fork` capability.
 #[cfg(feature = "unstable_session_fork")]
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_FORK_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -1182,6 +1284,18 @@ pub struct ForkSessionRequest {
     pub session_id: SessionId,
     /// The working directory for this session.
     pub cwd: PathBuf,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Additional workspace roots to activate for this session. Each path must be absolute.
+    ///
+    /// When omitted or empty, no additional roots are activated. When non-empty,
+    /// this is the complete resulting additional-root list for the forked
+    /// session.
+    #[cfg(feature = "unstable_session_additional_directories")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub additional_directories: Vec<PathBuf>,
     /// List of MCP servers to connect to for this session.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mcp_servers: Vec<McpServer>,
@@ -1190,7 +1304,7 @@ pub struct ForkSessionRequest {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1201,9 +1315,23 @@ impl ForkSessionRequest {
         Self {
             session_id: session_id.into(),
             cwd: cwd.into(),
+            #[cfg(feature = "unstable_session_additional_directories")]
+            additional_directories: vec![],
             mcp_servers: vec![],
             meta: None,
         }
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Additional workspace roots to activate for this session. Each path must be absolute.
+    #[cfg(feature = "unstable_session_additional_directories")]
+    #[must_use]
+    pub fn additional_directories(mut self, additional_directories: Vec<PathBuf>) -> Self {
+        self.additional_directories = additional_directories;
+        self
     }
 
     /// List of MCP servers to connect to for this session.
@@ -1231,6 +1359,8 @@ impl ForkSessionRequest {
 ///
 /// Response from forking an existing session.
 #[cfg(feature = "unstable_session_fork")]
+#[serde_as]
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_FORK_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -1241,7 +1371,8 @@ pub struct ForkSessionResponse {
     /// Initial mode state if supported by the Agent
     ///
     /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default)]
     pub modes: Option<SessionModeState>,
     /// **UNSTABLE**
     ///
@@ -1249,17 +1380,19 @@ pub struct ForkSessionResponse {
     ///
     /// Initial model state if supported by the Agent
     #[cfg(feature = "unstable_session_model")]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default)]
     pub models: Option<SessionModelState>,
     /// Initial session configuration options if supported by the Agent.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    #[serde(default)]
     pub config_options: Option<Vec<SessionConfigOption>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1331,8 +1464,9 @@ impl ForkSessionResponse {
 /// Resumes an existing session without returning previous messages (unlike `session/load`).
 /// This is useful for agents that can resume sessions but don't implement full session loading.
 ///
-/// Only available if the Agent supports the `session.resume` capability.
+/// Only available if the Agent supports the `sessionCapabilities.resume` capability.
 #[cfg(feature = "unstable_session_resume")]
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_RESUME_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -1342,6 +1476,18 @@ pub struct ResumeSessionRequest {
     pub session_id: SessionId,
     /// The working directory for this session.
     pub cwd: PathBuf,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Additional workspace roots to activate for this session. Each path must be absolute.
+    ///
+    /// When omitted or empty, no additional roots are activated. When non-empty,
+    /// this is the complete resulting additional-root list for the resumed
+    /// session.
+    #[cfg(feature = "unstable_session_additional_directories")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub additional_directories: Vec<PathBuf>,
     /// List of MCP servers to connect to for this session.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mcp_servers: Vec<McpServer>,
@@ -1350,7 +1496,7 @@ pub struct ResumeSessionRequest {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1361,9 +1507,23 @@ impl ResumeSessionRequest {
         Self {
             session_id: session_id.into(),
             cwd: cwd.into(),
+            #[cfg(feature = "unstable_session_additional_directories")]
+            additional_directories: vec![],
             mcp_servers: vec![],
             meta: None,
         }
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Additional workspace roots to activate for this session. Each path must be absolute.
+    #[cfg(feature = "unstable_session_additional_directories")]
+    #[must_use]
+    pub fn additional_directories(mut self, additional_directories: Vec<PathBuf>) -> Self {
+        self.additional_directories = additional_directories;
+        self
     }
 
     /// List of MCP servers to connect to for this session.
@@ -1391,6 +1551,8 @@ impl ResumeSessionRequest {
 ///
 /// Response from resuming an existing session.
 #[cfg(feature = "unstable_session_resume")]
+#[serde_as]
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_RESUME_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -1399,7 +1561,8 @@ pub struct ResumeSessionResponse {
     /// Initial mode state if supported by the Agent
     ///
     /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default)]
     pub modes: Option<SessionModeState>,
     /// **UNSTABLE**
     ///
@@ -1407,17 +1570,19 @@ pub struct ResumeSessionResponse {
     ///
     /// Initial model state if supported by the Agent
     #[cfg(feature = "unstable_session_model")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default)]
     pub models: Option<SessionModelState>,
     /// Initial session configuration options if supported by the Agent.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    #[serde(default)]
     pub config_options: Option<Vec<SessionConfigOption>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1483,8 +1648,9 @@ impl ResumeSessionResponse {
 /// (treat it as if `session/cancel` was called) and then free up any resources
 /// associated with the session.
 ///
-/// Only available if the Agent supports the `session.close` capability.
+/// Only available if the Agent supports the `sessionCapabilities.close` capability.
 #[cfg(feature = "unstable_session_close")]
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_CLOSE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -1497,7 +1663,7 @@ pub struct CloseSessionRequest {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1529,6 +1695,7 @@ impl CloseSessionRequest {
 ///
 /// Response from closing a session.
 #[cfg(feature = "unstable_session_close")]
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_CLOSE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -1539,7 +1706,7 @@ pub struct CloseSessionResponse {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1567,23 +1734,33 @@ impl CloseSessionResponse {
 /// Request parameters for listing existing sessions.
 ///
 /// Only available if the Agent supports the `sessionCapabilities.list` capability.
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_LIST_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ListSessionsRequest {
     /// Filter sessions by working directory. Must be an absolute path.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub cwd: Option<PathBuf>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Filter sessions by the exact ordered additional workspace roots. Each path must be absolute.
+    ///
+    /// This filter applies only when the field is present and non-empty. When
+    /// omitted or empty, no additional-root filter is applied.
+    #[cfg(feature = "unstable_session_additional_directories")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub additional_directories: Vec<PathBuf>,
     /// Opaque cursor token from a previous response's nextCursor field for cursor-based pagination
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub cursor: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1597,6 +1774,18 @@ impl ListSessionsRequest {
     #[must_use]
     pub fn cwd(mut self, cwd: impl IntoOption<PathBuf>) -> Self {
         self.cwd = cwd.into_option();
+        self
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Filter sessions by the exact ordered additional workspace roots. Each path must be absolute.
+    #[cfg(feature = "unstable_session_additional_directories")]
+    #[must_use]
+    pub fn additional_directories(mut self, additional_directories: Vec<PathBuf>) -> Self {
+        self.additional_directories = additional_directories;
         self
     }
 
@@ -1620,23 +1809,25 @@ impl ListSessionsRequest {
 }
 
 /// Response from listing sessions.
+#[serde_as]
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_LIST_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ListSessionsResponse {
     /// Array of session information objects
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
     pub sessions: Vec<SessionInfo>,
     /// Opaque cursor token. If present, pass this in the next request's cursor parameter
     /// to fetch the next page. If absent, there are no more results.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub next_cursor: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1669,6 +1860,8 @@ impl ListSessionsResponse {
 }
 
 /// Information about a session returned by session/list
+#[serde_as]
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -1677,18 +1870,31 @@ pub struct SessionInfo {
     pub session_id: SessionId,
     /// The working directory for this session. Must be an absolute path.
     pub cwd: PathBuf,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Authoritative ordered additional workspace roots for this session. Each path must be absolute.
+    ///
+    /// When omitted or empty, there are no additional roots for the session.
+    #[cfg(feature = "unstable_session_additional_directories")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub additional_directories: Vec<PathBuf>,
+
     /// Human-readable title for the session
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default)]
     pub title: Option<String>,
     /// ISO 8601 timestamp of last activity
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default)]
     pub updated_at: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1698,10 +1904,24 @@ impl SessionInfo {
         Self {
             session_id: session_id.into(),
             cwd: cwd.into(),
+            #[cfg(feature = "unstable_session_additional_directories")]
+            additional_directories: vec![],
             title: None,
             updated_at: None,
             meta: None,
         }
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Authoritative ordered additional workspace roots for this session. Each path must be absolute.
+    #[cfg(feature = "unstable_session_additional_directories")]
+    #[must_use]
+    pub fn additional_directories(mut self, additional_directories: Vec<PathBuf>) -> Self {
+        self.additional_directories = additional_directories;
+        self
     }
 
     /// Human-readable title for the session
@@ -1733,6 +1953,8 @@ impl SessionInfo {
 // Session modes
 
 /// The set of modes and the one currently active.
+#[serde_as]
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -1740,13 +1962,14 @@ pub struct SessionModeState {
     /// The current mode the Agent is in.
     pub current_mode_id: SessionModeId,
     /// The set of modes that the Agent can operate in
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
     pub available_modes: Vec<SessionMode>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1778,20 +2001,21 @@ impl SessionModeState {
 /// A mode the agent can operate in.
 ///
 /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SessionMode {
     pub id: SessionModeId,
     pub name: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub description: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1839,6 +2063,7 @@ impl SessionModeId {
 }
 
 /// Request parameters for setting a session mode.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_SET_MODE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -1853,7 +2078,7 @@ pub struct SetSessionModeRequest {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1875,6 +2100,7 @@ impl SetSessionModeRequest {
 }
 
 /// Response to `session/set_mode` method.
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_SET_MODE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -1885,7 +2111,7 @@ pub struct SetSessionModeResponse {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1952,6 +2178,7 @@ impl SessionConfigGroupId {
 }
 
 /// A possible value for a session configuration option.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -1961,14 +2188,14 @@ pub struct SessionConfigSelectOption {
     /// Human-readable label for this option value.
     pub name: String,
     /// Optional description for this option value.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub description: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -2002,6 +2229,7 @@ impl SessionConfigSelectOption {
 }
 
 /// A group of possible values for a session configuration option.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -2017,7 +2245,7 @@ pub struct SessionConfigSelectGroup {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -2159,6 +2387,8 @@ pub enum SessionConfigKind {
 }
 
 /// A session configuration option selector and its current state.
+#[serde_as]
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -2168,10 +2398,11 @@ pub struct SessionConfigOption {
     /// Human-readable label for the option.
     pub name: String,
     /// Optional description for the Client to display to the user.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub description: Option<String>,
     /// Optional semantic category for this option (UX only).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default)]
     pub category: Option<SessionConfigOptionCategory>,
     /// Type-specific fields for this configuration option.
     #[serde(flatten)]
@@ -2181,7 +2412,7 @@ pub struct SessionConfigOption {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -2351,6 +2582,7 @@ impl From<&str> for SessionConfigOptionValue {
 }
 
 /// Request parameters for setting a session configuration option.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_SET_CONFIG_OPTION_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -2375,7 +2607,7 @@ pub struct SetSessionConfigOptionRequest {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -2423,19 +2655,22 @@ impl SetSessionConfigOptionRequest {
 }
 
 /// Response to `session/set_config_option` method.
+#[serde_as]
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_SET_CONFIG_OPTION_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SetSessionConfigOptionResponse {
     /// The full set of configuration options and their current values.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
     pub config_options: Vec<SessionConfigOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -2488,6 +2723,7 @@ pub enum McpServer {
 }
 
 /// HTTP transport configuration for MCP.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -2503,7 +2739,7 @@ pub struct McpServerHttp {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -2538,6 +2774,7 @@ impl McpServerHttp {
 }
 
 /// SSE transport configuration for MCP.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -2553,7 +2790,7 @@ pub struct McpServerSse {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -2588,6 +2825,7 @@ impl McpServerSse {
 }
 
 /// Stdio transport configuration for MCP.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -2605,7 +2843,7 @@ pub struct McpServerStdio {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -2648,6 +2886,7 @@ impl McpServerStdio {
 }
 
 /// An environment variable to set when launching an MCP server.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -2661,7 +2900,7 @@ pub struct EnvVariable {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -2688,6 +2927,7 @@ impl EnvVariable {
 }
 
 /// An HTTP header to set when making requests to the MCP server.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -2701,7 +2941,7 @@ pub struct HttpHeader {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -2734,6 +2974,7 @@ impl HttpHeader {
 /// Contains the user's message and any additional context.
 ///
 /// See protocol docs: [User Message](https://agentclientprotocol.com/protocol/prompt-turn#1-user-message)
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_PROMPT_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -2751,7 +2992,6 @@ pub struct PromptRequest {
     /// [`PromptResponse`] to confirm it was recorded.
     /// Both clients and agents MUST use UUID format for message IDs.
     #[cfg(feature = "unstable_message_id")]
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub message_id: Option<String>,
     /// The blocks of content that compose the user's message.
     ///
@@ -2772,7 +3012,7 @@ pub struct PromptRequest {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -2819,6 +3059,8 @@ impl PromptRequest {
 /// Response from processing a user prompt.
 ///
 /// See protocol docs: [Check for Completion](https://agentclientprotocol.com/protocol/prompt-turn#4-check-for-completion)
+#[serde_as]
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_PROMPT_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -2834,7 +3076,6 @@ pub struct PromptResponse {
     /// to confirm it was recorded. If the client did not provide one, the agent MAY assign one
     /// and return it here. Absence of this field indicates the agent did not record a message ID.
     #[cfg(feature = "unstable_message_id")]
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub user_message_id: Option<String>,
     /// Indicates why the agent stopped processing the turn.
     pub stop_reason: StopReason,
@@ -2844,14 +3085,15 @@ pub struct PromptResponse {
     ///
     /// Token usage for this turn (optional).
     #[cfg(feature = "unstable_session_usage")]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default)]
     pub usage: Option<Usage>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -2941,6 +3183,7 @@ pub enum StopReason {
 ///
 /// Token usage information for a prompt turn.
 #[cfg(feature = "unstable_session_usage")]
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -2952,13 +3195,10 @@ pub struct Usage {
     /// Total output tokens across all turns.
     pub output_tokens: u64,
     /// Total thought/reasoning tokens
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub thought_tokens: Option<u64>,
     /// Total cache read tokens.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub cached_read_tokens: Option<u64>,
     /// Total cache write tokens.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub cached_write_tokens: Option<u64>,
 }
 
@@ -3006,6 +3246,8 @@ impl Usage {
 ///
 /// The set of models and the one currently active.
 #[cfg(feature = "unstable_session_model")]
+#[serde_as]
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -3013,13 +3255,14 @@ pub struct SessionModelState {
     /// The current model the Agent is in.
     pub current_model_id: ModelId,
     /// The set of models that the Agent can use
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
     pub available_models: Vec<ModelInfo>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -3072,6 +3315,7 @@ impl ModelId {
 ///
 /// Information about a selectable model.
 #[cfg(feature = "unstable_session_model")]
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -3081,14 +3325,14 @@ pub struct ModelInfo {
     /// Human-readable name of the model.
     pub name: String,
     /// Optional description of the model.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub description: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -3129,6 +3373,7 @@ impl ModelInfo {
 ///
 /// Request parameters for setting a session model.
 #[cfg(feature = "unstable_session_model")]
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_SET_MODEL_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -3143,7 +3388,7 @@ pub struct SetSessionModelRequest {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -3176,6 +3421,7 @@ impl SetSessionModelRequest {
 ///
 /// Response to `session/set_model` method.
 #[cfg(feature = "unstable_session_model")]
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_SET_MODEL_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -3186,12 +3432,413 @@ pub struct SetSessionModelResponse {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
 #[cfg(feature = "unstable_session_model")]
 impl SetSessionModelResponse {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+// Providers
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Well-known API protocol identifiers for LLM providers.
+///
+/// Agents and clients MUST handle unknown protocol identifiers gracefully.
+///
+/// Protocol names beginning with `_` are free for custom use, like other ACP extension methods.
+/// Protocol names that do not begin with `_` are reserved for the ACP spec.
+#[cfg(feature = "unstable_llm_providers")]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+#[expect(clippy::doc_markdown)]
+pub enum LlmProtocol {
+    /// Anthropic API protocol.
+    Anthropic,
+    /// OpenAI API protocol.
+    #[serde(rename = "openai")]
+    OpenAi,
+    /// Azure OpenAI API protocol.
+    Azure,
+    /// Google Vertex AI API protocol.
+    Vertex,
+    /// AWS Bedrock API protocol.
+    Bedrock,
+    /// Unknown or custom protocol.
+    #[serde(untagged)]
+    Other(String),
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Current effective non-secret routing configuration for a provider.
+#[cfg(feature = "unstable_llm_providers")]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct ProviderCurrentConfig {
+    /// Protocol currently used by this provider.
+    pub api_type: LlmProtocol,
+    /// Base URL currently used by this provider.
+    pub base_url: String,
+}
+
+#[cfg(feature = "unstable_llm_providers")]
+impl ProviderCurrentConfig {
+    #[must_use]
+    pub fn new(api_type: LlmProtocol, base_url: impl Into<String>) -> Self {
+        Self {
+            api_type,
+            base_url: base_url.into(),
+        }
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Information about a configurable LLM provider.
+#[cfg(feature = "unstable_llm_providers")]
+#[serde_as]
+#[skip_serializing_none]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct ProviderInfo {
+    /// Provider identifier, for example "main" or "openai".
+    pub id: String,
+    /// Supported protocol types for this provider.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    pub supported: Vec<LlmProtocol>,
+    /// Whether this provider is mandatory and cannot be disabled via `providers/disable`.
+    /// If true, clients must not call `providers/disable` for this id.
+    pub required: bool,
+    /// Current effective non-secret routing config.
+    /// Null means provider is disabled.
+    pub current: RequiredNullable<ProviderCurrentConfig>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_llm_providers")]
+impl ProviderInfo {
+    #[must_use]
+    pub fn new(
+        id: impl Into<String>,
+        supported: Vec<LlmProtocol>,
+        required: bool,
+        current: impl Into<RequiredNullable<ProviderCurrentConfig>>,
+    ) -> Self {
+        Self {
+            id: id.into(),
+            supported,
+            required,
+            current: current.into(),
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Request parameters for `providers/list`.
+#[cfg(feature = "unstable_llm_providers")]
+#[skip_serializing_none]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[schemars(extend("x-side" = "agent", "x-method" = PROVIDERS_LIST_METHOD_NAME))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct ListProvidersRequest {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_llm_providers")]
+impl ListProvidersRequest {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Response to `providers/list`.
+#[cfg(feature = "unstable_llm_providers")]
+#[serde_as]
+#[skip_serializing_none]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[schemars(extend("x-side" = "agent", "x-method" = PROVIDERS_LIST_METHOD_NAME))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct ListProvidersResponse {
+    /// Configurable providers with current routing info suitable for UI display.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    pub providers: Vec<ProviderInfo>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_llm_providers")]
+impl ListProvidersResponse {
+    #[must_use]
+    pub fn new(providers: Vec<ProviderInfo>) -> Self {
+        Self {
+            providers,
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Request parameters for `providers/set`.
+///
+/// Replaces the full configuration for one provider id.
+#[cfg(feature = "unstable_llm_providers")]
+#[skip_serializing_none]
+#[derive(Clone, Debug, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[schemars(extend("x-side" = "agent", "x-method" = PROVIDERS_SET_METHOD_NAME))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct SetProvidersRequest {
+    /// Provider id to configure.
+    pub id: String,
+    /// Protocol type for this provider.
+    pub api_type: LlmProtocol,
+    /// Base URL for requests sent through this provider.
+    pub base_url: String,
+    /// Full headers map for this provider.
+    /// May include authorization, routing, or other integration-specific headers.
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub headers: HashMap<String, String>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_llm_providers")]
+impl SetProvidersRequest {
+    #[must_use]
+    pub fn new(id: impl Into<String>, api_type: LlmProtocol, base_url: impl Into<String>) -> Self {
+        Self {
+            id: id.into(),
+            api_type,
+            base_url: base_url.into(),
+            headers: HashMap::new(),
+            meta: None,
+        }
+    }
+
+    /// Full headers map for this provider.
+    /// May include authorization, routing, or other integration-specific headers.
+    #[must_use]
+    pub fn headers(mut self, headers: HashMap<String, String>) -> Self {
+        self.headers = headers;
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Response to `providers/set`.
+#[cfg(feature = "unstable_llm_providers")]
+#[skip_serializing_none]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[schemars(extend("x-side" = "agent", "x-method" = PROVIDERS_SET_METHOD_NAME))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct SetProvidersResponse {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_llm_providers")]
+impl SetProvidersResponse {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Request parameters for `providers/disable`.
+#[cfg(feature = "unstable_llm_providers")]
+#[skip_serializing_none]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[schemars(extend("x-side" = "agent", "x-method" = PROVIDERS_DISABLE_METHOD_NAME))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct DisableProvidersRequest {
+    /// Provider id to disable.
+    pub id: String,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_llm_providers")]
+impl DisableProvidersRequest {
+    #[must_use]
+    pub fn new(id: impl Into<String>) -> Self {
+        Self {
+            id: id.into(),
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Response to `providers/disable`.
+#[cfg(feature = "unstable_llm_providers")]
+#[skip_serializing_none]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[schemars(extend("x-side" = "agent", "x-method" = PROVIDERS_DISABLE_METHOD_NAME))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct DisableProvidersResponse {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_llm_providers")]
+impl DisableProvidersResponse {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -3217,6 +3864,8 @@ impl SetSessionModelResponse {
 /// available features and content types.
 ///
 /// See protocol docs: [Agent Capabilities](https://agentclientprotocol.com/protocol/initialization#agent-capabilities)
+#[serde_as]
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -3240,12 +3889,41 @@ pub struct AgentCapabilities {
     #[cfg(feature = "unstable_logout")]
     #[serde(default)]
     pub auth: AgentAuthCapabilities,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Provider configuration capabilities supported by the agent.
+    ///
+    /// By supplying `{}` it means that the agent supports provider configuration methods.
+    #[cfg(feature = "unstable_llm_providers")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default)]
+    pub providers: Option<ProvidersCapabilities>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// NES (Next Edit Suggestions) capabilities supported by the agent.
+    #[cfg(feature = "unstable_nes")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default)]
+    pub nes: Option<NesCapabilities>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// The position encoding selected by the agent from the client's supported encodings.
+    #[cfg(feature = "unstable_nes")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default)]
+    pub position_encoding: Option<PositionEncodingKind>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -3295,6 +3973,83 @@ impl AgentCapabilities {
         self
     }
 
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Provider configuration capabilities supported by the agent.
+    #[cfg(feature = "unstable_llm_providers")]
+    #[must_use]
+    pub fn providers(mut self, providers: impl IntoOption<ProvidersCapabilities>) -> Self {
+        self.providers = providers.into_option();
+        self
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// NES (Next Edit Suggestions) capabilities supported by the agent.
+    #[cfg(feature = "unstable_nes")]
+    #[must_use]
+    pub fn nes(mut self, nes: impl IntoOption<NesCapabilities>) -> Self {
+        self.nes = nes.into_option();
+        self
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// The position encoding selected by the agent from the client's supported encodings.
+    #[cfg(feature = "unstable_nes")]
+    #[must_use]
+    pub fn position_encoding(
+        mut self,
+        position_encoding: impl IntoOption<PositionEncodingKind>,
+    ) -> Self {
+        self.position_encoding = position_encoding.into_option();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Provider configuration capabilities supported by the agent.
+///
+/// By supplying `{}` it means that the agent supports provider configuration methods.
+#[cfg(feature = "unstable_llm_providers")]
+#[skip_serializing_none]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct ProvidersCapabilities {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_llm_providers")]
+impl ProvidersCapabilities {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -3316,19 +4071,33 @@ impl AgentCapabilities {
 /// Note: `session/load` is still handled by the top-level `load_session` capability. This will be unified in future versions of the protocol.
 ///
 /// See protocol docs: [Session Capabilities](https://agentclientprotocol.com/protocol/initialization#session-capabilities)
+#[serde_as]
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SessionCapabilities {
     /// Whether the agent supports `session/list`.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default)]
     pub list: Option<SessionListCapabilities>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Whether the agent supports `additionalDirectories` on supported session lifecycle requests and `session/list`.
+    #[cfg(feature = "unstable_session_additional_directories")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default)]
+    pub additional_directories: Option<SessionAdditionalDirectoriesCapabilities>,
     /// **UNSTABLE**
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
     /// Whether the agent supports `session/fork`.
     #[cfg(feature = "unstable_session_fork")]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default)]
     pub fork: Option<SessionForkCapabilities>,
     /// **UNSTABLE**
     ///
@@ -3336,7 +4105,8 @@ pub struct SessionCapabilities {
     ///
     /// Whether the agent supports `session/resume`.
     #[cfg(feature = "unstable_session_resume")]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default)]
     pub resume: Option<SessionResumeCapabilities>,
     /// **UNSTABLE**
     ///
@@ -3344,14 +4114,15 @@ pub struct SessionCapabilities {
     ///
     /// Whether the agent supports `session/close`.
     #[cfg(feature = "unstable_session_close")]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default)]
     pub close: Option<SessionCloseCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -3365,6 +4136,21 @@ impl SessionCapabilities {
     #[must_use]
     pub fn list(mut self, list: impl IntoOption<SessionListCapabilities>) -> Self {
         self.list = list.into_option();
+        self
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Whether the agent supports `additionalDirectories` on supported session lifecycle requests and `session/list`.
+    #[cfg(feature = "unstable_session_additional_directories")]
+    #[must_use]
+    pub fn additional_directories(
+        mut self,
+        additional_directories: impl IntoOption<SessionAdditionalDirectoriesCapabilities>,
+    ) -> Self {
+        self.additional_directories = additional_directories.into_option();
         self
     }
 
@@ -3407,6 +4193,7 @@ impl SessionCapabilities {
 /// Capabilities for the `session/list` method.
 ///
 /// By supplying `{}` it means that the agent supports listing of sessions.
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct SessionListCapabilities {
@@ -3415,7 +4202,7 @@ pub struct SessionListCapabilities {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -3424,6 +4211,48 @@ impl SessionListCapabilities {
     pub fn new() -> Self {
         Self::default()
     }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Capabilities for additional session directories support.
+///
+/// By supplying `{}` it means that the agent supports the `additionalDirectories` field on
+/// supported session lifecycle requests and `session/list`.
+#[cfg(feature = "unstable_session_additional_directories")]
+#[skip_serializing_none]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct SessionAdditionalDirectoriesCapabilities {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_additional_directories")]
+impl SessionAdditionalDirectoriesCapabilities {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -3444,6 +4273,7 @@ impl SessionListCapabilities {
 ///
 /// By supplying `{}` it means that the agent supports forking of sessions.
 #[cfg(feature = "unstable_session_fork")]
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct SessionForkCapabilities {
@@ -3452,7 +4282,7 @@ pub struct SessionForkCapabilities {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -3483,6 +4313,7 @@ impl SessionForkCapabilities {
 ///
 /// By supplying `{}` it means that the agent supports resuming of sessions.
 #[cfg(feature = "unstable_session_resume")]
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct SessionResumeCapabilities {
@@ -3491,7 +4322,7 @@ pub struct SessionResumeCapabilities {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -3522,6 +4353,7 @@ impl SessionResumeCapabilities {
 ///
 /// By supplying `{}` it means that the agent supports closing of sessions.
 #[cfg(feature = "unstable_session_close")]
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct SessionCloseCapabilities {
@@ -3530,7 +4362,7 @@ pub struct SessionCloseCapabilities {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -3565,6 +4397,7 @@ impl SessionCloseCapabilities {
 /// the agent can process.
 ///
 /// See protocol docs: [Prompt Capabilities](https://agentclientprotocol.com/protocol/initialization#prompt-capabilities)
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -3586,7 +4419,7 @@ pub struct PromptCapabilities {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -3633,6 +4466,7 @@ impl PromptCapabilities {
 }
 
 /// MCP capabilities supported by the agent
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -3648,7 +4482,7 @@ pub struct McpCapabilities {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -3696,6 +4530,15 @@ pub struct AgentMethodNames {
     pub initialize: &'static str,
     /// Method for authenticating with the agent.
     pub authenticate: &'static str,
+    /// Method for listing configurable providers.
+    #[cfg(feature = "unstable_llm_providers")]
+    pub providers_list: &'static str,
+    /// Method for setting provider configuration.
+    #[cfg(feature = "unstable_llm_providers")]
+    pub providers_set: &'static str,
+    /// Method for disabling a provider.
+    #[cfg(feature = "unstable_llm_providers")]
+    pub providers_disable: &'static str,
     /// Method for creating a new session.
     pub session_new: &'static str,
     /// Method for loading an existing session.
@@ -3725,12 +4568,48 @@ pub struct AgentMethodNames {
     /// Method for logging out of an authenticated session.
     #[cfg(feature = "unstable_logout")]
     pub logout: &'static str,
+    /// Method for starting an NES session.
+    #[cfg(feature = "unstable_nes")]
+    pub nes_start: &'static str,
+    /// Method for requesting a suggestion.
+    #[cfg(feature = "unstable_nes")]
+    pub nes_suggest: &'static str,
+    /// Notification for accepting a suggestion.
+    #[cfg(feature = "unstable_nes")]
+    pub nes_accept: &'static str,
+    /// Notification for rejecting a suggestion.
+    #[cfg(feature = "unstable_nes")]
+    pub nes_reject: &'static str,
+    /// Method for closing an NES session.
+    #[cfg(feature = "unstable_nes")]
+    pub nes_close: &'static str,
+    /// Notification for document open events.
+    #[cfg(feature = "unstable_nes")]
+    pub document_did_open: &'static str,
+    /// Notification for document change events.
+    #[cfg(feature = "unstable_nes")]
+    pub document_did_change: &'static str,
+    /// Notification for document close events.
+    #[cfg(feature = "unstable_nes")]
+    pub document_did_close: &'static str,
+    /// Notification for document save events.
+    #[cfg(feature = "unstable_nes")]
+    pub document_did_save: &'static str,
+    /// Notification for document focus events.
+    #[cfg(feature = "unstable_nes")]
+    pub document_did_focus: &'static str,
 }
 
 /// Constant containing all agent method names.
 pub const AGENT_METHOD_NAMES: AgentMethodNames = AgentMethodNames {
     initialize: INITIALIZE_METHOD_NAME,
     authenticate: AUTHENTICATE_METHOD_NAME,
+    #[cfg(feature = "unstable_llm_providers")]
+    providers_list: PROVIDERS_LIST_METHOD_NAME,
+    #[cfg(feature = "unstable_llm_providers")]
+    providers_set: PROVIDERS_SET_METHOD_NAME,
+    #[cfg(feature = "unstable_llm_providers")]
+    providers_disable: PROVIDERS_DISABLE_METHOD_NAME,
     session_new: SESSION_NEW_METHOD_NAME,
     session_load: SESSION_LOAD_METHOD_NAME,
     session_set_mode: SESSION_SET_MODE_METHOD_NAME,
@@ -3748,12 +4627,41 @@ pub const AGENT_METHOD_NAMES: AgentMethodNames = AgentMethodNames {
     session_close: SESSION_CLOSE_METHOD_NAME,
     #[cfg(feature = "unstable_logout")]
     logout: LOGOUT_METHOD_NAME,
+    #[cfg(feature = "unstable_nes")]
+    nes_start: NES_START_METHOD_NAME,
+    #[cfg(feature = "unstable_nes")]
+    nes_suggest: NES_SUGGEST_METHOD_NAME,
+    #[cfg(feature = "unstable_nes")]
+    nes_accept: NES_ACCEPT_METHOD_NAME,
+    #[cfg(feature = "unstable_nes")]
+    nes_reject: NES_REJECT_METHOD_NAME,
+    #[cfg(feature = "unstable_nes")]
+    nes_close: NES_CLOSE_METHOD_NAME,
+    #[cfg(feature = "unstable_nes")]
+    document_did_open: DOCUMENT_DID_OPEN_METHOD_NAME,
+    #[cfg(feature = "unstable_nes")]
+    document_did_change: DOCUMENT_DID_CHANGE_METHOD_NAME,
+    #[cfg(feature = "unstable_nes")]
+    document_did_close: DOCUMENT_DID_CLOSE_METHOD_NAME,
+    #[cfg(feature = "unstable_nes")]
+    document_did_save: DOCUMENT_DID_SAVE_METHOD_NAME,
+    #[cfg(feature = "unstable_nes")]
+    document_did_focus: DOCUMENT_DID_FOCUS_METHOD_NAME,
 };
 
 /// Method name for the initialize request.
 pub(crate) const INITIALIZE_METHOD_NAME: &str = "initialize";
 /// Method name for the authenticate request.
 pub(crate) const AUTHENTICATE_METHOD_NAME: &str = "authenticate";
+/// Method name for listing configurable providers.
+#[cfg(feature = "unstable_llm_providers")]
+pub(crate) const PROVIDERS_LIST_METHOD_NAME: &str = "providers/list";
+/// Method name for setting provider configuration.
+#[cfg(feature = "unstable_llm_providers")]
+pub(crate) const PROVIDERS_SET_METHOD_NAME: &str = "providers/set";
+/// Method name for disabling a provider.
+#[cfg(feature = "unstable_llm_providers")]
+pub(crate) const PROVIDERS_DISABLE_METHOD_NAME: &str = "providers/disable";
 /// Method name for creating a new session.
 pub(crate) const SESSION_NEW_METHOD_NAME: &str = "session/new";
 /// Method name for loading an existing session.
@@ -3821,6 +4729,27 @@ pub enum ClientRequest {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
+    /// Lists providers that can be configured by the client.
+    #[cfg(feature = "unstable_llm_providers")]
+    ListProvidersRequest(ListProvidersRequest),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Replaces the configuration for a provider.
+    #[cfg(feature = "unstable_llm_providers")]
+    SetProvidersRequest(SetProvidersRequest),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Disables a provider.
+    #[cfg(feature = "unstable_llm_providers")]
+    DisableProvidersRequest(DisableProvidersRequest),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
     /// Logs out of the current authenticated state.
     ///
     /// After a successful logout, all new sessions will require authentication.
@@ -3877,7 +4806,7 @@ pub enum ClientRequest {
     ///
     /// Resumes an existing session without returning previous messages.
     ///
-    /// This method is only available if the agent advertises the `session.resume` capability.
+    /// This method is only available if the agent advertises the `sessionCapabilities.resume` capability.
     ///
     /// The agent should resume the session context, allowing the conversation to continue
     /// without replaying the message history (unlike `session/load`).
@@ -3889,7 +4818,7 @@ pub enum ClientRequest {
     ///
     /// Closes an active session and frees up any resources associated with it.
     ///
-    /// This method is only available if the agent advertises the `session.close` capability.
+    /// This method is only available if the agent advertises the `sessionCapabilities.close` capability.
     ///
     /// The agent must cancel any ongoing work (as if `session/cancel` was called)
     /// and then free up any resources associated with the session.
@@ -3929,6 +4858,30 @@ pub enum ClientRequest {
     ///
     /// Select a model for a given session.
     SetSessionModelRequest(SetSessionModelRequest),
+    #[cfg(feature = "unstable_nes")]
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Starts an NES session.
+    StartNesRequest(StartNesRequest),
+    #[cfg(feature = "unstable_nes")]
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Requests a code suggestion.
+    SuggestNesRequest(SuggestNesRequest),
+    #[cfg(feature = "unstable_nes")]
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Closes an active NES session and frees up any resources associated with it.
+    ///
+    /// The agent must cancel any ongoing work and then free up any resources
+    /// associated with the NES session.
+    CloseNesRequest(CloseNesRequest),
     /// Handles extension method requests from the client.
     ///
     /// Extension methods provide a way to add custom functionality while maintaining
@@ -3945,6 +4898,12 @@ impl ClientRequest {
         match self {
             Self::InitializeRequest(_) => AGENT_METHOD_NAMES.initialize,
             Self::AuthenticateRequest(_) => AGENT_METHOD_NAMES.authenticate,
+            #[cfg(feature = "unstable_llm_providers")]
+            Self::ListProvidersRequest(_) => AGENT_METHOD_NAMES.providers_list,
+            #[cfg(feature = "unstable_llm_providers")]
+            Self::SetProvidersRequest(_) => AGENT_METHOD_NAMES.providers_set,
+            #[cfg(feature = "unstable_llm_providers")]
+            Self::DisableProvidersRequest(_) => AGENT_METHOD_NAMES.providers_disable,
             #[cfg(feature = "unstable_logout")]
             Self::LogoutRequest(_) => AGENT_METHOD_NAMES.logout,
             Self::NewSessionRequest(_) => AGENT_METHOD_NAMES.session_new,
@@ -3961,6 +4920,12 @@ impl ClientRequest {
             Self::PromptRequest(_) => AGENT_METHOD_NAMES.session_prompt,
             #[cfg(feature = "unstable_session_model")]
             Self::SetSessionModelRequest(_) => AGENT_METHOD_NAMES.session_set_model,
+            #[cfg(feature = "unstable_nes")]
+            Self::StartNesRequest(_) => AGENT_METHOD_NAMES.nes_start,
+            #[cfg(feature = "unstable_nes")]
+            Self::SuggestNesRequest(_) => AGENT_METHOD_NAMES.nes_suggest,
+            #[cfg(feature = "unstable_nes")]
+            Self::CloseNesRequest(_) => AGENT_METHOD_NAMES.nes_close,
             Self::ExtMethodRequest(ext_request) => &ext_request.method,
         }
     }
@@ -3980,6 +4945,12 @@ impl ClientRequest {
 pub enum AgentResponse {
     InitializeResponse(InitializeResponse),
     AuthenticateResponse(#[serde(default)] AuthenticateResponse),
+    #[cfg(feature = "unstable_llm_providers")]
+    ListProvidersResponse(ListProvidersResponse),
+    #[cfg(feature = "unstable_llm_providers")]
+    SetProvidersResponse(#[serde(default)] SetProvidersResponse),
+    #[cfg(feature = "unstable_llm_providers")]
+    DisableProvidersResponse(#[serde(default)] DisableProvidersResponse),
     #[cfg(feature = "unstable_logout")]
     LogoutResponse(#[serde(default)] LogoutResponse),
     NewSessionResponse(NewSessionResponse),
@@ -3996,6 +4967,12 @@ pub enum AgentResponse {
     PromptResponse(PromptResponse),
     #[cfg(feature = "unstable_session_model")]
     SetSessionModelResponse(#[serde(default)] SetSessionModelResponse),
+    #[cfg(feature = "unstable_nes")]
+    StartNesResponse(StartNesResponse),
+    #[cfg(feature = "unstable_nes")]
+    SuggestNesResponse(SuggestNesResponse),
+    #[cfg(feature = "unstable_nes")]
+    CloseNesResponse(#[serde(default)] CloseNesResponse),
     ExtMethodResponse(ExtResponse),
 }
 
@@ -4022,6 +4999,41 @@ pub enum ClientNotification {
     ///
     /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-turn#cancellation)
     CancelNotification(CancelNotification),
+    #[cfg(feature = "unstable_nes")]
+    /// **UNSTABLE**
+    ///
+    /// Notification sent when a file is opened in the editor.
+    DidOpenDocumentNotification(DidOpenDocumentNotification),
+    #[cfg(feature = "unstable_nes")]
+    /// **UNSTABLE**
+    ///
+    /// Notification sent when a file is edited.
+    DidChangeDocumentNotification(DidChangeDocumentNotification),
+    #[cfg(feature = "unstable_nes")]
+    /// **UNSTABLE**
+    ///
+    /// Notification sent when a file is closed.
+    DidCloseDocumentNotification(DidCloseDocumentNotification),
+    #[cfg(feature = "unstable_nes")]
+    /// **UNSTABLE**
+    ///
+    /// Notification sent when a file is saved.
+    DidSaveDocumentNotification(DidSaveDocumentNotification),
+    #[cfg(feature = "unstable_nes")]
+    /// **UNSTABLE**
+    ///
+    /// Notification sent when a file becomes the active editor tab.
+    DidFocusDocumentNotification(DidFocusDocumentNotification),
+    #[cfg(feature = "unstable_nes")]
+    /// **UNSTABLE**
+    ///
+    /// Notification sent when a suggestion is accepted.
+    AcceptNesNotification(AcceptNesNotification),
+    #[cfg(feature = "unstable_nes")]
+    /// **UNSTABLE**
+    ///
+    /// Notification sent when a suggestion is rejected.
+    RejectNesNotification(RejectNesNotification),
     /// Handles extension notifications from the client.
     ///
     /// Extension notifications provide a way to send one-way messages for custom functionality
@@ -4037,6 +5049,20 @@ impl ClientNotification {
     pub fn method(&self) -> &str {
         match self {
             Self::CancelNotification(_) => AGENT_METHOD_NAMES.session_cancel,
+            #[cfg(feature = "unstable_nes")]
+            Self::DidOpenDocumentNotification(_) => AGENT_METHOD_NAMES.document_did_open,
+            #[cfg(feature = "unstable_nes")]
+            Self::DidChangeDocumentNotification(_) => AGENT_METHOD_NAMES.document_did_change,
+            #[cfg(feature = "unstable_nes")]
+            Self::DidCloseDocumentNotification(_) => AGENT_METHOD_NAMES.document_did_close,
+            #[cfg(feature = "unstable_nes")]
+            Self::DidSaveDocumentNotification(_) => AGENT_METHOD_NAMES.document_did_save,
+            #[cfg(feature = "unstable_nes")]
+            Self::DidFocusDocumentNotification(_) => AGENT_METHOD_NAMES.document_did_focus,
+            #[cfg(feature = "unstable_nes")]
+            Self::AcceptNesNotification(_) => AGENT_METHOD_NAMES.nes_accept,
+            #[cfg(feature = "unstable_nes")]
+            Self::RejectNesNotification(_) => AGENT_METHOD_NAMES.nes_reject,
             Self::ExtNotification(ext_notification) => &ext_notification.method,
         }
     }
@@ -4045,6 +5071,7 @@ impl ClientNotification {
 /// Notification to cancel ongoing operations for a session.
 ///
 /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-turn#cancellation)
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_CANCEL_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -4057,7 +5084,7 @@ pub struct CancelNotification {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -4328,6 +5355,106 @@ mod test_serialization {
 
         let deserialized: AuthMethod = serde_json::from_value(json).unwrap();
         assert!(matches!(deserialized, AuthMethod::Agent(_)));
+    }
+
+    #[cfg(feature = "unstable_session_additional_directories")]
+    #[test]
+    fn test_session_additional_directories_serialization() {
+        assert_eq!(
+            serde_json::to_value(NewSessionRequest::new("/home/user/project")).unwrap(),
+            json!({
+                "cwd": "/home/user/project",
+                "mcpServers": []
+            })
+        );
+        assert_eq!(
+            serde_json::to_value(
+                NewSessionRequest::new("/home/user/project").additional_directories(vec![
+                    PathBuf::from("/home/user/shared-lib"),
+                    PathBuf::from("/home/user/product-docs"),
+                ])
+            )
+            .unwrap(),
+            json!({
+                "cwd": "/home/user/project",
+                "additionalDirectories": [
+                    "/home/user/shared-lib",
+                    "/home/user/product-docs"
+                ],
+                "mcpServers": []
+            })
+        );
+        assert_eq!(
+            serde_json::to_value(
+                ListSessionsRequest::new().additional_directories(Vec::<PathBuf>::new())
+            )
+            .unwrap(),
+            json!({})
+        );
+        assert_eq!(
+            serde_json::to_value(SessionInfo::new("sess_abc123", "/home/user/project")).unwrap(),
+            json!({
+                "sessionId": "sess_abc123",
+                "cwd": "/home/user/project"
+            })
+        );
+        assert_eq!(
+            serde_json::to_value(
+                SessionInfo::new("sess_abc123", "/home/user/project").additional_directories(vec![
+                    PathBuf::from("/home/user/shared-lib"),
+                    PathBuf::from("/home/user/product-docs"),
+                ])
+            )
+            .unwrap(),
+            json!({
+                "sessionId": "sess_abc123",
+                "cwd": "/home/user/project",
+                "additionalDirectories": [
+                    "/home/user/shared-lib",
+                    "/home/user/product-docs"
+                ]
+            })
+        );
+        assert_eq!(
+            serde_json::from_value::<SessionInfo>(json!({
+                "sessionId": "sess_abc123",
+                "cwd": "/home/user/project"
+            }))
+            .unwrap()
+            .additional_directories,
+            Vec::<PathBuf>::new()
+        );
+
+        assert_eq!(
+            serde_json::from_value::<ListSessionsRequest>(json!({}))
+                .unwrap()
+                .additional_directories,
+            Vec::<PathBuf>::new()
+        );
+
+        assert_eq!(
+            serde_json::from_value::<ListSessionsRequest>(json!({
+                "additionalDirectories": []
+            }))
+            .unwrap()
+            .additional_directories,
+            Vec::<PathBuf>::new()
+        );
+    }
+
+    #[cfg(feature = "unstable_session_additional_directories")]
+    #[test]
+    fn test_session_additional_directories_capabilities_serialization() {
+        assert_eq!(
+            serde_json::to_value(
+                SessionCapabilities::new()
+                    .additional_directories(SessionAdditionalDirectoriesCapabilities::new())
+            )
+            .unwrap(),
+            json!({
+                "additionalDirectories": {}
+            })
+        );
     }
 
     #[cfg(feature = "unstable_auth_methods")]
@@ -4768,5 +5895,262 @@ mod test_serialization {
             }
             _ => panic!("Expected Select kind"),
         }
+    }
+
+    #[cfg(feature = "unstable_llm_providers")]
+    #[test]
+    fn test_llm_protocol_known_variants() {
+        assert_eq!(
+            serde_json::to_value(&LlmProtocol::Anthropic).unwrap(),
+            json!("anthropic")
+        );
+        assert_eq!(
+            serde_json::to_value(&LlmProtocol::OpenAi).unwrap(),
+            json!("openai")
+        );
+        assert_eq!(
+            serde_json::to_value(&LlmProtocol::Azure).unwrap(),
+            json!("azure")
+        );
+        assert_eq!(
+            serde_json::to_value(&LlmProtocol::Vertex).unwrap(),
+            json!("vertex")
+        );
+        assert_eq!(
+            serde_json::to_value(&LlmProtocol::Bedrock).unwrap(),
+            json!("bedrock")
+        );
+
+        assert_eq!(
+            serde_json::from_str::<LlmProtocol>("\"anthropic\"").unwrap(),
+            LlmProtocol::Anthropic
+        );
+        assert_eq!(
+            serde_json::from_str::<LlmProtocol>("\"openai\"").unwrap(),
+            LlmProtocol::OpenAi
+        );
+        assert_eq!(
+            serde_json::from_str::<LlmProtocol>("\"azure\"").unwrap(),
+            LlmProtocol::Azure
+        );
+        assert_eq!(
+            serde_json::from_str::<LlmProtocol>("\"vertex\"").unwrap(),
+            LlmProtocol::Vertex
+        );
+        assert_eq!(
+            serde_json::from_str::<LlmProtocol>("\"bedrock\"").unwrap(),
+            LlmProtocol::Bedrock
+        );
+    }
+
+    #[cfg(feature = "unstable_llm_providers")]
+    #[test]
+    fn test_llm_protocol_unknown_variant() {
+        let unknown: LlmProtocol = serde_json::from_str("\"cohere\"").unwrap();
+        assert_eq!(unknown, LlmProtocol::Other("cohere".to_string()));
+
+        let json = serde_json::to_value(&unknown).unwrap();
+        assert_eq!(json, json!("cohere"));
+    }
+
+    #[cfg(feature = "unstable_llm_providers")]
+    #[test]
+    fn test_provider_current_config_serialization() {
+        let config =
+            ProviderCurrentConfig::new(LlmProtocol::Anthropic, "https://api.anthropic.com");
+
+        let json = serde_json::to_value(&config).unwrap();
+        assert_eq!(
+            json,
+            json!({
+                "apiType": "anthropic",
+                "baseUrl": "https://api.anthropic.com"
+            })
+        );
+
+        let deserialized: ProviderCurrentConfig = serde_json::from_value(json).unwrap();
+        assert_eq!(deserialized.api_type, LlmProtocol::Anthropic);
+        assert_eq!(deserialized.base_url, "https://api.anthropic.com");
+    }
+
+    #[cfg(feature = "unstable_llm_providers")]
+    #[test]
+    fn test_provider_info_with_current_config() {
+        let info = ProviderInfo::new(
+            "main",
+            vec![LlmProtocol::Anthropic, LlmProtocol::OpenAi],
+            true,
+            Some(ProviderCurrentConfig::new(
+                LlmProtocol::Anthropic,
+                "https://api.anthropic.com",
+            )),
+        );
+
+        let json = serde_json::to_value(&info).unwrap();
+        assert_eq!(
+            json,
+            json!({
+                "id": "main",
+                "supported": ["anthropic", "openai"],
+                "required": true,
+                "current": {
+                    "apiType": "anthropic",
+                    "baseUrl": "https://api.anthropic.com"
+                }
+            })
+        );
+
+        let deserialized: ProviderInfo = serde_json::from_value(json).unwrap();
+        assert_eq!(deserialized.id, "main");
+        assert_eq!(deserialized.supported.len(), 2);
+        assert!(deserialized.required);
+        assert!(deserialized.current.is_value());
+        assert_eq!(
+            deserialized.current.value().unwrap().api_type,
+            LlmProtocol::Anthropic
+        );
+    }
+
+    #[cfg(feature = "unstable_llm_providers")]
+    #[test]
+    fn test_provider_info_disabled() {
+        let info = ProviderInfo::new(
+            "secondary",
+            vec![LlmProtocol::OpenAi],
+            false,
+            RequiredNullable::<ProviderCurrentConfig>::null(),
+        );
+
+        let json = serde_json::to_value(&info).unwrap();
+        assert_eq!(
+            json,
+            json!({
+                "id": "secondary",
+                "supported": ["openai"],
+                "required": false,
+                "current": null
+            })
+        );
+
+        let deserialized: ProviderInfo = serde_json::from_value(json).unwrap();
+        assert_eq!(deserialized.id, "secondary");
+        assert!(!deserialized.required);
+        assert!(deserialized.current.is_null());
+    }
+
+    #[cfg(feature = "unstable_llm_providers")]
+    #[test]
+    fn test_provider_info_missing_current_fails() {
+        // current is required-but-nullable — omitting it entirely must fail
+        let json = json!({
+            "id": "main",
+            "supported": ["anthropic"],
+            "required": true
+        });
+        assert!(serde_json::from_value::<ProviderInfo>(json).is_err());
+    }
+
+    #[cfg(feature = "unstable_llm_providers")]
+    #[test]
+    fn test_list_providers_response_serialization() {
+        let response = ListProvidersResponse::new(vec![ProviderInfo::new(
+            "main",
+            vec![LlmProtocol::Anthropic],
+            true,
+            Some(ProviderCurrentConfig::new(
+                LlmProtocol::Anthropic,
+                "https://api.anthropic.com",
+            )),
+        )]);
+
+        let json = serde_json::to_value(&response).unwrap();
+        assert_eq!(json["providers"].as_array().unwrap().len(), 1);
+        assert_eq!(json["providers"][0]["id"], "main");
+
+        let deserialized: ListProvidersResponse = serde_json::from_value(json).unwrap();
+        assert_eq!(deserialized.providers.len(), 1);
+    }
+
+    #[cfg(feature = "unstable_llm_providers")]
+    #[test]
+    fn test_set_providers_request_serialization() {
+        use std::collections::HashMap;
+
+        let mut headers = HashMap::new();
+        headers.insert("Authorization".to_string(), "Bearer sk-test".to_string());
+
+        let request =
+            SetProvidersRequest::new("main", LlmProtocol::OpenAi, "https://api.openai.com/v1")
+                .headers(headers);
+
+        let json = serde_json::to_value(&request).unwrap();
+        assert_eq!(
+            json,
+            json!({
+                "id": "main",
+                "apiType": "openai",
+                "baseUrl": "https://api.openai.com/v1",
+                "headers": {
+                    "Authorization": "Bearer sk-test"
+                }
+            })
+        );
+
+        let deserialized: SetProvidersRequest = serde_json::from_value(json).unwrap();
+        assert_eq!(deserialized.id, "main");
+        assert_eq!(deserialized.api_type, LlmProtocol::OpenAi);
+        assert_eq!(deserialized.base_url, "https://api.openai.com/v1");
+        assert_eq!(deserialized.headers.len(), 1);
+        assert_eq!(
+            deserialized.headers.get("Authorization").unwrap(),
+            "Bearer sk-test"
+        );
+    }
+
+    #[cfg(feature = "unstable_llm_providers")]
+    #[test]
+    fn test_set_providers_request_omits_empty_headers() {
+        let request =
+            SetProvidersRequest::new("main", LlmProtocol::Anthropic, "https://api.anthropic.com");
+
+        let json = serde_json::to_value(&request).unwrap();
+        // headers should be omitted when empty
+        assert!(!json.as_object().unwrap().contains_key("headers"));
+    }
+
+    #[cfg(feature = "unstable_llm_providers")]
+    #[test]
+    fn test_disable_providers_request_serialization() {
+        let request = DisableProvidersRequest::new("secondary");
+
+        let json = serde_json::to_value(&request).unwrap();
+        assert_eq!(json, json!({ "id": "secondary" }));
+
+        let deserialized: DisableProvidersRequest = serde_json::from_value(json).unwrap();
+        assert_eq!(deserialized.id, "secondary");
+    }
+
+    #[cfg(feature = "unstable_llm_providers")]
+    #[test]
+    fn test_providers_capabilities_serialization() {
+        let caps = ProvidersCapabilities::new();
+
+        let json = serde_json::to_value(&caps).unwrap();
+        assert_eq!(json, json!({}));
+
+        let deserialized: ProvidersCapabilities = serde_json::from_value(json).unwrap();
+        assert!(deserialized.meta.is_none());
+    }
+
+    #[cfg(feature = "unstable_llm_providers")]
+    #[test]
+    fn test_agent_capabilities_with_providers() {
+        let caps = AgentCapabilities::new().providers(ProvidersCapabilities::new());
+
+        let json = serde_json::to_value(&caps).unwrap();
+        assert_eq!(json["providers"], json!({}));
+
+        let deserialized: AgentCapabilities = serde_json::from_value(json).unwrap();
+        assert!(deserialized.providers.is_some());
     }
 }

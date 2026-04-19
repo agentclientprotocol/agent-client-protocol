@@ -1,0 +1,19 @@
+---
+title: Implementation information for agents and clients
+sidebarTitle: Implementation information
+description: Protocol update introducing optional implementation metadata during initialization.
+---
+
+**Published:** October 24, 2025
+
+ACP now allows agents and clients to provide information about themselves to the other party during initialization.
+
+The [InitializeRequest](/protocol/schema#initializerequest) message now includes an optional clientInfo field, and the [InitializeResponse](/protocol/schema#initializeresponse) message includes an optional agentInfo field.
+
+This information can be used by clients to show users which agent is running and what version, by both sides to track usage metrics for which agents and clients are most popular among their users, and to help track down issues tied to particular implementation versions.
+
+This follows the existing pattern laid out in the [Model Context Protocol](https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle#initialization).
+
+This is being introduced as an optional field for now for backwards compatibility. It is possible it will be made required in a future version of the protocol, like MCP, so that both sides can count on this information being available.
+
+For the user-facing protocol guide, see [Implementation Information](/protocol/initialization#implementation-information).

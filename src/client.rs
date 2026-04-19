@@ -8,17 +8,21 @@ use std::{path::PathBuf, sync::Arc};
 use derive_more::{Display, From};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
 #[cfg(feature = "unstable_elicitation")]
 use crate::elicitation::{
-    ElicitationCapabilities, ElicitationCompleteNotification, ElicitationRequest,
-    ElicitationResponse,
+    CompleteElicitationNotification, CreateElicitationRequest, CreateElicitationResponse,
+    ElicitationCapabilities,
 };
 use crate::{
     ContentBlock, ExtNotification, ExtRequest, ExtResponse, IntoOption, Meta, Plan,
-    SessionConfigOption, SessionId, SessionModeId, ToolCall, ToolCallUpdate,
+    SessionConfigOption, SessionId, SessionModeId, SkipListener, ToolCall, ToolCallUpdate,
 };
 use crate::{IntoMaybeUndefined, MaybeUndefined};
+
+#[cfg(feature = "unstable_nes")]
+use crate::{ClientNesCapabilities, PositionEncodingKind};
 
 // Session updates
 
@@ -27,6 +31,7 @@ use crate::{IntoMaybeUndefined, MaybeUndefined};
 /// Used to stream real-time progress and results during prompt processing.
 ///
 /// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-turn#3-agent-reports-output)
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[schemars(extend("x-side" = "client", "x-method" = SESSION_UPDATE_NOTIFICATION))]
 #[serde(rename_all = "camelCase")]
@@ -41,7 +46,7 @@ pub struct SessionNotification {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -112,6 +117,7 @@ pub enum SessionUpdate {
 /// The current mode of the session has changed
 ///
 /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -123,7 +129,7 @@ pub struct CurrentModeUpdate {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -149,18 +155,21 @@ impl CurrentModeUpdate {
 }
 
 /// Session configuration options have been updated.
+#[serde_as]
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ConfigOptionUpdate {
     /// The full set of configuration options and their current values.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
     pub config_options: Vec<SessionConfigOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -189,6 +198,7 @@ impl ConfigOptionUpdate {
 ///
 /// Agents send this notification to update session information like title or custom metadata.
 /// This allows clients to display dynamic session names and track session state changes.
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -204,7 +214,7 @@ pub struct SessionInfoUpdate {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -246,6 +256,8 @@ impl SessionInfoUpdate {
 ///
 /// Context window and cost update for a session.
 #[cfg(feature = "unstable_session_usage")]
+#[serde_as]
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -255,14 +267,15 @@ pub struct UsageUpdate {
     /// Total context window size in tokens.
     pub size: u64,
     /// Cumulative session cost (optional).
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default)]
     pub cost: Option<Cost>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -325,6 +338,7 @@ impl Cost {
 }
 
 /// A streamed item of content
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -341,14 +355,13 @@ pub struct ContentChunk {
     /// A change in `messageId` indicates a new message has started.
     /// Both clients and agents MUST use UUID format for message IDs.
     #[cfg(feature = "unstable_message_id")]
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub message_id: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -392,18 +405,21 @@ impl ContentChunk {
 }
 
 /// Available commands are ready or have changed
+#[serde_as]
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct AvailableCommandsUpdate {
     /// Commands the agent can execute
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
     pub available_commands: Vec<AvailableCommand>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -429,6 +445,8 @@ impl AvailableCommandsUpdate {
 }
 
 /// Information about a command.
+#[serde_as]
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -438,13 +456,15 @@ pub struct AvailableCommand {
     /// Human-readable description of what the command does.
     pub description: String,
     /// Input for the command if required
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default)]
     pub input: Option<AvailableCommandInput>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -488,6 +508,7 @@ pub enum AvailableCommandInput {
 }
 
 /// All text that was typed after the command name is provided as input.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -499,7 +520,7 @@ pub struct UnstructuredCommandInput {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -531,6 +552,7 @@ impl UnstructuredCommandInput {
 /// Sent when the agent needs authorization before performing a sensitive operation.
 ///
 /// See protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/tool-calls#requesting-permission)
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[schemars(extend("x-side" = "client", "x-method" = SESSION_REQUEST_PERMISSION_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -547,7 +569,7 @@ pub struct RequestPermissionRequest {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -579,6 +601,7 @@ impl RequestPermissionRequest {
 }
 
 /// An option presented to the user when requesting permission.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -594,7 +617,7 @@ pub struct PermissionOption {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -657,6 +680,7 @@ pub enum PermissionOptionKind {
 }
 
 /// Response to a permission request.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "client", "x-method" = SESSION_REQUEST_PERMISSION_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -670,7 +694,7 @@ pub struct RequestPermissionResponse {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -715,6 +739,7 @@ pub enum RequestPermissionOutcome {
 }
 
 /// The user selected one of the provided options.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -726,7 +751,7 @@ pub struct SelectedPermissionOutcome {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -756,6 +781,7 @@ impl SelectedPermissionOutcome {
 /// Request to write content to a text file.
 ///
 /// Only available if the client supports the `fs.writeTextFile` capability.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "client", "x-method" = FS_WRITE_TEXT_FILE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -772,7 +798,7 @@ pub struct WriteTextFileRequest {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -804,6 +830,7 @@ impl WriteTextFileRequest {
 }
 
 /// Response to `fs/write_text_file`
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = FS_WRITE_TEXT_FILE_METHOD_NAME))]
@@ -814,7 +841,7 @@ pub struct WriteTextFileResponse {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -841,6 +868,7 @@ impl WriteTextFileResponse {
 /// Request to read content from a text file.
 ///
 /// Only available if the client supports the `fs.readTextFile` capability.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "client", "x-method" = FS_READ_TEXT_FILE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -851,17 +879,15 @@ pub struct ReadTextFileRequest {
     /// Absolute path to the file to read.
     pub path: PathBuf,
     /// Line number to start reading from (1-based).
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub line: Option<u32>,
     /// Maximum number of lines to read.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub limit: Option<u32>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -904,6 +930,7 @@ impl ReadTextFileRequest {
 }
 
 /// Response containing the contents of a text file.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "client", "x-method" = FS_READ_TEXT_FILE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -915,7 +942,7 @@ pub struct ReadTextFileResponse {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -956,6 +983,7 @@ impl TerminalId {
 }
 
 /// Request to create a new terminal and execute a command.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_CREATE_METHOD_NAME))]
@@ -972,7 +1000,6 @@ pub struct CreateTerminalRequest {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub env: Vec<crate::EnvVariable>,
     /// Working directory for the command (absolute path).
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub cwd: Option<PathBuf>,
     /// Maximum number of output bytes to retain.
     ///
@@ -982,14 +1009,13 @@ pub struct CreateTerminalRequest {
     /// The Client MUST ensure truncation happens at a character boundary to maintain valid
     /// string output, even if this means the retained output is slightly less than the
     /// specified limit.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub output_byte_limit: Option<u64>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1055,6 +1081,7 @@ impl CreateTerminalRequest {
 }
 
 /// Response containing the ID of the created terminal.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_CREATE_METHOD_NAME))]
@@ -1067,7 +1094,7 @@ pub struct CreateTerminalResponse {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1093,6 +1120,7 @@ impl CreateTerminalResponse {
 }
 
 /// Request to get the current output and status of a terminal.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_OUTPUT_METHOD_NAME))]
@@ -1107,7 +1135,7 @@ pub struct TerminalOutputRequest {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1134,6 +1162,7 @@ impl TerminalOutputRequest {
 }
 
 /// Response containing the terminal output and exit status.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_OUTPUT_METHOD_NAME))]
@@ -1150,7 +1179,7 @@ pub struct TerminalOutputResponse {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1185,6 +1214,7 @@ impl TerminalOutputResponse {
 }
 
 /// Request to release a terminal and free its resources.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_RELEASE_METHOD_NAME))]
@@ -1199,7 +1229,7 @@ pub struct ReleaseTerminalRequest {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1226,6 +1256,7 @@ impl ReleaseTerminalRequest {
 }
 
 /// Response to terminal/release method
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_RELEASE_METHOD_NAME))]
@@ -1236,7 +1267,7 @@ pub struct ReleaseTerminalResponse {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1259,6 +1290,7 @@ impl ReleaseTerminalResponse {
 }
 
 /// Request to kill a terminal without releasing it.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_KILL_METHOD_NAME))]
@@ -1273,7 +1305,7 @@ pub struct KillTerminalRequest {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1300,6 +1332,7 @@ impl KillTerminalRequest {
 }
 
 /// Response to `terminal/kill` method
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_KILL_METHOD_NAME))]
@@ -1310,7 +1343,7 @@ pub struct KillTerminalResponse {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1333,6 +1366,7 @@ impl KillTerminalResponse {
 }
 
 /// Request to wait for a terminal command to exit.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_WAIT_FOR_EXIT_METHOD_NAME))]
@@ -1347,7 +1381,7 @@ pub struct WaitForTerminalExitRequest {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1374,6 +1408,7 @@ impl WaitForTerminalExitRequest {
 }
 
 /// Response containing the exit status of a terminal command.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[schemars(extend("x-side" = "client", "x-method" = TERMINAL_WAIT_FOR_EXIT_METHOD_NAME))]
@@ -1387,7 +1422,7 @@ pub struct WaitForTerminalExitResponse {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1413,6 +1448,7 @@ impl WaitForTerminalExitResponse {
 }
 
 /// Exit status of a terminal command.
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -1426,7 +1462,7 @@ pub struct TerminalExitStatus {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1470,6 +1506,8 @@ impl TerminalExitStatus {
 /// available features and methods.
 ///
 /// See protocol docs: [Client Capabilities](https://agentclientprotocol.com/protocol/initialization#client-capabilities)
+#[serde_as]
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -1498,14 +1536,34 @@ pub struct ClientCapabilities {
     /// Elicitation capabilities supported by the client.
     /// Determines which elicitation modes the agent may use.
     #[cfg(feature = "unstable_elicitation")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default)]
     pub elicitation: Option<ElicitationCapabilities>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// NES (Next Edit Suggestions) capabilities supported by the client.
+    #[cfg(feature = "unstable_nes")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default)]
+    pub nes: Option<ClientNesCapabilities>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// The position encodings supported by the client, in order of preference.
+    #[cfg(feature = "unstable_nes")]
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub position_encodings: Vec<PositionEncodingKind>,
+
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1557,6 +1615,26 @@ impl ClientCapabilities {
         self
     }
 
+    /// **UNSTABLE**
+    ///
+    /// NES (Next Edit Suggestions) capabilities supported by the client.
+    #[cfg(feature = "unstable_nes")]
+    #[must_use]
+    pub fn nes(mut self, nes: impl IntoOption<ClientNesCapabilities>) -> Self {
+        self.nes = nes.into_option();
+        self
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// The position encodings supported by the client, in order of preference.
+    #[cfg(feature = "unstable_nes")]
+    #[must_use]
+    pub fn position_encodings(mut self, position_encodings: Vec<PositionEncodingKind>) -> Self {
+        self.position_encodings = position_encodings;
+        self
+    }
+
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -1579,6 +1657,7 @@ impl ClientCapabilities {
 /// method types the client can handle. This governs opt-in types that require
 /// additional client-side support.
 #[cfg(feature = "unstable_auth_methods")]
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -1593,7 +1672,7 @@ pub struct AuthCapabilities {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1629,6 +1708,7 @@ impl AuthCapabilities {
 /// File system capabilities that a client may support.
 ///
 /// See protocol docs: [FileSystem](https://agentclientprotocol.com/protocol/initialization#filesystem)
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -1644,7 +1724,7 @@ pub struct FileSystemCapabilities {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1706,12 +1786,12 @@ pub struct ClientMethodNames {
     pub terminal_wait_for_exit: &'static str,
     /// Method for killing a terminal.
     pub terminal_kill: &'static str,
-    /// Method for session elicitation.
+    /// Method for elicitation.
     #[cfg(feature = "unstable_elicitation")]
-    pub session_elicitation: &'static str,
+    pub elicitation_create: &'static str,
     /// Notification for elicitation completion.
     #[cfg(feature = "unstable_elicitation")]
-    pub session_elicitation_complete: &'static str,
+    pub elicitation_complete: &'static str,
 }
 
 /// Constant containing all client method names.
@@ -1726,9 +1806,9 @@ pub const CLIENT_METHOD_NAMES: ClientMethodNames = ClientMethodNames {
     terminal_wait_for_exit: TERMINAL_WAIT_FOR_EXIT_METHOD_NAME,
     terminal_kill: TERMINAL_KILL_METHOD_NAME,
     #[cfg(feature = "unstable_elicitation")]
-    session_elicitation: SESSION_ELICITATION_METHOD_NAME,
+    elicitation_create: ELICITATION_CREATE_METHOD_NAME,
     #[cfg(feature = "unstable_elicitation")]
-    session_elicitation_complete: SESSION_ELICITATION_COMPLETE,
+    elicitation_complete: ELICITATION_COMPLETE_NOTIFICATION,
 };
 
 /// Notification name for session updates.
@@ -1749,12 +1829,12 @@ pub(crate) const TERMINAL_RELEASE_METHOD_NAME: &str = "terminal/release";
 pub(crate) const TERMINAL_WAIT_FOR_EXIT_METHOD_NAME: &str = "terminal/wait_for_exit";
 /// Method for killing a terminal.
 pub(crate) const TERMINAL_KILL_METHOD_NAME: &str = "terminal/kill";
-/// Method name for session elicitation.
+/// Method name for elicitation.
 #[cfg(feature = "unstable_elicitation")]
-pub(crate) const SESSION_ELICITATION_METHOD_NAME: &str = "session/elicitation";
+pub(crate) const ELICITATION_CREATE_METHOD_NAME: &str = "elicitation/create";
 /// Notification name for elicitation completion.
 #[cfg(feature = "unstable_elicitation")]
-pub(crate) const SESSION_ELICITATION_COMPLETE: &str = "session/elicitation/complete";
+pub(crate) const ELICITATION_COMPLETE_NOTIFICATION: &str = "elicitation/complete";
 
 /// All possible requests that an agent can send to a client.
 ///
@@ -1850,7 +1930,7 @@ pub enum AgentRequest {
     ///
     /// Requests structured user input via a form or URL.
     #[cfg(feature = "unstable_elicitation")]
-    ElicitationRequest(ElicitationRequest),
+    CreateElicitationRequest(CreateElicitationRequest),
     /// Handles extension method requests from the agent.
     ///
     /// Allows the Agent to send an arbitrary request that is not part of the ACP spec.
@@ -1875,7 +1955,7 @@ impl AgentRequest {
             Self::WaitForTerminalExitRequest(_) => CLIENT_METHOD_NAMES.terminal_wait_for_exit,
             Self::KillTerminalRequest(_) => CLIENT_METHOD_NAMES.terminal_kill,
             #[cfg(feature = "unstable_elicitation")]
-            Self::ElicitationRequest(_) => CLIENT_METHOD_NAMES.session_elicitation,
+            Self::CreateElicitationRequest(_) => CLIENT_METHOD_NAMES.elicitation_create,
             Self::ExtMethodRequest(ext_request) => &ext_request.method,
         }
     }
@@ -1901,7 +1981,7 @@ pub enum ClientResponse {
     WaitForTerminalExitResponse(WaitForTerminalExitResponse),
     KillTerminalResponse(#[serde(default)] KillTerminalResponse),
     #[cfg(feature = "unstable_elicitation")]
-    ElicitationResponse(ElicitationResponse),
+    CreateElicitationResponse(CreateElicitationResponse),
     ExtMethodResponse(ExtResponse),
 }
 
@@ -1935,7 +2015,7 @@ pub enum AgentNotification {
     ///
     /// Notification that a URL-based elicitation has completed.
     #[cfg(feature = "unstable_elicitation")]
-    ElicitationCompleteNotification(ElicitationCompleteNotification),
+    CompleteElicitationNotification(CompleteElicitationNotification),
     /// Handles extension notifications from the agent.
     ///
     /// Allows the Agent to send an arbitrary notification that is not part of the ACP spec.
@@ -1953,9 +2033,7 @@ impl AgentNotification {
         match self {
             Self::SessionNotification(_) => CLIENT_METHOD_NAMES.session_update,
             #[cfg(feature = "unstable_elicitation")]
-            Self::ElicitationCompleteNotification(_) => {
-                CLIENT_METHOD_NAMES.session_elicitation_complete
-            }
+            Self::CompleteElicitationNotification(_) => CLIENT_METHOD_NAMES.elicitation_complete,
             Self::ExtNotification(ext_notification) => &ext_notification.method,
         }
     }
@@ -2019,5 +2097,19 @@ mod tests {
             .unwrap(),
             json!({})
         );
+    }
+
+    #[cfg(feature = "unstable_nes")]
+    #[test]
+    fn test_client_capabilities_position_encodings_serialization() {
+        use serde_json::json;
+
+        let capabilities = ClientCapabilities::new().position_encodings(vec![
+            PositionEncodingKind::Utf32,
+            PositionEncodingKind::Utf16,
+        ]);
+        let json = serde_json::to_value(&capabilities).unwrap();
+
+        assert_eq!(json["positionEncodings"], json!(["utf-32", "utf-16"]));
     }
 }

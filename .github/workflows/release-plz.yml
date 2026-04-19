@@ -23,14 +23,14 @@ jobs:
           persist-credentials: false
       - &install-rust
         name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@efa25f7f19611383d5b0ccf2d1c8914531636bf9
+        uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9
         with:
           toolchain: stable
       - &generate-token
         # Generating a GitHub token, so that PRs and tags created by
         # the release-plz-action can trigger actions workflows.
         name: Generate GitHub token
-        uses: actions/create-github-app-token@f8d387b68d61c58ab83c6c016672934102569859
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3
         id: generate-token
         with:
           # GitHub App ID secret name
