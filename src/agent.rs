@@ -13,8 +13,6 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
-#[cfg(feature = "unstable_llm_providers")]
-use crate::RequiredNullable;
 use crate::{
     ClientCapabilities, ContentBlock, ExtNotification, ExtRequest, ExtResponse, IntoOption, Meta,
     ProtocolVersion, SessionId, SkipListener,
@@ -3537,8 +3535,8 @@ pub struct ProviderInfo {
     /// If true, clients must not call `providers/disable` for this id.
     pub required: bool,
     /// Current effective non-secret routing config.
-    /// Null means provider is disabled.
-    pub current: RequiredNullable<ProviderCurrentConfig>,
+    /// Null or omitted means provider is disabled.
+    pub current: Option<ProviderCurrentConfig>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -3555,13 +3553,13 @@ impl ProviderInfo {
         id: impl Into<String>,
         supported: Vec<LlmProtocol>,
         required: bool,
-        current: impl Into<RequiredNullable<ProviderCurrentConfig>>,
+        current: impl IntoOption<ProviderCurrentConfig>,
     ) -> Self {
         Self {
             id: id.into(),
             supported,
             required,
-            current: current.into(),
+            current: current.into_option(),
             meta: None,
         }
     }
@@ -6007,9 +6005,9 @@ mod test_serialization {
         assert_eq!(deserialized.id, "main");
         assert_eq!(deserialized.supported.len(), 2);
         assert!(deserialized.required);
-        assert!(deserialized.current.is_value());
+        assert!(deserialized.current.is_some());
         assert_eq!(
-            deserialized.current.value().unwrap().api_type,
+            deserialized.current.as_ref().unwrap().api_type,
             LlmProtocol::Anthropic
         );
     }
@@ -6021,7 +6019,7 @@ mod test_serialization {
             "secondary",
             vec![LlmProtocol::OpenAi],
             false,
-            RequiredNullable::<ProviderCurrentConfig>::null(),
+            None::<ProviderCurrentConfig>,
         );
 
         let json = serde_json::to_value(&info).unwrap();
@@ -6030,27 +6028,27 @@ mod test_serialization {
             json!({
                 "id": "secondary",
                 "supported": ["openai"],
-                "required": false,
-                "current": null
+                "required": false
             })
         );
 
         let deserialized: ProviderInfo = serde_json::from_value(json).unwrap();
         assert_eq!(deserialized.id, "secondary");
         assert!(!deserialized.required);
-        assert!(deserialized.current.is_null());
+        assert!(deserialized.current.is_none());
     }
 
     #[cfg(feature = "unstable_llm_providers")]
     #[test]
-    fn test_provider_info_missing_current_fails() {
-        // current is required-but-nullable — omitting it entirely must fail
+    fn test_provider_info_missing_current_defaults_to_none() {
+        // current is optional; omitting it should decode as None
         let json = json!({
             "id": "main",
             "supported": ["anthropic"],
             "required": true
         });
-        assert!(serde_json::from_value::<ProviderInfo>(json).is_err());
+        let deserialized: ProviderInfo = serde_json::from_value(json).unwrap();
+        assert!(deserialized.current.is_none());
     }
 
     #[cfg(feature = "unstable_llm_providers")]
