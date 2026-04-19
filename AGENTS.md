@@ -24,6 +24,10 @@ All paths in the protocol should be absolute
 - Run `npm run check`
 - Update the example agents and clients in tests and examples in both libraries
 
+## Schema rules
+
+- For any nullable field, explicitly define whether it is required or optional and whether `null` is equivalent to an omitted key before running schema generation.
+
 ## Updating existing methods, their params, or output
 
 - Update the mintlify docs and guides in the `docs` directory
