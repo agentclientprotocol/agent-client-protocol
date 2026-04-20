@@ -6053,6 +6053,22 @@ mod test_serialization {
 
     #[cfg(feature = "unstable_llm_providers")]
     #[test]
+    fn test_provider_info_explicit_null_current_decodes_to_none() {
+        // current: null and an omitted current are equivalent on the wire;
+        // both must deserialize into None so the disabled state is preserved
+        // regardless of which form the peer chose to send.
+        let json = json!({
+            "id": "main",
+            "supported": ["anthropic"],
+            "required": true,
+            "current": null
+        });
+        let deserialized: ProviderInfo = serde_json::from_value(json).unwrap();
+        assert!(deserialized.current.is_none());
+    }
+
+    #[cfg(feature = "unstable_llm_providers")]
+    #[test]
     fn test_list_providers_response_serialization() {
         let response = ListProvidersResponse::new(vec![ProviderInfo::new(
             "main",
