@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.1](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.12.0...v0.12.1) - 2026-04-20
+
+### Other
+
+- *(unstable)* Remove RequiredNullable dead code ([#1026](https://github.com/agentclientprotocol/agent-client-protocol/pull/1026))
+- Optional current provider ([#1021](https://github.com/agentclientprotocol/agent-client-protocol/pull/1021))
+
 ## [0.12.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.11.7...v0.12.0) - 2026-04-17
 
 ### Added
