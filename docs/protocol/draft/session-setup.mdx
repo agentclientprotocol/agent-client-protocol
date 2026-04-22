@@ -190,12 +190,6 @@ interrupted.
 
 ## Resuming Sessions
 
-<Note>
-  This section describes the preview `session/resume` method. Clients MUST gate
-  usage on the `sessionCapabilities.resume` capability being present during
-  initialization.
-</Note>
-
 Agents that advertise `sessionCapabilities.resume` allow Clients to reconnect to
 an existing session without replaying the conversation history.
 
@@ -205,7 +199,7 @@ Before attempting to resume a session, Clients **MUST** verify that the Agent
 supports this capability by checking for the `sessionCapabilities.resume` field
 in the `initialize` response:
 
-```json highlight={8-10}
+```json highlight={7-9}
 {
   "jsonrpc": "2.0",
   "id": 0,
@@ -351,9 +345,9 @@ active.
 
 When advertised, Clients MAY include `additionalDirectories` on supported
 session lifecycle requests to expand the session's effective filesystem root
-set. In the stable lifecycle pages, that means `session/new` and `session/load`.
-The same unstable field is also available on `session/resume` and
-`session/fork` when those methods are supported.
+set. In the stable lifecycle pages, that means `session/new`, `session/load`,
+and `session/resume`. The same unstable field is also available on
+`session/fork` when that method is supported.
 
 ```json
 {
@@ -388,7 +382,7 @@ Clients use this ID to:
 - Send prompt requests via `session/prompt`
 - Cancel ongoing operations via `session/cancel`
 - Load previous sessions via `session/load` (if the Agent supports the `loadSession` capability)
-- Resume previous sessions via `session/resume` (if the Agent supports the preview `sessionCapabilities.resume` capability)
+- Resume previous sessions via `session/resume` (if the Agent supports the `sessionCapabilities.resume` capability)
 
 ## Working Directory
 

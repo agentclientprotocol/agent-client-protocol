@@ -1373,10 +1373,6 @@ and return it here. Absence of this field indicates the agent did not record a m
 <a id="session-resume"></a>
 ### <span class="font-mono">session/resume</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 Resumes an existing session without returning previous messages.
 
 This method is only available if the agent advertises the `sessionCapabilities.resume` capability.
@@ -1385,10 +1381,6 @@ The agent should resume the session context, allowing the conversation to contin
 without replaying the message history (unlike `session/load`).
 
 #### <span class="font-mono">ResumeSessionRequest</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Request parameters for resuming an existing session.
 
@@ -1432,10 +1424,6 @@ session.
 </ResponseField>
 
 #### <span class="font-mono">ResumeSessionResponse</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Response from resuming an existing session.
 
@@ -6172,12 +6160,7 @@ Whether the agent supports `session/fork`.
   Whether the agent supports `session/list`.
 </ResponseField>
 <ResponseField name="resume" type={<><span><a href="#sessionresumecapabilities">SessionResumeCapabilities</a></span><span> | null</span></>} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Whether the agent supports `session/resume`.
-
+  Whether the agent supports `session/resume`.
 </ResponseField>
 
 ## <span class="font-mono">SessionCloseCapabilities</span>
@@ -6632,10 +6615,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 </ResponseField>
 
 ## <span class="font-mono">SessionResumeCapabilities</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Capabilities for the `session/resume` method.
 

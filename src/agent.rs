@@ -1453,17 +1453,12 @@ impl ForkSessionResponse {
 
 // Resume session
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Request parameters for resuming an existing session.
 ///
 /// Resumes an existing session without returning previous messages (unlike `session/load`).
 /// This is useful for agents that can resume sessions but don't implement full session loading.
 ///
 /// Only available if the Agent supports the `sessionCapabilities.resume` capability.
-#[cfg(feature = "unstable_session_resume")]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_RESUME_METHOD_NAME))]
@@ -1498,7 +1493,6 @@ pub struct ResumeSessionRequest {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_session_resume")]
 impl ResumeSessionRequest {
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>, cwd: impl Into<PathBuf>) -> Self {
@@ -1543,12 +1537,7 @@ impl ResumeSessionRequest {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Response from resuming an existing session.
-#[cfg(feature = "unstable_session_resume")]
 #[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -1584,7 +1573,6 @@ pub struct ResumeSessionResponse {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_session_resume")]
 impl ResumeSessionResponse {
     #[must_use]
     pub fn new() -> Self {
@@ -4097,12 +4085,7 @@ pub struct SessionCapabilities {
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[serde(default)]
     pub fork: Option<SessionForkCapabilities>,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Whether the agent supports `session/resume`.
-    #[cfg(feature = "unstable_session_resume")]
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[serde(default)]
     pub resume: Option<SessionResumeCapabilities>,
@@ -4160,7 +4143,6 @@ impl SessionCapabilities {
         self
     }
 
-    #[cfg(feature = "unstable_session_resume")]
     /// Whether the agent supports `session/resume`.
     #[must_use]
     pub fn resume(mut self, resume: impl IntoOption<SessionResumeCapabilities>) -> Self {
@@ -4303,14 +4285,9 @@ impl SessionForkCapabilities {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Capabilities for the `session/resume` method.
 ///
 /// By supplying `{}` it means that the agent supports resuming of sessions.
-#[cfg(feature = "unstable_session_resume")]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[non_exhaustive]
@@ -4324,7 +4301,6 @@ pub struct SessionResumeCapabilities {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_session_resume")]
 impl SessionResumeCapabilities {
     #[must_use]
     pub fn new() -> Self {
@@ -4558,7 +4534,6 @@ pub struct AgentMethodNames {
     #[cfg(feature = "unstable_session_fork")]
     pub session_fork: &'static str,
     /// Method for resuming an existing session.
-    #[cfg(feature = "unstable_session_resume")]
     pub session_resume: &'static str,
     /// Method for closing an active session.
     #[cfg(feature = "unstable_session_close")]
@@ -4619,7 +4594,6 @@ pub const AGENT_METHOD_NAMES: AgentMethodNames = AgentMethodNames {
     session_list: SESSION_LIST_METHOD_NAME,
     #[cfg(feature = "unstable_session_fork")]
     session_fork: SESSION_FORK_METHOD_NAME,
-    #[cfg(feature = "unstable_session_resume")]
     session_resume: SESSION_RESUME_METHOD_NAME,
     #[cfg(feature = "unstable_session_close")]
     session_close: SESSION_CLOSE_METHOD_NAME,
@@ -4681,7 +4655,6 @@ pub(crate) const SESSION_LIST_METHOD_NAME: &str = "session/list";
 #[cfg(feature = "unstable_session_fork")]
 pub(crate) const SESSION_FORK_METHOD_NAME: &str = "session/fork";
 /// Method name for resuming an existing session.
-#[cfg(feature = "unstable_session_resume")]
 pub(crate) const SESSION_RESUME_METHOD_NAME: &str = "session/resume";
 /// Method name for closing an active session.
 #[cfg(feature = "unstable_session_close")]
@@ -4797,11 +4770,6 @@ pub enum ClientRequest {
     /// original, allowing operations like generating summaries without affecting the
     /// original session's history.
     ForkSessionRequest(ForkSessionRequest),
-    #[cfg(feature = "unstable_session_resume")]
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Resumes an existing session without returning previous messages.
     ///
     /// This method is only available if the agent advertises the `sessionCapabilities.resume` capability.
@@ -4909,7 +4877,6 @@ impl ClientRequest {
             Self::ListSessionsRequest(_) => AGENT_METHOD_NAMES.session_list,
             #[cfg(feature = "unstable_session_fork")]
             Self::ForkSessionRequest(_) => AGENT_METHOD_NAMES.session_fork,
-            #[cfg(feature = "unstable_session_resume")]
             Self::ResumeSessionRequest(_) => AGENT_METHOD_NAMES.session_resume,
             #[cfg(feature = "unstable_session_close")]
             Self::CloseSessionRequest(_) => AGENT_METHOD_NAMES.session_close,
@@ -4956,7 +4923,6 @@ pub enum AgentResponse {
     ListSessionsResponse(ListSessionsResponse),
     #[cfg(feature = "unstable_session_fork")]
     ForkSessionResponse(ForkSessionResponse),
-    #[cfg(feature = "unstable_session_resume")]
     ResumeSessionResponse(#[serde(default)] ResumeSessionResponse),
     #[cfg(feature = "unstable_session_close")]
     CloseSessionResponse(#[serde(default)] CloseSessionResponse),

@@ -247,6 +247,14 @@
                 {
                   "allOf": [
                     {
+                      "$ref": "#/$defs/ResumeSessionResponse"
+                    }
+                  ],
+                  "title": "ResumeSessionResponse"
+                },
+                {
+                  "allOf": [
+                    {
                       "$ref": "#/$defs/SetSessionModeResponse"
                     }
                   ],
@@ -652,6 +660,15 @@
                   ],
                   "description": "Lists existing sessions known to the agent.\n\nThis method is only available if the agent advertises the `sessionCapabilities.list` capability.\n\nThe agent should return metadata about sessions with optional filtering and pagination support.",
                   "title": "ListSessionsRequest"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/ResumeSessionRequest"
+                    }
+                  ],
+                  "description": "Resumes an existing session without returning previous messages.\n\nThis method is only available if the agent advertises the `sessionCapabilities.resume` capability.\n\nThe agent should resume the session context, allowing the conversation to continue\nwithout replaying the message history (unlike `session/load`).",
+                  "title": "ResumeSessionRequest"
                 },
                 {
                   "allOf": [
@@ -2281,6 +2298,70 @@
       "required": ["name", "uri"],
       "type": "object"
     },
+    "ResumeSessionRequest": {
+      "description": "Request parameters for resuming an existing session.\n\nResumes an existing session without returning previous messages (unlike `session/load`).\nThis is useful for agents that can resume sessions but don't implement full session loading.\n\nOnly available if the Agent supports the `sessionCapabilities.resume` capability.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "cwd": {
+          "description": "The working directory for this session.",
+          "type": "string"
+        },
+        "mcpServers": {
+          "description": "List of MCP servers to connect to for this session.",
+          "items": {
+            "$ref": "#/$defs/McpServer"
+          },
+          "type": "array"
+        },
+        "sessionId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ],
+          "description": "The ID of the session to resume."
+        }
+      },
+      "required": ["sessionId", "cwd"],
+      "type": "object",
+      "x-method": "session/resume",
+      "x-side": "agent"
+    },
+    "ResumeSessionResponse": {
+      "description": "Response from resuming an existing session.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "configOptions": {
+          "description": "Initial session configuration options if supported by the Agent.",
+          "items": {
+            "$ref": "#/$defs/SessionConfigOption"
+          },
+          "type": ["array", "null"]
+        },
+        "modes": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SessionModeState"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Initial mode state if supported by the Agent\n\nSee protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)"
+        }
+      },
+      "type": "object",
+      "x-method": "session/resume",
+      "x-side": "agent"
+    },
     "Role": {
       "description": "The sender or recipient of messages and data in a conversation.",
       "enum": ["assistant", "user"],
@@ -2324,6 +2405,17 @@
             }
           ],
           "description": "Whether the agent supports `session/list`."
+        },
+        "resume": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SessionResumeCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Whether the agent supports `session/resume`."
         }
       },
       "type": "object"
@@ -2675,6 +2767,17 @@
       "type": "object",
       "x-method": "session/update",
       "x-side": "client"
+    },
+    "SessionResumeCapabilities": {
+      "description": "Capabilities for the `session/resume` method.\n\nBy supplying `{}` it means that the agent supports resuming of sessions.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object"
     },
     "SessionUpdate": {
       "description": "Different types of updates that can be sent during session processing.\n\nThese updates provide real-time feedback about the agent's progress.\n\nSee protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-turn#3-agent-reports-output)",

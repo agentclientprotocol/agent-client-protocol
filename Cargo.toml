@@ -24,7 +24,6 @@ unstable = [
     "unstable_session_additional_directories",
     "unstable_session_fork",
     "unstable_session_model",
-    "unstable_session_resume",
     "unstable_session_close",
     "unstable_session_usage",
     "unstable_message_id",
@@ -39,7 +38,6 @@ unstable_nes = []
 unstable_session_additional_directories = []
 unstable_session_fork = []
 unstable_session_model = []
-unstable_session_resume = []
 unstable_session_close = []
 unstable_session_usage = []
 unstable_message_id = []
