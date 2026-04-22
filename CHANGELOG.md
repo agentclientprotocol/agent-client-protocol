@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.12.1](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.12.0...v0.12.1) - 2026-04-21
+
+### Other
+
+- *(unstable)* Remove RequiredNullable dead code ([#1026](https://github.com/agentclientprotocol/agent-client-protocol/pull/1026))
+- Optional current provider ([#1021](https://github.com/agentclientprotocol/agent-client-protocol/pull/1021))
+
+## [0.12.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.11.7...v0.12.0) - 2026-04-17
+
+### Added
+
+- *(rust-only)* Remove unused RPC message schema types (schema.json unchanged) ([#1009](https://github.com/agentclientprotocol/agent-client-protocol/pull/1009))
+- *(rust-only)* better tolerate malformed optional fields in deserialization ([#1006](https://github.com/agentclientprotocol/agent-client-protocol/pull/1006))
+
+### Fixed
+
+- *(rpc)* preserve '_' prefix for extension methods and reject empty ext ([#883](https://github.com/agentclientprotocol/agent-client-protocol/pull/883))
+
 ## [0.11.7](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.11.6...v0.11.7) - 2026-04-15
 
 ### Added

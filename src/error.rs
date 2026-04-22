@@ -14,6 +14,7 @@ use std::{fmt::Display, str};
 
 use schemars::{JsonSchema, Schema};
 use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
 
 use crate::IntoOption;
 
@@ -25,6 +26,7 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 /// JSON-RPC 2.0 error object specification with optional additional data.
 ///
 /// See protocol docs: [JSON-RPC Error Object](https://www.jsonrpc.org/specification#error_object)
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct Error {
@@ -36,7 +38,6 @@ pub struct Error {
     pub message: String,
     /// Optional primitive or structured value that contains additional information about the error.
     /// This may include debugging information or context-specific details.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub data: Option<serde_json::Value>,
 }
 

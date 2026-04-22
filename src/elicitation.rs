@@ -10,6 +10,7 @@ use std::{collections::BTreeMap, sync::Arc};
 use derive_more::{Display, From};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use serde_with::{DefaultOnError, serde_as, skip_serializing_none};
 
 use crate::client::{ELICITATION_COMPLETE_NOTIFICATION, ELICITATION_CREATE_METHOD_NAME};
 use crate::tool_call::ToolCallId;
@@ -84,36 +85,30 @@ impl EnumOption {
 ///
 /// When `enum` or `oneOf` is set, this represents a single-select enum
 /// with `"type": "string"`.
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct StringPropertySchema {
     /// Optional title for the property.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
     /// Human-readable description.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     /// Minimum string length.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub min_length: Option<u32>,
     /// Maximum string length.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub max_length: Option<u32>,
     /// Pattern the string must match.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub pattern: Option<String>,
     /// String format.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub format: Option<StringFormat>,
     /// Default value.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub default: Option<String>,
     /// Enum values for untitled single-select enums.
-    #[serde(rename = "enum", skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "enum")]
     pub enum_values: Option<Vec<String>>,
     /// Titled enum options for titled single-select enums.
-    #[serde(rename = "oneOf", skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "oneOf")]
     pub one_of: Option<Vec<EnumOption>>,
 }
 
@@ -225,24 +220,20 @@ impl StringPropertySchema {
 }
 
 /// Schema for number (floating-point) properties in an elicitation form.
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NumberPropertySchema {
     /// Optional title for the property.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
     /// Human-readable description.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     /// Minimum value (inclusive).
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub minimum: Option<f64>,
     /// Maximum value (inclusive).
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub maximum: Option<f64>,
     /// Default value.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub default: Option<f64>,
 }
 
@@ -290,24 +281,20 @@ impl NumberPropertySchema {
 }
 
 /// Schema for integer properties in an elicitation form.
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct IntegerPropertySchema {
     /// Optional title for the property.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
     /// Human-readable description.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     /// Minimum value (inclusive).
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub minimum: Option<i64>,
     /// Maximum value (inclusive).
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub maximum: Option<i64>,
     /// Default value.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub default: Option<i64>,
 }
 
@@ -355,18 +342,16 @@ impl IntegerPropertySchema {
 }
 
 /// Schema for boolean properties in an elicitation form.
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct BooleanPropertySchema {
     /// Optional title for the property.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
     /// Human-readable description.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     /// Default value.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub default: Option<bool>,
 }
 
@@ -450,26 +435,22 @@ pub enum MultiSelectItems {
 }
 
 /// Schema for multi-select (array) properties in an elicitation form.
+#[skip_serializing_none]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct MultiSelectPropertySchema {
     /// Optional title for the property.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
     /// Human-readable description.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     /// Minimum number of items to select.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub min_items: Option<u64>,
     /// Maximum number of items to select.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub max_items: Option<u64>,
     /// The items definition describing allowed values.
     pub items: MultiSelectItems,
     /// Default selected values.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub default: Option<Vec<String>>,
 }
 
@@ -599,6 +580,7 @@ fn default_object_type() -> ElicitationSchemaType {
 ///
 /// This represents a JSON Schema object with primitive-typed properties,
 /// as required by the elicitation specification.
+#[skip_serializing_none]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -607,16 +589,13 @@ pub struct ElicitationSchema {
     #[serde(rename = "type", default = "default_object_type")]
     pub type_: ElicitationSchemaType,
     /// Optional title for the schema.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
     /// Property definitions (must be primitive types).
     #[serde(default)]
     pub properties: BTreeMap<String, ElicitationPropertySchema>,
     /// List of required property names.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub required: Option<Vec<String>>,
     /// Optional description of what this schema represents.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
 }
 
@@ -740,22 +719,26 @@ impl ElicitationSchema {
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
 /// Elicitation capabilities supported by the client.
+#[serde_as]
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ElicitationCapabilities {
     /// Whether the client supports form-based elicitation.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default)]
     pub form: Option<ElicitationFormCapabilities>,
     /// Whether the client supports URL-based elicitation.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default)]
     pub url: Option<ElicitationUrlCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -796,6 +779,7 @@ impl ElicitationCapabilities {
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
 /// Form-based elicitation capabilities.
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -805,7 +789,7 @@ pub struct ElicitationFormCapabilities {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -832,6 +816,7 @@ impl ElicitationFormCapabilities {
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
 /// URL-based elicitation capabilities.
+#[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -841,7 +826,7 @@ pub struct ElicitationUrlCapabilities {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -888,6 +873,7 @@ pub enum ElicitationScope {
 /// When `tool_call_id` is set, the elicitation is tied to a specific tool call.
 /// This is useful when an agent receives an elicitation from an MCP server
 /// during a tool call and needs to redirect it to the user.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -895,7 +881,6 @@ pub struct ElicitationSessionScope {
     /// The session this elicitation is tied to.
     pub session_id: SessionId,
     /// Optional tool call within the session.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub tool_call_id: Option<ToolCallId>,
 }
 
@@ -959,6 +944,7 @@ impl From<ElicitationRequestScope> for ElicitationScope {
 /// The agent sends this to the client to request information from the user,
 /// either via a form or by directing them to a URL.
 /// Elicitations are tied to a session (optionally a tool call) or a request.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[schemars(extend("x-side" = "client", "x-method" = ELICITATION_CREATE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -974,7 +960,7 @@ pub struct CreateElicitationRequest {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1110,6 +1096,7 @@ impl ElicitationUrlMode {
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
 /// Response from the client to an elicitation request.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[schemars(extend("x-side" = "client", "x-method" = ELICITATION_CREATE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
@@ -1123,7 +1110,7 @@ pub struct CreateElicitationResponse {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -1168,12 +1155,13 @@ pub enum ElicitationAction {
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
 /// The user accepted the elicitation and provided content.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ElicitationAcceptAction {
     /// The user-provided content, if any, as an object matching the requested schema.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub content: Option<BTreeMap<String, ElicitationContentValue>>,
 }
 
@@ -1264,6 +1252,7 @@ impl Default for ElicitationAcceptAction {
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
 /// Notification sent by the agent when a URL-based elicitation is complete.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "client", "x-method" = ELICITATION_COMPLETE_NOTIFICATION))]
 #[serde(rename_all = "camelCase")]
@@ -1276,7 +1265,7 @@ pub struct CompleteElicitationNotification {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 

@@ -3,7 +3,8 @@
 //! ## Types
 //!
 //! - [`MaybeUndefined<T>`] — three-state: undefined (key absent), null, or value.
-//! - [`RequiredNullable<T>`] — required-but-nullable: key must be present, value may be null.
+//! - [`SkipListener`] — [`serde_with::InspectError`] hook used by every
+//!   `VecSkipError` call site in the protocol types.
 //!
 //! ## Builder traits
 //!
@@ -21,6 +22,176 @@ use std::{
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+// ---- SkipListener ----
+
+/// Inspector passed to every `VecSkipError<_, SkipListener>` in the protocol
+/// types so that malformed list entries dropped during deserialization are
+/// surfaced to observability tooling rather than vanishing silently.
+///
+/// - With the `tracing` feature enabled, this is a zero-sized type whose
+///   [`InspectError`](serde_with::InspectError) implementation emits a
+///   [`tracing::warn!`] event on every skipped entry.
+/// - With the feature disabled (the default), it resolves to `()` — which
+///   `serde_with` ships with a no-op `InspectError` implementation — so call
+///   sites incur zero runtime cost.
+#[cfg(feature = "tracing")]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub struct SkipListener;
+
+#[cfg(feature = "tracing")]
+impl serde_with::InspectError for SkipListener {
+    fn inspect_error(error: impl serde::de::Error) {
+        tracing::warn!(
+            %error,
+            "skipped malformed list entry during deserialization",
+        );
+    }
+}
+
+/// Zero-cost stand-in for [`SkipListener`] when the `tracing` feature is
+/// disabled. Resolves to `()`, which `serde_with` already ships with a no-op
+/// `InspectError` implementation.
+#[cfg(not(feature = "tracing"))]
+pub type SkipListener = ();
+
+#[cfg(test)]
+mod skip_listener_tests {
+    use std::cell::Cell;
+
+    use serde::{Deserialize, Serialize};
+    use serde_json::json;
+    use serde_with::{DefaultOnError, VecSkipError, serde_as};
+
+    thread_local! {
+        static SKIP_COUNT: Cell<u32> = const { Cell::new(0) };
+    }
+
+    /// Test-only inspector that counts skipped entries.
+    struct CountingListener;
+
+    impl serde_with::InspectError for CountingListener {
+        fn inspect_error(_error: impl serde::de::Error) {
+            SKIP_COUNT.with(|c| c.set(c.get() + 1));
+        }
+    }
+
+    #[serde_as]
+    #[derive(Serialize, Deserialize, Debug, PartialEq)]
+    struct Wrapper {
+        #[serde_as(deserialize_as = "VecSkipError<_, CountingListener>")]
+        values: Vec<u32>,
+    }
+
+    #[test]
+    fn inspector_runs_for_each_skipped_entry() {
+        SKIP_COUNT.with(|c| c.set(0));
+
+        let input = json!({"values": [1, "oops", 2, {}, 3]});
+        let wrapper: Wrapper = serde_json::from_value(input).unwrap();
+
+        assert_eq!(wrapper.values, vec![1, 2, 3]);
+        assert_eq!(SKIP_COUNT.with(Cell::get), 2);
+    }
+
+    /// Mirrors the pattern applied to every required `Vec<T>` field in the
+    /// protocol: `DefaultOnError<VecSkipError<_, ...>>` + `#[serde(default)]`.
+    /// Element-level failures are skipped; any outer shape error (`null`, a
+    /// string, a map, etc.) collapses to `Default::default()` (i.e. `vec![]`).
+    #[serde_as]
+    #[derive(Deserialize, Debug, PartialEq)]
+    struct ResilientVec {
+        #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, CountingListener>>")]
+        #[serde(default)]
+        values: Vec<u32>,
+    }
+
+    #[test]
+    fn resilient_vec_tolerates_missing_null_and_wrong_type() {
+        // Missing field -> `#[serde(default)]` supplies `vec![]`.
+        let r: ResilientVec = serde_json::from_value(json!({})).unwrap();
+        assert_eq!(r.values, Vec::<u32>::new());
+
+        // Explicit null -> `DefaultOnError` swallows the type error.
+        let r: ResilientVec = serde_json::from_value(json!({"values": null})).unwrap();
+        assert_eq!(r.values, Vec::<u32>::new());
+
+        // Wrong outer type (string) -> `DefaultOnError` swallows.
+        let r: ResilientVec = serde_json::from_value(json!({"values": "oops"})).unwrap();
+        assert_eq!(r.values, Vec::<u32>::new());
+
+        // Wrong outer type (object) -> `DefaultOnError` swallows.
+        let r: ResilientVec = serde_json::from_value(json!({"values": {"k": 1}})).unwrap();
+        assert_eq!(r.values, Vec::<u32>::new());
+
+        // Valid array with element errors -> `VecSkipError` skips per-element.
+        SKIP_COUNT.with(|c| c.set(0));
+        let r: ResilientVec =
+            serde_json::from_value(json!({"values": [1, "oops", 2, {}, 3]})).unwrap();
+        assert_eq!(r.values, vec![1, 2, 3]);
+        assert_eq!(SKIP_COUNT.with(Cell::get), 2);
+    }
+
+    #[test]
+    fn resilient_vec_does_not_invoke_inspector_on_outer_failure() {
+        SKIP_COUNT.with(|c| c.set(0));
+
+        // Outer failures are swallowed silently by `DefaultOnError`; the
+        // inspector only sees per-element failures inside a valid array.
+        let _r: ResilientVec = serde_json::from_value(json!({"values": null})).unwrap();
+        let _r: ResilientVec = serde_json::from_value(json!({"values": "oops"})).unwrap();
+        let _r: ResilientVec = serde_json::from_value(json!({"values": {}})).unwrap();
+
+        assert_eq!(SKIP_COUNT.with(Cell::get), 0);
+    }
+
+    /// Mirrors the pattern applied to every optional `Option<Vec<T>>` field:
+    /// `DefaultOnError<Option<VecSkipError<_, ...>>>` + `#[serde(default)]`.
+    /// `null` becomes `None`; outer shape errors also collapse to `None`;
+    /// element-level failures are skipped inside the array.
+    #[serde_as]
+    #[derive(Deserialize, Debug, PartialEq)]
+    struct ResilientOptionVec {
+        #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, CountingListener>>>")]
+        #[serde(default)]
+        values: Option<Vec<u32>>,
+    }
+
+    #[test]
+    fn resilient_option_vec_tolerates_missing_null_and_wrong_type() {
+        // Missing field -> `None`.
+        let r: ResilientOptionVec = serde_json::from_value(json!({})).unwrap();
+        assert_eq!(r.values, None);
+
+        // Explicit null -> `None`.
+        let r: ResilientOptionVec = serde_json::from_value(json!({"values": null})).unwrap();
+        assert_eq!(r.values, None);
+
+        // Empty array -> `Some(vec![])`.
+        let r: ResilientOptionVec = serde_json::from_value(json!({"values": []})).unwrap();
+        assert_eq!(r.values, Some(Vec::<u32>::new()));
+
+        // Valid array -> `Some(vec)`.
+        let r: ResilientOptionVec = serde_json::from_value(json!({"values": [1, 2, 3]})).unwrap();
+        assert_eq!(r.values, Some(vec![1, 2, 3]));
+
+        // Wrong outer type (string) -> `DefaultOnError` collapses to `None`.
+        let r: ResilientOptionVec = serde_json::from_value(json!({"values": "oops"})).unwrap();
+        assert_eq!(r.values, None);
+
+        // Wrong outer type (object) -> `DefaultOnError` collapses to `None`.
+        let r: ResilientOptionVec = serde_json::from_value(json!({"values": {"k": 1}})).unwrap();
+        assert_eq!(r.values, None);
+
+        // Valid array with element errors -> `VecSkipError` skips per-element.
+        SKIP_COUNT.with(|c| c.set(0));
+        let r: ResilientOptionVec =
+            serde_json::from_value(json!({"values": [1, "oops", 2, {}, 3]})).unwrap();
+        assert_eq!(r.values, Some(vec![1, 2, 3]));
+        assert_eq!(SKIP_COUNT.with(Cell::get), 2);
+    }
+}
 
 // ---- IntoOption ----
 
@@ -458,140 +629,6 @@ impl IntoMaybeUndefined<serde_json::Value> for Cow<'_, str> {
     }
 }
 
-// ---- RequiredNullable<T> ----
-
-/// A value that must be present on the wire but whose value may be `null`.
-///
-/// Unlike `Option<T>`, which serde treats as an implicitly optional field
-/// (defaulting to `None` when absent), `RequiredNullable<T>` requires the key to be
-/// present during deserialization. A missing field will produce a
-/// deserialization error rather than silently defaulting to `None`.
-///
-/// On the wire this serializes identically to `Option<T>` — either `null` or
-/// the JSON representation of `T`.
-///
-/// **Note:** The `Deserialize` impl uses `serde_json::Value` internally to
-/// enforce the "required" constraint, so this type is JSON-only.
-///
-/// # Example
-///
-/// ```rust
-/// use agent_client_protocol_schema::RequiredNullable;
-/// use serde::{Serialize, Deserialize};
-///
-/// #[derive(Serialize, Deserialize, Debug, PartialEq)]
-/// struct Config {
-///     // MUST be present in JSON, but its value can be null
-///     value: RequiredNullable<String>,
-/// }
-///
-/// // ✅ Present with a value
-/// let c: Config = serde_json::from_str(r#"{"value":"hello"}"#).unwrap();
-/// assert_eq!(c.value, RequiredNullable::new("hello".to_string()));
-///
-/// // ✅ Present as null
-/// let c: Config = serde_json::from_str(r#"{"value":null}"#).unwrap();
-/// assert_eq!(c.value, RequiredNullable::null());
-///
-/// // ❌ Missing key — deserialization error
-/// assert!(serde_json::from_str::<Config>(r#"{}"#).is_err());
-/// ```
-#[cfg(feature = "unstable_llm_providers")]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, JsonSchema)]
-#[schemars(with = "Option<T>", inline)]
-#[non_exhaustive]
-pub struct RequiredNullable<T>(pub Option<T>);
-
-#[cfg(feature = "unstable_llm_providers")]
-impl<T> Default for RequiredNullable<T> {
-    fn default() -> Self {
-        Self(None)
-    }
-}
-
-#[cfg(feature = "unstable_llm_providers")]
-impl<T: Serialize> Serialize for RequiredNullable<T> {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        self.0.serialize(serializer)
-    }
-}
-
-#[cfg(feature = "unstable_llm_providers")]
-impl<'de, T: Deserialize<'de>> Deserialize<'de> for RequiredNullable<T> {
-    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        // Deserialize via serde_json::Value so that `deserialize_any` is called.
-        // serde's MissingFieldDeserializer errors on `deserialize_any` (good — the
-        // field is required), whereas `deserialize_option` silently returns None.
-        let value = serde_json::Value::deserialize(deserializer)?;
-        if value.is_null() {
-            Ok(RequiredNullable(None))
-        } else {
-            T::deserialize(value)
-                .map(RequiredNullable::new)
-                .map_err(serde::de::Error::custom)
-        }
-    }
-}
-
-#[cfg(feature = "unstable_llm_providers")]
-impl<T> RequiredNullable<T> {
-    /// Creates a `RequiredNullable` containing a value.
-    #[must_use]
-    pub fn new(value: T) -> Self {
-        Self(Some(value))
-    }
-
-    /// Creates a `RequiredNullable` representing `null`.
-    #[must_use]
-    pub fn null() -> Self {
-        Self(None)
-    }
-
-    /// Returns `true` if the value is `null`.
-    #[must_use]
-    pub fn is_null(&self) -> bool {
-        self.0.is_none()
-    }
-
-    /// Returns `true` if the value is present (not null).
-    #[must_use]
-    pub fn is_value(&self) -> bool {
-        self.0.is_some()
-    }
-
-    /// Returns a reference to the contained value, if present.
-    #[must_use]
-    pub fn value(&self) -> Option<&T> {
-        self.0.as_ref()
-    }
-
-    /// Returns a mutable reference to the contained value, if present.
-    #[must_use]
-    pub fn value_mut(&mut self) -> Option<&mut T> {
-        self.0.as_mut()
-    }
-
-    /// Converts into the inner `Option<T>`.
-    #[must_use]
-    pub fn into_inner(self) -> Option<T> {
-        self.0
-    }
-}
-
-#[cfg(feature = "unstable_llm_providers")]
-impl<T> From<Option<T>> for RequiredNullable<T> {
-    fn from(value: Option<T>) -> Self {
-        Self(value)
-    }
-}
-
-#[cfg(feature = "unstable_llm_providers")]
-impl<T> From<RequiredNullable<T>> for Option<T> {
-    fn from(value: RequiredNullable<T>) -> Self {
-        value.0
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use serde::{Deserialize, Serialize};
@@ -784,90 +821,5 @@ mod tests {
 
         value = MaybeUndefined::Value(Err("error"));
         assert_eq!(value.transpose(), Err("error"));
-    }
-
-    // ---- RequiredNullable tests ----
-
-    #[cfg(feature = "unstable_llm_providers")]
-    mod nullable_tests {
-        use super::*;
-        use serde_json::from_str;
-
-        #[derive(Serialize, Deserialize, Debug, PartialEq)]
-        struct Example {
-            value: RequiredNullable<String>,
-        }
-
-        #[test]
-        fn present_with_value() {
-            let example: Example = from_str(r#"{"value":"hello"}"#).unwrap();
-            assert_eq!(example.value, RequiredNullable(Some("hello".to_string())));
-        }
-
-        #[test]
-        fn present_as_null() {
-            let example: Example = from_str(r#"{"value":null}"#).unwrap();
-            assert_eq!(example.value, RequiredNullable(None));
-        }
-
-        #[test]
-        fn missing_key_fails() {
-            assert!(from_str::<Example>(r"{}").is_err());
-        }
-
-        #[test]
-        fn serialize_value() {
-            let example = Example {
-                value: RequiredNullable(Some("hello".to_string())),
-            };
-            assert_eq!(to_value(&example).unwrap(), json!({"value": "hello"}));
-        }
-
-        #[test]
-        fn serialize_null() {
-            let example = Example {
-                value: RequiredNullable(None),
-            };
-            assert_eq!(to_value(&example).unwrap(), json!({"value": null}));
-        }
-
-        #[test]
-        fn from_option() {
-            let nullable: RequiredNullable<i32> = Some(42).into();
-            assert_eq!(nullable, RequiredNullable(Some(42)));
-
-            let nullable: RequiredNullable<i32> = None.into();
-            assert_eq!(nullable, RequiredNullable(None));
-        }
-
-        #[test]
-        fn into_option() {
-            let option: Option<i32> = RequiredNullable(Some(42)).into();
-            assert_eq!(option, Some(42));
-
-            let option: Option<i32> = RequiredNullable(None).into();
-            assert_eq!(option, None);
-        }
-
-        #[test]
-        fn methods() {
-            let value = RequiredNullable::new(42);
-            assert!(value.is_value());
-            assert!(!value.is_null());
-            assert_eq!(value.value(), Some(&42));
-            assert_eq!(value.into_inner(), Some(42));
-
-            let null: RequiredNullable<i32> = RequiredNullable::null();
-            assert!(!null.is_value());
-            assert!(null.is_null());
-            assert_eq!(null.value(), None);
-            assert_eq!(null.into_inner(), None);
-        }
-
-        #[test]
-        fn default_is_null() {
-            let nullable: RequiredNullable<i32> = RequiredNullable::default();
-            assert_eq!(nullable, RequiredNullable(None));
-        }
     }
 }

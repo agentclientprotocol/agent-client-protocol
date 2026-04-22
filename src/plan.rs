@@ -7,8 +7,9 @@
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
-use crate::{IntoOption, Meta};
+use crate::{IntoOption, Meta, SkipListener};
 
 /// An execution plan for accomplishing complex tasks.
 ///
@@ -17,6 +18,8 @@ use crate::{IntoOption, Meta};
 /// Plans can evolve during execution as the agent discovers new requirements or completes tasks.
 ///
 /// See protocol docs: [Agent Plan](https://agentclientprotocol.com/protocol/agent-plan)
+#[serde_as]
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -25,13 +28,14 @@ pub struct Plan {
     ///
     /// When updating a plan, the agent must send a complete list of all entries
     /// with their current status. The client replaces the entire plan with each update.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
     pub entries: Vec<PlanEntry>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
@@ -61,6 +65,7 @@ impl Plan {
 /// Represents a task or goal that the assistant intends to accomplish
 /// as part of fulfilling the user's request.
 /// See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/agent-plan#plan-entries)
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -77,7 +82,7 @@ pub struct PlanEntry {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "_meta")]
+    #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 

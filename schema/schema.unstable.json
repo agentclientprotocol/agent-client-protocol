@@ -4879,7 +4879,7 @@
               "type": "null"
             }
           ],
-          "description": "Current effective non-secret routing config.\nNull means provider is disabled."
+          "description": "Current effective non-secret routing config.\nNull or omitted means provider is disabled."
         },
         "id": {
           "description": "Provider identifier, for example \"main\" or \"openai\".",
@@ -4897,7 +4897,7 @@
           "type": "array"
         }
       },
-      "required": ["id", "supported", "required", "current"],
+      "required": ["id", "supported", "required"],
       "type": "object"
     },
     "ProvidersCapabilities": {

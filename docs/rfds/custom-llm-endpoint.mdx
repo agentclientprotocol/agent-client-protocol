@@ -143,9 +143,9 @@ interface ProviderInfo {
 
   /**
    * Current effective non-secret routing config.
-   * Null means provider is disabled.
+   * Null or omitted means provider is disabled.
    */
-  current: ProviderCurrentConfig | null;
+  current?: ProviderCurrentConfig | null;
 
   /** Extension metadata */
   _meta?: Record<string, unknown>;
@@ -336,9 +336,9 @@ interface ProvidersDisableResponse {
 2. **Timing and session impact**: provider methods MUST be called after `initialize`. Clients SHOULD configure providers before creating or loading sessions. Agents MAY choose not to apply changes to already running sessions, but SHOULD apply them to sessions created or loaded after the change.
 3. **List semantics**: `providers/list` returns configurable providers, their supported protocol types, current effective routing, and `required` flag. Providers SHOULD remain discoverable in list after `providers/disable`.
 4. **Client behavior for required providers**: clients SHOULD NOT call `providers/disable` for providers where `required: true`.
-5. **Disabled state encoding**: in `providers/list`, `current: null` means the provider is disabled and MUST NOT be used by the agent for LLM calls.
+5. **Disabled state encoding**: in `providers/list`, `current` omitted or `current: null` means the provider is disabled and MUST NOT be used by the agent for LLM calls.
 6. **Set semantics and validation**: `providers/set` replaces the full configuration for the target `id` (`apiType`, `baseUrl`, `headers`); an omitted `headers` field is treated as an empty map. If `id` is unknown, `apiType` is unsupported for that provider, or params are malformed, agents SHOULD return `invalid_params`.
-7. **Disable semantics**: `providers/disable` disables the target provider at runtime. A disabled provider MUST appear in `providers/list` with `current: null`. If target provider has `required: true`, agents MUST return `invalid_params`. Disabling an unknown `id` SHOULD be treated as success (idempotent behavior).
+7. **Disable semantics**: `providers/disable` disables the target provider at runtime. A disabled provider MUST appear in `providers/list` with `current` omitted or `current: null`. If target provider has `required: true`, agents MUST return `invalid_params`. Disabling an unknown `id` SHOULD be treated as success (idempotent behavior).
 8. **Scope and persistence**: provider configuration is process-scoped and SHOULD NOT be persisted to disk.
 
 ## Frequently asked questions
@@ -347,7 +347,7 @@ interface ProvidersDisableResponse {
 
 ### What does `null` mean in `providers/list`?
 
-`current: null` means the provider is disabled.
+`current` omitted or `current: null` means the provider is disabled.
 
 When disabled, the agent MUST NOT route LLM calls through that provider until the client enables it again with `providers/set`.
 
@@ -395,6 +395,7 @@ Today, `session-config` values are effectively string-oriented and do not define
 
 ## Revision history
 
+- 2026-04-19: Made `ProviderInfo.current` optional in `providers/list`; disabled state may be encoded as omitted `current` or `current: null`
 - 2026-03-22: Finalized provider disable semantics - `providers/remove` renamed to `providers/disable`, required providers are non-disableable, and disabled state is represented as `current: null`
 - 2026-03-21: Initial draft of provider configuration API (`providers/list`, `providers/set`, `providers/remove`)
 - 2026-03-07: Rename "provider" to "protocol" to reflect API compatibility level; make `LlmProtocol` an open string type with well-known values; resolve open questions on identifier standardization and model availability

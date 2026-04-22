@@ -5908,9 +5908,9 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
 </ResponseField>
-<ResponseField name="current" type={<><span><a href="#providercurrentconfig">ProviderCurrentConfig</a></span><span> | null</span></>} required>
+<ResponseField name="current" type={<><span><a href="#providercurrentconfig">ProviderCurrentConfig</a></span><span> | null</span></>} >
   Current effective non-secret routing config.
-Null means provider is disabled.
+Null or omitted means provider is disabled.
 </ResponseField>
 <ResponseField name="id" type={"string"} required>
   Provider identifier, for example "main" or "openai".

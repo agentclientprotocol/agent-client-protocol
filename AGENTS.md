@@ -19,11 +19,14 @@ All paths in the protocol should be absolute
 
 - Add constants for the method names
 - Add variants to {Agent|Client}{Request|Response} enums
-- Handle the new method in the `Side::decode_request`/`Side::decode_notification` implementation
 - Add the method to markdown_generator.rs SideDocs functions
 - Run `npm run generate` and fix any issues that appear
 - Run `npm run check`
 - Update the example agents and clients in tests and examples in both libraries
+
+## Schema rules
+
+- For any nullable field, explicitly define whether it is required or optional and whether `null` is equivalent to an omitted key before running schema generation.
 
 ## Updating existing methods, their params, or output
 
