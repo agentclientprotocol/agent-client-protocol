@@ -2,9 +2,8 @@
 title: "Streamable HTTP & WebSocket Transport"
 ---
 
-Author(s):
-* Alex Hancock alexhancock@block.xyz (https://github.com/alexhancock)
-* Jasper Hugo jhugo@block.xyz (https://github.com/jh-block)
+- Author(s): [alexhancock](https://github.com/alexhancock), [jh-block](https://github.com/jh-block)
+- Champion: [anna239](https://github.com/anna239)
 
 ## Elevator pitch
 
@@ -62,12 +61,12 @@ Clients MUST accept, store, and return cookies set by the server on all HTTP-bas
 
 ### 5. Defines a unified routing model
 
-| Method | Upgrade Header? | Behavior |
-|--------|-----------------|----------|
-| `POST` | — | Send JSON-RPC request/notification/response (Streamable HTTP) |
-| `GET` | No | Open session-scoped SSE stream for server-initiated messages (Streamable HTTP). Requires `Acp-Connection-Id` and `Acp-Session-Id`. |
-| `GET` | `Upgrade: websocket` | Upgrade to WebSocket for full-duplex messaging |
-| `DELETE` | — | Terminate the connection |
+| Method   | Upgrade Header?      | Behavior                                                                                                                           |
+| -------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `POST`   | —                    | Send JSON-RPC request/notification/response (Streamable HTTP)                                                                      |
+| `GET`    | No                   | Open session-scoped SSE stream for server-initiated messages (Streamable HTTP). Requires `Acp-Connection-Id` and `Acp-Session-Id`. |
+| `GET`    | `Upgrade: websocket` | Upgrade to WebSocket for full-duplex messaging                                                                                     |
+| `DELETE` | —                    | Terminate the connection                                                                                                           |
 
 ### 6. Preserves the full ACP lifecycle
 
@@ -108,15 +107,15 @@ The `initialize` → `initialized` → messages → close lifecycle is identical
 
 ACP over Streamable HTTP uses two HTTP headers that together identify the full request context:
 
-| | `Acp-Connection-Id` | `Acp-Session-Id` |
-|---|---|---|
-| **Purpose** | Binds HTTP requests to an initialized connection | Identifies an ACP conversation/session |
-| **Created by** | Server, on `initialize` response | Server, on `session/new` response |
-| **Location** | HTTP header (all requests after `initialize`) | HTTP header (all requests after `session/new`) + JSON-RPC body as `sessionId` |
-| **Scope** | One per `initialize` handshake | One per `session/new` call |
-| **Multiplicity** | May span multiple sessions | Belongs to exactly one connection |
-| **Used for** | Request routing, capability lookup | Session-scoped request routing, session-scoped GET listener filtering |
-| **Required** | After `initialize` | After `session/new` |
+|                  | `Acp-Connection-Id`                              | `Acp-Session-Id`                                                              |
+| ---------------- | ------------------------------------------------ | ----------------------------------------------------------------------------- |
+| **Purpose**      | Binds HTTP requests to an initialized connection | Identifies an ACP conversation/session                                        |
+| **Created by**   | Server, on `initialize` response                 | Server, on `session/new` response                                             |
+| **Location**     | HTTP header (all requests after `initialize`)    | HTTP header (all requests after `session/new`) + JSON-RPC body as `sessionId` |
+| **Scope**        | One per `initialize` handshake                   | One per `session/new` call                                                    |
+| **Multiplicity** | May span multiple sessions                       | Belongs to exactly one connection                                             |
+| **Used for**     | Request routing, capability lookup               | Session-scoped request routing, session-scoped GET listener filtering         |
+| **Required**     | After `initialize`                               | After `session/new`                                                           |
 
 ### Streamable HTTP Message Flow
 
@@ -303,20 +302,20 @@ The agent task is spawned once per connection. Sessions are created within a con
 
 ### MCP Streamable HTTP Compliance
 
-| MCP Requirement | ACP Implementation | Status |
-|---|---|---|
-| POST for all client→server messages | ✅ | Compliant |
-| Accept header validation (406) | ✅ | Compliant |
-| Notifications/responses return 202 | ✅ | Compliant |
-| Requests return SSE stream | ✅ | Compliant |
-| Session ID on initialize response | ✅ (`Acp-Connection-Id`) | Compliant (renamed) |
+| MCP Requirement                            | ACP Implementation                                                               | Status               |
+| ------------------------------------------ | -------------------------------------------------------------------------------- | -------------------- |
+| POST for all client→server messages        | ✅                                                                               | Compliant            |
+| Accept header validation (406)             | ✅                                                                               | Compliant            |
+| Notifications/responses return 202         | ✅                                                                               | Compliant            |
+| Requests return SSE stream                 | ✅                                                                               | Compliant            |
+| Session ID on initialize response          | ✅ (`Acp-Connection-Id`)                                                         | Compliant (renamed)  |
 | Session ID required on subsequent requests | ✅ (`Acp-Connection-Id` required; `Acp-Session-Id` required after `session/new`) | Compliant (extended) |
-| GET opens SSE stream | ✅ | Compliant |
-| DELETE terminates session | ✅ (terminates connection) | Compliant |
-| 404 for unknown sessions | ✅ (unknown connection IDs) | Compliant |
-| Batch requests | ❌ (returns 501) | Documented deviation |
-| Resumability (Last-Event-ID) | ❌ | Future work |
-| Protocol version header | ❌ | Future work |
+| GET opens SSE stream                       | ✅                                                                               | Compliant            |
+| DELETE terminates session                  | ✅ (terminates connection)                                                       | Compliant            |
+| 404 for unknown sessions                   | ✅ (unknown connection IDs)                                                      | Compliant            |
+| Batch requests                             | ❌ (returns 501)                                                                 | Documented deviation |
+| Resumability (Last-Event-ID)               | ❌                                                                               | Future work          |
+| Protocol version header                    | ❌                                                                               | Future work          |
 
 ### Deviations from MCP Streamable HTTP
 
@@ -345,7 +344,7 @@ We largely do. The differences are: header naming (`Acp-Connection-Id` + `Acp-Se
 
 ### Why two headers (`Acp-Connection-Id` and `Acp-Session-Id`) instead of one?
 
-MCP uses a single `Mcp-Session-Id` because MCP has no protocol-level concept of sessions. ACP does — `session/new` creates a conversation with its own lifecycle. Using one header for both would conflate the initialized connection (capabilities, protocol version, auth state) with the active session (conversation context, history). Two headers let the server immediately distinguish which connection *and* which session a request belongs to, enable session-scoped GET listener streams, and support multiple concurrent sessions within a single connection.
+MCP uses a single `Mcp-Session-Id` because MCP has no protocol-level concept of sessions. ACP does — `session/new` creates a conversation with its own lifecycle. Using one header for both would conflate the initialized connection (capabilities, protocol version, auth state) with the active session (conversation context, history). Two headers let the server immediately distinguish which connection _and_ which session a request belongs to, enable session-scoped GET listener streams, and support multiple concurrent sessions within a single connection.
 
 ### Why add WebSocket support?
 

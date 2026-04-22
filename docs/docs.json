@@ -129,7 +129,8 @@
               "rfds/elicitation",
               "rfds/next-edit-suggestions",
               "rfds/additional-directories",
-              "rfds/custom-llm-endpoint"
+              "rfds/custom-llm-endpoint",
+              "rfds/streamable-http-websocket-transport"
             ]
           },
           {
