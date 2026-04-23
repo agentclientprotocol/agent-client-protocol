@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.2](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.12.1...v0.12.2) - 2026-04-23
+
+### Added
+
+- Stabilize session/close ([#1062](https://github.com/agentclientprotocol/agent-client-protocol/pull/1062))
+- Stabilize session/resume ([#1051](https://github.com/agentclientprotocol/agent-client-protocol/pull/1051))
+
 ## [0.12.1](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.12.0...v0.12.1) - 2026-04-21
 
 ### Other
