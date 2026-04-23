@@ -297,20 +297,20 @@ The agent task is spawned once per connection. A single GET SSE stream delivers 
 
 ### Comparing to MCP Streamable HTTP
 
-| MCP Requirement                            | ACP Implementation                                | Status               |
-| ------------------------------------------ | ------------------------------------------------- | -------------------- |
-| POST for all client→server messages        | ✅                                                | Compliant            |
-| Accept header validation (406)             | ✅                                                | Compliant            |
-| Notifications/responses return 202         | ✅ (except `initialize` returns 200)              | Mostly compliant     |
-| Requests return SSE stream                 | ❌ (single long-lived GET stream instead)         | Documented deviation |
-| Session ID on initialize response          | ✅ (`Acp-Connection-Id`)                          | Compliant (renamed)  |
-| Session ID required on subsequent requests | ✅ (`Acp-Connection-Id` + `Acp-Session-Id`)       | Compliant (extended) |
-| GET opens SSE stream                       | ✅ (single connection-scoped stream)              | Compliant            |
-| DELETE terminates session                  | ✅ (terminates connection)                        | Compliant            |
-| 404 for unknown sessions                   | ✅ (unknown connection IDs)                       | Compliant            |
-| Batch requests                             | ❌ (returns 501)                                  | Documented deviation |
-| Resumability (Last-Event-ID)               | ❌                                                | Future work          |
-| Protocol version header                    | ❌                                                | Future work          |
+| MCP Requirement                            | ACP Implementation                          | Status               |
+| ------------------------------------------ | ------------------------------------------- | -------------------- |
+| POST for all client→server messages        | ✅                                          | Compliant            |
+| Accept header validation (406)             | ✅                                          | Compliant            |
+| Notifications/responses return 202         | ✅ (except `initialize` returns 200)        | Mostly compliant     |
+| Requests return SSE stream                 | ❌ (single long-lived GET stream instead)   | Documented deviation |
+| Session ID on initialize response          | ✅ (`Acp-Connection-Id`)                    | Compliant (renamed)  |
+| Session ID required on subsequent requests | ✅ (`Acp-Connection-Id` + `Acp-Session-Id`) | Compliant (extended) |
+| GET opens SSE stream                       | ✅ (single connection-scoped stream)        | Compliant            |
+| DELETE terminates session                  | ✅ (terminates connection)                  | Compliant            |
+| 404 for unknown sessions                   | ✅ (unknown connection IDs)                 | Compliant            |
+| Batch requests                             | ❌ (returns 501)                            | Documented deviation |
+| Resumability (Last-Event-ID)               | ❌                                          | Future work          |
+| Protocol version header                    | ❌                                          | Future work          |
 
 ### Deviations from MCP Streamable HTTP
 
@@ -318,10 +318,10 @@ The agent task is spawned once per connection. A single GET SSE stream delivers 
 2. **Initialize returns JSON directly**: MCP's `initialize` returns an SSE stream. ACP's `initialize` returns `200 OK` with a JSON response body containing capabilities and `connectionId`. The `Acp-Connection-Id` is also included in the response header.
 3. **HTTP/2 required**: ACP requires HTTP/2 for multiplexing concurrent POST requests alongside the long-lived GET stream.
 4. **Two-header model**: ACP uses both `Acp-Connection-Id` (for connection identity) and `Acp-Session-Id` (for session identity on POST requests). MCP only uses `Mcp-Session-Id`. This allows ACP to distinguish connection-level state from session-level operations while supporting multiple concurrent sessions on one connection.
-6. **WebSocket extension**: MCP doesn't define WebSocket. ACP adds it as a required client capability. Clients MUST support WebSocket, and servers MAY choose to only support WebSocket connections.
-7. **Cookie support required**: Clients MUST handle cookies on HTTP transports for the duration of the connection, enabling sticky sessions and per-connection server state.
-8. **No batch requests**: Returns 501. May be added later.
-9. **No resumability yet in reference implementation**: SSE event IDs and `Last-Event-ID` resumption planned as follow-up.
+5. **WebSocket extension**: MCP doesn't define WebSocket. ACP adds it as a required client capability. Clients MUST support WebSocket, and servers MAY choose to only support WebSocket connections.
+6. **Cookie support required**: Clients MUST handle cookies on HTTP transports for the duration of the connection, enabling sticky sessions and per-connection server state.
+7. **No batch requests**: Returns 501. May be added later.
+8. **No resumability yet in reference implementation**: SSE event IDs and `Last-Event-ID` resumption planned as follow-up.
 
 ### Implementation Plan
 
