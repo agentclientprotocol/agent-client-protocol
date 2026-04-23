@@ -264,15 +264,9 @@ state when those features are supported by the Agent.
 
 ## Closing Active Sessions
 
-<Note>
-  This section describes the preview `sessionCapabilities.close` capability.
-  Clients MUST gate usage on that capability being present during
-  initialization.
-</Note>
-
-When advertised, Clients MAY call `session/close` to tell the Agent to cancel
-any ongoing work for a session and free any resources associated with that
-active session.
+Agents that advertise `sessionCapabilities.close` allow Clients to tell the
+Agent to cancel any ongoing work for a session and free any resources
+associated with that active session.
 
 ### Checking Support
 
@@ -280,7 +274,7 @@ Before attempting to close a session, Clients **MUST** verify that the Agent
 supports this capability by checking the `sessionCapabilities.close` field in
 the `initialize` response:
 
-```json highlight={8-10}
+```json highlight={7-9}
 {
   "jsonrpc": "2.0",
   "id": 0,
@@ -383,6 +377,7 @@ Clients use this ID to:
 - Cancel ongoing operations via `session/cancel`
 - Load previous sessions via `session/load` (if the Agent supports the `loadSession` capability)
 - Resume previous sessions via `session/resume` (if the Agent supports the `sessionCapabilities.resume` capability)
+- Close active sessions via `session/close` (if the Agent supports the `sessionCapabilities.close` capability)
 
 ## Working Directory
 

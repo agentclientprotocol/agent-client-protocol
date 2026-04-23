@@ -196,6 +196,59 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
   The ID of the session to cancel operations for.
 </ResponseField>
 
+<a id="session-close"></a>
+### <span class="font-mono">session/close</span>
+
+Closes an active session and frees up any resources associated with it.
+
+This method is only available if the agent advertises the `sessionCapabilities.close` capability.
+
+The agent must cancel any ongoing work (as if `session/cancel` was called)
+and then free up any resources associated with the session.
+
+#### <span class="font-mono">CloseSessionRequest</span>
+
+Request parameters for closing an active session.
+
+If supported, the agent **must** cancel any ongoing work related to the session
+(treat it as if `session/cancel` was called) and then free up any resources
+associated with the session.
+
+Only available if the Agent supports the `sessionCapabilities.close` capability.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The ID of the session to close.
+</ResponseField>
+
+#### <span class="font-mono">CloseSessionResponse</span>
+
+Response from closing a session.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+
 <a id="session-list"></a>
 ### <span class="font-mono">session/list</span>
 
@@ -2658,11 +2711,33 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
 </ResponseField>
+<ResponseField name="close" type={<><span><a href="#sessionclosecapabilities">SessionCloseCapabilities</a></span><span> | null</span></>} >
+  Whether the agent supports `session/close`.
+</ResponseField>
 <ResponseField name="list" type={<><span><a href="#sessionlistcapabilities">SessionListCapabilities</a></span><span> | null</span></>} >
   Whether the agent supports `session/list`.
 </ResponseField>
 <ResponseField name="resume" type={<><span><a href="#sessionresumecapabilities">SessionResumeCapabilities</a></span><span> | null</span></>} >
   Whether the agent supports `session/resume`.
+</ResponseField>
+
+## <span class="font-mono">SessionCloseCapabilities</span>
+
+Capabilities for the `session/close` method.
+
+By supplying `\{\}` it means that the agent supports closing of sessions.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
 </ResponseField>
 
 ## <span class="font-mono">SessionConfigGroupId</span>

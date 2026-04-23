@@ -1624,10 +1624,6 @@ impl ResumeSessionResponse {
 
 // Close session
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Request parameters for closing an active session.
 ///
 /// If supported, the agent **must** cancel any ongoing work related to the session
@@ -1635,7 +1631,6 @@ impl ResumeSessionResponse {
 /// associated with the session.
 ///
 /// Only available if the Agent supports the `sessionCapabilities.close` capability.
-#[cfg(feature = "unstable_session_close")]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_CLOSE_METHOD_NAME))]
@@ -1653,7 +1648,6 @@ pub struct CloseSessionRequest {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_session_close")]
 impl CloseSessionRequest {
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>) -> Self {
@@ -1675,12 +1669,7 @@ impl CloseSessionRequest {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Response from closing a session.
-#[cfg(feature = "unstable_session_close")]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_CLOSE_METHOD_NAME))]
@@ -1696,7 +1685,6 @@ pub struct CloseSessionResponse {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_session_close")]
 impl CloseSessionResponse {
     #[must_use]
     pub fn new() -> Self {
@@ -4089,12 +4077,7 @@ pub struct SessionCapabilities {
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[serde(default)]
     pub resume: Option<SessionResumeCapabilities>,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Whether the agent supports `session/close`.
-    #[cfg(feature = "unstable_session_close")]
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[serde(default)]
     pub close: Option<SessionCloseCapabilities>,
@@ -4150,7 +4133,6 @@ impl SessionCapabilities {
         self
     }
 
-    #[cfg(feature = "unstable_session_close")]
     /// Whether the agent supports `session/close`.
     #[must_use]
     pub fn close(mut self, close: impl IntoOption<SessionCloseCapabilities>) -> Self {
@@ -4319,14 +4301,9 @@ impl SessionResumeCapabilities {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Capabilities for the `session/close` method.
 ///
 /// By supplying `{}` it means that the agent supports closing of sessions.
-#[cfg(feature = "unstable_session_close")]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[non_exhaustive]
@@ -4340,7 +4317,6 @@ pub struct SessionCloseCapabilities {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_session_close")]
 impl SessionCloseCapabilities {
     #[must_use]
     pub fn new() -> Self {
@@ -4536,7 +4512,6 @@ pub struct AgentMethodNames {
     /// Method for resuming an existing session.
     pub session_resume: &'static str,
     /// Method for closing an active session.
-    #[cfg(feature = "unstable_session_close")]
     pub session_close: &'static str,
     /// Method for logging out of an authenticated session.
     #[cfg(feature = "unstable_logout")]
@@ -4595,7 +4570,6 @@ pub const AGENT_METHOD_NAMES: AgentMethodNames = AgentMethodNames {
     #[cfg(feature = "unstable_session_fork")]
     session_fork: SESSION_FORK_METHOD_NAME,
     session_resume: SESSION_RESUME_METHOD_NAME,
-    #[cfg(feature = "unstable_session_close")]
     session_close: SESSION_CLOSE_METHOD_NAME,
     #[cfg(feature = "unstable_logout")]
     logout: LOGOUT_METHOD_NAME,
@@ -4657,7 +4631,6 @@ pub(crate) const SESSION_FORK_METHOD_NAME: &str = "session/fork";
 /// Method name for resuming an existing session.
 pub(crate) const SESSION_RESUME_METHOD_NAME: &str = "session/resume";
 /// Method name for closing an active session.
-#[cfg(feature = "unstable_session_close")]
 pub(crate) const SESSION_CLOSE_METHOD_NAME: &str = "session/close";
 /// Method name for logging out of an authenticated session.
 #[cfg(feature = "unstable_logout")]
@@ -4777,11 +4750,6 @@ pub enum ClientRequest {
     /// The agent should resume the session context, allowing the conversation to continue
     /// without replaying the message history (unlike `session/load`).
     ResumeSessionRequest(ResumeSessionRequest),
-    #[cfg(feature = "unstable_session_close")]
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Closes an active session and frees up any resources associated with it.
     ///
     /// This method is only available if the agent advertises the `sessionCapabilities.close` capability.
@@ -4878,7 +4846,6 @@ impl ClientRequest {
             #[cfg(feature = "unstable_session_fork")]
             Self::ForkSessionRequest(_) => AGENT_METHOD_NAMES.session_fork,
             Self::ResumeSessionRequest(_) => AGENT_METHOD_NAMES.session_resume,
-            #[cfg(feature = "unstable_session_close")]
             Self::CloseSessionRequest(_) => AGENT_METHOD_NAMES.session_close,
             Self::SetSessionModeRequest(_) => AGENT_METHOD_NAMES.session_set_mode,
             Self::SetSessionConfigOptionRequest(_) => AGENT_METHOD_NAMES.session_set_config_option,
@@ -4924,7 +4891,6 @@ pub enum AgentResponse {
     #[cfg(feature = "unstable_session_fork")]
     ForkSessionResponse(ForkSessionResponse),
     ResumeSessionResponse(#[serde(default)] ResumeSessionResponse),
-    #[cfg(feature = "unstable_session_close")]
     CloseSessionResponse(#[serde(default)] CloseSessionResponse),
     SetSessionModeResponse(#[serde(default)] SetSessionModeResponse),
     SetSessionConfigOptionResponse(SetSessionConfigOptionResponse),

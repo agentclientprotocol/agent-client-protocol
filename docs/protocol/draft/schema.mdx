@@ -839,10 +839,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 <a id="session-close"></a>
 ### <span class="font-mono">session/close</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 Closes an active session and frees up any resources associated with it.
 
 This method is only available if the agent advertises the `sessionCapabilities.close` capability.
@@ -851,10 +847,6 @@ The agent must cancel any ongoing work (as if `session/cancel` was called)
 and then free up any resources associated with the session.
 
 #### <span class="font-mono">CloseSessionRequest</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Request parameters for closing an active session.
 
@@ -881,10 +873,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 </ResponseField>
 
 #### <span class="font-mono">CloseSessionResponse</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Response from closing a session.
 
@@ -6141,12 +6129,7 @@ Whether the agent supports `additionalDirectories` on supported session lifecycl
 
 </ResponseField>
 <ResponseField name="close" type={<><span><a href="#sessionclosecapabilities">SessionCloseCapabilities</a></span><span> | null</span></>} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Whether the agent supports `session/close`.
-
+  Whether the agent supports `session/close`.
 </ResponseField>
 <ResponseField name="fork" type={<><span><a href="#sessionforkcapabilities">SessionForkCapabilities</a></span><span> | null</span></>} >
   **UNSTABLE**
@@ -6164,10 +6147,6 @@ Whether the agent supports `session/fork`.
 </ResponseField>
 
 ## <span class="font-mono">SessionCloseCapabilities</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Capabilities for the `session/close` method.
 

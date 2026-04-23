@@ -255,6 +255,14 @@
                 {
                   "allOf": [
                     {
+                      "$ref": "#/$defs/CloseSessionResponse"
+                    }
+                  ],
+                  "title": "CloseSessionResponse"
+                },
+                {
+                  "allOf": [
+                    {
                       "$ref": "#/$defs/SetSessionModeResponse"
                     }
                   ],
@@ -673,6 +681,15 @@
                 {
                   "allOf": [
                     {
+                      "$ref": "#/$defs/CloseSessionRequest"
+                    }
+                  ],
+                  "description": "Closes an active session and frees up any resources associated with it.\n\nThis method is only available if the agent advertises the `sessionCapabilities.close` capability.\n\nThe agent must cancel any ongoing work (as if `session/cancel` was called)\nand then free up any resources associated with the session.",
+                  "title": "CloseSessionRequest"
+                },
+                {
+                  "allOf": [
+                    {
                       "$ref": "#/$defs/SetSessionModeRequest"
                     }
                   ],
@@ -823,6 +840,41 @@
         }
       ],
       "x-docs-ignore": true
+    },
+    "CloseSessionRequest": {
+      "description": "Request parameters for closing an active session.\n\nIf supported, the agent **must** cancel any ongoing work related to the session\n(treat it as if `session/cancel` was called) and then free up any resources\nassociated with the session.\n\nOnly available if the Agent supports the `sessionCapabilities.close` capability.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "sessionId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ],
+          "description": "The ID of the session to close."
+        }
+      },
+      "required": ["sessionId"],
+      "type": "object",
+      "x-method": "session/close",
+      "x-side": "agent"
+    },
+    "CloseSessionResponse": {
+      "description": "Response from closing a session.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object",
+      "x-method": "session/close",
+      "x-side": "agent"
     },
     "ConfigOptionUpdate": {
       "description": "Session configuration options have been updated.",
@@ -2395,6 +2447,17 @@
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
         },
+        "close": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SessionCloseCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Whether the agent supports `session/close`."
+        },
         "list": {
           "anyOf": [
             {
@@ -2416,6 +2479,17 @@
             }
           ],
           "description": "Whether the agent supports `session/resume`."
+        }
+      },
+      "type": "object"
+    },
+    "SessionCloseCapabilities": {
+      "description": "Capabilities for the `session/close` method.\n\nBy supplying `{}` it means that the agent supports closing of sessions.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
         }
       },
       "type": "object"
