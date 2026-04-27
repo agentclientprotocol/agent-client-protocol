@@ -19,7 +19,7 @@ All paths in the protocol should be absolute
 
 - Add constants for the method names
 - Add variants to {Agent|Client}{Request|Response} enums
-- Add the method to markdown_generator.rs SideDocs functions
+- Add the method to src/bin/generate.rs SideDocs functions
 - Run `npm run generate` and fix any issues that appear
 - Run `npm run check`
 - Update the example agents and clients in tests and examples in both libraries

@@ -5,7 +5,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
-use crate::{Error, Result};
+use super::{Error, Result};
 
 /// JSON RPC Request Id
 ///
@@ -136,7 +136,7 @@ impl<M> JsonRpcMessage<M> {
 mod tests {
     use super::*;
 
-    use crate::{
+    use crate::v2::{
         AgentNotification, CancelNotification, ClientNotification, ContentBlock, ContentChunk,
         SessionId, SessionNotification, SessionUpdate, TextContent,
     };

@@ -1,8 +1,9 @@
-//! Agent Client Protocol version 1 types.
+//! Agent Client Protocol version 2 draft types.
 
 mod agent;
 mod client;
 mod content;
+pub mod conversion;
 #[cfg(feature = "unstable_elicitation")]
 mod elicitation;
 mod error;

@@ -16,7 +16,7 @@
   "license": "Apache-2.0",
   "author": "Zed Industries",
   "files": [
-    "schema/schema.json",
+    "schema/*.json",
     "LICENSE"
   ],
   "type": "module",

@@ -1,9 +1,21 @@
+#[cfg(feature = "unstable_protocol_v2")]
+use agent_client_protocol_schema::v2::{
+    AGENT_METHOD_NAMES, AgentNotification, AgentRequest, AgentResponse, CLIENT_METHOD_NAMES,
+    ClientNotification, ClientRequest, ClientResponse, JsonRpcMessage, Notification,
+    ProtocolVersion, Request, Response,
+};
+#[cfg(all(feature = "unstable_cancel_request", feature = "unstable_protocol_v2"))]
+use agent_client_protocol_schema::v2::{PROTOCOL_LEVEL_METHOD_NAMES, ProtocolLevelNotification};
+#[cfg(not(feature = "unstable_protocol_v2"))]
 use agent_client_protocol_schema::{
     AGENT_METHOD_NAMES, AgentNotification, AgentRequest, AgentResponse, CLIENT_METHOD_NAMES,
     ClientNotification, ClientRequest, ClientResponse, JsonRpcMessage, Notification,
     ProtocolVersion, Request, Response,
 };
-#[cfg(feature = "unstable_cancel_request")]
+#[cfg(all(
+    feature = "unstable_cancel_request",
+    not(feature = "unstable_protocol_v2")
+))]
 use agent_client_protocol_schema::{PROTOCOL_LEVEL_METHOD_NAMES, ProtocolLevelNotification};
 use schemars::{
     JsonSchema,
@@ -71,16 +83,20 @@ fn main() {
     fs::create_dir_all(schema_dir.clone()).unwrap();
     fs::create_dir_all(docs_protocol_dir.clone()).unwrap();
 
-    let schema_file = if cfg!(feature = "unstable") {
-        "schema.unstable.json"
+    let schema_files: &[&str] = if cfg!(feature = "unstable_protocol_v2") {
+        if cfg!(feature = "unstable") {
+            &["schema.v2.unstable.json", "schema.unstable.json"]
+        } else {
+            &["schema.v2.unstable.json"]
+        }
     } else {
-        "schema.json"
+        &["schema.v1.json", "schema.json"]
     };
-    fs::write(
-        schema_dir.join(schema_file),
-        serde_json::to_string_pretty(&schema_value).unwrap(),
-    )
-    .unwrap_or_else(|e| panic!("Failed to write {schema_file}: {e}"));
+    let schema_json = serde_json::to_string_pretty(&schema_value).unwrap();
+    for &schema_file in schema_files {
+        fs::write(schema_dir.join(schema_file), &schema_json)
+            .unwrap_or_else(|e| panic!("Failed to write {schema_file}: {e}"));
+    }
 
     // Create a combined metadata object
     #[cfg(not(feature = "unstable_cancel_request"))]
@@ -97,16 +113,20 @@ fn main() {
         "protocolMethods": PROTOCOL_LEVEL_METHOD_NAMES,
     });
 
-    let meta_file = if cfg!(feature = "unstable") {
-        "meta.unstable.json"
+    let meta_files: &[&str] = if cfg!(feature = "unstable_protocol_v2") {
+        if cfg!(feature = "unstable") {
+            &["meta.v2.unstable.json", "meta.unstable.json"]
+        } else {
+            &["meta.v2.unstable.json"]
+        }
     } else {
-        "meta.json"
+        &["meta.v1.json", "meta.json"]
     };
-    fs::write(
-        schema_dir.join(meta_file),
-        serde_json::to_string_pretty(&metadata).unwrap(),
-    )
-    .unwrap_or_else(|e| panic!("Failed to write {meta_file}: {e}"));
+    let metadata_json = serde_json::to_string_pretty(&metadata).unwrap();
+    for &meta_file in meta_files {
+        fs::write(schema_dir.join(meta_file), &metadata_json)
+            .unwrap_or_else(|e| panic!("Failed to write {meta_file}: {e}"));
+    }
 
     // Generate markdown documentation
     let mut markdown_gen = MarkdownGenerator::new();
@@ -121,8 +141,12 @@ fn main() {
     fs::write(docs_protocol_dir.join(doc_file), markdown_doc)
         .unwrap_or_else(|e| panic!("Failed to write {doc_file}: {e}"));
 
-    println!("✓ Generated {schema_file}");
-    println!("✓ Generated {meta_file}");
+    for schema_file in schema_files {
+        println!("✓ Generated {schema_file}");
+    }
+    for meta_file in meta_files {
+        println!("✓ Generated {meta_file}");
+    }
     println!("✓ Generated {doc_file}");
 }
 
