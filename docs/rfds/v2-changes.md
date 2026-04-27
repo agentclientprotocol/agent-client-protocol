@@ -8,42 +8,21 @@ Author(s): [@benbrandt](https://github.com/benbrandt)
 
 > What are you proposing to change?
 
-<!--
-    Give a brief, high-level overview of what you plan to do and what problem you are solving. Feel free to use bullet points to help clarify the structure.
--->
+With ACP, we aim to move fast while keeping breaking changes to a minimum. However, we've gotten to a point where there are enough changes we would like to do that would benefit from some core redesigns that will allow for extending the protocol with new features more easily.
+
+We've also managed to add new features that has led to learnings that would benefit from consolidation and alignment in other areas of the protocol to smooth things out and make things more consistent.
 
 ## Status quo
 
 > How do things work today and what problems does this cause? Why would we change things?
 
+We have had a fairly successful time adding new features via new capabilities and adding in new features in a non-breaking way. But some of the learnings we have made will require breaking changes, and it feels like there are enough of these built up, or RFDs we are stuck due to required changes that now is a good time to do so.
+
 ## What we propose to do about it
 
 > What are you proposing to improve the situation?
 
-<!--
-    Use this section to describe what you propose to do at a high-level.
-    Don't give every detail, this should be the high-level summary.
-
-    Note: This section is OPTIONAL when RFDs are first opened.
-    You can also include multiple variants if you have different ideas of how to approach the problem, though these should be narrowed down as the RFD progresses.
--->
-
-## Shiny future
-
-> How will things will play out once this feature exists?
-
-<!--
-    Use this section to describe the "status quo" as it will play out once
-    we have made these changes.
-
-    Note: This section is OPTIONAL when RFDs are first opened.
--->
-
-## Implementation details and plan
-
-> Tell me more about your implementation. What is your detailed implementation plan?
-
-### Cleanup and Alignment
+#### New Required Capabilities
 
 #### Clean up capabilities
 
@@ -57,11 +36,7 @@ Same as session config categories: \_ for extension, preserve non-underscore for
 
 #### JSON-RPC Batch
 
-### Behavior Changes
-
 #### v2 Prompting
-
-### New Features
 
 #### Message IDs
 
@@ -91,6 +66,25 @@ Streaming + non-streaming as well
 ### Transports
 
 RFD for HTTP + Websockets
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+<!--
+    Use this section to describe the "status quo" as it will play out once
+    we have made these changes.
+
+    Note: This section is OPTIONAL when RFDs are first opened.
+-->
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+### v2 + v1 Schema publishing
+
+### SDK Support
 
 ## Frequently asked questions
 
