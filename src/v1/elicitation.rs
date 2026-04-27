@@ -12,9 +12,10 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, serde_as, skip_serializing_none};
 
-use crate::client::{ELICITATION_COMPLETE_NOTIFICATION, ELICITATION_CREATE_METHOD_NAME};
-use crate::tool_call::ToolCallId;
-use crate::{IntoOption, Meta, RequestId, SessionId};
+use crate::{
+    ELICITATION_COMPLETE_NOTIFICATION, ELICITATION_CREATE_METHOD_NAME, IntoOption, Meta, RequestId,
+    SessionId, ToolCallId,
+};
 
 /// **UNSTABLE**
 ///
