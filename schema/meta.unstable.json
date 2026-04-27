@@ -44,5 +44,5 @@
   "protocolMethods": {
     "cancel_request": "$/cancel_request"
   },
-  "version": 2
+  "version": 1
 }

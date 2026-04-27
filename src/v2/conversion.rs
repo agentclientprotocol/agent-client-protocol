@@ -7337,6 +7337,57 @@ mod tests {
     use super::*;
     use crate::{v1, v2};
 
+    /// Round-trip a v1 value through v2 and back, asserting equality.
+    ///
+    /// This catches dropped fields, renamed fields, and missing enum
+    /// variants in either direction of the conversion as soon as v1 and v2
+    /// diverge.
+    fn assert_v1_round_trip<T1, T2>(value: T1)
+    where
+        T1: IntoV2<Output = T2> + Clone + std::fmt::Debug + PartialEq,
+        T2: IntoV1<Output = T1>,
+    {
+        let original = value.clone();
+        let as_v2 = v1_to_v2(value).expect("v1 -> v2 conversion failed");
+        let back = v2_to_v1(as_v2).expect("v2 -> v1 conversion failed");
+        assert_eq!(
+            original, back,
+            "value did not survive v1 -> v2 -> v1 round trip"
+        );
+    }
+
+    /// Round-trip a v2 value through v1 and back, asserting equality.
+    fn assert_v2_round_trip<T2, T1>(value: T2)
+    where
+        T2: IntoV1<Output = T1> + Clone + std::fmt::Debug + PartialEq,
+        T1: IntoV2<Output = T2>,
+    {
+        let original = value.clone();
+        let as_v1 = v2_to_v1(value).expect("v2 -> v1 conversion failed");
+        let back = v1_to_v2(as_v1).expect("v1 -> v2 conversion failed");
+        assert_eq!(
+            original, back,
+            "value did not survive v2 -> v1 -> v2 round trip"
+        );
+    }
+
+    /// While v1 and v2 are structurally identical, JSON produced by either
+    /// module must be byte-equal after a conversion. This is a cheap insurance
+    /// against accidental field renames or shape drift in conversions.
+    fn assert_json_eq_after_v1_to_v2<T1, T2>(value: T1)
+    where
+        T1: IntoV2<Output = T2> + serde::Serialize + Clone,
+        T2: serde::Serialize,
+    {
+        let v1_json = serde_json::to_value(&value).expect("v1 serialize");
+        let as_v2 = v1_to_v2(value).expect("v1 -> v2 conversion");
+        let v2_json = serde_json::to_value(&as_v2).expect("v2 serialize");
+        assert_eq!(
+            v1_json, v2_json,
+            "JSON shape diverged after v1 -> v2 conversion"
+        );
+    }
+
     #[test]
     fn converts_v2_initialize_request_to_v1_without_serde() {
         let request = v2::InitializeRequest::new(ProtocolVersion::V2);
@@ -7353,5 +7404,146 @@ mod tests {
         let converted: v2::InitializeRequest = v1_to_v2(request).unwrap();
 
         assert_eq!(converted.protocol_version, ProtocolVersion::V1);
+    }
+
+    #[test]
+    fn round_trips_initialize_request() {
+        let request = v1::InitializeRequest::new(ProtocolVersion::V1)
+            .client_capabilities(
+                v1::ClientCapabilities::new()
+                    .terminal(true)
+                    .fs(v1::FileSystemCapabilities::new()
+                        .read_text_file(true)
+                        .write_text_file(true)),
+            )
+            .client_info(v1::Implementation::new("test-client", "1.0.0").title("Test Client"));
+
+        assert_v1_round_trip::<v1::InitializeRequest, v2::InitializeRequest>(request.clone());
+        assert_json_eq_after_v1_to_v2::<v1::InitializeRequest, v2::InitializeRequest>(request);
+    }
+
+    #[test]
+    fn round_trips_initialize_response() {
+        let response = v1::InitializeResponse::new(ProtocolVersion::V1)
+            .agent_info(v1::Implementation::new("test-agent", "2.0.0").title("Test Agent"));
+        assert_v1_round_trip::<v1::InitializeResponse, v2::InitializeResponse>(response.clone());
+        assert_json_eq_after_v1_to_v2::<v1::InitializeResponse, v2::InitializeResponse>(response);
+    }
+
+    #[test]
+    fn round_trips_new_session_request_with_mcp_variants() {
+        let request = v1::NewSessionRequest::new("/workspace").mcp_servers(vec![
+            v1::McpServer::Stdio(v1::McpServerStdio::new("local", "/usr/bin/mcp")),
+            v1::McpServer::Http(v1::McpServerHttp::new("remote", "https://example.com")),
+            v1::McpServer::Sse(v1::McpServerSse::new("events", "https://example.com/sse")),
+        ]);
+
+        assert_v1_round_trip::<v1::NewSessionRequest, v2::NewSessionRequest>(request.clone());
+        assert_json_eq_after_v1_to_v2::<v1::NewSessionRequest, v2::NewSessionRequest>(request);
+    }
+
+    #[test]
+    fn round_trips_prompt_request_with_content_variants() {
+        let prompt = vec![
+            v1::ContentBlock::Text(v1::TextContent::new("hello")),
+            v1::ContentBlock::Image(v1::ImageContent::new("data", "image/png")),
+            v1::ContentBlock::ResourceLink(v1::ResourceLink::new("file.txt", "file:///file.txt")),
+        ];
+        let request = v1::PromptRequest::new("sess_1", prompt);
+        assert_v1_round_trip::<v1::PromptRequest, v2::PromptRequest>(request.clone());
+        assert_json_eq_after_v1_to_v2::<v1::PromptRequest, v2::PromptRequest>(request);
+    }
+
+    #[test]
+    fn round_trips_tool_call_with_diff_and_locations() {
+        let tool_call = v1::ToolCall::new("tc_1", "editing files")
+            .kind(v1::ToolKind::Edit)
+            .status(v1::ToolCallStatus::InProgress)
+            .content(vec![v1::ToolCallContent::Diff(
+                v1::Diff::new("/path", "new contents").old_text("old contents"),
+            )])
+            .locations(vec![v1::ToolCallLocation::new("/path").line(42)])
+            .raw_input(serde_json::json!({"foo": "bar"}))
+            .raw_output(serde_json::json!({"ok": true}));
+
+        assert_v1_round_trip::<v1::ToolCall, v2::ToolCall>(tool_call.clone());
+        assert_json_eq_after_v1_to_v2::<v1::ToolCall, v2::ToolCall>(tool_call);
+    }
+
+    #[test]
+    fn round_trips_session_notification_for_each_update_kind() {
+        let cases: Vec<v1::SessionUpdate> = vec![
+            v1::SessionUpdate::UserMessageChunk(v1::ContentChunk::new(v1::ContentBlock::Text(
+                v1::TextContent::new("u"),
+            ))),
+            v1::SessionUpdate::AgentMessageChunk(v1::ContentChunk::new(v1::ContentBlock::Text(
+                v1::TextContent::new("a"),
+            ))),
+            v1::SessionUpdate::AgentThoughtChunk(v1::ContentChunk::new(v1::ContentBlock::Text(
+                v1::TextContent::new("t"),
+            ))),
+            v1::SessionUpdate::ToolCall(v1::ToolCall::new("tc", "title")),
+            v1::SessionUpdate::ToolCallUpdate(v1::ToolCallUpdate::new(
+                "tc",
+                v1::ToolCallUpdateFields::new().status(v1::ToolCallStatus::Completed),
+            )),
+            v1::SessionUpdate::Plan(v1::Plan::new(vec![v1::PlanEntry::new(
+                "step",
+                v1::PlanEntryPriority::High,
+                v1::PlanEntryStatus::InProgress,
+            )])),
+            v1::SessionUpdate::SessionInfoUpdate(v1::SessionInfoUpdate::new().title("hi")),
+        ];
+        for update in cases {
+            let notification = v1::SessionNotification::new("sess", update);
+            assert_v1_round_trip::<v1::SessionNotification, v2::SessionNotification>(
+                notification.clone(),
+            );
+            assert_json_eq_after_v1_to_v2::<v1::SessionNotification, v2::SessionNotification>(
+                notification,
+            );
+        }
+    }
+
+    #[test]
+    fn round_trips_request_permission_outcomes() {
+        let cancelled = v1::RequestPermissionResponse::new(v1::RequestPermissionOutcome::Cancelled);
+        assert_v1_round_trip::<v1::RequestPermissionResponse, v2::RequestPermissionResponse>(
+            cancelled,
+        );
+
+        let selected = v1::RequestPermissionResponse::new(v1::RequestPermissionOutcome::Selected(
+            v1::SelectedPermissionOutcome::new("opt_1"),
+        ));
+        assert_v1_round_trip::<v1::RequestPermissionResponse, v2::RequestPermissionResponse>(
+            selected,
+        );
+    }
+
+    #[test]
+    fn round_trips_error_with_data_payload() {
+        let err = v1::Error::invalid_params().data(serde_json::json!({
+            "reason": "missing field",
+            "field": "sessionId",
+        }));
+        assert_v1_round_trip::<v1::Error, v2::Error>(err);
+    }
+
+    #[test]
+    fn round_trips_v2_value_back_through_v1() {
+        // Same coverage but starting from v2, to exercise IntoV1 explicitly.
+        let request = v2::PromptRequest::new(
+            "sess_2",
+            vec![v2::ContentBlock::Text(v2::TextContent::new("hi"))],
+        );
+        assert_v2_round_trip::<v2::PromptRequest, v1::PromptRequest>(request);
+    }
+
+    #[test]
+    fn protocol_version_v1_constant_is_unchanged_by_feature_flag() {
+        // Guards against `LATEST` accidentally being re-pointed to V2 in the
+        // future; the contract is that `LATEST` is always the latest **stable**
+        // version, even when the v2 draft feature is enabled.
+        assert_eq!(ProtocolVersion::LATEST, ProtocolVersion::V1);
     }
 }

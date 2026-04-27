@@ -83,50 +83,63 @@ fn main() {
     fs::create_dir_all(schema_dir.clone()).unwrap();
     fs::create_dir_all(docs_protocol_dir.clone()).unwrap();
 
-    let schema_files: &[&str] = if cfg!(feature = "unstable_protocol_v2") {
-        if cfg!(feature = "unstable") {
-            &["schema.v2.unstable.json", "schema.unstable.json"]
-        } else {
-            &["schema.v2.unstable.json"]
-        }
-    } else {
-        &["schema.v1.json", "schema.json"]
+    // Each cfg combination owns exactly one filename, with disjoint write
+    // sets so the three generation runs that produce the published schemas
+    // can run in any order without clobbering each other:
+    //
+    // - `schema.json`              — stable v1 (no features)
+    // - `schema.unstable.json`     — v1 + unstable feature flags
+    // - `schema.v2.unstable.json`  — v2 (with optional unstable flags)
+    //
+    // There is no v2 stable schema yet; it will be added when v2 stabilizes.
+    let schema_file: &str = match (
+        cfg!(feature = "unstable_protocol_v2"),
+        cfg!(feature = "unstable"),
+    ) {
+        (true, _) => "schema.v2.unstable.json",
+        (false, true) => "schema.unstable.json",
+        (false, false) => "schema.json",
     };
     let schema_json = serde_json::to_string_pretty(&schema_value).unwrap();
-    for &schema_file in schema_files {
-        fs::write(schema_dir.join(schema_file), &schema_json)
-            .unwrap_or_else(|e| panic!("Failed to write {schema_file}: {e}"));
-    }
+    fs::write(schema_dir.join(schema_file), &schema_json)
+        .unwrap_or_else(|e| panic!("Failed to write {schema_file}: {e}"));
+
+    // The version embedded in `meta*.json` reflects the protocol version the
+    // *schema itself describes*, not `ProtocolVersion::LATEST` (which always
+    // tracks the latest **stable** version). Generating with the
+    // `unstable_protocol_v2` feature emits v2-shaped types, so the metadata
+    // file must advertise version 2 to stay consistent with its contents.
+    #[cfg(feature = "unstable_protocol_v2")]
+    let schema_protocol_version = ProtocolVersion::V2;
+    #[cfg(not(feature = "unstable_protocol_v2"))]
+    let schema_protocol_version = ProtocolVersion::V1;
 
     // Create a combined metadata object
     #[cfg(not(feature = "unstable_cancel_request"))]
     let metadata = serde_json::json!({
-        "version": ProtocolVersion::LATEST,
+        "version": schema_protocol_version,
         "agentMethods": AGENT_METHOD_NAMES,
         "clientMethods": CLIENT_METHOD_NAMES,
     });
     #[cfg(feature = "unstable_cancel_request")]
     let metadata = serde_json::json!({
-        "version": ProtocolVersion::LATEST,
+        "version": schema_protocol_version,
         "agentMethods": AGENT_METHOD_NAMES,
         "clientMethods": CLIENT_METHOD_NAMES,
         "protocolMethods": PROTOCOL_LEVEL_METHOD_NAMES,
     });
 
-    let meta_files: &[&str] = if cfg!(feature = "unstable_protocol_v2") {
-        if cfg!(feature = "unstable") {
-            &["meta.v2.unstable.json", "meta.unstable.json"]
-        } else {
-            &["meta.v2.unstable.json"]
-        }
-    } else {
-        &["meta.v1.json", "meta.json"]
+    let meta_file: &str = match (
+        cfg!(feature = "unstable_protocol_v2"),
+        cfg!(feature = "unstable"),
+    ) {
+        (true, _) => "meta.v2.unstable.json",
+        (false, true) => "meta.unstable.json",
+        (false, false) => "meta.json",
     };
     let metadata_json = serde_json::to_string_pretty(&metadata).unwrap();
-    for &meta_file in meta_files {
-        fs::write(schema_dir.join(meta_file), &metadata_json)
-            .unwrap_or_else(|e| panic!("Failed to write {meta_file}: {e}"));
-    }
+    fs::write(schema_dir.join(meta_file), &metadata_json)
+        .unwrap_or_else(|e| panic!("Failed to write {meta_file}: {e}"));
 
     // Generate markdown documentation
     let mut markdown_gen = MarkdownGenerator::new();
@@ -141,12 +154,8 @@ fn main() {
     fs::write(docs_protocol_dir.join(doc_file), markdown_doc)
         .unwrap_or_else(|e| panic!("Failed to write {doc_file}: {e}"));
 
-    for schema_file in schema_files {
-        println!("✓ Generated {schema_file}");
-    }
-    for meta_file in meta_files {
-        println!("✓ Generated {meta_file}");
-    }
+    println!("✓ Generated {schema_file}");
+    println!("✓ Generated {meta_file}");
     println!("✓ Generated {doc_file}");
 }
 

@@ -27,8 +27,12 @@ unstable = [
     "unstable_session_usage",
     "unstable_message_id",
     "unstable_boolean_config",
-    "unstable_protocol_v2",
 ]
+# Protocol v2 is intentionally NOT part of the `unstable` umbrella.
+# It introduces a parallel `v2` module and (eventually) a different wire
+# version, so it must be opted into explicitly to avoid silently
+# changing `ProtocolVersion::LATEST` for `unstable` users.
+unstable_protocol_v2 = []
 unstable_auth_methods = []
 unstable_cancel_request = []
 unstable_elicitation = []
@@ -41,7 +45,6 @@ unstable_session_model = []
 unstable_session_usage = []
 unstable_message_id = []
 unstable_boolean_config = []
-unstable_protocol_v2 = []
 
 # Emit `tracing::warn!` events when `VecSkipError` drops a malformed list
 # entry during deserialization. When disabled (the default), the inspector

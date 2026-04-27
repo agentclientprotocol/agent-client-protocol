@@ -13,9 +13,9 @@ mod plan;
 #[cfg(feature = "unstable_cancel_request")]
 mod protocol_level;
 mod rpc;
-mod serde_util;
 mod tool_call;
 
+pub use crate::serde_util::*;
 pub use crate::version::*;
 pub use agent::*;
 pub use client::*;
@@ -32,7 +32,6 @@ pub use plan::*;
 pub use protocol_level::*;
 pub use rpc::*;
 pub use serde_json::value::RawValue;
-pub use serde_util::*;
 pub use tool_call::*;
 
 use schemars::JsonSchema;

@@ -24,20 +24,17 @@ impl ProtocolVersion {
     pub const V1: Self = Self(1);
     /// Version `2` of the protocol.
     ///
-    /// This is an unstable draft used for protocol iteration.
+    /// This is an unstable draft used for protocol iteration. It is only
+    /// available when the `unstable_protocol_v2` feature is enabled and is
+    /// **not** advertised by [`ProtocolVersion::LATEST`] yet — callers must
+    /// opt into V2 explicitly.
     #[cfg(feature = "unstable_protocol_v2")]
     pub const V2: Self = Self(2);
-    /// The latest supported version of the protocol.
+    /// The latest stable supported version of the protocol.
     ///
-    /// This is version `2` when the `unstable_protocol_v2` feature is enabled,
-    /// otherwise version `1`.
-    #[cfg(feature = "unstable_protocol_v2")]
-    pub const LATEST: Self = Self::V2;
-    /// The latest supported version of the protocol.
-    ///
-    /// This is version `2` when the `unstable_protocol_v2` feature is enabled,
-    /// otherwise version `1`.
-    #[cfg(not(feature = "unstable_protocol_v2"))]
+    /// Currently this is version `1`. Enabling the `unstable_protocol_v2`
+    /// feature exposes [`ProtocolVersion::V2`] but does **not** change the
+    /// value of `LATEST` — v2 will only become the latest once it stabilizes.
     pub const LATEST: Self = Self::V1;
 
     #[cfg(test)]

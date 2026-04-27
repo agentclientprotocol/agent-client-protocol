@@ -27,9 +27,7 @@ jobs:
           gh release upload "${{ github.event.release.name }}" \
             schema/schema.json \
             schema/meta.json \
-            schema/schema.v1.json \
-            schema/meta.v1.json \
-            schema/schema.v2.unstable.json \
-            schema/meta.v2.unstable.json \
             schema/schema.unstable.json \
-            schema/meta.unstable.json
+            schema/meta.unstable.json \
+            schema/schema.v2.unstable.json \
+            schema/meta.v2.unstable.json
