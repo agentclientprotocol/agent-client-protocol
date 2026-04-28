@@ -1,54 +1,42 @@
 //! [![Agent Client Protocol](https://zed.dev/img/acp/banner-dark.webp)](https://agentclientprotocol.com/)
 //!
-//! # Agent Client Protocol (ACP)
+//! # Agent Client Protocol Schema
 //!
-//! The Agent Client Protocol standardizes communication between code editors
-//! (IDEs, text-editors, etc.) and coding agents (programs that use generative AI
-//! to autonomously modify code).
+//! Strongly-typed Rust definitions of the Agent Client Protocol (ACP) wire
+//! format. ACP is a JSON-RPC based protocol that standardizes communication
+//! between code editors (IDEs, text-editors, etc.) and coding agents
+//! (programs that use generative AI to autonomously modify code).
 //!
-//! ## Protocol & Transport
+//! This crate is **only** the schema: the request, response, and
+//! notification types, plus serde plumbing and JSON Schema generation. For
+//! the runtime pieces (transport, connection setup, the `Agent` / `Client`
+//! traits, etc.) use the higher-level [`agent-client-protocol`] crate, which
+//! builds on top of these types.
 //!
-//! ACP is a JSON-RPC based protocol. While clients typically start agents as
-//! subprocesses and communicate over stdio (stdin/stdout), this crate is
-//! transport-agnostic.
+//! [`agent-client-protocol`]: https://crates.io/crates/agent-client-protocol
 //!
-//! You can use any bidirectional stream that implements `AsyncRead` and `AsyncWrite`.
+//! ## What's in this crate
 //!
-//! ## Core Components
+//! - Wire-format types for every ACP method: request, response, and
+//!   notification structs grouped by which side handles them.
+//! - JSON-RPC envelope and routing types: [`JsonRpcMessage`], [`Request`],
+//!   [`Response`], [`Notification`], [`RequestId`], [`Error`].
+//! - Aggregated routing enums: [`AgentRequest`], [`AgentResponse`],
+//!   [`AgentNotification`], and the matching client-side trio used by SDK
+//!   crates to dispatch incoming JSON-RPC messages.
+//! - The `generate` binary that emits the published `schema.json`,
+//!   `meta.json`, and the accompanying mdx documentation consumed by the
+//!   protocol website and registry.
 //!
-//! - **Agent**: Programs that use generative AI to autonomously modify code
-//!   - See: [Agent](https://agentclientprotocol.com/protocol/overview#agent)
-//! - **Client**: Code editors that provide the interface between users and agents
-//!   - See: [Client](https://agentclientprotocol.com/protocol/overview#client)
+//! ## Versioning
 //!
-//! ## Getting Started
+//! The default surface re-exports the v1 (current stable) protocol types
+//! directly at the crate root, so most consumers can write
+//! `agent_client_protocol_schema::SessionId` (and so on) without thinking
+//! about versions.
 //!
-//! To understand the protocol, start by exploring the [`Agent`] and [`Client`] traits,
-//! which define the core methods and capabilities of each side of the connection.
-//!
-//! To see working examples of these traits in action, check out the
-//! [agent](https://github.com/agentclientprotocol/rust-sdk/blob/main/examples/agent.rs)
-//! and
-//! [client](https://github.com/agentclientprotocol/rust-sdk/blob/main/examples/client.rs)
-//! example binaries included with this crate.
-//!
-//! ### Implementation Pattern
-//!
-//! ACP uses a symmetric design where each participant implements one trait and
-//! creates a connection that provides the complementary trait:
-//!
-//! - **Agent builders** implement the [`Agent`] trait to handle client requests
-//!   (like initialization, authentication, and prompts). They pass this implementation
-//!   to [`AgentSideConnection::new`], which returns a connection providing [`Client`]
-//!   methods for requesting permissions and accessing the file system.
-//!
-//! - **Client builders** implement the [`Client`] trait to handle agent requests
-//!   (like file system operations and permission checks). They pass this implementation
-//!   to [`ClientSideConnection::new`], which returns a connection providing [`Agent`]
-//!   methods for managing sessions and sending prompts.
-//!
-//! For the complete protocol specification and documentation, visit:
-//! [https://agentclientprotocol.com](https://agentclientprotocol.com)
+//! For the complete protocol specification and documentation, visit
+//! <https://agentclientprotocol.com>.
 
 mod serde_util;
 mod v1;
@@ -56,4 +44,6 @@ mod v1;
 pub mod v2;
 mod version;
 
+pub use serde_util::*;
 pub use v1::*;
+pub use version::*;

@@ -2,7 +2,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
-use super::{IntoOption, Meta, RequestId};
+use super::{Meta, RequestId};
+use crate::IntoOption;
 
 /// **UNSTABLE**
 ///

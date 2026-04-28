@@ -13,9 +13,10 @@ use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, serde_as, skip_serializing_none};
 
 use super::{
-    ELICITATION_COMPLETE_NOTIFICATION, ELICITATION_CREATE_METHOD_NAME, IntoOption, Meta, RequestId,
-    SessionId, ToolCallId,
+    ELICITATION_COMPLETE_NOTIFICATION, ELICITATION_CREATE_METHOD_NAME, Meta, RequestId, SessionId,
+    ToolCallId,
 };
+use crate::IntoOption;
 
 /// **UNSTABLE**
 ///

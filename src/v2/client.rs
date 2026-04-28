@@ -16,10 +16,10 @@ use super::{
     ElicitationCapabilities,
 };
 use super::{
-    ContentBlock, EnvVariable, ExtNotification, ExtRequest, ExtResponse, IntoMaybeUndefined,
-    IntoOption, MaybeUndefined, Meta, Plan, SessionConfigOption, SessionId, SessionModeId,
-    SkipListener, ToolCall, ToolCallUpdate,
+    ContentBlock, EnvVariable, ExtNotification, ExtRequest, ExtResponse, Meta, Plan,
+    SessionConfigOption, SessionId, SessionModeId, ToolCall, ToolCallUpdate,
 };
+use crate::{IntoMaybeUndefined, IntoOption, MaybeUndefined, SkipListener};
 
 #[cfg(feature = "unstable_nes")]
 use super::{ClientNesCapabilities, PositionEncodingKind};
@@ -1839,7 +1839,7 @@ pub(crate) const ELICITATION_COMPLETE_NOTIFICATION: &str = "elicitation/complete
 /// All possible requests that an agent can send to a client.
 ///
 /// This enum is used internally for routing RPC requests. You typically won't need
-/// to use this directly - instead, use the methods on the [`Client`] trait.
+/// to use this directly.
 ///
 /// This enum encompasses all method calls from agent to client.
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
@@ -1988,7 +1988,7 @@ pub enum ClientResponse {
 /// All possible notifications that an agent can send to a client.
 ///
 /// This enum is used internally for routing RPC notifications. You typically won't need
-/// to use this directly - use the notification methods on the [`Client`] trait instead.
+/// to use this directly.
 ///
 /// Notifications do not expect a response.
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]

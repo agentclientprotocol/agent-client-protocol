@@ -4639,7 +4639,7 @@ pub(crate) const LOGOUT_METHOD_NAME: &str = "logout";
 /// All possible requests that a client can send to an agent.
 ///
 /// This enum is used internally for routing RPC requests. You typically won't need
-/// to use this directly - instead, use the methods on the [`Agent`] trait.
+/// to use this directly.
 ///
 /// This enum encompasses all method calls from client to agent.
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
@@ -4909,7 +4909,7 @@ pub enum AgentResponse {
 /// All possible notifications that a client can send to an agent.
 ///
 /// This enum is used internally for routing RPC notifications. You typically won't need
-/// to use this directly - use the notification methods on the [`Agent`] trait instead.
+/// to use this directly.
 ///
 /// Notifications do not expect a response.
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]

@@ -33,7 +33,7 @@ impl ProtocolVersion {
     /// The latest stable supported version of the protocol.
     ///
     /// Currently this is version `1`. Enabling the `unstable_protocol_v2`
-    /// feature exposes [`ProtocolVersion::V2`] but does **not** change the
+    /// feature exposes `ProtocolVersion::V2` but does **not** change the
     /// value of `LATEST` — v2 will only become the latest once it stabilizes.
     pub const LATEST: Self = Self::V1;
 

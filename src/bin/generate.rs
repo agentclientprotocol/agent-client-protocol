@@ -1,16 +1,17 @@
+use agent_client_protocol_schema::ProtocolVersion;
 #[cfg(feature = "unstable_protocol_v2")]
 use agent_client_protocol_schema::v2::{
     AGENT_METHOD_NAMES, AgentNotification, AgentRequest, AgentResponse, CLIENT_METHOD_NAMES,
-    ClientNotification, ClientRequest, ClientResponse, JsonRpcMessage, Notification,
-    ProtocolVersion, Request, Response,
+    ClientNotification, ClientRequest, ClientResponse, JsonRpcMessage, Notification, Request,
+    Response,
 };
 #[cfg(all(feature = "unstable_cancel_request", feature = "unstable_protocol_v2"))]
 use agent_client_protocol_schema::v2::{PROTOCOL_LEVEL_METHOD_NAMES, ProtocolLevelNotification};
 #[cfg(not(feature = "unstable_protocol_v2"))]
 use agent_client_protocol_schema::{
     AGENT_METHOD_NAMES, AgentNotification, AgentRequest, AgentResponse, CLIENT_METHOD_NAMES,
-    ClientNotification, ClientRequest, ClientResponse, JsonRpcMessage, Notification,
-    ProtocolVersion, Request, Response,
+    ClientNotification, ClientRequest, ClientResponse, JsonRpcMessage, Notification, Request,
+    Response,
 };
 #[cfg(all(
     feature = "unstable_cancel_request",

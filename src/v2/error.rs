@@ -16,7 +16,7 @@ use schemars::{JsonSchema, Schema};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
-use super::IntoOption;
+use crate::IntoOption;
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 

@@ -16,9 +16,9 @@ use crate::{
     ElicitationCapabilities,
 };
 use crate::{
-    ContentBlock, ExtNotification, ExtRequest, ExtResponse, IntoMaybeUndefined, IntoOption,
-    MaybeUndefined, Meta, Plan, SessionConfigOption, SessionId, SessionModeId, SkipListener,
-    ToolCall, ToolCallUpdate,
+    ContentBlock, EnvVariable, ExtNotification, ExtRequest, ExtResponse, IntoMaybeUndefined,
+    IntoOption, MaybeUndefined, Meta, Plan, SessionConfigOption, SessionId, SessionModeId,
+    SkipListener, ToolCall, ToolCallUpdate,
 };
 
 #[cfg(feature = "unstable_nes")]
@@ -998,7 +998,7 @@ pub struct CreateTerminalRequest {
     pub args: Vec<String>,
     /// Environment variables for the command.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub env: Vec<crate::EnvVariable>,
+    pub env: Vec<EnvVariable>,
     /// Working directory for the command (absolute path).
     pub cwd: Option<PathBuf>,
     /// Maximum number of output bytes to retain.
@@ -1042,7 +1042,7 @@ impl CreateTerminalRequest {
 
     /// Environment variables for the command.
     #[must_use]
-    pub fn env(mut self, env: Vec<crate::EnvVariable>) -> Self {
+    pub fn env(mut self, env: Vec<EnvVariable>) -> Self {
         self.env = env;
         self
     }
@@ -1839,7 +1839,7 @@ pub(crate) const ELICITATION_COMPLETE_NOTIFICATION: &str = "elicitation/complete
 /// All possible requests that an agent can send to a client.
 ///
 /// This enum is used internally for routing RPC requests. You typically won't need
-/// to use this directly - instead, use the methods on the [`Client`] trait.
+/// to use this directly.
 ///
 /// This enum encompasses all method calls from agent to client.
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
@@ -1988,7 +1988,7 @@ pub enum ClientResponse {
 /// All possible notifications that an agent can send to a client.
 ///
 /// This enum is used internally for routing RPC notifications. You typically won't need
-/// to use this directly - use the notification methods on the [`Client`] trait instead.
+/// to use this directly.
 ///
 /// Notifications do not expect a response.
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]

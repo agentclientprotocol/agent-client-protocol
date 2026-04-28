@@ -50,6 +50,27 @@ impl fmt::Display for ProtocolConversionError {
 
 impl std::error::Error for ProtocolConversionError {}
 
+/// Converts a [`ProtocolConversionError`] into a v1 [`Error`](crate::v1::Error)
+/// so callers can use `?` to bubble conversion failures through APIs that
+/// already speak the v1 error type.
+///
+/// The conversion is mapped onto [`Error::internal_error`](crate::v1::Error::internal_error)
+/// because a failed cross-version conversion always indicates a protocol
+/// mismatch on this side of the wire rather than a client mistake.
+impl From<ProtocolConversionError> for crate::v1::Error {
+    fn from(error: ProtocolConversionError) -> Self {
+        crate::v1::Error::internal_error().data(error.message)
+    }
+}
+
+/// Mirror of the [v1 `From`](#impl-From%3CProtocolConversionError%3E-for-Error)
+/// impl for the v2 [`Error`](crate::v2::Error) type.
+impl From<ProtocolConversionError> for crate::v2::Error {
+    fn from(error: ProtocolConversionError) -> Self {
+        crate::v2::Error::internal_error().data(error.message)
+    }
+}
+
 /// Converts a value from the v2 draft type namespace into the matching v1 type.
 pub trait IntoV1 {
     /// The corresponding v1 type.
@@ -226,30 +247,30 @@ where
     }
 }
 
-impl<T> IntoV1 for super::MaybeUndefined<T>
+impl<T> IntoV1 for crate::MaybeUndefined<T>
 where
     T: IntoV1,
 {
-    type Output = crate::v1::MaybeUndefined<T::Output>;
+    type Output = crate::MaybeUndefined<T::Output>;
     fn into_v1(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::Undefined => crate::v1::MaybeUndefined::Undefined,
-            Self::Null => crate::v1::MaybeUndefined::Null,
-            Self::Value(value) => crate::v1::MaybeUndefined::Value(value.into_v1()?),
+            Self::Undefined => crate::MaybeUndefined::Undefined,
+            Self::Null => crate::MaybeUndefined::Null,
+            Self::Value(value) => crate::MaybeUndefined::Value(value.into_v1()?),
         })
     }
 }
 
-impl<T> IntoV2 for crate::v1::MaybeUndefined<T>
+impl<T> IntoV2 for crate::MaybeUndefined<T>
 where
     T: IntoV2,
 {
-    type Output = super::MaybeUndefined<T::Output>;
+    type Output = crate::MaybeUndefined<T::Output>;
     fn into_v2(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::Undefined => super::MaybeUndefined::Undefined,
-            Self::Null => super::MaybeUndefined::Null,
-            Self::Value(value) => super::MaybeUndefined::Value(value.into_v2()?),
+            Self::Undefined => crate::MaybeUndefined::Undefined,
+            Self::Null => crate::MaybeUndefined::Null,
+            Self::Value(value) => crate::MaybeUndefined::Value(value.into_v2()?),
         })
     }
 }
@@ -4049,9 +4070,6 @@ impl IntoV1 for super::SetSessionConfigOptionRequest {
         Ok(crate::v1::SetSessionConfigOptionRequest {
             session_id: session_id.into_v1()?,
             config_id: config_id.into_v1()?,
-            #[cfg(feature = "unstable_boolean_config")]
-            value: value.into_v1()?,
-            #[cfg(not(feature = "unstable_boolean_config"))]
             value: value.into_v1()?,
             meta: meta.into_v1()?,
         })
@@ -4071,9 +4089,6 @@ impl IntoV2 for crate::v1::SetSessionConfigOptionRequest {
         Ok(super::SetSessionConfigOptionRequest {
             session_id: session_id.into_v2()?,
             config_id: config_id.into_v2()?,
-            #[cfg(feature = "unstable_boolean_config")]
-            value: value.into_v2()?,
-            #[cfg(not(feature = "unstable_boolean_config"))]
             value: value.into_v2()?,
             meta: meta.into_v2()?,
         })
@@ -9311,5 +9326,44 @@ mod tests {
         // future; the contract is that `LATEST` is always the latest **stable**
         // version, even when the v2 draft feature is enabled.
         assert_eq!(ProtocolVersion::LATEST, ProtocolVersion::V1);
+    }
+
+    /// `?` bubbles a [`ProtocolConversionError`] into a [`v1::Error`] without
+    /// loss of message, mapped onto the internal-error code.
+    #[test]
+    fn protocol_conversion_error_maps_into_v1_error() {
+        fn run() -> std::result::Result<(), v1::Error> {
+            // Synthesize a conversion error so we don't have to wait for v2
+            // to actually diverge before exercising the `?` path.
+            Err(ProtocolConversionError::new("missing required field"))?;
+            unreachable!();
+        }
+
+        let err = run().unwrap_err();
+        assert_eq!(err.code, v1::ErrorCode::InternalError);
+        assert_eq!(
+            err.data,
+            Some(serde_json::Value::String(
+                "missing required field".to_string()
+            ))
+        );
+    }
+
+    /// Mirror of the v1 test for the v2 [`Error`] type.
+    #[test]
+    fn protocol_conversion_error_maps_into_v2_error() {
+        fn run() -> std::result::Result<(), v2::Error> {
+            Err(ProtocolConversionError::new("missing required field"))?;
+            unreachable!();
+        }
+
+        let err = run().unwrap_err();
+        assert_eq!(err.code, v2::ErrorCode::InternalError);
+        assert_eq!(
+            err.data,
+            Some(serde_json::Value::String(
+                "missing required field".to_string()
+            ))
+        );
     }
 }
