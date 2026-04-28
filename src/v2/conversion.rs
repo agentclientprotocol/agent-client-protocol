@@ -144,9 +144,28 @@ macro_rules! identity_conversion {
 }
 
 identity_conversion!(
-    bool, f32, f64, i16, i32, i64, i8, isize, String, u16, u32, u64, u8, usize,
-    &'static str, Arc<RawValue>, Arc<str>, PathBuf, ProtocolVersion,
-    serde_json::Map<String, serde_json::Value>, serde_json::Value,
+    bool,
+    f32,
+    f64,
+    i16,
+    i32,
+    i64,
+    i8,
+    isize,
+    String,
+    u16,
+    u32,
+    u64,
+    u8,
+    usize,
+    &'static str,
+    Arc<RawValue>,
+    Arc<str>,
+    PathBuf,
+    ProtocolVersion,
+    super::RequestId,
+    serde_json::Map<String, serde_json::Value>,
+    serde_json::Value,
 );
 
 impl<T> IntoV1 for Option<T>
@@ -9047,30 +9066,6 @@ impl IntoV2 for crate::v1::Role {
         Ok(match self {
             Self::Assistant => super::Role::Assistant,
             Self::User => super::Role::User,
-        })
-    }
-}
-
-impl IntoV1 for super::RequestId {
-    type Output = crate::v1::RequestId;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        Ok(match self {
-            Self::Null => crate::v1::RequestId::Null,
-            Self::Number(value) => crate::v1::RequestId::Number(value.into_v1()?),
-            Self::Str(value) => crate::v1::RequestId::Str(value.into_v1()?),
-        })
-    }
-}
-
-impl IntoV2 for crate::v1::RequestId {
-    type Output = super::RequestId;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        Ok(match self {
-            Self::Null => super::RequestId::Null,
-            Self::Number(value) => super::RequestId::Number(value.into_v2()?),
-            Self::Str(value) => super::RequestId::Str(value.into_v2()?),
         })
     }
 }

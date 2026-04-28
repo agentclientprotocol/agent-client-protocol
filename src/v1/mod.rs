@@ -12,9 +12,9 @@ mod nes;
 mod plan;
 #[cfg(feature = "unstable_cancel_request")]
 mod protocol_level;
-mod rpc;
 mod tool_call;
 
+pub use crate::rpc::{JsonRpcMessage, Notification, Request, RequestId};
 pub use agent::*;
 pub use client::*;
 pub use content::*;
@@ -28,9 +28,10 @@ pub use nes::*;
 pub use plan::*;
 #[cfg(feature = "unstable_cancel_request")]
 pub use protocol_level::*;
-pub use rpc::*;
 pub use serde_json::value::RawValue;
 pub use tool_call::*;
+
+pub type Response<Result> = crate::rpc::Response<Result, Error>;
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};

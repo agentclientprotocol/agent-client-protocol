@@ -5,8 +5,6 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
-use super::{Error, Result};
-
 /// JSON RPC Request Id
 ///
 /// An identifier established by the Client that MUST contain a String, Number, or NULL value if included. If it is not included it is assumed to be a notification. The value SHOULD normally not be Null \[1\] and Numbers SHOULD NOT contain fractional parts \[2\]
@@ -63,14 +61,14 @@ pub struct Request<Params> {
 )]
 #[serde(untagged)]
 #[schemars(rename = "{Result}", extend("x-docs-ignore" = true))]
-pub enum Response<Result> {
+pub enum Response<Result, Error> {
     Result { id: RequestId, result: Result },
     Error { id: RequestId, error: Error },
 }
 
-impl<R> Response<R> {
+impl<R, E> Response<R, E> {
     #[must_use]
-    pub fn new(id: impl Into<RequestId>, result: Result<R>) -> Self {
+    pub fn new(id: impl Into<RequestId>, result: std::result::Result<R, E>) -> Self {
         match result {
             Ok(result) => Self::Result {
                 id: id.into(),
@@ -136,7 +134,7 @@ impl<M> JsonRpcMessage<M> {
 mod tests {
     use super::*;
 
-    use crate::v2::{
+    use crate::{
         AgentNotification, CancelNotification, ClientNotification, ContentBlock, ContentChunk,
         SessionId, SessionNotification, SessionUpdate, TextContent,
     };

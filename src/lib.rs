@@ -38,6 +38,7 @@
 //! For the complete protocol specification and documentation, visit
 //! <https://agentclientprotocol.com>.
 
+pub mod rpc;
 mod serde_util;
 mod v1;
 #[cfg(feature = "unstable_protocol_v2")]
