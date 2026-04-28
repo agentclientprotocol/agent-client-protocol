@@ -1,9 +1,6 @@
 {
   "name": "@agentclientprotocol/schema",
   "version": "0.0.0",
-  "publishConfig": {
-    "access": "public"
-  },
   "description": "The Agent Client Protocol (ACP) is a protocol that standardizes communication between *code editors* (interactive programs for viewing and editing source code) and *coding agents* (programs that use generative AI to autonomously modify code).",
   "homepage": "https://github.com/agentclientprotocol/agent-client-protocol#readme",
   "bugs": {
@@ -15,10 +12,6 @@
   },
   "license": "Apache-2.0",
   "author": "Zed Industries",
-  "files": [
-    "schema/*.json",
-    "LICENSE"
-  ],
   "type": "module",
   "scripts": {
     "generate:json-schema": "cargo run --bin generate",
