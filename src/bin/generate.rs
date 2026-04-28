@@ -141,14 +141,23 @@ fn main() {
     fs::write(schema_dir.join(meta_file), &metadata_json)
         .unwrap_or_else(|e| panic!("Failed to write {meta_file}: {e}"));
 
-    // Generate markdown documentation
+    // Generate markdown documentation. Each cfg combination owns its own
+    // doc file just like the JSON schema files above, so the three
+    // `npm run generate` runs don't clobber each other:
+    //
+    // - `schema.mdx`              — stable v1 (no features)
+    // - `draft/schema.mdx`        — v1 + unstable feature flags
+    // - `draft/schema-v2.mdx`     — v2 (with optional unstable flags)
     let mut markdown_gen = MarkdownGenerator::new();
     let markdown_doc = markdown_gen.generate(&schema_value);
 
-    let doc_file = if cfg!(feature = "unstable") {
-        "draft/schema.mdx"
-    } else {
-        "schema.mdx"
+    let doc_file: &str = match (
+        cfg!(feature = "unstable_protocol_v2"),
+        cfg!(feature = "unstable"),
+    ) {
+        (true, _) => "draft/schema-v2.mdx",
+        (false, true) => "draft/schema.mdx",
+        (false, false) => "schema.mdx",
     };
 
     fs::write(docs_protocol_dir.join(doc_file), markdown_doc)

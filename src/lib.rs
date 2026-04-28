@@ -50,10 +50,10 @@
 //! For the complete protocol specification and documentation, visit:
 //! [https://agentclientprotocol.com](https://agentclientprotocol.com)
 
-pub mod serde_util;
-pub mod v1;
+mod serde_util;
+mod v1;
 #[cfg(feature = "unstable_protocol_v2")]
 pub mod v2;
-pub mod version;
+mod version;
 
 pub use v1::*;
