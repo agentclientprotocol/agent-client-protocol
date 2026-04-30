@@ -20,6 +20,7 @@ unstable = [
     "unstable_elicitation",
     "unstable_llm_providers",
     "unstable_logout",
+    "unstable_mcp_over_acp",
     "unstable_nes",
     "unstable_session_additional_directories",
     "unstable_session_fork",
@@ -38,6 +39,7 @@ unstable_cancel_request = []
 unstable_elicitation = []
 unstable_llm_providers = []
 unstable_logout = []
+unstable_mcp_over_acp = []
 unstable_nes = []
 unstable_session_additional_directories = []
 unstable_session_fork = []
