@@ -50,12 +50,12 @@ Clients MUST accept, store, and return cookies set by the server on all HTTP-bas
 
 ### 6. Defines a unified routing model
 
-| Method   | Upgrade Header?      | Behavior                                                                                                    |
-| -------- | -------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `POST`   | —                    | Send JSON-RPC message. `initialize` returns 200 with JSON body. All others return 202 Accepted immediately. |
+| Method   | Upgrade Header?      | Behavior                                                                                                                               |
+| -------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST`   | —                    | Send JSON-RPC message. `initialize` returns 200 with JSON body. All others return 202 Accepted immediately.                            |
 | `GET`    | No                   | Open SSE stream. `Acp-Connection-Id` alone → connection-scoped stream. `Acp-Connection-Id` + `Acp-Session-Id` → session-scoped stream. |
-| `GET`    | `Upgrade: websocket` | Upgrade to WebSocket for full-duplex messaging                                                              |
-| `DELETE` | —                    | Terminate the connection                                                                                    |
+| `GET`    | `Upgrade: websocket` | Upgrade to WebSocket for full-duplex messaging                                                                                         |
+| `DELETE` | —                    | Terminate the connection                                                                                                               |
 
 ### 7. Preserves the full ACP lifecycle
 
