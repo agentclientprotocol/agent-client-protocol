@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.13.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.12.2...v0.13.0) - 2026-05-05
+
+### Other
+
+- *(deps)* bump the minor group with 2 updates ([#1121](https://github.com/agentclientprotocol/agent-client-protocol/pull/1121))
+- *(unstable)* Start setting up v2 Schema scaffolding for experimentation ([#1099](https://github.com/agentclientprotocol/agent-client-protocol/pull/1099))
+- reorganize to v1 module ([#1094](https://github.com/agentclientprotocol/agent-client-protocol/pull/1094))
+
 ## [0.12.2](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.12.1...v0.12.2) - 2026-04-23
 
 ### Added
