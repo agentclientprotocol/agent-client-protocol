@@ -130,7 +130,14 @@
               "rfds/next-edit-suggestions",
               "rfds/additional-directories",
               "rfds/custom-llm-endpoint",
-              "rfds/streamable-http-websocket-transport"
+              "rfds/streamable-http-websocket-transport",
+              {
+                "group": "v2 Draft",
+                "expanded": true,
+                "root": "rfds/v2/overview",
+                "directory": "accordion",
+                "pages": ["rfds/v2/prompt"]
+              }
             ]
           },
           {
