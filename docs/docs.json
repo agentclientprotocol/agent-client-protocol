@@ -123,20 +123,21 @@
               "rfds/rust-sdk-v1",
               "rfds/logout-method",
               "rfds/session-delete",
-              "rfds/message-id",
               "rfds/diff-delete",
               "rfds/boolean-config-option",
               "rfds/elicitation",
               "rfds/next-edit-suggestions",
               "rfds/additional-directories",
               "rfds/custom-llm-endpoint",
-              "rfds/streamable-http-websocket-transport",
               {
                 "group": "v2 Draft",
                 "expanded": true,
                 "root": "rfds/v2/overview",
-                "directory": "accordion",
-                "pages": ["rfds/v2/prompt"]
+                "pages": [
+                  "rfds/v2/prompt",
+                  "rfds/message-id",
+                  "rfds/streamable-http-websocket-transport"
+                ]
               }
             ]
           },
