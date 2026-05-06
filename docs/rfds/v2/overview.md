@@ -68,7 +68,7 @@ However, once all of this work is in place, it should be much easier to make add
 
 ### v2 + v1 Schema publishing
 
-I have created a draft of the v2 schema, which is currently a direct duplicate of v1: <https://github.com/agentclientprotocol/agent-client-protocol/pull/1099>
+I have created a [draft of the v2 schema](https://github.com/agentclientprotocol/agent-client-protocol/pull/1099), which is currently a direct duplicate of v1.
 
 This also has the necessary conversion types that are needed for Rust at least to convert between the two. But this has a nice side-effect of a clear diff of how the schema will change and also what conversion is necessary. So the plan is to start proposing draft RFDs with the relevant schema changes where possible for approval.
 
