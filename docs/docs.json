@@ -129,6 +129,7 @@
               "rfds/next-edit-suggestions",
               "rfds/additional-directories",
               "rfds/custom-llm-endpoint",
+              "rfds/model-config-category",
               {
                 "group": "v2 Draft",
                 "expanded": true,
