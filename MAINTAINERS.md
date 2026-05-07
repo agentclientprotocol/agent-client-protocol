@@ -69,7 +69,12 @@ The current maintainers for ACP are:
 
 [Working Groups and Interest Groups](https://agentclientprotocol.com/community/working-interest-groups) are not required to have maintainers (they can be managed by informal facilitators), but maintainers may be appointed on an as-needed basis.
 
-_No current working or interest groups._
+### Transports
+
+| Name         | GitHub                         |
+| ------------ | ------------------------------ |
+| Anna Zhdan   | https://github.com/anna239     |
+| Alex Hancock | https://github.com/alexhancock |
 
 ---
 

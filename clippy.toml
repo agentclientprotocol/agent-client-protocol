@@ -1,0 +1,5 @@
+allowed-duplicate-crates = [
+    "hashbrown",
+    "indexmap",
+    "schemars",
+]

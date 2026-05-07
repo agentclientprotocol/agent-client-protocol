@@ -1,4 +1,17 @@
-//! Based on: <https://docs.rs/async-graphql/latest/src/async_graphql/types/maybe_undefined.rs.html>
+//! Custom option-like field wrappers and builder helpers for serde.
+//!
+//! ## Types
+//!
+//! - [`MaybeUndefined<T>`] — three-state: undefined (key absent), null, or value.
+//! - [`SkipListener`] — [`serde_with::InspectError`] hook used by every
+//!   `VecSkipError` call site in the protocol types.
+//!
+//! ## Builder traits
+//!
+//! - [`IntoOption<T>`] — ergonomic conversion into `Option<T>` for builder methods.
+//! - [`IntoMaybeUndefined<T>`] — ergonomic conversion into `MaybeUndefined<T>` for builder methods.
+//!
+//! `MaybeUndefined` based on: <https://docs.rs/async-graphql/latest/src/async_graphql/types/maybe_undefined.rs.html>
 use std::{
     borrow::Cow,
     ffi::OsStr,
@@ -9,6 +22,271 @@ use std::{
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+// ---- SkipListener ----
+
+/// Inspector passed to every `VecSkipError<_, SkipListener>` in the protocol
+/// types so that malformed list entries dropped during deserialization are
+/// surfaced to observability tooling rather than vanishing silently.
+///
+/// - With the `tracing` feature enabled, this is a zero-sized type whose
+///   [`InspectError`](serde_with::InspectError) implementation emits a
+///   [`tracing::warn!`] event on every skipped entry.
+/// - With the feature disabled (the default), it resolves to `()` — which
+///   `serde_with` ships with a no-op `InspectError` implementation — so call
+///   sites incur zero runtime cost.
+#[cfg(feature = "tracing")]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub struct SkipListener;
+
+#[cfg(feature = "tracing")]
+impl serde_with::InspectError for SkipListener {
+    fn inspect_error(error: impl serde::de::Error) {
+        tracing::warn!(
+            %error,
+            "skipped malformed list entry during deserialization",
+        );
+    }
+}
+
+/// Zero-cost stand-in for [`SkipListener`] when the `tracing` feature is
+/// disabled. Resolves to `()`, which `serde_with` already ships with a no-op
+/// `InspectError` implementation.
+#[cfg(not(feature = "tracing"))]
+pub type SkipListener = ();
+
+#[cfg(test)]
+mod skip_listener_tests {
+    use std::cell::Cell;
+
+    use serde::{Deserialize, Serialize};
+    use serde_json::json;
+    use serde_with::{DefaultOnError, VecSkipError, serde_as};
+
+    thread_local! {
+        static SKIP_COUNT: Cell<u32> = const { Cell::new(0) };
+    }
+
+    /// Test-only inspector that counts skipped entries.
+    struct CountingListener;
+
+    impl serde_with::InspectError for CountingListener {
+        fn inspect_error(_error: impl serde::de::Error) {
+            SKIP_COUNT.with(|c| c.set(c.get() + 1));
+        }
+    }
+
+    #[serde_as]
+    #[derive(Serialize, Deserialize, Debug, PartialEq)]
+    struct Wrapper {
+        #[serde_as(deserialize_as = "VecSkipError<_, CountingListener>")]
+        values: Vec<u32>,
+    }
+
+    #[test]
+    fn inspector_runs_for_each_skipped_entry() {
+        SKIP_COUNT.with(|c| c.set(0));
+
+        let input = json!({"values": [1, "oops", 2, {}, 3]});
+        let wrapper: Wrapper = serde_json::from_value(input).unwrap();
+
+        assert_eq!(wrapper.values, vec![1, 2, 3]);
+        assert_eq!(SKIP_COUNT.with(Cell::get), 2);
+    }
+
+    /// Mirrors the pattern applied to every required `Vec<T>` field in the
+    /// protocol: `DefaultOnError<VecSkipError<_, ...>>` + `#[serde(default)]`.
+    /// Element-level failures are skipped; any outer shape error (`null`, a
+    /// string, a map, etc.) collapses to `Default::default()` (i.e. `vec![]`).
+    #[serde_as]
+    #[derive(Deserialize, Debug, PartialEq)]
+    struct ResilientVec {
+        #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, CountingListener>>")]
+        #[serde(default)]
+        values: Vec<u32>,
+    }
+
+    #[test]
+    fn resilient_vec_tolerates_missing_null_and_wrong_type() {
+        // Missing field -> `#[serde(default)]` supplies `vec![]`.
+        let r: ResilientVec = serde_json::from_value(json!({})).unwrap();
+        assert_eq!(r.values, Vec::<u32>::new());
+
+        // Explicit null -> `DefaultOnError` swallows the type error.
+        let r: ResilientVec = serde_json::from_value(json!({"values": null})).unwrap();
+        assert_eq!(r.values, Vec::<u32>::new());
+
+        // Wrong outer type (string) -> `DefaultOnError` swallows.
+        let r: ResilientVec = serde_json::from_value(json!({"values": "oops"})).unwrap();
+        assert_eq!(r.values, Vec::<u32>::new());
+
+        // Wrong outer type (object) -> `DefaultOnError` swallows.
+        let r: ResilientVec = serde_json::from_value(json!({"values": {"k": 1}})).unwrap();
+        assert_eq!(r.values, Vec::<u32>::new());
+
+        // Valid array with element errors -> `VecSkipError` skips per-element.
+        SKIP_COUNT.with(|c| c.set(0));
+        let r: ResilientVec =
+            serde_json::from_value(json!({"values": [1, "oops", 2, {}, 3]})).unwrap();
+        assert_eq!(r.values, vec![1, 2, 3]);
+        assert_eq!(SKIP_COUNT.with(Cell::get), 2);
+    }
+
+    #[test]
+    fn resilient_vec_does_not_invoke_inspector_on_outer_failure() {
+        SKIP_COUNT.with(|c| c.set(0));
+
+        // Outer failures are swallowed silently by `DefaultOnError`; the
+        // inspector only sees per-element failures inside a valid array.
+        let _r: ResilientVec = serde_json::from_value(json!({"values": null})).unwrap();
+        let _r: ResilientVec = serde_json::from_value(json!({"values": "oops"})).unwrap();
+        let _r: ResilientVec = serde_json::from_value(json!({"values": {}})).unwrap();
+
+        assert_eq!(SKIP_COUNT.with(Cell::get), 0);
+    }
+
+    /// Mirrors the pattern applied to every optional `Option<Vec<T>>` field:
+    /// `DefaultOnError<Option<VecSkipError<_, ...>>>` + `#[serde(default)]`.
+    /// `null` becomes `None`; outer shape errors also collapse to `None`;
+    /// element-level failures are skipped inside the array.
+    #[serde_as]
+    #[derive(Deserialize, Debug, PartialEq)]
+    struct ResilientOptionVec {
+        #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, CountingListener>>>")]
+        #[serde(default)]
+        values: Option<Vec<u32>>,
+    }
+
+    #[test]
+    fn resilient_option_vec_tolerates_missing_null_and_wrong_type() {
+        // Missing field -> `None`.
+        let r: ResilientOptionVec = serde_json::from_value(json!({})).unwrap();
+        assert_eq!(r.values, None);
+
+        // Explicit null -> `None`.
+        let r: ResilientOptionVec = serde_json::from_value(json!({"values": null})).unwrap();
+        assert_eq!(r.values, None);
+
+        // Empty array -> `Some(vec![])`.
+        let r: ResilientOptionVec = serde_json::from_value(json!({"values": []})).unwrap();
+        assert_eq!(r.values, Some(Vec::<u32>::new()));
+
+        // Valid array -> `Some(vec)`.
+        let r: ResilientOptionVec = serde_json::from_value(json!({"values": [1, 2, 3]})).unwrap();
+        assert_eq!(r.values, Some(vec![1, 2, 3]));
+
+        // Wrong outer type (string) -> `DefaultOnError` collapses to `None`.
+        let r: ResilientOptionVec = serde_json::from_value(json!({"values": "oops"})).unwrap();
+        assert_eq!(r.values, None);
+
+        // Wrong outer type (object) -> `DefaultOnError` collapses to `None`.
+        let r: ResilientOptionVec = serde_json::from_value(json!({"values": {"k": 1}})).unwrap();
+        assert_eq!(r.values, None);
+
+        // Valid array with element errors -> `VecSkipError` skips per-element.
+        SKIP_COUNT.with(|c| c.set(0));
+        let r: ResilientOptionVec =
+            serde_json::from_value(json!({"values": [1, "oops", 2, {}, 3]})).unwrap();
+        assert_eq!(r.values, Some(vec![1, 2, 3]));
+        assert_eq!(SKIP_COUNT.with(Cell::get), 2);
+    }
+}
+
+// ---- IntoOption ----
+
+/// Utility trait for builder methods for optional values.
+/// This allows the caller to either pass in the value itself without wrapping it in `Some`,
+/// or to just pass in an Option if that is what they have.
+pub trait IntoOption<T> {
+    fn into_option(self) -> Option<T>;
+}
+
+impl<T> IntoOption<T> for Option<T> {
+    fn into_option(self) -> Option<T> {
+        self
+    }
+}
+
+impl<T> IntoOption<T> for T {
+    fn into_option(self) -> Option<T> {
+        Some(self)
+    }
+}
+
+impl IntoOption<String> for &str {
+    fn into_option(self) -> Option<String> {
+        Some(self.into())
+    }
+}
+
+impl IntoOption<String> for &mut str {
+    fn into_option(self) -> Option<String> {
+        Some(self.into())
+    }
+}
+
+impl IntoOption<String> for &String {
+    fn into_option(self) -> Option<String> {
+        Some(self.into())
+    }
+}
+
+impl IntoOption<String> for Box<str> {
+    fn into_option(self) -> Option<String> {
+        Some(self.into())
+    }
+}
+
+impl IntoOption<String> for Cow<'_, str> {
+    fn into_option(self) -> Option<String> {
+        Some(self.into())
+    }
+}
+
+impl IntoOption<String> for Arc<str> {
+    fn into_option(self) -> Option<String> {
+        Some(self.to_string())
+    }
+}
+
+impl<T: ?Sized + AsRef<OsStr>> IntoOption<PathBuf> for &T {
+    fn into_option(self) -> Option<PathBuf> {
+        Some(self.into())
+    }
+}
+
+impl IntoOption<PathBuf> for Box<Path> {
+    fn into_option(self) -> Option<PathBuf> {
+        Some(self.into())
+    }
+}
+
+impl IntoOption<PathBuf> for Cow<'_, Path> {
+    fn into_option(self) -> Option<PathBuf> {
+        Some(self.into())
+    }
+}
+
+impl IntoOption<serde_json::Value> for &str {
+    fn into_option(self) -> Option<serde_json::Value> {
+        Some(self.into())
+    }
+}
+
+impl IntoOption<serde_json::Value> for String {
+    fn into_option(self) -> Option<serde_json::Value> {
+        Some(self.into())
+    }
+}
+
+impl IntoOption<serde_json::Value> for Cow<'_, str> {
+    fn into_option(self) -> Option<serde_json::Value> {
+        Some(self.into())
+    }
+}
+
+// ---- MaybeUndefined ----
 
 /// Similar to `Option`, but it has three states, `undefined`, `null` and `x`.
 ///

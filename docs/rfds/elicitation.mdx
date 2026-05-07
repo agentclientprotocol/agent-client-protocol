@@ -1,5 +1,5 @@
 ---
-title: "Elicitation: Structured User Input During Sessions"
+title: "Elicitation: Structured User Input"
 ---
 
 - Author(s): [@yordis](https://github.com/yordis)
@@ -7,7 +7,7 @@ title: "Elicitation: Structured User Input During Sessions"
 
 ## Elevator pitch
 
-Add support for agents to request structured information from users during a session through a standardized elicitation mechanism, aligned with [MCP's elicitation feature](https://modelcontextprotocol.io/specification/draft/client/elicitation). This allows agents to ask follow-up questions, collect authentication credentials, gather preferences, and request required information without side-channel communication or ad-hoc client UI implementations.
+Add support for agents to request structured information from users through a standardized elicitation mechanism, aligned with [MCP's elicitation feature](https://modelcontextprotocol.io/specification/draft/client/elicitation). This allows agents to ask follow-up questions, collect authentication credentials, gather preferences, and request required information without side-channel communication or ad-hoc client UI implementations.
 
 ## Status quo
 
@@ -41,7 +41,7 @@ The mechanism would:
    - **Form mode** (in-band): Structured data collection via JSON Schema forms
    - **URL mode** (out-of-band): Browser-based flows for sensitive operations like OAuth (addressing PR #330 authentication pain points)
 
-3. **Request/response pattern**: Agents send elicitation requests via a `session/elicitation` method and receive responses. The agent controls when to send requests and whether to wait for responses before proceeding. Unlike Session Config Options (which are persistent), elicitation requests are transient.
+3. **Request/response pattern**: Agents send elicitation requests via an `elicitation/create` method and receive responses. The agent controls when to send requests and whether to wait for responses before proceeding. Unlike Session Config Options (which are persistent), elicitation requests are transient.
 
 4. **Support client capability negotiation**: Clients declare elicitation support via a structured capability object that distinguishes between `form`-based and `url`-based elicitation (following MCP's capability model). This allows clients to support one or both modalities, enables agents to pass capabilities along to MCP servers, and handles graceful degradation when clients have limited elicitation support.
 
@@ -70,12 +70,13 @@ Clients can:
 
 ### Alignment with MCP
 
-This proposal follows MCP's draft elicitation specification. See [MCP Elicitation Specification](https://modelcontextprotocol.io/specification/draft/client/elicitation) for detailed guidance. ACP uses the same JSON Schema constraint approach and capability model, adapted for our session/turn-based architecture.
+This proposal follows MCP's draft elicitation specification. See [MCP Elicitation Specification](https://modelcontextprotocol.io/specification/draft/client/elicitation) for detailed guidance. ACP uses the same JSON Schema constraint approach and capability model, adapted for ACP interactions.
 
 Key differences from MCP:
 
-- MCP elicitation is tool-call-scoped; ACP elicitation is session-scoped
-- ACP uses `session/elicitation` method; MCP uses `elicitation/create`
+- MCP elicitation is tool-call-scoped; ACP elicitation may be tool-call-scoped, session-scoped, or request-scoped
+- ACP uses `elicitation/create` method (same as MCP)
+- ACP includes an optional `toolCallId` field to support tool-call-scoped elicitations (e.g., when an agent receives an MCP elicitation during a tool call and needs to redirect it to the user)
 - ACP must integrate with existing Session Config Options (which also use schema constraints)
 
 ### Elicitation Request Structure
@@ -346,7 +347,7 @@ Clients use this schema to generate appropriate input forms, validate user input
 
 ### Elicitation Request
 
-The agent sends a `session/elicitation` request when it needs information from the user:
+The agent sends an `elicitation/create` request when it needs information from the user:
 
 **Form mode example:**
 
@@ -354,9 +355,10 @@ The agent sends a `session/elicitation` request when it needs information from t
 {
   "jsonrpc": "2.0",
   "id": 43,
-  "method": "session/elicitation",
+  "method": "elicitation/create",
   "params": {
     "sessionId": "...",
+    "toolCallId": "tc_123",
     "mode": "form",
     "message": "How would you like me to approach this refactoring?",
     "requestedSchema": {
@@ -385,13 +387,44 @@ The agent sends a `session/elicitation` request when it needs information from t
 {
   "jsonrpc": "2.0",
   "id": 44,
-  "method": "session/elicitation",
+  "method": "elicitation/create",
   "params": {
-    "sessionId": "...",
+    "requestId": 12,
     "mode": "url",
     "elicitationId": "github-oauth-001",
     "url": "https://agent.example.com/connect?elicitationId=github-oauth-001",
     "message": "Please authorize access to your GitHub repositories."
+  }
+}
+```
+
+The scope fields are flattened at the top level of the request. Elicitation supports two scoping variants:
+
+- **Session scope**: `sessionId` is set — tied to a specific session. Optionally includes `toolCallId` when tied to a specific tool call within that session (e.g., when an agent receives an elicitation from an MCP server during a tool call and needs to redirect it to the user).
+- **Request scope**: `requestId` is set — tied to a specific JSON-RPC request outside of a session (e.g., auth/configuration phases before any session is started).
+
+**Request-scoped example:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 45,
+  "method": "elicitation/create",
+  "params": {
+    "requestId": 12,
+    "mode": "form",
+    "message": "Please provide your workspace name to continue setup.",
+    "requestedSchema": {
+      "type": "object",
+      "properties": {
+        "workspaceName": {
+          "type": "string",
+          "title": "Workspace Name",
+          "description": "The name of your workspace"
+        }
+      },
+      "required": ["workspaceName"]
+    }
   }
 }
 ```
@@ -460,7 +493,7 @@ sequenceDiagram
     participant Agent
 
     Note over Agent: Agent initiates elicitation
-    Agent->>Client: session/elicitation (mode: form)
+    Agent->>Client: elicitation/create (mode: form)
 
     Note over User,Client: Present elicitation UI
     User-->>Client: Provide requested information
@@ -481,7 +514,7 @@ sequenceDiagram
     participant Agent
 
     Note over Agent: Agent initiates elicitation
-    Agent->>Client: session/elicitation (mode: url)
+    Agent->>Client: elicitation/create (mode: url)
 
     Client->>User: Present consent to open URL
     User-->>Client: Provide consent
@@ -491,7 +524,7 @@ sequenceDiagram
 
     Note over User,UserAgent: User interaction
     UserAgent-->>Agent: Interaction complete
-    Agent-->>Client: notifications/elicitation/complete (optional)
+    Agent-->>Client: elicitation/complete (optional)
 
     Note over Agent: Continue processing with new information
 ```
@@ -519,19 +552,19 @@ sequenceDiagram
     Note over User,UserAgent: User interaction
 
     UserAgent-->>Agent: Interaction complete
-    Agent-->>Client: notifications/elicitation/complete (optional)
+    Agent-->>Client: elicitation/complete (optional)
 
     Client->>Agent: Retry original request (optional)
 ```
 
 ### Completion Notifications for URL Mode
 
-Following MCP, agents MAY send a `notifications/elicitation/complete` notification when an out-of-band interaction started by URL mode elicitation is completed:
+Following MCP, agents MAY send an `elicitation/complete` notification when an out-of-band interaction started by URL mode elicitation is completed:
 
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "notifications/elicitation/complete",
+  "method": "elicitation/complete",
   "params": {
     "elicitationId": "github-oauth-001"
   }
@@ -584,7 +617,7 @@ Agents MUST return standard JSON-RPC errors for common failure cases:
 
 Clients MUST return standard JSON-RPC errors for common failure cases:
 
-- When the agent sends a `session/elicitation` request with a mode not declared in client capabilities: `-32602` (Invalid params)
+- When the agent sends an `elicitation/create` request with a mode not declared in client capabilities: `-32602` (Invalid params)
 
 ### Client Capabilities
 
@@ -725,7 +758,7 @@ From PR #330: URL-mode elicitation allows agents to request authentication witho
 7. User authenticates and grants permission
 8. OAuth provider redirects back to the agent's redirect_uri
 9. Agent exchanges the authorization code for tokens and stores them bound to the user's identity
-10. Agent sends a `notifications/elicitation/complete` notification to inform the client
+10. Agent sends an `elicitation/complete` notification to inform the client
 
 **Key guarantees**:
 

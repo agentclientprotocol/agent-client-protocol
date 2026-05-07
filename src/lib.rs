@@ -1,206 +1,50 @@
 //! [![Agent Client Protocol](https://zed.dev/img/acp/banner-dark.webp)](https://agentclientprotocol.com/)
 //!
-//! # Agent Client Protocol (ACP)
+//! # Agent Client Protocol Schema
 //!
-//! The Agent Client Protocol standardizes communication between code editors
-//! (IDEs, text-editors, etc.) and coding agents (programs that use generative AI
-//! to autonomously modify code).
+//! Strongly-typed Rust definitions of the Agent Client Protocol (ACP) wire
+//! format. ACP is a JSON-RPC based protocol that standardizes communication
+//! between code editors (IDEs, text-editors, etc.) and coding agents
+//! (programs that use generative AI to autonomously modify code).
 //!
-//! ## Protocol & Transport
+//! This crate is **only** the schema: the request, response, and
+//! notification types, plus serde plumbing and JSON Schema generation. For
+//! the runtime pieces (transport, connection setup, the `Agent` / `Client`
+//! traits, etc.) use the higher-level [`agent-client-protocol`] crate, which
+//! builds on top of these types.
 //!
-//! ACP is a JSON-RPC based protocol. While clients typically start agents as
-//! subprocesses and communicate over stdio (stdin/stdout), this crate is
-//! transport-agnostic.
+//! [`agent-client-protocol`]: https://crates.io/crates/agent-client-protocol
 //!
-//! You can use any bidirectional stream that implements `AsyncRead` and `AsyncWrite`.
+//! ## What's in this crate
 //!
-//! ## Core Components
+//! - Wire-format types for every ACP method: request, response, and
+//!   notification structs grouped by which side handles them.
+//! - JSON-RPC envelope and routing types: [`JsonRpcMessage`], [`Request`],
+//!   [`Response`], [`Notification`], [`RequestId`], [`Error`].
+//! - Aggregated routing enums: [`AgentRequest`], [`AgentResponse`],
+//!   [`AgentNotification`], and the matching client-side trio used by SDK
+//!   crates to dispatch incoming JSON-RPC messages.
+//! - The `generate` binary that emits the published `schema.json`,
+//!   `meta.json`, and the accompanying mdx documentation consumed by the
+//!   protocol website and registry.
 //!
-//! - **Agent**: Programs that use generative AI to autonomously modify code
-//!   - See: [Agent](https://agentclientprotocol.com/protocol/overview#agent)
-//! - **Client**: Code editors that provide the interface between users and agents
-//!   - See: [Client](https://agentclientprotocol.com/protocol/overview#client)
+//! ## Versioning
 //!
-//! ## Getting Started
+//! The default surface re-exports the v1 (current stable) protocol types
+//! directly at the crate root, so most consumers can write
+//! `agent_client_protocol_schema::SessionId` (and so on) without thinking
+//! about versions.
 //!
-//! To understand the protocol, start by exploring the [`Agent`] and [`Client`] traits,
-//! which define the core methods and capabilities of each side of the connection.
-//!
-//! To see working examples of these traits in action, check out the
-//! [agent](https://github.com/agentclientprotocol/rust-sdk/blob/main/examples/agent.rs)
-//! and
-//! [client](https://github.com/agentclientprotocol/rust-sdk/blob/main/examples/client.rs)
-//! example binaries included with this crate.
-//!
-//! ### Implementation Pattern
-//!
-//! ACP uses a symmetric design where each participant implements one trait and
-//! creates a connection that provides the complementary trait:
-//!
-//! - **Agent builders** implement the [`Agent`] trait to handle client requests
-//!   (like initialization, authentication, and prompts). They pass this implementation
-//!   to [`AgentSideConnection::new`], which returns a connection providing [`Client`]
-//!   methods for requesting permissions and accessing the file system.
-//!
-//! - **Client builders** implement the [`Client`] trait to handle agent requests
-//!   (like file system operations and permission checks). They pass this implementation
-//!   to [`ClientSideConnection::new`], which returns a connection providing [`Agent`]
-//!   methods for managing sessions and sending prompts.
-//!
-//! For the complete protocol specification and documentation, visit:
-//! [https://agentclientprotocol.com](https://agentclientprotocol.com)
+//! For the complete protocol specification and documentation, visit
+//! <https://agentclientprotocol.com>.
 
-mod agent;
-mod client;
-mod content;
-#[cfg(feature = "unstable_elicitation")]
-mod elicitation;
-mod error;
-mod ext;
-mod maybe_undefined;
-#[cfg(feature = "unstable_nes")]
-mod nes;
-mod plan;
-#[cfg(feature = "unstable_cancel_request")]
-mod protocol_level;
-mod rpc;
-mod tool_call;
+pub mod rpc;
+mod serde_util;
+mod v1;
+#[cfg(feature = "unstable_protocol_v2")]
+pub mod v2;
 mod version;
 
-pub use agent::*;
-pub use client::*;
-pub use content::*;
-use derive_more::{Display, From};
-#[cfg(feature = "unstable_elicitation")]
-pub use elicitation::*;
-pub use error::*;
-pub use ext::*;
-pub use maybe_undefined::*;
-#[cfg(feature = "unstable_nes")]
-pub use nes::*;
-pub use plan::*;
-#[cfg(feature = "unstable_cancel_request")]
-pub use protocol_level::*;
-pub use rpc::*;
-pub use serde_json::value::RawValue;
-pub use tool_call::*;
+pub use serde_util::*;
+pub use v1::*;
 pub use version::*;
-
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-use std::{
-    borrow::Cow,
-    ffi::OsStr,
-    path::{Path, PathBuf},
-    sync::Arc,
-};
-
-/// A unique identifier for a conversation session between a client and agent.
-///
-/// Sessions maintain their own context, conversation history, and state,
-/// allowing multiple independent interactions with the same agent.
-///
-/// See protocol docs: [Session ID](https://agentclientprotocol.com/protocol/session-setup#session-id)
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
-#[serde(transparent)]
-#[from(Arc<str>, String, &'static str)]
-#[non_exhaustive]
-pub struct SessionId(pub Arc<str>);
-
-impl SessionId {
-    #[must_use]
-    pub fn new(id: impl Into<Arc<str>>) -> Self {
-        Self(id.into())
-    }
-}
-
-/// Utility trait for builder methods for optional values.
-/// This allows the caller to either pass in the value itself without wrapping it in `Some`,
-/// or to just pass in an Option if that is what they have.
-pub trait IntoOption<T> {
-    fn into_option(self) -> Option<T>;
-}
-
-impl<T> IntoOption<T> for Option<T> {
-    fn into_option(self) -> Option<T> {
-        self
-    }
-}
-
-impl<T> IntoOption<T> for T {
-    fn into_option(self) -> Option<T> {
-        Some(self)
-    }
-}
-
-impl IntoOption<String> for &str {
-    fn into_option(self) -> Option<String> {
-        Some(self.into())
-    }
-}
-
-impl IntoOption<String> for &mut str {
-    fn into_option(self) -> Option<String> {
-        Some(self.into())
-    }
-}
-
-impl IntoOption<String> for &String {
-    fn into_option(self) -> Option<String> {
-        Some(self.into())
-    }
-}
-
-impl IntoOption<String> for Box<str> {
-    fn into_option(self) -> Option<String> {
-        Some(self.into())
-    }
-}
-
-impl IntoOption<String> for Cow<'_, str> {
-    fn into_option(self) -> Option<String> {
-        Some(self.into())
-    }
-}
-
-impl IntoOption<String> for Arc<str> {
-    fn into_option(self) -> Option<String> {
-        Some(self.to_string())
-    }
-}
-
-impl<T: ?Sized + AsRef<OsStr>> IntoOption<PathBuf> for &T {
-    fn into_option(self) -> Option<PathBuf> {
-        Some(self.into())
-    }
-}
-
-impl IntoOption<PathBuf> for Box<Path> {
-    fn into_option(self) -> Option<PathBuf> {
-        Some(self.into())
-    }
-}
-
-impl IntoOption<PathBuf> for Cow<'_, Path> {
-    fn into_option(self) -> Option<PathBuf> {
-        Some(self.into())
-    }
-}
-
-impl IntoOption<serde_json::Value> for &str {
-    fn into_option(self) -> Option<serde_json::Value> {
-        Some(self.into())
-    }
-}
-
-impl IntoOption<serde_json::Value> for String {
-    fn into_option(self) -> Option<serde_json::Value> {
-        Some(self.into())
-    }
-}
-
-impl IntoOption<serde_json::Value> for Cow<'_, str> {
-    fn into_option(self) -> Option<serde_json::Value> {
-        Some(self.into())
-    }
-}

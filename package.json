@@ -1,9 +1,6 @@
 {
   "name": "@agentclientprotocol/schema",
   "version": "0.0.0",
-  "publishConfig": {
-    "access": "public"
-  },
   "description": "The Agent Client Protocol (ACP) is a protocol that standardizes communication between *code editors* (interactive programs for viewing and editing source code) and *coding agents* (programs that use generative AI to autonomously modify code).",
   "homepage": "https://github.com/agentclientprotocol/agent-client-protocol#readme",
   "bugs": {
@@ -15,15 +12,12 @@
   },
   "license": "Apache-2.0",
   "author": "Zed Industries",
-  "files": [
-    "schema/schema.json",
-    "LICENSE"
-  ],
   "type": "module",
   "scripts": {
     "generate:json-schema": "cargo run --bin generate",
     "generate:json-schema:unstable": "cargo run --bin generate --features unstable",
-    "generate": "npm run generate:json-schema && npm run generate:json-schema:unstable && npm run format",
+    "generate:json-schema:v2-unstable": "cargo run --bin generate --features unstable,unstable_protocol_v2",
+    "generate": "npm run generate:json-schema && npm run generate:json-schema:unstable && npm run generate:json-schema:v2-unstable && npm run format",
     "format": "prettier --write --log-level warn . && cargo fmt",
     "format:check": "prettier --check . && cargo fmt -- --check",
     "spellcheck": "./scripts/spellcheck.sh",
@@ -33,7 +27,7 @@
     "docs": "cd docs && npx mint dev"
   },
   "devDependencies": {
-    "mint": "^4.2.488",
-    "prettier": "^3.8.1"
+    "mint": "^4.2.546",
+    "prettier": "^3.8.3"
   }
 }
