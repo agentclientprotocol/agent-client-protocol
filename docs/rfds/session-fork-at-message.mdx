@@ -8,7 +8,7 @@ Author(s): [@SteffenDE](https://github.com/SteffenDE)
 
 > What are you proposing to change?
 
-Extend `session/fork` with an optional `messageId` parameter so clients can fork a session at a
+Extend `session/fork` with an optional `forkId` parameter so clients can fork a session at a
 specific point in the conversation, enabling use cases like editing a previous user message or
 regenerating an agent response.
 
@@ -17,27 +17,24 @@ regenerating an agent response.
 > How do things work today and what problems does this cause? Why would we change things?
 
 The [session-fork RFD](./session-fork.mdx) introduced `session/fork` to duplicate an entire session.
-It already anticipated extending this with a message ID. The [message-id RFD](./message-id.mdx) now
-provides stable, unique identifiers for every message. Together, these enable forking at a specific
-point in the conversation.
+It already anticipated extending this with a message ID. Since the [message-id RFD](./message-id.mdx)
+is still in flux, we propose to use a more flexible approach that also works for agents that are unable
+to provide stable message IDs for message chunks.
 
 ## What we propose to do about it
 
 > What are you proposing to improve the situation?
 
-Add an optional `messageId` field to `session/fork`. The semantics are **inclusive**: the forked
-session contains all messages up to and including the specified message.
+Allow agents to send a new `sessionUpdate` type: `"forkPoint"`. When an agent sends this message,
+a client can provide the given `forkId` in `session/fork` to create a session that represents the
+chat history up to that point.
 
-Because the ID is inclusive, to "edit" a user message, the client should fork at the **agent message
-before it** — then the forked session ends with the agent's response, and the client sends the
-edited user message as a new prompt.
-
-The agent MUST not trigger a new response after forking. This could be added as an optional parameter
-with separate capability in the future.
+The agent MUST NOT trigger a new response after forking. This could be added as an optional parameter
+with a separate capability in the future.
 
 ## Shiny future
 
-> How will things will play out once this feature exists?
+> How will things play out once this feature exists?
 
 Clients can offer conversation editing UIs: editing previous messages, regenerating responses,
 and exploring alternative conversation branches from any point.
@@ -46,7 +43,26 @@ and exploring alternative conversation branches from any point.
 
 > Tell me more about your implementation. What is your detailed implementation plan?
 
-Agents declare support via `session: { fork: { atMessageId: true } }` in capabilities, extending
+During a prompt turn, the agent can send a new `sessionUpdate`:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "forkPoint",
+      "forkId": "agent_specific_id_789xyz"
+    }
+  }
+}
+```
+
+This informs the client that it can use the provided `forkId` to fork the session at this point.
+The agent can send multiple such updates during a turn.
+
+Agents declare support via `session: { fork: { atForkPoint: true } }` in capabilities, extending
 the existing `fork: {}` object that was reserved for this purpose.
 
 ```json
@@ -56,32 +72,39 @@ the existing `fork: {}` object that was reserved for this purpose.
   "method": "session/fork",
   "params": {
     "sessionId": "sess_789xyz",
-    "messageId": "ea87d0e7-beb8-484a-a404-94a30b78a5a8",
+    "forkId": "agent_specific_id_789xyz",
     "cwd": "...",
     "mcpServers": [...]
   }
 }
 ```
 
-When `messageId` is omitted, behavior is unchanged (full session fork). When provided, the agent
+When `forkId` is omitted, behavior is unchanged (full session fork). When provided, the agent
 MUST include only messages up to and including the given message, and MUST return an error if the
 ID is not recognized.
 
-Schema changes: add optional `messageId` (UUID string) to `ForkRequest`, add `atMessageId`
+Schema changes: add optional `forkId` (opaque string) to `ForkRequest`, add `atForkPoint`
 (boolean) to `ForkCapabilities`.
 
 ## Frequently asked questions
 
 > What questions have arisen over the course of authoring this document or during subsequent discussions?
 
-**Q: Why inclusive rather than exclusive semantics?**
+**Q: Why a new `forkId` instead of using message IDs directly?**
 
-This is mainly because that's how it works in Claude's Agent SDK, but it's also a reasonable choice in general.
+I tried to implement the message ID RFD for [claude-agent-acp](https://github.com/agentclientprotocol/claude-agent-acp),
+but because of the way the Claude Agent SDK generates UUIDs for messages, we cannot generate a stable message ID for
+the streaming chunks. The SDK only provides the ID required for forking after a streaming message is complete.
+
+By allowing the fork ID to be separate from message IDs, we allow the protocol to be more flexible and support more agents.
+In contrast to the message ID RFD, we also don't enforce a specific format for the fork ID, treating it as an
+opaque string instead.
 
 **Q: What about forking at a thought message?**
 
-Agents MAY support it but SHOULD return an error if they don't.
+An agent can send a `forkPoint` update any time during the turn, including after a thought message or tool call.
 
 ## Revision history
 
 - 2026-03-03: Initial draft
+- 2026-05-08: Use dedicated `forkId` updates
