@@ -4053,6 +4053,8 @@ impl IntoV1 for super::McpServer {
         Ok(match self {
             Self::Http(value) => crate::v1::McpServer::Http(value.into_v1()?),
             Self::Sse(value) => crate::v1::McpServer::Sse(value.into_v1()?),
+            #[cfg(feature = "unstable_mcp_over_acp")]
+            Self::Acp(value) => crate::v1::McpServer::Acp(value.into_v1()?),
             Self::Stdio(value) => crate::v1::McpServer::Stdio(value.into_v1()?),
         })
     }
@@ -4065,6 +4067,8 @@ impl IntoV2 for crate::v1::McpServer {
         Ok(match self {
             Self::Http(value) => super::McpServer::Http(value.into_v2()?),
             Self::Sse(value) => super::McpServer::Sse(value.into_v2()?),
+            #[cfg(feature = "unstable_mcp_over_acp")]
+            Self::Acp(value) => super::McpServer::Acp(value.into_v2()?),
             Self::Stdio(value) => super::McpServer::Stdio(value.into_v2()?),
         })
     }
@@ -4141,6 +4145,52 @@ impl IntoV2 for crate::v1::McpServerSse {
             name: name.into_v2()?,
             url: url.into_v2()?,
             headers: headers.into_v2()?,
+            meta: meta.into_v2()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl IntoV1 for super::McpServerAcpId {
+    type Output = crate::v1::McpServerAcpId;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        Ok(crate::v1::McpServerAcpId(self.0.into_v1()?))
+    }
+}
+
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl IntoV2 for crate::v1::McpServerAcpId {
+    type Output = super::McpServerAcpId;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        Ok(super::McpServerAcpId(self.0.into_v2()?))
+    }
+}
+
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl IntoV1 for super::McpServerAcp {
+    type Output = crate::v1::McpServerAcp;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        let Self { name, id, meta } = self;
+        Ok(crate::v1::McpServerAcp {
+            name: name.into_v1()?,
+            id: id.into_v1()?,
+            meta: meta.into_v1()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl IntoV2 for crate::v1::McpServerAcp {
+    type Output = super::McpServerAcp;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        let Self { name, id, meta } = self;
+        Ok(super::McpServerAcp {
+            name: name.into_v2()?,
+            id: id.into_v2()?,
             meta: meta.into_v2()?,
         })
     }
@@ -5136,10 +5186,18 @@ impl IntoV1 for super::McpCapabilities {
     type Output = crate::v1::McpCapabilities;
 
     fn into_v1(self) -> Result<Self::Output> {
-        let Self { http, sse, meta } = self;
+        let Self {
+            http,
+            sse,
+            #[cfg(feature = "unstable_mcp_over_acp")]
+            acp,
+            meta,
+        } = self;
         Ok(crate::v1::McpCapabilities {
             http: http.into_v1()?,
             sse: sse.into_v1()?,
+            #[cfg(feature = "unstable_mcp_over_acp")]
+            acp: acp.into_v1()?,
             meta: meta.into_v1()?,
         })
     }
@@ -5149,10 +5207,18 @@ impl IntoV2 for crate::v1::McpCapabilities {
     type Output = super::McpCapabilities;
 
     fn into_v2(self) -> Result<Self::Output> {
-        let Self { http, sse, meta } = self;
+        let Self {
+            http,
+            sse,
+            #[cfg(feature = "unstable_mcp_over_acp")]
+            acp,
+            meta,
+        } = self;
         Ok(super::McpCapabilities {
             http: http.into_v2()?,
             sse: sse.into_v2()?,
+            #[cfg(feature = "unstable_mcp_over_acp")]
+            acp: acp.into_v2()?,
             meta: meta.into_v2()?,
         })
     }
