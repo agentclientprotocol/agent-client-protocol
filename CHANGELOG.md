@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.13.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.12.2...v0.13.0) - 2026-05-12
+
+### Added
+
+- *(unstable)* Add experimental MCP-over-ACP message types ([#1185](https://github.com/agentclientprotocol/agent-client-protocol/pull/1185))
+
+### Other
+
+- add unstable mcp-over-acp additions to the schema ([#1173](https://github.com/agentclientprotocol/agent-client-protocol/pull/1173))
+- *(deps)* bump the minor group with 3 updates ([#1178](https://github.com/agentclientprotocol/agent-client-protocol/pull/1178))
+- *(deps)* bump the minor group with 2 updates ([#1121](https://github.com/agentclientprotocol/agent-client-protocol/pull/1121))
+- *(unstable)* Start setting up v2 Schema scaffolding for experimentation ([#1099](https://github.com/agentclientprotocol/agent-client-protocol/pull/1099))
+- reorganize to v1 module ([#1094](https://github.com/agentclientprotocol/agent-client-protocol/pull/1094))
+
 ## [0.12.2](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.12.1...v0.12.2) - 2026-04-23
 
 ### Added
