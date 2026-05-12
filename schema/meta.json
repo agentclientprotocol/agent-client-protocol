@@ -10,7 +10,8 @@
     "session_prompt": "session/prompt",
     "session_resume": "session/resume",
     "session_set_config_option": "session/set_config_option",
-    "session_set_mode": "session/set_mode"
+    "session_set_mode": "session/set_mode",
+    "session_set_title": "session/setTitle"
   },
   "clientMethods": {
     "fs_read_text_file": "fs/read_text_file",
