@@ -1918,6 +1918,77 @@ impl SessionInfo {
     }
 }
 
+/// Request parameters for setting a session title.
+#[skip_serializing_none]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[schemars(extend("x-side" = "agent", "x-method" = SESSION_SET_TITLE_METHOD_NAME))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct SetSessionTitleRequest {
+    /// The ID of the session to set the title for.
+    pub session_id: SessionId,
+    /// The new title for the session.
+    pub title: String,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl SetSessionTitleRequest {
+    #[must_use]
+    pub fn new(session_id: impl Into<SessionId>, title: impl Into<String>) -> Self {
+        Self {
+            session_id: session_id.into(),
+            title: title.into(),
+            meta: None,
+        }
+    }
+
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// Response to `session/setTitle` method.
+#[skip_serializing_none]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[schemars(extend("x-side" = "agent", "x-method" = SESSION_SET_TITLE_METHOD_NAME))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct SetSessionTitleResponse {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl SetSessionTitleResponse {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
 // Session config options
 
 /// Unique identifier for a session configuration option.
@@ -3854,6 +3925,11 @@ pub struct SessionCapabilities {
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub close: Option<SessionCloseCapabilities>,
+    /// Whether the agent supports `session/setTitle`.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
+    pub set_title: Option<SessionSetTitleCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -3950,6 +4026,13 @@ impl SessionCapabilities {
     #[must_use]
     pub fn close(mut self, close: impl IntoOption<SessionCloseCapabilities>) -> Self {
         self.close = close.into_option();
+        self
+    }
+
+    /// Whether the agent supports `session/setTitle`.
+    #[must_use]
+    pub fn set_title(mut self, set_title: impl IntoOption<SessionSetTitleCapabilities>) -> Self {
+        self.set_title = set_title.into_option();
         self
     }
 
@@ -4195,6 +4278,40 @@ pub struct SessionCloseCapabilities {
 }
 
 impl SessionCloseCapabilities {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// Capabilities for the `session/setTitle` method.
+///
+/// By supplying `{}` it means that the agent supports setting session titles.
+#[skip_serializing_none]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct SessionSetTitleCapabilities {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl SessionSetTitleCapabilities {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -4653,6 +4770,8 @@ pub struct AgentMethodNames {
     pub session_new: &'static str,
     /// Method for loading an existing session.
     pub session_load: &'static str,
+    /// Method for setting the title for a session.
+    pub session_set_title: &'static str,
     /// Method for setting a configuration option for a session.
     pub session_set_config_option: &'static str,
     /// Method for sending a prompt to the agent.
@@ -4719,6 +4838,7 @@ pub const AGENT_METHOD_NAMES: AgentMethodNames = AgentMethodNames {
     providers_disable: PROVIDERS_DISABLE_METHOD_NAME,
     session_new: SESSION_NEW_METHOD_NAME,
     session_load: SESSION_LOAD_METHOD_NAME,
+    session_set_title: SESSION_SET_TITLE_METHOD_NAME,
     session_set_config_option: SESSION_SET_CONFIG_OPTION_METHOD_NAME,
     session_prompt: SESSION_PROMPT_METHOD_NAME,
     session_cancel: SESSION_CANCEL_METHOD_NAME,
@@ -4770,6 +4890,8 @@ pub(crate) const PROVIDERS_DISABLE_METHOD_NAME: &str = "providers/disable";
 pub(crate) const SESSION_NEW_METHOD_NAME: &str = "session/new";
 /// Method name for loading an existing session.
 pub(crate) const SESSION_LOAD_METHOD_NAME: &str = "session/load";
+/// Method name for setting the title for a session.
+pub(crate) const SESSION_SET_TITLE_METHOD_NAME: &str = "session/setTitle";
 /// Method name for setting a configuration option for a session.
 pub(crate) const SESSION_SET_CONFIG_OPTION_METHOD_NAME: &str = "session/set_config_option";
 /// Method name for sending a prompt.
@@ -4909,6 +5031,13 @@ pub enum ClientRequest {
     /// The agent must cancel any ongoing work (as if `session/cancel` was called)
     /// and then free up any resources associated with the session.
     CloseSessionRequest(CloseSessionRequest),
+    /// Sets the title for a session.
+    ///
+    /// Empty titles are valid and request that the agent clear the session title.
+    ///
+    /// This method can be called at any time during a session, whether the Agent is
+    /// idle or actively generating a response.
+    SetSessionTitleRequest(SetSessionTitleRequest),
     /// Sets the current value for a session configuration option.
     SetSessionConfigOptionRequest(SetSessionConfigOptionRequest),
     /// Processes a user prompt within a session.
@@ -4985,6 +5114,7 @@ impl ClientRequest {
             Self::ForkSessionRequest(_) => AGENT_METHOD_NAMES.session_fork,
             Self::ResumeSessionRequest(_) => AGENT_METHOD_NAMES.session_resume,
             Self::CloseSessionRequest(_) => AGENT_METHOD_NAMES.session_close,
+            Self::SetSessionTitleRequest(_) => AGENT_METHOD_NAMES.session_set_title,
             Self::SetSessionConfigOptionRequest(_) => AGENT_METHOD_NAMES.session_set_config_option,
             Self::PromptRequest(_) => AGENT_METHOD_NAMES.session_prompt,
             #[cfg(feature = "unstable_nes")]
@@ -5028,6 +5158,7 @@ pub enum AgentResponse {
     ForkSessionResponse(ForkSessionResponse),
     ResumeSessionResponse(#[serde(default)] ResumeSessionResponse),
     CloseSessionResponse(#[serde(default)] CloseSessionResponse),
+    SetSessionTitleResponse(#[serde(default)] SetSessionTitleResponse),
     SetSessionConfigOptionResponse(SetSessionConfigOptionResponse),
     PromptResponse(PromptResponse),
     #[cfg(feature = "unstable_nes")]
@@ -5842,6 +5973,43 @@ mod test_serialization {
             }
             _ => panic!("Expected Terminal variant"),
         }
+    }
+
+    #[test]
+    fn test_set_session_title_request_roundtrip() {
+        let original = SetSessionTitleRequest::new("sess_1", "A clearer thread title");
+        let json = serde_json::to_value(&original).unwrap();
+        assert_eq!(
+            json,
+            json!({
+                "sessionId": "sess_1",
+                "title": "A clearer thread title"
+            })
+        );
+        let roundtripped: SetSessionTitleRequest = serde_json::from_value(json).unwrap();
+        assert_eq!(original, roundtripped);
+    }
+
+    #[test]
+    fn test_set_session_title_response_roundtrip() {
+        let original = SetSessionTitleResponse::new();
+        let json = serde_json::to_value(&original).unwrap();
+        assert_eq!(json, json!({}));
+        let roundtripped: SetSessionTitleResponse = serde_json::from_value(json).unwrap();
+        assert_eq!(original, roundtripped);
+    }
+
+    #[test]
+    fn test_set_session_title_capabilities_serialization() {
+        assert_eq!(
+            serde_json::to_value(
+                SessionCapabilities::new().set_title(SessionSetTitleCapabilities::new())
+            )
+            .unwrap(),
+            json!({
+                "setTitle": {}
+            })
+        );
     }
 
     #[cfg(feature = "unstable_boolean_config")]

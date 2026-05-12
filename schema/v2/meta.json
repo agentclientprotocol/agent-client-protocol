@@ -5,6 +5,7 @@
     "authenticate": "authenticate",
     "session_new": "session/new",
     "session_load": "session/load",
+    "session_set_title": "session/setTitle",
     "session_set_config_option": "session/set_config_option",
     "session_prompt": "session/prompt",
     "session_cancel": "session/cancel",
