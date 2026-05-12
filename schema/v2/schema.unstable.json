@@ -270,6 +270,15 @@
                     ]
                   },
                   {
+                    "title": "SetSessionTitleResponse",
+                    "description": "Successful result returned for a `session/setTitle` request.",
+                    "allOf": [
+                      {
+                        "$ref": "#/$defs/SetSessionTitleResponse"
+                      }
+                    ]
+                  },
+                  {
                     "title": "SetSessionConfigOptionResponse",
                     "description": "Successful result returned for a `session/set_config_option` request.",
                     "allOf": [
@@ -2643,6 +2652,15 @@
                   ]
                 },
                 {
+                  "title": "SetSessionTitleResponse",
+                  "description": "Successful result returned for a `session/setTitle` request.",
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/SetSessionTitleResponse"
+                    }
+                  ]
+                },
+                {
                   "title": "SetSessionConfigOptionResponse",
                   "description": "Successful result returned for a `session/set_config_option` request.",
                   "allOf": [
@@ -3004,6 +3022,18 @@
           ],
           "x-deserialize-default-on-error": true
         },
+        "setTitle": {
+          "description": "Whether the agent supports `session/setTitle`.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SessionSetTitleCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
           "type": ["object", "null"],
@@ -3254,6 +3284,18 @@
     },
     "SessionCloseCapabilities": {
       "description": "Capabilities for the `session/close` method.\n\nSupplying `{}` means the agent supports closing sessions.",
+      "type": "object",
+      "properties": {
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
+    },
+    "SessionSetTitleCapabilities": {
+      "description": "Capabilities for the `session/setTitle` method.\n\nBy supplying `{}` it means that the agent supports setting session titles.",
       "type": "object",
       "properties": {
         "_meta": {
@@ -4682,6 +4724,20 @@
       },
       "x-side": "agent",
       "x-method": "session/close"
+    },
+    "SetSessionTitleResponse": {
+      "description": "Response to `session/setTitle` method.",
+      "type": "object",
+      "properties": {
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "x-side": "agent",
+      "x-method": "session/setTitle"
     },
     "SetSessionConfigOptionResponse": {
       "description": "Response to `session/set_config_option` method.",
@@ -6915,6 +6971,15 @@
                   ]
                 },
                 {
+                  "title": "SetSessionTitleRequest",
+                  "description": "Sets the title for a session.\n\nEmpty titles are valid and request that the agent clear the session title.\n\nThis method can be called at any time during a session, whether the Agent is\nidle or actively generating a response.",
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/SetSessionTitleRequest"
+                    }
+                  ]
+                },
+                {
                   "title": "SetSessionConfigOptionRequest",
                   "description": "Sets the current value for a session configuration option.",
                   "allOf": [
@@ -7842,6 +7907,33 @@
       "required": ["sessionId"],
       "x-side": "agent",
       "x-method": "session/close"
+    },
+    "SetSessionTitleRequest": {
+      "description": "Request parameters for setting a session title.",
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "description": "The ID of the session to set the title for.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ]
+        },
+        "title": {
+          "description": "The new title for the session.",
+          "type": "string"
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["sessionId", "title"],
+      "x-side": "agent",
+      "x-method": "session/setTitle"
     },
     "SetSessionConfigOptionRequest": {
       "description": "Request parameters for setting a session configuration option.",
