@@ -23,6 +23,7 @@ unstable = [
     "unstable_mcp_over_acp",
     "unstable_nes",
     "unstable_session_additional_directories",
+    "unstable_session_delete",
     "unstable_session_fork",
     "unstable_session_model",
     "unstable_session_usage",
@@ -42,6 +43,7 @@ unstable_logout = []
 unstable_mcp_over_acp = []
 unstable_nes = []
 unstable_session_additional_directories = []
+unstable_session_delete = []
 unstable_session_fork = []
 unstable_session_model = []
 unstable_session_usage = []

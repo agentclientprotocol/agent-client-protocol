@@ -1703,6 +1703,90 @@ impl CloseSessionResponse {
     }
 }
 
+// Delete session
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Request parameters for deleting a session.
+///
+/// Only available if the Agent supports the `sessionCapabilities.delete` capability.
+#[cfg(feature = "unstable_session_delete")]
+#[skip_serializing_none]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[schemars(extend("x-side" = "agent", "x-method" = SESSION_DELETE_METHOD_NAME))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct DeleteSessionRequest {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_delete")]
+impl DeleteSessionRequest {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Response from deleting a session.
+#[cfg(feature = "unstable_session_delete")]
+#[skip_serializing_none]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[schemars(extend("x-side" = "agent", "x-method" = SESSION_DELETE_METHOD_NAME))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct DeleteSessionResponse {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_delete")]
+impl DeleteSessionResponse {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
 // List sessions
 
 /// Request parameters for listing existing sessions.
@@ -4160,6 +4244,15 @@ pub struct SessionCapabilities {
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[serde(default)]
     pub fork: Option<SessionForkCapabilities>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Whether the agent supports `session/delete`.
+    #[cfg(feature = "unstable_session_delete")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default)]
+    pub delete: Option<SessionDeleteCapabilities>,
     /// Whether the agent supports `session/resume`.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[serde(default)]
@@ -4210,6 +4303,18 @@ impl SessionCapabilities {
     #[must_use]
     pub fn fork(mut self, fork: impl IntoOption<SessionForkCapabilities>) -> Self {
         self.fork = fork.into_option();
+        self
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Whether the agent supports `session/delete`.
+    #[cfg(feature = "unstable_session_delete")]
+    #[must_use]
+    pub fn delete(mut self, delete: impl IntoOption<SessionDeleteCapabilities>) -> Self {
+        self.delete = delete.into_option();
         self
     }
 
@@ -4337,6 +4442,46 @@ pub struct SessionForkCapabilities {
 
 #[cfg(feature = "unstable_session_fork")]
 impl SessionForkCapabilities {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Capabilities for the `session/delete` method.
+///
+/// By supplying `{}` it means that the agent supports deletion of sessions.
+#[cfg(feature = "unstable_session_delete")]
+#[skip_serializing_none]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct SessionDeleteCapabilities {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_delete")]
+impl SessionDeleteCapabilities {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -4616,6 +4761,9 @@ pub struct AgentMethodNames {
     /// Method for forking an existing session.
     #[cfg(feature = "unstable_session_fork")]
     pub session_fork: &'static str,
+    /// Method for deleting an existing session.
+    #[cfg(feature = "unstable_session_delete")]
+    pub session_delete: &'static str,
     /// Method for resuming an existing session.
     pub session_resume: &'static str,
     /// Method for closing an active session.
@@ -4676,6 +4824,8 @@ pub const AGENT_METHOD_NAMES: AgentMethodNames = AgentMethodNames {
     session_list: SESSION_LIST_METHOD_NAME,
     #[cfg(feature = "unstable_session_fork")]
     session_fork: SESSION_FORK_METHOD_NAME,
+    #[cfg(feature = "unstable_session_delete")]
+    session_delete: SESSION_DELETE_METHOD_NAME,
     session_resume: SESSION_RESUME_METHOD_NAME,
     session_close: SESSION_CLOSE_METHOD_NAME,
     #[cfg(feature = "unstable_logout")]
@@ -4735,6 +4885,9 @@ pub(crate) const SESSION_LIST_METHOD_NAME: &str = "session/list";
 /// Method name for forking an existing session.
 #[cfg(feature = "unstable_session_fork")]
 pub(crate) const SESSION_FORK_METHOD_NAME: &str = "session/fork";
+/// Method name for deleting an existing session.
+#[cfg(feature = "unstable_session_delete")]
+pub(crate) const SESSION_DELETE_METHOD_NAME: &str = "session/delete";
 /// Method name for resuming an existing session.
 pub(crate) const SESSION_RESUME_METHOD_NAME: &str = "session/resume";
 /// Method name for closing an active session.
@@ -4850,6 +5003,15 @@ pub enum ClientRequest {
     /// original, allowing operations like generating summaries without affecting the
     /// original session's history.
     ForkSessionRequest(ForkSessionRequest),
+    #[cfg(feature = "unstable_session_delete")]
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Deletes an existing session.
+    ///
+    /// This method is only available if the agent advertises the `session.delete` capability.
+    DeleteSessionRequest(DeleteSessionRequest),
     /// Resumes an existing session without returning previous messages.
     ///
     /// This method is only available if the agent advertises the `sessionCapabilities.resume` capability.
@@ -4952,6 +5114,8 @@ impl ClientRequest {
             Self::ListSessionsRequest(_) => AGENT_METHOD_NAMES.session_list,
             #[cfg(feature = "unstable_session_fork")]
             Self::ForkSessionRequest(_) => AGENT_METHOD_NAMES.session_fork,
+            #[cfg(feature = "unstable_session_delete")]
+            Self::DeleteSessionRequest(_) => AGENT_METHOD_NAMES.session_delete,
             Self::ResumeSessionRequest(_) => AGENT_METHOD_NAMES.session_resume,
             Self::CloseSessionRequest(_) => AGENT_METHOD_NAMES.session_close,
             Self::SetSessionModeRequest(_) => AGENT_METHOD_NAMES.session_set_mode,
@@ -4997,6 +5161,8 @@ pub enum AgentResponse {
     ListSessionsResponse(ListSessionsResponse),
     #[cfg(feature = "unstable_session_fork")]
     ForkSessionResponse(ForkSessionResponse),
+    #[cfg(feature = "unstable_session_delete")]
+    DeleteSessionResponse(#[serde(default)] DeleteSessionResponse),
     ResumeSessionResponse(#[serde(default)] ResumeSessionResponse),
     CloseSessionResponse(#[serde(default)] CloseSessionResponse),
     SetSessionModeResponse(#[serde(default)] SetSessionModeResponse),

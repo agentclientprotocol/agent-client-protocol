@@ -3328,6 +3328,54 @@ impl IntoV2 for crate::v1::ResumeSessionResponse {
     }
 }
 
+#[cfg(feature = "unstable_session_delete")]
+impl IntoV1 for super::DeleteSessionRequest {
+    type Output = crate::v1::DeleteSessionRequest;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        let Self { meta } = self;
+        Ok(crate::v1::DeleteSessionRequest {
+            meta: meta.into_v1()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_session_delete")]
+impl IntoV2 for crate::v1::DeleteSessionRequest {
+    type Output = super::DeleteSessionRequest;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        let Self { meta } = self;
+        Ok(super::DeleteSessionRequest {
+            meta: meta.into_v2()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_session_delete")]
+impl IntoV1 for super::DeleteSessionResponse {
+    type Output = crate::v1::DeleteSessionResponse;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        let Self { meta } = self;
+        Ok(crate::v1::DeleteSessionResponse {
+            meta: meta.into_v1()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_session_delete")]
+impl IntoV2 for crate::v1::DeleteSessionResponse {
+    type Output = super::DeleteSessionResponse;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        let Self { meta } = self;
+        Ok(super::DeleteSessionResponse {
+            meta: meta.into_v2()?,
+        })
+    }
+}
+
 impl IntoV1 for super::CloseSessionRequest {
     type Output = crate::v1::CloseSessionRequest;
 
@@ -4986,6 +5034,8 @@ impl IntoV1 for super::SessionCapabilities {
             additional_directories,
             #[cfg(feature = "unstable_session_fork")]
             fork,
+            #[cfg(feature = "unstable_session_delete")]
+            delete,
             resume,
             close,
             meta,
@@ -4996,6 +5046,8 @@ impl IntoV1 for super::SessionCapabilities {
             additional_directories: additional_directories.into_v1()?,
             #[cfg(feature = "unstable_session_fork")]
             fork: fork.into_v1()?,
+            #[cfg(feature = "unstable_session_delete")]
+            delete: delete.into_v1()?,
             resume: resume.into_v1()?,
             close: close.into_v1()?,
             meta: meta.into_v1()?,
@@ -5013,6 +5065,8 @@ impl IntoV2 for crate::v1::SessionCapabilities {
             additional_directories,
             #[cfg(feature = "unstable_session_fork")]
             fork,
+            #[cfg(feature = "unstable_session_delete")]
+            delete,
             resume,
             close,
             meta,
@@ -5023,6 +5077,8 @@ impl IntoV2 for crate::v1::SessionCapabilities {
             additional_directories: additional_directories.into_v2()?,
             #[cfg(feature = "unstable_session_fork")]
             fork: fork.into_v2()?,
+            #[cfg(feature = "unstable_session_delete")]
+            delete: delete.into_v2()?,
             resume: resume.into_v2()?,
             close: close.into_v2()?,
             meta: meta.into_v2()?,
@@ -5095,6 +5151,30 @@ impl IntoV2 for crate::v1::SessionForkCapabilities {
     fn into_v2(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(super::SessionForkCapabilities {
+            meta: meta.into_v2()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_session_delete")]
+impl IntoV1 for super::SessionDeleteCapabilities {
+    type Output = crate::v1::SessionDeleteCapabilities;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        let Self { meta } = self;
+        Ok(crate::v1::SessionDeleteCapabilities {
+            meta: meta.into_v1()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_session_delete")]
+impl IntoV2 for crate::v1::SessionDeleteCapabilities {
+    type Output = super::SessionDeleteCapabilities;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        let Self { meta } = self;
+        Ok(super::SessionDeleteCapabilities {
             meta: meta.into_v2()?,
         })
     }
@@ -5262,6 +5342,10 @@ impl IntoV1 for super::ClientRequest {
             Self::ForkSessionRequest(value) => {
                 crate::v1::ClientRequest::ForkSessionRequest(value.into_v1()?)
             }
+            #[cfg(feature = "unstable_session_delete")]
+            Self::DeleteSessionRequest(value) => {
+                crate::v1::ClientRequest::DeleteSessionRequest(value.into_v1()?)
+            }
             Self::ResumeSessionRequest(value) => {
                 crate::v1::ClientRequest::ResumeSessionRequest(value.into_v1()?)
             }
@@ -5336,6 +5420,10 @@ impl IntoV2 for crate::v1::ClientRequest {
             Self::ForkSessionRequest(value) => {
                 super::ClientRequest::ForkSessionRequest(value.into_v2()?)
             }
+            #[cfg(feature = "unstable_session_delete")]
+            Self::DeleteSessionRequest(value) => {
+                super::ClientRequest::DeleteSessionRequest(value.into_v2()?)
+            }
             Self::ResumeSessionRequest(value) => {
                 super::ClientRequest::ResumeSessionRequest(value.into_v2()?)
             }
@@ -5407,6 +5495,10 @@ impl IntoV1 for super::AgentResponse {
             #[cfg(feature = "unstable_session_fork")]
             Self::ForkSessionResponse(value) => {
                 crate::v1::AgentResponse::ForkSessionResponse(value.into_v1()?)
+            }
+            #[cfg(feature = "unstable_session_delete")]
+            Self::DeleteSessionResponse(value) => {
+                crate::v1::AgentResponse::DeleteSessionResponse(value.into_v1()?)
             }
             Self::ResumeSessionResponse(value) => {
                 crate::v1::AgentResponse::ResumeSessionResponse(value.into_v1()?)
@@ -5483,6 +5575,10 @@ impl IntoV2 for crate::v1::AgentResponse {
             #[cfg(feature = "unstable_session_fork")]
             Self::ForkSessionResponse(value) => {
                 super::AgentResponse::ForkSessionResponse(value.into_v2()?)
+            }
+            #[cfg(feature = "unstable_session_delete")]
+            Self::DeleteSessionResponse(value) => {
+                super::AgentResponse::DeleteSessionResponse(value.into_v2()?)
             }
             Self::ResumeSessionResponse(value) => {
                 super::AgentResponse::ResumeSessionResponse(value.into_v2()?)
