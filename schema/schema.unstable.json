@@ -170,6 +170,15 @@
                 {
                   "allOf": [
                     {
+                      "$ref": "#/$defs/MessageMcpNotification"
+                    }
+                  ],
+                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nReceives an MCP-over-ACP notification.",
+                  "title": "MessageMcpNotification"
+                },
+                {
+                  "allOf": [
+                    {
                       "$ref": "#/$defs/ExtNotification"
                     }
                   ],
@@ -281,6 +290,33 @@
                   ],
                   "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequests structured user input via a form or URL.",
                   "title": "CreateElicitationRequest"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/ConnectMcpRequest"
+                    }
+                  ],
+                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nOpens an MCP-over-ACP connection.",
+                  "title": "ConnectMcpRequest"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/MessageMcpRequest"
+                    }
+                  ],
+                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nExchanges an MCP-over-ACP message.",
+                  "title": "MessageMcpRequest"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/DisconnectMcpRequest"
+                    }
+                  ],
+                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCloses an MCP-over-ACP connection.",
+                  "title": "DisconnectMcpRequest"
                 },
                 {
                   "allOf": [
@@ -472,6 +508,14 @@
                     }
                   ],
                   "title": "ExtMethodResponse"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/MessageMcpResponse"
+                    }
+                  ],
+                  "title": "MessageMcpResponse"
                 }
               ],
               "description": "All possible responses that an agent can send to a client.\n\nThis enum is used internally for routing RPC responses. You typically won't need\nto use this directly - the responses are handled automatically by the connection.\n\nThese are responses to the corresponding `ClientRequest` variants."
@@ -1112,6 +1156,15 @@
                 {
                   "allOf": [
                     {
+                      "$ref": "#/$defs/MessageMcpNotification"
+                    }
+                  ],
+                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSends an MCP-over-ACP notification.",
+                  "title": "MessageMcpNotification"
+                },
+                {
+                  "allOf": [
+                    {
                       "$ref": "#/$defs/ExtNotification"
                     }
                   ],
@@ -1317,6 +1370,15 @@
                 {
                   "allOf": [
                     {
+                      "$ref": "#/$defs/MessageMcpRequest"
+                    }
+                  ],
+                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nExchanges an MCP-over-ACP message.",
+                  "title": "MessageMcpRequest"
+                },
+                {
+                  "allOf": [
+                    {
                       "$ref": "#/$defs/ExtRequest"
                     }
                   ],
@@ -1420,10 +1482,34 @@
                 {
                   "allOf": [
                     {
+                      "$ref": "#/$defs/ConnectMcpResponse"
+                    }
+                  ],
+                  "title": "ConnectMcpResponse"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/DisconnectMcpResponse"
+                    }
+                  ],
+                  "title": "DisconnectMcpResponse"
+                },
+                {
+                  "allOf": [
+                    {
                       "$ref": "#/$defs/ExtResponse"
                     }
                   ],
                   "title": "ExtMethodResponse"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/MessageMcpResponse"
+                    }
+                  ],
+                  "title": "MessageMcpResponse"
                 }
               ],
               "description": "All possible responses that a client can send to an agent.\n\nThis enum is used internally for routing RPC responses. You typically won't need\nto use this directly - the responses are handled automatically by the connection.\n\nThese are responses to the corresponding `AgentRequest` variants."
@@ -1559,6 +1645,50 @@
       },
       "required": ["configOptions"],
       "type": "object"
+    },
+    "ConnectMcpRequest": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for `mcp/connect`.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "acpId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/McpServerAcpId"
+            }
+          ],
+          "description": "The ACP MCP server ID that was provided by the component declaring the MCP server."
+        }
+      },
+      "required": ["acpId"],
+      "type": "object",
+      "x-method": "mcp/connect",
+      "x-side": "client"
+    },
+    "ConnectMcpResponse": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nResponse to `mcp/connect`.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "connectionId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/McpConnectionId"
+            }
+          ],
+          "description": "The unique identifier for this MCP-over-ACP connection."
+        }
+      },
+      "required": ["connectionId"],
+      "type": "object",
+      "x-method": "mcp/connect",
+      "x-side": "client"
     },
     "Content": {
       "description": "Standard content block (text, images, resources).",
@@ -2137,6 +2267,41 @@
       "type": "object",
       "x-method": "providers/disable",
       "x-side": "agent"
+    },
+    "DisconnectMcpRequest": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for `mcp/disconnect`.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "connectionId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/McpConnectionId"
+            }
+          ],
+          "description": "The MCP-over-ACP connection to close."
+        }
+      },
+      "required": ["connectionId"],
+      "type": "object",
+      "x-method": "mcp/disconnect",
+      "x-side": "client"
+    },
+    "DisconnectMcpResponse": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nResponse to `mcp/disconnect`.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object",
+      "x-method": "mcp/disconnect",
+      "x-side": "client"
     },
     "ElicitationAcceptAction": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nThe user accepted the elicitation and provided content.",
@@ -3324,6 +3489,10 @@
       },
       "type": "object"
     },
+    "McpConnectionId": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA unique identifier for an active MCP-over-ACP connection.",
+      "type": "string"
+    },
     "McpServer": {
       "anyOf": [
         {
@@ -3501,6 +3670,73 @@
       },
       "required": ["name", "command", "args", "env"],
       "type": "object"
+    },
+    "MessageMcpNotification": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNotification parameters for `mcp/message`.\n\nThis is used when the wrapped MCP message is a notification and the outer JSON-RPC\nenvelope has no `id`.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "connectionId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/McpConnectionId"
+            }
+          ],
+          "description": "The MCP-over-ACP connection this message is sent on."
+        },
+        "method": {
+          "description": "The inner MCP method name.",
+          "type": "string"
+        },
+        "params": {
+          "additionalProperties": true,
+          "description": "Optional inner MCP params.\n\nIf omitted or set to `null`, the inner MCP message has no params.",
+          "type": ["object", "null"]
+        }
+      },
+      "required": ["connectionId", "method"],
+      "type": "object",
+      "x-method": "mcp/message",
+      "x-side": "both"
+    },
+    "MessageMcpRequest": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for `mcp/message`.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "connectionId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/McpConnectionId"
+            }
+          ],
+          "description": "The MCP-over-ACP connection this message is sent on."
+        },
+        "method": {
+          "description": "The inner MCP method name.",
+          "type": "string"
+        },
+        "params": {
+          "additionalProperties": true,
+          "description": "Optional inner MCP params.\n\nIf omitted or set to `null`, the inner MCP message has no params.",
+          "type": ["object", "null"]
+        }
+      },
+      "required": ["connectionId", "method"],
+      "type": "object",
+      "x-method": "mcp/message",
+      "x-side": "both"
+    },
+    "MessageMcpResponse": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nResponse to `mcp/message`.\n\nThis is the inner MCP response result payload. Any JSON value is valid.",
+      "x-method": "mcp/message",
+      "x-side": "both"
     },
     "ModelId": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA unique identifier for a model.",

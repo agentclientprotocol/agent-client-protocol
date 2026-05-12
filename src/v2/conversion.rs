@@ -1688,6 +1688,220 @@ impl IntoV2 for crate::v1::TerminalExitStatus {
     }
 }
 
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl IntoV1 for super::ConnectMcpRequest {
+    type Output = crate::v1::ConnectMcpRequest;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        let Self { acp_id, meta } = self;
+        Ok(crate::v1::ConnectMcpRequest {
+            acp_id: acp_id.into_v1()?,
+            meta: meta.into_v1()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl IntoV2 for crate::v1::ConnectMcpRequest {
+    type Output = super::ConnectMcpRequest;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        let Self { acp_id, meta } = self;
+        Ok(super::ConnectMcpRequest {
+            acp_id: acp_id.into_v2()?,
+            meta: meta.into_v2()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl IntoV1 for super::ConnectMcpResponse {
+    type Output = crate::v1::ConnectMcpResponse;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        let Self {
+            connection_id,
+            meta,
+        } = self;
+        Ok(crate::v1::ConnectMcpResponse {
+            connection_id: connection_id.into_v1()?,
+            meta: meta.into_v1()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl IntoV2 for crate::v1::ConnectMcpResponse {
+    type Output = super::ConnectMcpResponse;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        let Self {
+            connection_id,
+            meta,
+        } = self;
+        Ok(super::ConnectMcpResponse {
+            connection_id: connection_id.into_v2()?,
+            meta: meta.into_v2()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl IntoV1 for super::MessageMcpRequest {
+    type Output = crate::v1::MessageMcpRequest;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        let Self {
+            connection_id,
+            method,
+            params,
+            meta,
+        } = self;
+        Ok(crate::v1::MessageMcpRequest {
+            connection_id: connection_id.into_v1()?,
+            method: method.into_v1()?,
+            params: params.into_v1()?,
+            meta: meta.into_v1()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl IntoV2 for crate::v1::MessageMcpRequest {
+    type Output = super::MessageMcpRequest;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        let Self {
+            connection_id,
+            method,
+            params,
+            meta,
+        } = self;
+        Ok(super::MessageMcpRequest {
+            connection_id: connection_id.into_v2()?,
+            method: method.into_v2()?,
+            params: params.into_v2()?,
+            meta: meta.into_v2()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl IntoV1 for super::MessageMcpNotification {
+    type Output = crate::v1::MessageMcpNotification;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        let Self {
+            connection_id,
+            method,
+            params,
+            meta,
+        } = self;
+        Ok(crate::v1::MessageMcpNotification {
+            connection_id: connection_id.into_v1()?,
+            method: method.into_v1()?,
+            params: params.into_v1()?,
+            meta: meta.into_v1()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl IntoV2 for crate::v1::MessageMcpNotification {
+    type Output = super::MessageMcpNotification;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        let Self {
+            connection_id,
+            method,
+            params,
+            meta,
+        } = self;
+        Ok(super::MessageMcpNotification {
+            connection_id: connection_id.into_v2()?,
+            method: method.into_v2()?,
+            params: params.into_v2()?,
+            meta: meta.into_v2()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl IntoV1 for super::MessageMcpResponse {
+    type Output = crate::v1::MessageMcpResponse;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        let Self(result) = self;
+        Ok(crate::v1::MessageMcpResponse::new(result.into_v1()?))
+    }
+}
+
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl IntoV2 for crate::v1::MessageMcpResponse {
+    type Output = super::MessageMcpResponse;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        let Self(result) = self;
+        Ok(super::MessageMcpResponse::new(result.into_v2()?))
+    }
+}
+
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl IntoV1 for super::DisconnectMcpRequest {
+    type Output = crate::v1::DisconnectMcpRequest;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        let Self {
+            connection_id,
+            meta,
+        } = self;
+        Ok(crate::v1::DisconnectMcpRequest {
+            connection_id: connection_id.into_v1()?,
+            meta: meta.into_v1()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl IntoV2 for crate::v1::DisconnectMcpRequest {
+    type Output = super::DisconnectMcpRequest;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        let Self {
+            connection_id,
+            meta,
+        } = self;
+        Ok(super::DisconnectMcpRequest {
+            connection_id: connection_id.into_v2()?,
+            meta: meta.into_v2()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl IntoV1 for super::DisconnectMcpResponse {
+    type Output = crate::v1::DisconnectMcpResponse;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        let Self { meta } = self;
+        Ok(crate::v1::DisconnectMcpResponse {
+            meta: meta.into_v1()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl IntoV2 for crate::v1::DisconnectMcpResponse {
+    type Output = super::DisconnectMcpResponse;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        let Self { meta } = self;
+        Ok(super::DisconnectMcpResponse {
+            meta: meta.into_v2()?,
+        })
+    }
+}
+
 impl IntoV1 for super::ClientCapabilities {
     type Output = crate::v1::ClientCapabilities;
 
@@ -1847,6 +2061,18 @@ impl IntoV1 for super::AgentRequest {
             Self::CreateElicitationRequest(value) => {
                 crate::v1::AgentRequest::CreateElicitationRequest(value.into_v1()?)
             }
+            #[cfg(feature = "unstable_mcp_over_acp")]
+            Self::ConnectMcpRequest(value) => {
+                crate::v1::AgentRequest::ConnectMcpRequest(value.into_v1()?)
+            }
+            #[cfg(feature = "unstable_mcp_over_acp")]
+            Self::MessageMcpRequest(value) => {
+                crate::v1::AgentRequest::MessageMcpRequest(value.into_v1()?)
+            }
+            #[cfg(feature = "unstable_mcp_over_acp")]
+            Self::DisconnectMcpRequest(value) => {
+                crate::v1::AgentRequest::DisconnectMcpRequest(value.into_v1()?)
+            }
             Self::ExtMethodRequest(value) => {
                 crate::v1::AgentRequest::ExtMethodRequest(value.into_v1()?)
             }
@@ -1886,6 +2112,18 @@ impl IntoV2 for crate::v1::AgentRequest {
             #[cfg(feature = "unstable_elicitation")]
             Self::CreateElicitationRequest(value) => {
                 super::AgentRequest::CreateElicitationRequest(value.into_v2()?)
+            }
+            #[cfg(feature = "unstable_mcp_over_acp")]
+            Self::ConnectMcpRequest(value) => {
+                super::AgentRequest::ConnectMcpRequest(value.into_v2()?)
+            }
+            #[cfg(feature = "unstable_mcp_over_acp")]
+            Self::MessageMcpRequest(value) => {
+                super::AgentRequest::MessageMcpRequest(value.into_v2()?)
+            }
+            #[cfg(feature = "unstable_mcp_over_acp")]
+            Self::DisconnectMcpRequest(value) => {
+                super::AgentRequest::DisconnectMcpRequest(value.into_v2()?)
             }
             Self::ExtMethodRequest(value) => {
                 super::AgentRequest::ExtMethodRequest(value.into_v2()?)
@@ -1927,6 +2165,18 @@ impl IntoV1 for super::ClientResponse {
             Self::CreateElicitationResponse(value) => {
                 crate::v1::ClientResponse::CreateElicitationResponse(value.into_v1()?)
             }
+            #[cfg(feature = "unstable_mcp_over_acp")]
+            Self::ConnectMcpResponse(value) => {
+                crate::v1::ClientResponse::ConnectMcpResponse(value.into_v1()?)
+            }
+            #[cfg(feature = "unstable_mcp_over_acp")]
+            Self::MessageMcpResponse(value) => {
+                crate::v1::ClientResponse::MessageMcpResponse(value.into_v1()?)
+            }
+            #[cfg(feature = "unstable_mcp_over_acp")]
+            Self::DisconnectMcpResponse(value) => {
+                crate::v1::ClientResponse::DisconnectMcpResponse(value.into_v1()?)
+            }
             Self::ExtMethodResponse(value) => {
                 crate::v1::ClientResponse::ExtMethodResponse(value.into_v1()?)
             }
@@ -1967,6 +2217,18 @@ impl IntoV2 for crate::v1::ClientResponse {
             Self::CreateElicitationResponse(value) => {
                 super::ClientResponse::CreateElicitationResponse(value.into_v2()?)
             }
+            #[cfg(feature = "unstable_mcp_over_acp")]
+            Self::ConnectMcpResponse(value) => {
+                super::ClientResponse::ConnectMcpResponse(value.into_v2()?)
+            }
+            #[cfg(feature = "unstable_mcp_over_acp")]
+            Self::MessageMcpResponse(value) => {
+                super::ClientResponse::MessageMcpResponse(value.into_v2()?)
+            }
+            #[cfg(feature = "unstable_mcp_over_acp")]
+            Self::DisconnectMcpResponse(value) => {
+                super::ClientResponse::DisconnectMcpResponse(value.into_v2()?)
+            }
             Self::ExtMethodResponse(value) => {
                 super::ClientResponse::ExtMethodResponse(value.into_v2()?)
             }
@@ -1986,6 +2248,10 @@ impl IntoV1 for super::AgentNotification {
             Self::CompleteElicitationNotification(value) => {
                 crate::v1::AgentNotification::CompleteElicitationNotification(value.into_v1()?)
             }
+            #[cfg(feature = "unstable_mcp_over_acp")]
+            Self::MessageMcpNotification(value) => {
+                crate::v1::AgentNotification::MessageMcpNotification(value.into_v1()?)
+            }
             Self::ExtNotification(value) => {
                 crate::v1::AgentNotification::ExtNotification(value.into_v1()?)
             }
@@ -2004,6 +2270,10 @@ impl IntoV2 for crate::v1::AgentNotification {
             #[cfg(feature = "unstable_elicitation")]
             Self::CompleteElicitationNotification(value) => {
                 super::AgentNotification::CompleteElicitationNotification(value.into_v2()?)
+            }
+            #[cfg(feature = "unstable_mcp_over_acp")]
+            Self::MessageMcpNotification(value) => {
+                super::AgentNotification::MessageMcpNotification(value.into_v2()?)
             }
             Self::ExtNotification(value) => {
                 super::AgentNotification::ExtNotification(value.into_v2()?)
@@ -4169,6 +4439,24 @@ impl IntoV2 for crate::v1::McpServerAcpId {
 }
 
 #[cfg(feature = "unstable_mcp_over_acp")]
+impl IntoV1 for super::McpConnectionId {
+    type Output = crate::v1::McpConnectionId;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        Ok(crate::v1::McpConnectionId(self.0.into_v1()?))
+    }
+}
+
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl IntoV2 for crate::v1::McpConnectionId {
+    type Output = super::McpConnectionId;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        Ok(super::McpConnectionId(self.0.into_v2()?))
+    }
+}
+
+#[cfg(feature = "unstable_mcp_over_acp")]
 impl IntoV1 for super::McpServerAcp {
     type Output = crate::v1::McpServerAcp;
 
@@ -5291,6 +5579,10 @@ impl IntoV1 for super::ClientRequest {
             Self::CloseNesRequest(value) => {
                 crate::v1::ClientRequest::CloseNesRequest(value.into_v1()?)
             }
+            #[cfg(feature = "unstable_mcp_over_acp")]
+            Self::MessageMcpRequest(value) => {
+                crate::v1::ClientRequest::MessageMcpRequest(value.into_v1()?)
+            }
             Self::ExtMethodRequest(value) => {
                 crate::v1::ClientRequest::ExtMethodRequest(value.into_v1()?)
             }
@@ -5361,6 +5653,10 @@ impl IntoV2 for crate::v1::ClientRequest {
             }
             #[cfg(feature = "unstable_nes")]
             Self::CloseNesRequest(value) => super::ClientRequest::CloseNesRequest(value.into_v2()?),
+            #[cfg(feature = "unstable_mcp_over_acp")]
+            Self::MessageMcpRequest(value) => {
+                super::ClientRequest::MessageMcpRequest(value.into_v2()?)
+            }
             Self::ExtMethodRequest(value) => {
                 super::ClientRequest::ExtMethodRequest(value.into_v2()?)
             }
@@ -5442,6 +5738,10 @@ impl IntoV1 for super::AgentResponse {
             Self::ExtMethodResponse(value) => {
                 crate::v1::AgentResponse::ExtMethodResponse(value.into_v1()?)
             }
+            #[cfg(feature = "unstable_mcp_over_acp")]
+            Self::MessageMcpResponse(value) => {
+                crate::v1::AgentResponse::MessageMcpResponse(value.into_v1()?)
+            }
         })
     }
 }
@@ -5516,6 +5816,10 @@ impl IntoV2 for crate::v1::AgentResponse {
             Self::ExtMethodResponse(value) => {
                 super::AgentResponse::ExtMethodResponse(value.into_v2()?)
             }
+            #[cfg(feature = "unstable_mcp_over_acp")]
+            Self::MessageMcpResponse(value) => {
+                super::AgentResponse::MessageMcpResponse(value.into_v2()?)
+            }
         })
     }
 }
@@ -5555,6 +5859,10 @@ impl IntoV1 for super::ClientNotification {
             #[cfg(feature = "unstable_nes")]
             Self::RejectNesNotification(value) => {
                 crate::v1::ClientNotification::RejectNesNotification(value.into_v1()?)
+            }
+            #[cfg(feature = "unstable_mcp_over_acp")]
+            Self::MessageMcpNotification(value) => {
+                crate::v1::ClientNotification::MessageMcpNotification(value.into_v1()?)
             }
             Self::ExtNotification(value) => {
                 crate::v1::ClientNotification::ExtNotification(value.into_v1()?)
@@ -5598,6 +5906,10 @@ impl IntoV2 for crate::v1::ClientNotification {
             #[cfg(feature = "unstable_nes")]
             Self::RejectNesNotification(value) => {
                 super::ClientNotification::RejectNesNotification(value.into_v2()?)
+            }
+            #[cfg(feature = "unstable_mcp_over_acp")]
+            Self::MessageMcpNotification(value) => {
+                super::ClientNotification::MessageMcpNotification(value.into_v2()?)
             }
             Self::ExtNotification(value) => {
                 super::ClientNotification::ExtNotification(value.into_v2()?)

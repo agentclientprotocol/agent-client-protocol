@@ -171,7 +171,7 @@ fn main() {
 
 mod markdown_generator {
     use serde_json::Value;
-    use std::collections::{BTreeMap, HashMap};
+    use std::collections::{BTreeMap, BTreeSet, HashMap};
     use std::fmt::Write;
     use std::fs;
     use std::process::Command;
@@ -189,6 +189,7 @@ mod markdown_generator {
             }
         }
 
+        #[expect(clippy::too_many_lines)]
         pub fn generate(&mut self, schema: &Value) -> String {
             // Extract definitions
             if let Some(defs) = schema.get("$defs").and_then(|v| v.as_object()) {
@@ -227,6 +228,18 @@ mod markdown_generator {
                         "agent" => &mut agent_types,
                         "client" => &mut client_types,
                         "protocol" => &mut protocol_types,
+                        "both" => {
+                            let entry = (name.clone(), def.clone());
+                            agent_types
+                                .entry(method.to_string())
+                                .or_default()
+                                .push(entry.clone());
+                            client_types
+                                .entry(method.to_string())
+                                .or_default()
+                                .push(entry);
+                            continue;
+                        }
                         _ => unimplemented!("Unexpected side {side}"),
                     };
 
@@ -240,6 +253,17 @@ mod markdown_generator {
             }
 
             let side_docs = extract_side_docs();
+            let mut duplicate_methods = BTreeSet::new();
+            for method in agent_types.keys() {
+                if client_types.contains_key(method) || protocol_types.contains_key(method) {
+                    duplicate_methods.insert(method.clone());
+                }
+            }
+            for method in client_types.keys() {
+                if protocol_types.contains_key(method) {
+                    duplicate_methods.insert(method.clone());
+                }
+            }
 
             writeln!(&mut self.output, "## Agent").unwrap();
             writeln!(&mut self.output).unwrap();
@@ -254,7 +278,13 @@ requests from clients and execute tasks using language models and tools."
             writeln!(&mut self.output).unwrap();
 
             for (method, types) in agent_types {
-                self.generate_method(&method, side_docs.agent_method_doc(&method), types);
+                let anchor_prefix = duplicate_methods.contains(&method).then_some("agent");
+                self.generate_method(
+                    anchor_prefix,
+                    &method,
+                    side_docs.agent_method_doc(&method),
+                    types,
+                );
             }
 
             writeln!(&mut self.output, "## Client").unwrap();
@@ -270,7 +300,13 @@ and control access to resources."
             .unwrap();
 
             for (method, types) in client_types {
-                self.generate_method(&method, side_docs.client_method_doc(&method), types);
+                let anchor_prefix = duplicate_methods.contains(&method).then_some("client");
+                self.generate_method(
+                    anchor_prefix,
+                    &method,
+                    side_docs.client_method_doc(&method),
+                    types,
+                );
             }
             #[cfg(feature = "unstable_cancel_request")]
             {
@@ -290,7 +326,13 @@ starting with '$/' it is free to ignore the notification."
                 .unwrap();
 
                 for (method, types) in protocol_types {
-                    self.generate_method(&method, side_docs.protocol_method_doc(&method), types);
+                    let anchor_prefix = duplicate_methods.contains(&method).then_some("protocol");
+                    self.generate_method(
+                        anchor_prefix,
+                        &method,
+                        side_docs.protocol_method_doc(&method),
+                        types,
+                    );
                 }
             }
 
@@ -304,17 +346,17 @@ starting with '$/' it is free to ignore the notification."
 
         fn generate_method(
             &mut self,
+            anchor_prefix: Option<&str>,
             method: &str,
             docs: &str,
             mut method_types: Vec<(String, Value)>,
         ) {
             if method.contains('/') {
-                writeln!(
-                    &mut self.output,
-                    "<a id=\"{}\"></a>",
-                    Self::anchor_text(method).replace('/', "-")
-                )
-                .unwrap();
+                let mut anchor = Self::anchor_text(method).replace('/', "-");
+                if let Some(prefix) = anchor_prefix {
+                    anchor = format!("{prefix}-{anchor}");
+                }
+                writeln!(&mut self.output, "<a id=\"{anchor}\"></a>").unwrap();
             }
             writeln!(
                 &mut self.output,
@@ -1148,6 +1190,7 @@ starting with '$/' it is free to ignore the notification."
                 "document/didClose" => self.agent.get("DidCloseDocumentNotification").unwrap(),
                 "document/didSave" => self.agent.get("DidSaveDocumentNotification").unwrap(),
                 "document/didFocus" => self.agent.get("DidFocusDocumentNotification").unwrap(),
+                "mcp/message" => self.agent.get("MessageMcpRequest").unwrap(),
                 _ => panic!("Introduced a method? Add it here :)"),
             }
         }
@@ -1169,6 +1212,9 @@ starting with '$/' it is free to ignore the notification."
                 "elicitation/complete" => {
                     self.client.get("CompleteElicitationNotification").unwrap()
                 }
+                "mcp/connect" => self.client.get("ConnectMcpRequest").unwrap(),
+                "mcp/message" => self.client.get("MessageMcpRequest").unwrap(),
+                "mcp/disconnect" => self.client.get("DisconnectMcpRequest").unwrap(),
                 _ => panic!("Introduced a method? Add it here :)"),
             }
         }

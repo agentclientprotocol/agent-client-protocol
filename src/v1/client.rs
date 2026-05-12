@@ -21,6 +21,13 @@ use crate::{
     SkipListener, ToolCall, ToolCallUpdate,
 };
 
+#[cfg(feature = "unstable_mcp_over_acp")]
+use super::mcp::{
+    ConnectMcpRequest, ConnectMcpResponse, DisconnectMcpRequest, DisconnectMcpResponse,
+    MCP_CONNECT_METHOD_NAME, MCP_DISCONNECT_METHOD_NAME, MCP_MESSAGE_METHOD_NAME,
+    MessageMcpNotification, MessageMcpRequest, MessageMcpResponse,
+};
+
 #[cfg(feature = "unstable_nes")]
 use crate::{ClientNesCapabilities, PositionEncodingKind};
 
@@ -1786,6 +1793,15 @@ pub struct ClientMethodNames {
     pub terminal_wait_for_exit: &'static str,
     /// Method for killing a terminal.
     pub terminal_kill: &'static str,
+    /// Method for opening an MCP-over-ACP connection.
+    #[cfg(feature = "unstable_mcp_over_acp")]
+    pub mcp_connect: &'static str,
+    /// Method for exchanging MCP-over-ACP messages.
+    #[cfg(feature = "unstable_mcp_over_acp")]
+    pub mcp_message: &'static str,
+    /// Method for closing an MCP-over-ACP connection.
+    #[cfg(feature = "unstable_mcp_over_acp")]
+    pub mcp_disconnect: &'static str,
     /// Method for elicitation.
     #[cfg(feature = "unstable_elicitation")]
     pub elicitation_create: &'static str,
@@ -1805,6 +1821,12 @@ pub const CLIENT_METHOD_NAMES: ClientMethodNames = ClientMethodNames {
     terminal_release: TERMINAL_RELEASE_METHOD_NAME,
     terminal_wait_for_exit: TERMINAL_WAIT_FOR_EXIT_METHOD_NAME,
     terminal_kill: TERMINAL_KILL_METHOD_NAME,
+    #[cfg(feature = "unstable_mcp_over_acp")]
+    mcp_connect: MCP_CONNECT_METHOD_NAME,
+    #[cfg(feature = "unstable_mcp_over_acp")]
+    mcp_message: MCP_MESSAGE_METHOD_NAME,
+    #[cfg(feature = "unstable_mcp_over_acp")]
+    mcp_disconnect: MCP_DISCONNECT_METHOD_NAME,
     #[cfg(feature = "unstable_elicitation")]
     elicitation_create: ELICITATION_CREATE_METHOD_NAME,
     #[cfg(feature = "unstable_elicitation")]
@@ -1931,6 +1953,27 @@ pub enum AgentRequest {
     /// Requests structured user input via a form or URL.
     #[cfg(feature = "unstable_elicitation")]
     CreateElicitationRequest(CreateElicitationRequest),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Opens an MCP-over-ACP connection.
+    #[cfg(feature = "unstable_mcp_over_acp")]
+    ConnectMcpRequest(ConnectMcpRequest),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Exchanges an MCP-over-ACP message.
+    #[cfg(feature = "unstable_mcp_over_acp")]
+    MessageMcpRequest(MessageMcpRequest),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Closes an MCP-over-ACP connection.
+    #[cfg(feature = "unstable_mcp_over_acp")]
+    DisconnectMcpRequest(DisconnectMcpRequest),
     /// Handles extension method requests from the agent.
     ///
     /// Allows the Agent to send an arbitrary request that is not part of the ACP spec.
@@ -1956,6 +1999,12 @@ impl AgentRequest {
             Self::KillTerminalRequest(_) => CLIENT_METHOD_NAMES.terminal_kill,
             #[cfg(feature = "unstable_elicitation")]
             Self::CreateElicitationRequest(_) => CLIENT_METHOD_NAMES.elicitation_create,
+            #[cfg(feature = "unstable_mcp_over_acp")]
+            Self::ConnectMcpRequest(_) => CLIENT_METHOD_NAMES.mcp_connect,
+            #[cfg(feature = "unstable_mcp_over_acp")]
+            Self::MessageMcpRequest(_) => CLIENT_METHOD_NAMES.mcp_message,
+            #[cfg(feature = "unstable_mcp_over_acp")]
+            Self::DisconnectMcpRequest(_) => CLIENT_METHOD_NAMES.mcp_disconnect,
             Self::ExtMethodRequest(ext_request) => &ext_request.method,
         }
     }
@@ -1982,7 +2031,13 @@ pub enum ClientResponse {
     KillTerminalResponse(#[serde(default)] KillTerminalResponse),
     #[cfg(feature = "unstable_elicitation")]
     CreateElicitationResponse(CreateElicitationResponse),
+    #[cfg(feature = "unstable_mcp_over_acp")]
+    ConnectMcpResponse(ConnectMcpResponse),
+    #[cfg(feature = "unstable_mcp_over_acp")]
+    DisconnectMcpResponse(#[serde(default)] DisconnectMcpResponse),
     ExtMethodResponse(ExtResponse),
+    #[cfg(feature = "unstable_mcp_over_acp")]
+    MessageMcpResponse(MessageMcpResponse),
 }
 
 /// All possible notifications that an agent can send to a client.
@@ -2016,6 +2071,13 @@ pub enum AgentNotification {
     /// Notification that a URL-based elicitation has completed.
     #[cfg(feature = "unstable_elicitation")]
     CompleteElicitationNotification(CompleteElicitationNotification),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Receives an MCP-over-ACP notification.
+    #[cfg(feature = "unstable_mcp_over_acp")]
+    MessageMcpNotification(MessageMcpNotification),
     /// Handles extension notifications from the agent.
     ///
     /// Allows the Agent to send an arbitrary notification that is not part of the ACP spec.
@@ -2034,6 +2096,8 @@ impl AgentNotification {
             Self::SessionNotification(_) => CLIENT_METHOD_NAMES.session_update,
             #[cfg(feature = "unstable_elicitation")]
             Self::CompleteElicitationNotification(_) => CLIENT_METHOD_NAMES.elicitation_complete,
+            #[cfg(feature = "unstable_mcp_over_acp")]
+            Self::MessageMcpNotification(_) => CLIENT_METHOD_NAMES.mcp_message,
             Self::ExtNotification(ext_notification) => &ext_notification.method,
         }
     }
@@ -2111,5 +2175,81 @@ mod tests {
         let json = serde_json::to_value(&capabilities).unwrap();
 
         assert_eq!(json["positionEncodings"], json!(["utf-32", "utf-16"]));
+    }
+
+    #[cfg(feature = "unstable_mcp_over_acp")]
+    #[test]
+    fn test_agent_mcp_request_method_names() {
+        use serde_json::json;
+
+        let params: serde_json::Map<String, serde_json::Value> =
+            [("cursor".to_string(), json!("abc"))].into_iter().collect();
+
+        assert_eq!(CLIENT_METHOD_NAMES.mcp_connect, "mcp/connect");
+        assert_eq!(CLIENT_METHOD_NAMES.mcp_message, "mcp/message");
+        assert_eq!(CLIENT_METHOD_NAMES.mcp_disconnect, "mcp/disconnect");
+
+        assert_eq!(
+            AgentRequest::ConnectMcpRequest(ConnectMcpRequest::new("server-1")).method(),
+            "mcp/connect"
+        );
+        assert_eq!(
+            AgentRequest::MessageMcpRequest(MessageMcpRequest::new("conn-1", "tools/list"))
+                .method(),
+            "mcp/message"
+        );
+        assert_eq!(
+            AgentRequest::DisconnectMcpRequest(DisconnectMcpRequest::new("conn-1")).method(),
+            "mcp/disconnect"
+        );
+        assert_eq!(
+            AgentNotification::MessageMcpNotification(MessageMcpNotification::new(
+                "conn-1",
+                "notifications/progress"
+            ))
+            .method(),
+            "mcp/message"
+        );
+
+        assert_eq!(
+            serde_json::to_value(ConnectMcpRequest::new("server-1")).unwrap(),
+            json!({ "acpId": "server-1" })
+        );
+        assert_eq!(
+            serde_json::to_value(ConnectMcpResponse::new("conn-1")).unwrap(),
+            json!({ "connectionId": "conn-1" })
+        );
+        assert_eq!(
+            serde_json::to_value(MessageMcpRequest::new("conn-1", "tools/list").params(params))
+                .unwrap(),
+            json!({
+                "connectionId": "conn-1",
+                "method": "tools/list",
+                "params": { "cursor": "abc" }
+            })
+        );
+        assert_eq!(
+            serde_json::to_value(DisconnectMcpRequest::new("conn-1")).unwrap(),
+            json!({ "connectionId": "conn-1" })
+        );
+        assert_eq!(
+            serde_json::to_value(MessageMcpNotification::new(
+                "conn-1",
+                "notifications/progress"
+            ))
+            .unwrap(),
+            json!({
+                "connectionId": "conn-1",
+                "method": "notifications/progress"
+            })
+        );
+
+        let request_with_null_params: MessageMcpRequest = serde_json::from_value(json!({
+            "connectionId": "conn-1",
+            "method": "tools/list",
+            "params": null
+        }))
+        .unwrap();
+        assert_eq!(request_with_null_params.params, None);
     }
 }

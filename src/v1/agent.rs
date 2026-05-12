@@ -18,6 +18,11 @@ use crate::{
     ProtocolVersion, SessionId, SkipListener,
 };
 
+#[cfg(feature = "unstable_mcp_over_acp")]
+use super::mcp::{
+    MCP_MESSAGE_METHOD_NAME, MessageMcpNotification, MessageMcpRequest, MessageMcpResponse,
+};
+
 #[cfg(feature = "unstable_nes")]
 use crate::{
     AcceptNesNotification, CloseNesRequest, CloseNesResponse, DidChangeDocumentNotification,
@@ -4608,6 +4613,9 @@ pub struct AgentMethodNames {
     pub session_prompt: &'static str,
     /// Notification for cancelling operations.
     pub session_cancel: &'static str,
+    /// Method for exchanging MCP-over-ACP messages.
+    #[cfg(feature = "unstable_mcp_over_acp")]
+    pub mcp_message: &'static str,
     /// Method for selecting a model for a given session.
     #[cfg(feature = "unstable_session_model")]
     pub session_set_model: &'static str,
@@ -4671,6 +4679,8 @@ pub const AGENT_METHOD_NAMES: AgentMethodNames = AgentMethodNames {
     session_set_config_option: SESSION_SET_CONFIG_OPTION_METHOD_NAME,
     session_prompt: SESSION_PROMPT_METHOD_NAME,
     session_cancel: SESSION_CANCEL_METHOD_NAME,
+    #[cfg(feature = "unstable_mcp_over_acp")]
+    mcp_message: MCP_MESSAGE_METHOD_NAME,
     #[cfg(feature = "unstable_session_model")]
     session_set_model: SESSION_SET_MODEL_METHOD_NAME,
     session_list: SESSION_LIST_METHOD_NAME,
@@ -4923,6 +4933,13 @@ pub enum ClientRequest {
     /// The agent must cancel any ongoing work and then free up any resources
     /// associated with the NES session.
     CloseNesRequest(CloseNesRequest),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Exchanges an MCP-over-ACP message.
+    #[cfg(feature = "unstable_mcp_over_acp")]
+    MessageMcpRequest(MessageMcpRequest),
     /// Handles extension method requests from the client.
     ///
     /// Extension methods provide a way to add custom functionality while maintaining
@@ -4965,6 +4982,8 @@ impl ClientRequest {
             Self::SuggestNesRequest(_) => AGENT_METHOD_NAMES.nes_suggest,
             #[cfg(feature = "unstable_nes")]
             Self::CloseNesRequest(_) => AGENT_METHOD_NAMES.nes_close,
+            #[cfg(feature = "unstable_mcp_over_acp")]
+            Self::MessageMcpRequest(_) => AGENT_METHOD_NAMES.mcp_message,
             Self::ExtMethodRequest(ext_request) => &ext_request.method,
         }
     }
@@ -5011,6 +5030,8 @@ pub enum AgentResponse {
     #[cfg(feature = "unstable_nes")]
     CloseNesResponse(#[serde(default)] CloseNesResponse),
     ExtMethodResponse(ExtResponse),
+    #[cfg(feature = "unstable_mcp_over_acp")]
+    MessageMcpResponse(MessageMcpResponse),
 }
 
 /// All possible notifications that a client can send to an agent.
@@ -5071,6 +5092,13 @@ pub enum ClientNotification {
     ///
     /// Notification sent when a suggestion is rejected.
     RejectNesNotification(RejectNesNotification),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Sends an MCP-over-ACP notification.
+    #[cfg(feature = "unstable_mcp_over_acp")]
+    MessageMcpNotification(MessageMcpNotification),
     /// Handles extension notifications from the client.
     ///
     /// Extension notifications provide a way to send one-way messages for custom functionality
@@ -5100,6 +5128,8 @@ impl ClientNotification {
             Self::AcceptNesNotification(_) => AGENT_METHOD_NAMES.nes_accept,
             #[cfg(feature = "unstable_nes")]
             Self::RejectNesNotification(_) => AGENT_METHOD_NAMES.nes_reject,
+            #[cfg(feature = "unstable_mcp_over_acp")]
+            Self::MessageMcpNotification(_) => AGENT_METHOD_NAMES.mcp_message,
             Self::ExtNotification(ext_notification) => &ext_notification.method,
         }
     }
@@ -5267,6 +5297,26 @@ mod test_serialization {
             }
             _ => panic!("Expected Acp variant"),
         }
+    }
+
+    #[cfg(feature = "unstable_mcp_over_acp")]
+    #[test]
+    fn test_client_mcp_message_method_names() {
+        assert_eq!(AGENT_METHOD_NAMES.mcp_message, "mcp/message");
+
+        assert_eq!(
+            ClientRequest::MessageMcpRequest(MessageMcpRequest::new("conn-1", "tools/list"))
+                .method(),
+            "mcp/message"
+        );
+        assert_eq!(
+            ClientNotification::MessageMcpNotification(MessageMcpNotification::new(
+                "conn-1",
+                "notifications/progress"
+            ))
+            .method(),
+            "mcp/message"
+        );
     }
 
     #[cfg(feature = "unstable_mcp_over_acp")]
