@@ -1714,11 +1714,13 @@ impl CloseSessionResponse {
 /// Only available if the Agent supports the `sessionCapabilities.delete` capability.
 #[cfg(feature = "unstable_session_delete")]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_DELETE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct DeleteSessionRequest {
+    /// The ID of the session to delete.
+    pub session_id: SessionId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -1731,8 +1733,11 @@ pub struct DeleteSessionRequest {
 #[cfg(feature = "unstable_session_delete")]
 impl DeleteSessionRequest {
     #[must_use]
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(session_id: impl Into<SessionId>) -> Self {
+        Self {
+            session_id: session_id.into(),
+            meta: None,
+        }
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -5010,7 +5015,7 @@ pub enum ClientRequest {
     ///
     /// Deletes an existing session.
     ///
-    /// This method is only available if the agent advertises the `session.delete` capability.
+    /// This method is only available if the agent advertises the `sessionCapabilities.delete` capability.
     DeleteSessionRequest(DeleteSessionRequest),
     /// Resumes an existing session without returning previous messages.
     ///
@@ -5734,6 +5739,37 @@ mod test_serialization {
             .unwrap(),
             json!({
                 "additionalDirectories": {}
+            })
+        );
+    }
+
+    #[cfg(feature = "unstable_session_delete")]
+    #[test]
+    fn test_delete_session_request_serialization() {
+        let request = DeleteSessionRequest::new("sess_abc123");
+
+        let json = serde_json::to_value(&request).unwrap();
+        assert_eq!(
+            json,
+            json!({
+                "sessionId": "sess_abc123",
+            })
+        );
+
+        let deserialized: DeleteSessionRequest = serde_json::from_value(json).unwrap();
+        assert_eq!(deserialized.session_id, SessionId::from("sess_abc123"));
+    }
+
+    #[cfg(feature = "unstable_session_delete")]
+    #[test]
+    fn test_delete_session_capabilities_serialization() {
+        assert_eq!(
+            serde_json::to_value(
+                SessionCapabilities::new().delete(SessionDeleteCapabilities::new())
+            )
+            .unwrap(),
+            json!({
+                "delete": {}
             })
         );
     }

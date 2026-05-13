@@ -3333,8 +3333,9 @@ impl IntoV1 for super::DeleteSessionRequest {
     type Output = crate::v1::DeleteSessionRequest;
 
     fn into_v1(self) -> Result<Self::Output> {
-        let Self { meta } = self;
+        let Self { session_id, meta } = self;
         Ok(crate::v1::DeleteSessionRequest {
+            session_id: session_id.into_v1()?,
             meta: meta.into_v1()?,
         })
     }
@@ -3345,8 +3346,9 @@ impl IntoV2 for crate::v1::DeleteSessionRequest {
     type Output = super::DeleteSessionRequest;
 
     fn into_v2(self) -> Result<Self::Output> {
-        let Self { meta } = self;
+        let Self { session_id, meta } = self;
         Ok(super::DeleteSessionRequest {
+            session_id: session_id.into_v2()?,
             meta: meta.into_v2()?,
         })
     }
