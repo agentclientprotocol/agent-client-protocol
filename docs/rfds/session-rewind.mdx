@@ -1,0 +1,251 @@
+---
+title: Session Rewind
+sidebarTitle: Session Rewind
+---
+
+Author(s): @htahaozlu
+
+Champion: _(open for champion from core team)_
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+We propose adding two complementary methods to ACP that let a client modify a session's conversation timeline in place: edit a previously-sent user message and re-run from that point, or rewind a session to an earlier point in its conversation history. These are user-facing actions familiar from every modern coding-agent UI (Claude Desktop, Cursor, Windsurf, Gemini CLI checkpointing) but currently have no portable surface in ACP, forcing each editor-agent pair to reinvent the integration and producing the bugs observed in Zed issues [#52153](https://github.com/zed-industries/zed/issues/52153), [#39997](https://github.com/zed-industries/zed/issues/39997), and [#28676](https://github.com/zed-industries/zed/issues/28676).
+
+This proposal is complementary to, and distinct from, [`session/fork`](./session-fork.mdx). Fork copies a session's context into a new session for non-destructive side queries. Rewind mutates the source session's history.
+
+## Status quo
+
+The protocol today provides `session/new`, `session/load`, `session/resume`, `session/list`, `session/close`, `session/prompt`, and `session/fork`. Once a `session/prompt` turn completes, its messages are immutable from the client's perspective. There is no protocol-level operation for:
+
+1. **Editing a previously sent user message.** Today the only workaround is to start a new session and manually re-prompt, losing intermediate context and tool-call results that were still useful.
+2. **Rewinding a conversation to an earlier point.** Agents that implement this internally (Gemini CLI via shadow git, Claude Code via `/clear`, Codex via its own checkpoint store) cannot expose it through ACP, so ACP clients can only call out via slash commands with no structured response.
+3. **Discarding only some messages after a chosen point** (the common "edit message N, drop N+1..end, re-run from N" affordance).
+
+The `unstable_message_id` feature flag already exists in `Cargo.toml`, suggesting message identity is anticipated. Without operations that consume message IDs, the flag has no user-facing leverage.
+
+[Discussion #239](https://github.com/orgs/agentclientprotocol/discussions/239) "Restoring a checkpoint and an earlier point in the conversation" has been open since 2025-11 with thoughtful contributors but no concrete proposal. [Discussion #329](https://github.com/orgs/agentclientprotocol/discussions/329) "`session/undo` and `session/redo` requests" has zero engagement. This RFD consolidates them.
+
+## What we propose to do about it
+
+Add two methods, both gated behind `unstable_session_rewind`, both depending on `unstable_message_id` being stabilized (or co-stabilized).
+
+### `session/rewind`
+
+The client tells the agent: "treat history up to and including message `<id>` as canonical, discard everything after." After this returns, the next `session/prompt` continues from the rewound state.
+
+```jsonc
+// Request
+{
+  "jsonrpc": "2.0",
+  "id": 17,
+  "method": "session/rewind",
+  "params": {
+    "sessionId": "sess_abc123",
+    "toMessageId": "msg_42"
+  }
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "id": 17,
+  "result": {
+    "remainingMessageCount": 8,
+    "lastMessageId": "msg_42"
+  }
+}
+```
+
+Semantics:
+
+- `toMessageId` MUST be a message that exists in the session and was emitted via `session/update`. If the ID is unknown the agent returns JSON-RPC error `-32602` (invalid params).
+- After a successful rewind, the next `session/prompt` MUST behave as if the discarded messages never happened: no implicit re-prompt, no auto-replay.
+- If a turn is currently active when `session/rewind` is called, the agent MUST first cancel the turn (re-using the existing cancel semantics) and then perform the rewind.
+- Rewind does NOT touch the filesystem. Clients that want filesystem rollback layer it on top using existing IDE/SCM mechanisms or `session/fork`.
+
+### `session/edit_prompt`
+
+The client tells the agent: "replace the content of message `<id>` (which MUST be a user message) with new content, then re-run the turn that followed it as if the new content had been sent from the start."
+
+```jsonc
+// Request
+{
+  "jsonrpc": "2.0",
+  "id": 18,
+  "method": "session/edit_prompt",
+  "params": {
+    "sessionId": "sess_abc123",
+    "messageId": "msg_42",
+    "newContent": [
+      { "type": "text", "text": "Updated prompt..." }
+    ]
+  }
+}
+
+// Response: same shape as `session/prompt`, streaming continues via `session/update`
+```
+
+Semantics:
+
+- `session/edit_prompt` is implicitly a `session/rewind` to the message immediately before `messageId`, followed by replacing `messageId`'s content and re-running its turn.
+- The agent emits `session/update` notifications during the re-run, same as `session/prompt`.
+- `messageId` MUST identify a **user** message. Attempting to edit an agent or tool message returns error `-32602`.
+- Re-running uses the same model, MCP configuration, and tools that were active for the original message. Future RFDs may allow overriding these (not in scope here).
+
+### Capability discovery
+
+```jsonc
+// session/new or session/load response
+{
+  "result": {
+    "protocolVersion": 1,
+    "agentCapabilities": {
+      "rewindSession": {
+        "supported": true,
+        "supportsEditPrompt": true
+      }
+    }
+  }
+}
+```
+
+An agent may advertise `rewindSession.supported: true` and `supportsEditPrompt: false` if it can truncate history but cannot re-run an edited prompt (rare; included for forward compat).
+
+## Shiny future
+
+A user opens Zed with Claude Code attached over ACP. They've had a 30-message conversation; the 10th user message was poorly phrased. They click the edit pencil on that message, change the wording, hit enter. Zed sends `session/edit_prompt`. Claude Code truncates its internal context to before message 10, re-runs the turn with the new prompt, streams updates back. Zed shows the new branch; the old 20 messages are gone. The user does not have to copy-paste anything, does not have to start a new session, does not lose the first 9 messages of context.
+
+Same user clicks "rewind to here" on message 5 of a different conversation. Zed sends `session/rewind`. The agent keeps messages 1–5, drops 6–30. The user types a new follow-up that continues from message 5's state.
+
+A user editing a message in a session attached to Gemini CLI gets the same experience because the protocol normalizes both agents' internal checkpoint mechanisms behind one surface.
+
+External developers building third-party ACP clients (Eclipse Agents, Cline, the Unity client) get the same primitive without per-agent special-casing.
+
+## Implementation details and plan
+
+### Feature flag
+
+Add to `Cargo.toml`:
+
+```toml
+unstable_session_rewind = []
+```
+
+And to the `unstable` umbrella in the order matching existing flags.
+
+### Rust types (`src/agent.rs`)
+
+```rust
+#[cfg(feature = "unstable_session_rewind")]
+pub struct RewindSessionRequest {
+    pub session_id: SessionId,
+    pub to_message_id: MessageId,
+}
+
+#[cfg(feature = "unstable_session_rewind")]
+pub struct RewindSessionResponse {
+    pub remaining_message_count: u32,
+    pub last_message_id: MessageId,
+}
+
+#[cfg(feature = "unstable_session_rewind")]
+pub struct EditPromptRequest {
+    pub session_id: SessionId,
+    pub message_id: MessageId,
+    pub new_content: Vec<ContentBlock>,
+}
+
+// EditPromptResponse aliases PromptResponse for shape; consider type alias.
+```
+
+Following `AGENTS.md` conventions:
+
+- Trait methods: `rewind_session`, `edit_prompt`
+- Constants: `session_rewind`, `session_edit_prompt`
+- Add variants to `AgentRequest` and `AgentResponse` enums
+- Register both in `src/bin/generate.rs` SideDocs
+- Run `npm run generate` and `npm run check`
+
+### Dependency on `unstable_message_id`
+
+This RFD assumes `unstable_message_id` stabilizes (or co-stabilizes) before `session/rewind` graduates to Preview. If `unstable_message_id` is rejected or re-designed, this RFD updates accordingly.
+
+### Test plan
+
+1. Unit tests for protocol round-trips: rewind to a known message, then send a new prompt, verify the conversation excludes truncated messages.
+2. Error cases: unknown `toMessageId`, attempting to edit an agent message, calling rewind while a turn is active.
+3. Integration test with one reference agent (Claude Code or a mock) confirming `session/update` events stop emitting from truncated messages.
+
+### Examples to update
+
+- `examples/agent.rs` in the Rust SDK: add a stub `rewind_session` handler showing a minimal correct implementation.
+- `examples/client.rs`: add a sample call site.
+- TypeScript SDK examples folder once the schema regenerates.
+
+### Documentation
+
+Add a section to `docs/protocol/` describing the methods, capability flag, and the relationship to `session/fork`. Cross-link the session-fork RFD.
+
+### Rollout
+
+1. **Draft RFD** lands in `docs/rfds/session-rewind.mdx`.
+2. **Implementation PR(s)** behind `unstable_session_rewind` flag. Possibly split into:
+   - "feat(unstable): Add session/rewind"
+   - "feat(unstable): Add session/edit_prompt"
+3. SDK PRs once the Rust schema regenerates.
+4. **Move to Preview** once at least one agent (Claude Code adapter, Codex adapter, or a reference test agent) implements it end-to-end and at least one client (Zed) consumes it.
+5. **Stabilize** once ecosystem feedback is positive.
+
+## Frequently asked questions
+
+### Why two methods instead of one?
+
+`session/rewind` and `session/edit_prompt` are conceptually `rewind + new prompt`. We could expose only `session/rewind` and require clients to follow with `session/prompt` for the edit case. We split them because:
+
+- Clients want atomic edit-and-resubmit semantics; otherwise the agent could observe a "rewound but no follow-up" state and not know whether to wait, summarize, or stay idle.
+- An edited prompt is recognizably a re-run, not a new prompt. Surfacing the intent allows agents to apply different policies (e.g., reuse cached tool outputs from the discarded turn when safe).
+
+### Why not just expose this as a slash command?
+
+Slash commands are stringly-typed, agent-specific, and produce unstructured output. The Zed-Claude-Code `/clear` bug ([zed#55888](https://github.com/zed-industries/zed/issues/55888)) is a direct consequence of relying on slash commands for state-modifying operations.
+
+### What about filesystem rollback?
+
+Explicitly out of scope. ACP already has the `fs/*` family for filesystem operations. If an agent or client wants to combine rewind with filesystem rollback, they layer it. Agent-side filesystem snapshots (Gemini's shadow git, Roo Code's similar mechanism) remain agent-side implementation details. Client-side IDE history (Zed snapshot, VS Code timeline) remains client-side. The protocol intentionally does not arbitrate this debate, which has been circling Discussion #239 for months.
+
+### How does this interact with `session/fork`?
+
+`session/fork` produces a new session sharing a prefix with the original; both can be live concurrently and the original is unmodified. `session/rewind` modifies the original in place and discards messages after the rewind point. A client can combine them: fork the session at point P (preserving the original for safety), then `session/rewind` on the fork if needed. They compose cleanly because their domains do not overlap.
+
+### How does this interact with `session/resume`?
+
+`session/resume` is about lifecycle (reconnecting to a session). `session/rewind` is about content (modifying history). After a rewind, calling `session/resume` returns the truncated history, exactly as if those messages had never been emitted.
+
+### What if a turn is active when rewind is called?
+
+The agent MUST cancel the active turn before performing the rewind. Cancellation semantics match the existing protocol (see `unstable_cancel_request` RFD).
+
+### Who owns the message IDs?
+
+Per the `unstable_message_id` design (in flight): the agent assigns IDs and emits them via `session/update`. The client never invents IDs; it only references IDs it has observed.
+
+### Why not piggyback on `session/load`?
+
+`session/load` already mandates that the agent replay the full conversation. Adding a `truncateAfter` parameter was considered. We rejected it because rewind is a discrete state mutation, while `session/load` is currently a stateless resume operation. Coupling them would conflate two concerns and risk breaking existing `session/load` consumers.
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+1. **Slash-command-only**: rejected as unsafe (see Zed #55888) and not portable.
+2. **Single `session/restore_to_checkpoint` operation with opaque checkpoint IDs**: considered but rejected for the v1 design because it requires the agent to invent and store checkpoint handles, while message IDs already exist via `unstable_message_id`. A `session/checkpoint/*` family can be added later if shadow-git-style agent-side state proves valuable.
+3. **Client-owned history (à la Vercel AI SDK)**: the agent is stateless, the client sends a possibly-truncated history on each prompt. Rejected because it places history-management burden on every client, breaks long-running stateful agents (Claude Code's deep context handling), and is incompatible with `session/resume`.
+4. **Branching (tree of conversation timelines)**: more powerful but much bigger surface. Out of scope for v1; a future RFD could add it on top.
+
+### Is this going to break agents that don't implement it?
+
+No. The methods are gated behind `unstable_session_rewind` and discovered via `agentCapabilities.rewindSession`. Agents that don't implement them advertise `supported: false` (or omit the capability), and clients fall back to today's behavior.
+
+## Revision history
+
+- **v1** (draft) — initial proposal: `session/rewind` and `session/edit_prompt`, depending on `unstable_message_id`. Filesystem rollback explicitly out of scope. Open for champion.
