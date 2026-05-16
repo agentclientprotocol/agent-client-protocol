@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.13.1](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.13.0...v0.13.1) - 2026-05-16
+
+### Added
+
+- *(unstable)* Add unstable session delete support ([#1216](https://github.com/agentclientprotocol/agent-client-protocol/pull/1216))
+
 ## [0.13.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.12.2...v0.13.0) - 2026-05-12
 
 ### Added
