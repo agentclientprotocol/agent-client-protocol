@@ -424,6 +424,14 @@
                 {
                   "allOf": [
                     {
+                      "$ref": "#/$defs/DeleteSessionResponse"
+                    }
+                  ],
+                  "title": "DeleteSessionResponse"
+                },
+                {
+                  "allOf": [
+                    {
                       "$ref": "#/$defs/ForkSessionResponse"
                     }
                   ],
@@ -1280,6 +1288,15 @@
                 {
                   "allOf": [
                     {
+                      "$ref": "#/$defs/DeleteSessionRequest"
+                    }
+                  ],
+                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nDeletes an existing session from `session/list`.\n\nThis method is only available if the agent advertises the `sessionCapabilities.delete` capability.",
+                  "title": "DeleteSessionRequest"
+                },
+                {
+                  "allOf": [
+                    {
                       "$ref": "#/$defs/ForkSessionRequest"
                     }
                   ],
@@ -2036,6 +2053,41 @@
       },
       "required": ["currentModeId"],
       "type": "object"
+    },
+    "DeleteSessionRequest": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for deleting an existing session from `session/list`.\n\nOnly available if the Agent supports the `sessionCapabilities.delete` capability.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "sessionId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ],
+          "description": "The ID of the session to delete."
+        }
+      },
+      "required": ["sessionId"],
+      "type": "object",
+      "x-method": "session/delete",
+      "x-side": "agent"
+    },
+    "DeleteSessionResponse": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nResponse from deleting a session.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object",
+      "x-method": "session/delete",
+      "x-side": "agent"
     },
     "DidChangeDocumentNotification": {
       "description": "Notification sent when a file is edited.",
@@ -5653,6 +5705,17 @@
           ],
           "description": "Whether the agent supports `session/close`."
         },
+        "delete": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SessionDeleteCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nWhether the agent supports `session/delete`.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports deleting sessions from `session/list`."
+        },
         "fork": {
           "anyOf": [
             {
@@ -5926,6 +5989,17 @@
     "SessionConfigValueId": {
       "description": "Unique identifier for a session configuration option value.",
       "type": "string"
+    },
+    "SessionDeleteCapabilities": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapabilities for the `session/delete` method.\n\nSupplying `{}` means the agent supports deleting sessions from `session/list`.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object"
     },
     "SessionForkCapabilities": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapabilities for the `session/fork` method.\n\nBy supplying `{}` it means that the agent supports forking of sessions.",

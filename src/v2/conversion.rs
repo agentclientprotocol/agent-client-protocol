@@ -3644,6 +3644,56 @@ impl IntoV2 for crate::v1::CloseSessionResponse {
     }
 }
 
+#[cfg(feature = "unstable_session_delete")]
+impl IntoV1 for super::DeleteSessionRequest {
+    type Output = crate::v1::DeleteSessionRequest;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        let Self { session_id, meta } = self;
+        Ok(crate::v1::DeleteSessionRequest {
+            session_id: session_id.into_v1()?,
+            meta: meta.into_v1()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_session_delete")]
+impl IntoV2 for crate::v1::DeleteSessionRequest {
+    type Output = super::DeleteSessionRequest;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        let Self { session_id, meta } = self;
+        Ok(super::DeleteSessionRequest {
+            session_id: session_id.into_v2()?,
+            meta: meta.into_v2()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_session_delete")]
+impl IntoV1 for super::DeleteSessionResponse {
+    type Output = crate::v1::DeleteSessionResponse;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        let Self { meta } = self;
+        Ok(crate::v1::DeleteSessionResponse {
+            meta: meta.into_v1()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_session_delete")]
+impl IntoV2 for crate::v1::DeleteSessionResponse {
+    type Output = super::DeleteSessionResponse;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        let Self { meta } = self;
+        Ok(super::DeleteSessionResponse {
+            meta: meta.into_v2()?,
+        })
+    }
+}
+
 impl IntoV1 for super::ListSessionsRequest {
     type Output = crate::v1::ListSessionsRequest;
 
@@ -5270,6 +5320,8 @@ impl IntoV1 for super::SessionCapabilities {
     fn into_v1(self) -> Result<Self::Output> {
         let Self {
             list,
+            #[cfg(feature = "unstable_session_delete")]
+            delete,
             #[cfg(feature = "unstable_session_additional_directories")]
             additional_directories,
             #[cfg(feature = "unstable_session_fork")]
@@ -5280,6 +5332,8 @@ impl IntoV1 for super::SessionCapabilities {
         } = self;
         Ok(crate::v1::SessionCapabilities {
             list: list.into_v1()?,
+            #[cfg(feature = "unstable_session_delete")]
+            delete: delete.into_v1()?,
             #[cfg(feature = "unstable_session_additional_directories")]
             additional_directories: additional_directories.into_v1()?,
             #[cfg(feature = "unstable_session_fork")]
@@ -5297,6 +5351,8 @@ impl IntoV2 for crate::v1::SessionCapabilities {
     fn into_v2(self) -> Result<Self::Output> {
         let Self {
             list,
+            #[cfg(feature = "unstable_session_delete")]
+            delete,
             #[cfg(feature = "unstable_session_additional_directories")]
             additional_directories,
             #[cfg(feature = "unstable_session_fork")]
@@ -5307,6 +5363,8 @@ impl IntoV2 for crate::v1::SessionCapabilities {
         } = self;
         Ok(super::SessionCapabilities {
             list: list.into_v2()?,
+            #[cfg(feature = "unstable_session_delete")]
+            delete: delete.into_v2()?,
             #[cfg(feature = "unstable_session_additional_directories")]
             additional_directories: additional_directories.into_v2()?,
             #[cfg(feature = "unstable_session_fork")]
@@ -5335,6 +5393,30 @@ impl IntoV2 for crate::v1::SessionListCapabilities {
     fn into_v2(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(super::SessionListCapabilities {
+            meta: meta.into_v2()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_session_delete")]
+impl IntoV1 for super::SessionDeleteCapabilities {
+    type Output = crate::v1::SessionDeleteCapabilities;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        let Self { meta } = self;
+        Ok(crate::v1::SessionDeleteCapabilities {
+            meta: meta.into_v1()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_session_delete")]
+impl IntoV2 for crate::v1::SessionDeleteCapabilities {
+    type Output = super::SessionDeleteCapabilities;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        let Self { meta } = self;
+        Ok(super::SessionDeleteCapabilities {
             meta: meta.into_v2()?,
         })
     }
@@ -5546,6 +5628,10 @@ impl IntoV1 for super::ClientRequest {
             Self::ListSessionsRequest(value) => {
                 crate::v1::ClientRequest::ListSessionsRequest(value.into_v1()?)
             }
+            #[cfg(feature = "unstable_session_delete")]
+            Self::DeleteSessionRequest(value) => {
+                crate::v1::ClientRequest::DeleteSessionRequest(value.into_v1()?)
+            }
             #[cfg(feature = "unstable_session_fork")]
             Self::ForkSessionRequest(value) => {
                 crate::v1::ClientRequest::ForkSessionRequest(value.into_v1()?)
@@ -5624,6 +5710,10 @@ impl IntoV2 for crate::v1::ClientRequest {
             Self::ListSessionsRequest(value) => {
                 super::ClientRequest::ListSessionsRequest(value.into_v2()?)
             }
+            #[cfg(feature = "unstable_session_delete")]
+            Self::DeleteSessionRequest(value) => {
+                super::ClientRequest::DeleteSessionRequest(value.into_v2()?)
+            }
             #[cfg(feature = "unstable_session_fork")]
             Self::ForkSessionRequest(value) => {
                 super::ClientRequest::ForkSessionRequest(value.into_v2()?)
@@ -5699,6 +5789,10 @@ impl IntoV1 for super::AgentResponse {
             }
             Self::ListSessionsResponse(value) => {
                 crate::v1::AgentResponse::ListSessionsResponse(value.into_v1()?)
+            }
+            #[cfg(feature = "unstable_session_delete")]
+            Self::DeleteSessionResponse(value) => {
+                crate::v1::AgentResponse::DeleteSessionResponse(value.into_v1()?)
             }
             #[cfg(feature = "unstable_session_fork")]
             Self::ForkSessionResponse(value) => {
@@ -5779,6 +5873,10 @@ impl IntoV2 for crate::v1::AgentResponse {
             }
             Self::ListSessionsResponse(value) => {
                 super::AgentResponse::ListSessionsResponse(value.into_v2()?)
+            }
+            #[cfg(feature = "unstable_session_delete")]
+            Self::DeleteSessionResponse(value) => {
+                super::AgentResponse::DeleteSessionResponse(value.into_v2()?)
             }
             #[cfg(feature = "unstable_session_fork")]
             Self::ForkSessionResponse(value) => {

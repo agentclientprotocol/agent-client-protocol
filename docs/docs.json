@@ -84,6 +84,7 @@
                 "pages": [
                   "protocol/draft/session-setup",
                   "protocol/draft/session-list",
+                  "protocol/draft/session-delete",
                   "protocol/draft/file-system",
                   "protocol/draft/cancellation",
                   "protocol/draft/schema"

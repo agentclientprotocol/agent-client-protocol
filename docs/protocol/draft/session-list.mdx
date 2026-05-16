@@ -61,6 +61,12 @@ If `sessionCapabilities.list` is not present, the Agent does not support listing
   list for that session.
 </Note>
 
+<Note>
+  If the Agent advertises the unstable `sessionCapabilities.delete` capability,
+  Clients can remove sessions from future `session/list` results with
+  [`session/delete`](/protocol/draft/session-delete).
+</Note>
+
 ## Listing Sessions
 
 Clients discover existing sessions by calling the `session/list` method with optional filtering and pagination parameters:
