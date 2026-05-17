@@ -7,6 +7,8 @@ Sessions represent a specific conversation or thread between the [Client](/proto
 
 Before creating a session, Clients **MUST** first complete the [initialization](/protocol/initialization) phase to establish protocol compatibility and capabilities.
 
+If the Agent requires authentication, `session/new` may fail with an `auth_required` error until the Client completes the [authentication flow](/protocol/draft/authentication).
+
 <br />
 
 ```mermaid
