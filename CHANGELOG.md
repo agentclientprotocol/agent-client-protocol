@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.13.2](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.13.1...v0.13.2) - 2026-05-17
+
+### Fixed
+
+- *(unstable)* Update additionalDirectories guidance ([#1227](https://github.com/agentclientprotocol/agent-client-protocol/pull/1227))
+
 ## [0.13.1](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.13.0...v0.13.1) - 2026-05-16
 
 ### Added
