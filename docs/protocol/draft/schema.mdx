@@ -1165,17 +1165,6 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
 </ResponseField>
-<ResponseField name="additionalDirectories" type={<><span>"string"</span><span>[]</span></>} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Filter sessions by the exact ordered additional workspace roots. Each path must be absolute.
-
-This filter applies only when the field is present and non-empty. When
-omitted or empty, no additional-root filter is applied.
-
-</ResponseField>
 <ResponseField name="cursor" type={"string | null"} >
   Opaque cursor token from a previous response's nextCursor field for cursor-based pagination
 </ResponseField>
@@ -1251,7 +1240,8 @@ Additional workspace roots to activate for this session. Each path must be absol
 
 When omitted or empty, no additional roots are activated. When non-empty,
 this is the complete resulting additional-root list for the loaded
-session.
+session. It may differ from any previously used or reported list as long as
+the request `cwd` matches the session's `cwd`.
 
 </ResponseField>
 <ResponseField name="cwd" type={"string"} required>
@@ -1544,7 +1534,8 @@ Additional workspace roots to activate for this session. Each path must be absol
 
 When omitted or empty, no additional roots are activated. When non-empty,
 this is the complete resulting additional-root list for the resumed
-session.
+session. It may differ from any previously used or reported list as long as
+the request `cwd` matches the session's `cwd`.
 
 </ResponseField>
 <ResponseField name="cwd" type={"string"} required>
@@ -6530,8 +6521,10 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 Capabilities for additional session directories support.
 
-By supplying `\{\}` it means that the agent supports the `additionalDirectories` field on
-supported session lifecycle requests and `session/list`.
+By supplying `\{\}` it means that the agent supports the `additionalDirectories`
+field on supported session lifecycle requests. Agents that also support
+`session/list` may return `SessionInfo.additionalDirectories` when they track
+that state.
 
 **Type:** Object
 
@@ -6575,7 +6568,10 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
 This capability is not part of the spec yet, and may be removed or changed at any point.
 
-Whether the agent supports `additionalDirectories` on supported session lifecycle requests and `session/list`.
+Whether the agent supports `additionalDirectories` on supported session lifecycle requests.
+
+Agents that also support `session/list` may return
+`SessionInfo.additionalDirectories` when they track that state.
 
 </ResponseField>
 <ResponseField name="close" type={<><span><a href="#sessionclosecapabilities">SessionCloseCapabilities</a></span><span> | null</span></>} >
@@ -6933,9 +6929,11 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
 This capability is not part of the spec yet, and may be removed or changed at any point.
 
-Authoritative ordered additional workspace roots for this session. Each path must be absolute.
+Additional workspace roots for this session, if the Agent reports them. Each path must be absolute.
 
-When omitted or empty, there are no additional roots for the session.
+Agents may omit this field when they do not track or surface additional-root
+state. When present, this is the complete additional-root list known to
+the Agent for the session.
 
 </ResponseField>
 <ResponseField name="cwd" type={"string"} required>

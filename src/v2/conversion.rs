@@ -3698,17 +3698,9 @@ impl IntoV1 for super::ListSessionsRequest {
     type Output = crate::v1::ListSessionsRequest;
 
     fn into_v1(self) -> Result<Self::Output> {
-        let Self {
-            cwd,
-            #[cfg(feature = "unstable_session_additional_directories")]
-            additional_directories,
-            cursor,
-            meta,
-        } = self;
+        let Self { cwd, cursor, meta } = self;
         Ok(crate::v1::ListSessionsRequest {
             cwd: cwd.into_v1()?,
-            #[cfg(feature = "unstable_session_additional_directories")]
-            additional_directories: additional_directories.into_v1()?,
             cursor: cursor.into_v1()?,
             meta: meta.into_v1()?,
         })
@@ -3719,17 +3711,9 @@ impl IntoV2 for crate::v1::ListSessionsRequest {
     type Output = super::ListSessionsRequest;
 
     fn into_v2(self) -> Result<Self::Output> {
-        let Self {
-            cwd,
-            #[cfg(feature = "unstable_session_additional_directories")]
-            additional_directories,
-            cursor,
-            meta,
-        } = self;
+        let Self { cwd, cursor, meta } = self;
         Ok(super::ListSessionsRequest {
             cwd: cwd.into_v2()?,
-            #[cfg(feature = "unstable_session_additional_directories")]
-            additional_directories: additional_directories.into_v2()?,
             cursor: cursor.into_v2()?,
             meta: meta.into_v2()?,
         })
