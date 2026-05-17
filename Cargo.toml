@@ -12,6 +12,7 @@ readme = "README.md"
 keywords = ["agent", "client", "protocol", "ai", "editor"]
 categories = ["development-tools", "api-bindings"]
 include = ["/src/**/*.rs", "/README.md", "/LICENSE", "/Cargo.toml"]
+rust-version = "1.88.0"
 
 [features]
 unstable = [

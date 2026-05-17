@@ -17,6 +17,29 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  msrv:
+    name: Minimum supported Rust version
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
+      - name: Read MSRV from Cargo.toml
+        id: msrv
+        run: |
+          msrv="$(sed -n 's/^rust-version[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' Cargo.toml)"
+          test -n "$msrv"
+          echo "version=$msrv" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@46268bd060767258de96ed93c1251119784f2ab6
+        with:
+          toolchain: ${{ steps.msrv.outputs.version }}
+
+      - name: Check with MSRV
+        run: cargo check --all-targets --all-features --locked
+
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -61,3 +84,34 @@ jobs:
         run: |
           npm run generate
           git diff --exit-code || (echo "Generated files are out of date. Run 'npm run generate' and commit the changes." && exit 1)
+
+  feature-powerset:
+    name: Feature powerset (${{ matrix.partition }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        partition: ["1/4", "2/4", "3/4", "4/4"]
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
+
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@46268bd060767258de96ed93c1251119784f2ab6
+        with:
+          toolchain: stable
+
+      - name: Install cargo-hack
+        uses: taiki-e/install-action@c070f87102a1c75b3183910f391c1cb887fe13c8
+        with:
+          tool: cargo-hack
+
+      - name: Check feature powerset
+        # `unstable` is an aggregate alias for the individual unstable_* features,
+        # so excluding it avoids duplicate combinations. Limit the powerset to
+        # feature pairs to keep CI practical; the regular CI all-features build
+        # still covers the all-on case.
+        run: cargo hack --locked check --feature-powerset --exclude-features unstable --no-dev-deps --depth 2 --partition ${{ matrix.partition }}
