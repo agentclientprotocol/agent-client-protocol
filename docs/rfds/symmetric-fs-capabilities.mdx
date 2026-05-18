@@ -1,0 +1,113 @@
+---
+title: "Symmetric filesystem capabilities"
+---
+
+- Author(s): [Adrian Cole](https://github.com/codefromthecrypt)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Require that `writeTextFile: true` implies `readTextFile: true` in client capabilities. No client uses them asymmetrically, and the split creates confusion for agent developers without serving a use case.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+The [file system spec][fs-spec] defines `readTextFile` and `writeTextFile` as independent booleans in `clientCapabilities.fs`, both defaulting to `false`. This creates four possible combinations, but only two occur in practice across all known open-source clients:
+
+| Client | readTextFile | writeTextFile |
+|--------|-------------|---------------|
+| [acp.nvim][acpnvim-cap] | true | true |
+| [ACP UI][acpui-cap] | true | true |
+| [agent-shell][agentshell-cap] | true | true |
+| [agentic.nvim][agentic-cap] | true | true |
+| [AionUi][aionui-cap] | true | true |
+| [avante.nvim][avante-cap] | true | true |
+| [Chrome ACP][chromeacp-cap] | true | true |
+| [codecompanion.nvim][cc-cap] | true | true |
+| [deepchat][deepchat-cap] | true | true |
+| [marimo][marimo-cap] | true | true |
+| [Mitto][mitto-cap] | true | true |
+| [UnityAgentClient][unity-cap] | true | true |
+| [vscode-acp][vscodeacp-cap] | true | true |
+| [Zed][zed-cap] | true | true |
+| [agent-client-kernel][ackernel-cap] | false | false |
+| [agent-review][agentreview-cap] | false | false |
+| [Agent Studio][agentstudio-cap] | false | false |
+| [cmd][cmd-cap] | false | false |
+| [duckdb-acp][duckdb-cap] | false | false |
+| [forge-core][forge-cap] | false | false |
+| [mcpc][mcpc-cap] | false | false |
+| [obsidian-agent-client][obsidian-cap] | false | false |
+| [tidewave_app][tidewave-cap] | false | false |
+
+No client sends `readTextFile: true, writeTextFile: false` or vice versa. The unused combinations create a buffer consistency problem: if a client advertises write but not read, agents read stale on-disk content via local tools and then write through ACP to the editor buffer, overwriting unsaved state based on stale input ([goose discussion][goose-discussion]).
+
+The four-way matrix adds complexity for agent developers who must handle combinations that never occur in practice.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+Add a normative statement to the [file system documentation][fs-spec]:
+
+> Agents MUST treat `writeTextFile: true` as implying `readTextFile: true`. Clients SHOULD set both capabilities symmetrically.
+
+This is a no-op for existing implementations since no client sends an asymmetric combination.
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+Agent developers handle two cases (fs supported or not) instead of four. The buffer consistency question is eliminated by definition.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Why not collapse into a single `fs` boolean?
+
+That matches what every client already does, but it is a breaking schema change. Write-implies-read is additive: existing clients already comply since none send an asymmetric combination.
+
+### Why not just document it as a recommendation?
+
+Recommendations do not remove the confusion. Agent developers still need to consider whether asymmetric clients exist. A MUST requirement removes the question.
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+1. **Single `fs` boolean** - Simpler but breaking. Requires schema migration and SDK updates.
+2. **SHOULD instead of MUST** - Does not solve the problem. Agent developers still handle the asymmetric case defensively.
+3. **Do nothing** - Leaves unnecessary complexity for every new agent implementation.
+
+Write-implies-read codifies existing practice with zero migration cost.
+
+## Revision history
+
+- 2026-03-06: Initial draft
+
+[fs-spec]: https://github.com/agentclientprotocol/agent-client-protocol/blob/main/docs/protocol/file-system.mdx
+[goose-discussion]: https://github.com/block/goose/pull/7668#discussion_r2889311685
+[acpnvim-cap]: https://github.com/brianhuster/acp.nvim/blob/main/lua/acp/core.lua#L374
+[acpui-cap]: https://github.com/formulahendry/acp-ui/blob/main/src/stores/session.ts#L327
+[ackernel-cap]: https://github.com/wiki3-ai/agent-client-kernel/blob/main/agent_client_kernel/kernel.py#L601
+[agentreview-cap]: https://github.com/xenodium/agent-review/blob/main/agent-review.el#L242
+[agentstudio-cap]: https://github.com/sxhxliang/agent-studio/blob/main/crates/agentx-agent/src/client.rs#L656
+[agentshell-cap]: https://github.com/xenodmin/agent-shell/blob/main/agent-shell.el#L224
+[agentic-cap]: https://github.com/carlos-algms/agentic.nvim/blob/main/lua/agentic/acp/acp_client.lua#L73
+[aionui-cap]: https://github.com/iOfficeAI/AionUi/blob/main/src/agent/acp/AcpConnection.ts#L954
+[avante-cap]: https://github.com/yetone/avante.nvim/blob/main/lua/avante/libs/acp_client.lua#L240
+[chromeacp-cap]: https://github.com/Areo-Joe/chrome-acp/blob/main/packages/proxy-server/src/server.ts#L271
+[cmd-cap]: https://github.com/getcmd-dev/cmd/blob/main/local-server/src/server/endpoints/sendMessage/acp/clients/claudeCode/claudeCodeACPClient.ts#L59
+[cc-cap]: https://github.com/olimorris/codecompanion.nvim/blob/main/lua/codecompanion/adapters/acp/cagent.lua#L29
+[deepchat-cap]: https://github.com/ThinkInAIXYZ/deepchat/blob/main/src/main/presenter/agentPresenter/acp/acpCapabilities.ts#L21
+[duckdb-cap]: https://github.com/sidequery/duckdb-acp/blob/main/duckdb_acp_core/src/ffi.rs
+[forge-cap]: https://github.com/namastexlabs/forge-core/blob/main/crates/executors/src/executors/acp/harness.rs
+[marimo-cap]: https://github.com/marimo-team/marimo/blob/main/frontend/src/components/chat/acp/agent-panel.tsx#L691
+[mcpc-cap]: https://github.com/mcpc-tech/mcpc/blob/main/packages/acp-ai-provider/src/language-model.ts#L406
+[mitto-cap]: https://github.com/inercia/mitto/blob/main/internal/acp/connection.go#L180
+[obsidian-cap]: https://github.com/RAIT-09/obsidian-agent-client/blob/main/src/adapters/acp/acp.adapter.ts#L440
+[tidewave-cap]: https://github.com/tidewave-ai/tidewave_app/blob/main/tidewave-core/src/acp_proxy.rs
+[unity-cap]: https://github.com/nuskey8/UnityAgentClient/blob/main/Assets/UnityAgentClient/Editor/AgentWindow.cs#L159
+[vscodeacp-cap]: https://github.com/omercnet/vscode-acp/blob/main/src/acp/client.ts#L344
+[zed-cap]: https://github.com/zed-industries/zed/blob/main/crates/agent_servers/src/acp.rs#L282
