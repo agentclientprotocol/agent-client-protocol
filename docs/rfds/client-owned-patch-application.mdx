@@ -1,0 +1,273 @@
+---
+title: "Client-owned patch application"
+---
+
+Author(s): [@leovigna](https://github.com/leovigna)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Add a new client-owned filesystem capability and method, `fs/apply_patch`, that allows an Agent to ask the Client to apply structured multi-file text edits to the Client's current document state, including unsaved editor buffers.
+
+The key idea is:
+
+- ACP should support patch-style mutation as a **Client capability**, not as a tool.
+- The Client remains the owner of document state, save lifecycle, undo/redo, formatting, diagnostics, and conflict handling.
+- The method should support a declared patch or edit format so ACP does not permanently overfit to one patch representation.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+Today ACP has client-owned file access through `fs/read_text_file` and `fs/write_text_file`.
+
+That is enough for simple workflows, but it leaves a gap for coding agents that want to make precise, structured edits:
+
+- `fs/write_text_file` is a whole-file write. It does not express localized edits, file moves, or multi-file batches.
+- Whole-file replacement makes it harder to detect stale reads and conflicts against the Client's current buffer state.
+- Clients can expose unsaved editor state through `fs/read_text_file`, but ACP has no corresponding way to apply edits back to that same live document state other than overwriting the entire file.
+- ACP also supports tool-call `diff` content, but that is presentation and reporting. It is not a Client-owned mutation API.
+
+The result is that agent and client implementations that need patch-style edits must invent proprietary behavior outside the protocol.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+Introduce a new Client capability under `clientCapabilities.fs`, named `applyPatch`, and a corresponding method, `fs/apply_patch`.
+
+The method would let an Agent submit a structured batch of file operations to be applied against the Client's current document model for those paths.
+
+Important properties:
+
+- The operation targets the Client's live document state, not direct file mutation on disk.
+- If a document is open and has unsaved changes, the Client applies edits against that unsaved state.
+- The method supports multi-file operations, including create, update, delete, and move.
+- The request carries explicit format information so the Client can reject unsupported encodings cleanly.
+- The request carries preconditions so a patch cannot silently apply to stale content.
+- The response distinguishes successful application from conflicts, unsupported operations, and other failures.
+
+### Capability negotiation
+
+For a first version, the Client capability should likely stay consistent with the rest of `fs` and simply advertise whether patch application is available.
+
+Illustrative shape:
+
+```json
+{
+  "clientCapabilities": {
+    "fs": {
+      "readTextFile": true,
+      "writeTextFile": true,
+      "applyPatch": true
+    }
+  }
+}
+```
+
+This fits the current ACP filesystem capability model, where support is expressed as booleans.
+
+More detailed negotiation can still happen at the method level:
+
+- the Agent sends a `format`,
+- the Client either applies it or returns an unsupported-format error,
+- future revisions can add richer negotiation later if needed.
+
+### Method shape
+
+The method is named `fs/apply_patch`.
+
+Illustrative request:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 7,
+  "method": "fs/apply_patch",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "format": "v4a.apply_patch",
+    "atomicity": "transactional",
+    "patch": "*** Begin Patch\n*** Update File: /home/user/project/src/main.ts\n@@\n-import { oldHelper } from './old-helper';\n+import { helper } from './helper';\n*** Add File: /home/user/project/src/helper.ts\n+export function helper() {}\n*** Update File: /home/user/project/src/old-name.ts\n*** Move to: /home/user/project/src/new-name.ts\n*** End Patch"
+  }
+}
+```
+
+The exact wire shape should be refined during the RFD, but the core contract is:
+
+- `format` identifies the patch representation.
+- `patch` carries the format-specific payload.
+- Every path is an absolute path.
+- Preconditions are allowed so the Client can reject stale operations.
+- Atomicity is explicit rather than implicit.
+
+### Initial default format
+
+ACP should likely start with the V4A-style `apply_patch` envelope as the initial default patch format.
+
+This is the strongest initial default because it already exists in deployed coding-agent workflows, including Codex/OpenCode-style systems, and it already models the operations ACP needs:
+
+- multi-file add, update, delete, and move operations,
+- structured patch application rather than full-file overwrite,
+- conflict-aware application against current editor state.
+
+There does not appear to be a standalone neutral specification document for this format today, but there is public source code in OpenAI's `openai/codex` repository that defines and parses it, including its grammar and operation model:
+
+- [OpenAI Codex `apply_patch` parser](https://github.com/openai/codex/blob/main/codex-rs/apply-patch/src/parser.rs)
+- [OpenAI Codex `apply_patch` tool instructions](https://github.com/openai/codex/blob/main/codex-rs/apply-patch/apply_patch_tool_instructions.md)
+
+ACP still cannot adopt it entirely unchanged. The most obvious mismatch is path handling:
+
+- ACP paths should be absolute.
+- The public Codex `apply_patch` instructions describe file references as relative.
+
+ACP should keep absolute paths here to align with the rest of the protocol's filesystem and file-location model. Existing ACP filesystem methods use absolute `path` values, tool-call diffs and locations also use absolute paths, and ACP sessions already establish an absolute `cwd`. Reusing that convention keeps patch application unambiguous and avoids introducing a special "relative to cwd" rule for this one mutation method.
+
+So the likely direction is to adopt the V4A-style `apply_patch` envelope as the initial default syntax, but define an ACP profile of it for absolute paths and client-owned buffer semantics.
+
+That means the proposal is for:
+
+- a standard ACP method and capability,
+- an initial default format based on the public V4A-style `apply_patch` grammar,
+- room for additional accepted formats later.
+
+### Applying against Client-owned buffers
+
+The Client is the source of truth for current document state.
+
+That has several implications:
+
+- Open dirty buffers are applied against their unsaved contents.
+- Clients can group the changes into an undoable transaction.
+- Clients can run editor-integrated behaviors such as rename handling, diagnostics refresh, formatting, or save prompts according to local policy.
+- The method does not imply that changes are written to disk immediately.
+
+This keeps the model aligned with existing ACP filesystem methods, which are already Client-owned rather than Agent-owned.
+
+### Failure and conflict behavior
+
+This proposal should make failure explicit and safe.
+
+Examples of failure modes:
+
+- the requested `format` is unsupported,
+- a path no longer matches its expected version or content hash,
+- a create targets an existing document,
+- a delete or move targets a missing document,
+- an edit range cannot be applied to the current buffer state,
+- the Client supports patch application but not a requested operation or atomicity mode.
+
+The Client should return structured failure details that identify the failing operation and the reason.
+
+For a first version, the safest default is likely `transactional`: either the whole batch applies or none of it does. Best-effort partial success may still be useful, but should be explicitly requested rather than becoming the default behavior.
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+An Agent can read current editor state with `fs/read_text_file`, compute a structured patch, and ask the Client to apply it back to the same live document state with `fs/apply_patch`.
+
+The Client stays in control of document ownership and user-facing editor behavior, while the Agent gets a mutation API that is:
+
+- more precise than whole-file overwrite,
+- safer against stale content,
+- capable of multi-file changes,
+- compatible with unsaved buffers,
+- easier to map onto editor features like undo/redo and conflict presentation.
+
+Tool-call `diff` content still has a place, but as a reporting layer: the Agent can show the user what it intends to change or what it changed, while the actual mutation remains a Client method.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+This RFD should answer two layers of design.
+
+First, the protocol layer:
+
+- add a Client capability for patch application,
+- add a new `fs/apply_patch` method,
+- define the response and error model,
+- define the minimum guarantees around stale-content detection and atomicity.
+
+Second, the format layer:
+
+- define the ACP profile of the V4A-style `apply_patch` grammar,
+- decide how absolute paths are represented,
+- decide how version or hash preconditions are carried alongside the patch body,
+- decide whether a later ACP-native typed format is still desirable.
+
+A staged path could look like this:
+
+1. Standardize the method, capability, and transactional conflict model.
+2. Standardize an ACP profile of the V4A-style `apply_patch` format.
+3. Add support for negotiated additional patch formats without changing the core method.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+## Why not just use `fs/write_text_file`?
+
+Because `fs/write_text_file` is a whole-file mutation API. It does not communicate localized edits, multi-file intent, or conflict preconditions, and it is not a good fit for patch-based workflows where the Client should apply changes against its current buffer state.
+
+## Why not define this as a tool call?
+
+Because tool calls are how Agents report execution and progress. They are not the right place to define a Client-owned mutation API.
+
+ACP already distinguishes between:
+
+- capability-backed methods that the Agent may call on the Client, and
+- tool-call content such as `diff`, which helps the Client present what happened.
+
+This proposal should preserve that separation.
+
+## Why start with the V4A-style `apply_patch` format?
+
+Because it already exists in real coding-agent workflows and already covers the operations this RFD needs.
+
+Using it as the initial default gives ACP a practical starting point instead of inventing a new patch language before the protocol has validated the method itself.
+
+There is also a public implementation to point to when describing the format.
+
+## Why support multiple patch formats instead of standardizing exactly one forever?
+
+Even if ACP starts with a V4A-style default, it should not assume that one representation will cover every editor or agent workflow forever.
+
+An explicit `format` field gives ACP a stable method while leaving room for:
+
+- the initial V4A-style default,
+- future ACP-native revisions if they become necessary,
+- additional formats the Client may choose to accept.
+
+## Why prefer transactional application first?
+
+Because partial success is easy to misunderstand and hard to recover from.
+
+If a multi-file patch silently applies to some files but not others, the Agent and user can end up with a broken intermediate state. A transactional baseline makes failure handling simpler and safer. Partial modes may still be worth adding later as an explicit opt-in.
+
+## What alternative approaches did you consider, and why did you settle on this one?
+
+Three alternatives stand out:
+
+1. Extend `fs/write_text_file` with more flags.
+2. Treat tool-call `diff` content as an editable or executable patch.
+3. Standardize one specific patch syntax and bake it directly into ACP forever.
+
+This proposal is a better fit because it preserves ACP's existing Client-owned filesystem model, keeps reporting separate from mutation, and can start from an existing patch syntax without freezing ACP forever around that exact shape.
+
+## Open questions
+
+> Which questions should the next revision resolve?
+
+- Should ACP profile the public V4A-style grammar directly, or define a small ACP-specific variant of it from the start?
+- Should the initial `patch` field always be a string envelope, or should ACP wrap it in a richer object so preconditions and metadata are easier to carry?
+- How should preconditions work in the first version: document versions, content hashes, or both?
+- Should the first version require transactional semantics, or allow explicit best-effort partial application?
+- How should move operations interact with unsaved open buffers at the source and destination paths?
+- Should richer capability negotiation live in the base capability later, or remain in request/response semantics plus errors?
+
+## Revision history
+
+- 2026-03-21: Initial draft
