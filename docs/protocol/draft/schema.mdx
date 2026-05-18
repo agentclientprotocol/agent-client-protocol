@@ -1582,6 +1582,56 @@ See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/sess
 
 </ResponseField>
 
+<a id="session-settitle"></a>
+### <span class="font-mono">session/setTitle</span>
+
+Sets the title for a session.
+
+Empty titles are valid and request that the agent clear the session title.
+
+This method can be called at any time during a session, whether the Agent is
+idle or actively generating a response.
+
+#### <span class="font-mono">SetSessionTitleRequest</span>
+
+Request parameters for setting a session title.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The ID of the session to set the title for.
+</ResponseField>
+<ResponseField name="title" type={"string"} required>
+  The new title for the session.
+</ResponseField>
+
+#### <span class="font-mono">SetSessionTitleResponse</span>
+
+Response to `session/setTitle` method.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+
 <a id="session-set_config_option"></a>
 ### <span class="font-mono">session/set_config_option</span>
 

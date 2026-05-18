@@ -1173,6 +1173,7 @@ starting with '$/' it is free to ignore the notification."
                 "session/fork" => self.agent.get("ForkSessionRequest").unwrap(),
                 "session/resume" => self.agent.get("ResumeSessionRequest").unwrap(),
                 "session/set_mode" => self.agent.get("SetSessionModeRequest").unwrap(),
+                "session/setTitle" => self.agent.get("SetSessionTitleRequest").unwrap(),
                 "session/set_config_option" => {
                     self.agent.get("SetSessionConfigOptionRequest").unwrap()
                 }

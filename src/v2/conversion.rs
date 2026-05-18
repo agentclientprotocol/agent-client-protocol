@@ -3948,6 +3948,62 @@ impl IntoV2 for crate::v1::SetSessionModeResponse {
     }
 }
 
+impl IntoV1 for super::SetSessionTitleRequest {
+    type Output = crate::v1::SetSessionTitleRequest;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        let Self {
+            session_id,
+            title,
+            meta,
+        } = self;
+        Ok(crate::v1::SetSessionTitleRequest {
+            session_id: session_id.into_v1()?,
+            title,
+            meta: meta.into_v1()?,
+        })
+    }
+}
+
+impl IntoV2 for crate::v1::SetSessionTitleRequest {
+    type Output = super::SetSessionTitleRequest;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        let Self {
+            session_id,
+            title,
+            meta,
+        } = self;
+        Ok(super::SetSessionTitleRequest {
+            session_id: session_id.into_v2()?,
+            title,
+            meta: meta.into_v2()?,
+        })
+    }
+}
+
+impl IntoV1 for super::SetSessionTitleResponse {
+    type Output = crate::v1::SetSessionTitleResponse;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        let Self { meta } = self;
+        Ok(crate::v1::SetSessionTitleResponse {
+            meta: meta.into_v1()?,
+        })
+    }
+}
+
+impl IntoV2 for crate::v1::SetSessionTitleResponse {
+    type Output = super::SetSessionTitleResponse;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        let Self { meta } = self;
+        Ok(super::SetSessionTitleResponse {
+            meta: meta.into_v2()?,
+        })
+    }
+}
+
 impl IntoV1 for super::SessionConfigId {
     type Output = crate::v1::SessionConfigId;
 
@@ -5629,6 +5685,9 @@ impl IntoV1 for super::ClientRequest {
             Self::SetSessionModeRequest(value) => {
                 crate::v1::ClientRequest::SetSessionModeRequest(value.into_v1()?)
             }
+            Self::SetSessionTitleRequest(value) => {
+                crate::v1::ClientRequest::SetSessionTitleRequest(value.into_v1()?)
+            }
             Self::SetSessionConfigOptionRequest(value) => {
                 crate::v1::ClientRequest::SetSessionConfigOptionRequest(value.into_v1()?)
             }
@@ -5711,6 +5770,9 @@ impl IntoV2 for crate::v1::ClientRequest {
             Self::SetSessionModeRequest(value) => {
                 super::ClientRequest::SetSessionModeRequest(value.into_v2()?)
             }
+            Self::SetSessionTitleRequest(value) => {
+                super::ClientRequest::SetSessionTitleRequest(value.into_v2()?)
+            }
             Self::SetSessionConfigOptionRequest(value) => {
                 super::ClientRequest::SetSessionConfigOptionRequest(value.into_v2()?)
             }
@@ -5790,6 +5852,9 @@ impl IntoV1 for super::AgentResponse {
             }
             Self::SetSessionModeResponse(value) => {
                 crate::v1::AgentResponse::SetSessionModeResponse(value.into_v1()?)
+            }
+            Self::SetSessionTitleResponse(value) => {
+                crate::v1::AgentResponse::SetSessionTitleResponse(value.into_v1()?)
             }
             Self::SetSessionConfigOptionResponse(value) => {
                 crate::v1::AgentResponse::SetSessionConfigOptionResponse(value.into_v1()?)
@@ -5874,6 +5939,9 @@ impl IntoV2 for crate::v1::AgentResponse {
             }
             Self::SetSessionModeResponse(value) => {
                 super::AgentResponse::SetSessionModeResponse(value.into_v2()?)
+            }
+            Self::SetSessionTitleResponse(value) => {
+                super::AgentResponse::SetSessionTitleResponse(value.into_v2()?)
             }
             Self::SetSessionConfigOptionResponse(value) => {
                 super::AgentResponse::SetSessionConfigOptionResponse(value.into_v2()?)

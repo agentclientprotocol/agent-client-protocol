@@ -271,6 +271,14 @@
                 {
                   "allOf": [
                     {
+                      "$ref": "#/$defs/SetSessionTitleResponse"
+                    }
+                  ],
+                  "title": "SetSessionTitleResponse"
+                },
+                {
+                  "allOf": [
+                    {
                       "$ref": "#/$defs/SetSessionConfigOptionResponse"
                     }
                   ],
@@ -695,6 +703,15 @@
                   ],
                   "description": "Sets the current mode for a session.\n\nAllows switching between different agent modes (e.g., \"ask\", \"architect\", \"code\")\nthat affect system prompts, tool availability, and permission behaviors.\n\nThe mode must be one of the modes advertised in `availableModes` during session\ncreation or loading. Agents may also change modes autonomously and notify the\nclient via `current_mode_update` notifications.\n\nThis method can be called at any time during a session, whether the Agent is\nidle or actively generating a response.\n\nSee protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)",
                   "title": "SetSessionModeRequest"
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/SetSessionTitleRequest"
+                    }
+                  ],
+                  "description": "Sets the title for a session.\n\nEmpty titles are valid and request that the agent clear the session title.\n\nThis method can be called at any time during a session, whether the Agent is\nidle or actively generating a response.",
+                  "title": "SetSessionTitleRequest"
                 },
                 {
                   "allOf": [
@@ -3121,6 +3138,45 @@
       },
       "type": "object",
       "x-method": "session/set_mode",
+      "x-side": "agent"
+    },
+    "SetSessionTitleRequest": {
+      "description": "Request parameters for setting a session title.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "sessionId": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ],
+          "description": "The ID of the session to set the title for."
+        },
+        "title": {
+          "description": "The new title for the session.",
+          "type": "string"
+        }
+      },
+      "required": ["sessionId", "title"],
+      "type": "object",
+      "x-method": "session/setTitle",
+      "x-side": "agent"
+    },
+    "SetSessionTitleResponse": {
+      "description": "Response to `session/setTitle` method.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object",
+      "x-method": "session/setTitle",
       "x-side": "agent"
     },
     "StopReason": {
