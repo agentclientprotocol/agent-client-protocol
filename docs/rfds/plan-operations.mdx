@@ -1,0 +1,157 @@
+---
+title: "Plan Operations Support"
+---
+
+Author(s): <!-- add your GitHub handle -->
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Introduce a new `plan_update` session update type that supports multiple plan formats (item-based, file-based, markdown text), multiple concurrent plans via IDs, and plan removal. The existing `plan` session update type remains unchanged for backward compatibility.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+- The `plan` session update contains `entries: Vec<PlanEntry>` — a flat list of items with priority/status
+- Plans are one-way notifications (agent → client) via `session/update`
+- No plan identity — each update replaces the previous plan entirely
+- No way to remove/dismiss a plan once sent
+- Only one plan representation (structured items) — no support for free-form markdown or file-based plans
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+Add a new `SessionUpdate` variant — `plan_update` — that carries a `plan` field. The `plan` field is a tagged union (discriminated by `type`) with the following variants:
+
+| Type       | Description                                           | Specific fields        |
+| ---------- | ----------------------------------------------------- | ---------------------- |
+| `items`    | Structured entries (same semantics as today's `plan`) | `entries: PlanEntry[]` |
+| `file`     | Agent provides a file URI containing the plan         | `uri: string`          |
+| `markdown` | Agent provides raw markdown text                      | `content: string`      |
+
+All variants carry a required `id: string` that identifies the plan, and an optional `_meta` for extensibility.
+
+Additionally, introduce a `plan_removed` session update type that carries only a plan `id` to signal dismissal. This keeps `plan_update` focused purely on content updates and makes removal a distinct, self-describing event.
+
+The existing `plan` session update type is **not modified** and continues to work as before. Agents that want multi-plan support, new plan formats, or removal capabilities use `plan_update` and `plan_removed` instead.
+
+### Client Capabilities
+
+Add to `ClientCapabilities`:
+
+```
+planCapabilities: PlanCapabilities? = null
+```
+
+When present (`{}`), signals the client supports the `plan_update` and `plan_removed` session update types. When absent, the agent must fall back to the existing `plan` session update type.
+
+### Multiple Plans
+
+The `id` field on every plan variant identifies a specific plan.
+
+- Each `plan_update` targets the plan with the given `id`
+- Client tracks plans by ID; updates replace the content of that specific plan
+- Different plans may use different types (e.g., one `items` plan and one `markdown` plan)
+
+### Plan Removal
+
+Agent sends a `plan_removed` session update with the plan's `id` to dismiss it. This is a separate session update type from `plan_update`, keeping content updates and lifecycle events distinct.
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+Agents will be able to present plans in the format most natural to them — structured checklists for step-by-step execution, markdown for free-form design docs, or file URIs for large plans generated externally. Clients that support `plan_update` can show multiple concurrent plans (e.g., a high-level strategy and a detailed implementation checklist), and dismiss plans that are no longer relevant. Clients that don't advertise `planCapabilities` continue to receive the existing `plan` updates with no changes.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+### Json Format Examples
+
+Existing `plan` (unchanged):
+
+```json
+{
+  "sessionUpdate": "plan",
+  "entries": [{ "content": "Step 1", "priority": "high", "status": "pending" }]
+}
+```
+
+Item-based (`plan_update`):
+
+```json
+{
+  "sessionUpdate": "plan_update",
+  "plan": {
+    "type": "items",
+    "id": "plan-1",
+    "entries": [
+      { "content": "Step 1", "priority": "high", "status": "pending" }
+    ]
+  }
+}
+```
+
+Markdown:
+
+```json
+{
+  "sessionUpdate": "plan_update",
+  "plan": {
+    "type": "markdown",
+    "id": "plan-1",
+    "content": "## Steps\n- [ ] Refactor module\n- [ ] Add tests"
+  }
+}
+```
+
+File-based:
+
+```json
+{
+  "sessionUpdate": "plan_update",
+  "plan": {
+    "type": "file",
+    "id": "design-doc",
+    "uri": "file:///tmp/plan.md"
+  }
+}
+```
+
+Removal:
+
+```json
+{
+  "sessionUpdate": "plan_removed",
+  "id": "plan-1"
+}
+```
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Why a new session update type instead of extending the existing `plan`?
+
+The existing `plan` variant flattens `Plan`'s `entries` field directly into the `SessionUpdate` discriminated union object. Adding a nested `plan` field, optional `id`, and polymorphic types to the same variant would require breaking the existing format or complex dual-deserialization logic. A new `plan_update` variant avoids this entirely — old clients ignore it, new clients handle both.
+
+### Why a separate `plan_removed` session update type instead of a removal variant inside `plan_update`?
+
+Keeping removal as a separate session update type means `plan_update`'s `type` discriminator only covers content variants (`items`, `file`, `markdown`), making the schema cleaner.
+
+### Why plan-specific markdown and not a generic markdown content API?
+
+A generic "agent shares markdown document" API would be simpler and more reusable. However, keeping it plan-typed enables clients to build plan-aware UX: selecting plan steps for partial execution, tracking plan progress, showing plan history. A generic markdown block wouldn't carry this semantic meaning. If future use cases need generic markdown sharing, that can be a separate feature.
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+1. **Extending the existing `plan` variant**: Would break backward compatibility or require complex dual-format deserialization.
+2. **`"type": "removed"` variant inside `plan_update`**: Instead of a separate `plan_removed` session update type, removal could be a variant in the `plan_update` tagged union (e.g., `"type": "removed"`). This keeps the entire plan lifecycle within a single update type. The tradeoff is that the `type` discriminator mixes content variants with a lifecycle event, making the schema less clean.
+
+## Revision history
+
+<!-- If there have been major updates to this RFD, you can include the git revisions and a summary of the changes. -->
