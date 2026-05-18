@@ -1,0 +1,149 @@
+---
+title: "Client-Provided System Prompt"
+---
+
+Author(s): [@wpfleger96](https://github.com/wpfleger96) (Block — contributor to [Sprout](https://github.com/block/sprout) and [Goose](https://github.com/aaif-goose/goose))
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Allow clients to provide a system prompt when creating or prompting a session. Today, ACP has no mechanism for a client to deliver system-level instructions to an agent — the only content a client can send is user-role messages via `session/prompt`. This means behavioral instructions, persona definitions, and platform context all compete with user content in the same message role, never reaching the LLM's architecturally privileged system prompt slot.
+
+This proposal comes from building two ACP clients at Block — [Sprout](https://github.com/block/sprout), a Nostr-based team collaboration and messaging platform with managed AI agents, and [Goose](https://github.com/aaif-goose/goose), an open-source AI agent. Both have independently hit this gap and implemented non-standard workarounds. We'd like to solve it at the protocol level.
+
+We propose adding an optional `systemPrompt` string field to ACP, giving clients a standard way to provide system-level instructions that agents can deliver to the LLM's system prompt.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+ACP's `session/new` accepts only `cwd` and `mcpServers`. `session/prompt` accepts only `sessionId` and `prompt` (a `ContentBlock[]` of user content). There is no `systemPrompt`, `instructions`, or equivalent field on any ACP method — confirmed across all 80+ type definitions in the v0.13.0 schema.
+
+This creates several problems for clients that need to provide behavioral instructions to agents:
+
+**Workarounds are fragmented and non-standard.** Every implementation works around the gap differently:
+- [`claude-agent-acp`](https://github.com/agentclientprotocol/claude-agent-acp) added a `_meta.systemPrompt` extension ([issue #90](https://github.com/agentclientprotocol/claude-agent-acp/issues/90), [PR #91](https://github.com/agentclientprotocol/claude-agent-acp/pull/91)) — but the spec states implementations "MUST NOT make assumptions about values at these keys," making `_meta` unsuitable for instruction delivery that agents are expected to act on. The implementation silently dropped `excludeDynamicSections` for months ([issue #581](https://github.com/agentclientprotocol/claude-agent-acp/issues/581)), demonstrating the fragility of non-standard extensions.
+- [Sprout](https://github.com/block/sprout) is a Nostr-based team collaboration and messaging platform where AI agents are first-class workspace members. Each managed agent has a persona (behavioral instructions, role definition, platform context) that the ACP harness needs to deliver as system-level instructions. Today, Sprout injects this as `[System]\n{content}` prepended to the user message on every turn — content that never reaches the LLM's system slot. Sprout's own [Persona Pack Spec](https://github.com/block/sprout/blob/main/crates/sprout-persona/PERSONA_PACK_SPEC.md) lists "true system prompt injection via ACP" as a planned feature, explicitly acknowledging the current approach is a workaround.
+- [Goose](https://github.com/aaif-goose/goose) builds its system prompt internally via `PromptManager` from config files. ACP clients cannot inject or override it through the protocol. Goose has [an open issue](https://github.com/aaif-goose/goose/issues/7596) documenting the same gap in terms of its "recipe" system — recipes are Goose's mechanism for injecting behavioral instructions into a session, and the issue notes "there is no recipe field on `NewSessionRequest` and no logic to load/apply a recipe to the new session's agent." Goose's `_goose/session/update_project` method works around this by sending a project ID that the agent resolves to a file on disk — a Goose-specific indirection, not a protocol-level solution.
+- Codex receives no system prompt from clients. The harness controls only `approval_policy` and `sandbox_mode`.
+
+**Instruction following degrades when instructions are in user messages.** OpenAI's Instruction Hierarchy paper ([arXiv 2404.13208](https://arxiv.org/abs/2404.13208)) found 63% improvement in prompt injection defense when models treat system prompts as higher-priority than user messages. Research on system message compliance ([SysBench, arXiv 2408.10943](https://arxiv.org/abs/2408.10943)) further demonstrates that LLMs are specifically trained and evaluated on their ability to follow system-role instructions — a capability that ACP clients currently cannot leverage. The system role is architecturally privileged in modern LLMs, not just conventional.
+
+**ACP is an outlier.** Every comparable protocol provides system prompt support:
+
+| Protocol | Field | Type | Placement |
+|----------|-------|------|-----------|
+| MCP `sampling/createMessage` | `systemPrompt` | `string` | Per-request |
+| OpenAI Assistants API | `instructions` | `string` | Creation + per-run override |
+| OpenAI Responses API | `instructions` | `string` | Per-request |
+| Anthropic Messages API | `system` | `string \| ContentBlock[]` | Per-request |
+
+Agent frameworks follow the same pattern: AutoGen has `system_message`, CrewAI has `role`/`goal`/`backstory`, LangGraph has `prompt`. Only Google's A2A protocol is similarly silent — but A2A is agent-to-agent transport, a fundamentally different abstraction layer than ACP's client-to-agent communication.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+Add an optional `systemPrompt` string field to `session/new`, allowing clients to set behavioral instructions when creating a session.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "session/new",
+  "params": {
+    "cwd": "/home/user/project",
+    "mcpServers": [],
+    "systemPrompt": "You are a code review specialist. Focus on security vulnerabilities, performance issues, and adherence to the team's style guide. Be thorough but concise."
+  }
+}
+```
+
+`session/new` is the natural place for this — it already serves as the configuration point for `cwd` and `mcpServers`, and system prompts are fundamentally session-scoped (they define the agent's behavioral context for the entire interaction). One canonical place to set instructions, fully backward compatible, minimal protocol surface.
+
+The system prompt is immutable after session creation. If a client needs to change the system prompt mid-session (e.g., a user updates agent persona settings during an active conversation), it must start a new session. Mid-session updates could be addressed in the future via a dedicated method (e.g., `session/update_system_prompt`) without conflicting with this proposal.
+
+### Design choices
+
+- **Type: `string`.** Plain string covers the vast majority of use cases and matches the cross-protocol consensus (MCP, OpenAI, AutoGen all use simple strings). Structured types (e.g., `ContentBlock[]`) can be considered in a future extension if multimodal system prompts become a real need.
+- **Optional field.** Agents that don't support client-provided system prompts continue working — they simply ignore the field. Agents MUST have their own default behavior and MUST NOT require a client system prompt to function.
+- **Additive semantics.** When provided, the client system prompt is incorporated alongside the agent's own built-in instructions — it does not replace them. Agents always retain their own identity, safety guardrails, and internal configuration. This matches how real agent implementations work: Goose's recipe system appends recipe instructions under an `# Additional Instructions` heading while preserving the base system prompt, and Sprout's persona content is designed to layer on top of agent defaults. Override behavior can be achieved agent-side if an agent chooses to treat client instructions as authoritative, but the protocol default is additive.
+
+## Shiny future
+
+> How will things play out once this feature exists?
+
+Clients provide behavioral instructions through a standard protocol field, and agents deliver them to the LLM's system prompt slot. The current landscape of fragmented workarounds — `_meta` extensions, user-message injection, pre-session environment configuration — is replaced by a single interoperable mechanism.
+
+Sprout's managed agent personas — role definitions, platform context, behavioral guidelines — reach the LLM's system prompt regardless of which agent binary is running the session (Goose, Claude Code, Codex, or others). The same persona works across agents without agent-specific plumbing. Goose's recipe system can deliver instructions through the protocol instead of relying on filesystem indirection. An IDE can provide project-specific coding guidelines as system-level instructions. A CI/CD pipeline can configure an agent's behavioral constraints for automated workflows.
+
+Agents that don't support client system prompts continue working exactly as they do today — the field is optional and agents are free to ignore it.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+### Schema changes
+
+Add `systemPrompt` to `SessionNewParams`:
+
+```typescript
+interface SessionNewParams {
+  cwd?: string;
+  mcpServers?: McpServerStdio[];
+  systemPrompt?: string;  // NEW
+}
+```
+
+This is additive — no existing fields change, no breaking modifications.
+
+### Agent behavior
+
+When an agent receives a `systemPrompt`:
+- It MUST incorporate the content into its system prompt construction alongside its own built-in instructions
+- It MUST NOT discard its own safety guardrails, identity, or internal configuration in favor of client-provided content
+- It MUST NOT require a client system prompt to function — agents always have a default
+- If the agent cannot incorporate the system prompt, it MUST return a standard JSON-RPC error and MUST NOT create the session
+
+When `systemPrompt` is absent:
+- The agent uses its own default system prompt (current behavior, unchanged)
+
+### Backward compatibility
+
+The field is optional with no default behavior change. Existing clients that don't send `systemPrompt` see no difference. Agents implementing this spec version MUST handle `systemPrompt` when provided — either incorporating it successfully or returning an error. Agents on older spec versions that don't recognize the field will ignore it per standard JSON-RPC behavior. Clients can determine whether an agent supports `systemPrompt` based on the protocol version negotiated during `initialize`.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Why `string` and not `ContentBlock[]` or a structured object?
+
+`string` is the simplest type that solves the problem. Every protocol we surveyed (MCP, OpenAI, AutoGen) uses plain strings as the primary system prompt type. Anthropic's Messages API adds a structured variant (`list[TextBlockParam]`) for prompt caching, but that's an optimization concern that can be addressed in a future extension. Starting simple lets us validate the feature without over-designing the first version.
+
+### Why not standardize the `_meta.systemPrompt` convention from `claude-agent-acp`?
+
+The `_meta` field is ACP's extensibility escape hatch, but the spec explicitly states implementations "MUST NOT make assumptions about values at these keys." Instruction delivery requires agents to reliably read and act on the content — the opposite of a field where no assumptions are guaranteed. Using `_meta` for this purpose provides no interoperability guarantees and has already shown fragility in practice: `claude-agent-acp` silently dropped `excludeDynamicSections` for months ([issue #581](https://github.com/agentclientprotocol/claude-agent-acp/issues/581)). A first-class field is the right long-term solution.
+
+### How does this interact with session config options?
+
+[Session config options](https://agentclientprotocol.com/protocol/session-config-options) and `systemPrompt` address orthogonal concerns. Config options are agent-advertised behavioral presets — the agent defines the menu, the client picks from it via `session/set_config_option`. `systemPrompt` is client-authored content — the client writes it, the agent delivers it. They can coexist: an agent might apply config-option-driven tool configurations while also honoring a client-provided system prompt for behavioral instructions.
+
+The spec should clarify that these are independent mechanisms. A reasonable default: the client system prompt takes precedence for LLM instruction content, while config options continue to control tool availability, permissions, and other agent-internal configuration.
+
+### Should agents advertise system prompt support via capabilities?
+
+No separate capability flag is needed. The `session/new` response itself serves as acknowledgment: if the call succeeds, the system prompt was incorporated. If the agent cannot honor it, `session/new` returns a standard JSON-RPC error and no session is created — the client gets an explicit failure rather than a silently degraded session. For agents on older spec versions that don't recognize the field, clients can check the protocol version negotiated during `initialize` to determine support.
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+- **`systemPrompt` on `session/prompt` (per-turn)**: Would allow mid-session updates, matching how most LLM APIs send system content per-request. But it introduces ambiguous semantics when `systemPrompt` is omitted on a turn (inherit last value? revert to default?) and moves system prompt delivery from a one-time configuration to a repeated per-turn concern. For the common case — set instructions once at session start — `session/new` is simpler and sufficient.
+- **Dedicated `session/set_system_prompt` method**: Adds protocol surface for a one-shot operation. A field on an existing method is simpler.
+- **Standardize `_meta.systemPrompt`**: Violates `_meta` design intent (see FAQ above).
+- **CWD file conventions** (e.g., placing instruction files in the session `cwd`): Agent-specific, not portable, and relies on the agent voluntarily reading the file. Not a protocol-level solution.
+- **Environment variables or CLI flags**: Pre-session only, not portable across agent implementations, can't be session-specific without restarting the agent.
+
+## Revision history
+
+- 2026-05-18: Initial draft
+- 2026-05-19: Upgraded to MUST with response acknowledgment per PR review feedback
