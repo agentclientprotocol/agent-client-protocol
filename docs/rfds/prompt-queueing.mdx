@@ -1,0 +1,57 @@
+---
+title: "Prompt Queueing"
+---
+
+Author(s): [SteffenDE](https://github.com/SteffenDE)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Add a new `promptQueueing` session capability, that tells client if the agent supports sending prompts while another prompt is already being processed for that session.
+The Claude Code CLI supports writing a user message while the agent is working and injects that message at the next opportunity (i.e. after the current turn is finished).
+
+Since ACP prompts can consist of many agent turns, having an officially supported way to adjust running prompts is very useful.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+Today, the specification does not mention what should happen when sending a concurrent prompt request.
+Clients cannot assume that this is supported, so running prompts need to be canceled when a client wants to allow users to send a new prompt while an existing one is running.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+Add a capability that tells clients if parallel prompt requests are supported.
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+If an agent supports prompt queuing, clients can send parallel prompt requests and be sure that the agent will handle them properly.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+The idea is to use whatever mechanism the agent has to queue incoming prompts and if a new prompt arrives and is processed at the next opportunity,
+the existing is finished early `end_turn` (or optionally a new stop reason). This allows the client to inject the new user message at the correct place
+in the conversation, since session updates are not tied to a particular prompt request.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+None so far.
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+I was thinking that maybe clients could first send a `session/cancel` with a new parameter `afterCurrentTurn: true` to indicate that the current turn should be finished.
+Right now, the protocol tells clients to immediately mark tool calls as canceled when sending `session/cancel`, but for queued prompts, currently running tool calls
+should be able to finish.
+
+## Revision history
+
+<!-- If there have been major updates to this RFD, you can include the git revisions and a summary of the changes. -->
