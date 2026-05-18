@@ -147,7 +147,7 @@ The `messageId` field would be:
 
 - **Optional** on `agent_message_chunk`, `user_message_chunk`, `agent_thought_chunk` updates and `session/prompt` requests (as `messageId`)
 - **Optional** in `session/prompt` responses (as `userMessageId`)
-- **UUID format** - Both clients and agents MUST use UUID format to ensure collision avoidance
+- **Uniqueness** - Both clients and agents must ensure that generated IDs are unique per session, for example by using UUIDv4/v7
 - **Unique per message** within a session
 - **Stable across chunks** - all chunks belonging to the same message share the same `messageId`
 - **Opaque** - Implementations treat it as an identifier without parsing its structure
@@ -280,20 +280,18 @@ The proposed approach with `messageId` is:
 - **Simple** - Just one new field with clear semantics
 - **Flexible** - Enables future capabilities without further protocol changes
 - **Practical** - Clients generate IDs for their messages, agents for theirs
-- **Collision-safe** - UUID format ensures uniqueness across both sides
 
 ### Who generates message IDs?
 
 **Both clients and agents can generate message IDs**, each for their own messages:
 
-- **For user messages**: The Client generates a UUID and includes it as `messageId` in the `session/prompt` request. The Agent echoes this ID as `userMessageId` in the response to confirm it was recorded. If the client doesn't provide one, the Agent MAY assign one and return it in the response so the client knows the assigned ID.
-- **For agent messages**: The Agent generates the UUID when creating its response and includes it in session update chunks.
+- **For user messages**: The Client generates an ID and includes it as `messageId` in the `session/prompt` request. The Agent echoes this ID as `userMessageId` in the response to confirm it was recorded. If the client doesn't provide one, the Agent MAY assign one and return it in the response so the client knows the assigned ID.
+- **For agent messages**: The Agent generates the ID when creating its response and includes it in session update chunks.
 
 This differs from other protocol identifiers (`sessionId`, `terminalId`, `toolCallId`) which are agent-generated, but provides practical benefits:
 
 - **Immediate availability** - Clients have the ID as soon as they send the message, without waiting for a response
 - **Deduplication** - Clients can use IDs to deduplicate messages on `session/load` or when echoing to multiple clients
-- **Collision-safe** - UUID format ensures uniqueness without coordination
 - **Adapter-friendly** - Adapters for agents that don't support message IDs can simply not pass them through
 
 ### Should this field be required or optional?
@@ -304,13 +302,12 @@ Making this field required will be considered for a future v2 version of the pro
 
 ### What format should message IDs use?
 
-Both clients and agents **MUST** use UUID format for message IDs. This is required because both sides can generate IDs, and UUID format ensures:
+Both clients and agents **SHOULD** use UUID format for message IDs. This is recommended because both sides can generate IDs, and UUID format ensures:
 
 - **No collisions** - UUIDs are globally unique without coordination between client and agent
-- **Interoperability** - Both sides use the same format, so either side can rely on uniqueness guarantees
 - **Simplicity** - Standard libraries available in all languages
 
-While `messageId` values are UUIDs, implementations **SHOULD** treat them as opaque strings when reading/comparing them, and not parse or interpret their internal structure.
+Implementations **MUST** treat them as opaque strings when reading/comparing them, and not parse or interpret their internal structure.
 
 ### What about message IDs across session loads?
 
@@ -333,6 +330,7 @@ Future RFDs may propose extending `messageId` to other update types if use cases
 
 ## Revision history
 
+- **2026-03-10**: Allow IDs to be any opaque string (not just UUID), but clarify that both client and server must ensure uniqueness.
 - **2026-02-17**: Added "Message ID Acknowledgment" section to clarify that presence/absence of `userMessageId` in response indicates whether the Agent recorded the ID; clarified that UUID format is MUST (not SHOULD) since both sides generate IDs; renamed response field to `userMessageId` for clarity (request keeps `messageId`)
 - **2026-01-29**: Updated to allow both clients and agents to generate message IDs using UUID format
 - **2025-11-09**: Initial draft
