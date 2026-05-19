@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.13.3](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.13.2...v0.13.3) - 2026-05-19
+
+### Other
+
+- *(deps)* bump num-conv from 0.2.1 to 0.2.2 in the minor group ([#1244](https://github.com/agentclientprotocol/agent-client-protocol/pull/1244))
+- Set minimum supported Rust version ([#1232](https://github.com/agentclientprotocol/agent-client-protocol/pull/1232))
+- Document ACP versioning semantics ([#1229](https://github.com/agentclientprotocol/agent-client-protocol/pull/1229))
+
 ## [0.13.2](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.13.1...v0.13.2) - 2026-05-17
 
 ### Fixed
