@@ -18,6 +18,11 @@ use crate::{
     ProtocolVersion, SessionId, SkipListener,
 };
 
+#[cfg(feature = "unstable_mcp_over_acp")]
+use super::mcp::{
+    MCP_MESSAGE_METHOD_NAME, MessageMcpNotification, MessageMcpRequest, MessageMcpResponse,
+};
+
 #[cfg(feature = "unstable_nes")]
 use crate::{
     AcceptNesNotification, CloseNesRequest, CloseNesResponse, DidChangeDocumentNotification,
@@ -1115,7 +1120,8 @@ pub struct LoadSessionRequest {
     ///
     /// When omitted or empty, no additional roots are activated. When non-empty,
     /// this is the complete resulting additional-root list for the loaded
-    /// session.
+    /// session. It may differ from any previously used or reported list as long as
+    /// the request `cwd` matches the session's `cwd`.
     #[cfg(feature = "unstable_session_additional_directories")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<PathBuf>,
@@ -1477,7 +1483,8 @@ pub struct ResumeSessionRequest {
     ///
     /// When omitted or empty, no additional roots are activated. When non-empty,
     /// this is the complete resulting additional-root list for the resumed
-    /// session.
+    /// session. It may differ from any previously used or reported list as long as
+    /// the request `cwd` matches the session's `cwd`.
     #[cfg(feature = "unstable_session_additional_directories")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<PathBuf>,
@@ -1716,17 +1723,6 @@ impl CloseSessionResponse {
 pub struct ListSessionsRequest {
     /// Filter sessions by working directory. Must be an absolute path.
     pub cwd: Option<PathBuf>,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// Filter sessions by the exact ordered additional workspace roots. Each path must be absolute.
-    ///
-    /// This filter applies only when the field is present and non-empty. When
-    /// omitted or empty, no additional-root filter is applied.
-    #[cfg(feature = "unstable_session_additional_directories")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub additional_directories: Vec<PathBuf>,
     /// Opaque cursor token from a previous response's nextCursor field for cursor-based pagination
     pub cursor: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1748,18 +1744,6 @@ impl ListSessionsRequest {
     #[must_use]
     pub fn cwd(mut self, cwd: impl IntoOption<PathBuf>) -> Self {
         self.cwd = cwd.into_option();
-        self
-    }
-
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// Filter sessions by the exact ordered additional workspace roots. Each path must be absolute.
-    #[cfg(feature = "unstable_session_additional_directories")]
-    #[must_use]
-    pub fn additional_directories(mut self, additional_directories: Vec<PathBuf>) -> Self {
-        self.additional_directories = additional_directories;
         self
     }
 
@@ -1833,6 +1817,95 @@ impl ListSessionsResponse {
     }
 }
 
+// Delete session
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Request parameters for deleting an existing session from `session/list`.
+///
+/// Only available if the Agent supports the `sessionCapabilities.delete` capability.
+#[cfg(feature = "unstable_session_delete")]
+#[skip_serializing_none]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[schemars(extend("x-side" = "agent", "x-method" = SESSION_DELETE_METHOD_NAME))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct DeleteSessionRequest {
+    /// The ID of the session to delete.
+    pub session_id: SessionId,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_delete")]
+impl DeleteSessionRequest {
+    #[must_use]
+    pub fn new(session_id: impl Into<SessionId>) -> Self {
+        Self {
+            session_id: session_id.into(),
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Response from deleting a session.
+#[cfg(feature = "unstable_session_delete")]
+#[skip_serializing_none]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[schemars(extend("x-side" = "agent", "x-method" = SESSION_DELETE_METHOD_NAME))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct DeleteSessionResponse {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_delete")]
+impl DeleteSessionResponse {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
 /// Information about a session returned by session/list
 #[serde_as]
 #[skip_serializing_none]
@@ -1848,9 +1921,11 @@ pub struct SessionInfo {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
-    /// Authoritative ordered additional workspace roots for this session. Each path must be absolute.
+    /// Additional workspace roots for this session, if the Agent reports them. Each path must be absolute.
     ///
-    /// When omitted or empty, there are no additional roots for the session.
+    /// Agents may omit this field when they do not track or surface additional-root
+    /// state. When present, this is the complete additional-root list known to
+    /// the Agent for the session.
     #[cfg(feature = "unstable_session_additional_directories")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<PathBuf>,
@@ -1890,7 +1965,7 @@ impl SessionInfo {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
-    /// Authoritative ordered additional workspace roots for this session. Each path must be absolute.
+    /// Additional workspace roots for this session, if the Agent reports them. Each path must be absolute.
     #[cfg(feature = "unstable_session_additional_directories")]
     #[must_use]
     pub fn additional_directories(mut self, additional_directories: Vec<PathBuf>) -> Self {
@@ -2689,6 +2764,16 @@ pub enum McpServer {
     ///
     /// Only available when the Agent capabilities indicate `mcp_capabilities.sse` is `true`.
     Sse(McpServerSse),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// ACP transport configuration
+    ///
+    /// Only available when the Agent capabilities indicate `mcp_capabilities.acp` is `true`.
+    /// The MCP server is provided by an ACP component and communicates over the ACP channel.
+    #[cfg(feature = "unstable_mcp_over_acp")]
+    Acp(McpServerAcp),
     /// Stdio transport configuration
     ///
     /// All Agents MUST support this transport.
@@ -2784,6 +2869,83 @@ impl McpServerSse {
     pub fn headers(mut self, headers: Vec<HttpHeader>) -> Self {
         self.headers = headers;
         self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Unique identifier for an MCP server using the ACP transport.
+///
+/// The value is opaque and generated by the ACP component providing the MCP server. It is
+/// used by `mcp/connect` to route connection requests back to the component that declared the
+/// server.
+#[cfg(feature = "unstable_mcp_over_acp")]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
+#[serde(transparent)]
+#[from(Arc<str>, String, &'static str)]
+#[non_exhaustive]
+pub struct McpServerAcpId(pub Arc<str>);
+
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl McpServerAcpId {
+    #[must_use]
+    pub fn new(id: impl Into<Arc<str>>) -> Self {
+        Self(id.into())
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// ACP transport configuration for MCP.
+///
+/// The MCP server is provided by an ACP component and communicates over the ACP channel
+/// using `mcp/connect`, `mcp/message`, and `mcp/disconnect`.
+#[skip_serializing_none]
+#[cfg(feature = "unstable_mcp_over_acp")]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct McpServerAcp {
+    /// Human-readable name identifying this MCP server.
+    pub name: String,
+    /// Unique identifier for this MCP server, generated by the component providing it.
+    ///
+    /// Providers MUST NOT reuse an ID for multiple ACP-transport MCP servers that are visible
+    /// on the same ACP connection.
+    pub id: McpServerAcpId,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl McpServerAcp {
+    #[must_use]
+    pub fn new(name: impl Into<String>, id: impl Into<McpServerAcpId>) -> Self {
+        Self {
+            name: name.into(),
+            id: id.into(),
+            meta: None,
+        }
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -4059,7 +4221,22 @@ pub struct SessionCapabilities {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
-    /// Whether the agent supports `additionalDirectories` on supported session lifecycle requests and `session/list`.
+    /// Whether the agent supports `session/delete`.
+    ///
+    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports deleting sessions from `session/list`.
+    #[cfg(feature = "unstable_session_delete")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default)]
+    pub delete: Option<SessionDeleteCapabilities>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Whether the agent supports `additionalDirectories` on supported session lifecycle requests.
+    ///
+    /// Agents that also support `session/list` may return
+    /// `SessionInfo.additionalDirectories` when they track that state.
     #[cfg(feature = "unstable_session_additional_directories")]
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[serde(default)]
@@ -4107,7 +4284,25 @@ impl SessionCapabilities {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
-    /// Whether the agent supports `additionalDirectories` on supported session lifecycle requests and `session/list`.
+    /// Whether the agent supports `session/delete`.
+    ///
+    /// Omitted or `null` both mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports deleting sessions from `session/list`.
+    #[cfg(feature = "unstable_session_delete")]
+    #[must_use]
+    pub fn delete(mut self, delete: impl IntoOption<SessionDeleteCapabilities>) -> Self {
+        self.delete = delete.into_option();
+        self
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Whether the agent supports `additionalDirectories` on supported session lifecycle requests.
+    ///
+    /// Agents that also support `session/list` may return
+    /// `SessionInfo.additionalDirectories` when they track that state.
     #[cfg(feature = "unstable_session_additional_directories")]
     #[must_use]
     pub fn additional_directories(
@@ -4190,10 +4385,52 @@ impl SessionListCapabilities {
 ///
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
+/// Capabilities for the `session/delete` method.
+///
+/// Supplying `{}` means the agent supports deleting sessions from `session/list`.
+#[cfg(feature = "unstable_session_delete")]
+#[skip_serializing_none]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct SessionDeleteCapabilities {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_delete")]
+impl SessionDeleteCapabilities {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
 /// Capabilities for additional session directories support.
 ///
-/// By supplying `{}` it means that the agent supports the `additionalDirectories` field on
-/// supported session lifecycle requests and `session/list`.
+/// By supplying `{}` it means that the agent supports the `additionalDirectories`
+/// field on supported session lifecycle requests. Agents that also support
+/// `session/list` may return `SessionInfo.additionalDirectories` when they track
+/// that state.
 #[cfg(feature = "unstable_session_additional_directories")]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -4427,6 +4664,14 @@ pub struct McpCapabilities {
     /// Agent supports [`McpServer::Sse`].
     #[serde(default)]
     pub sse: bool,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Agent supports [`McpServer::Acp`].
+    #[cfg(feature = "unstable_mcp_over_acp")]
+    #[serde(default)]
+    pub acp: bool,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -4453,6 +4698,18 @@ impl McpCapabilities {
     #[must_use]
     pub fn sse(mut self, sse: bool) -> Self {
         self.sse = sse;
+        self
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Agent supports [`McpServer::Acp`].
+    #[cfg(feature = "unstable_mcp_over_acp")]
+    #[must_use]
+    pub fn acp(mut self, acp: bool) -> Self {
+        self.acp = acp;
         self
     }
 
@@ -4501,11 +4758,17 @@ pub struct AgentMethodNames {
     pub session_prompt: &'static str,
     /// Notification for cancelling operations.
     pub session_cancel: &'static str,
+    /// Method for exchanging MCP-over-ACP messages.
+    #[cfg(feature = "unstable_mcp_over_acp")]
+    pub mcp_message: &'static str,
     /// Method for selecting a model for a given session.
     #[cfg(feature = "unstable_session_model")]
     pub session_set_model: &'static str,
     /// Method for listing existing sessions.
     pub session_list: &'static str,
+    /// Method for deleting an existing session.
+    #[cfg(feature = "unstable_session_delete")]
+    pub session_delete: &'static str,
     /// Method for forking an existing session.
     #[cfg(feature = "unstable_session_fork")]
     pub session_fork: &'static str,
@@ -4564,9 +4827,13 @@ pub const AGENT_METHOD_NAMES: AgentMethodNames = AgentMethodNames {
     session_set_config_option: SESSION_SET_CONFIG_OPTION_METHOD_NAME,
     session_prompt: SESSION_PROMPT_METHOD_NAME,
     session_cancel: SESSION_CANCEL_METHOD_NAME,
+    #[cfg(feature = "unstable_mcp_over_acp")]
+    mcp_message: MCP_MESSAGE_METHOD_NAME,
     #[cfg(feature = "unstable_session_model")]
     session_set_model: SESSION_SET_MODEL_METHOD_NAME,
     session_list: SESSION_LIST_METHOD_NAME,
+    #[cfg(feature = "unstable_session_delete")]
+    session_delete: SESSION_DELETE_METHOD_NAME,
     #[cfg(feature = "unstable_session_fork")]
     session_fork: SESSION_FORK_METHOD_NAME,
     session_resume: SESSION_RESUME_METHOD_NAME,
@@ -4625,6 +4892,9 @@ pub(crate) const SESSION_CANCEL_METHOD_NAME: &str = "session/cancel";
 pub(crate) const SESSION_SET_MODEL_METHOD_NAME: &str = "session/set_model";
 /// Method name for listing existing sessions.
 pub(crate) const SESSION_LIST_METHOD_NAME: &str = "session/list";
+/// Method name for deleting an existing session.
+#[cfg(feature = "unstable_session_delete")]
+pub(crate) const SESSION_DELETE_METHOD_NAME: &str = "session/delete";
 /// Method name for forking an existing session.
 #[cfg(feature = "unstable_session_fork")]
 pub(crate) const SESSION_FORK_METHOD_NAME: &str = "session/fork";
@@ -4730,6 +5000,15 @@ pub enum ClientRequest {
     ///
     /// The agent should return metadata about sessions with optional filtering and pagination support.
     ListSessionsRequest(ListSessionsRequest),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Deletes an existing session from `session/list`.
+    ///
+    /// This method is only available if the agent advertises the `sessionCapabilities.delete` capability.
+    #[cfg(feature = "unstable_session_delete")]
+    DeleteSessionRequest(DeleteSessionRequest),
     #[cfg(feature = "unstable_session_fork")]
     /// **UNSTABLE**
     ///
@@ -4816,6 +5095,13 @@ pub enum ClientRequest {
     /// The agent must cancel any ongoing work and then free up any resources
     /// associated with the NES session.
     CloseNesRequest(CloseNesRequest),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Exchanges an MCP-over-ACP message.
+    #[cfg(feature = "unstable_mcp_over_acp")]
+    MessageMcpRequest(MessageMcpRequest),
     /// Handles extension method requests from the client.
     ///
     /// Extension methods provide a way to add custom functionality while maintaining
@@ -4843,6 +5129,8 @@ impl ClientRequest {
             Self::NewSessionRequest(_) => AGENT_METHOD_NAMES.session_new,
             Self::LoadSessionRequest(_) => AGENT_METHOD_NAMES.session_load,
             Self::ListSessionsRequest(_) => AGENT_METHOD_NAMES.session_list,
+            #[cfg(feature = "unstable_session_delete")]
+            Self::DeleteSessionRequest(_) => AGENT_METHOD_NAMES.session_delete,
             #[cfg(feature = "unstable_session_fork")]
             Self::ForkSessionRequest(_) => AGENT_METHOD_NAMES.session_fork,
             Self::ResumeSessionRequest(_) => AGENT_METHOD_NAMES.session_resume,
@@ -4858,6 +5146,8 @@ impl ClientRequest {
             Self::SuggestNesRequest(_) => AGENT_METHOD_NAMES.nes_suggest,
             #[cfg(feature = "unstable_nes")]
             Self::CloseNesRequest(_) => AGENT_METHOD_NAMES.nes_close,
+            #[cfg(feature = "unstable_mcp_over_acp")]
+            Self::MessageMcpRequest(_) => AGENT_METHOD_NAMES.mcp_message,
             Self::ExtMethodRequest(ext_request) => &ext_request.method,
         }
     }
@@ -4888,6 +5178,8 @@ pub enum AgentResponse {
     NewSessionResponse(NewSessionResponse),
     LoadSessionResponse(#[serde(default)] LoadSessionResponse),
     ListSessionsResponse(ListSessionsResponse),
+    #[cfg(feature = "unstable_session_delete")]
+    DeleteSessionResponse(#[serde(default)] DeleteSessionResponse),
     #[cfg(feature = "unstable_session_fork")]
     ForkSessionResponse(ForkSessionResponse),
     ResumeSessionResponse(#[serde(default)] ResumeSessionResponse),
@@ -4904,6 +5196,8 @@ pub enum AgentResponse {
     #[cfg(feature = "unstable_nes")]
     CloseNesResponse(#[serde(default)] CloseNesResponse),
     ExtMethodResponse(ExtResponse),
+    #[cfg(feature = "unstable_mcp_over_acp")]
+    MessageMcpResponse(MessageMcpResponse),
 }
 
 /// All possible notifications that a client can send to an agent.
@@ -4964,6 +5258,13 @@ pub enum ClientNotification {
     ///
     /// Notification sent when a suggestion is rejected.
     RejectNesNotification(RejectNesNotification),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Sends an MCP-over-ACP notification.
+    #[cfg(feature = "unstable_mcp_over_acp")]
+    MessageMcpNotification(MessageMcpNotification),
     /// Handles extension notifications from the client.
     ///
     /// Extension notifications provide a way to send one-way messages for custom functionality
@@ -4993,6 +5294,8 @@ impl ClientNotification {
             Self::AcceptNesNotification(_) => AGENT_METHOD_NAMES.nes_accept,
             #[cfg(feature = "unstable_nes")]
             Self::RejectNesNotification(_) => AGENT_METHOD_NAMES.nes_reject,
+            #[cfg(feature = "unstable_mcp_over_acp")]
+            Self::MessageMcpNotification(_) => AGENT_METHOD_NAMES.mcp_message,
             Self::ExtNotification(ext_notification) => &ext_notification.method,
         }
     }
@@ -5134,6 +5437,104 @@ mod test_serialization {
                 assert_eq!(headers[1].value, "application/json");
             }
             _ => panic!("Expected Http variant"),
+        }
+    }
+
+    #[cfg(feature = "unstable_mcp_over_acp")]
+    #[test]
+    fn test_mcp_server_acp_serialization() {
+        let server = McpServer::Acp(McpServerAcp::new("project-tools", "project-tools-id"));
+
+        let json = serde_json::to_value(&server).unwrap();
+        assert_eq!(
+            json,
+            json!({
+                "type": "acp",
+                "name": "project-tools",
+                "id": "project-tools-id"
+            })
+        );
+
+        let deserialized: McpServer = serde_json::from_value(json).unwrap();
+        match deserialized {
+            McpServer::Acp(McpServerAcp { name, id, meta: _ }) => {
+                assert_eq!(name, "project-tools");
+                assert_eq!(id, McpServerAcpId::new("project-tools-id"));
+            }
+            _ => panic!("Expected Acp variant"),
+        }
+    }
+
+    #[cfg(feature = "unstable_mcp_over_acp")]
+    #[test]
+    fn test_client_mcp_message_method_names() {
+        assert_eq!(AGENT_METHOD_NAMES.mcp_message, "mcp/message");
+
+        assert_eq!(
+            ClientRequest::MessageMcpRequest(MessageMcpRequest::new("conn-1", "tools/list"))
+                .method(),
+            "mcp/message"
+        );
+        assert_eq!(
+            ClientNotification::MessageMcpNotification(MessageMcpNotification::new(
+                "conn-1",
+                "notifications/progress"
+            ))
+            .method(),
+            "mcp/message"
+        );
+    }
+
+    #[cfg(feature = "unstable_mcp_over_acp")]
+    #[test]
+    fn test_mcp_server_acp_schema() {
+        let mcp_server_schema = serde_json::to_value(schemars::schema_for!(McpServer)).unwrap();
+        assert!(json_contains_entry(
+            &mcp_server_schema,
+            "const",
+            &json!("acp")
+        ));
+        assert!(json_contains_entry(
+            &mcp_server_schema,
+            "$ref",
+            &json!("#/$defs/McpServerAcp")
+        ));
+
+        let capabilities_schema =
+            serde_json::to_value(schemars::schema_for!(McpCapabilities)).unwrap();
+        assert!(json_contains_key(&capabilities_schema, "acp"));
+    }
+
+    #[cfg(feature = "unstable_mcp_over_acp")]
+    fn json_contains_entry(
+        value: &serde_json::Value,
+        key: &str,
+        expected: &serde_json::Value,
+    ) -> bool {
+        match value {
+            serde_json::Value::Object(map) => {
+                map.get(key) == Some(expected)
+                    || map
+                        .values()
+                        .any(|value| json_contains_entry(value, key, expected))
+            }
+            serde_json::Value::Array(values) => values
+                .iter()
+                .any(|value| json_contains_entry(value, key, expected)),
+            _ => false,
+        }
+    }
+
+    #[cfg(feature = "unstable_mcp_over_acp")]
+    fn json_contains_key(value: &serde_json::Value, key: &str) -> bool {
+        match value {
+            serde_json::Value::Object(map) => {
+                map.contains_key(key) || map.values().any(|value| json_contains_key(value, key))
+            }
+            serde_json::Value::Array(values) => {
+                values.iter().any(|value| json_contains_key(value, key))
+            }
+            _ => false,
         }
     }
 
@@ -5287,6 +5688,35 @@ mod test_serialization {
         assert!(matches!(deserialized, AuthMethod::Agent(_)));
     }
 
+    #[cfg(feature = "unstable_session_delete")]
+    #[test]
+    fn test_session_delete_serialization() {
+        assert_eq!(AGENT_METHOD_NAMES.session_delete, "session/delete");
+        assert_eq!(
+            ClientRequest::DeleteSessionRequest(DeleteSessionRequest::new("sess_abc123")).method(),
+            "session/delete"
+        );
+        assert_eq!(
+            serde_json::to_value(DeleteSessionRequest::new("sess_abc123")).unwrap(),
+            json!({
+                "sessionId": "sess_abc123"
+            })
+        );
+        assert_eq!(
+            serde_json::to_value(DeleteSessionResponse::new()).unwrap(),
+            json!({})
+        );
+        assert_eq!(
+            serde_json::to_value(
+                SessionCapabilities::new().delete(SessionDeleteCapabilities::new())
+            )
+            .unwrap(),
+            json!({
+                "delete": {}
+            })
+        );
+    }
+
     #[cfg(feature = "unstable_session_additional_directories")]
     #[test]
     fn test_session_additional_directories_serialization() {
@@ -5313,13 +5743,6 @@ mod test_serialization {
                 ],
                 "mcpServers": []
             })
-        );
-        assert_eq!(
-            serde_json::to_value(
-                ListSessionsRequest::new().additional_directories(Vec::<PathBuf>::new())
-            )
-            .unwrap(),
-            json!({})
         );
         assert_eq!(
             serde_json::to_value(SessionInfo::new("sess_abc123", "/home/user/project")).unwrap(),
@@ -5349,22 +5772,6 @@ mod test_serialization {
             serde_json::from_value::<SessionInfo>(json!({
                 "sessionId": "sess_abc123",
                 "cwd": "/home/user/project"
-            }))
-            .unwrap()
-            .additional_directories,
-            Vec::<PathBuf>::new()
-        );
-
-        assert_eq!(
-            serde_json::from_value::<ListSessionsRequest>(json!({}))
-                .unwrap()
-                .additional_directories,
-            Vec::<PathBuf>::new()
-        );
-
-        assert_eq!(
-            serde_json::from_value::<ListSessionsRequest>(json!({
-                "additionalDirectories": []
             }))
             .unwrap()
             .additional_directories,

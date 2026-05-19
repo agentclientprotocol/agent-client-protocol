@@ -14,3 +14,8 @@ typescript/*.js.map
 
 # TypeDoc generated documentation
 typescript/docs/
+
+.agents
+.kiro
+.claude
+

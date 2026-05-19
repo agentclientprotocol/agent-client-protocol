@@ -309,7 +309,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 <ResponseField name="agentCapabilities" type={<a href="#agentcapabilities">AgentCapabilities</a>} >
   Capabilities supported by the agent.
 
-    - Default: `{"auth":{},"loadSession":false,"mcpCapabilities":{"http":false,"sse":false},"promptCapabilities":{"audio":false,"embeddedContext":false,"image":false},"sessionCapabilities":{}}`
+    - Default: `{"auth":{},"loadSession":false,"mcpCapabilities":{"acp":false,"http":false,"sse":false},"promptCapabilities":{"audio":false,"embeddedContext":false,"image":false},"sessionCapabilities":{}}`
 
 </ResponseField>
 <ResponseField name="agentInfo" type={<><span><a href="#implementation">Implementation</a></span><span> | null</span></>} >
@@ -386,6 +386,94 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
 </ResponseField>
+
+<a id="agent-mcp-message"></a>
+### <span class="font-mono">mcp/message</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Exchanges an MCP-over-ACP message.
+
+#### <span class="font-mono">MessageMcpNotification</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Notification parameters for `mcp/message`.
+
+This is used when the wrapped MCP message is a notification and the outer JSON-RPC
+envelope has no `id`.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="connectionId" type={<a href="#mcpconnectionid">McpConnectionId</a>} required>
+  The MCP-over-ACP connection this message is sent on.
+</ResponseField>
+<ResponseField name="method" type={"string"} required>
+  The inner MCP method name.
+</ResponseField>
+<ResponseField name="params" type={"object | null"} >
+  Optional inner MCP params.
+
+If omitted or set to `null`, the inner MCP message has no params.
+
+</ResponseField>
+
+#### <span class="font-mono">MessageMcpRequest</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Request parameters for `mcp/message`.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="connectionId" type={<a href="#mcpconnectionid">McpConnectionId</a>} required>
+  The MCP-over-ACP connection this message is sent on.
+</ResponseField>
+<ResponseField name="method" type={"string"} required>
+  The inner MCP method name.
+</ResponseField>
+<ResponseField name="params" type={"object | null"} >
+  Optional inner MCP params.
+
+If omitted or set to `null`, the inner MCP message has no params.
+
+</ResponseField>
+
+#### <span class="font-mono">MessageMcpResponse</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Response to `mcp/message`.
+
+This is the inner MCP response result payload. Any JSON value is valid.
 
 <a id="nes-accept"></a>
 ### <span class="font-mono">nes/accept</span>
@@ -889,6 +977,64 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
 </ResponseField>
 
+<a id="session-delete"></a>
+### <span class="font-mono">session/delete</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Deletes an existing session from `session/list`.
+
+This method is only available if the agent advertises the `sessionCapabilities.delete` capability.
+
+#### <span class="font-mono">DeleteSessionRequest</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Request parameters for deleting an existing session from `session/list`.
+
+Only available if the Agent supports the `sessionCapabilities.delete` capability.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The ID of the session to delete.
+</ResponseField>
+
+#### <span class="font-mono">DeleteSessionResponse</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Response from deleting a session.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+
 <a id="session-fork"></a>
 ### <span class="font-mono">session/fork</span>
 
@@ -1019,17 +1165,6 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
 </ResponseField>
-<ResponseField name="additionalDirectories" type={<><span>"string"</span><span>[]</span></>} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Filter sessions by the exact ordered additional workspace roots. Each path must be absolute.
-
-This filter applies only when the field is present and non-empty. When
-omitted or empty, no additional-root filter is applied.
-
-</ResponseField>
 <ResponseField name="cursor" type={"string | null"} >
   Opaque cursor token from a previous response's nextCursor field for cursor-based pagination
 </ResponseField>
@@ -1105,7 +1240,8 @@ Additional workspace roots to activate for this session. Each path must be absol
 
 When omitted or empty, no additional roots are activated. When non-empty,
 this is the complete resulting additional-root list for the loaded
-session.
+session. It may differ from any previously used or reported list as long as
+the request `cwd` matches the session's `cwd`.
 
 </ResponseField>
 <ResponseField name="cwd" type={"string"} required>
@@ -1398,7 +1534,8 @@ Additional workspace roots to activate for this session. Each path must be absol
 
 When omitted or empty, no additional roots are activated. When non-empty,
 this is the complete resulting additional-root list for the resumed
-session.
+session. It may differ from any previously used or reported list as long as
+the request `cwd` matches the session's `cwd`.
 
 </ResponseField>
 <ResponseField name="cwd" type={"string"} required>
@@ -1948,6 +2085,205 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
 </ResponseField>
 
+<a id="mcp-connect"></a>
+### <span class="font-mono">mcp/connect</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Opens an MCP-over-ACP connection.
+
+#### <span class="font-mono">ConnectMcpRequest</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Request parameters for `mcp/connect`.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="acpId" type={<a href="#mcpserveracpid">McpServerAcpId</a>} required>
+  The ACP MCP server ID that was provided by the component declaring the MCP server.
+</ResponseField>
+
+#### <span class="font-mono">ConnectMcpResponse</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Response to `mcp/connect`.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="connectionId" type={<a href="#mcpconnectionid">McpConnectionId</a>} required>
+  The unique identifier for this MCP-over-ACP connection.
+</ResponseField>
+
+<a id="mcp-disconnect"></a>
+### <span class="font-mono">mcp/disconnect</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Closes an MCP-over-ACP connection.
+
+#### <span class="font-mono">DisconnectMcpRequest</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Request parameters for `mcp/disconnect`.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="connectionId" type={<a href="#mcpconnectionid">McpConnectionId</a>} required>
+  The MCP-over-ACP connection to close.
+</ResponseField>
+
+#### <span class="font-mono">DisconnectMcpResponse</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Response to `mcp/disconnect`.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+
+<a id="client-mcp-message"></a>
+### <span class="font-mono">mcp/message</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Exchanges an MCP-over-ACP message.
+
+#### <span class="font-mono">MessageMcpNotification</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Notification parameters for `mcp/message`.
+
+This is used when the wrapped MCP message is a notification and the outer JSON-RPC
+envelope has no `id`.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="connectionId" type={<a href="#mcpconnectionid">McpConnectionId</a>} required>
+  The MCP-over-ACP connection this message is sent on.
+</ResponseField>
+<ResponseField name="method" type={"string"} required>
+  The inner MCP method name.
+</ResponseField>
+<ResponseField name="params" type={"object | null"} >
+  Optional inner MCP params.
+
+If omitted or set to `null`, the inner MCP message has no params.
+
+</ResponseField>
+
+#### <span class="font-mono">MessageMcpRequest</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Request parameters for `mcp/message`.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="connectionId" type={<a href="#mcpconnectionid">McpConnectionId</a>} required>
+  The MCP-over-ACP connection this message is sent on.
+</ResponseField>
+<ResponseField name="method" type={"string"} required>
+  The inner MCP method name.
+</ResponseField>
+<ResponseField name="params" type={"object | null"} >
+  Optional inner MCP params.
+
+If omitted or set to `null`, the inner MCP message has no params.
+
+</ResponseField>
+
+#### <span class="font-mono">MessageMcpResponse</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Response to `mcp/message`.
+
+This is the inner MCP response result payload. Any JSON value is valid.
+
 <a id="session-request_permission"></a>
 ### <span class="font-mono">session/request_permission</span>
 
@@ -2491,7 +2827,7 @@ Authentication-related capabilities supported by the agent.
 <ResponseField name="mcpCapabilities" type={<a href="#mcpcapabilities">McpCapabilities</a>} >
   MCP capabilities supported by the agent.
 
-    - Default: `{"http":false,"sse":false}`
+    - Default: `{"acp":false,"http":false,"sse":false}`
 
 </ResponseField>
 <ResponseField name="nes" type={<><span><a href="#nescapabilities">NesCapabilities</a></span><span> | null</span></>} >
@@ -4368,6 +4704,16 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
 
 </ResponseField>
+<ResponseField name="acp" type={"boolean"} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Agent supports `McpServer::Acp`.
+
+    - Default: `false`
+
+</ResponseField>
 <ResponseField name="http" type={"boolean"} >
   Agent supports `McpServer::Http`.
 
@@ -4380,6 +4726,16 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
     - Default: `false`
 
 </ResponseField>
+
+## <span class="font-mono">McpConnectionId</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+A unique identifier for an active MCP-over-ACP connection.
+
+**Type:** `string`
 
 ## <span class="font-mono">McpServer</span>
 
@@ -4454,6 +4810,43 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 </Expandable>
 </ResponseField>
 
+<ResponseField name="acp" type="object">
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+ACP transport configuration
+
+Only available when the Agent capabilities indicate `mcp_capabilities.acp` is `true`.
+The MCP server is provided by an ACP component and communicates over the ACP channel.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="id" type={<a href="#mcpserveracpid">McpServerAcpId</a>} required>
+  Unique identifier for this MCP server, generated by the component providing it.
+
+Providers MUST NOT reuse an ID for multiple ACP-transport MCP servers that are visible
+on the same ACP connection.
+
+</ResponseField>
+<ResponseField name="name" type={"string"} required>
+  Human-readable name identifying this MCP server.
+</ResponseField>
+<ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"acp"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 <ResponseField name="stdio">
 Stdio transport configuration
 
@@ -4484,6 +4877,54 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
 </Expandable>
 </ResponseField>
+
+## <span class="font-mono">McpServerAcp</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+ACP transport configuration for MCP.
+
+The MCP server is provided by an ACP component and communicates over the ACP channel
+using `mcp/connect`, `mcp/message`, and `mcp/disconnect`.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="id" type={<a href="#mcpserveracpid">McpServerAcpId</a>} required>
+  Unique identifier for this MCP server, generated by the component providing it.
+
+Providers MUST NOT reuse an ID for multiple ACP-transport MCP servers that are visible
+on the same ACP connection.
+
+</ResponseField>
+<ResponseField name="name" type={"string"} required>
+  Human-readable name identifying this MCP server.
+</ResponseField>
+
+## <span class="font-mono">McpServerAcpId</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Unique identifier for an MCP server using the ACP transport.
+
+The value is opaque and generated by the ACP component providing the MCP server. It is
+used by `mcp/connect` to route connection requests back to the component that declared the
+server.
+
+**Type:** `string`
 
 ## <span class="font-mono">McpServerHttp</span>
 
@@ -6080,8 +6521,10 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 Capabilities for additional session directories support.
 
-By supplying `\{\}` it means that the agent supports the `additionalDirectories` field on
-supported session lifecycle requests and `session/list`.
+By supplying `\{\}` it means that the agent supports the `additionalDirectories`
+field on supported session lifecycle requests. Agents that also support
+`session/list` may return `SessionInfo.additionalDirectories` when they track
+that state.
 
 **Type:** Object
 
@@ -6125,11 +6568,25 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
 This capability is not part of the spec yet, and may be removed or changed at any point.
 
-Whether the agent supports `additionalDirectories` on supported session lifecycle requests and `session/list`.
+Whether the agent supports `additionalDirectories` on supported session lifecycle requests.
+
+Agents that also support `session/list` may return
+`SessionInfo.additionalDirectories` when they track that state.
 
 </ResponseField>
 <ResponseField name="close" type={<><span><a href="#sessionclosecapabilities">SessionCloseCapabilities</a></span><span> | null</span></>} >
   Whether the agent supports `session/close`.
+</ResponseField>
+<ResponseField name="delete" type={<><span><a href="#sessiondeletecapabilities">SessionDeleteCapabilities</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Whether the agent supports `session/delete`.
+
+Optional. Omitted or `null` both mean the agent does not advertise support.
+Supplying `\{\}` means the agent supports deleting sessions from `session/list`.
+
 </ResponseField>
 <ResponseField name="fork" type={<><span><a href="#sessionforkcapabilities">SessionForkCapabilities</a></span><span> | null</span></>} >
   **UNSTABLE**
@@ -6394,6 +6851,29 @@ Unique identifier for a session configuration option value.
 
 **Type:** `string`
 
+## <span class="font-mono">SessionDeleteCapabilities</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Capabilities for the `session/delete` method.
+
+Supplying `\{\}` means the agent supports deleting sessions from `session/list`.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+
 ## <span class="font-mono">SessionForkCapabilities</span>
 
 **UNSTABLE**
@@ -6449,9 +6929,11 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
 This capability is not part of the spec yet, and may be removed or changed at any point.
 
-Authoritative ordered additional workspace roots for this session. Each path must be absolute.
+Additional workspace roots for this session, if the Agent reports them. Each path must be absolute.
 
-When omitted or empty, there are no additional roots for the session.
+Agents may omit this field when they do not track or surface additional-root
+state. When present, this is the complete additional-root list known to
+the Agent for the session.
 
 </ResponseField>
 <ResponseField name="cwd" type={"string"} required>

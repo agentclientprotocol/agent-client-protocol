@@ -196,6 +196,10 @@ All methods follow standard JSON-RPC 2.0 [error handling](https://www.jsonrpc.or
 - Errors include an `error` object with `code` and `message`
 - Notifications never receive responses (success or error)
 
+## Conventions
+
+Unless explicitly defined otherwise in the schema, ACP-defined JSON object property keys use `camelCase`. String values carried by discriminator fields use `snake_case`. The JSON-RPC envelope fields (`jsonrpc`, `id`, `method`, `params`, `result`, and `error`) follow the JSON-RPC 2.0 specification.
+
 ## Extensibility
 
 The protocol provides built-in mechanisms for adding custom functionality while maintaining compatibility:
