@@ -82,12 +82,24 @@
                 "group": "Draft: In Progress and May Change",
                 "hidden": true,
                 "pages": [
+                  "protocol/draft/overview",
                   "protocol/draft/authentication",
+                  "protocol/draft/initialization",
                   "protocol/draft/session-setup",
                   "protocol/draft/session-list",
                   "protocol/draft/session-delete",
+                  "protocol/draft/prompt-turn",
+                  "protocol/draft/content",
+                  "protocol/draft/tool-calls",
                   "protocol/draft/file-system",
                   "protocol/draft/cancellation",
+                  "protocol/draft/terminals",
+                  "protocol/draft/agent-plan",
+                  "protocol/draft/session-modes",
+                  "protocol/draft/session-config-options",
+                  "protocol/draft/slash-commands",
+                  "protocol/draft/extensibility",
+                  "protocol/draft/transports",
                   "protocol/draft/schema"
                 ]
               }
