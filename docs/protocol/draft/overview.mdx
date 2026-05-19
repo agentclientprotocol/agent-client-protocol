@@ -1,0 +1,214 @@
+---
+title: "Overview"
+description: "How the Agent Client Protocol works"
+---
+
+The Agent Client Protocol allows [Agents](#agent) and [Clients](#client) to communicate by exposing methods that each side can call and sending notifications to inform each other of events.
+
+## Communication Model
+
+The protocol follows the [JSON-RPC 2.0](https://www.jsonrpc.org/specification) specification with two types of messages:
+
+- **Methods**: Request-response pairs that expect a result or error
+- **Notifications**: One-way messages that don't expect a response
+
+## Message Flow
+
+A typical flow follows this pattern:
+
+<Steps>
+<Step title="Initialization Phase">
+
+- Client → Agent: `initialize` to establish connection
+- Client → Agent: `authenticate` if required by the Agent
+
+</Step>
+
+<Step title="Session Setup - either:">
+
+- Client → Agent: `session/new` to create a new session
+- Client → Agent: `session/load` to resume an existing session if supported
+
+</Step>
+
+<Step title="Prompt Turn">
+   - Client → Agent: `session/prompt` to send user message
+   - Agent → Client: `session/update` notifications for progress updates
+   - Agent → Client: File operations or permission requests as needed
+   - Client → Agent: `session/cancel` to interrupt processing if needed
+   - Turn ends and the Agent sends the `session/prompt` response with a stop reason
+</Step>
+</Steps>
+
+## Agent
+
+Agents are programs that use generative AI to autonomously modify code. They typically run as subprocesses of the Client.
+
+### Baseline Methods
+
+<ResponseField
+  name="initialize"
+  post={[<a href="./schema#initialize">Schema</a>]}
+>
+  [Negotiate versions and exchange capabilities.](./initialization).
+</ResponseField>
+
+<ResponseField
+  name="authenticate"
+  post={[<a href="./schema#authenticate">Schema</a>]}
+>
+  Authenticate with the Agent (if required).
+</ResponseField>
+
+<ResponseField
+  name="session/new"
+  post={[<a href="./schema#session%2Fnew">Schema</a>]}
+>
+  [Create a new conversation session](./session-setup#creating-a-session).
+</ResponseField>
+
+<ResponseField
+  name="session/prompt"
+  post={[<a href="./schema#session%2Fprompt">Schema</a>]}
+>
+  [Send user prompts](./prompt-turn#1-user-message) to the Agent.
+</ResponseField>
+
+### Optional Methods
+
+<ResponseField
+  name="session/load"
+  post={[<a href="./schema#session%2Fload">Schema</a>]}
+>
+  [Load an existing session](./session-setup#loading-sessions) (requires
+  `loadSession` capability).
+</ResponseField>
+
+<ResponseField
+  name="session/set_mode"
+  post={[<a href="./schema#session%2Fset-mode">Schema</a>]}
+>
+  [Switch between agent operating
+  modes](./session-modes#setting-the-current-mode).
+</ResponseField>
+
+### Notifications
+
+<ResponseField
+  name="session/cancel"
+  post={[<a href="./schema#session%2Fcancel">Schema</a>]}
+>
+  [Cancel ongoing operations](./prompt-turn#cancellation) (no response
+  expected).
+</ResponseField>
+
+## Client
+
+Clients provide the interface between users and agents. They are typically code editors (IDEs, text editors) but can also be other UIs for interacting with agents. Clients manage the environment, handle user interactions, and control access to resources.
+
+### Baseline Methods
+
+<ResponseField
+  name="session/request_permission"
+  post={[<a href="./schema#session%2Frequest_permission">Schema</a>]}
+>
+  [Request user authorization](./tool-calls#requesting-permission) for tool
+  calls.
+</ResponseField>
+
+### Optional Methods
+
+<ResponseField
+  name="fs/read_text_file"
+  post={[<a href="./schema#fs%2Fread_text_file">Schema</a>]}
+>
+  [Read file contents](./file-system#reading-files) (requires `fs.readTextFile`
+  capability).
+</ResponseField>
+
+<ResponseField
+  name="fs/write_text_file"
+  post={[<a href="./schema#fs%2Fwrite_text_file">Schema</a>]}
+>
+  [Write file contents](./file-system#writing-files) (requires
+  `fs.writeTextFile` capability).
+</ResponseField>
+
+<ResponseField
+  name="terminal/create"
+  post={[<a href="./schema#terminal%2Fcreate">Schema</a>]}
+>
+  [Create a new terminal](./terminals) (requires `terminal` capability).
+</ResponseField>
+
+<ResponseField
+  name="terminal/output"
+  post={[<a href="./schema#terminal%2Foutput">Schema</a>]}
+>
+  Get terminal output and exit status (requires `terminal` capability).
+</ResponseField>
+
+<ResponseField
+  name="terminal/release"
+  post={[<a href="./schema#terminal%2Frelease">Schema</a>]}
+>
+  Release a terminal (requires `terminal` capability).
+</ResponseField>
+
+<ResponseField
+  name="terminal/wait_for_exit"
+  post={[<a href="./schema#terminal%2Fwait_for_exit">Schema</a>]}
+>
+  Wait for terminal command to exit (requires `terminal` capability).
+</ResponseField>
+
+<ResponseField
+  name="terminal/kill"
+  post={[<a href="./schema#terminal%2Fkill">Schema</a>]}
+>
+  Kill terminal command without releasing (requires `terminal` capability).
+</ResponseField>
+
+### Notifications
+
+<ResponseField
+  name="session/update"
+  post={[<a href="./schema#session%2Fupdate">Schema</a>]}
+>
+  [Send session updates](./prompt-turn#3-agent-reports-output) to inform the
+  Client of changes (no response expected). This includes: - [Message
+  chunks](./content) (agent, user, thought) - [Tool calls and
+  updates](./tool-calls) - [Plans](./agent-plan) - [Available commands
+  updates](./slash-commands#advertising-commands) - [Mode
+  changes](./session-modes#from-the-agent)
+</ResponseField>
+
+## Argument requirements
+
+- All file paths in the protocol **MUST** be absolute.
+- Line numbers are 1-based
+
+## Error Handling
+
+All methods follow standard JSON-RPC 2.0 [error handling](https://www.jsonrpc.org/specification#error_object):
+
+- Successful responses include a `result` field
+- Errors include an `error` object with `code` and `message`
+- Notifications never receive responses (success or error)
+
+## Extensibility
+
+The protocol provides built-in mechanisms for adding custom functionality while maintaining compatibility:
+
+- Add custom data using `_meta` fields
+- Create custom methods by prefixing their name with underscore (`_`)
+- Advertise custom capabilities during initialization
+
+Learn about [protocol extensibility](./extensibility) to understand how to use these mechanisms.
+
+## Next Steps
+
+- Learn about [Initialization](./initialization) to understand version and capability negotiation
+- Understand [Session Setup](./session-setup) for creating and loading sessions
+- Review the [Prompt Turn](./prompt-turn) lifecycle
+- Explore [Extensibility](./extensibility) to add custom features

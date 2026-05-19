@@ -1,0 +1,134 @@
+---
+title: "Extensibility"
+description: "Adding custom data and capabilities"
+---
+
+The Agent Client Protocol provides built-in extension mechanisms that allow implementations to add custom functionality while maintaining compatibility with the core protocol. These mechanisms ensure that Agents and Clients can innovate without breaking interoperability.
+
+## The `_meta` Field
+
+All types in the protocol include a `_meta` field with type `{ [key: string]: unknown }` that implementations can use to attach custom information. This includes requests, responses, notifications, and even nested types like content blocks, tool calls, plan entries, and capability objects.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "session/prompt",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "prompt": [
+      {
+        "type": "text",
+        "text": "Hello, world!"
+      }
+    ],
+    "_meta": {
+      "traceparent": "00-80e1afed08e019fc1110464cfa66635c-7a085853722dc6d2-01",
+      "zed.dev/debugMode": true
+    }
+  }
+}
+```
+
+Clients may propagate fields to the agent for correlation purposes, such as `requestId`. The following root-level keys in `_meta` **SHOULD** be reserved for [W3C trace context](https://www.w3.org/TR/trace-context/) to guarantee interop with existing MCP implementations and OpenTelemetry tooling:
+
+- `traceparent`
+- `tracestate`
+- `baggage`
+
+Implementations **MUST NOT** add any custom fields at the root of a type that's part of the specification. All possible names are reserved for future protocol versions.
+
+## Extension Methods
+
+The protocol reserves any method name starting with an underscore (`_`) for custom extensions. This allows implementations to add new functionality without the risk of conflicting with future protocol versions.
+
+Extension methods follow standard [JSON-RPC 2.0](https://www.jsonrpc.org/specification) semantics:
+
+- **[Requests](https://www.jsonrpc.org/specification#request_object)** - Include an `id` field and expect a response
+- **[Notifications](https://www.jsonrpc.org/specification#notification)** - Omit the `id` field and are one-way
+
+### Custom Requests
+
+In addition to the requests specified by the protocol, implementations **MAY** expose and call custom JSON-RPC requests as long as their name starts with an underscore (`_`).
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "_zed.dev/workspace/buffers",
+  "params": {
+    "language": "rust"
+  }
+}
+```
+
+Upon receiving a custom request, implementations **MUST** respond accordingly with the provided `id`:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "buffers": [
+      { "id": 0, "path": "/home/user/project/src/main.rs" },
+      { "id": 1, "path": "/home/user/project/src/editor.rs" }
+    ]
+  }
+}
+```
+
+If the receiving end doesn't recognize the custom method name, it should respond with the standard "Method not found" error:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "error": {
+    "code": -32601,
+    "message": "Method not found"
+  }
+}
+```
+
+To avoid such cases, extensions **SHOULD** advertise their [custom capabilities](#advertising-custom-capabilities) so that callers can check their availability first and adapt their behavior or interface accordingly.
+
+### Custom Notifications
+
+Custom notifications are regular JSON-RPC notifications that start with an underscore (`_`). Like all notifications, they omit the `id` field:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "_zed.dev/file_opened",
+  "params": {
+    "path": "/home/user/project/src/editor.rs"
+  }
+}
+```
+
+Unlike with custom requests, implementations **SHOULD** ignore unrecognized notifications.
+
+## Advertising Custom Capabilities
+
+Implementations **SHOULD** use the `_meta` field in capability objects to advertise support for extensions and their methods:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 0,
+  "result": {
+    "protocolVersion": 1,
+    "agentCapabilities": {
+      "loadSession": true,
+      "_meta": {
+        "zed.dev": {
+          "workspace": true,
+          "fileNotifications": true
+        }
+      }
+    }
+  }
+}
+```
+
+This allows implementations to negotiate custom features during initialization without breaking compatibility with standard Clients and Agents.
