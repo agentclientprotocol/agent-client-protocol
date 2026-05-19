@@ -148,6 +148,7 @@
                 "root": "rfds/v2/overview",
                 "pages": [
                   "rfds/v2/prompt",
+                  "rfds/v2/session-inject",
                   "rfds/message-id",
                   "rfds/streamable-http-websocket-transport"
                 ]
