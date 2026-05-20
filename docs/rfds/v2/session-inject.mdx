@@ -8,7 +8,7 @@ Author(s): [@kennethsinder](https://github.com/kennethsinder)
 
 > What are you proposing to change?
 
-Add a single `session/inject` method, with a `mode` of `queue` or `steer`, so clients can hand the agent another user-role message without ending the current turn. The agent advertises which modes it supports via a capability. Delivery is echoed as a `user_message` notification so multi-client observers and `session/load` replay see one consistent history.
+Add a single `session/inject` method, with a `mode` of `queue` or `steer`, so clients can hand the agent another user-role message without ending the current turn. The agent advertises which modes it supports via a capability. Delivery is echoed as a `user_message` notification so multi-client observers and `session/load` replay see one consistent history. Before delivery, the returned `messageId` is also the handle clients use to revoke the pending message, and optionally replace its content.
 
 This is a v2 follow-on. It rides on the [v2 prompt lifecycle](./prompt) (short-lived `session/prompt`, agent-owned `messageId`, `state_change` notifications) and replaces the standalone [prompt queueing RFD (#484)](https://github.com/agentclientprotocol/agent-client-protocol/pull/484), which predates that substrate and stops at the capability bit.
 
@@ -31,7 +31,7 @@ The v2 prompt lifecycle RFD already flags this gap in its motivation:
 
 The substrate that's missing isn't queueing alone. It's the wire shape that distinguishes "deliver soon" from "deliver later," that gives each delivery a stable handle for ack and revocation, and that echoes the delivery into the session history so multi-client and replay stay coherent. That substrate is the v2 prompt lifecycle. This RFD adds the call sites on top.
 
-PR [#484](https://github.com/agentclientprotocol/agent-client-protocol/pull/484) (open since February 2026) takes a thinner cut: a `promptQueueing` capability plus an `end_turn` early-finish signal, with prompts queued via a parallel `session/prompt` call. It doesn't address steer, doesn't define delivery semantics, and predates the v2 prompt lifecycle's `state_change` and `user_message` notifications. The author flags in a follow-up comment that the Claude Agent SDK had no public hook for "when was my queued message inserted," which is precisely what `user_message` echoing solves at the protocol level. The proposal below is intended to supersede #484, with credit to [@SteffenDE](https://github.com/SteffenDE) for raising the question first.
+PR [#484](https://github.com/agentclientprotocol/agent-client-protocol/pull/484) (open since February 2026) takes a thinner cut: a `promptQueueing` capability plus an `end_turn` early-finish signal, with prompts queued via a parallel `session/prompt` call. It doesn't address steer, doesn't define delivery semantics, and predates the v2 prompt lifecycle's `state_change` and `user_message` notifications. The follow-up thread also asks how clients edit a queued message. This RFD answers that directly: editing is a pending-inject operation before `user_message`, not a transcript rewrite after delivery. The author also flags that the Claude Agent SDK had no public hook for "when was my queued message inserted," which is precisely what `user_message` echoing solves at the protocol level. The proposal below is intended to supersede #484, with credit to [@SteffenDE](https://github.com/SteffenDE) for raising the question first.
 
 ## What we propose to do about it
 
@@ -59,7 +59,7 @@ One method, two modes, one capability.
 }
 ```
 
-The agent responds when the inject has been **accepted into the session**, not when the model has processed it. The response carries the agent-assigned `messageId`, matching the v2 prompt lifecycle pattern:
+The agent responds when the inject has been accepted for pending delivery, not when the model has processed it. The response carries the agent-assigned `messageId`, matching the v2 prompt lifecycle pattern:
 
 ```jsonc
 {
@@ -71,19 +71,26 @@ The agent responds when the inject has been **accepted into the session**, not w
 
 At delivery (which happens later for both modes), the agent emits a `user_message` session update with the same `messageId`. This is the same notification the v2 prompt lifecycle defines for `session/prompt`, so clients, observers attached via [multi-client attach (#533)](https://github.com/agentclientprotocol/agent-client-protocol/pull/533), and `session/load` replay all see the message land in the same shape regardless of whether it arrived as a prompt or an inject.
 
+Until that `user_message` notification is emitted, the message is pending. Pending messages are not transcript history yet. They can be revoked by `messageId`, and agents may also support replacing their content while preserving the original mode and queue position.
+
 ### The capability
 
 ```jsonc
 {
   "agentCapabilities": {
     "session": {
-      "inject": { "modes": ["queue", "steer"] },
+      "inject": {
+        "modes": ["queue", "steer"],
+        "pending": { "replace": true },
+      },
     },
   },
 }
 ```
 
 An agent that only supports buffering at end-of-turn declares `["queue"]`. A tool-loop agent that can break safely between tool calls declares `["queue", "steer"]`. A streaming-only agent that can't do either declares the absence of the capability and clients fall back to `session/cancel`.
+
+Revoke is part of the pending-inject contract. `pending.replace` is optional. Clients should only offer edit-in-place for already-sent pending messages when it is advertised; otherwise they can keep drafts client-side longer or revoke and send a new inject when losing queue position is acceptable.
 
 ### Semantics
 
@@ -95,7 +102,7 @@ An agent that only supports buffering at end-of-turn declares `["queue"]`. A too
 - **Mid LLM stream with no tool call pending**: agent-defined. The agent may either interrupt the stream and re-prompt with the steer text included, or let the stream finish and deliver before the next iteration. The choice is a quality-of-implementation concern; both behaviors are spec-conformant. Clients should not assume one or the other.
 - **Mid model-process pause** (provider rate limit, usage-limit cap): hold pending steers until the pause clears. This mirrors the shape Codex landed on in [PR #22226](https://github.com/openai/codex/pull/22226).
 
-Both modes are fire-and-forget in the sense that the response confirms acceptance, not model-process. Both deliveries are observable via the same `user_message` notification.
+Both modes are fire-and-forget in the sense that the response confirms acceptance, not model-process. Both deliveries are observable via the same `user_message` notification. While an inject is pending, the `messageId` returned from `session/inject` is the only stable handle clients should use for pending operations.
 
 ## Shiny future
 
@@ -126,41 +133,107 @@ In `schema/schema.json`:
    - `messageId: string` (UUID, agent-owned)
 4. Add `agentCapabilities.session.inject`:
    - `modes: SessionInjectMode[]`
-5. Register `session/inject` as a request method.
+   - `pending.replace: boolean` (optional; default `false`)
+5. Add `SessionRevokeInjectRequest`:
+   - `sessionId: SessionId`
+   - `messageId: string`
+6. Add `SessionRevokeInjectResponse`: empty object.
+7. Add `SessionReplaceInjectRequest`:
+   - `sessionId: SessionId`
+   - `messageId: string`
+   - `content: ContentBlock[]`
+8. Add `SessionReplaceInjectResponse`:
+   - `messageId: string` (same value, returned for symmetry with `session/inject`)
+9. Register `session/inject`, `session/revoke_inject`, and `session/replace_inject` as request methods.
 
 No changes to `session/update` or to existing notification types. The `user_message` notification introduced by the v2 prompt lifecycle is what carries the delivered content, with the same `messageId` that was returned from the inject response.
 
-### Revocation
+### Pending injects: revoke and replace
 
-A queued message that hasn't been delivered yet should be cancellable. The natural primitive is the one the [request cancellation RFD](./request-cancellation) just added: `$/cancel_request` on the original `session/inject` request id.
+A pending inject can be revoked by `messageId`:
 
 ```jsonc
 {
   "jsonrpc": "2.0",
-  "method": "$/cancel_request",
-  "params": { "requestId": 42 },
+  "id": 43,
+  "method": "session/revoke_inject",
+  "params": {
+    "sessionId": "sess_abc",
+    "messageId": "msg_inj_001",
+  },
 }
 ```
 
-If the inject hasn't been delivered, the agent drops it and responds to the original request with `-32800 Request cancelled`. If delivery already happened (the `user_message` notification has fired or is about to fire), the cancel is a no-op; the message is in the session. There is no separate "revoke a delivered message" surface; that's [session rewind (#1214)](https://github.com/agentclientprotocol/agent-client-protocol/pull/1214) territory.
+A successful response means the agent will not emit a future `user_message` for that `messageId`:
 
-Steered messages that have already been handed to the LLM call are not revocable from the protocol's point of view. They're already in the model's input.
+```jsonc
+{
+  "jsonrpc": "2.0",
+  "id": 43,
+  "result": {},
+}
+```
+
+Revoke is ordered against delivery at the agent:
+
+- If revoke wins, the pending inject is dropped. No later `user_message` is emitted for that `messageId`.
+- If delivery wins, the agent returns an error. The recommended shape is `-32602 Invalid params` with `error.data.reason: "already_delivered"` and the `messageId`. The client should keep the delivered message in the transcript.
+- If the `messageId` is unknown for that session, return `-32602 Invalid params` with `error.data.reason: "unknown_message_id"`.
+- If the message was already revoked and the agent still remembers the tombstone, return success. This makes revoke safe to retry after transport loss.
+
+Normal session errors still apply. If the session is unknown, closed, or no longer accepts input, return the same error the agent uses for other session requests.
+
+A steer that has been emitted as `user_message`, or otherwise committed to the next model input, is already delivered from the protocol's point of view. It is not revocable through `session/revoke_inject`. There is no separate "revoke a delivered message" surface; that is [session rewind (#1214)](https://github.com/agentclientprotocol/agent-client-protocol/pull/1214) territory.
+
+Agents may also support replacing pending content. Replacement keeps the same `messageId`, mode, and queue position; only `content` changes. The eventual `user_message` carries the final content, not the edit history.
+
+```jsonc
+{
+  "jsonrpc": "2.0",
+  "id": 44,
+  "method": "session/replace_inject",
+  "params": {
+    "sessionId": "sess_abc",
+    "messageId": "msg_inj_001",
+    "content": [
+      {
+        "type": "text",
+        "text": "actually use auth_v3.go",
+      },
+    ],
+  },
+}
+```
+
+```jsonc
+{
+  "jsonrpc": "2.0",
+  "id": 44,
+  "result": { "messageId": "msg_inj_001" },
+}
+```
+
+The same failure cases apply to replace: `already_delivered`, `unknown_message_id`, and unsupported capability. If `pending.replace` was not advertised, clients should not call the method; agents may still return `Method not found` or `-32602 Invalid params` with `error.data.reason: "replace_not_supported"`. If replace races with delivery, the agent either delivers the old content and returns `already_delivered`, or accepts the replacement and later emits `user_message` with the new content. It must not report success and then deliver the old content.
+
+`$/cancel_request` still applies to an in-flight `session/inject` request before the accept response is sent. Once `session/inject` has returned a `messageId`, request cancellation is no longer the right tool; the request is complete, and the message is managed by `session/revoke_inject` or `session/replace_inject`.
 
 ### Persistence and replay
 
-Injected messages are part of session history. They appear in `session/load` replay as `user_message` notifications, ordered by acceptance time (which equals delivery time for queue+steer because acceptance and delivery are the same moment from the session's perspective, even though the response went out earlier).
+Delivered injected messages are part of session history. They appear in `session/load` replay as `user_message` notifications, ordered by delivery time.
+
+Pending messages are not replayed as history. Revoked messages are not replayed. Replaced messages replay once, as the final `user_message` content that was actually delivered.
 
 This means a session loaded from disk doesn't carry "this was a steer" provenance. That's deliberate. Once delivered, an injected message is just a user message in the transcript. The modality is observable in real time via the gap between response and `user_message`, not as a persistent attribute.
 
 ### Multi-client interaction
 
-With [multi-client attach (#533)](https://github.com/agentclientprotocol/agent-client-protocol/pull/533), multiple controllers can inject into the same session. Ordering across controllers is by arrival time at the agent (FIFO from each controller; interleaved across controllers). Observers cannot inject.
+With [multi-client attach (#533)](https://github.com/agentclientprotocol/agent-client-protocol/pull/533), multiple controllers can inject into the same session. Ordering across controllers is by arrival time at the agent (FIFO from each controller; interleaved across controllers). Observers cannot inject, revoke, or replace.
 
-Every controller and observer sees the same `user_message` notification at delivery time, so transcripts converge.
+Every controller and observer sees the same `user_message` notification at delivery time, so transcripts converge. A revoked inject has no transcript update. If an agent restricts revocation or replacement to the controller that created the pending inject, it should reject other controllers with a permission error instead of silently doing nothing.
 
 ### Interaction with other in-flight requests
 
-- **`session/cancel` during a pending steer.** Codex [#22815](https://github.com/openai/codex/issues/22815) is a real bug surface here, and we should resolve it in the spec rather than leave it implicit. Recommended behavior: cancel applies to the in-flight turn only. Pending injects (both queue and steer) survive `session/cancel` and deliver as normal once the agent reaches idle. Clients that want to clear everything can revoke the injects via `$/cancel_request` first, then `session/cancel`. Agents should document if they deviate.
+- **`session/cancel` during a pending steer.** Codex [#22815](https://github.com/openai/codex/issues/22815) is a real bug surface here, and we should resolve it in the spec rather than leave it implicit. Recommended behavior: cancel applies to the in-flight turn only. Pending injects (both queue and steer) survive `session/cancel` and deliver as normal once the agent reaches idle. Clients that want to clear everything can call `session/revoke_inject` for pending injects first, then `session/cancel`. Agents should document if they deviate.
 - **`session/request_permission` blocking the turn.** While the agent is awaiting a permission decision, the turn is paused but not idle. Queue accumulates as normal. Steer is held until the permission resolves, then delivered at the next break-point (which may be immediately if the permission decision is the break-point). Agents that prefer to drop steers during permission waits may do so, capability-advertised.
 - **Elicitation in flight.** [Elicitation](./elicitation) is a separate request from the agent to the client. An inject is not an answer to an elicitation; they're orthogonal channels. Agents must not satisfy a pending `elicitation/create` from inject content.
 
@@ -225,6 +298,12 @@ Sibling but separate. `session/inject` carries user-role content; the agent trea
 
 Because delivery for `queue` can be arbitrarily delayed (a long-running turn might mean the queue waits minutes), and forcing the JSON-RPC request to stay open for that duration is wasteful and brittle on stateful transports. The `messageId` returned on acceptance is the handle clients need; the `user_message` notification at delivery time is the signal.
 
+### Can a queued message be edited?
+
+Yes, while it is pending. If the agent advertises `pending.replace`, clients can call `session/replace_inject` and keep the same queue position. If replacement is not advertised, clients can still keep unsent drafts editable on their side, or revoke and send a new inject when appending at the end is acceptable.
+
+After `user_message` fires, the message is transcript history. Editing or removing it is a rewind or fork operation, not an inject operation.
+
 ### Should the agent be allowed to drop an injected message?
 
 Only via revocation. Once accepted (the response has gone out with a `messageId`), the agent commits to delivering. If the agent crashes mid-turn and loses the queue, that's a durability bug, not a protocol-allowed behavior.
@@ -235,4 +314,5 @@ Steer delivers at the next break-point; queue delivers at idle. The steer arrive
 
 ## Revision history
 
+- 2026-05-20: Replaced request-cancellation-based revocation with `messageId`-based pending revoke/replace semantics, including race outcomes for already-delivered messages.
 - 2026-05-19: Initial draft, lifted from [discussion #1220](https://github.com/orgs/agentclientprotocol/discussions/1220) with two changes: explicit acknowledgment of and supersession over PR #484, and tightened `messageId` ownership to match the v2 prompt lifecycle (agent-owned, returned in the inject response).
