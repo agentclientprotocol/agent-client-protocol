@@ -18,7 +18,7 @@ This is a v2 follow-on. It rides on the [v2 prompt lifecycle](./prompt) (short-l
 
 Coding-agent UIs have converged on two adjacent input affordances on top of "send a prompt and wait":
 
-- **Queue.** The user types while the agent is mid-turn; the text is held and delivered once the agent goes idle. Shipped in Cursor since 1.2 as a FIFO ([forum thread](https://forum.cursor.com/t/queue-agent-messages/110883)). Shipped in Windsurf Cascade — type while Cascade is working, press Enter, it lands after the current task ([docs](https://docs.windsurf.com/plugins/cascade/cascade-overview)). Shipped in Gemini CLI with explicit `wait_for_idle` vs `wait_for_response` settings ([PR #7867](https://github.com/google-gemini/gemini-cli/pull/7867)), and with documented ordering bugs when tool calls are involved ([#17282](https://github.com/google-gemini/gemini-cli/issues/17282), [#17719](https://github.com/google-gemini/gemini-cli/issues/17719)). Shipped in Claude Code, with [known boundary bugs](https://github.com/anthropics/claude-code/issues/49373) where it flushes at every LLM pause instead of true end-of-turn ([related](https://github.com/anthropics/claude-code/issues/36326)).
+- **Queue.** The user types while the agent is mid-turn; the text is held and delivered once the agent goes idle. Shipped in Cursor since 1.2 as a FIFO ([forum thread](https://forum.cursor.com/t/queue-agent-messages/110883)). Shipped in Windsurf Cascade: type while Cascade is working, press Enter, and it lands after the current task ([docs](https://docs.windsurf.com/plugins/cascade/cascade-overview)). Shipped in Gemini CLI with explicit `wait_for_idle` vs `wait_for_response` settings ([PR #7867](https://github.com/google-gemini/gemini-cli/pull/7867)), and with documented ordering bugs when tool calls are involved ([#17282](https://github.com/google-gemini/gemini-cli/issues/17282), [#17719](https://github.com/google-gemini/gemini-cli/issues/17719)). Shipped in Claude Code, with [known boundary bugs](https://github.com/anthropics/claude-code/issues/49373) where it flushes at every LLM pause instead of true end-of-turn ([related](https://github.com/anthropics/claude-code/issues/36326)).
 - **Steer.** The user types while the agent is mid-turn; the text is delivered at the next safe break-point, typically after the in-flight tool call. Codex CLI has the most fleshed-out implementation, opt-in via `/experimental`. The Codex code base has had to evolve its own pending-steers buffer, requeue-on-turn-complete, pause-on-usage-limits, and a replay edge-case surface. See PRs [#12569](https://github.com/openai/codex/pull/12569), [#15235](https://github.com/openai/codex/pull/15235), [#22226](https://github.com/openai/codex/pull/22226), [#22879](https://github.com/openai/codex/pull/22879) and issues [#19975](https://github.com/openai/codex/issues/19975), [#22815](https://github.com/openai/codex/issues/22815). The original Codex request issues ([#4312](https://github.com/openai/codex/issues/4312), [#9096](https://github.com/openai/codex/issues/9096)) frame this as "queued corrections while the current turn is still running" — the same problem. Gemini CLI has an open proposal to add the same shape under a different name ([`/inject` for asynchronous mid-stream steering, #17197](https://github.com/google-gemini/gemini-cli/issues/17197)).
 
 The "queue vs. steer is two distinct things" framing has surfaced explicitly across ecosystems: see `langchain-ai/deepagents` [#1390 "Disambiguate steer/queue"](https://github.com/langchain-ai/deepagents/issues/1390) and `anomalyco/opencode` [#21388 "Allow messages to be sent mid-turn — interrupt, queue, or inject"](https://github.com/anomalyco/opencode/issues/21388). The convergence is visible, but each tool is reinventing the semantics from scratch.
@@ -29,7 +29,7 @@ The v2 prompt lifecycle RFD already flags this gap in its motivation:
 
 > Queueing messages (still an ongoing discussion) would also fit much nicer in this pattern... potentially the agent could decide whether it cancels the current turn and inserts it immediately, or inserts it at the next convenient break point.
 
-The substrate that's missing isn't queueing alone. It's the wire shape that distinguishes "deliver soon" from "deliver later," that gives each delivery a stable handle for ack and revocation, and that echoes the delivery into the session history so multi-client and replay stay coherent. That substrate is the v2 prompt lifecycle. This RFD adds the call sites on top.
+The missing piece is not queueing alone. It is the wire shape that distinguishes "deliver soon" from "deliver later," gives each delivery a stable handle for ack and revocation, and echoes the delivery into the session history so multi-client and replay stay coherent. The v2 prompt lifecycle gives us that base. This RFD adds the call sites on top.
 
 PR [#484](https://github.com/agentclientprotocol/agent-client-protocol/pull/484) (open since February 2026) takes a thinner cut: a `promptQueueing` capability plus an `end_turn` early-finish signal, with prompts queued via a parallel `session/prompt` call. It doesn't address steer, doesn't define delivery semantics, and predates the v2 prompt lifecycle's `state_change` and `user_message` notifications. The follow-up thread also asks how clients edit a queued message. This RFD answers that directly: editing is a pending-inject operation before `user_message`, not a transcript rewrite after delivery. The author also flags that the Claude Agent SDK had no public hook for "when was my queued message inserted," which is precisely what `user_message` echoing solves at the protocol level. The proposal below is intended to supersede #484, with credit to [@SteffenDE](https://github.com/SteffenDE) for raising the question first.
 
@@ -130,7 +130,7 @@ In `schema/schema.json`:
    - `mode: SessionInjectMode`
    - `content: ContentBlock[]` (same shape as `PromptRequest.prompt`)
 3. Add `SessionInjectResponse`:
-   - `messageId: string` (UUID, agent-owned)
+   - `messageId: string` (opaque, agent-owned)
 4. Add `agentCapabilities.session.inject`:
    - `modes: SessionInjectMode[]`
    - `pending.replace: boolean` (optional; default `false`)
@@ -183,7 +183,7 @@ Revoke is ordered against delivery at the agent:
 
 Normal session errors still apply. If the session is unknown, closed, or no longer accepts input, return the same error the agent uses for other session requests.
 
-A steer that has been emitted as `user_message`, or otherwise committed to the next model input, is already delivered from the protocol's point of view. It is not revocable through `session/revoke_inject`. There is no separate "revoke a delivered message" surface; that is [session rewind (#1214)](https://github.com/agentclientprotocol/agent-client-protocol/pull/1214) territory.
+Delivery is the point where the agent commits the inject to session history and emits, or has irrevocably queued, the matching `user_message`. From that point, the content may already be in the next model input. Revoke must return `already_delivered`, and the client should expect the `user_message` if it has not seen it yet. There is no separate "revoke a delivered message" surface; that is [session rewind (#1214)](https://github.com/agentclientprotocol/agent-client-protocol/pull/1214) territory.
 
 Agents may also support replacing pending content. Replacement keeps the same `messageId`, mode, and queue position; only `content` changes. The eventual `user_message` carries the final content, not the edit history.
 
@@ -229,7 +229,7 @@ This means a session loaded from disk doesn't carry "this was a steer" provenanc
 
 With [multi-client attach (#533)](https://github.com/agentclientprotocol/agent-client-protocol/pull/533), multiple controllers can inject into the same session. Ordering across controllers is by arrival time at the agent (FIFO from each controller; interleaved across controllers). Observers cannot inject, revoke, or replace.
 
-Every controller and observer sees the same `user_message` notification at delivery time, so transcripts converge. A revoked inject has no transcript update. If an agent restricts revocation or replacement to the controller that created the pending inject, it should reject other controllers with a permission error instead of silently doing nothing.
+Every controller and observer sees the same `user_message` notification at delivery time, so transcripts converge. A revoked inject has no transcript update. This RFD does not add a shared pending-queue list or pending-message broadcast; clients can manage the pending handles returned to them, and delivery remains the shared signal. If an agent restricts revocation or replacement to the controller that created the pending inject, it should reject other controllers with a permission error instead of silently doing nothing.
 
 ### Interaction with other in-flight requests
 
