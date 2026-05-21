@@ -62,7 +62,7 @@ Agents that support `logout` also advertise `agentCapabilities.auth.logout`:
 
 If `agentCapabilities.auth.logout` is omitted or `null`, the Agent does not support `logout` and Clients **MUST NOT** call it. Supplying `{}` means the Agent supports the method.
 
-### Authentication method types
+### Authentication Method Types
 
 The default authentication method type is `agent`, where the Agent handles authentication itself. When no `type` is present, the method is treated as `agent`:
 
@@ -74,30 +74,9 @@ The default authentication method type is `agent`, where the Agent handles authe
 }
 ```
 
-Draft authentication method types provide additional information so Clients can offer better UI:
+An explicit `"type": "agent"` is also accepted but not required.
 
-- `env_var`: the user provides credentials that the Client passes to the Agent as environment variables.
-- `terminal`: the Client runs the Agent's terminal authentication flow for the user.
-
-`terminal` methods require Client support. Clients advertise this during initialization with `clientCapabilities.auth.terminal`:
-
-```json highlight={7-9}
-{
-  "jsonrpc": "2.0",
-  "id": 0,
-  "method": "initialize",
-  "params": {
-    "protocolVersion": 1,
-    "clientCapabilities": {
-      "auth": {
-        "terminal": true
-      }
-    }
-  }
-}
-```
-
-See the [draft schema](/protocol/draft/schema#authmethod) for the full `AuthMethod` definitions.
+See the [schema](/protocol/schema#authmethod) for the full stable `AuthMethod` definition.
 
 ## Authenticating
 

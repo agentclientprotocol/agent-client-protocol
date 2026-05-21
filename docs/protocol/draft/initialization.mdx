@@ -155,6 +155,10 @@ The Agent **SHOULD** specify whether it supports the following capabilities:
   included in `session/prompt` requests.
 </ResponseField>
 
+<ResponseField name="auth" type="AgentAuthCapabilities Object">
+  Authentication-related capabilities supported by the Agent.
+</ResponseField>
+
 #### Prompt capabilities
 
 As a baseline, all Agents **MUST** support `ContentBlock::Text` and `ContentBlock::ResourceLink` in `session/prompt` requests.
@@ -185,6 +189,16 @@ Optionally, they **MAY** support richer types of [content](./content) by specify
 Note: This transport has been deprecated by the MCP spec.
 
 </ResponseField>
+
+#### Authentication Capabilities
+
+<ResponseField name="logout" type="LogoutCapabilities Object">
+  The [`logout`](./authentication#logging-out) method is available.
+</ResponseField>
+
+<Card icon="shield-check" horizontal href="./authentication">
+  Learn more about Authentication
+</Card>
 
 #### Session Capabilities
 

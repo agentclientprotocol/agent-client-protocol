@@ -64,6 +64,7 @@
             "pages": [
               "protocol/overview",
               "protocol/initialization",
+              "protocol/authentication",
               "protocol/session-setup",
               "protocol/session-list",
               "protocol/prompt-turn",
@@ -155,11 +156,7 @@
           },
           {
             "group": "Preview",
-            "pages": [
-              "rfds/rust-sdk-v1",
-              "rfds/logout-method",
-              "rfds/additional-directories"
-            ]
+            "pages": ["rfds/rust-sdk-v1", "rfds/additional-directories"]
           },
           {
             "group": "Completed",
@@ -170,7 +167,8 @@
               "rfds/session-info-update",
               "rfds/acp-agent-registry",
               "rfds/session-resume",
-              "rfds/session-close"
+              "rfds/session-close",
+              "rfds/logout-method"
             ]
           }
         ]
@@ -196,6 +194,7 @@
           {
             "group": "Announcements",
             "pages": [
+              "announcements/logout-method-stabilized",
               "announcements/session-close-stabilized",
               "announcements/session-resume-stabilized",
               "announcements/transports-working-group",

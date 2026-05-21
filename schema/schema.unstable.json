@@ -27,7 +27,7 @@
       "x-side": "agent"
     },
     "AgentAuthCapabilities": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAuthentication-related capabilities supported by the agent.",
+      "description": "Authentication-related capabilities supported by the agent.",
       "properties": {
         "_meta": {
           "additionalProperties": true,
@@ -63,7 +63,7 @@
             }
           ],
           "default": {},
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAuthentication-related capabilities supported by the agent."
+          "description": "Authentication-related capabilities supported by the agent."
         },
         "loadSession": {
           "default": false,
@@ -1255,7 +1255,7 @@
                       "$ref": "#/$defs/LogoutRequest"
                     }
                   ],
-                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nLogs out of the current authenticated state.\n\nAfter a successful logout, all new sessions will require authentication.\nThere is no guarantee about the behavior of already running sessions.",
+                  "description": "Logs out of the current authenticated state.\n\nAfter a successful logout, all new sessions will require authentication.\nThere is no guarantee about the behavior of already running sessions.",
                   "title": "LogoutRequest"
                 },
                 {
@@ -3472,7 +3472,7 @@
       "x-side": "agent"
     },
     "LogoutCapabilities": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nLogout capabilities supported by the agent.\n\nBy supplying `{}` it means that the agent supports the logout method.",
+      "description": "Logout capabilities supported by the agent.\n\nBy supplying `{}` it means that the agent supports the logout method.",
       "properties": {
         "_meta": {
           "additionalProperties": true,
@@ -3483,7 +3483,7 @@
       "type": "object"
     },
     "LogoutRequest": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for the logout method.\n\nTerminates the current authenticated session.",
+      "description": "Request parameters for the logout method.\n\nTerminates the current authenticated session.",
       "properties": {
         "_meta": {
           "additionalProperties": true,
@@ -3496,7 +3496,7 @@
       "x-side": "agent"
     },
     "LogoutResponse": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nResponse to the `logout` method.",
+      "description": "Response to the `logout` method.",
       "properties": {
         "_meta": {
           "additionalProperties": true,

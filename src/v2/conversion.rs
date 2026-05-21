@@ -2918,7 +2918,6 @@ impl IntoV2 for crate::v1::AuthenticateResponse {
     }
 }
 
-#[cfg(feature = "unstable_logout")]
 impl IntoV1 for super::LogoutRequest {
     type Output = crate::v1::LogoutRequest;
 
@@ -2930,7 +2929,6 @@ impl IntoV1 for super::LogoutRequest {
     }
 }
 
-#[cfg(feature = "unstable_logout")]
 impl IntoV2 for crate::v1::LogoutRequest {
     type Output = super::LogoutRequest;
 
@@ -2942,7 +2940,6 @@ impl IntoV2 for crate::v1::LogoutRequest {
     }
 }
 
-#[cfg(feature = "unstable_logout")]
 impl IntoV1 for super::LogoutResponse {
     type Output = crate::v1::LogoutResponse;
 
@@ -2954,7 +2951,6 @@ impl IntoV1 for super::LogoutResponse {
     }
 }
 
-#[cfg(feature = "unstable_logout")]
 impl IntoV2 for crate::v1::LogoutResponse {
     type Output = super::LogoutResponse;
 
@@ -2966,7 +2962,6 @@ impl IntoV2 for crate::v1::LogoutResponse {
     }
 }
 
-#[cfg(feature = "unstable_logout")]
 impl IntoV1 for super::AgentAuthCapabilities {
     type Output = crate::v1::AgentAuthCapabilities;
 
@@ -2979,7 +2974,6 @@ impl IntoV1 for super::AgentAuthCapabilities {
     }
 }
 
-#[cfg(feature = "unstable_logout")]
 impl IntoV2 for crate::v1::AgentAuthCapabilities {
     type Output = super::AgentAuthCapabilities;
 
@@ -2992,7 +2986,6 @@ impl IntoV2 for crate::v1::AgentAuthCapabilities {
     }
 }
 
-#[cfg(feature = "unstable_logout")]
 impl IntoV1 for super::LogoutCapabilities {
     type Output = crate::v1::LogoutCapabilities;
 
@@ -3004,7 +2997,6 @@ impl IntoV1 for super::LogoutCapabilities {
     }
 }
 
-#[cfg(feature = "unstable_logout")]
 impl IntoV2 for crate::v1::LogoutCapabilities {
     type Output = super::LogoutCapabilities;
 
@@ -5209,7 +5201,6 @@ impl IntoV1 for super::AgentCapabilities {
             prompt_capabilities,
             mcp_capabilities,
             session_capabilities,
-            #[cfg(feature = "unstable_logout")]
             auth,
             #[cfg(feature = "unstable_llm_providers")]
             providers,
@@ -5224,7 +5215,6 @@ impl IntoV1 for super::AgentCapabilities {
             prompt_capabilities: prompt_capabilities.into_v1()?,
             mcp_capabilities: mcp_capabilities.into_v1()?,
             session_capabilities: session_capabilities.into_v1()?,
-            #[cfg(feature = "unstable_logout")]
             auth: auth.into_v1()?,
             #[cfg(feature = "unstable_llm_providers")]
             providers: providers.into_v1()?,
@@ -5246,7 +5236,6 @@ impl IntoV2 for crate::v1::AgentCapabilities {
             prompt_capabilities,
             mcp_capabilities,
             session_capabilities,
-            #[cfg(feature = "unstable_logout")]
             auth,
             #[cfg(feature = "unstable_llm_providers")]
             providers,
@@ -5261,7 +5250,6 @@ impl IntoV2 for crate::v1::AgentCapabilities {
             prompt_capabilities: prompt_capabilities.into_v2()?,
             mcp_capabilities: mcp_capabilities.into_v2()?,
             session_capabilities: session_capabilities.into_v2()?,
-            #[cfg(feature = "unstable_logout")]
             auth: auth.into_v2()?,
             #[cfg(feature = "unstable_llm_providers")]
             providers: providers.into_v2()?,
@@ -5601,7 +5589,6 @@ impl IntoV1 for super::ClientRequest {
             Self::DisableProviderRequest(value) => {
                 crate::v1::ClientRequest::DisableProviderRequest(value.into_v1()?)
             }
-            #[cfg(feature = "unstable_logout")]
             Self::LogoutRequest(value) => crate::v1::ClientRequest::LogoutRequest(value.into_v1()?),
             Self::NewSessionRequest(value) => {
                 crate::v1::ClientRequest::NewSessionRequest(value.into_v1()?)
@@ -5683,7 +5670,6 @@ impl IntoV2 for crate::v1::ClientRequest {
             Self::DisableProviderRequest(value) => {
                 super::ClientRequest::DisableProviderRequest(value.into_v2()?)
             }
-            #[cfg(feature = "unstable_logout")]
             Self::LogoutRequest(value) => super::ClientRequest::LogoutRequest(value.into_v2()?),
             Self::NewSessionRequest(value) => {
                 super::ClientRequest::NewSessionRequest(value.into_v2()?)
@@ -5761,7 +5747,6 @@ impl IntoV1 for super::AgentResponse {
             Self::DisableProviderResponse(value) => {
                 crate::v1::AgentResponse::DisableProviderResponse(value.into_v1()?)
             }
-            #[cfg(feature = "unstable_logout")]
             Self::LogoutResponse(value) => {
                 crate::v1::AgentResponse::LogoutResponse(value.into_v1()?)
             }
@@ -5847,7 +5832,6 @@ impl IntoV2 for crate::v1::AgentResponse {
             Self::DisableProviderResponse(value) => {
                 super::AgentResponse::DisableProviderResponse(value.into_v2()?)
             }
-            #[cfg(feature = "unstable_logout")]
             Self::LogoutResponse(value) => super::AgentResponse::LogoutResponse(value.into_v2()?),
             Self::NewSessionResponse(value) => {
                 super::AgentResponse::NewSessionResponse(value.into_v2()?)

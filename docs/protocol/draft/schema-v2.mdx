@@ -339,20 +339,12 @@ The client should disconnect, if it doesn't support this version.
 
 ### <span class="font-mono">logout</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 Logs out of the current authenticated state.
 
 After a successful logout, all new sessions will require authentication.
 There is no guarantee about the behavior of already running sessions.
 
 #### <span class="font-mono">LogoutRequest</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Request parameters for the logout method.
 
@@ -372,10 +364,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 </ResponseField>
 
 #### <span class="font-mono">LogoutResponse</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Response to the `logout` method.
 
@@ -2767,10 +2755,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
 ## <span class="font-mono">AgentAuthCapabilities</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 Authentication-related capabilities supported by the agent.
 
 **Type:** Object
@@ -2814,11 +2798,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
 </ResponseField>
 <ResponseField name="auth" type={<a href="#agentauthcapabilities">AgentAuthCapabilities</a>} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Authentication-related capabilities supported by the agent.
+  Authentication-related capabilities supported by the agent.
 
     - Default: `{}`
 
@@ -4671,10 +4651,6 @@ Protocol names that do not begin with `_` are reserved for the ACP spec.
 </ResponseField>
 
 ## <span class="font-mono">LogoutCapabilities</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Logout capabilities supported by the agent.
 

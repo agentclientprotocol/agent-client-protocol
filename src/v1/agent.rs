@@ -335,14 +335,9 @@ impl AuthenticateResponse {
 
 // Logout
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Request parameters for the logout method.
 ///
 /// Terminates the current authenticated session.
-#[cfg(feature = "unstable_logout")]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = LOGOUT_METHOD_NAME))]
@@ -358,7 +353,6 @@ pub struct LogoutRequest {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_logout")]
 impl LogoutRequest {
     #[must_use]
     pub fn new() -> Self {
@@ -377,12 +371,7 @@ impl LogoutRequest {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Response to the `logout` method.
-#[cfg(feature = "unstable_logout")]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = LOGOUT_METHOD_NAME))]
@@ -398,7 +387,6 @@ pub struct LogoutResponse {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_logout")]
 impl LogoutResponse {
     #[must_use]
     pub fn new() -> Self {
@@ -417,12 +405,7 @@ impl LogoutResponse {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Authentication-related capabilities supported by the agent.
-#[cfg(feature = "unstable_logout")]
 #[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -444,7 +427,6 @@ pub struct AgentAuthCapabilities {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_logout")]
 impl AgentAuthCapabilities {
     #[must_use]
     pub fn new() -> Self {
@@ -470,14 +452,9 @@ impl AgentAuthCapabilities {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Logout capabilities supported by the agent.
 ///
 /// By supplying `{}` it means that the agent supports the logout method.
-#[cfg(feature = "unstable_logout")]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[non_exhaustive]
@@ -491,7 +468,6 @@ pub struct LogoutCapabilities {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_logout")]
 impl LogoutCapabilities {
     #[must_use]
     pub fn new() -> Self {
@@ -4017,12 +3993,7 @@ pub struct AgentCapabilities {
     pub mcp_capabilities: McpCapabilities,
     #[serde(default)]
     pub session_capabilities: SessionCapabilities,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Authentication-related capabilities supported by the agent.
-    #[cfg(feature = "unstable_logout")]
     #[serde(default)]
     pub auth: AgentAuthCapabilities,
     /// **UNSTABLE**
@@ -4097,12 +4068,7 @@ impl AgentCapabilities {
         self
     }
 
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Authentication-related capabilities supported by the agent.
-    #[cfg(feature = "unstable_logout")]
     #[must_use]
     pub fn auth(mut self, auth: AgentAuthCapabilities) -> Self {
         self.auth = auth;
@@ -4779,7 +4745,6 @@ pub struct AgentMethodNames {
     /// Method for closing an active session.
     pub session_close: &'static str,
     /// Method for logging out of an authenticated session.
-    #[cfg(feature = "unstable_logout")]
     pub logout: &'static str,
     /// Method for starting an NES session.
     #[cfg(feature = "unstable_nes")]
@@ -4840,7 +4805,6 @@ pub const AGENT_METHOD_NAMES: AgentMethodNames = AgentMethodNames {
     session_fork: SESSION_FORK_METHOD_NAME,
     session_resume: SESSION_RESUME_METHOD_NAME,
     session_close: SESSION_CLOSE_METHOD_NAME,
-    #[cfg(feature = "unstable_logout")]
     logout: LOGOUT_METHOD_NAME,
     #[cfg(feature = "unstable_nes")]
     nes_start: NES_START_METHOD_NAME,
@@ -4905,7 +4869,6 @@ pub(crate) const SESSION_RESUME_METHOD_NAME: &str = "session/resume";
 /// Method name for closing an active session.
 pub(crate) const SESSION_CLOSE_METHOD_NAME: &str = "session/close";
 /// Method name for logging out of an authenticated session.
-#[cfg(feature = "unstable_logout")]
 pub(crate) const LOGOUT_METHOD_NAME: &str = "logout";
 
 /// All possible requests that a client can send to an agent.
@@ -4962,15 +4925,10 @@ pub enum ClientRequest {
     /// Disables a provider.
     #[cfg(feature = "unstable_llm_providers")]
     DisableProviderRequest(DisableProviderRequest),
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Logs out of the current authenticated state.
     ///
     /// After a successful logout, all new sessions will require authentication.
     /// There is no guarantee about the behavior of already running sessions.
-    #[cfg(feature = "unstable_logout")]
     LogoutRequest(LogoutRequest),
     /// Creates a new conversation session with the agent.
     ///
@@ -5126,7 +5084,6 @@ impl ClientRequest {
             Self::SetProviderRequest(_) => AGENT_METHOD_NAMES.providers_set,
             #[cfg(feature = "unstable_llm_providers")]
             Self::DisableProviderRequest(_) => AGENT_METHOD_NAMES.providers_disable,
-            #[cfg(feature = "unstable_logout")]
             Self::LogoutRequest(_) => AGENT_METHOD_NAMES.logout,
             Self::NewSessionRequest(_) => AGENT_METHOD_NAMES.session_new,
             Self::LoadSessionRequest(_) => AGENT_METHOD_NAMES.session_load,
@@ -5175,7 +5132,6 @@ pub enum AgentResponse {
     SetProviderResponse(#[serde(default)] SetProviderResponse),
     #[cfg(feature = "unstable_llm_providers")]
     DisableProviderResponse(#[serde(default)] DisableProviderResponse),
-    #[cfg(feature = "unstable_logout")]
     LogoutResponse(#[serde(default)] LogoutResponse),
     NewSessionResponse(NewSessionResponse),
     LoadSessionResponse(#[serde(default)] LoadSessionResponse),

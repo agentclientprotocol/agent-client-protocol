@@ -66,7 +66,7 @@ interface LogoutResponse {
 
 ### Capability Advertisement
 
-The `logout` capability should be advertised within a new `auth` object in `AgentCapabilities`:
+The `logout` capability is advertised within the `auth` object in `AgentCapabilities`:
 
 ```typescript
 interface AgentCapabilities {
@@ -177,7 +177,7 @@ interface LogoutCapabilities {
 ### Behavior
 
 1. **Pre-condition**: The client should only call `logout` if:
-   - The agent advertises `auth.logout: {}`
+   - The agent advertises `agentCapabilities.auth.logout: {}`
 
 2. **Agent responsibilities**:
    - Invalidate any stored tokens or credentials as appropriate
@@ -207,5 +207,6 @@ The RFD intentionally does not mandate a specific behavior to allow flexibility.
 
 ## Revision history
 
+- 2026-05-21: RFD marked as Completed; `logout` is stabilized
 - 2026-05-17: Moved to Preview.
 - 2026-02-02: Initial draft

@@ -84,6 +84,11 @@ Agents are programs that use generative AI to autonomously modify code. They typ
   `loadSession` capability).
 </ResponseField>
 
+<ResponseField name="logout" post={[<a href="./schema#logout">Schema</a>]}>
+  [End the current authenticated state](./authentication#logging-out) (requires
+  `agentCapabilities.auth.logout` capability).
+</ResponseField>
+
 <ResponseField
   name="session/set_mode"
   post={[<a href="./schema#session%2Fset-mode">Schema</a>]}
