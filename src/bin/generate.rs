@@ -206,6 +206,12 @@ mod markdown_generator {
             .unwrap();
             writeln!(&mut self.output, "---").unwrap();
             writeln!(&mut self.output).unwrap();
+            writeln!(
+                &mut self.output,
+                "<Note>The schema file can be downloaded directly from the [latest GitHub release](https://github.com/agentclientprotocol/agent-client-protocol/releases/latest/download/schema.json).</Note>"
+            )
+            .unwrap();
+            writeln!(&mut self.output).unwrap();
 
             let mut agent_types: BTreeMap<String, Vec<(String, Value)>> = BTreeMap::new();
             let mut client_types: BTreeMap<String, Vec<(String, Value)>> = BTreeMap::new();
