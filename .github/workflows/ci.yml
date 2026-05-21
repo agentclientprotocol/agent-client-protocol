@@ -85,8 +85,44 @@ jobs:
           npm run generate
           git diff --exit-code || (echo "Generated files are out of date. Run 'npm run generate' and commit the changes." && exit 1)
 
+  rust-changes:
+    name: Detect Rust changes
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.rust-changes.outputs.changed }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check for Rust file changes
+        id: rust-changes
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -Eq '(^|/)(Cargo\.toml|Cargo\.lock)$|\.rs$'; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
   feature-powerset:
     name: Feature powerset (${{ matrix.partition }})
+    needs: rust-changes
+    if: needs.rust-changes.outputs.changed == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
