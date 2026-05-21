@@ -5083,8 +5083,8 @@ impl IntoV2 for crate::v1::ListProvidersResponse {
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl IntoV1 for super::SetProvidersRequest {
-    type Output = crate::v1::SetProvidersRequest;
+impl IntoV1 for super::SetProviderRequest {
+    type Output = crate::v1::SetProviderRequest;
 
     fn into_v1(self) -> Result<Self::Output> {
         let Self {
@@ -5094,7 +5094,7 @@ impl IntoV1 for super::SetProvidersRequest {
             headers,
             meta,
         } = self;
-        Ok(crate::v1::SetProvidersRequest {
+        Ok(crate::v1::SetProviderRequest {
             id: id.into_v1()?,
             api_type: api_type.into_v1()?,
             base_url: base_url.into_v1()?,
@@ -5105,8 +5105,8 @@ impl IntoV1 for super::SetProvidersRequest {
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl IntoV2 for crate::v1::SetProvidersRequest {
-    type Output = super::SetProvidersRequest;
+impl IntoV2 for crate::v1::SetProviderRequest {
+    type Output = super::SetProviderRequest;
 
     fn into_v2(self) -> Result<Self::Output> {
         let Self {
@@ -5116,7 +5116,7 @@ impl IntoV2 for crate::v1::SetProvidersRequest {
             headers,
             meta,
         } = self;
-        Ok(super::SetProvidersRequest {
+        Ok(super::SetProviderRequest {
             id: id.into_v2()?,
             api_type: api_type.into_v2()?,
             base_url: base_url.into_v2()?,
@@ -5127,36 +5127,36 @@ impl IntoV2 for crate::v1::SetProvidersRequest {
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl IntoV1 for super::SetProvidersResponse {
-    type Output = crate::v1::SetProvidersResponse;
+impl IntoV1 for super::SetProviderResponse {
+    type Output = crate::v1::SetProviderResponse;
 
     fn into_v1(self) -> Result<Self::Output> {
         let Self { meta } = self;
-        Ok(crate::v1::SetProvidersResponse {
+        Ok(crate::v1::SetProviderResponse {
             meta: meta.into_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl IntoV2 for crate::v1::SetProvidersResponse {
-    type Output = super::SetProvidersResponse;
+impl IntoV2 for crate::v1::SetProviderResponse {
+    type Output = super::SetProviderResponse;
 
     fn into_v2(self) -> Result<Self::Output> {
         let Self { meta } = self;
-        Ok(super::SetProvidersResponse {
+        Ok(super::SetProviderResponse {
             meta: meta.into_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl IntoV1 for super::DisableProvidersRequest {
-    type Output = crate::v1::DisableProvidersRequest;
+impl IntoV1 for super::DisableProviderRequest {
+    type Output = crate::v1::DisableProviderRequest;
 
     fn into_v1(self) -> Result<Self::Output> {
         let Self { id, meta } = self;
-        Ok(crate::v1::DisableProvidersRequest {
+        Ok(crate::v1::DisableProviderRequest {
             id: id.into_v1()?,
             meta: meta.into_v1()?,
         })
@@ -5164,12 +5164,12 @@ impl IntoV1 for super::DisableProvidersRequest {
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl IntoV2 for crate::v1::DisableProvidersRequest {
-    type Output = super::DisableProvidersRequest;
+impl IntoV2 for crate::v1::DisableProviderRequest {
+    type Output = super::DisableProviderRequest;
 
     fn into_v2(self) -> Result<Self::Output> {
         let Self { id, meta } = self;
-        Ok(super::DisableProvidersRequest {
+        Ok(super::DisableProviderRequest {
             id: id.into_v2()?,
             meta: meta.into_v2()?,
         })
@@ -5177,24 +5177,24 @@ impl IntoV2 for crate::v1::DisableProvidersRequest {
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl IntoV1 for super::DisableProvidersResponse {
-    type Output = crate::v1::DisableProvidersResponse;
+impl IntoV1 for super::DisableProviderResponse {
+    type Output = crate::v1::DisableProviderResponse;
 
     fn into_v1(self) -> Result<Self::Output> {
         let Self { meta } = self;
-        Ok(crate::v1::DisableProvidersResponse {
+        Ok(crate::v1::DisableProviderResponse {
             meta: meta.into_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl IntoV2 for crate::v1::DisableProvidersResponse {
-    type Output = super::DisableProvidersResponse;
+impl IntoV2 for crate::v1::DisableProviderResponse {
+    type Output = super::DisableProviderResponse;
 
     fn into_v2(self) -> Result<Self::Output> {
         let Self { meta } = self;
-        Ok(super::DisableProvidersResponse {
+        Ok(super::DisableProviderResponse {
             meta: meta.into_v2()?,
         })
     }
@@ -5594,12 +5594,12 @@ impl IntoV1 for super::ClientRequest {
                 crate::v1::ClientRequest::ListProvidersRequest(value.into_v1()?)
             }
             #[cfg(feature = "unstable_llm_providers")]
-            Self::SetProvidersRequest(value) => {
-                crate::v1::ClientRequest::SetProvidersRequest(value.into_v1()?)
+            Self::SetProviderRequest(value) => {
+                crate::v1::ClientRequest::SetProviderRequest(value.into_v1()?)
             }
             #[cfg(feature = "unstable_llm_providers")]
-            Self::DisableProvidersRequest(value) => {
-                crate::v1::ClientRequest::DisableProvidersRequest(value.into_v1()?)
+            Self::DisableProviderRequest(value) => {
+                crate::v1::ClientRequest::DisableProviderRequest(value.into_v1()?)
             }
             #[cfg(feature = "unstable_logout")]
             Self::LogoutRequest(value) => crate::v1::ClientRequest::LogoutRequest(value.into_v1()?),
@@ -5676,12 +5676,12 @@ impl IntoV2 for crate::v1::ClientRequest {
                 super::ClientRequest::ListProvidersRequest(value.into_v2()?)
             }
             #[cfg(feature = "unstable_llm_providers")]
-            Self::SetProvidersRequest(value) => {
-                super::ClientRequest::SetProvidersRequest(value.into_v2()?)
+            Self::SetProviderRequest(value) => {
+                super::ClientRequest::SetProviderRequest(value.into_v2()?)
             }
             #[cfg(feature = "unstable_llm_providers")]
-            Self::DisableProvidersRequest(value) => {
-                super::ClientRequest::DisableProvidersRequest(value.into_v2()?)
+            Self::DisableProviderRequest(value) => {
+                super::ClientRequest::DisableProviderRequest(value.into_v2()?)
             }
             #[cfg(feature = "unstable_logout")]
             Self::LogoutRequest(value) => super::ClientRequest::LogoutRequest(value.into_v2()?),
@@ -5754,12 +5754,12 @@ impl IntoV1 for super::AgentResponse {
                 crate::v1::AgentResponse::ListProvidersResponse(value.into_v1()?)
             }
             #[cfg(feature = "unstable_llm_providers")]
-            Self::SetProvidersResponse(value) => {
-                crate::v1::AgentResponse::SetProvidersResponse(value.into_v1()?)
+            Self::SetProviderResponse(value) => {
+                crate::v1::AgentResponse::SetProviderResponse(value.into_v1()?)
             }
             #[cfg(feature = "unstable_llm_providers")]
-            Self::DisableProvidersResponse(value) => {
-                crate::v1::AgentResponse::DisableProvidersResponse(value.into_v1()?)
+            Self::DisableProviderResponse(value) => {
+                crate::v1::AgentResponse::DisableProviderResponse(value.into_v1()?)
             }
             #[cfg(feature = "unstable_logout")]
             Self::LogoutResponse(value) => {
@@ -5840,12 +5840,12 @@ impl IntoV2 for crate::v1::AgentResponse {
                 super::AgentResponse::ListProvidersResponse(value.into_v2()?)
             }
             #[cfg(feature = "unstable_llm_providers")]
-            Self::SetProvidersResponse(value) => {
-                super::AgentResponse::SetProvidersResponse(value.into_v2()?)
+            Self::SetProviderResponse(value) => {
+                super::AgentResponse::SetProviderResponse(value.into_v2()?)
             }
             #[cfg(feature = "unstable_llm_providers")]
-            Self::DisableProvidersResponse(value) => {
-                super::AgentResponse::DisableProvidersResponse(value.into_v2()?)
+            Self::DisableProviderResponse(value) => {
+                super::AgentResponse::DisableProviderResponse(value.into_v2()?)
             }
             #[cfg(feature = "unstable_logout")]
             Self::LogoutResponse(value) => super::AgentResponse::LogoutResponse(value.into_v2()?),

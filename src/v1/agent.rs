@@ -3814,7 +3814,7 @@ impl ListProvidersResponse {
 #[schemars(extend("x-side" = "agent", "x-method" = PROVIDERS_SET_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct SetProvidersRequest {
+pub struct SetProviderRequest {
     /// Provider id to configure.
     pub id: String,
     /// Protocol type for this provider.
@@ -3835,7 +3835,7 @@ pub struct SetProvidersRequest {
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl SetProvidersRequest {
+impl SetProviderRequest {
     #[must_use]
     pub fn new(id: impl Into<String>, api_type: LlmProtocol, base_url: impl Into<String>) -> Self {
         Self {
@@ -3878,7 +3878,7 @@ impl SetProvidersRequest {
 #[schemars(extend("x-side" = "agent", "x-method" = PROVIDERS_SET_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct SetProvidersResponse {
+pub struct SetProviderResponse {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -3889,7 +3889,7 @@ pub struct SetProvidersResponse {
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl SetProvidersResponse {
+impl SetProviderResponse {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -3918,7 +3918,7 @@ impl SetProvidersResponse {
 #[schemars(extend("x-side" = "agent", "x-method" = PROVIDERS_DISABLE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct DisableProvidersRequest {
+pub struct DisableProviderRequest {
     /// Provider id to disable.
     pub id: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -3931,7 +3931,7 @@ pub struct DisableProvidersRequest {
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl DisableProvidersRequest {
+impl DisableProviderRequest {
     #[must_use]
     pub fn new(id: impl Into<String>) -> Self {
         Self {
@@ -3963,7 +3963,7 @@ impl DisableProvidersRequest {
 #[schemars(extend("x-side" = "agent", "x-method" = PROVIDERS_DISABLE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct DisableProvidersResponse {
+pub struct DisableProviderResponse {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -3974,7 +3974,7 @@ pub struct DisableProvidersResponse {
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl DisableProvidersResponse {
+impl DisableProviderResponse {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -4952,14 +4952,14 @@ pub enum ClientRequest {
     ///
     /// Replaces the configuration for a provider.
     #[cfg(feature = "unstable_llm_providers")]
-    SetProvidersRequest(SetProvidersRequest),
+    SetProviderRequest(SetProviderRequest),
     /// **UNSTABLE**
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
     /// Disables a provider.
     #[cfg(feature = "unstable_llm_providers")]
-    DisableProvidersRequest(DisableProvidersRequest),
+    DisableProviderRequest(DisableProviderRequest),
     /// **UNSTABLE**
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -5121,9 +5121,9 @@ impl ClientRequest {
             #[cfg(feature = "unstable_llm_providers")]
             Self::ListProvidersRequest(_) => AGENT_METHOD_NAMES.providers_list,
             #[cfg(feature = "unstable_llm_providers")]
-            Self::SetProvidersRequest(_) => AGENT_METHOD_NAMES.providers_set,
+            Self::SetProviderRequest(_) => AGENT_METHOD_NAMES.providers_set,
             #[cfg(feature = "unstable_llm_providers")]
-            Self::DisableProvidersRequest(_) => AGENT_METHOD_NAMES.providers_disable,
+            Self::DisableProviderRequest(_) => AGENT_METHOD_NAMES.providers_disable,
             #[cfg(feature = "unstable_logout")]
             Self::LogoutRequest(_) => AGENT_METHOD_NAMES.logout,
             Self::NewSessionRequest(_) => AGENT_METHOD_NAMES.session_new,
@@ -5170,9 +5170,9 @@ pub enum AgentResponse {
     #[cfg(feature = "unstable_llm_providers")]
     ListProvidersResponse(ListProvidersResponse),
     #[cfg(feature = "unstable_llm_providers")]
-    SetProvidersResponse(#[serde(default)] SetProvidersResponse),
+    SetProviderResponse(#[serde(default)] SetProviderResponse),
     #[cfg(feature = "unstable_llm_providers")]
-    DisableProvidersResponse(#[serde(default)] DisableProvidersResponse),
+    DisableProviderResponse(#[serde(default)] DisableProviderResponse),
     #[cfg(feature = "unstable_logout")]
     LogoutResponse(#[serde(default)] LogoutResponse),
     NewSessionResponse(NewSessionResponse),
@@ -6429,14 +6429,14 @@ mod test_serialization {
 
     #[cfg(feature = "unstable_llm_providers")]
     #[test]
-    fn test_set_providers_request_serialization() {
+    fn test_set_provider_request_serialization() {
         use std::collections::HashMap;
 
         let mut headers = HashMap::new();
         headers.insert("Authorization".to_string(), "Bearer sk-test".to_string());
 
         let request =
-            SetProvidersRequest::new("main", LlmProtocol::OpenAi, "https://api.openai.com/v1")
+            SetProviderRequest::new("main", LlmProtocol::OpenAi, "https://api.openai.com/v1")
                 .headers(headers);
 
         let json = serde_json::to_value(&request).unwrap();
@@ -6452,7 +6452,7 @@ mod test_serialization {
             })
         );
 
-        let deserialized: SetProvidersRequest = serde_json::from_value(json).unwrap();
+        let deserialized: SetProviderRequest = serde_json::from_value(json).unwrap();
         assert_eq!(deserialized.id, "main");
         assert_eq!(deserialized.api_type, LlmProtocol::OpenAi);
         assert_eq!(deserialized.base_url, "https://api.openai.com/v1");
@@ -6465,9 +6465,9 @@ mod test_serialization {
 
     #[cfg(feature = "unstable_llm_providers")]
     #[test]
-    fn test_set_providers_request_omits_empty_headers() {
+    fn test_set_provider_request_omits_empty_headers() {
         let request =
-            SetProvidersRequest::new("main", LlmProtocol::Anthropic, "https://api.anthropic.com");
+            SetProviderRequest::new("main", LlmProtocol::Anthropic, "https://api.anthropic.com");
 
         let json = serde_json::to_value(&request).unwrap();
         // headers should be omitted when empty
@@ -6476,13 +6476,13 @@ mod test_serialization {
 
     #[cfg(feature = "unstable_llm_providers")]
     #[test]
-    fn test_disable_providers_request_serialization() {
-        let request = DisableProvidersRequest::new("secondary");
+    fn test_disable_provider_request_serialization() {
+        let request = DisableProviderRequest::new("secondary");
 
         let json = serde_json::to_value(&request).unwrap();
         assert_eq!(json, json!({ "id": "secondary" }));
 
-        let deserialized: DisableProvidersRequest = serde_json::from_value(json).unwrap();
+        let deserialized: DisableProviderRequest = serde_json::from_value(json).unwrap();
         assert_eq!(deserialized.id, "secondary");
     }
 

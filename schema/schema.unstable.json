@@ -376,18 +376,18 @@
                 {
                   "allOf": [
                     {
-                      "$ref": "#/$defs/SetProvidersResponse"
+                      "$ref": "#/$defs/SetProviderResponse"
                     }
                   ],
-                  "title": "SetProvidersResponse"
+                  "title": "SetProviderResponse"
                 },
                 {
                   "allOf": [
                     {
-                      "$ref": "#/$defs/DisableProvidersResponse"
+                      "$ref": "#/$defs/DisableProviderResponse"
                     }
                   ],
-                  "title": "DisableProvidersResponse"
+                  "title": "DisableProviderResponse"
                 },
                 {
                   "allOf": [
@@ -1234,20 +1234,20 @@
                 {
                   "allOf": [
                     {
-                      "$ref": "#/$defs/SetProvidersRequest"
+                      "$ref": "#/$defs/SetProviderRequest"
                     }
                   ],
                   "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nReplaces the configuration for a provider.",
-                  "title": "SetProvidersRequest"
+                  "title": "SetProviderRequest"
                 },
                 {
                   "allOf": [
                     {
-                      "$ref": "#/$defs/DisableProvidersRequest"
+                      "$ref": "#/$defs/DisableProviderRequest"
                     }
                   ],
                   "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nDisables a provider.",
-                  "title": "DisableProvidersRequest"
+                  "title": "DisableProviderRequest"
                 },
                 {
                   "allOf": [
@@ -2289,7 +2289,7 @@
       "required": ["path", "newText"],
       "type": "object"
     },
-    "DisableProvidersRequest": {
+    "DisableProviderRequest": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for `providers/disable`.",
       "properties": {
         "_meta": {
@@ -2307,7 +2307,7 @@
       "x-method": "providers/disable",
       "x-side": "agent"
     },
-    "DisableProvidersResponse": {
+    "DisableProviderResponse": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nResponse to `providers/disable`.",
       "properties": {
         "_meta": {
@@ -6382,7 +6382,7 @@
         }
       ]
     },
-    "SetProvidersRequest": {
+    "SetProviderRequest": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for `providers/set`.\n\nReplaces the full configuration for one provider id.",
       "properties": {
         "_meta": {
@@ -6419,7 +6419,7 @@
       "x-method": "providers/set",
       "x-side": "agent"
     },
-    "SetProvidersResponse": {
+    "SetProviderResponse": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nResponse to `providers/set`.",
       "properties": {
         "_meta": {

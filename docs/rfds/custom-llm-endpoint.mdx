@@ -174,7 +174,7 @@ interface ProvidersListResponse {
 `providers/set` updates the full configuration for one provider id.
 
 ```typescript
-interface ProvidersSetRequest {
+interface SetProviderRequest {
   /** Provider id to configure. */
   id: string;
 
@@ -195,7 +195,7 @@ interface ProvidersSetRequest {
   _meta?: Record<string, unknown>;
 }
 
-interface ProvidersSetResponse {
+interface SetProviderResponse {
   /** Extension metadata */
   _meta?: Record<string, unknown>;
 }
@@ -204,7 +204,7 @@ interface ProvidersSetResponse {
 ### `providers/disable`
 
 ```typescript
-interface ProvidersDisableRequest {
+interface DisableProviderRequest {
   /** Provider id to disable. */
   id: string;
 
@@ -212,7 +212,7 @@ interface ProvidersDisableRequest {
   _meta?: Record<string, unknown>;
 }
 
-interface ProvidersDisableResponse {
+interface DisableProviderResponse {
   /** Extension metadata */
   _meta?: Record<string, unknown>;
 }
