@@ -54,7 +54,7 @@ The proposal is scoped to session lifecycle requests, session discovery requests
 
 Agents advertise support with `sessionCapabilities.additionalDirectories`. Clients MUST gate usage on that capability.
 
-This proposal also allows Agents to include `additionalDirectories` in `SessionInfo` returned by `session/list` when they track that state. Because Agents are not required to persist additional-root metadata, Clients treat `SessionInfo.additionalDirectories` as optional discovery metadata rather than required session state. `session/load` and `session/resume` remain explicit-list only: omitting `additionalDirectories` or supplying an empty array means no additional roots are activated for the resulting session, while a non-empty array-valued `additionalDirectories` becomes the complete resulting additional-root list for that request. Clients MAY change the additional-root list on `session/load` or `session/resume` from any previously used or reported list, as long as the request `cwd` matches the session's `cwd` and the Agent accepts the requested roots.
+This proposal also allows Agents to include `additionalDirectories` in `SessionInfo` returned by `session/list`. Because Agents are not required to persist additional-root metadata, Clients treat `SessionInfo.additionalDirectories` as optional discovery metadata rather than required session state. `session/load` and `session/resume` remain explicit-list only: omitting `additionalDirectories` or supplying an empty array means no additional roots are activated for the resulting session, while a non-empty array-valued `additionalDirectories` becomes the complete resulting additional-root list for that request. Clients MAY change the additional-root list on `session/load` or `session/resume` from any previously used or reported list, as long as the request `cwd` matches the session's `cwd` and the Agent accepts the requested roots.
 
 ## Shiny future
 
@@ -111,11 +111,11 @@ additionalDirectories?: {}
 
 Clients MUST send `additionalDirectories` only when `sessionCapabilities.additionalDirectories` is present.
 
-If an Agent advertises `sessionCapabilities.additionalDirectories` and also supports `session/list`, it MAY include `SessionInfo.additionalDirectories` for sessions whose additional-root state it tracks. When present, the value is the complete ordered additional-root list known to the Agent for that session. Agents MAY omit the field when they do not track or choose not to surface additional-root state. Clients MUST NOT treat an omitted field as proof that the session has no additional roots; an explicit empty array means the Agent is reporting no additional roots for that session.
+If an Agent advertises `sessionCapabilities.additionalDirectories` and also supports `session/list`, it MAY include `SessionInfo.additionalDirectories` to report the complete ordered additional-root list associated with a listed session. Omitted and empty values are equivalent: the `SessionInfo` response reports no additional roots. Clients MUST NOT merge this field with prior values or infer additional roots from agent-specific state.
 
 `ListSessionsRequest` is not extended with `additionalDirectories`. `session/list` filtering remains defined around existing list parameters such as `cwd`; Clients that need to find sessions by additional-root state can filter locally when Agents return `SessionInfo.additionalDirectories`.
 
-If adopted, the session-setup, session-list, and filesystem documentation will need corresponding updates so they describe the effective root set rather than `cwd` alone as the session filesystem context or boundary.
+The session-setup, session-list, and filesystem documentation describe the effective root set rather than `cwd` alone as the session filesystem context or boundary.
 
 ### Capability advertisement example
 
@@ -281,7 +281,7 @@ A client that sends `additionalDirectories`:
 - SHOULD remove exact duplicate path strings and entries identical to `cwd` before sending; and
 - MUST NOT assume an agent will infer extra roots from project metadata, directory conventions, or prior session state.
 
-If a client mediates filesystem access through ACP client capabilities such as `fs/read_text_file` and `fs/write_text_file`, it MUST enforce the effective root set for that session when authorizing path-based access. ACP's filesystem methods are client-mediated and operate on absolute paths, so the client remains responsible for boundary enforcement in those flows. When the client learns about an existing session through `session/list`, it SHOULD use `SessionInfo.additionalDirectories` together with `cwd` as the current root set for those checks when the field is present. If the field is omitted, the Client should rely on roots it obtained, persisted, or reconstructed itself, and any subsequent lifecycle request establishes the resulting active root set explicitly.
+If a client mediates filesystem access through ACP client capabilities such as `fs/read_text_file` and `fs/write_text_file`, it MUST enforce the effective root set for that session when authorizing path-based access. ACP's filesystem methods are client-mediated and operate on absolute paths, so the client remains responsible for boundary enforcement in those flows. When the client learns about an existing session through `session/list`, it SHOULD use `cwd` together with any `SessionInfo.additionalDirectories` entries returned for that session as the reported root set. Omitted and empty values report no additional roots. Any subsequent lifecycle request establishes the resulting active root set explicitly.
 
 If a client launches an agent with direct filesystem access, `additionalDirectories` is not, by itself, a sandbox. Clients that need root boundaries to be enforced in that deployment model SHOULD apply operating-system or runtime sandboxing consistent with the declared root set.
 
@@ -382,7 +382,7 @@ Updated agents MUST continue to accept requests that do not include the field.
 
 Older implementations may validate request objects strictly against older schemas and MAY reject unknown fields. Clients therefore MUST gate usage on `sessionCapabilities.additionalDirectories`.
 
-This proposal intentionally does not extend the responses to `session/new`, `session/load`, `session/resume`, or `session/fork` to surface additional-root state directly. That remains consistent with existing ACP response shapes, which also do not return `cwd`. Instead, when `session/list` is supported, Agents MAY expose the complete ordered additional-root list for listed sessions through `SessionInfo.additionalDirectories` when they track that state. `SessionInfoUpdate` remains unchanged because this RFD does not define mid-session mutation of `additionalDirectories`. Clients that need multi-root continuity across `session/load` or `session/resume` MUST still send the full intended list explicitly, and MAY change that list from a previously used or reported list as long as the request `cwd` matches the session's `cwd`.
+This proposal intentionally does not extend the responses to `session/new`, `session/load`, `session/resume`, or `session/fork` to surface additional-root state directly. That remains consistent with existing ACP response shapes, which also do not return `cwd`. Instead, when `session/list` is supported, Agents MAY expose the complete ordered additional-root list for listed sessions through `SessionInfo.additionalDirectories`. Omitted and empty values report no additional roots for that `SessionInfo`. `SessionInfoUpdate` remains unchanged because this RFD does not define mid-session mutation of `additionalDirectories`. Clients that need multi-root continuity across `session/load` or `session/resume` MUST still send the full intended list explicitly, and MAY change that list from a previously used or reported list as long as the request `cwd` matches the session's `cwd`.
 
 `session/list` filtering remains independent of `additionalDirectories`. Sessions that differ by `additionalDirectories` are distinguishable only when the Agent surfaces that state through `SessionInfo.additionalDirectories`; Clients that need additional-root matching can filter those returned sessions locally.
 
@@ -433,4 +433,5 @@ This proposal is preferred because it is additive, keeps `cwd` semantics stable,
 
 ## Revision history
 
+- 2026-05-21: Moved to Preview.
 - 2026-03-24: Initial draft.

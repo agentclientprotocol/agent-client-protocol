@@ -1921,11 +1921,11 @@ pub struct SessionInfo {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
-    /// Additional workspace roots for this session, if the Agent reports them. Each path must be absolute.
+    /// Additional workspace roots reported for this session. Each path must be absolute.
     ///
-    /// Agents may omit this field when they do not track or surface additional-root
-    /// state. When present, this is the complete additional-root list known to
-    /// the Agent for the session.
+    /// When present, this is the complete ordered additional-root list reported
+    /// by the Agent. Omitted and empty values are equivalent: the response
+    /// reports no additional roots.
     #[cfg(feature = "unstable_session_additional_directories")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<PathBuf>,
@@ -1965,7 +1965,7 @@ impl SessionInfo {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
-    /// Additional workspace roots for this session, if the Agent reports them. Each path must be absolute.
+    /// Additional workspace roots reported for this session. Each path must be absolute.
     #[cfg(feature = "unstable_session_additional_directories")]
     #[must_use]
     pub fn additional_directories(mut self, additional_directories: Vec<PathBuf>) -> Self {
@@ -4236,7 +4236,8 @@ pub struct SessionCapabilities {
     /// Whether the agent supports `additionalDirectories` on supported session lifecycle requests.
     ///
     /// Agents that also support `session/list` may return
-    /// `SessionInfo.additionalDirectories` when they track that state.
+    /// `SessionInfo.additionalDirectories` to report the complete ordered
+    /// additional-root list associated with a listed session.
     #[cfg(feature = "unstable_session_additional_directories")]
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[serde(default)]
@@ -4302,7 +4303,8 @@ impl SessionCapabilities {
     /// Whether the agent supports `additionalDirectories` on supported session lifecycle requests.
     ///
     /// Agents that also support `session/list` may return
-    /// `SessionInfo.additionalDirectories` when they track that state.
+    /// `SessionInfo.additionalDirectories` to report the complete ordered
+    /// additional-root list associated with a listed session.
     #[cfg(feature = "unstable_session_additional_directories")]
     #[must_use]
     pub fn additional_directories(
@@ -4429,8 +4431,8 @@ impl SessionDeleteCapabilities {
 ///
 /// By supplying `{}` it means that the agent supports the `additionalDirectories`
 /// field on supported session lifecycle requests. Agents that also support
-/// `session/list` may return `SessionInfo.additionalDirectories` when they track
-/// that state.
+/// `session/list` may return `SessionInfo.additionalDirectories` to report the
+/// complete ordered additional-root list associated with a listed session.
 #[cfg(feature = "unstable_session_additional_directories")]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]

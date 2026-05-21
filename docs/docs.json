@@ -139,7 +139,6 @@
               "rfds/boolean-config-option",
               "rfds/elicitation",
               "rfds/next-edit-suggestions",
-              "rfds/additional-directories",
               "rfds/custom-llm-endpoint",
               "rfds/model-config-category",
               {
@@ -156,7 +155,11 @@
           },
           {
             "group": "Preview",
-            "pages": ["rfds/rust-sdk-v1", "rfds/logout-method"]
+            "pages": [
+              "rfds/rust-sdk-v1",
+              "rfds/logout-method",
+              "rfds/additional-directories"
+            ]
           },
           {
             "group": "Completed",

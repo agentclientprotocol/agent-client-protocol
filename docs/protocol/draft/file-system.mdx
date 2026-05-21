@@ -13,7 +13,7 @@ authorize those paths against the session's effective root set.
 - by default, the effective root set is just `cwd`
 - if the unstable `sessionCapabilities.additionalDirectories` capability is in use, the effective root set becomes `[cwd, ...additionalDirectories]`
 - `cwd` remains the base for relative paths; additional roots only expand filesystem scope
-- when a Client discovers a session through `session/list`, it SHOULD use `SessionInfo.additionalDirectories` together with `cwd` as the current root set when the field is present; if omitted, the Agent is not reporting additional-root state, and any later `session/load` or `session/resume` request establishes the root set explicitly
+- when a Client discovers a session through `session/list`, it SHOULD use `cwd` together with any `SessionInfo.additionalDirectories` entries returned for that session as the reported root set; omitted and empty values report no additional roots, and any later `session/load` or `session/resume` request establishes the root set explicitly
 
 Because ACP filesystem methods are client-mediated, the Client remains
 responsible for enforcing those root boundaries.

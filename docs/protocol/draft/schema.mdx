@@ -6528,8 +6528,8 @@ Capabilities for additional session directories support.
 
 By supplying `\{\}` it means that the agent supports the `additionalDirectories`
 field on supported session lifecycle requests. Agents that also support
-`session/list` may return `SessionInfo.additionalDirectories` when they track
-that state.
+`session/list` may return `SessionInfo.additionalDirectories` to report the
+complete ordered additional-root list associated with a listed session.
 
 **Type:** Object
 
@@ -6576,7 +6576,8 @@ This capability is not part of the spec yet, and may be removed or changed at an
 Whether the agent supports `additionalDirectories` on supported session lifecycle requests.
 
 Agents that also support `session/list` may return
-`SessionInfo.additionalDirectories` when they track that state.
+`SessionInfo.additionalDirectories` to report the complete ordered
+additional-root list associated with a listed session.
 
 </ResponseField>
 <ResponseField name="close" type={<><span><a href="#sessionclosecapabilities">SessionCloseCapabilities</a></span><span> | null</span></>} >
@@ -6934,11 +6935,11 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
 This capability is not part of the spec yet, and may be removed or changed at any point.
 
-Additional workspace roots for this session, if the Agent reports them. Each path must be absolute.
+Additional workspace roots reported for this session. Each path must be absolute.
 
-Agents may omit this field when they do not track or surface additional-root
-state. When present, this is the complete additional-root list known to
-the Agent for the session.
+When present, this is the complete ordered additional-root list reported
+by the Agent. Omitted and empty values are equivalent: the response
+reports no additional roots.
 
 </ResponseField>
 <ResponseField name="cwd" type={"string"} required>
