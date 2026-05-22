@@ -191,6 +191,8 @@ Following MCP's approach (specifically [SEP-1036](https://modelcontextprotocol.i
 
 This distinction is reflected in the client capabilities model, allowing clients to declare support for one or both modalities.
 
+URL mode supports an optional `userCode` parameter. If present, the user must enter this code when they visit the external URL.
+
 **Normative requirements:**
 
 - Clients declaring the `elicitation` capability MUST support at least one mode (`form` or `url`).

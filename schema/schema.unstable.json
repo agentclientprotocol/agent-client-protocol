@@ -2713,6 +2713,10 @@
           "description": "The URL to direct the user to.",
           "format": "uri",
           "type": "string"
+        },
+        "userCode": {
+          "description": "If provided, the user must visit the URL and enter this code to complete the elicitation.",
+          "type": ["string", "null"]
         }
       },
       "required": ["elicitationId", "url"],

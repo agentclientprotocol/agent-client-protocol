@@ -1075,6 +1075,8 @@ pub struct ElicitationUrlMode {
     /// The URL to direct the user to.
     #[schemars(extend("format" = "uri"))]
     pub url: String,
+    /// If provided, the user must visit the URL and enter this code to complete the elicitation.
+    pub user_code: Option<String>,
 }
 
 impl ElicitationUrlMode {
@@ -1088,7 +1090,15 @@ impl ElicitationUrlMode {
             scope: scope.into(),
             elicitation_id: elicitation_id.into(),
             url: url.into(),
+            user_code: None,
         }
+    }
+
+    /// If provided, the user must visit the URL and enter this code to complete the elicitation.
+    #[must_use]
+    pub fn user_code(mut self, user_code: impl IntoOption<String>) -> Self {
+        self.user_code = user_code.into_option();
+        self
     }
 }
 
@@ -1330,6 +1340,8 @@ pub struct UrlElicitationRequiredItem {
     pub url: String,
     /// A human-readable message describing what input is needed.
     pub message: String,
+    /// If provided, the user must visit the URL and enter this code to complete the elicitation.
+    pub user_code: Option<String>,
 }
 
 /// Type discriminator for URL-only elicitation error items.
@@ -1354,7 +1366,15 @@ impl UrlElicitationRequiredItem {
             elicitation_id: elicitation_id.into(),
             url: url.into(),
             message: message.into(),
+            user_code: None,
         }
+    }
+
+    /// If provided, the user must visit the URL and enter this code to complete the elicitation.
+    #[must_use]
+    pub fn user_code(mut self, user_code: impl IntoOption<String>) -> Self {
+        self.user_code = user_code.into_option();
+        self
     }
 }
 
@@ -1410,6 +1430,37 @@ mod tests {
         assert_eq!(json["elicitationId"], "elic_1");
         assert_eq!(json["url"], "https://example.com/auth");
         assert_eq!(json["message"], "Please authenticate");
+
+        let roundtripped: CreateElicitationRequest = serde_json::from_value(json).unwrap();
+        assert_eq!(
+            *roundtripped.scope(),
+            ElicitationSessionScope::new("sess_2")
+                .tool_call_id("tc_1")
+                .into()
+        );
+        assert!(matches!(roundtripped.mode, ElicitationMode::Url(_)));
+    }
+
+    #[test]
+    fn url_mode_request_with_user_code_serialization() {
+        let req = CreateElicitationRequest::new(
+            ElicitationUrlMode::new(
+                ElicitationSessionScope::new("sess_2").tool_call_id("tc_1"),
+                "elic_1",
+                "https://example.com/auth",
+            )
+            .user_code("ABCDEF-123456"),
+            "Please authenticate",
+        );
+
+        let json = serde_json::to_value(&req).unwrap();
+        assert_eq!(json["sessionId"], "sess_2");
+        assert_eq!(json["toolCallId"], "tc_1");
+        assert_eq!(json["mode"], "url");
+        assert_eq!(json["elicitationId"], "elic_1");
+        assert_eq!(json["url"], "https://example.com/auth");
+        assert_eq!(json["message"], "Please authenticate");
+        assert_eq!(json["userCode"], "ABCDEF-123456");
 
         let roundtripped: CreateElicitationRequest = serde_json::from_value(json).unwrap();
         assert_eq!(
@@ -1656,6 +1707,31 @@ mod tests {
         assert_eq!(json["elicitations"][0]["mode"], "url");
         assert_eq!(json["elicitations"][0]["elicitationId"], "elic_1");
         assert_eq!(json["elicitations"][0]["url"], "https://example.com/auth");
+
+        let roundtripped: UrlElicitationRequiredData = serde_json::from_value(json).unwrap();
+        assert_eq!(roundtripped.elicitations.len(), 1);
+        assert_eq!(
+            roundtripped.elicitations[0].mode,
+            ElicitationUrlOnlyMode::Url
+        );
+    }
+
+    #[test]
+    fn url_elicitation_required_with_user_code_data_serialization() {
+        let data = UrlElicitationRequiredData::new(vec![
+            UrlElicitationRequiredItem::new(
+                "elic_1",
+                "https://example.com/auth",
+                "Please authenticate",
+            )
+            .user_code("ABCDE-12345"),
+        ]);
+
+        let json = serde_json::to_value(&data).unwrap();
+        assert_eq!(json["elicitations"][0]["mode"], "url");
+        assert_eq!(json["elicitations"][0]["elicitationId"], "elic_1");
+        assert_eq!(json["elicitations"][0]["url"], "https://example.com/auth");
+        assert_eq!(json["elicitations"][0]["userCode"], "ABCDE-12345");
 
         let roundtripped: UrlElicitationRequiredData = serde_json::from_value(json).unwrap();
         assert_eq!(roundtripped.elicitations.len(), 1);
