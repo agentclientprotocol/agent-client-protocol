@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.13.3](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.13.2...v0.13.3) - 2026-05-22
+
+### Added
+
+- Stabilize logout method ([#1273](https://github.com/agentclientprotocol/agent-client-protocol/pull/1273))
+
+### Fixed
+
+- *(unstable)* Rename provider method types to singular ([#1272](https://github.com/agentclientprotocol/agent-client-protocol/pull/1272))
+
+### Other
+
+- *(rfd)* Move additional directories RFD to Preview ([#1276](https://github.com/agentclientprotocol/agent-client-protocol/pull/1276))
+- Add schema download note to schema page ([#1269](https://github.com/agentclientprotocol/agent-client-protocol/pull/1269))
+- *(deps)* bump num-conv from 0.2.1 to 0.2.2 in the minor group ([#1244](https://github.com/agentclientprotocol/agent-client-protocol/pull/1244))
+- Set minimum supported Rust version ([#1232](https://github.com/agentclientprotocol/agent-client-protocol/pull/1232))
+- Document ACP versioning semantics ([#1229](https://github.com/agentclientprotocol/agent-client-protocol/pull/1229))
+
 ## [0.13.2](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.13.1...v0.13.2) - 2026-05-17
 
 ### Fixed
