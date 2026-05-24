@@ -187,7 +187,7 @@ Revoke is ordered against delivery at the agent:
 
 Normal session errors still apply. If the session is unknown, closed, or no longer accepts input, return the same error the agent uses for other session requests.
 
-Delivery is defined as the point where the agent emits the matching `user_message` notification. Before that point, revoke succeeds and no `user_message` is emitted for that `messageId`. At or after that point, revoke returns `already_delivered`, and the client should expect the `user_message` if it has not already seen it. There is no third "committed but not delivered" state in the protocol; any internal commit the agent does before emitting `user_message` is its own bookkeeping, not a visible state. Removing or rewriting a delivered message is [session rewind (#1214)](https://github.com/agentclientprotocol/agent-client-protocol/pull/1214) territory, not inject.
+Delivery is defined as the point where the agent emits the matching `user_message` notification. Before that point, revoke succeeds and no `user_message` is emitted for that `messageId`. At or after that point, revoke returns `already_delivered`, and the client should expect the `user_message` if it has not already seen it. There is no third "committed but not delivered" state in the protocol; any internal commit the agent does before emitting `user_message` is purely for its own bookkeeping. Removing or rewriting a delivered message is [session rewind (#1214)](https://github.com/agentclientprotocol/agent-client-protocol/pull/1214) territory, not inject.
 
 Agents may also support replacing pending content. Replacement keeps the same `messageId`, mode, and queue position; only `content` changes. The eventual `user_message` carries the final content, not the edit history.
 
