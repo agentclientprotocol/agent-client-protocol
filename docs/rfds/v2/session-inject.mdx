@@ -109,7 +109,7 @@ Replace is opt-in via `pending.replace`. Content editing is genuinely harder tha
 - **Mid LLM stream with no tool call pending**: behavior is declared via the `steer_in_stream` capability (see the capability section). The agent may truncate the stream and re-prompt with the steer text included, or let the stream finish and deliver before the next iteration. Clients consult the capability to know which to expect.
 - **Mid model-process pause** (provider rate limit, usage-limit cap): hold pending steers until the pause clears. This mirrors the shape Codex landed on in [PR #22226](https://github.com/openai/codex/pull/22226).
 
-A steer on an already-idle session has no running turn to steer; the agent returns an error. Clients should use `session/prompt` for input that starts a new turn.
+A steer on an already-idle session has no running turn to steer. The agent returns `-32010` with `error.data.reason: "no_running_turn"`. Clients should use `session/prompt` for input that starts a new turn.
 
 Both modes are fire-and-forget in the sense that the response confirms acceptance, not model-process. Both deliveries are observable via the same `user_message` notification. While an inject is pending, the `messageId` returned from `session/inject` is the only stable handle clients should use for pending operations.
 
@@ -155,6 +155,7 @@ In `schema/schema.json`:
 8. Add `SessionReplaceInjectResponse`:
    - `messageId: string` (same value, returned for symmetry with `session/inject`)
 9. Register `session/inject`, `session/revoke_inject`, and `session/replace_inject` as request methods.
+10. Extend the `ErrorCode` union with `-32010 "Inject precondition failed"`, documenting the `error.data.reason` discriminator values: `already_delivered`, `no_running_turn`, `replace_not_supported`. The existing `-32002 "Resource not found"` is reused for `unknown_message_id`. (Number chosen to leave `-32001` through `-32009` available for future generic-protocol codes; the actual value is subject to schema-PR review.)
 
 No changes to `session/update` or to existing notification types. The `user_message` notification introduced by the v2 prompt lifecycle is what carries the delivered content, with the same `messageId` that was returned from the inject response.
 
@@ -187,8 +188,8 @@ A successful response means the agent will not emit a future `user_message` for 
 Revoke is ordered against delivery at the agent:
 
 - If revoke wins, the pending inject is dropped. No later `user_message` is emitted for that `messageId`.
-- If delivery wins, the agent returns an error in the JSON-RPC server-error range (`-32000` to `-32099`; the exact code is left to schema definition) with `error.data.reason: "already_delivered"` and the `messageId`. The client should keep the delivered message in the transcript.
-- If the `messageId` is unknown for that session, return an error in the same range with `error.data.reason: "unknown_message_id"`.
+- If delivery wins, the agent returns `-32010 "Inject precondition failed"` with `error.data.reason: "already_delivered"` and the `messageId`. The client should keep the delivered message in the transcript.
+- If the `messageId` is unknown for that session, return the existing `-32002 "Resource not found"` with `error.data.reason: "unknown_message_id"`.
 - If the message was already revoked and the agent still remembers the tombstone, return success. This makes revoke safe to retry after transport loss.
 
 Normal session errors still apply. If the session is unknown, closed, or no longer accepts input, return the same error the agent uses for other session requests.
@@ -223,7 +224,7 @@ Agents may also support replacing pending content. Replacement keeps the same `m
 }
 ```
 
-The same failure cases apply to replace: `already_delivered`, `unknown_message_id`, and unsupported capability. If `pending.replace` was not advertised, clients should not call the method; agents may still return `Method not found` or a server-range error with `error.data.reason: "replace_not_supported"`. If replace races with delivery, the agent either delivers the old content and returns `already_delivered`, or accepts the replacement and later emits `user_message` with the new content. It must not report success and then deliver the old content.
+The same failure cases apply to replace, using the same codes: `-32010` for `already_delivered`, `-32002` for `unknown_message_id`. If `pending.replace` was not advertised, clients should not call `session/replace_inject`; agents that receive it anyway should return `-32601 "Method not found"` or `-32010` with `error.data.reason: "replace_not_supported"`. If replace races with delivery, the agent either delivers the old content and returns `already_delivered`, or accepts the replacement and later emits `user_message` with the new content. It must not report success and then deliver the old content.
 
 `$/cancel_request` still applies to an in-flight `session/inject` request before the accept response is sent. Once `session/inject` has returned a `messageId`, request cancellation is no longer the right tool; the request is complete, and the message is managed by `session/revoke_inject` or `session/replace_inject`.
 
