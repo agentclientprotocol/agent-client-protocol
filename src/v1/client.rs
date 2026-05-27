@@ -20,6 +20,8 @@ use crate::{
     IntoOption, MaybeUndefined, Meta, Plan, SessionConfigOption, SessionId, SessionModeId,
     SkipListener, ToolCall, ToolCallUpdate,
 };
+#[cfg(feature = "unstable_plan_operations")]
+use crate::{PlanCapabilities, PlanRemoved, PlanUpdate};
 
 #[cfg(feature = "unstable_mcp_over_acp")]
 use super::mcp::{
@@ -102,6 +104,20 @@ pub enum SessionUpdate {
     /// The agent's execution plan for complex tasks.
     /// See protocol docs: [Agent Plan](https://agentclientprotocol.com/protocol/agent-plan)
     Plan(Plan),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// A content update for a plan identified by ID.
+    #[cfg(feature = "unstable_plan_operations")]
+    PlanUpdate(PlanUpdate),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Removal notice for a plan identified by ID.
+    #[cfg(feature = "unstable_plan_operations")]
+    PlanRemoved(PlanRemoved),
     /// Available commands are ready or have changed
     AvailableCommandsUpdate(AvailableCommandsUpdate),
     /// The current mode of the session has changed
@@ -1530,6 +1546,18 @@ pub struct ClientCapabilities {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
+    /// Whether the client supports `plan_update` and `plan_removed` session updates.
+    ///
+    /// Optional. Omitted means the client does not advertise support.
+    /// Supplying `{}` means the client can receive both update types.
+    #[cfg(feature = "unstable_plan_operations")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default)]
+    pub plan_capabilities: Option<PlanCapabilities>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
     /// Authentication capabilities supported by the client.
     /// Determines which authentication method types the agent may include
     /// in its `InitializeResponse`.
@@ -1592,6 +1620,24 @@ impl ClientCapabilities {
     #[must_use]
     pub fn terminal(mut self, terminal: bool) -> Self {
         self.terminal = terminal;
+        self
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Whether the client supports `plan_update` and `plan_removed` session updates.
+    ///
+    /// Omitted means the client does not advertise support.
+    /// Supplying `{}` means the client can receive both update types.
+    #[cfg(feature = "unstable_plan_operations")]
+    #[must_use]
+    pub fn plan_capabilities(
+        mut self,
+        plan_capabilities: impl IntoOption<PlanCapabilities>,
+    ) -> Self {
+        self.plan_capabilities = plan_capabilities.into_option();
         self
     }
 
@@ -2175,6 +2221,59 @@ mod tests {
         let json = serde_json::to_value(&capabilities).unwrap();
 
         assert_eq!(json["positionEncodings"], json!(["utf-32", "utf-16"]));
+    }
+
+    #[cfg(feature = "unstable_plan_operations")]
+    #[test]
+    fn test_plan_operations_serialization() {
+        use serde_json::json;
+
+        let plan_update =
+            SessionUpdate::PlanUpdate(PlanUpdate::new(crate::PlanUpdateContent::items(
+                "plan-1",
+                vec![crate::PlanEntry::new(
+                    "Step 1",
+                    crate::PlanEntryPriority::High,
+                    crate::PlanEntryStatus::Pending,
+                )],
+            )));
+
+        assert_eq!(
+            serde_json::to_value(plan_update).unwrap(),
+            json!({
+                "sessionUpdate": "plan_update",
+                "plan": {
+                    "type": "items",
+                    "id": "plan-1",
+                    "entries": [
+                        {
+                            "content": "Step 1",
+                            "priority": "high",
+                            "status": "pending"
+                        }
+                    ]
+                }
+            })
+        );
+
+        assert_eq!(
+            serde_json::to_value(SessionUpdate::PlanRemoved(PlanRemoved::new("plan-1"))).unwrap(),
+            json!({
+                "sessionUpdate": "plan_removed",
+                "id": "plan-1"
+            })
+        );
+
+        let capabilities = ClientCapabilities::new().plan_capabilities(PlanCapabilities::new());
+        let json = serde_json::to_value(&capabilities).unwrap();
+        assert_eq!(json["planCapabilities"], json!({}));
+
+        assert_eq!(
+            serde_json::from_value::<ClientCapabilities>(json!({ "planCapabilities": null }))
+                .unwrap()
+                .plan_capabilities,
+            None
+        );
     }
 
     #[cfg(feature = "unstable_mcp_over_acp")]

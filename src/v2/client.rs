@@ -19,6 +19,8 @@ use super::{
     ContentBlock, EnvVariable, ExtNotification, ExtRequest, ExtResponse, Meta, Plan,
     SessionConfigOption, SessionId, SessionModeId, ToolCall, ToolCallUpdate,
 };
+#[cfg(feature = "unstable_plan_operations")]
+use super::{PlanCapabilities, PlanRemoved, PlanUpdate};
 use crate::{IntoMaybeUndefined, IntoOption, MaybeUndefined, SkipListener};
 
 #[cfg(feature = "unstable_mcp_over_acp")]
@@ -102,6 +104,20 @@ pub enum SessionUpdate {
     /// The agent's execution plan for complex tasks.
     /// See protocol docs: [Agent Plan](https://agentclientprotocol.com/protocol/agent-plan)
     Plan(Plan),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// A content update for a plan identified by ID.
+    #[cfg(feature = "unstable_plan_operations")]
+    PlanUpdate(PlanUpdate),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Removal notice for a plan identified by ID.
+    #[cfg(feature = "unstable_plan_operations")]
+    PlanRemoved(PlanRemoved),
     /// Available commands are ready or have changed
     AvailableCommandsUpdate(AvailableCommandsUpdate),
     /// The current mode of the session has changed
@@ -1530,6 +1546,18 @@ pub struct ClientCapabilities {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
+    /// Whether the client supports `plan_update` and `plan_removed` session updates.
+    ///
+    /// Optional. Omitted means the client does not advertise support.
+    /// Supplying `{}` means the client can receive both update types.
+    #[cfg(feature = "unstable_plan_operations")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default)]
+    pub plan_capabilities: Option<PlanCapabilities>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
     /// Authentication capabilities supported by the client.
     /// Determines which authentication method types the agent may include
     /// in its `InitializeResponse`.
@@ -1592,6 +1620,24 @@ impl ClientCapabilities {
     #[must_use]
     pub fn terminal(mut self, terminal: bool) -> Self {
         self.terminal = terminal;
+        self
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Whether the client supports `plan_update` and `plan_removed` session updates.
+    ///
+    /// Omitted means the client does not advertise support.
+    /// Supplying `{}` means the client can receive both update types.
+    #[cfg(feature = "unstable_plan_operations")]
+    #[must_use]
+    pub fn plan_capabilities(
+        mut self,
+        plan_capabilities: impl IntoOption<PlanCapabilities>,
+    ) -> Self {
+        self.plan_capabilities = plan_capabilities.into_option();
         self
     }
 

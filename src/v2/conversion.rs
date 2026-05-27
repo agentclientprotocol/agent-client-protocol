@@ -448,6 +448,210 @@ impl IntoV2 for crate::v1::Plan {
     }
 }
 
+#[cfg(feature = "unstable_plan_operations")]
+impl IntoV1 for super::PlanId {
+    type Output = crate::v1::PlanId;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        Ok(crate::v1::PlanId(self.0.into_v1()?))
+    }
+}
+
+#[cfg(feature = "unstable_plan_operations")]
+impl IntoV2 for crate::v1::PlanId {
+    type Output = super::PlanId;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        Ok(super::PlanId(self.0.into_v2()?))
+    }
+}
+
+#[cfg(feature = "unstable_plan_operations")]
+impl IntoV1 for super::PlanUpdate {
+    type Output = crate::v1::PlanUpdate;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        let Self { plan, meta } = self;
+        Ok(crate::v1::PlanUpdate {
+            plan: plan.into_v1()?,
+            meta: meta.into_v1()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_plan_operations")]
+impl IntoV2 for crate::v1::PlanUpdate {
+    type Output = super::PlanUpdate;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        let Self { plan, meta } = self;
+        Ok(super::PlanUpdate {
+            plan: plan.into_v2()?,
+            meta: meta.into_v2()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_plan_operations")]
+impl IntoV1 for super::PlanUpdateContent {
+    type Output = crate::v1::PlanUpdateContent;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        Ok(match self {
+            Self::Items(value) => crate::v1::PlanUpdateContent::Items(value.into_v1()?),
+            Self::File(value) => crate::v1::PlanUpdateContent::File(value.into_v1()?),
+            Self::Markdown(value) => crate::v1::PlanUpdateContent::Markdown(value.into_v1()?),
+        })
+    }
+}
+
+#[cfg(feature = "unstable_plan_operations")]
+impl IntoV2 for crate::v1::PlanUpdateContent {
+    type Output = super::PlanUpdateContent;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        Ok(match self {
+            Self::Items(value) => super::PlanUpdateContent::Items(value.into_v2()?),
+            Self::File(value) => super::PlanUpdateContent::File(value.into_v2()?),
+            Self::Markdown(value) => super::PlanUpdateContent::Markdown(value.into_v2()?),
+        })
+    }
+}
+
+#[cfg(feature = "unstable_plan_operations")]
+impl IntoV1 for super::PlanItems {
+    type Output = crate::v1::PlanItems;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        let Self { id, entries, meta } = self;
+        Ok(crate::v1::PlanItems {
+            id: id.into_v1()?,
+            entries: entries.into_v1()?,
+            meta: meta.into_v1()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_plan_operations")]
+impl IntoV2 for crate::v1::PlanItems {
+    type Output = super::PlanItems;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        let Self { id, entries, meta } = self;
+        Ok(super::PlanItems {
+            id: id.into_v2()?,
+            entries: entries.into_v2()?,
+            meta: meta.into_v2()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_plan_operations")]
+impl IntoV1 for super::PlanFile {
+    type Output = crate::v1::PlanFile;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        let Self { id, uri, meta } = self;
+        Ok(crate::v1::PlanFile {
+            id: id.into_v1()?,
+            uri: uri.into_v1()?,
+            meta: meta.into_v1()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_plan_operations")]
+impl IntoV2 for crate::v1::PlanFile {
+    type Output = super::PlanFile;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        let Self { id, uri, meta } = self;
+        Ok(super::PlanFile {
+            id: id.into_v2()?,
+            uri: uri.into_v2()?,
+            meta: meta.into_v2()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_plan_operations")]
+impl IntoV1 for super::PlanMarkdown {
+    type Output = crate::v1::PlanMarkdown;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        let Self { id, content, meta } = self;
+        Ok(crate::v1::PlanMarkdown {
+            id: id.into_v1()?,
+            content: content.into_v1()?,
+            meta: meta.into_v1()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_plan_operations")]
+impl IntoV2 for crate::v1::PlanMarkdown {
+    type Output = super::PlanMarkdown;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        let Self { id, content, meta } = self;
+        Ok(super::PlanMarkdown {
+            id: id.into_v2()?,
+            content: content.into_v2()?,
+            meta: meta.into_v2()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_plan_operations")]
+impl IntoV1 for super::PlanRemoved {
+    type Output = crate::v1::PlanRemoved;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        let Self { id, meta } = self;
+        Ok(crate::v1::PlanRemoved {
+            id: id.into_v1()?,
+            meta: meta.into_v1()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_plan_operations")]
+impl IntoV2 for crate::v1::PlanRemoved {
+    type Output = super::PlanRemoved;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        let Self { id, meta } = self;
+        Ok(super::PlanRemoved {
+            id: id.into_v2()?,
+            meta: meta.into_v2()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_plan_operations")]
+impl IntoV1 for super::PlanCapabilities {
+    type Output = crate::v1::PlanCapabilities;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        let Self { meta } = self;
+        Ok(crate::v1::PlanCapabilities {
+            meta: meta.into_v1()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_plan_operations")]
+impl IntoV2 for crate::v1::PlanCapabilities {
+    type Output = super::PlanCapabilities;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        let Self { meta } = self;
+        Ok(super::PlanCapabilities {
+            meta: meta.into_v2()?,
+        })
+    }
+}
+
 impl IntoV1 for super::PlanEntry {
     type Output = crate::v1::PlanEntry;
 
@@ -639,6 +843,10 @@ impl IntoV1 for super::SessionUpdate {
                 crate::v1::SessionUpdate::ToolCallUpdate(value.into_v1()?)
             }
             Self::Plan(value) => crate::v1::SessionUpdate::Plan(value.into_v1()?),
+            #[cfg(feature = "unstable_plan_operations")]
+            Self::PlanUpdate(value) => crate::v1::SessionUpdate::PlanUpdate(value.into_v1()?),
+            #[cfg(feature = "unstable_plan_operations")]
+            Self::PlanRemoved(value) => crate::v1::SessionUpdate::PlanRemoved(value.into_v1()?),
             Self::AvailableCommandsUpdate(value) => {
                 crate::v1::SessionUpdate::AvailableCommandsUpdate(value.into_v1()?)
             }
@@ -674,6 +882,10 @@ impl IntoV2 for crate::v1::SessionUpdate {
             Self::ToolCall(value) => super::SessionUpdate::ToolCall(value.into_v2()?),
             Self::ToolCallUpdate(value) => super::SessionUpdate::ToolCallUpdate(value.into_v2()?),
             Self::Plan(value) => super::SessionUpdate::Plan(value.into_v2()?),
+            #[cfg(feature = "unstable_plan_operations")]
+            Self::PlanUpdate(value) => super::SessionUpdate::PlanUpdate(value.into_v2()?),
+            #[cfg(feature = "unstable_plan_operations")]
+            Self::PlanRemoved(value) => super::SessionUpdate::PlanRemoved(value.into_v2()?),
             Self::AvailableCommandsUpdate(value) => {
                 super::SessionUpdate::AvailableCommandsUpdate(value.into_v2()?)
             }
@@ -1909,6 +2121,8 @@ impl IntoV1 for super::ClientCapabilities {
         let Self {
             fs,
             terminal,
+            #[cfg(feature = "unstable_plan_operations")]
+            plan_capabilities,
             #[cfg(feature = "unstable_auth_methods")]
             auth,
             #[cfg(feature = "unstable_elicitation")]
@@ -1922,6 +2136,8 @@ impl IntoV1 for super::ClientCapabilities {
         Ok(crate::v1::ClientCapabilities {
             fs: fs.into_v1()?,
             terminal: terminal.into_v1()?,
+            #[cfg(feature = "unstable_plan_operations")]
+            plan_capabilities: plan_capabilities.into_v1()?,
             #[cfg(feature = "unstable_auth_methods")]
             auth: auth.into_v1()?,
             #[cfg(feature = "unstable_elicitation")]
@@ -1942,6 +2158,8 @@ impl IntoV2 for crate::v1::ClientCapabilities {
         let Self {
             fs,
             terminal,
+            #[cfg(feature = "unstable_plan_operations")]
+            plan_capabilities,
             #[cfg(feature = "unstable_auth_methods")]
             auth,
             #[cfg(feature = "unstable_elicitation")]
@@ -1955,6 +2173,8 @@ impl IntoV2 for crate::v1::ClientCapabilities {
         Ok(super::ClientCapabilities {
             fs: fs.into_v2()?,
             terminal: terminal.into_v2()?,
+            #[cfg(feature = "unstable_plan_operations")]
+            plan_capabilities: plan_capabilities.into_v2()?,
             #[cfg(feature = "unstable_auth_methods")]
             auth: auth.into_v2()?,
             #[cfg(feature = "unstable_elicitation")]
@@ -9335,14 +9555,21 @@ mod tests {
 
     #[test]
     fn round_trips_initialize_request() {
+        let mut client_capabilities =
+            v1::ClientCapabilities::new()
+                .terminal(true)
+                .fs(v1::FileSystemCapabilities::new()
+                    .read_text_file(true)
+                    .write_text_file(true));
+
+        #[cfg(feature = "unstable_plan_operations")]
+        {
+            client_capabilities =
+                client_capabilities.plan_capabilities(v1::PlanCapabilities::new());
+        }
+
         let request = v1::InitializeRequest::new(ProtocolVersion::V1)
-            .client_capabilities(
-                v1::ClientCapabilities::new()
-                    .terminal(true)
-                    .fs(v1::FileSystemCapabilities::new()
-                        .read_text_file(true)
-                        .write_text_file(true)),
-            )
+            .client_capabilities(client_capabilities)
             .client_info(v1::Implementation::new("test-client", "1.0.0").title("Test Client"));
 
         assert_v1_round_trip::<v1::InitializeRequest, v2::InitializeRequest>(request.clone());
@@ -9419,6 +9646,13 @@ mod tests {
                 v1::PlanEntryPriority::High,
                 v1::PlanEntryStatus::InProgress,
             )])),
+            #[cfg(feature = "unstable_plan_operations")]
+            v1::SessionUpdate::PlanUpdate(v1::PlanUpdate::new(v1::PlanUpdateContent::markdown(
+                "plan-1",
+                "## Steps\n- [ ] Test conversion",
+            ))),
+            #[cfg(feature = "unstable_plan_operations")]
+            v1::SessionUpdate::PlanRemoved(v1::PlanRemoved::new("plan-1")),
             v1::SessionUpdate::SessionInfoUpdate(v1::SessionInfoUpdate::new().title("hi")),
         ];
         for update in cases {

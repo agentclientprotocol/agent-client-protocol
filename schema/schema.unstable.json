@@ -1021,6 +1021,17 @@
           ],
           "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNES (Next Edit Suggestions) capabilities supported by the client."
         },
+        "planCapabilities": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PlanCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nWhether the client supports `plan_update` and `plan_removed` session updates.\n\nOptional. Omitted means the client does not advertise support.\nSupplying `{}` means the client can receive both update types."
+        },
         "positionEncodings": {
           "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nThe position encodings supported by the client, in order of preference.",
           "items": {
@@ -4961,6 +4972,17 @@
       "required": ["entries"],
       "type": "object"
     },
+    "PlanCapabilities": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapabilities for receiving `plan_update` and `plan_removed` session updates.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object"
+    },
     "PlanEntry": {
       "description": "A single entry in the execution plan.\n\nRepresents a task or goal that the assistant intends to accomplish\nas part of fulfilling the user's request.\nSee protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/agent-plan#plan-entries)",
       "properties": {
@@ -5030,6 +5052,181 @@
           "const": "completed",
           "description": "The task has been successfully completed.",
           "type": "string"
+        }
+      ]
+    },
+    "PlanFile": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA plan represented by a file URI.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "id": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/PlanId"
+            }
+          ],
+          "description": "The plan ID to update."
+        },
+        "uri": {
+          "description": "The URI of the file containing the plan.",
+          "type": "string"
+        }
+      },
+      "required": ["id", "uri"],
+      "type": "object"
+    },
+    "PlanId": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nUnique identifier for a plan within a session.",
+      "type": "string"
+    },
+    "PlanItems": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA plan represented as structured entries.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "entries": {
+          "description": "The list of tasks to be accomplished.\n\nWhen updating an item-based plan, the agent must send a complete list of all entries\nwith their current status. The client replaces that plan with each update.",
+          "items": {
+            "$ref": "#/$defs/PlanEntry"
+          },
+          "type": "array"
+        },
+        "id": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/PlanId"
+            }
+          ],
+          "description": "The plan ID to update."
+        }
+      },
+      "required": ["id", "entries"],
+      "type": "object"
+    },
+    "PlanMarkdown": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA plan represented as raw markdown content.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "content": {
+          "description": "Markdown content for the plan.",
+          "type": "string"
+        },
+        "id": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/PlanId"
+            }
+          ],
+          "description": "The plan ID to update."
+        }
+      },
+      "required": ["id", "content"],
+      "type": "object"
+    },
+    "PlanRemoved": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRemoval notice for a plan identified by ID.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "id": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/PlanId"
+            }
+          ],
+          "description": "The plan ID to remove."
+        }
+      },
+      "required": ["id"],
+      "type": "object"
+    },
+    "PlanUpdate": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA content update for a plan identified by ID.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "plan": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/PlanUpdateContent"
+            }
+          ],
+          "description": "The updated plan content."
+        }
+      },
+      "required": ["plan"],
+      "type": "object"
+    },
+    "PlanUpdateContent": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nUpdated content for a plan.",
+      "discriminator": {
+        "propertyName": "type"
+      },
+      "oneOf": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/PlanItems"
+            }
+          ],
+          "description": "Structured plan entries.",
+          "properties": {
+            "type": {
+              "const": "items",
+              "type": "string"
+            }
+          },
+          "required": ["type"],
+          "type": "object"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/PlanFile"
+            }
+          ],
+          "description": "A URI pointing to a file containing the plan.",
+          "properties": {
+            "type": {
+              "const": "file",
+              "type": "string"
+            }
+          },
+          "required": ["type"],
+          "type": "object"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/PlanMarkdown"
+            }
+          ],
+          "description": "Raw markdown content for the plan.",
+          "properties": {
+            "type": {
+              "const": "markdown",
+              "type": "string"
+            }
+          },
+          "required": ["type"],
+          "type": "object"
         }
       ]
     },
@@ -6294,6 +6491,38 @@
           "properties": {
             "sessionUpdate": {
               "const": "plan",
+              "type": "string"
+            }
+          },
+          "required": ["sessionUpdate"],
+          "type": "object"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/PlanUpdate"
+            }
+          ],
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA content update for a plan identified by ID.",
+          "properties": {
+            "sessionUpdate": {
+              "const": "plan_update",
+              "type": "string"
+            }
+          },
+          "required": ["sessionUpdate"],
+          "type": "object"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/PlanRemoved"
+            }
+          ],
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRemoval notice for a plan identified by ID.",
+          "properties": {
+            "sessionUpdate": {
+              "const": "plan_removed",
               "type": "string"
             }
           },
