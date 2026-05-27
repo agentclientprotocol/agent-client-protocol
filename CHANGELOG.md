@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.13.4](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.13.3...v0.13.4) - 2026-05-27
+
+### Added
+
+- *(unstable)* Add unstable plan operations ([#1299](https://github.com/agentclientprotocol/agent-client-protocol/pull/1299))
+
 ## [0.13.3](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.13.2...v0.13.3) - 2026-05-22
 
 ### Added
