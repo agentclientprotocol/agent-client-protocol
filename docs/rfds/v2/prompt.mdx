@@ -1,0 +1,231 @@
+---
+title: "v2 Prompt Lifecycle"
+---
+
+Author(s): [@benbrandt](https://github.com/benbrandt)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+For v2 of the protocol wire format, I am proposing a change in the lifecycle of the prompt request, allowing for more dynamic session updates from the agent, and unlocking new capabilities in the process.
+
+Once a session is created, the agent will be able to send session updates at any point in time, and prompt requests will last until the prompt is accepted, not until the end of the turn. As I'll go into later, this not only removes some current awkwardness around the prompt request lifecycle, but also provides a more flexible foundation to add features like queued messages and multi-client replay. This can even allow the agent to initiate an interaction in a session rather than requiring it to wait for a user prompt, which is becoming increasingly important for background tasks and agents which may send updates before or after a "turn" is over since its runtime might be different than the main conversation.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+Currently, the protocol kind of assumes that all turns will be initiated by a client and ended by an agent, with a series of session update notifications in-between. While in many cases this is enough, it is becoming clear that this model is not flexible enough.
+
+It is not clear how to model queued messages for instance: would these create a new turn request lifecycle? Or fit into the existing one?
+
+What if the agent wants to submit some text at the start of a session _before_ the user prompts? Or a status update? Also, if an agent finishes it's turn, wants to wait for the next user action, but had a background subagent or task running, can it only submit updates about that status after the user prompts again? When replaying a session, the prompt request can be turned into a user message notification, but what about the end of turn response? If you call load during a currently running session, how do you know that the turn is done?
+
+Some clients handle these out-of-turn updates more gracefully than others. But it is a constant point of confusion in discussions and issues.
+
+In the spirit of allowing as much flexibility in the protocol for new paradigms and designs to emerge in the prompt lifecycle, I think imposing fewer restrictions in the protocol, whether explicitly described or just implicitly inferred because of vague wording, on when participants can make session updates will allow for more dynamic sessions, as well as make it easier to extend to new use cases in the future.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+### Change the `session/prompt` response
+
+`session/prompt` is still a request, but both its response lifecycle and payload will change.
+
+The agent will respond once the prompt has been _accepted_, not when the turn is over. And the agent would be able to respond with the given id for that prompt, a current problem we have in the [message id RFD][./message-id] in terms of how to get the message id back soon enough.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "req_12345",
+  "result": {
+    "messageId": "msg_789xyz"
+  }
+}
+```
+
+Given there will need to be some more exploration for Message IDs in general, I won't tie that RFD to this one unnecessarily, but it becomes a much more natural point to provide the information if we decide to do so.
+
+Queueing messages (still an ongoing discussion) would also fit much nicer in this pattern. Either by adding additional parameters or a separate method, we can allow a client to submit queued messages and either cancel or edit them before they get accepted without having to mess with the turn semantics of the previous prompt request approach. Again, queueing is decidedly not part of this RFD, but it seems to fall more naturally into this semantic change in the prompt request.
+
+### Additional Agent `session/update` notification types
+
+Because `session/update`s can more freely flow from the agent, and we lost the ability to pass end_turn and other information from the prompt response, we need to provide the agent with the affordance for a few more notification types.
+
+#### User message accepted/acknowledged
+
+In order to have a consistent understanding between agent and client on where the user message appears within the session history in relation to other messages, it is important to see when and where the agent has accepted the user message into the feed.
+
+This will also be important for queueing messages, depending on how we implement that, so that the client can know if it is still allowed to edit the queued message, or where in the turn order it got inserted.
+
+Even without a new queue, which may allow for editing the queued message, it means that the client doesn't necessarily have to send a `session/cancel` before prompting. This would need some exploration, but potentially the agent could decide whether it cancels the current turn and inserts it immediately, or inserts it at the next convenient break point. This should probably still be defined as "as soon as possible" and queueing would enable some later points, but it could still be more graceful than needing to cancel all current tool calls for example, as is required at the moment.
+
+The question then turns to what makes up this notification. Which brings us to:
+
+**Who owns the user message id?**
+
+This is an open question at the moment for the [message id RFD](./message-id). If we allow the client to define the message id, this allows the client to eagerly create it and rely on it. However, if there isn't an agreement on "uniqueness", or if a given agent requires all message ids to be UUIDs or something similar, this could cause issues if both sides are allowed to treat ids as an opaque string, since there would need to be some agreement on how they are actually derived to ensure constraints.
+
+By allowing the agent to replay the message, we have a natural place for the agent to both provide the content as well as the id once it is inserted in the session. The client will be able to associate that a given user message was from their prompt request by seeing the same message id in the prompt response as this notification. Overall with message ids, I propose to let the agent continue to generate their own ids, and it is the sole source of truth. Ultimately the agent is responsible for the session persistence, and otherwise we may need to align on UUIDs or something similar for message ids, which may or may not fit well with the current agent implementations. If there is only one source for ids, we can continue to treat them as opaque strings that fit well into the agent's individual implementations.
+
+My current proposal is that this would look like the client sending the following message:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "req_12345",
+  "method": "session/prompt",
+  "params": {
+    "sessionId": "sess_789xyz",
+    "prompt": [
+      {
+        "type": "text",
+        "text": "What's the capital of France?"
+      }
+    ]
+  }
+}
+```
+
+And the Agent responds with:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "req_12345",
+  "result": {
+    "messageId": "mess_456def"
+  }
+}
+```
+
+And also send the notification:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_789xyz",
+    "update": {
+      "sessionUpdate": "user_message",
+      "messageId": "mess_456def",
+      "content": [
+        {
+          "type": "text",
+          "text": "What's the capital of France?"
+        }
+      ]
+    }
+  }
+}
+```
+
+The client can then make sure the prompt sits nicely in the feed at the right place, and also allows for multiple clients to be attached to the same session because they would receive a user message that they didn't prompt.
+
+This is a new message type as well. Not a `user_message_chunk` but just a `user_message` that allows for sending the entire message at once. For v2 we will make sure to allow for the agent to do the same on their messages as well, providing both full and partial streaming update patterns for a given message.
+
+#### `state_change` notification
+
+This would be a notification from the agent to indicate that it's current status has changed, such as the "turn" has ended, carrying information like `stopReason` and `usage` data for that turn.
+
+**Running**, to indicate that a turn has begun. Important now that turns aren't tied necessarily to prompts:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_789xyz",
+    "update": {
+      "sessionUpdate": "state_change",
+      "state": "running"
+    }
+  }
+}
+```
+
+**Idle**, whenever the agent is done, with optional data on why:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_789xyz",
+    "update": {
+      "sessionUpdate": "state_change",
+      "state": "idle",
+      "stop_reason": "end_turn",
+      "usage": {...},
+    }
+  }
+}
+```
+
+**Requires Action**, for when the agent is trying to run, but needs to wait on user input to continue, it isn't just idle:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_789xyz",
+    "update": {
+      "sessionUpdate": "state_change",
+      "state": "requires_action"
+    }
+  }
+}
+```
+
+We could explore adding which permission or elicitation it is waiting on if we wanted to make it clearer if we wanted.
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+This isn't a huge schema change, but it is a fundamental behavior change in the protocol that I believe:
+
+- Provides agents with much more flexibility in how they want to update a client about a given session
+- Solves some concrete pain points we have the the current model (i.e. how to integrate prompts into session/load and multi-client replays, message ids, etc)
+
+Ultimately, after months of using the current model, I am quite excited for what these small tweaks can unlock, and also how we can build on top of this in the future!
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+Overall, this isn't a huge lift on schema definition, but it is a large, **breaking** change in behavior which means we can only stabilize in protocol version 2.
+
+Depending on how the rest of v2 testing goes, we can either:
+
+1. Make this an opt-in "future-flag" capability on v1 so people can experiment, but it would be an unstable feature regardless.
+2. We establish a preview/beta flow for v2
+
+We definitely need 2 regardless, and can likely handle this in a similar "unstable" manner as we do for current unstabilized features. It's likely timing will work out that we can just do it that way. If for some reason the timing doesn't work out, we can start experimenting with an unstable capability or some `_meta` flag.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+I've hopefully addressed all of the questions and concerns for what motivated this above, but happy to engage with others on this.
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+#### Prompt as a notification
+
+Early discussions revolved around having this be a bidirectional stream of notifications on the session. While this felt very symmetrical and appealing, it ran into several problems in practice:
+
+1. Clients only really had one type of notification that made sense to emit on the session: user messages
+2. The Agent would still need to replay that message to show where it got accepted within the message history
+3. We would then need a notification-based way of emitting errors for invalid prompts that would need to be tied to fire-and-forget notifications.
+
+Given that the agent is ultimately the owner of the session history, it makes sense that it is the sole notifier of the session, because it is the source of truth. By having all client interactions on the session remain requests, albeit much shorter-lived ones in theory, we still have a semantically meaningful way to communicate errors and when and how a given request was incorporated into the session.
+
+## Revision history
+
+2026-04-13: Initial draft
+2026-04-22: Move from bidirectional notification approach to a change in the prompt request lifecycle

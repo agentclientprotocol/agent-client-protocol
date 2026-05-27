@@ -64,6 +64,7 @@
             "pages": [
               "protocol/overview",
               "protocol/initialization",
+              "protocol/authentication",
               "protocol/session-setup",
               "protocol/session-list",
               "protocol/prompt-turn",
@@ -82,10 +83,24 @@
                 "group": "Draft: In Progress and May Change",
                 "hidden": true,
                 "pages": [
+                  "protocol/draft/overview",
+                  "protocol/draft/authentication",
+                  "protocol/draft/initialization",
                   "protocol/draft/session-setup",
                   "protocol/draft/session-list",
+                  "protocol/draft/session-delete",
+                  "protocol/draft/prompt-turn",
+                  "protocol/draft/content",
+                  "protocol/draft/tool-calls",
                   "protocol/draft/file-system",
                   "protocol/draft/cancellation",
+                  "protocol/draft/terminals",
+                  "protocol/draft/agent-plan",
+                  "protocol/draft/session-modes",
+                  "protocol/draft/session-config-options",
+                  "protocol/draft/slash-commands",
+                  "protocol/draft/extensibility",
+                  "protocol/draft/transports",
                   "protocol/draft/schema"
                 ]
               }
@@ -108,34 +123,40 @@
         "tab": "RFDs",
         "pages": [
           "rfds/about",
+          "rfds/updates",
           {
             "group": "Draft",
             "pages": [
               "rfds/session-fork",
               "rfds/request-cancellation",
-              "rfds/session-resume",
               "rfds/meta-propagation",
               "rfds/agent-telemetry-export",
               "rfds/proxy-chains",
               "rfds/mcp-over-acp",
               "rfds/session-usage",
               "rfds/auth-methods",
-              "rfds/rust-sdk-v1",
-              "rfds/logout-method",
               "rfds/session-delete",
-              "rfds/message-id",
               "rfds/diff-delete",
               "rfds/boolean-config-option",
               "rfds/elicitation",
-              "rfds/session-close",
               "rfds/next-edit-suggestions",
-              "rfds/additional-directories",
-              "rfds/custom-llm-endpoint"
+              "rfds/custom-llm-endpoint",
+              "rfds/model-config-category",
+              {
+                "group": "v2 Draft",
+                "expanded": true,
+                "root": "rfds/v2/overview",
+                "pages": [
+                  "rfds/v2/prompt",
+                  "rfds/message-id",
+                  "rfds/streamable-http-websocket-transport"
+                ]
+              }
             ]
           },
           {
             "group": "Preview",
-            "pages": []
+            "pages": ["rfds/rust-sdk-v1", "rfds/additional-directories"]
           },
           {
             "group": "Completed",
@@ -144,7 +165,10 @@
               "rfds/session-config-options",
               "rfds/session-list",
               "rfds/session-info-update",
-              "rfds/acp-agent-registry"
+              "rfds/acp-agent-registry",
+              "rfds/session-resume",
+              "rfds/session-close",
+              "rfds/logout-method"
             ]
           }
         ]
@@ -165,7 +189,24 @@
       },
       {
         "tab": "Updates",
-        "pages": ["updates"]
+        "pages": [
+          "updates",
+          {
+            "group": "Announcements",
+            "pages": [
+              "announcements/logout-method-stabilized",
+              "announcements/session-close-stabilized",
+              "announcements/session-resume-stabilized",
+              "announcements/transports-working-group",
+              "announcements/acp-agent-registry-stabilized",
+              "announcements/session-info-update-stabilized",
+              "announcements/session-list-stabilized",
+              "announcements/sergey-ignatov-lead-maintainer",
+              "announcements/session-config-options-stabilized",
+              "announcements/implementation-information"
+            ]
+          }
+        ]
       },
       {
         "tab": "Brand",

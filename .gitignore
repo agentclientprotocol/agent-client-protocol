@@ -3,6 +3,7 @@ node_modules
 dist
 *.tsbuildinfo
 .DS_Store
+.idea
 
 # TypeScript generated files
 typescript/*.js
@@ -13,3 +14,8 @@ typescript/*.js.map
 
 # TypeDoc generated documentation
 typescript/docs/
+
+.agents
+.kiro
+.claude
+

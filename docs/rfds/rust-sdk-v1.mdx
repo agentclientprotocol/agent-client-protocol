@@ -865,7 +865,7 @@ The new SDK is organized into several crates with clear responsibilities:
 
 ### Current status
 
-A working implementation exists in the [symposium-dev/symposium-acp](https://github.com/symposium-dev/symposium-acp) repository and is published on crates.io. It powers:
+The implementation has been upstreamed to [agentclientprotocol/rust-sdk](https://github.com/agentclientprotocol/rust-sdk) for preview. The original [`sacp`](https://github.com/symposium-dev/symposium-acp) crates remain published on crates.io and power:
 
 - The conductor (proxy chain orchestration)
 - patchwork-rs (programmatic agent orchestration)
@@ -873,12 +873,13 @@ A working implementation exists in the [symposium-dev/symposium-acp](https://git
 
 ### Migration path
 
-The transition involves importing the `sacp` implementation into this repository:
+The transition involves upstreaming the `sacp` implementation to the `agentclientprotocol/rust-sdk` repository and stabilizing it after preview:
 
-1. **Import `sacp` crates** into this repository with the new `agent-client-protocol-*` naming
-2. **Release `agent-client-protocol` v1.0** with the new builder-based API
-3. **Deprecate `sacp` crates** on crates.io, pointing users to the `agent-client-protocol` family
-4. **Provide migration guidance** for users of the current v0.x SDK
+1. **Import `sacp` crates** to `agentclientprotocol/rust-sdk` with the new `agent-client-protocol-*` naming
+2. **Preview the upstreamed SDK** to collect feedback on the new builder-based API
+3. **Release `agent-client-protocol` v1.0** when this RFD is marked Completed
+4. **Deprecate `sacp` crates** on crates.io, pointing users to the `agent-client-protocol` family
+5. **Provide migration guidance** for users of the current v0.x SDK
 
 Most users will find the migration straightforward - the builder pattern is more ergonomic than the trait-based approach, so the new code is often simpler than the old.
 
@@ -910,10 +911,11 @@ This is a potential future enhancement - enum derives could dispatch to differen
 
 ### What changes are needed before stabilizing?
 
-We are in the process of changing how response messages work to simplify the implementation of the conductor. Before stabilizing we should do a thorough review of the methods and look for candidates that can be removed or simplified.
+Now that the implementation has been upstreamed, preview feedback should focus on API polish, method review, and identifying any candidates that can be removed or simplified before the 1.0 release.
 
 The conductor is feature complete but the support for MCP-over-ACP needs a few minor improvements (in particular, it should detect when the agent only supports stdio bridging and not attempt to use HTTP, which it currently does not).
 
 ## Revision history
 
+- 2026-05-12: Moved to Preview after the initial crate import was upstreamed to agentclientprotocol/rust-sdk.
 - Initial draft based on working implementation in symposium-acp repository.

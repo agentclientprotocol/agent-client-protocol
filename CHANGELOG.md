@@ -1,5 +1,97 @@
 # Changelog
 
+## [0.13.3](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.13.2...v0.13.3) - 2026-05-22
+
+### Added
+
+- Stabilize logout method ([#1273](https://github.com/agentclientprotocol/agent-client-protocol/pull/1273))
+
+### Fixed
+
+- *(unstable)* Rename provider method types to singular ([#1272](https://github.com/agentclientprotocol/agent-client-protocol/pull/1272))
+
+### Other
+
+- *(rfd)* Move additional directories RFD to Preview ([#1276](https://github.com/agentclientprotocol/agent-client-protocol/pull/1276))
+- Add schema download note to schema page ([#1269](https://github.com/agentclientprotocol/agent-client-protocol/pull/1269))
+- *(deps)* bump num-conv from 0.2.1 to 0.2.2 in the minor group ([#1244](https://github.com/agentclientprotocol/agent-client-protocol/pull/1244))
+- Set minimum supported Rust version ([#1232](https://github.com/agentclientprotocol/agent-client-protocol/pull/1232))
+- Document ACP versioning semantics ([#1229](https://github.com/agentclientprotocol/agent-client-protocol/pull/1229))
+
+## [0.13.2](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.13.1...v0.13.2) - 2026-05-17
+
+### Fixed
+
+- *(unstable)* Update additionalDirectories guidance ([#1227](https://github.com/agentclientprotocol/agent-client-protocol/pull/1227))
+
+## [0.13.1](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.13.0...v0.13.1) - 2026-05-16
+
+### Added
+
+- *(unstable)* Add unstable session delete support ([#1216](https://github.com/agentclientprotocol/agent-client-protocol/pull/1216))
+
+## [0.13.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.12.2...v0.13.0) - 2026-05-12
+
+### Added
+
+- *(unstable)* Add experimental MCP-over-ACP message types ([#1185](https://github.com/agentclientprotocol/agent-client-protocol/pull/1185))
+
+### Other
+
+- add unstable mcp-over-acp additions to the schema ([#1173](https://github.com/agentclientprotocol/agent-client-protocol/pull/1173))
+- *(deps)* bump the minor group with 3 updates ([#1178](https://github.com/agentclientprotocol/agent-client-protocol/pull/1178))
+- *(deps)* bump the minor group with 2 updates ([#1121](https://github.com/agentclientprotocol/agent-client-protocol/pull/1121))
+- *(unstable)* Start setting up v2 Schema scaffolding for experimentation ([#1099](https://github.com/agentclientprotocol/agent-client-protocol/pull/1099))
+- reorganize to v1 module ([#1094](https://github.com/agentclientprotocol/agent-client-protocol/pull/1094))
+
+## [0.12.2](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.12.1...v0.12.2) - 2026-04-23
+
+### Added
+
+- Stabilize session/close ([#1062](https://github.com/agentclientprotocol/agent-client-protocol/pull/1062))
+- Stabilize session/resume ([#1051](https://github.com/agentclientprotocol/agent-client-protocol/pull/1051))
+
+## [0.12.1](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.12.0...v0.12.1) - 2026-04-21
+
+### Other
+
+- *(unstable)* Remove RequiredNullable dead code ([#1026](https://github.com/agentclientprotocol/agent-client-protocol/pull/1026))
+- Optional current provider ([#1021](https://github.com/agentclientprotocol/agent-client-protocol/pull/1021))
+
+## [0.12.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.11.7...v0.12.0) - 2026-04-17
+
+### Added
+
+- *(rust-only)* Remove unused RPC message schema types (schema.json unchanged) ([#1009](https://github.com/agentclientprotocol/agent-client-protocol/pull/1009))
+- *(rust-only)* better tolerate malformed optional fields in deserialization ([#1006](https://github.com/agentclientprotocol/agent-client-protocol/pull/1006))
+
+### Fixed
+
+- *(rpc)* preserve '_' prefix for extension methods and reject empty ext ([#883](https://github.com/agentclientprotocol/agent-client-protocol/pull/883))
+
+## [0.11.7](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.11.6...v0.11.7) - 2026-04-15
+
+### Added
+
+- *(unstable)* Initial implementation of providers ([#899](https://github.com/agentclientprotocol/agent-client-protocol/pull/899))
+
+### Other
+
+- *(rfd)* Move session/close to Preview ([#970](https://github.com/agentclientprotocol/agent-client-protocol/pull/970))
+- *(rfd)* Move session/resume to Preview ([#969](https://github.com/agentclientprotocol/agent-client-protocol/pull/969))
+
+## [0.11.6](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.11.5...v0.11.6) - 2026-04-14
+
+### Fixed
+
+- *(unstable)* Move elicitation scope into mode variants ([#966](https://github.com/agentclientprotocol/agent-client-protocol/pull/966))
+
+## [0.11.5](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.11.4...v0.11.5) - 2026-04-09
+
+### Added
+
+- *(unstable)* elicitation for session, tool call, and requests ([#792](https://github.com/agentclientprotocol/agent-client-protocol/pull/792))
+
 ## [0.11.4](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.11.3...v0.11.4) - 2026-03-28
 
 ### Added

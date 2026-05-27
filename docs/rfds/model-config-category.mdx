@@ -1,0 +1,83 @@
+---
+title: "Model Config Option Category"
+---
+
+- Author(s): [anna239](https://github.com/anna239)
+
+## Elevator pitch
+
+Add a new `model_config` category to session configuration options, so that agents can expose model-related parameters (context size, speed/quality trade-offs, etc) and clients can group them alongside the main model selector in the UI.
+
+## Status quo
+
+The `category` field on `SessionConfigOption` currently supports three values: `mode`, `model`, and `thought_level`. This works well when the model is a single selector, but some agents expose many model configurations — context window size, speed tier, and similar settings that logically belong next to the model picker.
+
+## What we propose to do about it
+
+Add a `model_config` variant to `SessionConfigOptionCategory`.
+
+Agents tag any model-related parameters with `"category": "model_config"`, and clients render them near the primary `model` selector — for example as secondary controls within a model-picker popover or panel.
+
+### Relationship to `thought_level`
+
+Once `model_config` exists, `thought_level` is semantically a special case of a model configuration parameter. We keep `thought_level` as-is for backward compatibility — existing clients already handle it — but new model-related options should use `model_config`.
+
+## Shiny future
+
+Agents expose rich, parameterized model configurations over ACP.
+
+## Implementation details and plan
+
+### JSON format
+
+An agent declares model-config options in `configOptions`:
+
+```json
+{
+  "configOptions": [
+    {
+      "id": "model",
+      "name": "Model",
+      "category": "model",
+      "type": "select",
+      "currentValue": "sonnet-4.5",
+      "options": [
+        { "value": "sonnet-4.5", "name": "Sonnet 4.5" },
+        { "value": "opus-4.6", "name": "Opus 4.6" }
+      ]
+    },
+    {
+      "id": "context_size",
+      "name": "Context Size",
+      "category": "model_config",
+      "type": "select",
+      "currentValue": "200k",
+      "options": [
+        { "value": "200k", "name": "200K" },
+        { "value": "1m", "name": "1M" }
+      ]
+    },
+    {
+      "id": "fast_mode",
+      "name": "Fast Mode",
+      "category": "model_config",
+      "type": "boolean",
+      "currentValue": false
+    }
+  ]
+}
+```
+
+### Client behavior
+
+- Clients SHOULD render `model_config` options near the `model` selector (e.g., in the same popover or panel).
+- Clients that do not recognize the category MUST handle it gracefully per the existing spec — the option still renders, just without special placement.
+- No new client capability negotiation is needed.
+
+### Should `thought_level` move under `model_config`?
+
+Not now. Existing clients already handle `thought_level`, so changing its semantics would be a breaking change. New model-related parameters should use `model_config`; `thought_level` remains for backward compatibility.
+
+## Revision history
+
+- 2026-04-08: Initial proposal

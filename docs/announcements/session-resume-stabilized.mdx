@@ -1,0 +1,13 @@
+---
+title: Session Resume is stabilized
+sidebarTitle: Session Resume stabilized
+description: Announcement that the session/resume method is now part of the stable ACP protocol.
+---
+
+**Published:** April 22, 2026
+
+The Session Resume RFD has moved to Completed and the `session/resume` method is stabilized.
+
+Unlike `session/load`, `session/resume` reconnects clients to an existing session without replaying the conversation history. This is a simpler primitive for agents that can restore context but don't implement full history replay, and it gives proxies and adapters a foundation they can build `session/load` semantics on top of.
+
+For the shipped protocol, see [Resuming Sessions](/protocol/session-setup#resuming-sessions). For the design history, see the [Session Resume RFD](/rfds/session-resume).

@@ -6,7 +6,9 @@ use serde::Serialize;
 ///
 /// This version is only bumped for breaking changes.
 /// Non-breaking changes should be introduced via capabilities.
-#[derive(Debug, Clone, Serialize, JsonSchema, PartialEq, Eq, PartialOrd, Ord, From, Display)]
+#[derive(
+    Debug, Clone, Copy, Serialize, JsonSchema, PartialEq, Eq, PartialOrd, Ord, From, Display,
+)]
 pub struct ProtocolVersion(u16);
 
 impl ProtocolVersion {
@@ -20,9 +22,19 @@ impl ProtocolVersion {
     ///
     /// <https://agentclientprotocol.com/protocol/overview>
     pub const V1: Self = Self(1);
-    /// The latest supported version of the protocol.
+    /// Version `2` of the protocol.
     ///
-    /// Currently, this is version `1`.
+    /// This is an unstable draft used for protocol iteration. It is only
+    /// available when the `unstable_protocol_v2` feature is enabled and is
+    /// **not** advertised by [`ProtocolVersion::LATEST`] yet — callers must
+    /// opt into V2 explicitly.
+    #[cfg(feature = "unstable_protocol_v2")]
+    pub const V2: Self = Self(2);
+    /// The latest stable supported version of the protocol.
+    ///
+    /// Currently this is version `1`. Enabling the `unstable_protocol_v2`
+    /// feature exposes `ProtocolVersion::V2` but does **not** change the
+    /// value of `LATEST` — v2 will only become the latest once it stabilizes.
     pub const LATEST: Self = Self::V1;
 
     #[cfg(test)]
