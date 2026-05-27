@@ -2,7 +2,7 @@
 title: "Plan Operations Support"
 ---
 
-Author(s): <!-- add your GitHub handle -->
+Author(s): [anna239](https://github.com/anna239)
 
 ## Elevator pitch
 
@@ -43,7 +43,7 @@ The existing `plan` session update type is **not modified** and continues to wor
 Add to `ClientCapabilities`:
 
 ```
-planCapabilities: PlanCapabilities? = null
+planCapabilities: PlanCapabilities? = undefined
 ```
 
 When present (`{}`), signals the client supports the `plan_update` and `plan_removed` session update types. When absent, the agent must fall back to the existing `plan` session update type.
@@ -154,4 +154,4 @@ A generic "agent shares markdown document" API would be simpler and more reusabl
 
 ## Revision history
 
-<!-- If there have been major updates to this RFD, you can include the git revisions and a summary of the changes. -->
+2026-04-02: Initial draft

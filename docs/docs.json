@@ -142,6 +142,7 @@
               "rfds/next-edit-suggestions",
               "rfds/custom-llm-endpoint",
               "rfds/model-config-category",
+              "rfds/plan-operations",
               {
                 "group": "v2 Draft",
                 "expanded": true,
