@@ -502,12 +502,16 @@ starting with '$/' it is free to ignore the notification."
 
         #[expect(clippy::too_many_lines)]
         fn document_variant_table_row(&mut self, variant: &Value) {
+            let enum_values = variant.get("enum").and_then(|v| v.as_array());
+
             write!(&mut self.output, "<ResponseField name=\"").unwrap();
 
             // Get variant name
             if let Some(ref_val) = variant.get("$ref").and_then(|v| v.as_str()) {
                 let type_name = ref_val.strip_prefix("#/$defs/").unwrap_or(ref_val);
                 write!(&mut self.output, "{type_name}").unwrap();
+            } else if let Some(enum_values) = enum_values {
+                write!(&mut self.output, "{}", Self::enum_values_label(enum_values)).unwrap();
             } else if let Some(const_val) = variant.get("const") {
                 if let Some(s) = const_val.as_str() {
                     write!(&mut self.output, "{s}").unwrap();
@@ -546,7 +550,9 @@ starting with '$/' it is free to ignore the notification."
                 write!(&mut self.output, "Variant").unwrap();
             }
 
-            if let Some(format) = variant.get("format") {
+            if enum_values.is_some() {
+                write!(&mut self.output, "\" type=\"enum").unwrap();
+            } else if let Some(format) = variant.get("format") {
                 if let Some(s) = format.as_str() {
                     write!(&mut self.output, "\" type=\"{s}").unwrap();
                 } else {
@@ -565,7 +571,19 @@ starting with '$/' it is free to ignore the notification."
             // Get description
             if let Some(desc) = Self::get_def_description(variant) {
                 writeln!(&mut self.output, "{desc}").unwrap();
-            } else {
+            }
+
+            if let Some(enum_values) = enum_values {
+                if Self::get_def_description(variant).is_some() {
+                    writeln!(&mut self.output).unwrap();
+                }
+                writeln!(
+                    &mut self.output,
+                    "**Values:** {}",
+                    Self::format_enum_values(enum_values)
+                )
+                .unwrap();
+            } else if Self::get_def_description(variant).is_none() {
                 writeln!(&mut self.output, "{{\"\"}}").unwrap();
             }
 
@@ -655,6 +673,32 @@ starting with '$/' it is free to ignore the notification."
                 }
                 writeln!(&mut self.output).unwrap();
             }
+        }
+
+        fn enum_values_label(values: &[Value]) -> String {
+            values
+                .iter()
+                .map(|value| {
+                    value
+                        .as_str()
+                        .map_or_else(|| value.to_string(), str::to_string)
+                })
+                .collect::<Vec<_>>()
+                .join(" | ")
+        }
+
+        fn format_enum_values(values: &[Value]) -> String {
+            values
+                .iter()
+                .map(|value| {
+                    if let Some(value) = value.as_str() {
+                        format!("`\"{}\"`", Self::escape_mdx(value))
+                    } else {
+                        format!("`{value}`")
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join(", ")
         }
 
         fn document_object(&mut self, definition: &Value) {
@@ -1506,6 +1550,39 @@ starting with '$/' it is free to ignore the notification."
             let form_pos = generator.output.find("\"form\"").unwrap();
             assert!(variants_pos < session_pos);
             assert!(session_pos < form_pos);
+        }
+
+        #[test]
+        fn document_union_renders_enum_variant_values() {
+            let mut generator = MarkdownGenerator::new();
+            let definition = json!({
+                "description": "The sender or recipient.",
+                "anyOf": [
+                    {
+                        "enum": ["assistant", "user"],
+                        "type": "string"
+                    },
+                    {
+                        "description": "Custom or future role.",
+                        "title": "other",
+                        "type": "string"
+                    }
+                ]
+            });
+
+            generator.document_type(4, "Role", &definition);
+
+            assert!(
+                generator
+                    .output
+                    .contains("<ResponseField name=\"assistant | user\" type=\"enum\">")
+            );
+            assert!(
+                generator
+                    .output
+                    .contains("**Values:** `\"assistant\"`, `\"user\"`")
+            );
+            assert!(!generator.output.contains("<ResponseField name=\"string\""));
         }
     }
 }

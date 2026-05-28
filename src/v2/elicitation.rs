@@ -37,7 +37,7 @@ impl ElicitationId {
 }
 
 /// String format types for string properties in elicitation schemas.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum StringFormat {
@@ -49,6 +49,12 @@ pub enum StringFormat {
     Date,
     /// Date-time format (ISO 8601).
     DateTime,
+    /// Custom or future string format.
+    ///
+    /// Unknown formats are preserved. Implementations that do not understand a
+    /// format should treat it as an annotation rather than rejecting the schema.
+    #[serde(untagged)]
+    Other(String),
 }
 
 /// Type discriminator for elicitation schemas.

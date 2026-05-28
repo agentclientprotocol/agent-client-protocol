@@ -3,20 +3,20 @@
 //! This module defines the Agent trait and all associated types for implementing
 //! an AI coding agent that follows the Agent Client Protocol (ACP).
 
-use std::{path::PathBuf, sync::Arc};
+use std::{collections::BTreeMap, path::PathBuf, sync::Arc};
 
 #[cfg(any(feature = "unstable_auth_methods", feature = "unstable_llm_providers"))]
 use std::collections::HashMap;
 
 use derive_more::{Display, From};
-use schemars::JsonSchema;
+use schemars::{JsonSchema, Schema};
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
 use super::{
     ClientCapabilities, ContentBlock, ExtNotification, ExtRequest, ExtResponse, Meta, SessionId,
 };
-use crate::{IntoOption, ProtocolVersion, SkipListener};
+use crate::{IntoOption, MaybeUndefined, ProtocolVersion, SkipListener};
 
 #[cfg(feature = "unstable_mcp_over_acp")]
 use super::mcp::{
@@ -521,6 +521,17 @@ pub enum AuthMethod {
     /// Client runs an interactive terminal for the user to authenticate via a TUI.
     #[cfg(feature = "unstable_auth_methods")]
     Terminal(AuthMethodTerminal),
+    /// Custom or future authentication method.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    ///
+    /// Clients that do not understand this method type should preserve the raw
+    /// payload when storing, replaying, proxying, or forwarding initialization
+    /// data, and otherwise ignore the method or display it generically.
+    #[serde(untagged)]
+    Unknown(UnknownAuthMethod),
     /// Agent handles authentication itself.
     ///
     /// This is the default when no `type` is specified.
@@ -534,6 +545,7 @@ impl AuthMethod {
     pub fn id(&self) -> &AuthMethodId {
         match self {
             Self::Agent(a) => &a.id,
+            Self::Unknown(a) => &a.id,
             #[cfg(feature = "unstable_auth_methods")]
             Self::EnvVar(e) => &e.id,
             #[cfg(feature = "unstable_auth_methods")]
@@ -546,6 +558,7 @@ impl AuthMethod {
     pub fn name(&self) -> &str {
         match self {
             Self::Agent(a) => &a.name,
+            Self::Unknown(a) => &a.name,
             #[cfg(feature = "unstable_auth_methods")]
             Self::EnvVar(e) => &e.name,
             #[cfg(feature = "unstable_auth_methods")]
@@ -558,6 +571,7 @@ impl AuthMethod {
     pub fn description(&self) -> Option<&str> {
         match self {
             Self::Agent(a) => a.description.as_deref(),
+            Self::Unknown(a) => a.description.as_deref(),
             #[cfg(feature = "unstable_auth_methods")]
             Self::EnvVar(e) => e.description.as_deref(),
             #[cfg(feature = "unstable_auth_methods")]
@@ -574,6 +588,7 @@ impl AuthMethod {
     pub fn meta(&self) -> Option<&Meta> {
         match self {
             Self::Agent(a) => a.meta.as_ref(),
+            Self::Unknown(a) => a.meta.as_ref(),
             #[cfg(feature = "unstable_auth_methods")]
             Self::EnvVar(e) => e.meta.as_ref(),
             #[cfg(feature = "unstable_auth_methods")]
@@ -582,11 +597,148 @@ impl AuthMethod {
     }
 }
 
+/// Custom or future authentication method payload.
+#[skip_serializing_none]
+#[derive(Debug, Clone, Serialize, JsonSchema, PartialEq, Eq)]
+#[schemars(inline)]
+#[schemars(transform = unknown_auth_method_schema)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct UnknownAuthMethod {
+    /// Custom or future authentication method type.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(rename = "type")]
+    pub type_: String,
+    /// Unique identifier for this authentication method.
+    pub id: AuthMethodId,
+    /// Human-readable name of the authentication method.
+    pub name: String,
+    /// Optional description providing more details about this authentication method.
+    pub description: Option<String>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+    /// Additional fields from the unknown authentication method payload.
+    #[serde(flatten)]
+    pub fields: BTreeMap<String, serde_json::Value>,
+}
+
+impl UnknownAuthMethod {
+    #[must_use]
+    pub fn new(
+        type_: impl Into<String>,
+        id: impl Into<AuthMethodId>,
+        name: impl Into<String>,
+        mut fields: BTreeMap<String, serde_json::Value>,
+    ) -> Self {
+        fields.remove("type");
+        fields.remove("id");
+        fields.remove("name");
+        fields.remove("description");
+        fields.remove("_meta");
+        Self {
+            type_: type_.into(),
+            id: id.into(),
+            name: name.into(),
+            description: None,
+            meta: None,
+            fields,
+        }
+    }
+
+    /// Optional description providing more details about this authentication method.
+    #[must_use]
+    pub fn description(mut self, description: impl IntoOption<String>) -> Self {
+        self.description = description.into_option();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+impl<'de> Deserialize<'de> for UnknownAuthMethod {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(rename_all = "camelCase")]
+        struct RawUnknownAuthMethod {
+            #[serde(rename = "type")]
+            type_: String,
+            id: AuthMethodId,
+            name: String,
+            description: Option<String>,
+            #[serde(rename = "_meta")]
+            meta: Option<Meta>,
+            #[serde(flatten)]
+            fields: BTreeMap<String, serde_json::Value>,
+        }
+
+        let raw = RawUnknownAuthMethod::deserialize(deserializer)?;
+        if is_known_auth_method_type(&raw.type_) {
+            return Err(serde::de::Error::custom(format!(
+                "known authentication method `{}` did not match its schema",
+                raw.type_
+            )));
+        }
+
+        Ok(Self {
+            type_: raw.type_,
+            id: raw.id,
+            name: raw.name,
+            description: raw.description,
+            meta: raw.meta,
+            fields: raw.fields,
+        })
+    }
+}
+
+fn is_known_auth_method_type(type_: &str) -> bool {
+    match type_ {
+        "agent" => true,
+        #[cfg(feature = "unstable_auth_methods")]
+        "env_var" | "terminal" => true,
+        _ => false,
+    }
+}
+
+fn unknown_auth_method_schema(schema: &mut Schema) {
+    super::schema_util::reject_known_string_discriminators(
+        schema,
+        "type",
+        &[
+            "agent",
+            #[cfg(feature = "unstable_auth_methods")]
+            "env_var",
+            #[cfg(feature = "unstable_auth_methods")]
+            "terminal",
+        ],
+    );
+}
+
 /// Agent handles authentication itself.
 ///
 /// This is the default authentication method type.
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, JsonSchema, PartialEq, Eq)]
+#[schemars(transform = auth_method_agent_schema)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct AuthMethodAgent {
@@ -633,6 +785,52 @@ impl AuthMethodAgent {
         self.meta = meta.into_option();
         self
     }
+}
+
+impl<'de> Deserialize<'de> for AuthMethodAgent {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(rename_all = "camelCase")]
+        struct RawAuthMethodAgent {
+            id: AuthMethodId,
+            name: String,
+            description: Option<String>,
+            #[serde(rename = "_meta")]
+            meta: Option<Meta>,
+            #[serde(rename = "type")]
+            #[serde(default)]
+            type_: MaybeUndefined<String>,
+        }
+
+        let raw = RawAuthMethodAgent::deserialize(deserializer)?;
+        match raw.type_.as_opt_deref() {
+            None | Some(Some("agent")) => {}
+            Some(None) => {
+                return Err(serde::de::Error::custom(
+                    "default authentication method `type` must be omitted or `agent`",
+                ));
+            }
+            Some(Some(_)) => {
+                return Err(serde::de::Error::custom(
+                    "default authentication method cannot include a non-agent `type`",
+                ));
+            }
+        }
+
+        Ok(Self {
+            id: raw.id,
+            name: raw.name,
+            description: raw.description,
+            meta: raw.meta,
+        })
+    }
+}
+
+fn auth_method_agent_schema(schema: &mut Schema) {
+    super::schema_util::reject_string_property_except(schema, "type", "agent");
 }
 
 /// **UNSTABLE**
@@ -2389,7 +2587,11 @@ pub enum SessionConfigOptionCategory {
     Model,
     /// Thought/reasoning level selector.
     ThoughtLevel,
-    /// Unknown / uncategorized selector.
+    /// Custom or future category.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
     #[serde(untagged)]
     Other(String),
 }
@@ -2409,6 +2611,91 @@ pub enum SessionConfigKind {
     /// Boolean on/off toggle.
     #[cfg(feature = "unstable_boolean_config")]
     Boolean(SessionConfigBoolean),
+    /// Custom or future session configuration option payload.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    ///
+    /// Clients that do not understand this option type should preserve the raw
+    /// payload when storing, replaying, proxying, or forwarding configuration
+    /// data, and otherwise ignore the option or display it generically.
+    #[serde(untagged)]
+    Unknown(UnknownSessionConfigKind),
+}
+
+/// Custom or future session configuration option payload.
+#[derive(Debug, Clone, Serialize, JsonSchema, PartialEq, Eq)]
+#[schemars(inline)]
+#[schemars(transform = unknown_session_config_kind_schema)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct UnknownSessionConfigKind {
+    /// Custom or future session configuration option type.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(rename = "type")]
+    pub type_: String,
+    /// Additional fields from the unknown session configuration option payload.
+    #[serde(flatten)]
+    pub fields: BTreeMap<String, serde_json::Value>,
+}
+
+impl UnknownSessionConfigKind {
+    #[must_use]
+    pub fn new(type_: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
+        fields.remove("type");
+        Self {
+            type_: type_.into(),
+            fields,
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for UnknownSessionConfigKind {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let type_ = fields
+            .remove("type")
+            .ok_or_else(|| serde::de::Error::missing_field("type"))?;
+        let serde_json::Value::String(type_) = type_ else {
+            return Err(serde::de::Error::custom("`type` must be a string"));
+        };
+
+        if is_known_session_config_kind_type(&type_) {
+            return Err(serde::de::Error::custom(format!(
+                "known session configuration option `{type_}` did not match its schema"
+            )));
+        }
+
+        Ok(Self { type_, fields })
+    }
+}
+
+fn is_known_session_config_kind_type(type_: &str) -> bool {
+    match type_ {
+        "select" => true,
+        #[cfg(feature = "unstable_boolean_config")]
+        "boolean" => true,
+        _ => false,
+    }
+}
+
+fn unknown_session_config_kind_schema(schema: &mut Schema) {
+    super::schema_util::reject_known_string_discriminators(
+        schema,
+        "type",
+        &[
+            "select",
+            #[cfg(feature = "unstable_boolean_config")]
+            "boolean",
+        ],
+    );
 }
 
 /// A session configuration option selector and its current state.
@@ -3265,7 +3552,7 @@ impl PromptResponse {
 /// Reasons why an agent stops processing a prompt turn.
 ///
 /// See protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/prompt-turn#stop-reasons)
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum StopReason {
@@ -3287,6 +3574,13 @@ pub enum StopReason {
     /// Agents should catch these exceptions and return this semantically meaningful
     /// response to confirm successful cancellation.
     Cancelled,
+    /// Custom or future stop reason.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(untagged)]
+    Other(String),
 }
 
 /// **UNSTABLE**
@@ -3596,7 +3890,11 @@ pub enum LlmProtocol {
     Vertex,
     /// AWS Bedrock API protocol.
     Bedrock,
-    /// Unknown or custom protocol.
+    /// Custom or future protocol.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
     #[serde(untagged)]
     Other(String),
 }
@@ -5550,7 +5848,6 @@ mod test_serialization {
                 assert_eq!(id.0.as_ref(), "default-auth");
                 assert_eq!(name, "Default Auth");
             }
-            #[cfg(feature = "unstable_auth_methods")]
             _ => panic!("Expected Agent variant"),
         }
     }
@@ -5566,6 +5863,63 @@ mod test_serialization {
 
         let deserialized: AuthMethod = serde_json::from_value(json).unwrap();
         assert!(matches!(deserialized, AuthMethod::Agent(_)));
+    }
+
+    #[test]
+    fn test_auth_method_agent_rejects_null_type() {
+        assert!(
+            serde_json::from_value::<AuthMethod>(json!({
+                "id": "agent-auth",
+                "name": "Agent Auth",
+                "type": null
+            }))
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn test_auth_method_unknown_variant_roundtrip() {
+        let method: AuthMethod = serde_json::from_value(json!({
+            "id": "oauth",
+            "name": "OAuth",
+            "type": "_oauth",
+            "authorizationUrl": "https://example.com/auth"
+        }))
+        .unwrap();
+
+        assert_eq!(method.id().0.as_ref(), "oauth");
+        assert_eq!(method.name(), "OAuth");
+        let AuthMethod::Unknown(unknown) = method else {
+            panic!("expected unknown auth method");
+        };
+        assert_eq!(unknown.type_, "_oauth");
+        assert_eq!(
+            unknown.fields.get("authorizationUrl"),
+            Some(&json!("https://example.com/auth"))
+        );
+
+        assert_eq!(
+            serde_json::to_value(AuthMethod::Unknown(unknown)).unwrap(),
+            json!({
+                "id": "oauth",
+                "name": "OAuth",
+                "type": "_oauth",
+                "authorizationUrl": "https://example.com/auth"
+            })
+        );
+    }
+
+    #[cfg(feature = "unstable_auth_methods")]
+    #[test]
+    fn test_auth_method_unknown_does_not_hide_malformed_known_variant() {
+        assert!(
+            serde_json::from_value::<AuthMethod>(json!({
+                "id": "api-key",
+                "name": "API Key",
+                "type": "env_var"
+            }))
+            .is_err()
+        );
     }
 
     #[cfg(feature = "unstable_session_delete")]
@@ -6115,6 +6469,44 @@ mod test_serialization {
             }
             _ => panic!("Expected Select kind"),
         }
+    }
+
+    #[test]
+    fn test_session_config_option_unknown_kind_roundtrip() {
+        let option: SessionConfigOption = serde_json::from_value(json!({
+            "id": "verbosity",
+            "name": "Verbosity",
+            "type": "_slider",
+            "currentValue": 3,
+            "min": 0,
+            "max": 5
+        }))
+        .unwrap();
+
+        assert_eq!(option.id.to_string(), "verbosity");
+        let SessionConfigKind::Unknown(unknown) = &option.kind else {
+            panic!("expected unknown config kind");
+        };
+        assert_eq!(unknown.type_, "_slider");
+        assert_eq!(unknown.fields.get("currentValue"), Some(&json!(3)));
+
+        let json = serde_json::to_value(&option).unwrap();
+        assert_eq!(json["type"], "_slider");
+        assert_eq!(json["currentValue"], 3);
+        assert_eq!(json["min"], 0);
+        assert_eq!(json["max"], 5);
+    }
+
+    #[test]
+    fn test_session_config_option_unknown_does_not_hide_malformed_known_kind() {
+        assert!(
+            serde_json::from_value::<SessionConfigOption>(json!({
+                "id": "model",
+                "name": "Model",
+                "type": "select"
+            }))
+            .is_err()
+        );
     }
 
     #[cfg(feature = "unstable_llm_providers")]

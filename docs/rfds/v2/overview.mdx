@@ -29,6 +29,7 @@ We have had a fairly successful time adding new features via new capabilities an
 Current RFDs accepted as Drafts that are targeting v2 release
 
 - [New Prompt Lifecycle](./prompt.md)
+- [Enum Variant Extension](./enum-variant-extension.mdx)
 - [Message IDs](../message-id.md)
   - [Fork from specified IDs](../session-fork.mds)
 - [Remote Transports](../streamable-http-websocket-transport.mdx)
@@ -40,16 +41,16 @@ Other RFDs will progress separately and are not dependent on breaking changes (s
 Changes under consideration that still need to be drafted or moved to draft:
 
 - Capabilities: clean up naming and organization, as well as make some more capabilities required.
-- Enum variant extension: Same as session config categories: \_ for extension, preserve non-underscore for future variants
 - Streaming/Non-streaming consistency: Offer both options for both messages and tool calls
   - Also Terminal Output type for streaming terminal output from an agent
-  - Expand diff types
+  - Expand diff types (delete, move)
 - JSON-RPC Batch messages: clearer guidance on how SDK support should work for these
 - Truncate/Edit support
 - session/new changes:
   - Providing starting message history
   - Response can provide available commands
   - Potentially config options
+    - Get config options outside of a session (take a cwd?)
 - Remove session modes and (unstable) session models. These are replaces by session config options
 - [Plan variants](/rfds/plan-operations): Make this RFD the default and remove the old plan update
 - Subagent support

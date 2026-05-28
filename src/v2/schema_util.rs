@@ -1,0 +1,62 @@
+use schemars::Schema;
+use serde_json::json;
+
+pub(crate) fn reject_known_string_discriminators(
+    schema: &mut Schema,
+    property_name: &str,
+    known_values: &[&str],
+) {
+    let known_value_schemas: Vec<_> = known_values
+        .iter()
+        .map(|value| {
+            json!({
+                "properties": {
+                    property_name: {
+                        "const": value,
+                        "type": "string"
+                    }
+                },
+                "required": [property_name],
+                "type": "object"
+            })
+        })
+        .collect();
+
+    schema.insert(
+        "not".into(),
+        json!({
+            "anyOf": known_value_schemas
+        }),
+    );
+}
+
+pub(crate) fn reject_property(schema: &mut Schema, property_name: &str) {
+    schema.insert(
+        "not".into(),
+        json!({
+            "required": [property_name],
+            "type": "object"
+        }),
+    );
+}
+
+pub(crate) fn reject_string_property_except(
+    schema: &mut Schema,
+    property_name: &str,
+    allowed_value: &str,
+) {
+    schema.insert(
+        "not".into(),
+        json!({
+            "properties": {
+                property_name: {
+                    "not": {
+                        "const": allowed_value
+                    }
+                }
+            },
+            "required": [property_name],
+            "type": "object"
+        }),
+    );
+}

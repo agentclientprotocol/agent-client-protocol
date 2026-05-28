@@ -3063,6 +3063,48 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 </Expandable>
 </ResponseField>
 
+<ResponseField name="unknown" type="object">
+Custom or future authentication method.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+Clients that do not understand this method type should preserve the raw
+payload when storing, replaying, proxying, or forwarding initialization
+data, and otherwise ignore the method or display it generically.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+
+</ResponseField>
+<ResponseField name="description" type={"string | null"} >
+  Optional description providing more details about this authentication method.
+</ResponseField>
+<ResponseField name="id" type={"string"} required>
+  Unique identifier for this authentication method.
+</ResponseField>
+<ResponseField name="name" type={"string"} required>
+  Human-readable name of the authentication method.
+</ResponseField>
+<ResponseField name="type" type={"string"} required>
+  Custom or future authentication method type.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 <ResponseField name="agent">
 Agent handles authentication itself.
 
@@ -3225,11 +3267,12 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
 The input specification for a command.
 
+**Type:** Union
+
+<ResponseField name="unstructured">
 All text that was typed after the command name is provided as input.
 
-**Type:** Object
-
-**Properties:**
+<Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -3241,6 +3284,35 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 </ResponseField>
 <ResponseField name="hint" type={"string"} required>
   A hint to display when the input hasn't been provided yet
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="unknown" type="object">
+Custom or future command input specification.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+Clients that do not understand this input type should preserve the raw
+payload when storing, replaying, proxying, or forwarding command
+metadata, and otherwise ignore the input specification or display the
+command without structured input.
+
+<Expandable title="Properties">
+
+<ResponseField name="type" type={"string"} required>
+  Custom or future command input type.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+</ResponseField>
+
+</Expandable>
 </ResponseField>
 
 ## <span class="font-mono">AvailableCommandsUpdate</span>
@@ -3617,6 +3689,31 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
   The discriminator value. Must be `"resource"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="unknown" type="object">
+Custom or future content block.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+Receivers that do not understand this content block type should preserve
+the raw payload when storing, replaying, proxying, or forwarding content,
+and otherwise ignore it or display it generically.
+
+<Expandable title="Properties">
+
+<ResponseField name="type" type={"string"} required>
+  Custom or future content block type.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
 </ResponseField>
 
 </Expandable>
@@ -4658,7 +4755,12 @@ Protocol names that do not begin with `_` are reserved for the ACP spec.
 </ResponseField>
 
 <ResponseField name="other" type="string">
-  Unknown or custom protocol.
+Custom or future protocol.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
 </ResponseField>
 
 ## <span class="font-mono">LogoutCapabilities</span>
@@ -5227,6 +5329,15 @@ Severity of a diagnostic.
   A hint.
 </ResponseField>
 
+<ResponseField name="Other" type="string">
+Custom or future diagnostic severity.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+</ResponseField>
+
 ## <span class="font-mono">NesDiagnosticsCapabilities</span>
 
 Capabilities for diagnostics context.
@@ -5620,6 +5731,15 @@ The reason a suggestion was rejected.
   The request was cancelled before the agent returned a response.
 </ResponseField>
 
+<ResponseField name="Other" type="string">
+Custom or future rejection reason.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+</ResponseField>
+
 ## <span class="font-mono">NesRelatedSnippet</span>
 
 A related code snippet from a file.
@@ -5904,6 +6024,31 @@ A search-and-replace suggestion.
 </Expandable>
 </ResponseField>
 
+<ResponseField name="unknown" type="object">
+Custom or future NES suggestion.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+Receivers that do not understand this suggestion kind should preserve
+the raw payload when storing, replaying, proxying, or forwarding
+suggestions, and otherwise ignore it or display it generically.
+
+<Expandable title="Properties">
+
+<ResponseField name="kind" type={"string"} required>
+  Custom or future NES suggestion kind.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 ## <span class="font-mono">NesTextEdit</span>
 
 A text edit within a suggestion.
@@ -5935,6 +6080,15 @@ What triggered the suggestion request.
 
 <ResponseField name="manual" type="string">
   Triggered by an explicit user action (keyboard shortcut).
+</ResponseField>
+
+<ResponseField name="Other" type="string">
+Custom or future suggestion trigger kind.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
 </ResponseField>
 
 ## <span class="font-mono">NesUserAction</span>
@@ -6064,6 +6218,15 @@ Helps clients choose appropriate icons and UI treatment.
   Reject this operation and remember the choice.
 </ResponseField>
 
+<ResponseField name="other" type="string">
+Custom or future permission option kind.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+</ResponseField>
+
 ## <span class="font-mono">Plan</span>
 
 An execution plan for accomplishing complex tasks.
@@ -6168,6 +6331,15 @@ See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/agent
   Low priority task - nice to have but not essential.
 </ResponseField>
 
+<ResponseField name="other" type="string">
+Custom or future plan entry priority.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+</ResponseField>
+
 ## <span class="font-mono">PlanEntryStatus</span>
 
 Status of a plan entry in the execution flow.
@@ -6187,6 +6359,15 @@ See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/agent
 
 <ResponseField name="completed" type="string">
   The task has been successfully completed.
+</ResponseField>
+
+<ResponseField name="other" type="string">
+Custom or future plan entry status.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
 </ResponseField>
 
 ## <span class="font-mono">PlanFile</span>
@@ -6419,6 +6600,31 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
   The discriminator value. Must be `"markdown"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="unknown" type="object">
+Custom or future plan update content.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+Receivers that do not understand this content type should preserve the
+raw payload when storing, replaying, proxying, or forwarding plans, and
+otherwise ignore it or display it generically.
+
+<Expandable title="Properties">
+
+<ResponseField name="type" type={"string"} required>
+  Custom or future plan update content type.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
 </ResponseField>
 
 </Expandable>
@@ -6734,12 +6940,20 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 
 The sender or recipient of messages and data in a conversation.
 
-**Type:** Enumeration
+**Type:** Union
 
-| Value         |
-| ------------- |
-| `"assistant"` |
-| `"user"`      |
+<ResponseField name="assistant | user" type="enum">
+  **Values:** `"assistant"`, `"user"`
+</ResponseField>
+
+<ResponseField name="other" type="string">
+Custom or future role.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+</ResponseField>
 
 ## <span class="font-mono">SelectedPermissionOutcome</span>
 
@@ -6975,6 +7189,31 @@ Boolean on/off toggle.
 </Expandable>
 </ResponseField>
 
+<ResponseField name="unknown" type="object">
+Custom or future session configuration option payload.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+Clients that do not understand this option type should preserve the raw
+payload when storing, replaying, proxying, or forwarding configuration
+data, and otherwise ignore the option or display it generically.
+
+<Expandable title="Properties">
+
+<ResponseField name="type" type={"string"} required>
+  Custom or future session configuration option type.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 ## <span class="font-mono">SessionConfigOptionCategory</span>
 
 Semantic category for a session configuration option.
@@ -7002,7 +7241,12 @@ Category names that do not begin with `_` are reserved for the ACP spec.
 </ResponseField>
 
 <ResponseField name="other" type="string">
-  Unknown / uncategorized selector.
+Custom or future category.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
 </ResponseField>
 
 ## <span class="font-mono">SessionConfigSelect</span>
@@ -7766,6 +8010,31 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 </Expandable>
 </ResponseField>
 
+<ResponseField name="unknown" type="object">
+Custom or future session update.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+Receivers that do not understand this update type should preserve the
+raw payload when storing, replaying, proxying, or forwarding session
+history, and otherwise ignore it or display it generically.
+
+<Expandable title="Properties">
+
+<ResponseField name="sessionUpdate" type={"string"} required>
+  Custom or future session update type.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 ## <span class="font-mono">StopReason</span>
 
 Reasons why an agent stops processing a prompt turn.
@@ -7803,6 +8072,15 @@ response to confirm successful cancellation.
 
 </ResponseField>
 
+<ResponseField name="other" type="string">
+Custom or future stop reason.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+</ResponseField>
+
 ## <span class="font-mono">StringFormat</span>
 
 String format types for string properties in elicitation schemas.
@@ -7823,6 +8101,14 @@ String format types for string properties in elicitation schemas.
 
 <ResponseField name="date-time" type="string">
   Date-time format (ISO 8601).
+</ResponseField>
+
+<ResponseField name="other" type="string">
+Custom or future string format.
+
+Unknown formats are preserved. Implementations that do not understand a
+format should treat it as an annotation rather than rejecting the schema.
+
 </ResponseField>
 
 ## <span class="font-mono">StringPropertySchema</span>
@@ -8159,6 +8445,31 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/exte
 </Expandable>
 </ResponseField>
 
+<ResponseField name="unknown" type="object">
+Custom or future tool call content.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+Receivers that do not understand this content type should preserve the
+raw payload when storing, replaying, proxying, or forwarding tool call
+output, and otherwise ignore it or display it generically.
+
+<Expandable title="Properties">
+
+<ResponseField name="type" type={"string"} required>
+  Custom or future tool call content type.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 ## <span class="font-mono">ToolCallId</span>
 
 Unique identifier for a tool call within a session.
@@ -8221,6 +8532,15 @@ See protocol docs: [Status](https://agentclientprotocol.com/protocol/tool-calls#
 
 <ResponseField name="failed" type="string">
   The tool call failed with an error.
+</ResponseField>
+
+<ResponseField name="other" type="string">
+Custom or future tool call status.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
 </ResponseField>
 
 ## <span class="font-mono">ToolCallUpdate</span>
@@ -8318,6 +8638,15 @@ See protocol docs: [Creating](https://agentclientprotocol.com/protocol/tool-call
 
 <ResponseField name="other" type="string">
   Other tool types (default).
+</ResponseField>
+
+<ResponseField name="unknown" type="string">
+Custom or future tool kind.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
 </ResponseField>
 
 ## <span class="font-mono">UnstructuredCommandInput</span>

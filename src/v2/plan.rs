@@ -6,11 +6,13 @@
 //! See: [Agent Plan](https://agentclientprotocol.com/protocol/agent-plan)
 
 #[cfg(feature = "unstable_plan_operations")]
-use std::sync::Arc;
+use std::{collections::BTreeMap, sync::Arc};
 
 #[cfg(feature = "unstable_plan_operations")]
 use derive_more::{Display, From};
 use schemars::JsonSchema;
+#[cfg(feature = "unstable_plan_operations")]
+use schemars::Schema;
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
@@ -144,6 +146,87 @@ pub enum PlanUpdateContent {
     File(PlanFile),
     /// Raw markdown content for the plan.
     Markdown(PlanMarkdown),
+    /// Custom or future plan update content.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    ///
+    /// Receivers that do not understand this content type should preserve the
+    /// raw payload when storing, replaying, proxying, or forwarding plans, and
+    /// otherwise ignore it or display it generically.
+    #[serde(untagged)]
+    Unknown(UnknownPlanUpdateContent),
+}
+
+/// Custom or future plan update content payload.
+#[cfg(feature = "unstable_plan_operations")]
+#[derive(Debug, Clone, Serialize, JsonSchema, PartialEq, Eq)]
+#[schemars(inline)]
+#[schemars(transform = unknown_plan_update_content_schema)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct UnknownPlanUpdateContent {
+    /// Custom or future plan update content type.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(rename = "type")]
+    pub type_: String,
+    /// Additional fields from the unknown plan update content payload.
+    #[serde(flatten)]
+    pub fields: BTreeMap<String, serde_json::Value>,
+}
+
+#[cfg(feature = "unstable_plan_operations")]
+impl UnknownPlanUpdateContent {
+    #[must_use]
+    pub fn new(type_: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
+        fields.remove("type");
+        Self {
+            type_: type_.into(),
+            fields,
+        }
+    }
+}
+
+#[cfg(feature = "unstable_plan_operations")]
+impl<'de> Deserialize<'de> for UnknownPlanUpdateContent {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let type_ = fields
+            .remove("type")
+            .ok_or_else(|| serde::de::Error::missing_field("type"))?;
+        let serde_json::Value::String(type_) = type_ else {
+            return Err(serde::de::Error::custom("`type` must be a string"));
+        };
+
+        if is_known_plan_update_content_type(&type_) {
+            return Err(serde::de::Error::custom(format!(
+                "known plan update content `{type_}` did not match its schema"
+            )));
+        }
+
+        Ok(Self { type_, fields })
+    }
+}
+
+#[cfg(feature = "unstable_plan_operations")]
+fn is_known_plan_update_content_type(type_: &str) -> bool {
+    matches!(type_, "items" | "file" | "markdown")
+}
+
+#[cfg(feature = "unstable_plan_operations")]
+fn unknown_plan_update_content_schema(schema: &mut Schema) {
+    super::schema_util::reject_known_string_discriminators(
+        schema,
+        "type",
+        &["items", "file", "markdown"],
+    );
 }
 
 #[cfg(feature = "unstable_plan_operations")]
@@ -461,6 +544,13 @@ pub enum PlanEntryPriority {
     Medium,
     /// Low priority task - nice to have but not essential.
     Low,
+    /// Custom or future plan entry priority.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(untagged)]
+    Other(String),
 }
 
 /// Status of a plan entry in the execution flow.
@@ -477,4 +567,65 @@ pub enum PlanEntryStatus {
     InProgress,
     /// The task has been successfully completed.
     Completed,
+    /// Custom or future plan entry status.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(untagged)]
+    Other(String),
+}
+
+#[cfg(all(test, feature = "unstable_plan_operations"))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn plan_entry_priority_preserves_unknown_variant() {
+        let priority: PlanEntryPriority = serde_json::from_str("\"urgent\"").unwrap();
+        assert_eq!(priority, PlanEntryPriority::Other("urgent".to_string()));
+        assert_eq!(serde_json::to_value(&priority).unwrap(), "urgent");
+    }
+
+    #[test]
+    fn plan_entry_status_preserves_unknown_variant() {
+        let status: PlanEntryStatus = serde_json::from_str("\"blocked\"").unwrap();
+        assert_eq!(status, PlanEntryStatus::Other("blocked".to_string()));
+        assert_eq!(serde_json::to_value(&status).unwrap(), "blocked");
+    }
+
+    #[test]
+    fn plan_update_content_preserves_unknown_variant() {
+        let content: PlanUpdateContent = serde_json::from_value(serde_json::json!({
+            "type": "_timeline",
+            "id": "plan-1",
+            "events": []
+        }))
+        .unwrap();
+
+        let PlanUpdateContent::Unknown(unknown) = content else {
+            panic!("expected unknown plan update content");
+        };
+
+        assert_eq!(unknown.type_, "_timeline");
+        assert_eq!(unknown.fields.get("id"), Some(&serde_json::json!("plan-1")));
+        assert_eq!(
+            serde_json::to_value(PlanUpdateContent::Unknown(unknown)).unwrap(),
+            serde_json::json!({
+                "type": "_timeline",
+                "id": "plan-1",
+                "events": []
+            })
+        );
+    }
+
+    #[test]
+    fn plan_update_content_does_not_hide_malformed_known_variant() {
+        assert!(
+            serde_json::from_value::<PlanUpdateContent>(serde_json::json!({
+                "type": "items"
+            }))
+            .is_err()
+        );
+    }
 }

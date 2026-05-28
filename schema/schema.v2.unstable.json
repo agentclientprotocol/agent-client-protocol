@@ -682,6 +682,70 @@
           "type": "object"
         },
         {
+          "additionalProperties": true,
+          "description": "Custom or future authentication method.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nClients that do not understand this method type should preserve the raw\npayload when storing, replaying, proxying, or forwarding initialization\ndata, and otherwise ignore the method or display it generically.",
+          "not": {
+            "anyOf": [
+              {
+                "properties": {
+                  "type": {
+                    "const": "agent",
+                    "type": "string"
+                  }
+                },
+                "required": ["type"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "type": {
+                    "const": "env_var",
+                    "type": "string"
+                  }
+                },
+                "required": ["type"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "type": {
+                    "const": "terminal",
+                    "type": "string"
+                  }
+                },
+                "required": ["type"],
+                "type": "object"
+              }
+            ]
+          },
+          "properties": {
+            "_meta": {
+              "additionalProperties": true,
+              "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+              "type": ["object", "null"]
+            },
+            "description": {
+              "description": "Optional description providing more details about this authentication method.",
+              "type": ["string", "null"]
+            },
+            "id": {
+              "description": "Unique identifier for this authentication method.",
+              "type": "string"
+            },
+            "name": {
+              "description": "Human-readable name of the authentication method.",
+              "type": "string"
+            },
+            "type": {
+              "description": "Custom or future authentication method type.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+              "type": "string"
+            }
+          },
+          "required": ["type", "id", "name"],
+          "title": "unknown",
+          "type": "object"
+        },
+        {
           "allOf": [
             {
               "$ref": "#/$defs/AuthMethodAgent"
@@ -695,6 +759,17 @@
     },
     "AuthMethodAgent": {
       "description": "Agent handles authentication itself.\n\nThis is the default authentication method type.",
+      "not": {
+        "properties": {
+          "type": {
+            "not": {
+              "const": "agent"
+            }
+          }
+        },
+        "required": ["type"],
+        "type": "object"
+      },
       "properties": {
         "_meta": {
           "additionalProperties": true,
@@ -862,6 +937,19 @@
           ],
           "description": "All text that was typed after the command name is provided as input.",
           "title": "unstructured"
+        },
+        {
+          "additionalProperties": true,
+          "description": "Custom or future command input specification.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nClients that do not understand this input type should preserve the raw\npayload when storing, replaying, proxying, or forwarding command\nmetadata, and otherwise ignore the input specification or display the\ncommand without structured input.",
+          "properties": {
+            "type": {
+              "description": "Custom or future command input type.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+              "type": "string"
+            }
+          },
+          "required": ["type"],
+          "title": "unknown",
+          "type": "object"
         }
       ],
       "description": "The input specification for a command."
@@ -1739,11 +1827,7 @@
       "type": "object"
     },
     "ContentBlock": {
-      "description": "Content blocks represent displayable information in the Agent Client Protocol.\n\nThey provide a structured way to handle various types of user-facing content—whether\nit's text from language models, images for analysis, or embedded resources for context.\n\nContent blocks appear in:\n- User prompts sent via `session/prompt`\n- Language model output streamed through `session/update` notifications\n- Progress updates and results from tool calls\n\nThis structure is compatible with the Model Context Protocol (MCP), enabling\nagents to seamlessly forward content from MCP tool outputs without transformation.\n\nSee protocol docs: [Content](https://agentclientprotocol.com/protocol/content)",
-      "discriminator": {
-        "propertyName": "type"
-      },
-      "oneOf": [
+      "anyOf": [
         {
           "allOf": [
             {
@@ -1823,8 +1907,79 @@
           },
           "required": ["type"],
           "type": "object"
+        },
+        {
+          "additionalProperties": true,
+          "description": "Custom or future content block.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nReceivers that do not understand this content block type should preserve\nthe raw payload when storing, replaying, proxying, or forwarding content,\nand otherwise ignore it or display it generically.",
+          "not": {
+            "anyOf": [
+              {
+                "properties": {
+                  "type": {
+                    "const": "text",
+                    "type": "string"
+                  }
+                },
+                "required": ["type"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "type": {
+                    "const": "image",
+                    "type": "string"
+                  }
+                },
+                "required": ["type"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "type": {
+                    "const": "audio",
+                    "type": "string"
+                  }
+                },
+                "required": ["type"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "type": {
+                    "const": "resource_link",
+                    "type": "string"
+                  }
+                },
+                "required": ["type"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "type": {
+                    "const": "resource",
+                    "type": "string"
+                  }
+                },
+                "required": ["type"],
+                "type": "object"
+              }
+            ]
+          },
+          "properties": {
+            "type": {
+              "description": "Custom or future content block type.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+              "type": "string"
+            }
+          },
+          "required": ["type"],
+          "title": "unknown",
+          "type": "object"
         }
-      ]
+      ],
+      "description": "Content blocks represent displayable information in the Agent Client Protocol.\n\nThey provide a structured way to handle various types of user-facing content—whether\nit's text from language models, images for analysis, or embedded resources for context.\n\nContent blocks appear in:\n- User prompts sent via `session/prompt`\n- Language model output streamed through `session/update` notifications\n- Progress updates and results from tool calls\n\nThis structure is compatible with the Model Context Protocol (MCP), enabling\nagents to seamlessly forward content from MCP tool outputs without transformation.\n\nSee protocol docs: [Content](https://agentclientprotocol.com/protocol/content)",
+      "discriminator": {
+        "propertyName": "type"
+      }
     },
     "ContentChunk": {
       "description": "A streamed item of content",
@@ -3393,7 +3548,7 @@
           "type": "string"
         },
         {
-          "description": "Unknown or custom protocol.",
+          "description": "Custom or future protocol.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
           "title": "other",
           "type": "string"
         }
@@ -4033,8 +4188,7 @@
       "type": "object"
     },
     "NesDiagnosticSeverity": {
-      "description": "Severity of a diagnostic.",
-      "oneOf": [
+      "anyOf": [
         {
           "const": "error",
           "description": "An error.",
@@ -4054,8 +4208,14 @@
           "const": "hint",
           "description": "A hint.",
           "type": "string"
+        },
+        {
+          "description": "Custom or future diagnostic severity.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+          "title": "Other",
+          "type": "string"
         }
-      ]
+      ],
+      "description": "Severity of a diagnostic."
     },
     "NesDiagnosticsCapabilities": {
       "description": "Capabilities for diagnostics context.",
@@ -4422,8 +4582,7 @@
       "type": "object"
     },
     "NesRejectReason": {
-      "description": "The reason a suggestion was rejected.",
-      "oneOf": [
+      "anyOf": [
         {
           "const": "rejected",
           "description": "The user explicitly dismissed the suggestion.",
@@ -4443,8 +4602,14 @@
           "const": "cancelled",
           "description": "The request was cancelled before the agent returned a response.",
           "type": "string"
+        },
+        {
+          "description": "Custom or future rejection reason.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+          "title": "Other",
+          "type": "string"
         }
-      ]
+      ],
+      "description": "The reason a suggestion was rejected."
     },
     "NesRelatedSnippet": {
       "description": "A related code snippet from a file.",
@@ -4624,11 +4789,7 @@
       "type": "object"
     },
     "NesSuggestion": {
-      "description": "A suggestion returned by the agent.",
-      "discriminator": {
-        "propertyName": "kind"
-      },
-      "oneOf": [
+      "anyOf": [
         {
           "allOf": [
             {
@@ -4692,8 +4853,69 @@
           },
           "required": ["kind"],
           "type": "object"
+        },
+        {
+          "additionalProperties": true,
+          "description": "Custom or future NES suggestion.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nReceivers that do not understand this suggestion kind should preserve\nthe raw payload when storing, replaying, proxying, or forwarding\nsuggestions, and otherwise ignore it or display it generically.",
+          "not": {
+            "anyOf": [
+              {
+                "properties": {
+                  "kind": {
+                    "const": "edit",
+                    "type": "string"
+                  }
+                },
+                "required": ["kind"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "kind": {
+                    "const": "jump",
+                    "type": "string"
+                  }
+                },
+                "required": ["kind"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "kind": {
+                    "const": "rename",
+                    "type": "string"
+                  }
+                },
+                "required": ["kind"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "kind": {
+                    "const": "searchAndReplace",
+                    "type": "string"
+                  }
+                },
+                "required": ["kind"],
+                "type": "object"
+              }
+            ]
+          },
+          "properties": {
+            "kind": {
+              "description": "Custom or future NES suggestion kind.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+              "type": "string"
+            }
+          },
+          "required": ["kind"],
+          "title": "unknown",
+          "type": "object"
         }
-      ]
+      ],
+      "description": "A suggestion returned by the agent.",
+      "discriminator": {
+        "propertyName": "kind"
+      }
     },
     "NesTextEdit": {
       "description": "A text edit within a suggestion.",
@@ -4715,8 +4937,7 @@
       "type": "object"
     },
     "NesTriggerKind": {
-      "description": "What triggered the suggestion request.",
-      "oneOf": [
+      "anyOf": [
         {
           "const": "automatic",
           "description": "Triggered by user typing or cursor movement.",
@@ -4731,8 +4952,14 @@
           "const": "manual",
           "description": "Triggered by an explicit user action (keyboard shortcut).",
           "type": "string"
+        },
+        {
+          "description": "Custom or future suggestion trigger kind.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+          "title": "Other",
+          "type": "string"
         }
-      ]
+      ],
+      "description": "What triggered the suggestion request."
     },
     "NesUserAction": {
       "description": "A user action (typing, cursor movement, etc.).",
@@ -4929,8 +5156,7 @@
       "type": "string"
     },
     "PermissionOptionKind": {
-      "description": "The type of permission option being presented to the user.\n\nHelps clients choose appropriate icons and UI treatment.",
-      "oneOf": [
+      "anyOf": [
         {
           "const": "allow_once",
           "description": "Allow this operation only this time.",
@@ -4950,8 +5176,14 @@
           "const": "reject_always",
           "description": "Reject this operation and remember the choice.",
           "type": "string"
+        },
+        {
+          "description": "Custom or future permission option kind.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+          "title": "other",
+          "type": "string"
         }
-      ]
+      ],
+      "description": "The type of permission option being presented to the user.\n\nHelps clients choose appropriate icons and UI treatment."
     },
     "Plan": {
       "description": "An execution plan for accomplishing complex tasks.\n\nPlans consist of multiple entries representing individual tasks or goals.\nAgents report plans to clients to provide visibility into their execution strategy.\nPlans can evolve during execution as the agent discovers new requirements or completes tasks.\n\nSee protocol docs: [Agent Plan](https://agentclientprotocol.com/protocol/agent-plan)",
@@ -5016,8 +5248,7 @@
       "type": "object"
     },
     "PlanEntryPriority": {
-      "description": "Priority levels for plan entries.\n\nUsed to indicate the relative importance or urgency of different\ntasks in the execution plan.\nSee protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/agent-plan#plan-entries)",
-      "oneOf": [
+      "anyOf": [
         {
           "const": "high",
           "description": "High priority task - critical to the overall goal.",
@@ -5032,12 +5263,17 @@
           "const": "low",
           "description": "Low priority task - nice to have but not essential.",
           "type": "string"
+        },
+        {
+          "description": "Custom or future plan entry priority.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+          "title": "other",
+          "type": "string"
         }
-      ]
+      ],
+      "description": "Priority levels for plan entries.\n\nUsed to indicate the relative importance or urgency of different\ntasks in the execution plan.\nSee protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/agent-plan#plan-entries)"
     },
     "PlanEntryStatus": {
-      "description": "Status of a plan entry in the execution flow.\n\nTracks the lifecycle of each task from planning through completion.\nSee protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/agent-plan#plan-entries)",
-      "oneOf": [
+      "anyOf": [
         {
           "const": "pending",
           "description": "The task has not started yet.",
@@ -5052,8 +5288,14 @@
           "const": "completed",
           "description": "The task has been successfully completed.",
           "type": "string"
+        },
+        {
+          "description": "Custom or future plan entry status.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+          "title": "other",
+          "type": "string"
         }
-      ]
+      ],
+      "description": "Status of a plan entry in the execution flow.\n\nTracks the lifecycle of each task from planning through completion.\nSee protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/agent-plan#plan-entries)"
     },
     "PlanFile": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA plan represented by a file URI.",
@@ -5175,11 +5417,7 @@
       "type": "object"
     },
     "PlanUpdateContent": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nUpdated content for a plan.",
-      "discriminator": {
-        "propertyName": "type"
-      },
-      "oneOf": [
+      "anyOf": [
         {
           "allOf": [
             {
@@ -5227,8 +5465,59 @@
           },
           "required": ["type"],
           "type": "object"
+        },
+        {
+          "additionalProperties": true,
+          "description": "Custom or future plan update content.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nReceivers that do not understand this content type should preserve the\nraw payload when storing, replaying, proxying, or forwarding plans, and\notherwise ignore it or display it generically.",
+          "not": {
+            "anyOf": [
+              {
+                "properties": {
+                  "type": {
+                    "const": "items",
+                    "type": "string"
+                  }
+                },
+                "required": ["type"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "type": {
+                    "const": "file",
+                    "type": "string"
+                  }
+                },
+                "required": ["type"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "type": {
+                    "const": "markdown",
+                    "type": "string"
+                  }
+                },
+                "required": ["type"],
+                "type": "object"
+              }
+            ]
+          },
+          "properties": {
+            "type": {
+              "description": "Custom or future plan update content type.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+              "type": "string"
+            }
+          },
+          "required": ["type"],
+          "title": "unknown",
+          "type": "object"
         }
-      ]
+      ],
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nUpdated content for a plan.",
+      "discriminator": {
+        "propertyName": "type"
+      }
     },
     "Position": {
       "description": "A zero-based position in a text document.\n\nThe meaning of `character` depends on the negotiated position encoding.",
@@ -5830,9 +6119,18 @@
       "x-side": "agent"
     },
     "Role": {
-      "description": "The sender or recipient of messages and data in a conversation.",
-      "enum": ["assistant", "user"],
-      "type": "string"
+      "anyOf": [
+        {
+          "enum": ["assistant", "user"],
+          "type": "string"
+        },
+        {
+          "description": "Custom or future role.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+          "title": "other",
+          "type": "string"
+        }
+      ],
+      "description": "The sender or recipient of messages and data in a conversation."
     },
     "SelectedPermissionOutcome": {
       "description": "The user selected one of the provided options.",
@@ -5973,11 +6271,7 @@
       "type": "string"
     },
     "SessionConfigOption": {
-      "description": "A session configuration option selector and its current state.",
-      "discriminator": {
-        "propertyName": "type"
-      },
-      "oneOf": [
+      "anyOf": [
         {
           "allOf": [
             {
@@ -6009,8 +6303,49 @@
           },
           "required": ["type"],
           "type": "object"
+        },
+        {
+          "additionalProperties": true,
+          "description": "Custom or future session configuration option payload.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nClients that do not understand this option type should preserve the raw\npayload when storing, replaying, proxying, or forwarding configuration\ndata, and otherwise ignore the option or display it generically.",
+          "not": {
+            "anyOf": [
+              {
+                "properties": {
+                  "type": {
+                    "const": "select",
+                    "type": "string"
+                  }
+                },
+                "required": ["type"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "type": {
+                    "const": "boolean",
+                    "type": "string"
+                  }
+                },
+                "required": ["type"],
+                "type": "object"
+              }
+            ]
+          },
+          "properties": {
+            "type": {
+              "description": "Custom or future session configuration option type.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+              "type": "string"
+            }
+          },
+          "required": ["type"],
+          "title": "unknown",
+          "type": "object"
         }
       ],
+      "description": "A session configuration option selector and its current state.",
+      "discriminator": {
+        "propertyName": "type"
+      },
       "properties": {
         "_meta": {
           "additionalProperties": true,
@@ -6066,7 +6401,7 @@
           "type": "string"
         },
         {
-          "description": "Unknown / uncategorized selector.",
+          "description": "Custom or future category.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
           "title": "other",
           "type": "string"
         }
@@ -6396,11 +6731,7 @@
       "type": "object"
     },
     "SessionUpdate": {
-      "description": "Different types of updates that can be sent during session processing.\n\nThese updates provide real-time feedback about the agent's progress.\n\nSee protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-turn#3-agent-reports-output)",
-      "discriminator": {
-        "propertyName": "sessionUpdate"
-      },
-      "oneOf": [
+      "anyOf": [
         {
           "allOf": [
             {
@@ -6608,8 +6939,159 @@
           },
           "required": ["sessionUpdate"],
           "type": "object"
+        },
+        {
+          "additionalProperties": true,
+          "description": "Custom or future session update.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nReceivers that do not understand this update type should preserve the\nraw payload when storing, replaying, proxying, or forwarding session\nhistory, and otherwise ignore it or display it generically.",
+          "not": {
+            "anyOf": [
+              {
+                "properties": {
+                  "sessionUpdate": {
+                    "const": "user_message_chunk",
+                    "type": "string"
+                  }
+                },
+                "required": ["sessionUpdate"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "sessionUpdate": {
+                    "const": "agent_message_chunk",
+                    "type": "string"
+                  }
+                },
+                "required": ["sessionUpdate"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "sessionUpdate": {
+                    "const": "agent_thought_chunk",
+                    "type": "string"
+                  }
+                },
+                "required": ["sessionUpdate"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "sessionUpdate": {
+                    "const": "tool_call",
+                    "type": "string"
+                  }
+                },
+                "required": ["sessionUpdate"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "sessionUpdate": {
+                    "const": "tool_call_update",
+                    "type": "string"
+                  }
+                },
+                "required": ["sessionUpdate"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "sessionUpdate": {
+                    "const": "plan",
+                    "type": "string"
+                  }
+                },
+                "required": ["sessionUpdate"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "sessionUpdate": {
+                    "const": "available_commands_update",
+                    "type": "string"
+                  }
+                },
+                "required": ["sessionUpdate"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "sessionUpdate": {
+                    "const": "current_mode_update",
+                    "type": "string"
+                  }
+                },
+                "required": ["sessionUpdate"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "sessionUpdate": {
+                    "const": "config_option_update",
+                    "type": "string"
+                  }
+                },
+                "required": ["sessionUpdate"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "sessionUpdate": {
+                    "const": "session_info_update",
+                    "type": "string"
+                  }
+                },
+                "required": ["sessionUpdate"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "sessionUpdate": {
+                    "const": "plan_update",
+                    "type": "string"
+                  }
+                },
+                "required": ["sessionUpdate"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "sessionUpdate": {
+                    "const": "plan_removed",
+                    "type": "string"
+                  }
+                },
+                "required": ["sessionUpdate"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "sessionUpdate": {
+                    "const": "usage_update",
+                    "type": "string"
+                  }
+                },
+                "required": ["sessionUpdate"],
+                "type": "object"
+              }
+            ]
+          },
+          "properties": {
+            "sessionUpdate": {
+              "description": "Custom or future session update type.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+              "type": "string"
+            }
+          },
+          "required": ["sessionUpdate"],
+          "title": "unknown",
+          "type": "object"
         }
-      ]
+      ],
+      "description": "Different types of updates that can be sent during session processing.\n\nThese updates provide real-time feedback about the agent's progress.\n\nSee protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-turn#3-agent-reports-output)",
+      "discriminator": {
+        "propertyName": "sessionUpdate"
+      }
     },
     "SetProviderRequest": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for `providers/set`.\n\nReplaces the full configuration for one provider id.",
@@ -6889,8 +7371,7 @@
       "x-side": "agent"
     },
     "StopReason": {
-      "description": "Reasons why an agent stops processing a prompt turn.\n\nSee protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/prompt-turn#stop-reasons)",
-      "oneOf": [
+      "anyOf": [
         {
           "const": "end_turn",
           "description": "The turn ended successfully.",
@@ -6915,12 +7396,17 @@
           "const": "cancelled",
           "description": "The turn was cancelled by the client via `session/cancel`.\n\nThis stop reason MUST be returned when the client sends a `session/cancel`\nnotification, even if the cancellation causes exceptions in underlying operations.\nAgents should catch these exceptions and return this semantically meaningful\nresponse to confirm successful cancellation.",
           "type": "string"
+        },
+        {
+          "description": "Custom or future stop reason.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+          "title": "other",
+          "type": "string"
         }
-      ]
+      ],
+      "description": "Reasons why an agent stops processing a prompt turn.\n\nSee protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/prompt-turn#stop-reasons)"
     },
     "StringFormat": {
-      "description": "String format types for string properties in elicitation schemas.",
-      "oneOf": [
+      "anyOf": [
         {
           "const": "email",
           "description": "Email address format.",
@@ -6940,8 +7426,14 @@
           "const": "date-time",
           "description": "Date-time format (ISO 8601).",
           "type": "string"
+        },
+        {
+          "description": "Custom or future string format.\n\nUnknown formats are preserved. Implementations that do not understand a\nformat should treat it as an annotation rather than rejecting the schema.",
+          "title": "other",
+          "type": "string"
         }
-      ]
+      ],
+      "description": "String format types for string properties in elicitation schemas."
     },
     "StringPropertySchema": {
       "description": "Schema for string properties in an elicitation form.\n\nWhen `enum` or `oneOf` is set, this represents a single-select enum\nwith `\"type\": \"string\"`.",
@@ -7345,11 +7837,7 @@
       "type": "object"
     },
     "ToolCallContent": {
-      "description": "Content produced by a tool call.\n\nTool calls can produce different types of content including\nstandard content blocks (text, images) or file diffs.\n\nSee protocol docs: [Content](https://agentclientprotocol.com/protocol/tool-calls#content)",
-      "discriminator": {
-        "propertyName": "type"
-      },
-      "oneOf": [
+      "anyOf": [
         {
           "allOf": [
             {
@@ -7397,8 +7885,59 @@
           },
           "required": ["type"],
           "type": "object"
+        },
+        {
+          "additionalProperties": true,
+          "description": "Custom or future tool call content.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nReceivers that do not understand this content type should preserve the\nraw payload when storing, replaying, proxying, or forwarding tool call\noutput, and otherwise ignore it or display it generically.",
+          "not": {
+            "anyOf": [
+              {
+                "properties": {
+                  "type": {
+                    "const": "content",
+                    "type": "string"
+                  }
+                },
+                "required": ["type"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "type": {
+                    "const": "diff",
+                    "type": "string"
+                  }
+                },
+                "required": ["type"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "type": {
+                    "const": "terminal",
+                    "type": "string"
+                  }
+                },
+                "required": ["type"],
+                "type": "object"
+              }
+            ]
+          },
+          "properties": {
+            "type": {
+              "description": "Custom or future tool call content type.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+              "type": "string"
+            }
+          },
+          "required": ["type"],
+          "title": "unknown",
+          "type": "object"
         }
-      ]
+      ],
+      "description": "Content produced by a tool call.\n\nTool calls can produce different types of content including\nstandard content blocks (text, images) or file diffs.\n\nSee protocol docs: [Content](https://agentclientprotocol.com/protocol/tool-calls#content)",
+      "discriminator": {
+        "propertyName": "type"
+      }
     },
     "ToolCallId": {
       "description": "Unique identifier for a tool call within a session.",
@@ -7427,8 +7966,7 @@
       "type": "object"
     },
     "ToolCallStatus": {
-      "description": "Execution status of a tool call.\n\nTool calls progress through different statuses during their lifecycle.\n\nSee protocol docs: [Status](https://agentclientprotocol.com/protocol/tool-calls#status)",
-      "oneOf": [
+      "anyOf": [
         {
           "const": "pending",
           "description": "The tool call hasn't started running yet because the input is either\nstreaming or we're awaiting approval.",
@@ -7448,8 +7986,14 @@
           "const": "failed",
           "description": "The tool call failed with an error.",
           "type": "string"
+        },
+        {
+          "description": "Custom or future tool call status.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+          "title": "other",
+          "type": "string"
         }
-      ]
+      ],
+      "description": "Execution status of a tool call.\n\nTool calls progress through different statuses during their lifecycle.\n\nSee protocol docs: [Status](https://agentclientprotocol.com/protocol/tool-calls#status)"
     },
     "ToolCallUpdate": {
       "description": "An update to an existing tool call.\n\nUsed to report progress and results as tools execute. All fields except\nthe tool call ID are optional - only changed fields need to be included.\n\nSee protocol docs: [Updating](https://agentclientprotocol.com/protocol/tool-calls#updating)",
@@ -7518,8 +8062,7 @@
       "type": "object"
     },
     "ToolKind": {
-      "description": "Categories of tools that can be invoked.\n\nTool kinds help clients choose appropriate icons and optimize how they\ndisplay tool execution progress.\n\nSee protocol docs: [Creating](https://agentclientprotocol.com/protocol/tool-calls#creating)",
-      "oneOf": [
+      "anyOf": [
         {
           "const": "read",
           "description": "Reading files or data.",
@@ -7569,11 +8112,21 @@
           "const": "other",
           "description": "Other tool types (default).",
           "type": "string"
+        },
+        {
+          "description": "Custom or future tool kind.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+          "title": "unknown",
+          "type": "string"
         }
-      ]
+      ],
+      "description": "Categories of tools that can be invoked.\n\nTool kinds help clients choose appropriate icons and optimize how they\ndisplay tool execution progress.\n\nSee protocol docs: [Creating](https://agentclientprotocol.com/protocol/tool-calls#creating)"
     },
     "UnstructuredCommandInput": {
       "description": "All text that was typed after the command name is provided as input.",
+      "not": {
+        "required": ["type"],
+        "type": "object"
+      },
       "properties": {
         "_meta": {
           "additionalProperties": true,
