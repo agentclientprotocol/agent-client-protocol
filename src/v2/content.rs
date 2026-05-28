@@ -70,16 +70,16 @@ pub enum ContentBlock {
     /// the raw payload when storing, replaying, proxying, or forwarding content,
     /// and otherwise ignore it or display it generically.
     #[serde(untagged)]
-    Unknown(UnknownContentBlock),
+    Other(OtherContentBlock),
 }
 
 /// Custom or future content block payload.
 #[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
 #[schemars(inline)]
-#[schemars(transform = unknown_content_block_schema)]
+#[schemars(transform = other_content_block_schema)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct UnknownContentBlock {
+pub struct OtherContentBlock {
     /// Custom or future content block type.
     ///
     /// Values beginning with `_` are reserved for implementation-specific
@@ -92,7 +92,7 @@ pub struct UnknownContentBlock {
     pub fields: BTreeMap<String, serde_json::Value>,
 }
 
-impl UnknownContentBlock {
+impl OtherContentBlock {
     #[must_use]
     pub fn new(type_: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
         fields.remove("type");
@@ -103,7 +103,7 @@ impl UnknownContentBlock {
     }
 }
 
-impl<'de> Deserialize<'de> for UnknownContentBlock {
+impl<'de> Deserialize<'de> for OtherContentBlock {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -133,7 +133,7 @@ fn is_known_content_block_type(type_: &str) -> bool {
     )
 }
 
-fn unknown_content_block_schema(schema: &mut Schema) {
+fn other_content_block_schema(schema: &mut Schema) {
     super::schema_util::reject_known_string_discriminators(
         schema,
         "type",
@@ -652,7 +652,7 @@ mod tests {
         }))
         .unwrap();
 
-        let ContentBlock::Unknown(unknown) = block else {
+        let ContentBlock::Other(unknown) = block else {
             panic!("expected unknown content block");
         };
 
@@ -662,7 +662,7 @@ mod tests {
             Some(&serde_json::json!("Status"))
         );
         assert_eq!(
-            serde_json::to_value(ContentBlock::Unknown(unknown)).unwrap(),
+            serde_json::to_value(ContentBlock::Other(unknown)).unwrap(),
             serde_json::json!({
                 "type": "_widget",
                 "title": "Status",

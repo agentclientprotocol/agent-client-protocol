@@ -1830,16 +1830,16 @@ pub enum NesSuggestion {
     /// the raw payload when storing, replaying, proxying, or forwarding
     /// suggestions, and otherwise ignore it or display it generically.
     #[serde(untagged)]
-    Unknown(UnknownNesSuggestion),
+    Other(OtherNesSuggestion),
 }
 
 /// Custom or future NES suggestion payload.
 #[derive(Debug, Clone, Serialize, JsonSchema, PartialEq, Eq)]
 #[schemars(inline)]
-#[schemars(transform = unknown_nes_suggestion_schema)]
+#[schemars(transform = other_nes_suggestion_schema)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct UnknownNesSuggestion {
+pub struct OtherNesSuggestion {
     /// Custom or future NES suggestion kind.
     ///
     /// Values beginning with `_` are reserved for implementation-specific
@@ -1851,7 +1851,7 @@ pub struct UnknownNesSuggestion {
     pub fields: BTreeMap<String, serde_json::Value>,
 }
 
-impl UnknownNesSuggestion {
+impl OtherNesSuggestion {
     #[must_use]
     pub fn new(kind: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
         fields.remove("kind");
@@ -1862,7 +1862,7 @@ impl UnknownNesSuggestion {
     }
 }
 
-impl<'de> Deserialize<'de> for UnknownNesSuggestion {
+impl<'de> Deserialize<'de> for OtherNesSuggestion {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -1889,7 +1889,7 @@ fn is_known_nes_suggestion_kind(kind: &str) -> bool {
     matches!(kind, "edit" | "jump" | "rename" | "searchAndReplace")
 }
 
-fn unknown_nes_suggestion_schema(schema: &mut Schema) {
+fn other_nes_suggestion_schema(schema: &mut Schema) {
     super::schema_util::reject_known_string_discriminators(
         schema,
         "kind",
@@ -2496,14 +2496,14 @@ mod tests {
         }))
         .unwrap();
 
-        let NesSuggestion::Unknown(unknown) = suggestion else {
+        let NesSuggestion::Other(unknown) = suggestion else {
             panic!("expected unknown NES suggestion");
         };
 
         assert_eq!(unknown.kind, "_preview");
         assert_eq!(unknown.fields.get("id"), Some(&json!("sugg_001")));
         assert_eq!(
-            serde_json::to_value(NesSuggestion::Unknown(unknown)).unwrap(),
+            serde_json::to_value(NesSuggestion::Other(unknown)).unwrap(),
             json!({
                 "kind": "_preview",
                 "id": "sugg_001",

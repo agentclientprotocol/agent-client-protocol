@@ -156,17 +156,17 @@ pub enum PlanUpdateContent {
     /// raw payload when storing, replaying, proxying, or forwarding plans, and
     /// otherwise ignore it or display it generically.
     #[serde(untagged)]
-    Unknown(UnknownPlanUpdateContent),
+    Other(OtherPlanUpdateContent),
 }
 
 /// Custom or future plan update content payload.
 #[cfg(feature = "unstable_plan_operations")]
 #[derive(Debug, Clone, Serialize, JsonSchema, PartialEq, Eq)]
 #[schemars(inline)]
-#[schemars(transform = unknown_plan_update_content_schema)]
+#[schemars(transform = other_plan_update_content_schema)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct UnknownPlanUpdateContent {
+pub struct OtherPlanUpdateContent {
     /// Custom or future plan update content type.
     ///
     /// Values beginning with `_` are reserved for implementation-specific
@@ -180,7 +180,7 @@ pub struct UnknownPlanUpdateContent {
 }
 
 #[cfg(feature = "unstable_plan_operations")]
-impl UnknownPlanUpdateContent {
+impl OtherPlanUpdateContent {
     #[must_use]
     pub fn new(type_: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
         fields.remove("type");
@@ -192,7 +192,7 @@ impl UnknownPlanUpdateContent {
 }
 
 #[cfg(feature = "unstable_plan_operations")]
-impl<'de> Deserialize<'de> for UnknownPlanUpdateContent {
+impl<'de> Deserialize<'de> for OtherPlanUpdateContent {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -221,7 +221,7 @@ fn is_known_plan_update_content_type(type_: &str) -> bool {
 }
 
 #[cfg(feature = "unstable_plan_operations")]
-fn unknown_plan_update_content_schema(schema: &mut Schema) {
+fn other_plan_update_content_schema(schema: &mut Schema) {
     super::schema_util::reject_known_string_discriminators(
         schema,
         "type",
@@ -603,14 +603,14 @@ mod tests {
         }))
         .unwrap();
 
-        let PlanUpdateContent::Unknown(unknown) = content else {
+        let PlanUpdateContent::Other(unknown) = content else {
             panic!("expected unknown plan update content");
         };
 
         assert_eq!(unknown.type_, "_timeline");
         assert_eq!(unknown.fields.get("id"), Some(&serde_json::json!("plan-1")));
         assert_eq!(
-            serde_json::to_value(PlanUpdateContent::Unknown(unknown)).unwrap(),
+            serde_json::to_value(PlanUpdateContent::Other(unknown)).unwrap(),
             serde_json::json!({
                 "type": "_timeline",
                 "id": "plan-1",

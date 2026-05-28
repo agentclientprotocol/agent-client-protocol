@@ -145,7 +145,7 @@ pub enum SessionUpdate {
     /// raw payload when storing, replaying, proxying, or forwarding session
     /// history, and otherwise ignore it or display it generically.
     #[serde(untagged)]
-    Unknown(UnknownSessionUpdate),
+    Other(OtherSessionUpdate),
 }
 
 /// Custom or future session update payload.
@@ -155,10 +155,10 @@ pub enum SessionUpdate {
 /// history.
 #[derive(Debug, Clone, Serialize, JsonSchema, PartialEq)]
 #[schemars(inline)]
-#[schemars(transform = unknown_session_update_schema)]
+#[schemars(transform = other_session_update_schema)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct UnknownSessionUpdate {
+pub struct OtherSessionUpdate {
     /// Custom or future session update type.
     ///
     /// Values beginning with `_` are reserved for implementation-specific
@@ -171,7 +171,7 @@ pub struct UnknownSessionUpdate {
     pub fields: BTreeMap<String, serde_json::Value>,
 }
 
-impl UnknownSessionUpdate {
+impl OtherSessionUpdate {
     #[must_use]
     pub fn new(
         session_update: impl Into<String>,
@@ -185,7 +185,7 @@ impl UnknownSessionUpdate {
     }
 }
 
-impl<'de> Deserialize<'de> for UnknownSessionUpdate {
+impl<'de> Deserialize<'de> for OtherSessionUpdate {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -231,7 +231,7 @@ fn is_known_session_update(session_update: &str) -> bool {
     }
 }
 
-fn unknown_session_update_schema(schema: &mut Schema) {
+fn other_session_update_schema(schema: &mut Schema) {
     super::schema_util::reject_known_string_discriminators(
         schema,
         "sessionUpdate",
@@ -657,7 +657,7 @@ pub enum AvailableCommandInput {
     /// payload when storing, replaying, proxying, or forwarding command
     /// metadata, and otherwise ignore the input specification or display the
     /// command without structured input.
-    Unknown(UnknownAvailableCommandInput),
+    Other(OtherAvailableCommandInput),
 }
 
 /// Custom or future command input specification.
@@ -665,7 +665,7 @@ pub enum AvailableCommandInput {
 #[schemars(inline)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct UnknownAvailableCommandInput {
+pub struct OtherAvailableCommandInput {
     /// Custom or future command input type.
     ///
     /// Values beginning with `_` are reserved for implementation-specific
@@ -678,7 +678,7 @@ pub struct UnknownAvailableCommandInput {
     pub fields: BTreeMap<String, serde_json::Value>,
 }
 
-impl UnknownAvailableCommandInput {
+impl OtherAvailableCommandInput {
     #[must_use]
     pub fn new(type_: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
         fields.remove("type");
@@ -689,7 +689,7 @@ impl UnknownAvailableCommandInput {
     }
 }
 
-impl<'de> Deserialize<'de> for UnknownAvailableCommandInput {
+impl<'de> Deserialize<'de> for OtherAvailableCommandInput {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -2437,7 +2437,7 @@ mod tests {
         }))
         .unwrap();
 
-        let SessionUpdate::Unknown(unknown) = update else {
+        let SessionUpdate::Other(unknown) = update else {
             panic!("expected unknown session update");
         };
 
@@ -2446,7 +2446,7 @@ mod tests {
         assert_eq!(unknown.fields.get("progress"), Some(&json!(0.5)));
 
         assert_eq!(
-            serde_json::to_value(SessionUpdate::Unknown(unknown)).unwrap(),
+            serde_json::to_value(SessionUpdate::Other(unknown)).unwrap(),
             json!({
                 "sessionUpdate": "_status_badge",
                 "label": "Indexing",
@@ -2478,7 +2478,7 @@ mod tests {
         }))
         .unwrap();
 
-        let AvailableCommandInput::Unknown(unknown) = input else {
+        let AvailableCommandInput::Other(unknown) = input else {
             panic!("expected unknown command input");
         };
 
@@ -2489,7 +2489,7 @@ mod tests {
             Some(&json!(["fast", "careful"]))
         );
         assert_eq!(
-            serde_json::to_value(AvailableCommandInput::Unknown(unknown)).unwrap(),
+            serde_json::to_value(AvailableCommandInput::Other(unknown)).unwrap(),
             json!({
                 "type": "_choices",
                 "hint": "Pick one",

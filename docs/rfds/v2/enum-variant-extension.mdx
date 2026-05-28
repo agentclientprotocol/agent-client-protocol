@@ -65,7 +65,6 @@ The v2 Rust schema types should encode this convention directly where fallback b
 - Core control-flow discriminators may remain closed when there is no safe fallback behavior.
 - SDKs should expose fallback variants that carry unknown values rather than silently discarding them.
 - Conversion from v2 to v1 should fail when an unknown v2 value cannot be represented in v1 without data loss.
-- v2-to-v1 conversion errors for unknown v2 variants should be structured so compatibility bridges can explicitly decide to drop unsupported informational notifications while continuing to fail requests, responses, and required fields that cannot be represented correctly.
 - v1 schemas remain unchanged.
 
 The fallback variant's Rust doc comment should document the `_` extension rule and the future-ACP reservation rule, so generated docs and schemas follow the type source of truth.

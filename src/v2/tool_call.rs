@@ -493,16 +493,16 @@ pub enum ToolCallContent {
     /// raw payload when storing, replaying, proxying, or forwarding tool call
     /// output, and otherwise ignore it or display it generically.
     #[serde(untagged)]
-    Unknown(UnknownToolCallContent),
+    Other(OtherToolCallContent),
 }
 
 /// Custom or future tool call content payload.
 #[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
 #[schemars(inline)]
-#[schemars(transform = unknown_tool_call_content_schema)]
+#[schemars(transform = other_tool_call_content_schema)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct UnknownToolCallContent {
+pub struct OtherToolCallContent {
     /// Custom or future tool call content type.
     ///
     /// Values beginning with `_` are reserved for implementation-specific
@@ -515,7 +515,7 @@ pub struct UnknownToolCallContent {
     pub fields: BTreeMap<String, serde_json::Value>,
 }
 
-impl UnknownToolCallContent {
+impl OtherToolCallContent {
     #[must_use]
     pub fn new(type_: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
         fields.remove("type");
@@ -526,7 +526,7 @@ impl UnknownToolCallContent {
     }
 }
 
-impl<'de> Deserialize<'de> for UnknownToolCallContent {
+impl<'de> Deserialize<'de> for OtherToolCallContent {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -553,7 +553,7 @@ fn is_known_tool_call_content_type(type_: &str) -> bool {
     matches!(type_, "content" | "diff" | "terminal")
 }
 
-fn unknown_tool_call_content_schema(schema: &mut Schema) {
+fn other_tool_call_content_schema(schema: &mut Schema) {
     super::schema_util::reject_known_string_discriminators(
         schema,
         "type",
@@ -788,7 +788,7 @@ mod tests {
         }))
         .unwrap();
 
-        let ToolCallContent::Unknown(unknown) = content else {
+        let ToolCallContent::Other(unknown) = content else {
             panic!("expected unknown tool call content");
         };
 
@@ -798,7 +798,7 @@ mod tests {
             Some(&serde_json::json!("Tests"))
         );
         assert_eq!(
-            serde_json::to_value(ToolCallContent::Unknown(unknown)).unwrap(),
+            serde_json::to_value(ToolCallContent::Other(unknown)).unwrap(),
             serde_json::json!({
                 "type": "_chart",
                 "title": "Tests",

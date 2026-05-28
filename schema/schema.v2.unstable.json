@@ -742,7 +742,7 @@
             }
           },
           "required": ["type", "id", "name"],
-          "title": "unknown",
+          "title": "other",
           "type": "object"
         },
         {
@@ -948,7 +948,7 @@
             }
           },
           "required": ["type"],
-          "title": "unknown",
+          "title": "other",
           "type": "object"
         }
       ],
@@ -1972,7 +1972,7 @@
             }
           },
           "required": ["type"],
-          "title": "unknown",
+          "title": "other",
           "type": "object"
         }
       ],
@@ -4908,7 +4908,7 @@
             }
           },
           "required": ["kind"],
-          "title": "unknown",
+          "title": "other",
           "type": "object"
         }
       ],
@@ -5510,7 +5510,7 @@
             }
           },
           "required": ["type"],
-          "title": "unknown",
+          "title": "other",
           "type": "object"
         }
       ],
@@ -6338,7 +6338,7 @@
             }
           },
           "required": ["type"],
-          "title": "unknown",
+          "title": "other",
           "type": "object"
         }
       ],
@@ -7084,7 +7084,7 @@
             }
           },
           "required": ["sessionUpdate"],
-          "title": "unknown",
+          "title": "other",
           "type": "object"
         }
       ],
@@ -7930,7 +7930,7 @@
             }
           },
           "required": ["type"],
-          "title": "unknown",
+          "title": "other",
           "type": "object"
         }
       ],

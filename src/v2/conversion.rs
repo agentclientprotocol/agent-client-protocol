@@ -24,29 +24,6 @@ pub type Result<T> = std::result::Result<T, ProtocolConversionError>;
 #[non_exhaustive]
 pub struct ProtocolConversionError {
     message: String,
-    unsupported_v2_variant: Option<UnsupportedV2Variant>,
-}
-
-/// A v2 enum-like variant that cannot be represented in the v1 type namespace.
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[non_exhaustive]
-pub struct UnsupportedV2Variant {
-    type_name: String,
-    value: String,
-}
-
-impl UnsupportedV2Variant {
-    /// Returns the v2 enum-like type name that contained the unsupported variant.
-    #[must_use]
-    pub fn type_name(&self) -> &str {
-        &self.type_name
-    }
-
-    /// Returns the unsupported v2 variant value.
-    #[must_use]
-    pub fn value(&self) -> &str {
-        &self.value
-    }
 }
 
 impl ProtocolConversionError {
@@ -55,7 +32,6 @@ impl ProtocolConversionError {
     pub fn new(message: impl Into<String>) -> Self {
         Self {
             message: message.into(),
-            unsupported_v2_variant: None,
         }
     }
 
@@ -63,20 +39,6 @@ impl ProtocolConversionError {
     #[must_use]
     pub fn message(&self) -> &str {
         &self.message
-    }
-
-    /// Returns the unsupported v2 variant details when this conversion failed
-    /// because a v2 enum-like value has no v1 representation.
-    #[must_use]
-    pub fn unsupported_v2_variant(&self) -> Option<&UnsupportedV2Variant> {
-        self.unsupported_v2_variant.as_ref()
-    }
-
-    /// Returns true when this conversion failed because a v2 enum-like value
-    /// has no v1 representation.
-    #[must_use]
-    pub fn is_unsupported_v2_variant(&self) -> bool {
-        self.unsupported_v2_variant.is_some()
     }
 }
 
@@ -89,13 +51,9 @@ impl fmt::Display for ProtocolConversionError {
 impl std::error::Error for ProtocolConversionError {}
 
 fn unknown_v2_enum_variant(type_name: &str, value: &str) -> ProtocolConversionError {
-    ProtocolConversionError {
-        message: format!("v2 {type_name} variant `{value}` cannot be represented in v1"),
-        unsupported_v2_variant: Some(UnsupportedV2Variant {
-            type_name: type_name.to_string(),
-            value: value.to_string(),
-        }),
-    }
+    ProtocolConversionError::new(format!(
+        "v2 {type_name} variant `{value}` cannot be represented in v1"
+    ))
 }
 
 /// Converts a [`ProtocolConversionError`] into a v1 [`Error`](crate::v1::Error)
@@ -549,7 +507,7 @@ impl IntoV1 for super::PlanUpdateContent {
             Self::Items(value) => crate::v1::PlanUpdateContent::Items(value.into_v1()?),
             Self::File(value) => crate::v1::PlanUpdateContent::File(value.into_v1()?),
             Self::Markdown(value) => crate::v1::PlanUpdateContent::Markdown(value.into_v1()?),
-            Self::Unknown(value) => {
+            Self::Other(value) => {
                 return Err(unknown_v2_enum_variant("PlanUpdateContent", &value.type_));
             }
         })
@@ -916,7 +874,7 @@ impl IntoV1 for super::SessionUpdate {
             }
             #[cfg(feature = "unstable_session_usage")]
             Self::UsageUpdate(value) => crate::v1::SessionUpdate::UsageUpdate(value.into_v1()?),
-            Self::Unknown(value) => {
+            Self::Other(value) => {
                 return Err(unknown_v2_enum_variant(
                     "SessionUpdate",
                     &value.session_update,
@@ -1239,7 +1197,7 @@ impl IntoV1 for super::AvailableCommandInput {
             Self::Unstructured(value) => {
                 crate::v1::AvailableCommandInput::Unstructured(value.into_v1()?)
             }
-            Self::Unknown(value) => {
+            Self::Other(value) => {
                 return Err(unknown_v2_enum_variant(
                     "AvailableCommandInput",
                     &value.type_,
@@ -2918,7 +2876,7 @@ impl IntoV1 for super::ToolCallContent {
             Self::Content(value) => crate::v1::ToolCallContent::Content(value.into_v1()?),
             Self::Diff(value) => crate::v1::ToolCallContent::Diff(value.into_v1()?),
             Self::Terminal(value) => crate::v1::ToolCallContent::Terminal(value.into_v1()?),
-            Self::Unknown(value) => {
+            Self::Other(value) => {
                 return Err(unknown_v2_enum_variant("ToolCallContent", &value.type_));
             }
         })
@@ -3328,7 +3286,7 @@ impl IntoV1 for super::AuthMethod {
             Self::EnvVar(value) => crate::v1::AuthMethod::EnvVar(value.into_v1()?),
             #[cfg(feature = "unstable_auth_methods")]
             Self::Terminal(value) => crate::v1::AuthMethod::Terminal(value.into_v1()?),
-            Self::Unknown(value) => {
+            Self::Other(value) => {
                 return Err(unknown_v2_enum_variant("AuthMethod", &value.type_));
             }
             Self::Agent(value) => crate::v1::AuthMethod::Agent(value.into_v1()?),
@@ -4478,7 +4436,7 @@ impl IntoV1 for super::SessionConfigKind {
             Self::Select(value) => crate::v1::SessionConfigKind::Select(value.into_v1()?),
             #[cfg(feature = "unstable_boolean_config")]
             Self::Boolean(value) => crate::v1::SessionConfigKind::Boolean(value.into_v1()?),
-            Self::Unknown(value) => {
+            Self::Other(value) => {
                 return Err(unknown_v2_enum_variant("SessionConfigKind", &value.type_));
             }
         })
@@ -7822,7 +7780,7 @@ impl IntoV1 for super::NesSuggestion {
             Self::SearchAndReplace(value) => {
                 crate::v1::NesSuggestion::SearchAndReplace(value.into_v1()?)
             }
-            Self::Unknown(value) => {
+            Self::Other(value) => {
                 return Err(unknown_v2_enum_variant("NesSuggestion", &value.kind));
             }
         })
@@ -9147,7 +9105,7 @@ impl IntoV1 for super::ContentBlock {
             Self::Audio(value) => crate::v1::ContentBlock::Audio(value.into_v1()?),
             Self::ResourceLink(value) => crate::v1::ContentBlock::ResourceLink(value.into_v1()?),
             Self::Resource(value) => crate::v1::ContentBlock::Resource(value.into_v1()?),
-            Self::Unknown(value) => {
+            Self::Other(value) => {
                 return Err(unknown_v2_enum_variant("ContentBlock", &value.type_));
             }
         })
@@ -9770,7 +9728,7 @@ mod tests {
 
     #[test]
     fn unknown_v2_session_update_does_not_convert_to_v1() {
-        let update = v2::SessionUpdate::Unknown(v2::UnknownSessionUpdate::new(
+        let update = v2::SessionUpdate::Other(v2::OtherSessionUpdate::new(
             "_status_badge",
             std::collections::BTreeMap::new(),
         ));
@@ -9782,51 +9740,37 @@ mod tests {
     }
 
     #[test]
-    fn unknown_v2_variant_conversion_error_is_structured() {
-        let error = v2_to_v1(v2::Role::Other("_critic".to_string())).unwrap_err();
-
-        assert_eq!(
-            error.message(),
-            "v2 Role variant `_critic` cannot be represented in v1"
-        );
-        assert!(error.is_unsupported_v2_variant());
-        let unsupported = error.unsupported_v2_variant().unwrap();
-        assert_eq!(unsupported.type_name(), "Role");
-        assert_eq!(unsupported.value(), "_critic");
-    }
-
-    #[test]
     fn unknown_v2_raw_fallbacks_do_not_convert_to_v1() {
         assert_v2_to_v1_error(
-            v2::ContentBlock::Unknown(v2::UnknownContentBlock::new(
+            v2::ContentBlock::Other(v2::OtherContentBlock::new(
                 "_widget",
                 std::collections::BTreeMap::new(),
             )),
             "v2 ContentBlock variant `_widget` cannot be represented in v1",
         );
         assert_v2_to_v1_error(
-            v2::ToolCallContent::Unknown(v2::UnknownToolCallContent::new(
+            v2::ToolCallContent::Other(v2::OtherToolCallContent::new(
                 "_chart",
                 std::collections::BTreeMap::new(),
             )),
             "v2 ToolCallContent variant `_chart` cannot be represented in v1",
         );
         assert_v2_to_v1_error(
-            v2::AvailableCommandInput::Unknown(v2::UnknownAvailableCommandInput::new(
+            v2::AvailableCommandInput::Other(v2::OtherAvailableCommandInput::new(
                 "_choices",
                 std::collections::BTreeMap::new(),
             )),
             "v2 AvailableCommandInput variant `_choices` cannot be represented in v1",
         );
         assert_v2_to_v1_error(
-            v2::SessionConfigKind::Unknown(v2::UnknownSessionConfigKind::new(
+            v2::SessionConfigKind::Other(v2::OtherSessionConfigKind::new(
                 "_slider",
                 std::collections::BTreeMap::new(),
             )),
             "v2 SessionConfigKind variant `_slider` cannot be represented in v1",
         );
         assert_v2_to_v1_error(
-            v2::AuthMethod::Unknown(v2::UnknownAuthMethod::new(
+            v2::AuthMethod::Other(v2::OtherAuthMethod::new(
                 "_oauth",
                 "oauth",
                 "OAuth",
@@ -9836,7 +9780,7 @@ mod tests {
         );
         #[cfg(feature = "unstable_plan_operations")]
         assert_v2_to_v1_error(
-            v2::PlanUpdateContent::Unknown(v2::UnknownPlanUpdateContent::new(
+            v2::PlanUpdateContent::Other(v2::OtherPlanUpdateContent::new(
                 "_timeline",
                 std::collections::BTreeMap::new(),
             )),
@@ -9844,7 +9788,7 @@ mod tests {
         );
         #[cfg(feature = "unstable_nes")]
         assert_v2_to_v1_error(
-            v2::NesSuggestion::Unknown(v2::UnknownNesSuggestion::new(
+            v2::NesSuggestion::Other(v2::OtherNesSuggestion::new(
                 "_preview",
                 std::collections::BTreeMap::new(),
             )),

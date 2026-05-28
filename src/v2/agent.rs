@@ -531,7 +531,7 @@ pub enum AuthMethod {
     /// payload when storing, replaying, proxying, or forwarding initialization
     /// data, and otherwise ignore the method or display it generically.
     #[serde(untagged)]
-    Unknown(UnknownAuthMethod),
+    Other(OtherAuthMethod),
     /// Agent handles authentication itself.
     ///
     /// This is the default when no `type` is specified.
@@ -545,7 +545,7 @@ impl AuthMethod {
     pub fn id(&self) -> &AuthMethodId {
         match self {
             Self::Agent(a) => &a.id,
-            Self::Unknown(a) => &a.id,
+            Self::Other(a) => &a.id,
             #[cfg(feature = "unstable_auth_methods")]
             Self::EnvVar(e) => &e.id,
             #[cfg(feature = "unstable_auth_methods")]
@@ -558,7 +558,7 @@ impl AuthMethod {
     pub fn name(&self) -> &str {
         match self {
             Self::Agent(a) => &a.name,
-            Self::Unknown(a) => &a.name,
+            Self::Other(a) => &a.name,
             #[cfg(feature = "unstable_auth_methods")]
             Self::EnvVar(e) => &e.name,
             #[cfg(feature = "unstable_auth_methods")]
@@ -571,7 +571,7 @@ impl AuthMethod {
     pub fn description(&self) -> Option<&str> {
         match self {
             Self::Agent(a) => a.description.as_deref(),
-            Self::Unknown(a) => a.description.as_deref(),
+            Self::Other(a) => a.description.as_deref(),
             #[cfg(feature = "unstable_auth_methods")]
             Self::EnvVar(e) => e.description.as_deref(),
             #[cfg(feature = "unstable_auth_methods")]
@@ -588,7 +588,7 @@ impl AuthMethod {
     pub fn meta(&self) -> Option<&Meta> {
         match self {
             Self::Agent(a) => a.meta.as_ref(),
-            Self::Unknown(a) => a.meta.as_ref(),
+            Self::Other(a) => a.meta.as_ref(),
             #[cfg(feature = "unstable_auth_methods")]
             Self::EnvVar(e) => e.meta.as_ref(),
             #[cfg(feature = "unstable_auth_methods")]
@@ -601,10 +601,10 @@ impl AuthMethod {
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, JsonSchema, PartialEq, Eq)]
 #[schemars(inline)]
-#[schemars(transform = unknown_auth_method_schema)]
+#[schemars(transform = other_auth_method_schema)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct UnknownAuthMethod {
+pub struct OtherAuthMethod {
     /// Custom or future authentication method type.
     ///
     /// Values beginning with `_` are reserved for implementation-specific
@@ -630,7 +630,7 @@ pub struct UnknownAuthMethod {
     pub fields: BTreeMap<String, serde_json::Value>,
 }
 
-impl UnknownAuthMethod {
+impl OtherAuthMethod {
     #[must_use]
     pub fn new(
         type_: impl Into<String>,
@@ -672,14 +672,14 @@ impl UnknownAuthMethod {
     }
 }
 
-impl<'de> Deserialize<'de> for UnknownAuthMethod {
+impl<'de> Deserialize<'de> for OtherAuthMethod {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
         #[derive(Deserialize)]
         #[serde(rename_all = "camelCase")]
-        struct RawUnknownAuthMethod {
+        struct RawOtherAuthMethod {
             #[serde(rename = "type")]
             type_: String,
             id: AuthMethodId,
@@ -691,7 +691,7 @@ impl<'de> Deserialize<'de> for UnknownAuthMethod {
             fields: BTreeMap<String, serde_json::Value>,
         }
 
-        let raw = RawUnknownAuthMethod::deserialize(deserializer)?;
+        let raw = RawOtherAuthMethod::deserialize(deserializer)?;
         if is_known_auth_method_type(&raw.type_) {
             return Err(serde::de::Error::custom(format!(
                 "known authentication method `{}` did not match its schema",
@@ -719,7 +719,7 @@ fn is_known_auth_method_type(type_: &str) -> bool {
     }
 }
 
-fn unknown_auth_method_schema(schema: &mut Schema) {
+fn other_auth_method_schema(schema: &mut Schema) {
     super::schema_util::reject_known_string_discriminators(
         schema,
         "type",
@@ -2621,16 +2621,16 @@ pub enum SessionConfigKind {
     /// payload when storing, replaying, proxying, or forwarding configuration
     /// data, and otherwise ignore the option or display it generically.
     #[serde(untagged)]
-    Unknown(UnknownSessionConfigKind),
+    Other(OtherSessionConfigKind),
 }
 
 /// Custom or future session configuration option payload.
 #[derive(Debug, Clone, Serialize, JsonSchema, PartialEq, Eq)]
 #[schemars(inline)]
-#[schemars(transform = unknown_session_config_kind_schema)]
+#[schemars(transform = other_session_config_kind_schema)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct UnknownSessionConfigKind {
+pub struct OtherSessionConfigKind {
     /// Custom or future session configuration option type.
     ///
     /// Values beginning with `_` are reserved for implementation-specific
@@ -2643,7 +2643,7 @@ pub struct UnknownSessionConfigKind {
     pub fields: BTreeMap<String, serde_json::Value>,
 }
 
-impl UnknownSessionConfigKind {
+impl OtherSessionConfigKind {
     #[must_use]
     pub fn new(type_: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
         fields.remove("type");
@@ -2654,7 +2654,7 @@ impl UnknownSessionConfigKind {
     }
 }
 
-impl<'de> Deserialize<'de> for UnknownSessionConfigKind {
+impl<'de> Deserialize<'de> for OtherSessionConfigKind {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -2686,7 +2686,7 @@ fn is_known_session_config_kind_type(type_: &str) -> bool {
     }
 }
 
-fn unknown_session_config_kind_schema(schema: &mut Schema) {
+fn other_session_config_kind_schema(schema: &mut Schema) {
     super::schema_util::reject_known_string_discriminators(
         schema,
         "type",
@@ -5889,7 +5889,7 @@ mod test_serialization {
 
         assert_eq!(method.id().0.as_ref(), "oauth");
         assert_eq!(method.name(), "OAuth");
-        let AuthMethod::Unknown(unknown) = method else {
+        let AuthMethod::Other(unknown) = method else {
             panic!("expected unknown auth method");
         };
         assert_eq!(unknown.type_, "_oauth");
@@ -5899,7 +5899,7 @@ mod test_serialization {
         );
 
         assert_eq!(
-            serde_json::to_value(AuthMethod::Unknown(unknown)).unwrap(),
+            serde_json::to_value(AuthMethod::Other(unknown)).unwrap(),
             json!({
                 "id": "oauth",
                 "name": "OAuth",
@@ -6484,7 +6484,7 @@ mod test_serialization {
         .unwrap();
 
         assert_eq!(option.id.to_string(), "verbosity");
-        let SessionConfigKind::Unknown(unknown) = &option.kind else {
+        let SessionConfigKind::Other(unknown) = &option.kind else {
             panic!("expected unknown config kind");
         };
         assert_eq!(unknown.type_, "_slider");
