@@ -80,6 +80,54 @@
               "protocol/transports",
               "protocol/schema",
               {
+                "group": "v2",
+                "hidden": true,
+                "pages": [
+                  "protocol/v2/overview",
+                  "protocol/v2/authentication",
+                  "protocol/v2/initialization",
+                  "protocol/v2/session-setup",
+                  "protocol/v2/session-list",
+                  "protocol/v2/prompt-turn",
+                  "protocol/v2/content",
+                  "protocol/v2/tool-calls",
+                  "protocol/v2/file-system",
+                  "protocol/v2/terminals",
+                  "protocol/v2/agent-plan",
+                  "protocol/v2/session-modes",
+                  "protocol/v2/session-config-options",
+                  "protocol/v2/slash-commands",
+                  "protocol/v2/extensibility",
+                  "protocol/v2/transports",
+                  "protocol/v2/schema",
+                  {
+                    "group": "Draft: In Progress and May Change",
+                    "hidden": true,
+                    "pages": [
+                      "protocol/v2/draft/overview",
+                      "protocol/v2/draft/authentication",
+                      "protocol/v2/draft/initialization",
+                      "protocol/v2/draft/session-setup",
+                      "protocol/v2/draft/session-list",
+                      "protocol/v2/draft/session-delete",
+                      "protocol/v2/draft/prompt-turn",
+                      "protocol/v2/draft/content",
+                      "protocol/v2/draft/tool-calls",
+                      "protocol/v2/draft/file-system",
+                      "protocol/v2/draft/cancellation",
+                      "protocol/v2/draft/terminals",
+                      "protocol/v2/draft/agent-plan",
+                      "protocol/v2/draft/session-modes",
+                      "protocol/v2/draft/session-config-options",
+                      "protocol/v2/draft/slash-commands",
+                      "protocol/v2/draft/extensibility",
+                      "protocol/v2/draft/transports",
+                      "protocol/v2/draft/schema"
+                    ]
+                  }
+                ]
+              },
+              {
                 "group": "Draft: In Progress and May Change",
                 "hidden": true,
                 "pages": [
