@@ -8791,11 +8791,13 @@ impl IntoV1 for super::ElicitationUrlMode {
             scope,
             elicitation_id,
             url,
+            user_code,
         } = self;
         Ok(crate::v1::ElicitationUrlMode {
             scope: scope.into_v1()?,
             elicitation_id: elicitation_id.into_v1()?,
             url: url.into_v1()?,
+            user_code: user_code.into_v1()?,
         })
     }
 }
@@ -8809,11 +8811,13 @@ impl IntoV2 for crate::v1::ElicitationUrlMode {
             scope,
             elicitation_id,
             url,
+            user_code,
         } = self;
         Ok(super::ElicitationUrlMode {
             scope: scope.into_v2()?,
             elicitation_id: elicitation_id.into_v2()?,
             url: url.into_v2()?,
+            user_code: user_code.into_v2()?,
         })
     }
 }
@@ -8994,12 +8998,14 @@ impl IntoV1 for super::UrlElicitationRequiredItem {
             elicitation_id,
             url,
             message,
+            user_code,
         } = self;
         Ok(crate::v1::UrlElicitationRequiredItem {
             mode: mode.into_v1()?,
             elicitation_id: elicitation_id.into_v1()?,
             url: url.into_v1()?,
             message: message.into_v1()?,
+            user_code: user_code.into_v1()?,
         })
     }
 }
@@ -9014,12 +9020,14 @@ impl IntoV2 for crate::v1::UrlElicitationRequiredItem {
             elicitation_id,
             url,
             message,
+            user_code,
         } = self;
         Ok(super::UrlElicitationRequiredItem {
             mode: mode.into_v2()?,
             elicitation_id: elicitation_id.into_v2()?,
             url: url.into_v2()?,
             message: message.into_v2()?,
+            user_code: user_code.into_v2()?,
         })
     }
 }

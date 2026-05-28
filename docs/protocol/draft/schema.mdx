@@ -1891,6 +1891,10 @@ URL-based elicitation where the client directs the user to a URL.
 <ResponseField name="url" type={"string"} required>
   The URL to direct the user to.
 </ResponseField>
+<ResponseField name="userCode" type={"string | null"}>
+  If provided, the user must visit the URL and enter this code to complete the
+  elicitation.
+</ResponseField>
 
 </Expandable>
 </ResponseField>
@@ -4210,6 +4214,10 @@ URL-based elicitation mode where the client directs the user to a URL.
 </ResponseField>
 <ResponseField name="url" type={"string"} required>
   The URL to direct the user to.
+</ResponseField>
+<ResponseField name="userCode" type={"string | null"}>
+  If provided, the user must visit the URL and enter this code to complete the
+  elicitation.
 </ResponseField>
 
 **Variants:**
