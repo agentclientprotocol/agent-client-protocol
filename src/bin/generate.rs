@@ -90,20 +90,24 @@ fn main() {
     //
     // - `schema.json`              — stable v1 (no features)
     // - `schema.unstable.json`     — v1 + unstable feature flags
-    // - `schema.v2.json`           — v2 (hidden while v2 is drafted)
     // - `schema.v2.unstable.json`  — v2 + unstable feature flags
-    let schema_file: &str = match (
+    //
+    // There is no stable v2 JSON schema yet; hidden v2 docs are generated
+    // below without writing `schema.v2.json` or `meta.v2.json`.
+    let schema_file: Option<&str> = match (
         cfg!(feature = "unstable_protocol_v2"),
         cfg!(feature = "unstable"),
     ) {
-        (true, true) => "schema.v2.unstable.json",
-        (true, false) => "schema.v2.json",
-        (false, true) => "schema.unstable.json",
-        (false, false) => "schema.json",
+        (true, true) => Some("schema.v2.unstable.json"),
+        (true, false) => None,
+        (false, true) => Some("schema.unstable.json"),
+        (false, false) => Some("schema.json"),
     };
-    let schema_json = serde_json::to_string_pretty(&schema_value).unwrap();
-    fs::write(schema_dir.join(schema_file), &schema_json)
-        .unwrap_or_else(|e| panic!("Failed to write {schema_file}: {e}"));
+    if let Some(schema_file) = schema_file {
+        let schema_json = serde_json::to_string_pretty(&schema_value).unwrap();
+        fs::write(schema_dir.join(schema_file), &schema_json)
+            .unwrap_or_else(|e| panic!("Failed to write {schema_file}: {e}"));
+    }
 
     // The version embedded in `meta*.json` reflects the protocol version the
     // *schema itself describes*, not `ProtocolVersion::LATEST` (which always
@@ -130,26 +134,27 @@ fn main() {
         "protocolMethods": PROTOCOL_LEVEL_METHOD_NAMES,
     });
 
-    let meta_file: &str = match (
+    let meta_file: Option<&str> = match (
         cfg!(feature = "unstable_protocol_v2"),
         cfg!(feature = "unstable"),
     ) {
-        (true, true) => "meta.v2.unstable.json",
-        (true, false) => "meta.v2.json",
-        (false, true) => "meta.unstable.json",
-        (false, false) => "meta.json",
+        (true, true) => Some("meta.v2.unstable.json"),
+        (true, false) => None,
+        (false, true) => Some("meta.unstable.json"),
+        (false, false) => Some("meta.json"),
     };
-    let metadata_json = serde_json::to_string_pretty(&metadata).unwrap();
-    fs::write(schema_dir.join(meta_file), &metadata_json)
-        .unwrap_or_else(|e| panic!("Failed to write {meta_file}: {e}"));
+    if let Some(meta_file) = meta_file {
+        let metadata_json = serde_json::to_string_pretty(&metadata).unwrap();
+        fs::write(schema_dir.join(meta_file), &metadata_json)
+            .unwrap_or_else(|e| panic!("Failed to write {meta_file}: {e}"));
+    }
 
     // Generate markdown documentation. Each cfg combination owns its own
-    // doc file just like the JSON schema files above, so the three
-    // `npm run generate` runs don't clobber each other:
+    // doc file, so the `npm run generate` runs don't clobber each other:
     //
     // - `schema.mdx`              — stable v1 (no features)
     // - `draft/schema.mdx`        — v1 + unstable feature flags
-    // - `v2/schema.mdx`           — v2 (hidden while v2 is drafted)
+    // - `v2/schema.mdx`           — v2 docs only (hidden while v2 is drafted)
     // - `v2/draft/schema.mdx`     — v2 + unstable feature flags
     let mut markdown_gen = MarkdownGenerator::new(schema_file);
     let mut markdown_doc = markdown_gen.generate(&schema_value);
@@ -184,8 +189,14 @@ fn main() {
 
     fs::write(doc_path, markdown_doc).unwrap_or_else(|e| panic!("Failed to write {doc_file}: {e}"));
 
-    println!("✓ Generated {schema_file}");
-    println!("✓ Generated {meta_file}");
+    match schema_file {
+        Some(schema_file) => println!("✓ Generated {schema_file}"),
+        None => println!("✓ Skipped stable v2 JSON schema"),
+    }
+    match meta_file {
+        Some(meta_file) => println!("✓ Generated {meta_file}"),
+        None => println!("✓ Skipped stable v2 metadata"),
+    }
     println!("✓ Generated {doc_file}");
 }
 
@@ -199,11 +210,11 @@ mod markdown_generator {
     pub struct MarkdownGenerator {
         definitions: BTreeMap<String, Value>,
         output: String,
-        schema_file: &'static str,
+        schema_file: Option<&'static str>,
     }
 
     impl MarkdownGenerator {
-        pub fn new(schema_file: &'static str) -> Self {
+        pub fn new(schema_file: Option<&'static str>) -> Self {
             Self {
                 definitions: BTreeMap::new(),
                 output: String::new(),
@@ -228,20 +239,28 @@ mod markdown_generator {
             .unwrap();
             writeln!(&mut self.output, "---").unwrap();
             writeln!(&mut self.output).unwrap();
-            if self.schema_file.starts_with("schema.v2") {
-                writeln!(
-                    &mut self.output,
-                    "<Note>The v2 schema is generated in this repository at [`schema/{schema_file}`](https://github.com/agentclientprotocol/agent-client-protocol/blob/main/schema/{schema_file}). ACP v2 remains hidden while it is being drafted.</Note>",
-                    schema_file = self.schema_file
-                )
-                .unwrap();
-            } else {
-                writeln!(
-                    &mut self.output,
-                    "<Note>The schema file can be downloaded directly from the [latest GitHub release](https://github.com/agentclientprotocol/agent-client-protocol/releases/latest/download/{schema_file}).</Note>",
-                    schema_file = self.schema_file
-                )
-                .unwrap();
+            match self.schema_file {
+                Some(schema_file) if schema_file.starts_with("schema.v2") => {
+                    writeln!(
+                        &mut self.output,
+                        "<Note>The v2 schema is generated in this repository at [`schema/{schema_file}`](https://github.com/agentclientprotocol/agent-client-protocol/blob/main/schema/{schema_file}). ACP v2 remains hidden while it is being drafted.</Note>"
+                    )
+                    .unwrap();
+                }
+                Some(schema_file) => {
+                    writeln!(
+                        &mut self.output,
+                        "<Note>The schema file can be downloaded directly from the [latest GitHub release](https://github.com/agentclientprotocol/agent-client-protocol/releases/latest/download/{schema_file}).</Note>"
+                    )
+                    .unwrap();
+                }
+                None => {
+                    writeln!(
+                        &mut self.output,
+                        "<Note>This page is generated from the v2 Rust schema types. The stable v2 JSON schema and metadata files are not emitted yet while ACP v2 remains hidden.</Note>"
+                    )
+                    .unwrap();
+                }
             }
             writeln!(&mut self.output).unwrap();
 
@@ -1430,7 +1449,7 @@ starting with '$/' it is free to ignore the notification."
 
         #[test]
         fn document_union_includes_shared_properties() {
-            let mut generator = MarkdownGenerator::new("schema.json");
+            let mut generator = MarkdownGenerator::new(Some("schema.json"));
             let definition = json!({
                 "description": "Example union.",
                 "discriminator": {
@@ -1502,7 +1521,7 @@ starting with '$/' it is free to ignore the notification."
 
         #[test]
         fn document_union_renders_both_any_of_and_one_of() {
-            let mut generator = MarkdownGenerator::new("schema.json");
+            let mut generator = MarkdownGenerator::new(Some("schema.json"));
             let definition = json!({
                 "description": "Request with scope and mode.",
                 "anyOf": [
@@ -1586,7 +1605,7 @@ starting with '$/' it is free to ignore the notification."
 
         #[test]
         fn document_union_renders_enum_variant_values() {
-            let mut generator = MarkdownGenerator::new("schema.json");
+            let mut generator = MarkdownGenerator::new(Some("schema.json"));
             let definition = json!({
                 "description": "The sender or recipient.",
                 "anyOf": [
