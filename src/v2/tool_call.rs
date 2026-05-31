@@ -4,10 +4,10 @@
 //! running code, or fetching data—it generates tool calls that the agent executes on its behalf.
 //!
 /// See protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/tool-calls)
-use std::{path::PathBuf, sync::Arc};
+use std::{collections::BTreeMap, path::PathBuf, sync::Arc};
 
 use derive_more::{Display, From};
-use schemars::JsonSchema;
+use schemars::{JsonSchema, Schema};
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
@@ -388,7 +388,7 @@ impl IntoOption<ToolCallId> for &str {
 /// display tool execution progress.
 ///
 /// See protocol docs: [Creating](https://agentclientprotocol.com/protocol/tool-calls#creating)
-#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum ToolKind {
@@ -412,12 +412,17 @@ pub enum ToolKind {
     SwitchMode,
     /// Other tool types (default).
     #[default]
-    #[serde(other)]
     Other,
+    /// Custom or future tool kind.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(untagged)]
+    Unknown(String),
 }
 
 impl ToolKind {
-    #[expect(clippy::trivially_copy_pass_by_ref, reason = "Required by serde")]
     fn is_default(&self) -> bool {
         matches!(self, ToolKind::Other)
     }
@@ -428,7 +433,7 @@ impl ToolKind {
 /// Tool calls progress through different statuses during their lifecycle.
 ///
 /// See protocol docs: [Status](https://agentclientprotocol.com/protocol/tool-calls#status)
-#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum ToolCallStatus {
@@ -442,10 +447,16 @@ pub enum ToolCallStatus {
     Completed,
     /// The tool call failed with an error.
     Failed,
+    /// Custom or future tool call status.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(untagged)]
+    Other(String),
 }
 
 impl ToolCallStatus {
-    #[expect(clippy::trivially_copy_pass_by_ref, reason = "Required by serde")]
     fn is_default(&self) -> bool {
         matches!(self, ToolCallStatus::Pending)
     }
@@ -472,6 +483,82 @@ pub enum ToolCallContent {
     ///
     /// See protocol docs: [Terminal](https://agentclientprotocol.com/protocol/terminals)
     Terminal(Terminal),
+    /// Custom or future tool call content.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    ///
+    /// Receivers that do not understand this content type should preserve the
+    /// raw payload when storing, replaying, proxying, or forwarding tool call
+    /// output, and otherwise ignore it or display it generically.
+    #[serde(untagged)]
+    Other(OtherToolCallContent),
+}
+
+/// Custom or future tool call content payload.
+#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[schemars(inline)]
+#[schemars(transform = other_tool_call_content_schema)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct OtherToolCallContent {
+    /// Custom or future tool call content type.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(rename = "type")]
+    pub type_: String,
+    /// Additional fields from the unknown tool call content payload.
+    #[serde(flatten)]
+    pub fields: BTreeMap<String, serde_json::Value>,
+}
+
+impl OtherToolCallContent {
+    #[must_use]
+    pub fn new(type_: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
+        fields.remove("type");
+        Self {
+            type_: type_.into(),
+            fields,
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for OtherToolCallContent {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let type_ = fields
+            .remove("type")
+            .ok_or_else(|| serde::de::Error::missing_field("type"))?;
+        let serde_json::Value::String(type_) = type_ else {
+            return Err(serde::de::Error::custom("`type` must be a string"));
+        };
+
+        if is_known_tool_call_content_type(&type_) {
+            return Err(serde::de::Error::custom(format!(
+                "known tool call content `{type_}` did not match its schema"
+            )));
+        }
+
+        Ok(Self { type_, fields })
+    }
+}
+
+fn is_known_tool_call_content_type(type_: &str) -> bool {
+    matches!(type_, "content" | "diff" | "terminal")
+}
+
+fn other_tool_call_content_schema(schema: &mut Schema) {
+    super::schema_util::reject_known_string_discriminators(
+        schema,
+        "type",
+        &["content", "diff", "terminal"],
+    );
 }
 
 impl<T: Into<ContentBlock>> From<T> for ToolCallContent {
@@ -671,5 +758,62 @@ impl ToolCallLocation {
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
         self
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn tool_kind_preserves_unknown_variant() {
+        let kind: ToolKind = serde_json::from_str("\"review\"").unwrap();
+        assert_eq!(kind, ToolKind::Unknown("review".to_string()));
+        assert_eq!(serde_json::to_value(&kind).unwrap(), "review");
+    }
+
+    #[test]
+    fn tool_call_status_preserves_unknown_variant() {
+        let status: ToolCallStatus = serde_json::from_str("\"deferred\"").unwrap();
+        assert_eq!(status, ToolCallStatus::Other("deferred".to_string()));
+        assert_eq!(serde_json::to_value(&status).unwrap(), "deferred");
+    }
+
+    #[test]
+    fn tool_call_content_preserves_unknown_variant() {
+        let content: ToolCallContent = serde_json::from_value(serde_json::json!({
+            "type": "_chart",
+            "title": "Tests",
+            "data": [1, 2, 3]
+        }))
+        .unwrap();
+
+        let ToolCallContent::Other(unknown) = content else {
+            panic!("expected unknown tool call content");
+        };
+
+        assert_eq!(unknown.type_, "_chart");
+        assert_eq!(
+            unknown.fields.get("title"),
+            Some(&serde_json::json!("Tests"))
+        );
+        assert_eq!(
+            serde_json::to_value(ToolCallContent::Other(unknown)).unwrap(),
+            serde_json::json!({
+                "type": "_chart",
+                "title": "Tests",
+                "data": [1, 2, 3]
+            })
+        );
+    }
+
+    #[test]
+    fn tool_call_content_does_not_hide_malformed_known_variant() {
+        assert!(
+            serde_json::from_value::<ToolCallContent>(serde_json::json!({
+                "type": "diff"
+            }))
+            .is_err()
+        );
     }
 }

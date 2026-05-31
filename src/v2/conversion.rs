@@ -50,6 +50,12 @@ impl fmt::Display for ProtocolConversionError {
 
 impl std::error::Error for ProtocolConversionError {}
 
+fn unknown_v2_enum_variant(type_name: &str, value: &str) -> ProtocolConversionError {
+    ProtocolConversionError::new(format!(
+        "v2 {type_name} variant `{value}` cannot be represented in v1"
+    ))
+}
+
 /// Converts a [`ProtocolConversionError`] into a v1 [`Error`](crate::v1::Error)
 /// so callers can use `?` to bubble conversion failures through APIs that
 /// already speak the v1 error type.
@@ -448,6 +454,213 @@ impl IntoV2 for crate::v1::Plan {
     }
 }
 
+#[cfg(feature = "unstable_plan_operations")]
+impl IntoV1 for super::PlanId {
+    type Output = crate::v1::PlanId;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        Ok(crate::v1::PlanId(self.0.into_v1()?))
+    }
+}
+
+#[cfg(feature = "unstable_plan_operations")]
+impl IntoV2 for crate::v1::PlanId {
+    type Output = super::PlanId;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        Ok(super::PlanId(self.0.into_v2()?))
+    }
+}
+
+#[cfg(feature = "unstable_plan_operations")]
+impl IntoV1 for super::PlanUpdate {
+    type Output = crate::v1::PlanUpdate;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        let Self { plan, meta } = self;
+        Ok(crate::v1::PlanUpdate {
+            plan: plan.into_v1()?,
+            meta: meta.into_v1()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_plan_operations")]
+impl IntoV2 for crate::v1::PlanUpdate {
+    type Output = super::PlanUpdate;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        let Self { plan, meta } = self;
+        Ok(super::PlanUpdate {
+            plan: plan.into_v2()?,
+            meta: meta.into_v2()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_plan_operations")]
+impl IntoV1 for super::PlanUpdateContent {
+    type Output = crate::v1::PlanUpdateContent;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        Ok(match self {
+            Self::Items(value) => crate::v1::PlanUpdateContent::Items(value.into_v1()?),
+            Self::File(value) => crate::v1::PlanUpdateContent::File(value.into_v1()?),
+            Self::Markdown(value) => crate::v1::PlanUpdateContent::Markdown(value.into_v1()?),
+            Self::Other(value) => {
+                return Err(unknown_v2_enum_variant("PlanUpdateContent", &value.type_));
+            }
+        })
+    }
+}
+
+#[cfg(feature = "unstable_plan_operations")]
+impl IntoV2 for crate::v1::PlanUpdateContent {
+    type Output = super::PlanUpdateContent;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        Ok(match self {
+            Self::Items(value) => super::PlanUpdateContent::Items(value.into_v2()?),
+            Self::File(value) => super::PlanUpdateContent::File(value.into_v2()?),
+            Self::Markdown(value) => super::PlanUpdateContent::Markdown(value.into_v2()?),
+        })
+    }
+}
+
+#[cfg(feature = "unstable_plan_operations")]
+impl IntoV1 for super::PlanItems {
+    type Output = crate::v1::PlanItems;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        let Self { id, entries, meta } = self;
+        Ok(crate::v1::PlanItems {
+            id: id.into_v1()?,
+            entries: entries.into_v1()?,
+            meta: meta.into_v1()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_plan_operations")]
+impl IntoV2 for crate::v1::PlanItems {
+    type Output = super::PlanItems;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        let Self { id, entries, meta } = self;
+        Ok(super::PlanItems {
+            id: id.into_v2()?,
+            entries: entries.into_v2()?,
+            meta: meta.into_v2()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_plan_operations")]
+impl IntoV1 for super::PlanFile {
+    type Output = crate::v1::PlanFile;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        let Self { id, uri, meta } = self;
+        Ok(crate::v1::PlanFile {
+            id: id.into_v1()?,
+            uri: uri.into_v1()?,
+            meta: meta.into_v1()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_plan_operations")]
+impl IntoV2 for crate::v1::PlanFile {
+    type Output = super::PlanFile;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        let Self { id, uri, meta } = self;
+        Ok(super::PlanFile {
+            id: id.into_v2()?,
+            uri: uri.into_v2()?,
+            meta: meta.into_v2()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_plan_operations")]
+impl IntoV1 for super::PlanMarkdown {
+    type Output = crate::v1::PlanMarkdown;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        let Self { id, content, meta } = self;
+        Ok(crate::v1::PlanMarkdown {
+            id: id.into_v1()?,
+            content: content.into_v1()?,
+            meta: meta.into_v1()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_plan_operations")]
+impl IntoV2 for crate::v1::PlanMarkdown {
+    type Output = super::PlanMarkdown;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        let Self { id, content, meta } = self;
+        Ok(super::PlanMarkdown {
+            id: id.into_v2()?,
+            content: content.into_v2()?,
+            meta: meta.into_v2()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_plan_operations")]
+impl IntoV1 for super::PlanRemoved {
+    type Output = crate::v1::PlanRemoved;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        let Self { id, meta } = self;
+        Ok(crate::v1::PlanRemoved {
+            id: id.into_v1()?,
+            meta: meta.into_v1()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_plan_operations")]
+impl IntoV2 for crate::v1::PlanRemoved {
+    type Output = super::PlanRemoved;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        let Self { id, meta } = self;
+        Ok(super::PlanRemoved {
+            id: id.into_v2()?,
+            meta: meta.into_v2()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_plan_operations")]
+impl IntoV1 for super::PlanCapabilities {
+    type Output = crate::v1::PlanCapabilities;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        let Self { meta } = self;
+        Ok(crate::v1::PlanCapabilities {
+            meta: meta.into_v1()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_plan_operations")]
+impl IntoV2 for crate::v1::PlanCapabilities {
+    type Output = super::PlanCapabilities;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        let Self { meta } = self;
+        Ok(super::PlanCapabilities {
+            meta: meta.into_v2()?,
+        })
+    }
+}
+
 impl IntoV1 for super::PlanEntry {
     type Output = crate::v1::PlanEntry;
 
@@ -494,6 +707,9 @@ impl IntoV1 for super::PlanEntryPriority {
             Self::High => crate::v1::PlanEntryPriority::High,
             Self::Medium => crate::v1::PlanEntryPriority::Medium,
             Self::Low => crate::v1::PlanEntryPriority::Low,
+            Self::Other(value) => {
+                return Err(unknown_v2_enum_variant("PlanEntryPriority", &value));
+            }
         })
     }
 }
@@ -518,6 +734,7 @@ impl IntoV1 for super::PlanEntryStatus {
             Self::Pending => crate::v1::PlanEntryStatus::Pending,
             Self::InProgress => crate::v1::PlanEntryStatus::InProgress,
             Self::Completed => crate::v1::PlanEntryStatus::Completed,
+            Self::Other(value) => return Err(unknown_v2_enum_variant("PlanEntryStatus", &value)),
         })
     }
 }
@@ -639,6 +856,10 @@ impl IntoV1 for super::SessionUpdate {
                 crate::v1::SessionUpdate::ToolCallUpdate(value.into_v1()?)
             }
             Self::Plan(value) => crate::v1::SessionUpdate::Plan(value.into_v1()?),
+            #[cfg(feature = "unstable_plan_operations")]
+            Self::PlanUpdate(value) => crate::v1::SessionUpdate::PlanUpdate(value.into_v1()?),
+            #[cfg(feature = "unstable_plan_operations")]
+            Self::PlanRemoved(value) => crate::v1::SessionUpdate::PlanRemoved(value.into_v1()?),
             Self::AvailableCommandsUpdate(value) => {
                 crate::v1::SessionUpdate::AvailableCommandsUpdate(value.into_v1()?)
             }
@@ -653,6 +874,12 @@ impl IntoV1 for super::SessionUpdate {
             }
             #[cfg(feature = "unstable_session_usage")]
             Self::UsageUpdate(value) => crate::v1::SessionUpdate::UsageUpdate(value.into_v1()?),
+            Self::Other(value) => {
+                return Err(unknown_v2_enum_variant(
+                    "SessionUpdate",
+                    &value.session_update,
+                ));
+            }
         })
     }
 }
@@ -674,6 +901,10 @@ impl IntoV2 for crate::v1::SessionUpdate {
             Self::ToolCall(value) => super::SessionUpdate::ToolCall(value.into_v2()?),
             Self::ToolCallUpdate(value) => super::SessionUpdate::ToolCallUpdate(value.into_v2()?),
             Self::Plan(value) => super::SessionUpdate::Plan(value.into_v2()?),
+            #[cfg(feature = "unstable_plan_operations")]
+            Self::PlanUpdate(value) => super::SessionUpdate::PlanUpdate(value.into_v2()?),
+            #[cfg(feature = "unstable_plan_operations")]
+            Self::PlanRemoved(value) => super::SessionUpdate::PlanRemoved(value.into_v2()?),
             Self::AvailableCommandsUpdate(value) => {
                 super::SessionUpdate::AvailableCommandsUpdate(value.into_v2()?)
             }
@@ -966,6 +1197,12 @@ impl IntoV1 for super::AvailableCommandInput {
             Self::Unstructured(value) => {
                 crate::v1::AvailableCommandInput::Unstructured(value.into_v1()?)
             }
+            Self::Other(value) => {
+                return Err(unknown_v2_enum_variant(
+                    "AvailableCommandInput",
+                    &value.type_,
+                ));
+            }
         })
     }
 }
@@ -1107,6 +1344,9 @@ impl IntoV1 for super::PermissionOptionKind {
             Self::AllowAlways => crate::v1::PermissionOptionKind::AllowAlways,
             Self::RejectOnce => crate::v1::PermissionOptionKind::RejectOnce,
             Self::RejectAlways => crate::v1::PermissionOptionKind::RejectAlways,
+            Self::Other(value) => {
+                return Err(unknown_v2_enum_variant("PermissionOptionKind", &value));
+            }
         })
     }
 }
@@ -1909,6 +2149,8 @@ impl IntoV1 for super::ClientCapabilities {
         let Self {
             fs,
             terminal,
+            #[cfg(feature = "unstable_plan_operations")]
+            plan_capabilities,
             #[cfg(feature = "unstable_auth_methods")]
             auth,
             #[cfg(feature = "unstable_elicitation")]
@@ -1922,6 +2164,8 @@ impl IntoV1 for super::ClientCapabilities {
         Ok(crate::v1::ClientCapabilities {
             fs: fs.into_v1()?,
             terminal: terminal.into_v1()?,
+            #[cfg(feature = "unstable_plan_operations")]
+            plan_capabilities: plan_capabilities.into_v1()?,
             #[cfg(feature = "unstable_auth_methods")]
             auth: auth.into_v1()?,
             #[cfg(feature = "unstable_elicitation")]
@@ -1942,6 +2186,8 @@ impl IntoV2 for crate::v1::ClientCapabilities {
         let Self {
             fs,
             terminal,
+            #[cfg(feature = "unstable_plan_operations")]
+            plan_capabilities,
             #[cfg(feature = "unstable_auth_methods")]
             auth,
             #[cfg(feature = "unstable_elicitation")]
@@ -1955,6 +2201,8 @@ impl IntoV2 for crate::v1::ClientCapabilities {
         Ok(super::ClientCapabilities {
             fs: fs.into_v2()?,
             terminal: terminal.into_v2()?,
+            #[cfg(feature = "unstable_plan_operations")]
+            plan_capabilities: plan_capabilities.into_v2()?,
             #[cfg(feature = "unstable_auth_methods")]
             auth: auth.into_v2()?,
             #[cfg(feature = "unstable_elicitation")]
@@ -2569,6 +2817,7 @@ impl IntoV1 for super::ToolKind {
             Self::Fetch => crate::v1::ToolKind::Fetch,
             Self::SwitchMode => crate::v1::ToolKind::SwitchMode,
             Self::Other => crate::v1::ToolKind::Other,
+            Self::Unknown(value) => return Err(unknown_v2_enum_variant("ToolKind", &value)),
         })
     }
 }
@@ -2601,6 +2850,7 @@ impl IntoV1 for super::ToolCallStatus {
             Self::InProgress => crate::v1::ToolCallStatus::InProgress,
             Self::Completed => crate::v1::ToolCallStatus::Completed,
             Self::Failed => crate::v1::ToolCallStatus::Failed,
+            Self::Other(value) => return Err(unknown_v2_enum_variant("ToolCallStatus", &value)),
         })
     }
 }
@@ -2626,6 +2876,9 @@ impl IntoV1 for super::ToolCallContent {
             Self::Content(value) => crate::v1::ToolCallContent::Content(value.into_v1()?),
             Self::Diff(value) => crate::v1::ToolCallContent::Diff(value.into_v1()?),
             Self::Terminal(value) => crate::v1::ToolCallContent::Terminal(value.into_v1()?),
+            Self::Other(value) => {
+                return Err(unknown_v2_enum_variant("ToolCallContent", &value.type_));
+            }
         })
     }
 }
@@ -2918,7 +3171,6 @@ impl IntoV2 for crate::v1::AuthenticateResponse {
     }
 }
 
-#[cfg(feature = "unstable_logout")]
 impl IntoV1 for super::LogoutRequest {
     type Output = crate::v1::LogoutRequest;
 
@@ -2930,7 +3182,6 @@ impl IntoV1 for super::LogoutRequest {
     }
 }
 
-#[cfg(feature = "unstable_logout")]
 impl IntoV2 for crate::v1::LogoutRequest {
     type Output = super::LogoutRequest;
 
@@ -2942,7 +3193,6 @@ impl IntoV2 for crate::v1::LogoutRequest {
     }
 }
 
-#[cfg(feature = "unstable_logout")]
 impl IntoV1 for super::LogoutResponse {
     type Output = crate::v1::LogoutResponse;
 
@@ -2954,7 +3204,6 @@ impl IntoV1 for super::LogoutResponse {
     }
 }
 
-#[cfg(feature = "unstable_logout")]
 impl IntoV2 for crate::v1::LogoutResponse {
     type Output = super::LogoutResponse;
 
@@ -2966,7 +3215,6 @@ impl IntoV2 for crate::v1::LogoutResponse {
     }
 }
 
-#[cfg(feature = "unstable_logout")]
 impl IntoV1 for super::AgentAuthCapabilities {
     type Output = crate::v1::AgentAuthCapabilities;
 
@@ -2979,7 +3227,6 @@ impl IntoV1 for super::AgentAuthCapabilities {
     }
 }
 
-#[cfg(feature = "unstable_logout")]
 impl IntoV2 for crate::v1::AgentAuthCapabilities {
     type Output = super::AgentAuthCapabilities;
 
@@ -2992,7 +3239,6 @@ impl IntoV2 for crate::v1::AgentAuthCapabilities {
     }
 }
 
-#[cfg(feature = "unstable_logout")]
 impl IntoV1 for super::LogoutCapabilities {
     type Output = crate::v1::LogoutCapabilities;
 
@@ -3004,7 +3250,6 @@ impl IntoV1 for super::LogoutCapabilities {
     }
 }
 
-#[cfg(feature = "unstable_logout")]
 impl IntoV2 for crate::v1::LogoutCapabilities {
     type Output = super::LogoutCapabilities;
 
@@ -3041,6 +3286,9 @@ impl IntoV1 for super::AuthMethod {
             Self::EnvVar(value) => crate::v1::AuthMethod::EnvVar(value.into_v1()?),
             #[cfg(feature = "unstable_auth_methods")]
             Self::Terminal(value) => crate::v1::AuthMethod::Terminal(value.into_v1()?),
+            Self::Other(value) => {
+                return Err(unknown_v2_enum_variant("AuthMethod", &value.type_));
+            }
             Self::Agent(value) => crate::v1::AuthMethod::Agent(value.into_v1()?),
         })
     }
@@ -4188,6 +4436,9 @@ impl IntoV1 for super::SessionConfigKind {
             Self::Select(value) => crate::v1::SessionConfigKind::Select(value.into_v1()?),
             #[cfg(feature = "unstable_boolean_config")]
             Self::Boolean(value) => crate::v1::SessionConfigKind::Boolean(value.into_v1()?),
+            Self::Other(value) => {
+                return Err(unknown_v2_enum_variant("SessionConfigKind", &value.type_));
+            }
         })
     }
 }
@@ -4710,6 +4961,7 @@ impl IntoV1 for super::StopReason {
             Self::MaxTurnRequests => crate::v1::StopReason::MaxTurnRequests,
             Self::Refusal => crate::v1::StopReason::Refusal,
             Self::Cancelled => crate::v1::StopReason::Cancelled,
+            Self::Other(value) => return Err(unknown_v2_enum_variant("StopReason", &value)),
         })
     }
 }
@@ -5083,8 +5335,8 @@ impl IntoV2 for crate::v1::ListProvidersResponse {
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl IntoV1 for super::SetProvidersRequest {
-    type Output = crate::v1::SetProvidersRequest;
+impl IntoV1 for super::SetProviderRequest {
+    type Output = crate::v1::SetProviderRequest;
 
     fn into_v1(self) -> Result<Self::Output> {
         let Self {
@@ -5094,7 +5346,7 @@ impl IntoV1 for super::SetProvidersRequest {
             headers,
             meta,
         } = self;
-        Ok(crate::v1::SetProvidersRequest {
+        Ok(crate::v1::SetProviderRequest {
             id: id.into_v1()?,
             api_type: api_type.into_v1()?,
             base_url: base_url.into_v1()?,
@@ -5105,8 +5357,8 @@ impl IntoV1 for super::SetProvidersRequest {
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl IntoV2 for crate::v1::SetProvidersRequest {
-    type Output = super::SetProvidersRequest;
+impl IntoV2 for crate::v1::SetProviderRequest {
+    type Output = super::SetProviderRequest;
 
     fn into_v2(self) -> Result<Self::Output> {
         let Self {
@@ -5116,7 +5368,7 @@ impl IntoV2 for crate::v1::SetProvidersRequest {
             headers,
             meta,
         } = self;
-        Ok(super::SetProvidersRequest {
+        Ok(super::SetProviderRequest {
             id: id.into_v2()?,
             api_type: api_type.into_v2()?,
             base_url: base_url.into_v2()?,
@@ -5127,36 +5379,36 @@ impl IntoV2 for crate::v1::SetProvidersRequest {
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl IntoV1 for super::SetProvidersResponse {
-    type Output = crate::v1::SetProvidersResponse;
+impl IntoV1 for super::SetProviderResponse {
+    type Output = crate::v1::SetProviderResponse;
 
     fn into_v1(self) -> Result<Self::Output> {
         let Self { meta } = self;
-        Ok(crate::v1::SetProvidersResponse {
+        Ok(crate::v1::SetProviderResponse {
             meta: meta.into_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl IntoV2 for crate::v1::SetProvidersResponse {
-    type Output = super::SetProvidersResponse;
+impl IntoV2 for crate::v1::SetProviderResponse {
+    type Output = super::SetProviderResponse;
 
     fn into_v2(self) -> Result<Self::Output> {
         let Self { meta } = self;
-        Ok(super::SetProvidersResponse {
+        Ok(super::SetProviderResponse {
             meta: meta.into_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl IntoV1 for super::DisableProvidersRequest {
-    type Output = crate::v1::DisableProvidersRequest;
+impl IntoV1 for super::DisableProviderRequest {
+    type Output = crate::v1::DisableProviderRequest;
 
     fn into_v1(self) -> Result<Self::Output> {
         let Self { id, meta } = self;
-        Ok(crate::v1::DisableProvidersRequest {
+        Ok(crate::v1::DisableProviderRequest {
             id: id.into_v1()?,
             meta: meta.into_v1()?,
         })
@@ -5164,12 +5416,12 @@ impl IntoV1 for super::DisableProvidersRequest {
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl IntoV2 for crate::v1::DisableProvidersRequest {
-    type Output = super::DisableProvidersRequest;
+impl IntoV2 for crate::v1::DisableProviderRequest {
+    type Output = super::DisableProviderRequest;
 
     fn into_v2(self) -> Result<Self::Output> {
         let Self { id, meta } = self;
-        Ok(super::DisableProvidersRequest {
+        Ok(super::DisableProviderRequest {
             id: id.into_v2()?,
             meta: meta.into_v2()?,
         })
@@ -5177,24 +5429,24 @@ impl IntoV2 for crate::v1::DisableProvidersRequest {
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl IntoV1 for super::DisableProvidersResponse {
-    type Output = crate::v1::DisableProvidersResponse;
+impl IntoV1 for super::DisableProviderResponse {
+    type Output = crate::v1::DisableProviderResponse;
 
     fn into_v1(self) -> Result<Self::Output> {
         let Self { meta } = self;
-        Ok(crate::v1::DisableProvidersResponse {
+        Ok(crate::v1::DisableProviderResponse {
             meta: meta.into_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl IntoV2 for crate::v1::DisableProvidersResponse {
-    type Output = super::DisableProvidersResponse;
+impl IntoV2 for crate::v1::DisableProviderResponse {
+    type Output = super::DisableProviderResponse;
 
     fn into_v2(self) -> Result<Self::Output> {
         let Self { meta } = self;
-        Ok(super::DisableProvidersResponse {
+        Ok(super::DisableProviderResponse {
             meta: meta.into_v2()?,
         })
     }
@@ -5209,7 +5461,6 @@ impl IntoV1 for super::AgentCapabilities {
             prompt_capabilities,
             mcp_capabilities,
             session_capabilities,
-            #[cfg(feature = "unstable_logout")]
             auth,
             #[cfg(feature = "unstable_llm_providers")]
             providers,
@@ -5224,7 +5475,6 @@ impl IntoV1 for super::AgentCapabilities {
             prompt_capabilities: prompt_capabilities.into_v1()?,
             mcp_capabilities: mcp_capabilities.into_v1()?,
             session_capabilities: session_capabilities.into_v1()?,
-            #[cfg(feature = "unstable_logout")]
             auth: auth.into_v1()?,
             #[cfg(feature = "unstable_llm_providers")]
             providers: providers.into_v1()?,
@@ -5246,7 +5496,6 @@ impl IntoV2 for crate::v1::AgentCapabilities {
             prompt_capabilities,
             mcp_capabilities,
             session_capabilities,
-            #[cfg(feature = "unstable_logout")]
             auth,
             #[cfg(feature = "unstable_llm_providers")]
             providers,
@@ -5261,7 +5510,6 @@ impl IntoV2 for crate::v1::AgentCapabilities {
             prompt_capabilities: prompt_capabilities.into_v2()?,
             mcp_capabilities: mcp_capabilities.into_v2()?,
             session_capabilities: session_capabilities.into_v2()?,
-            #[cfg(feature = "unstable_logout")]
             auth: auth.into_v2()?,
             #[cfg(feature = "unstable_llm_providers")]
             providers: providers.into_v2()?,
@@ -5594,14 +5842,13 @@ impl IntoV1 for super::ClientRequest {
                 crate::v1::ClientRequest::ListProvidersRequest(value.into_v1()?)
             }
             #[cfg(feature = "unstable_llm_providers")]
-            Self::SetProvidersRequest(value) => {
-                crate::v1::ClientRequest::SetProvidersRequest(value.into_v1()?)
+            Self::SetProviderRequest(value) => {
+                crate::v1::ClientRequest::SetProviderRequest(value.into_v1()?)
             }
             #[cfg(feature = "unstable_llm_providers")]
-            Self::DisableProvidersRequest(value) => {
-                crate::v1::ClientRequest::DisableProvidersRequest(value.into_v1()?)
+            Self::DisableProviderRequest(value) => {
+                crate::v1::ClientRequest::DisableProviderRequest(value.into_v1()?)
             }
-            #[cfg(feature = "unstable_logout")]
             Self::LogoutRequest(value) => crate::v1::ClientRequest::LogoutRequest(value.into_v1()?),
             Self::NewSessionRequest(value) => {
                 crate::v1::ClientRequest::NewSessionRequest(value.into_v1()?)
@@ -5676,14 +5923,13 @@ impl IntoV2 for crate::v1::ClientRequest {
                 super::ClientRequest::ListProvidersRequest(value.into_v2()?)
             }
             #[cfg(feature = "unstable_llm_providers")]
-            Self::SetProvidersRequest(value) => {
-                super::ClientRequest::SetProvidersRequest(value.into_v2()?)
+            Self::SetProviderRequest(value) => {
+                super::ClientRequest::SetProviderRequest(value.into_v2()?)
             }
             #[cfg(feature = "unstable_llm_providers")]
-            Self::DisableProvidersRequest(value) => {
-                super::ClientRequest::DisableProvidersRequest(value.into_v2()?)
+            Self::DisableProviderRequest(value) => {
+                super::ClientRequest::DisableProviderRequest(value.into_v2()?)
             }
-            #[cfg(feature = "unstable_logout")]
             Self::LogoutRequest(value) => super::ClientRequest::LogoutRequest(value.into_v2()?),
             Self::NewSessionRequest(value) => {
                 super::ClientRequest::NewSessionRequest(value.into_v2()?)
@@ -5754,14 +6000,13 @@ impl IntoV1 for super::AgentResponse {
                 crate::v1::AgentResponse::ListProvidersResponse(value.into_v1()?)
             }
             #[cfg(feature = "unstable_llm_providers")]
-            Self::SetProvidersResponse(value) => {
-                crate::v1::AgentResponse::SetProvidersResponse(value.into_v1()?)
+            Self::SetProviderResponse(value) => {
+                crate::v1::AgentResponse::SetProviderResponse(value.into_v1()?)
             }
             #[cfg(feature = "unstable_llm_providers")]
-            Self::DisableProvidersResponse(value) => {
-                crate::v1::AgentResponse::DisableProvidersResponse(value.into_v1()?)
+            Self::DisableProviderResponse(value) => {
+                crate::v1::AgentResponse::DisableProviderResponse(value.into_v1()?)
             }
-            #[cfg(feature = "unstable_logout")]
             Self::LogoutResponse(value) => {
                 crate::v1::AgentResponse::LogoutResponse(value.into_v1()?)
             }
@@ -5840,14 +6085,13 @@ impl IntoV2 for crate::v1::AgentResponse {
                 super::AgentResponse::ListProvidersResponse(value.into_v2()?)
             }
             #[cfg(feature = "unstable_llm_providers")]
-            Self::SetProvidersResponse(value) => {
-                super::AgentResponse::SetProvidersResponse(value.into_v2()?)
+            Self::SetProviderResponse(value) => {
+                super::AgentResponse::SetProviderResponse(value.into_v2()?)
             }
             #[cfg(feature = "unstable_llm_providers")]
-            Self::DisableProvidersResponse(value) => {
-                super::AgentResponse::DisableProvidersResponse(value.into_v2()?)
+            Self::DisableProviderResponse(value) => {
+                super::AgentResponse::DisableProviderResponse(value.into_v2()?)
             }
-            #[cfg(feature = "unstable_logout")]
             Self::LogoutResponse(value) => super::AgentResponse::LogoutResponse(value.into_v2()?),
             Self::NewSessionResponse(value) => {
                 super::AgentResponse::NewSessionResponse(value.into_v2()?)
@@ -7097,6 +7341,7 @@ impl IntoV1 for super::NesTriggerKind {
             Self::Automatic => crate::v1::NesTriggerKind::Automatic,
             Self::Diagnostic => crate::v1::NesTriggerKind::Diagnostic,
             Self::Manual => crate::v1::NesTriggerKind::Manual,
+            Self::Other(value) => return Err(unknown_v2_enum_variant("NesTriggerKind", &value)),
         })
     }
 }
@@ -7476,6 +7721,9 @@ impl IntoV1 for super::NesDiagnosticSeverity {
             Self::Warning => crate::v1::NesDiagnosticSeverity::Warning,
             Self::Information => crate::v1::NesDiagnosticSeverity::Information,
             Self::Hint => crate::v1::NesDiagnosticSeverity::Hint,
+            Self::Other(value) => {
+                return Err(unknown_v2_enum_variant("NesDiagnosticSeverity", &value));
+            }
         })
     }
 }
@@ -7531,6 +7779,9 @@ impl IntoV1 for super::NesSuggestion {
             Self::Rename(value) => crate::v1::NesSuggestion::Rename(value.into_v1()?),
             Self::SearchAndReplace(value) => {
                 crate::v1::NesSuggestion::SearchAndReplace(value.into_v1()?)
+            }
+            Self::Other(value) => {
+                return Err(unknown_v2_enum_variant("NesSuggestion", &value.kind));
             }
         })
     }
@@ -7816,6 +8067,7 @@ impl IntoV1 for super::NesRejectReason {
             Self::Ignored => crate::v1::NesRejectReason::Ignored,
             Self::Replaced => crate::v1::NesRejectReason::Replaced,
             Self::Cancelled => crate::v1::NesRejectReason::Cancelled,
+            Self::Other(value) => return Err(unknown_v2_enum_variant("NesRejectReason", &value)),
         })
     }
 }
@@ -7862,6 +8114,7 @@ impl IntoV1 for super::StringFormat {
             Self::Uri => crate::v1::StringFormat::Uri,
             Self::Date => crate::v1::StringFormat::Date,
             Self::DateTime => crate::v1::StringFormat::DateTime,
+            Self::Other(value) => return Err(unknown_v2_enum_variant("StringFormat", &value)),
         })
     }
 }
@@ -8852,6 +9105,9 @@ impl IntoV1 for super::ContentBlock {
             Self::Audio(value) => crate::v1::ContentBlock::Audio(value.into_v1()?),
             Self::ResourceLink(value) => crate::v1::ContentBlock::ResourceLink(value.into_v1()?),
             Self::Resource(value) => crate::v1::ContentBlock::Resource(value.into_v1()?),
+            Self::Other(value) => {
+                return Err(unknown_v2_enum_variant("ContentBlock", &value.type_));
+            }
         })
     }
 }
@@ -9223,6 +9479,7 @@ impl IntoV1 for super::Role {
         Ok(match self {
             Self::Assistant => crate::v1::Role::Assistant,
             Self::User => crate::v1::Role::User,
+            Self::Other(value) => return Err(unknown_v2_enum_variant("Role", &value)),
         })
     }
 }
@@ -9331,6 +9588,15 @@ mod tests {
         );
     }
 
+    fn assert_v2_to_v1_error<T>(value: T, expected: &str)
+    where
+        T: IntoV1,
+        T::Output: std::fmt::Debug,
+    {
+        let error = v2_to_v1(value).unwrap_err();
+        assert_eq!(error.message(), expected);
+    }
+
     #[test]
     fn converts_v2_initialize_request_to_v1_without_serde() {
         let request = v2::InitializeRequest::new(ProtocolVersion::V2);
@@ -9351,14 +9617,19 @@ mod tests {
 
     #[test]
     fn round_trips_initialize_request() {
+        let client_capabilities =
+            v1::ClientCapabilities::new()
+                .terminal(true)
+                .fs(v1::FileSystemCapabilities::new()
+                    .read_text_file(true)
+                    .write_text_file(true));
+
+        #[cfg(feature = "unstable_plan_operations")]
+        let client_capabilities =
+            client_capabilities.plan_capabilities(v1::PlanCapabilities::new());
+
         let request = v1::InitializeRequest::new(ProtocolVersion::V1)
-            .client_capabilities(
-                v1::ClientCapabilities::new()
-                    .terminal(true)
-                    .fs(v1::FileSystemCapabilities::new()
-                        .read_text_file(true)
-                        .write_text_file(true)),
-            )
+            .client_capabilities(client_capabilities)
             .client_info(v1::Implementation::new("test-client", "1.0.0").title("Test Client"));
 
         assert_v1_round_trip::<v1::InitializeRequest, v2::InitializeRequest>(request.clone());
@@ -9435,6 +9706,13 @@ mod tests {
                 v1::PlanEntryPriority::High,
                 v1::PlanEntryStatus::InProgress,
             )])),
+            #[cfg(feature = "unstable_plan_operations")]
+            v1::SessionUpdate::PlanUpdate(v1::PlanUpdate::new(v1::PlanUpdateContent::markdown(
+                "plan-1",
+                "## Steps\n- [ ] Test conversion",
+            ))),
+            #[cfg(feature = "unstable_plan_operations")]
+            v1::SessionUpdate::PlanRemoved(v1::PlanRemoved::new("plan-1")),
             v1::SessionUpdate::SessionInfoUpdate(v1::SessionInfoUpdate::new().title("hi")),
         ];
         for update in cases {
@@ -9446,6 +9724,76 @@ mod tests {
                 notification,
             );
         }
+    }
+
+    #[test]
+    fn unknown_v2_session_update_does_not_convert_to_v1() {
+        let update = v2::SessionUpdate::Other(v2::OtherSessionUpdate::new(
+            "_status_badge",
+            std::collections::BTreeMap::new(),
+        ));
+
+        assert_v2_to_v1_error(
+            update,
+            "v2 SessionUpdate variant `_status_badge` cannot be represented in v1",
+        );
+    }
+
+    #[test]
+    fn unknown_v2_raw_fallbacks_do_not_convert_to_v1() {
+        assert_v2_to_v1_error(
+            v2::ContentBlock::Other(v2::OtherContentBlock::new(
+                "_widget",
+                std::collections::BTreeMap::new(),
+            )),
+            "v2 ContentBlock variant `_widget` cannot be represented in v1",
+        );
+        assert_v2_to_v1_error(
+            v2::ToolCallContent::Other(v2::OtherToolCallContent::new(
+                "_chart",
+                std::collections::BTreeMap::new(),
+            )),
+            "v2 ToolCallContent variant `_chart` cannot be represented in v1",
+        );
+        assert_v2_to_v1_error(
+            v2::AvailableCommandInput::Other(v2::OtherAvailableCommandInput::new(
+                "_choices",
+                std::collections::BTreeMap::new(),
+            )),
+            "v2 AvailableCommandInput variant `_choices` cannot be represented in v1",
+        );
+        assert_v2_to_v1_error(
+            v2::SessionConfigKind::Other(v2::OtherSessionConfigKind::new(
+                "_slider",
+                std::collections::BTreeMap::new(),
+            )),
+            "v2 SessionConfigKind variant `_slider` cannot be represented in v1",
+        );
+        assert_v2_to_v1_error(
+            v2::AuthMethod::Other(v2::OtherAuthMethod::new(
+                "_oauth",
+                "oauth",
+                "OAuth",
+                std::collections::BTreeMap::new(),
+            )),
+            "v2 AuthMethod variant `_oauth` cannot be represented in v1",
+        );
+        #[cfg(feature = "unstable_plan_operations")]
+        assert_v2_to_v1_error(
+            v2::PlanUpdateContent::Other(v2::OtherPlanUpdateContent::new(
+                "_timeline",
+                std::collections::BTreeMap::new(),
+            )),
+            "v2 PlanUpdateContent variant `_timeline` cannot be represented in v1",
+        );
+        #[cfg(feature = "unstable_nes")]
+        assert_v2_to_v1_error(
+            v2::NesSuggestion::Other(v2::OtherNesSuggestion::new(
+                "_preview",
+                std::collections::BTreeMap::new(),
+            )),
+            "v2 NesSuggestion variant `_preview` cannot be represented in v1",
+        );
     }
 
     #[test]

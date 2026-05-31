@@ -3,20 +3,20 @@
 //! This module defines the Agent trait and all associated types for implementing
 //! an AI coding agent that follows the Agent Client Protocol (ACP).
 
-use std::{path::PathBuf, sync::Arc};
+use std::{collections::BTreeMap, path::PathBuf, sync::Arc};
 
 #[cfg(any(feature = "unstable_auth_methods", feature = "unstable_llm_providers"))]
 use std::collections::HashMap;
 
 use derive_more::{Display, From};
-use schemars::JsonSchema;
+use schemars::{JsonSchema, Schema};
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
 use super::{
     ClientCapabilities, ContentBlock, ExtNotification, ExtRequest, ExtResponse, Meta, SessionId,
 };
-use crate::{IntoOption, ProtocolVersion, SkipListener};
+use crate::{IntoOption, MaybeUndefined, ProtocolVersion, SkipListener};
 
 #[cfg(feature = "unstable_mcp_over_acp")]
 use super::mcp::{
@@ -335,14 +335,9 @@ impl AuthenticateResponse {
 
 // Logout
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Request parameters for the logout method.
 ///
 /// Terminates the current authenticated session.
-#[cfg(feature = "unstable_logout")]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = LOGOUT_METHOD_NAME))]
@@ -358,7 +353,6 @@ pub struct LogoutRequest {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_logout")]
 impl LogoutRequest {
     #[must_use]
     pub fn new() -> Self {
@@ -377,12 +371,7 @@ impl LogoutRequest {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Response to the `logout` method.
-#[cfg(feature = "unstable_logout")]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = LOGOUT_METHOD_NAME))]
@@ -398,7 +387,6 @@ pub struct LogoutResponse {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_logout")]
 impl LogoutResponse {
     #[must_use]
     pub fn new() -> Self {
@@ -417,12 +405,7 @@ impl LogoutResponse {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Authentication-related capabilities supported by the agent.
-#[cfg(feature = "unstable_logout")]
 #[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -444,7 +427,6 @@ pub struct AgentAuthCapabilities {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_logout")]
 impl AgentAuthCapabilities {
     #[must_use]
     pub fn new() -> Self {
@@ -470,14 +452,9 @@ impl AgentAuthCapabilities {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Logout capabilities supported by the agent.
 ///
 /// By supplying `{}` it means that the agent supports the logout method.
-#[cfg(feature = "unstable_logout")]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[non_exhaustive]
@@ -491,7 +468,6 @@ pub struct LogoutCapabilities {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_logout")]
 impl LogoutCapabilities {
     #[must_use]
     pub fn new() -> Self {
@@ -545,6 +521,17 @@ pub enum AuthMethod {
     /// Client runs an interactive terminal for the user to authenticate via a TUI.
     #[cfg(feature = "unstable_auth_methods")]
     Terminal(AuthMethodTerminal),
+    /// Custom or future authentication method.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    ///
+    /// Clients that do not understand this method type should preserve the raw
+    /// payload when storing, replaying, proxying, or forwarding initialization
+    /// data, and otherwise ignore the method or display it generically.
+    #[serde(untagged)]
+    Other(OtherAuthMethod),
     /// Agent handles authentication itself.
     ///
     /// This is the default when no `type` is specified.
@@ -558,6 +545,7 @@ impl AuthMethod {
     pub fn id(&self) -> &AuthMethodId {
         match self {
             Self::Agent(a) => &a.id,
+            Self::Other(a) => &a.id,
             #[cfg(feature = "unstable_auth_methods")]
             Self::EnvVar(e) => &e.id,
             #[cfg(feature = "unstable_auth_methods")]
@@ -570,6 +558,7 @@ impl AuthMethod {
     pub fn name(&self) -> &str {
         match self {
             Self::Agent(a) => &a.name,
+            Self::Other(a) => &a.name,
             #[cfg(feature = "unstable_auth_methods")]
             Self::EnvVar(e) => &e.name,
             #[cfg(feature = "unstable_auth_methods")]
@@ -582,6 +571,7 @@ impl AuthMethod {
     pub fn description(&self) -> Option<&str> {
         match self {
             Self::Agent(a) => a.description.as_deref(),
+            Self::Other(a) => a.description.as_deref(),
             #[cfg(feature = "unstable_auth_methods")]
             Self::EnvVar(e) => e.description.as_deref(),
             #[cfg(feature = "unstable_auth_methods")]
@@ -598,6 +588,7 @@ impl AuthMethod {
     pub fn meta(&self) -> Option<&Meta> {
         match self {
             Self::Agent(a) => a.meta.as_ref(),
+            Self::Other(a) => a.meta.as_ref(),
             #[cfg(feature = "unstable_auth_methods")]
             Self::EnvVar(e) => e.meta.as_ref(),
             #[cfg(feature = "unstable_auth_methods")]
@@ -606,11 +597,148 @@ impl AuthMethod {
     }
 }
 
+/// Custom or future authentication method payload.
+#[skip_serializing_none]
+#[derive(Debug, Clone, Serialize, JsonSchema, PartialEq, Eq)]
+#[schemars(inline)]
+#[schemars(transform = other_auth_method_schema)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct OtherAuthMethod {
+    /// Custom or future authentication method type.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(rename = "type")]
+    pub type_: String,
+    /// Unique identifier for this authentication method.
+    pub id: AuthMethodId,
+    /// Human-readable name of the authentication method.
+    pub name: String,
+    /// Optional description providing more details about this authentication method.
+    pub description: Option<String>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+    /// Additional fields from the unknown authentication method payload.
+    #[serde(flatten)]
+    pub fields: BTreeMap<String, serde_json::Value>,
+}
+
+impl OtherAuthMethod {
+    #[must_use]
+    pub fn new(
+        type_: impl Into<String>,
+        id: impl Into<AuthMethodId>,
+        name: impl Into<String>,
+        mut fields: BTreeMap<String, serde_json::Value>,
+    ) -> Self {
+        fields.remove("type");
+        fields.remove("id");
+        fields.remove("name");
+        fields.remove("description");
+        fields.remove("_meta");
+        Self {
+            type_: type_.into(),
+            id: id.into(),
+            name: name.into(),
+            description: None,
+            meta: None,
+            fields,
+        }
+    }
+
+    /// Optional description providing more details about this authentication method.
+    #[must_use]
+    pub fn description(mut self, description: impl IntoOption<String>) -> Self {
+        self.description = description.into_option();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+impl<'de> Deserialize<'de> for OtherAuthMethod {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(rename_all = "camelCase")]
+        struct RawOtherAuthMethod {
+            #[serde(rename = "type")]
+            type_: String,
+            id: AuthMethodId,
+            name: String,
+            description: Option<String>,
+            #[serde(rename = "_meta")]
+            meta: Option<Meta>,
+            #[serde(flatten)]
+            fields: BTreeMap<String, serde_json::Value>,
+        }
+
+        let raw = RawOtherAuthMethod::deserialize(deserializer)?;
+        if is_known_auth_method_type(&raw.type_) {
+            return Err(serde::de::Error::custom(format!(
+                "known authentication method `{}` did not match its schema",
+                raw.type_
+            )));
+        }
+
+        Ok(Self {
+            type_: raw.type_,
+            id: raw.id,
+            name: raw.name,
+            description: raw.description,
+            meta: raw.meta,
+            fields: raw.fields,
+        })
+    }
+}
+
+fn is_known_auth_method_type(type_: &str) -> bool {
+    match type_ {
+        "agent" => true,
+        #[cfg(feature = "unstable_auth_methods")]
+        "env_var" | "terminal" => true,
+        _ => false,
+    }
+}
+
+fn other_auth_method_schema(schema: &mut Schema) {
+    super::schema_util::reject_known_string_discriminators(
+        schema,
+        "type",
+        &[
+            "agent",
+            #[cfg(feature = "unstable_auth_methods")]
+            "env_var",
+            #[cfg(feature = "unstable_auth_methods")]
+            "terminal",
+        ],
+    );
+}
+
 /// Agent handles authentication itself.
 ///
 /// This is the default authentication method type.
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, JsonSchema, PartialEq, Eq)]
+#[schemars(transform = auth_method_agent_schema)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct AuthMethodAgent {
@@ -657,6 +785,52 @@ impl AuthMethodAgent {
         self.meta = meta.into_option();
         self
     }
+}
+
+impl<'de> Deserialize<'de> for AuthMethodAgent {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(rename_all = "camelCase")]
+        struct RawAuthMethodAgent {
+            id: AuthMethodId,
+            name: String,
+            description: Option<String>,
+            #[serde(rename = "_meta")]
+            meta: Option<Meta>,
+            #[serde(rename = "type")]
+            #[serde(default)]
+            type_: MaybeUndefined<String>,
+        }
+
+        let raw = RawAuthMethodAgent::deserialize(deserializer)?;
+        match raw.type_.as_opt_deref() {
+            None | Some(Some("agent")) => {}
+            Some(None) => {
+                return Err(serde::de::Error::custom(
+                    "default authentication method `type` must be omitted or `agent`",
+                ));
+            }
+            Some(Some(_)) => {
+                return Err(serde::de::Error::custom(
+                    "default authentication method cannot include a non-agent `type`",
+                ));
+            }
+        }
+
+        Ok(Self {
+            id: raw.id,
+            name: raw.name,
+            description: raw.description,
+            meta: raw.meta,
+        })
+    }
+}
+
+fn auth_method_agent_schema(schema: &mut Schema) {
+    super::schema_util::reject_string_property_except(schema, "type", "agent");
 }
 
 /// **UNSTABLE**
@@ -1921,11 +2095,11 @@ pub struct SessionInfo {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
-    /// Additional workspace roots for this session, if the Agent reports them. Each path must be absolute.
+    /// Additional workspace roots reported for this session. Each path must be absolute.
     ///
-    /// Agents may omit this field when they do not track or surface additional-root
-    /// state. When present, this is the complete additional-root list known to
-    /// the Agent for the session.
+    /// When present, this is the complete ordered additional-root list reported
+    /// by the Agent. Omitted and empty values are equivalent: the response
+    /// reports no additional roots.
     #[cfg(feature = "unstable_session_additional_directories")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<PathBuf>,
@@ -1965,7 +2139,7 @@ impl SessionInfo {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
-    /// Additional workspace roots for this session, if the Agent reports them. Each path must be absolute.
+    /// Additional workspace roots reported for this session. Each path must be absolute.
     #[cfg(feature = "unstable_session_additional_directories")]
     #[must_use]
     pub fn additional_directories(mut self, additional_directories: Vec<PathBuf>) -> Self {
@@ -2413,7 +2587,11 @@ pub enum SessionConfigOptionCategory {
     Model,
     /// Thought/reasoning level selector.
     ThoughtLevel,
-    /// Unknown / uncategorized selector.
+    /// Custom or future category.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
     #[serde(untagged)]
     Other(String),
 }
@@ -2433,6 +2611,91 @@ pub enum SessionConfigKind {
     /// Boolean on/off toggle.
     #[cfg(feature = "unstable_boolean_config")]
     Boolean(SessionConfigBoolean),
+    /// Custom or future session configuration option payload.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    ///
+    /// Clients that do not understand this option type should preserve the raw
+    /// payload when storing, replaying, proxying, or forwarding configuration
+    /// data, and otherwise ignore the option or display it generically.
+    #[serde(untagged)]
+    Other(OtherSessionConfigKind),
+}
+
+/// Custom or future session configuration option payload.
+#[derive(Debug, Clone, Serialize, JsonSchema, PartialEq, Eq)]
+#[schemars(inline)]
+#[schemars(transform = other_session_config_kind_schema)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct OtherSessionConfigKind {
+    /// Custom or future session configuration option type.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(rename = "type")]
+    pub type_: String,
+    /// Additional fields from the unknown session configuration option payload.
+    #[serde(flatten)]
+    pub fields: BTreeMap<String, serde_json::Value>,
+}
+
+impl OtherSessionConfigKind {
+    #[must_use]
+    pub fn new(type_: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
+        fields.remove("type");
+        Self {
+            type_: type_.into(),
+            fields,
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for OtherSessionConfigKind {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let type_ = fields
+            .remove("type")
+            .ok_or_else(|| serde::de::Error::missing_field("type"))?;
+        let serde_json::Value::String(type_) = type_ else {
+            return Err(serde::de::Error::custom("`type` must be a string"));
+        };
+
+        if is_known_session_config_kind_type(&type_) {
+            return Err(serde::de::Error::custom(format!(
+                "known session configuration option `{type_}` did not match its schema"
+            )));
+        }
+
+        Ok(Self { type_, fields })
+    }
+}
+
+fn is_known_session_config_kind_type(type_: &str) -> bool {
+    match type_ {
+        "select" => true,
+        #[cfg(feature = "unstable_boolean_config")]
+        "boolean" => true,
+        _ => false,
+    }
+}
+
+fn other_session_config_kind_schema(schema: &mut Schema) {
+    super::schema_util::reject_known_string_discriminators(
+        schema,
+        "type",
+        &[
+            "select",
+            #[cfg(feature = "unstable_boolean_config")]
+            "boolean",
+        ],
+    );
 }
 
 /// A session configuration option selector and its current state.
@@ -3289,7 +3552,7 @@ impl PromptResponse {
 /// Reasons why an agent stops processing a prompt turn.
 ///
 /// See protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/prompt-turn#stop-reasons)
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum StopReason {
@@ -3311,6 +3574,13 @@ pub enum StopReason {
     /// Agents should catch these exceptions and return this semantically meaningful
     /// response to confirm successful cancellation.
     Cancelled,
+    /// Custom or future stop reason.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(untagged)]
+    Other(String),
 }
 
 /// **UNSTABLE**
@@ -3620,7 +3890,11 @@ pub enum LlmProtocol {
     Vertex,
     /// AWS Bedrock API protocol.
     Bedrock,
-    /// Unknown or custom protocol.
+    /// Custom or future protocol.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
     #[serde(untagged)]
     Other(String),
 }
@@ -3814,7 +4088,7 @@ impl ListProvidersResponse {
 #[schemars(extend("x-side" = "agent", "x-method" = PROVIDERS_SET_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct SetProvidersRequest {
+pub struct SetProviderRequest {
     /// Provider id to configure.
     pub id: String,
     /// Protocol type for this provider.
@@ -3835,7 +4109,7 @@ pub struct SetProvidersRequest {
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl SetProvidersRequest {
+impl SetProviderRequest {
     #[must_use]
     pub fn new(id: impl Into<String>, api_type: LlmProtocol, base_url: impl Into<String>) -> Self {
         Self {
@@ -3878,7 +4152,7 @@ impl SetProvidersRequest {
 #[schemars(extend("x-side" = "agent", "x-method" = PROVIDERS_SET_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct SetProvidersResponse {
+pub struct SetProviderResponse {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -3889,7 +4163,7 @@ pub struct SetProvidersResponse {
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl SetProvidersResponse {
+impl SetProviderResponse {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -3918,7 +4192,7 @@ impl SetProvidersResponse {
 #[schemars(extend("x-side" = "agent", "x-method" = PROVIDERS_DISABLE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct DisableProvidersRequest {
+pub struct DisableProviderRequest {
     /// Provider id to disable.
     pub id: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -3931,7 +4205,7 @@ pub struct DisableProvidersRequest {
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl DisableProvidersRequest {
+impl DisableProviderRequest {
     #[must_use]
     pub fn new(id: impl Into<String>) -> Self {
         Self {
@@ -3963,7 +4237,7 @@ impl DisableProvidersRequest {
 #[schemars(extend("x-side" = "agent", "x-method" = PROVIDERS_DISABLE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct DisableProvidersResponse {
+pub struct DisableProviderResponse {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -3974,7 +4248,7 @@ pub struct DisableProvidersResponse {
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl DisableProvidersResponse {
+impl DisableProviderResponse {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -4017,12 +4291,7 @@ pub struct AgentCapabilities {
     pub mcp_capabilities: McpCapabilities,
     #[serde(default)]
     pub session_capabilities: SessionCapabilities,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Authentication-related capabilities supported by the agent.
-    #[cfg(feature = "unstable_logout")]
     #[serde(default)]
     pub auth: AgentAuthCapabilities,
     /// **UNSTABLE**
@@ -4097,12 +4366,7 @@ impl AgentCapabilities {
         self
     }
 
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Authentication-related capabilities supported by the agent.
-    #[cfg(feature = "unstable_logout")]
     #[must_use]
     pub fn auth(mut self, auth: AgentAuthCapabilities) -> Self {
         self.auth = auth;
@@ -4236,7 +4500,8 @@ pub struct SessionCapabilities {
     /// Whether the agent supports `additionalDirectories` on supported session lifecycle requests.
     ///
     /// Agents that also support `session/list` may return
-    /// `SessionInfo.additionalDirectories` when they track that state.
+    /// `SessionInfo.additionalDirectories` to report the complete ordered
+    /// additional-root list associated with a listed session.
     #[cfg(feature = "unstable_session_additional_directories")]
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[serde(default)]
@@ -4302,7 +4567,8 @@ impl SessionCapabilities {
     /// Whether the agent supports `additionalDirectories` on supported session lifecycle requests.
     ///
     /// Agents that also support `session/list` may return
-    /// `SessionInfo.additionalDirectories` when they track that state.
+    /// `SessionInfo.additionalDirectories` to report the complete ordered
+    /// additional-root list associated with a listed session.
     #[cfg(feature = "unstable_session_additional_directories")]
     #[must_use]
     pub fn additional_directories(
@@ -4429,8 +4695,8 @@ impl SessionDeleteCapabilities {
 ///
 /// By supplying `{}` it means that the agent supports the `additionalDirectories`
 /// field on supported session lifecycle requests. Agents that also support
-/// `session/list` may return `SessionInfo.additionalDirectories` when they track
-/// that state.
+/// `session/list` may return `SessionInfo.additionalDirectories` to report the
+/// complete ordered additional-root list associated with a listed session.
 #[cfg(feature = "unstable_session_additional_directories")]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -4777,7 +5043,6 @@ pub struct AgentMethodNames {
     /// Method for closing an active session.
     pub session_close: &'static str,
     /// Method for logging out of an authenticated session.
-    #[cfg(feature = "unstable_logout")]
     pub logout: &'static str,
     /// Method for starting an NES session.
     #[cfg(feature = "unstable_nes")]
@@ -4838,7 +5103,6 @@ pub const AGENT_METHOD_NAMES: AgentMethodNames = AgentMethodNames {
     session_fork: SESSION_FORK_METHOD_NAME,
     session_resume: SESSION_RESUME_METHOD_NAME,
     session_close: SESSION_CLOSE_METHOD_NAME,
-    #[cfg(feature = "unstable_logout")]
     logout: LOGOUT_METHOD_NAME,
     #[cfg(feature = "unstable_nes")]
     nes_start: NES_START_METHOD_NAME,
@@ -4903,7 +5167,6 @@ pub(crate) const SESSION_RESUME_METHOD_NAME: &str = "session/resume";
 /// Method name for closing an active session.
 pub(crate) const SESSION_CLOSE_METHOD_NAME: &str = "session/close";
 /// Method name for logging out of an authenticated session.
-#[cfg(feature = "unstable_logout")]
 pub(crate) const LOGOUT_METHOD_NAME: &str = "logout";
 
 /// All possible requests that a client can send to an agent.
@@ -4952,23 +5215,18 @@ pub enum ClientRequest {
     ///
     /// Replaces the configuration for a provider.
     #[cfg(feature = "unstable_llm_providers")]
-    SetProvidersRequest(SetProvidersRequest),
+    SetProviderRequest(SetProviderRequest),
     /// **UNSTABLE**
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
     /// Disables a provider.
     #[cfg(feature = "unstable_llm_providers")]
-    DisableProvidersRequest(DisableProvidersRequest),
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
+    DisableProviderRequest(DisableProviderRequest),
     /// Logs out of the current authenticated state.
     ///
     /// After a successful logout, all new sessions will require authentication.
     /// There is no guarantee about the behavior of already running sessions.
-    #[cfg(feature = "unstable_logout")]
     LogoutRequest(LogoutRequest),
     /// Creates a new conversation session with the agent.
     ///
@@ -5121,10 +5379,9 @@ impl ClientRequest {
             #[cfg(feature = "unstable_llm_providers")]
             Self::ListProvidersRequest(_) => AGENT_METHOD_NAMES.providers_list,
             #[cfg(feature = "unstable_llm_providers")]
-            Self::SetProvidersRequest(_) => AGENT_METHOD_NAMES.providers_set,
+            Self::SetProviderRequest(_) => AGENT_METHOD_NAMES.providers_set,
             #[cfg(feature = "unstable_llm_providers")]
-            Self::DisableProvidersRequest(_) => AGENT_METHOD_NAMES.providers_disable,
-            #[cfg(feature = "unstable_logout")]
+            Self::DisableProviderRequest(_) => AGENT_METHOD_NAMES.providers_disable,
             Self::LogoutRequest(_) => AGENT_METHOD_NAMES.logout,
             Self::NewSessionRequest(_) => AGENT_METHOD_NAMES.session_new,
             Self::LoadSessionRequest(_) => AGENT_METHOD_NAMES.session_load,
@@ -5170,10 +5427,9 @@ pub enum AgentResponse {
     #[cfg(feature = "unstable_llm_providers")]
     ListProvidersResponse(ListProvidersResponse),
     #[cfg(feature = "unstable_llm_providers")]
-    SetProvidersResponse(#[serde(default)] SetProvidersResponse),
+    SetProviderResponse(#[serde(default)] SetProviderResponse),
     #[cfg(feature = "unstable_llm_providers")]
-    DisableProvidersResponse(#[serde(default)] DisableProvidersResponse),
-    #[cfg(feature = "unstable_logout")]
+    DisableProviderResponse(#[serde(default)] DisableProviderResponse),
     LogoutResponse(#[serde(default)] LogoutResponse),
     NewSessionResponse(NewSessionResponse),
     LoadSessionResponse(#[serde(default)] LoadSessionResponse),
@@ -5592,7 +5848,6 @@ mod test_serialization {
                 assert_eq!(id.0.as_ref(), "default-auth");
                 assert_eq!(name, "Default Auth");
             }
-            #[cfg(feature = "unstable_auth_methods")]
             _ => panic!("Expected Agent variant"),
         }
     }
@@ -5608,6 +5863,63 @@ mod test_serialization {
 
         let deserialized: AuthMethod = serde_json::from_value(json).unwrap();
         assert!(matches!(deserialized, AuthMethod::Agent(_)));
+    }
+
+    #[test]
+    fn test_auth_method_agent_rejects_null_type() {
+        assert!(
+            serde_json::from_value::<AuthMethod>(json!({
+                "id": "agent-auth",
+                "name": "Agent Auth",
+                "type": null
+            }))
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn test_auth_method_unknown_variant_roundtrip() {
+        let method: AuthMethod = serde_json::from_value(json!({
+            "id": "oauth",
+            "name": "OAuth",
+            "type": "_oauth",
+            "authorizationUrl": "https://example.com/auth"
+        }))
+        .unwrap();
+
+        assert_eq!(method.id().0.as_ref(), "oauth");
+        assert_eq!(method.name(), "OAuth");
+        let AuthMethod::Other(unknown) = method else {
+            panic!("expected unknown auth method");
+        };
+        assert_eq!(unknown.type_, "_oauth");
+        assert_eq!(
+            unknown.fields.get("authorizationUrl"),
+            Some(&json!("https://example.com/auth"))
+        );
+
+        assert_eq!(
+            serde_json::to_value(AuthMethod::Other(unknown)).unwrap(),
+            json!({
+                "id": "oauth",
+                "name": "OAuth",
+                "type": "_oauth",
+                "authorizationUrl": "https://example.com/auth"
+            })
+        );
+    }
+
+    #[cfg(feature = "unstable_auth_methods")]
+    #[test]
+    fn test_auth_method_unknown_does_not_hide_malformed_known_variant() {
+        assert!(
+            serde_json::from_value::<AuthMethod>(json!({
+                "id": "api-key",
+                "name": "API Key",
+                "type": "env_var"
+            }))
+            .is_err()
+        );
     }
 
     #[cfg(feature = "unstable_session_delete")]
@@ -6159,6 +6471,44 @@ mod test_serialization {
         }
     }
 
+    #[test]
+    fn test_session_config_option_unknown_kind_roundtrip() {
+        let option: SessionConfigOption = serde_json::from_value(json!({
+            "id": "verbosity",
+            "name": "Verbosity",
+            "type": "_slider",
+            "currentValue": 3,
+            "min": 0,
+            "max": 5
+        }))
+        .unwrap();
+
+        assert_eq!(option.id.to_string(), "verbosity");
+        let SessionConfigKind::Other(unknown) = &option.kind else {
+            panic!("expected unknown config kind");
+        };
+        assert_eq!(unknown.type_, "_slider");
+        assert_eq!(unknown.fields.get("currentValue"), Some(&json!(3)));
+
+        let json = serde_json::to_value(&option).unwrap();
+        assert_eq!(json["type"], "_slider");
+        assert_eq!(json["currentValue"], 3);
+        assert_eq!(json["min"], 0);
+        assert_eq!(json["max"], 5);
+    }
+
+    #[test]
+    fn test_session_config_option_unknown_does_not_hide_malformed_known_kind() {
+        assert!(
+            serde_json::from_value::<SessionConfigOption>(json!({
+                "id": "model",
+                "name": "Model",
+                "type": "select"
+            }))
+            .is_err()
+        );
+    }
+
     #[cfg(feature = "unstable_llm_providers")]
     #[test]
     fn test_llm_protocol_known_variants() {
@@ -6351,14 +6701,14 @@ mod test_serialization {
 
     #[cfg(feature = "unstable_llm_providers")]
     #[test]
-    fn test_set_providers_request_serialization() {
+    fn test_set_provider_request_serialization() {
         use std::collections::HashMap;
 
         let mut headers = HashMap::new();
         headers.insert("Authorization".to_string(), "Bearer sk-test".to_string());
 
         let request =
-            SetProvidersRequest::new("main", LlmProtocol::OpenAi, "https://api.openai.com/v1")
+            SetProviderRequest::new("main", LlmProtocol::OpenAi, "https://api.openai.com/v1")
                 .headers(headers);
 
         let json = serde_json::to_value(&request).unwrap();
@@ -6374,7 +6724,7 @@ mod test_serialization {
             })
         );
 
-        let deserialized: SetProvidersRequest = serde_json::from_value(json).unwrap();
+        let deserialized: SetProviderRequest = serde_json::from_value(json).unwrap();
         assert_eq!(deserialized.id, "main");
         assert_eq!(deserialized.api_type, LlmProtocol::OpenAi);
         assert_eq!(deserialized.base_url, "https://api.openai.com/v1");
@@ -6387,9 +6737,9 @@ mod test_serialization {
 
     #[cfg(feature = "unstable_llm_providers")]
     #[test]
-    fn test_set_providers_request_omits_empty_headers() {
+    fn test_set_provider_request_omits_empty_headers() {
         let request =
-            SetProvidersRequest::new("main", LlmProtocol::Anthropic, "https://api.anthropic.com");
+            SetProviderRequest::new("main", LlmProtocol::Anthropic, "https://api.anthropic.com");
 
         let json = serde_json::to_value(&request).unwrap();
         // headers should be omitted when empty
@@ -6398,13 +6748,13 @@ mod test_serialization {
 
     #[cfg(feature = "unstable_llm_providers")]
     #[test]
-    fn test_disable_providers_request_serialization() {
-        let request = DisableProvidersRequest::new("secondary");
+    fn test_disable_provider_request_serialization() {
+        let request = DisableProviderRequest::new("secondary");
 
         let json = serde_json::to_value(&request).unwrap();
         assert_eq!(json, json!({ "id": "secondary" }));
 
-        let deserialized: DisableProvidersRequest = serde_json::from_value(json).unwrap();
+        let deserialized: DisableProviderRequest = serde_json::from_value(json).unwrap();
         assert_eq!(deserialized.id, "secondary");
     }
 

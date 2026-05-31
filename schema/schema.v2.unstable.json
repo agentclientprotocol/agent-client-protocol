@@ -27,7 +27,7 @@
       "x-side": "agent"
     },
     "AgentAuthCapabilities": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAuthentication-related capabilities supported by the agent.",
+      "description": "Authentication-related capabilities supported by the agent.",
       "properties": {
         "_meta": {
           "additionalProperties": true,
@@ -63,7 +63,7 @@
             }
           ],
           "default": {},
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAuthentication-related capabilities supported by the agent."
+          "description": "Authentication-related capabilities supported by the agent."
         },
         "loadSession": {
           "default": false,
@@ -376,18 +376,18 @@
                 {
                   "allOf": [
                     {
-                      "$ref": "#/$defs/SetProvidersResponse"
+                      "$ref": "#/$defs/SetProviderResponse"
                     }
                   ],
-                  "title": "SetProvidersResponse"
+                  "title": "SetProviderResponse"
                 },
                 {
                   "allOf": [
                     {
-                      "$ref": "#/$defs/DisableProvidersResponse"
+                      "$ref": "#/$defs/DisableProviderResponse"
                     }
                   ],
-                  "title": "DisableProvidersResponse"
+                  "title": "DisableProviderResponse"
                 },
                 {
                   "allOf": [
@@ -682,6 +682,70 @@
           "type": "object"
         },
         {
+          "additionalProperties": true,
+          "description": "Custom or future authentication method.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nClients that do not understand this method type should preserve the raw\npayload when storing, replaying, proxying, or forwarding initialization\ndata, and otherwise ignore the method or display it generically.",
+          "not": {
+            "anyOf": [
+              {
+                "properties": {
+                  "type": {
+                    "const": "agent",
+                    "type": "string"
+                  }
+                },
+                "required": ["type"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "type": {
+                    "const": "env_var",
+                    "type": "string"
+                  }
+                },
+                "required": ["type"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "type": {
+                    "const": "terminal",
+                    "type": "string"
+                  }
+                },
+                "required": ["type"],
+                "type": "object"
+              }
+            ]
+          },
+          "properties": {
+            "_meta": {
+              "additionalProperties": true,
+              "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+              "type": ["object", "null"]
+            },
+            "description": {
+              "description": "Optional description providing more details about this authentication method.",
+              "type": ["string", "null"]
+            },
+            "id": {
+              "description": "Unique identifier for this authentication method.",
+              "type": "string"
+            },
+            "name": {
+              "description": "Human-readable name of the authentication method.",
+              "type": "string"
+            },
+            "type": {
+              "description": "Custom or future authentication method type.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+              "type": "string"
+            }
+          },
+          "required": ["type", "id", "name"],
+          "title": "other",
+          "type": "object"
+        },
+        {
           "allOf": [
             {
               "$ref": "#/$defs/AuthMethodAgent"
@@ -695,6 +759,17 @@
     },
     "AuthMethodAgent": {
       "description": "Agent handles authentication itself.\n\nThis is the default authentication method type.",
+      "not": {
+        "properties": {
+          "type": {
+            "not": {
+              "const": "agent"
+            }
+          }
+        },
+        "required": ["type"],
+        "type": "object"
+      },
       "properties": {
         "_meta": {
           "additionalProperties": true,
@@ -862,6 +937,19 @@
           ],
           "description": "All text that was typed after the command name is provided as input.",
           "title": "unstructured"
+        },
+        {
+          "additionalProperties": true,
+          "description": "Custom or future command input specification.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nClients that do not understand this input type should preserve the raw\npayload when storing, replaying, proxying, or forwarding command\nmetadata, and otherwise ignore the input specification or display the\ncommand without structured input.",
+          "properties": {
+            "type": {
+              "description": "Custom or future command input type.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+              "type": "string"
+            }
+          },
+          "required": ["type"],
+          "title": "other",
+          "type": "object"
         }
       ],
       "description": "The input specification for a command."
@@ -1020,6 +1108,17 @@
             }
           ],
           "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNES (Next Edit Suggestions) capabilities supported by the client."
+        },
+        "planCapabilities": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PlanCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nWhether the client supports `plan_update` and `plan_removed` session updates.\n\nOptional. Omitted means the client does not advertise support.\nSupplying `{}` means the client can receive both update types."
         },
         "positionEncodings": {
           "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nThe position encodings supported by the client, in order of preference.",
@@ -1234,20 +1333,20 @@
                 {
                   "allOf": [
                     {
-                      "$ref": "#/$defs/SetProvidersRequest"
+                      "$ref": "#/$defs/SetProviderRequest"
                     }
                   ],
                   "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nReplaces the configuration for a provider.",
-                  "title": "SetProvidersRequest"
+                  "title": "SetProviderRequest"
                 },
                 {
                   "allOf": [
                     {
-                      "$ref": "#/$defs/DisableProvidersRequest"
+                      "$ref": "#/$defs/DisableProviderRequest"
                     }
                   ],
                   "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nDisables a provider.",
-                  "title": "DisableProvidersRequest"
+                  "title": "DisableProviderRequest"
                 },
                 {
                   "allOf": [
@@ -1255,7 +1354,7 @@
                       "$ref": "#/$defs/LogoutRequest"
                     }
                   ],
-                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nLogs out of the current authenticated state.\n\nAfter a successful logout, all new sessions will require authentication.\nThere is no guarantee about the behavior of already running sessions.",
+                  "description": "Logs out of the current authenticated state.\n\nAfter a successful logout, all new sessions will require authentication.\nThere is no guarantee about the behavior of already running sessions.",
                   "title": "LogoutRequest"
                 },
                 {
@@ -1728,11 +1827,7 @@
       "type": "object"
     },
     "ContentBlock": {
-      "description": "Content blocks represent displayable information in the Agent Client Protocol.\n\nThey provide a structured way to handle various types of user-facing content—whether\nit's text from language models, images for analysis, or embedded resources for context.\n\nContent blocks appear in:\n- User prompts sent via `session/prompt`\n- Language model output streamed through `session/update` notifications\n- Progress updates and results from tool calls\n\nThis structure is compatible with the Model Context Protocol (MCP), enabling\nagents to seamlessly forward content from MCP tool outputs without transformation.\n\nSee protocol docs: [Content](https://agentclientprotocol.com/protocol/content)",
-      "discriminator": {
-        "propertyName": "type"
-      },
-      "oneOf": [
+      "anyOf": [
         {
           "allOf": [
             {
@@ -1812,8 +1907,79 @@
           },
           "required": ["type"],
           "type": "object"
+        },
+        {
+          "additionalProperties": true,
+          "description": "Custom or future content block.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nReceivers that do not understand this content block type should preserve\nthe raw payload when storing, replaying, proxying, or forwarding content,\nand otherwise ignore it or display it generically.",
+          "not": {
+            "anyOf": [
+              {
+                "properties": {
+                  "type": {
+                    "const": "text",
+                    "type": "string"
+                  }
+                },
+                "required": ["type"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "type": {
+                    "const": "image",
+                    "type": "string"
+                  }
+                },
+                "required": ["type"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "type": {
+                    "const": "audio",
+                    "type": "string"
+                  }
+                },
+                "required": ["type"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "type": {
+                    "const": "resource_link",
+                    "type": "string"
+                  }
+                },
+                "required": ["type"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "type": {
+                    "const": "resource",
+                    "type": "string"
+                  }
+                },
+                "required": ["type"],
+                "type": "object"
+              }
+            ]
+          },
+          "properties": {
+            "type": {
+              "description": "Custom or future content block type.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+              "type": "string"
+            }
+          },
+          "required": ["type"],
+          "title": "other",
+          "type": "object"
         }
-      ]
+      ],
+      "description": "Content blocks represent displayable information in the Agent Client Protocol.\n\nThey provide a structured way to handle various types of user-facing content—whether\nit's text from language models, images for analysis, or embedded resources for context.\n\nContent blocks appear in:\n- User prompts sent via `session/prompt`\n- Language model output streamed through `session/update` notifications\n- Progress updates and results from tool calls\n\nThis structure is compatible with the Model Context Protocol (MCP), enabling\nagents to seamlessly forward content from MCP tool outputs without transformation.\n\nSee protocol docs: [Content](https://agentclientprotocol.com/protocol/content)",
+      "discriminator": {
+        "propertyName": "type"
+      }
     },
     "ContentChunk": {
       "description": "A streamed item of content",
@@ -2289,7 +2455,7 @@
       "required": ["path", "newText"],
       "type": "object"
     },
-    "DisableProvidersRequest": {
+    "DisableProviderRequest": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for `providers/disable`.",
       "properties": {
         "_meta": {
@@ -2307,7 +2473,7 @@
       "x-method": "providers/disable",
       "x-side": "agent"
     },
-    "DisableProvidersResponse": {
+    "DisableProviderResponse": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nResponse to `providers/disable`.",
       "properties": {
         "_meta": {
@@ -3382,7 +3548,7 @@
           "type": "string"
         },
         {
-          "description": "Unknown or custom protocol.",
+          "description": "Custom or future protocol.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
           "title": "other",
           "type": "string"
         }
@@ -3472,7 +3638,7 @@
       "x-side": "agent"
     },
     "LogoutCapabilities": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nLogout capabilities supported by the agent.\n\nBy supplying `{}` it means that the agent supports the logout method.",
+      "description": "Logout capabilities supported by the agent.\n\nBy supplying `{}` it means that the agent supports the logout method.",
       "properties": {
         "_meta": {
           "additionalProperties": true,
@@ -3483,7 +3649,7 @@
       "type": "object"
     },
     "LogoutRequest": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for the logout method.\n\nTerminates the current authenticated session.",
+      "description": "Request parameters for the logout method.\n\nTerminates the current authenticated session.",
       "properties": {
         "_meta": {
           "additionalProperties": true,
@@ -3496,7 +3662,7 @@
       "x-side": "agent"
     },
     "LogoutResponse": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nResponse to the `logout` method.",
+      "description": "Response to the `logout` method.",
       "properties": {
         "_meta": {
           "additionalProperties": true,
@@ -4022,8 +4188,7 @@
       "type": "object"
     },
     "NesDiagnosticSeverity": {
-      "description": "Severity of a diagnostic.",
-      "oneOf": [
+      "anyOf": [
         {
           "const": "error",
           "description": "An error.",
@@ -4043,8 +4208,14 @@
           "const": "hint",
           "description": "A hint.",
           "type": "string"
+        },
+        {
+          "description": "Custom or future diagnostic severity.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+          "title": "Other",
+          "type": "string"
         }
-      ]
+      ],
+      "description": "Severity of a diagnostic."
     },
     "NesDiagnosticsCapabilities": {
       "description": "Capabilities for diagnostics context.",
@@ -4411,8 +4582,7 @@
       "type": "object"
     },
     "NesRejectReason": {
-      "description": "The reason a suggestion was rejected.",
-      "oneOf": [
+      "anyOf": [
         {
           "const": "rejected",
           "description": "The user explicitly dismissed the suggestion.",
@@ -4432,8 +4602,14 @@
           "const": "cancelled",
           "description": "The request was cancelled before the agent returned a response.",
           "type": "string"
+        },
+        {
+          "description": "Custom or future rejection reason.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+          "title": "Other",
+          "type": "string"
         }
-      ]
+      ],
+      "description": "The reason a suggestion was rejected."
     },
     "NesRelatedSnippet": {
       "description": "A related code snippet from a file.",
@@ -4613,11 +4789,7 @@
       "type": "object"
     },
     "NesSuggestion": {
-      "description": "A suggestion returned by the agent.",
-      "discriminator": {
-        "propertyName": "kind"
-      },
-      "oneOf": [
+      "anyOf": [
         {
           "allOf": [
             {
@@ -4681,8 +4853,69 @@
           },
           "required": ["kind"],
           "type": "object"
+        },
+        {
+          "additionalProperties": true,
+          "description": "Custom or future NES suggestion.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nReceivers that do not understand this suggestion kind should preserve\nthe raw payload when storing, replaying, proxying, or forwarding\nsuggestions, and otherwise ignore it or display it generically.",
+          "not": {
+            "anyOf": [
+              {
+                "properties": {
+                  "kind": {
+                    "const": "edit",
+                    "type": "string"
+                  }
+                },
+                "required": ["kind"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "kind": {
+                    "const": "jump",
+                    "type": "string"
+                  }
+                },
+                "required": ["kind"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "kind": {
+                    "const": "rename",
+                    "type": "string"
+                  }
+                },
+                "required": ["kind"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "kind": {
+                    "const": "searchAndReplace",
+                    "type": "string"
+                  }
+                },
+                "required": ["kind"],
+                "type": "object"
+              }
+            ]
+          },
+          "properties": {
+            "kind": {
+              "description": "Custom or future NES suggestion kind.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+              "type": "string"
+            }
+          },
+          "required": ["kind"],
+          "title": "other",
+          "type": "object"
         }
-      ]
+      ],
+      "description": "A suggestion returned by the agent.",
+      "discriminator": {
+        "propertyName": "kind"
+      }
     },
     "NesTextEdit": {
       "description": "A text edit within a suggestion.",
@@ -4704,8 +4937,7 @@
       "type": "object"
     },
     "NesTriggerKind": {
-      "description": "What triggered the suggestion request.",
-      "oneOf": [
+      "anyOf": [
         {
           "const": "automatic",
           "description": "Triggered by user typing or cursor movement.",
@@ -4720,8 +4952,14 @@
           "const": "manual",
           "description": "Triggered by an explicit user action (keyboard shortcut).",
           "type": "string"
+        },
+        {
+          "description": "Custom or future suggestion trigger kind.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+          "title": "Other",
+          "type": "string"
         }
-      ]
+      ],
+      "description": "What triggered the suggestion request."
     },
     "NesUserAction": {
       "description": "A user action (typing, cursor movement, etc.).",
@@ -4918,8 +5156,7 @@
       "type": "string"
     },
     "PermissionOptionKind": {
-      "description": "The type of permission option being presented to the user.\n\nHelps clients choose appropriate icons and UI treatment.",
-      "oneOf": [
+      "anyOf": [
         {
           "const": "allow_once",
           "description": "Allow this operation only this time.",
@@ -4939,8 +5176,14 @@
           "const": "reject_always",
           "description": "Reject this operation and remember the choice.",
           "type": "string"
+        },
+        {
+          "description": "Custom or future permission option kind.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+          "title": "other",
+          "type": "string"
         }
-      ]
+      ],
+      "description": "The type of permission option being presented to the user.\n\nHelps clients choose appropriate icons and UI treatment."
     },
     "Plan": {
       "description": "An execution plan for accomplishing complex tasks.\n\nPlans consist of multiple entries representing individual tasks or goals.\nAgents report plans to clients to provide visibility into their execution strategy.\nPlans can evolve during execution as the agent discovers new requirements or completes tasks.\n\nSee protocol docs: [Agent Plan](https://agentclientprotocol.com/protocol/agent-plan)",
@@ -4959,6 +5202,17 @@
         }
       },
       "required": ["entries"],
+      "type": "object"
+    },
+    "PlanCapabilities": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapabilities for receiving `plan_update` and `plan_removed` session updates.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        }
+      },
       "type": "object"
     },
     "PlanEntry": {
@@ -4994,8 +5248,7 @@
       "type": "object"
     },
     "PlanEntryPriority": {
-      "description": "Priority levels for plan entries.\n\nUsed to indicate the relative importance or urgency of different\ntasks in the execution plan.\nSee protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/agent-plan#plan-entries)",
-      "oneOf": [
+      "anyOf": [
         {
           "const": "high",
           "description": "High priority task - critical to the overall goal.",
@@ -5010,12 +5263,17 @@
           "const": "low",
           "description": "Low priority task - nice to have but not essential.",
           "type": "string"
+        },
+        {
+          "description": "Custom or future plan entry priority.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+          "title": "other",
+          "type": "string"
         }
-      ]
+      ],
+      "description": "Priority levels for plan entries.\n\nUsed to indicate the relative importance or urgency of different\ntasks in the execution plan.\nSee protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/agent-plan#plan-entries)"
     },
     "PlanEntryStatus": {
-      "description": "Status of a plan entry in the execution flow.\n\nTracks the lifecycle of each task from planning through completion.\nSee protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/agent-plan#plan-entries)",
-      "oneOf": [
+      "anyOf": [
         {
           "const": "pending",
           "description": "The task has not started yet.",
@@ -5030,8 +5288,236 @@
           "const": "completed",
           "description": "The task has been successfully completed.",
           "type": "string"
+        },
+        {
+          "description": "Custom or future plan entry status.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+          "title": "other",
+          "type": "string"
         }
-      ]
+      ],
+      "description": "Status of a plan entry in the execution flow.\n\nTracks the lifecycle of each task from planning through completion.\nSee protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/agent-plan#plan-entries)"
+    },
+    "PlanFile": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA plan represented by a file URI.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "id": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/PlanId"
+            }
+          ],
+          "description": "The plan ID to update."
+        },
+        "uri": {
+          "description": "The URI of the file containing the plan.",
+          "type": "string"
+        }
+      },
+      "required": ["id", "uri"],
+      "type": "object"
+    },
+    "PlanId": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nUnique identifier for a plan within a session.",
+      "type": "string"
+    },
+    "PlanItems": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA plan represented as structured entries.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "entries": {
+          "description": "The list of tasks to be accomplished.\n\nWhen updating an item-based plan, the agent must send a complete list of all entries\nwith their current status. The client replaces that plan with each update.",
+          "items": {
+            "$ref": "#/$defs/PlanEntry"
+          },
+          "type": "array"
+        },
+        "id": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/PlanId"
+            }
+          ],
+          "description": "The plan ID to update."
+        }
+      },
+      "required": ["id", "entries"],
+      "type": "object"
+    },
+    "PlanMarkdown": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA plan represented as raw markdown content.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "content": {
+          "description": "Markdown content for the plan.",
+          "type": "string"
+        },
+        "id": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/PlanId"
+            }
+          ],
+          "description": "The plan ID to update."
+        }
+      },
+      "required": ["id", "content"],
+      "type": "object"
+    },
+    "PlanRemoved": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRemoval notice for a plan identified by ID.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "id": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/PlanId"
+            }
+          ],
+          "description": "The plan ID to remove."
+        }
+      },
+      "required": ["id"],
+      "type": "object"
+    },
+    "PlanUpdate": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA content update for a plan identified by ID.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "plan": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/PlanUpdateContent"
+            }
+          ],
+          "description": "The updated plan content."
+        }
+      },
+      "required": ["plan"],
+      "type": "object"
+    },
+    "PlanUpdateContent": {
+      "anyOf": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/PlanItems"
+            }
+          ],
+          "description": "Structured plan entries.",
+          "properties": {
+            "type": {
+              "const": "items",
+              "type": "string"
+            }
+          },
+          "required": ["type"],
+          "type": "object"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/PlanFile"
+            }
+          ],
+          "description": "A URI pointing to a file containing the plan.",
+          "properties": {
+            "type": {
+              "const": "file",
+              "type": "string"
+            }
+          },
+          "required": ["type"],
+          "type": "object"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/PlanMarkdown"
+            }
+          ],
+          "description": "Raw markdown content for the plan.",
+          "properties": {
+            "type": {
+              "const": "markdown",
+              "type": "string"
+            }
+          },
+          "required": ["type"],
+          "type": "object"
+        },
+        {
+          "additionalProperties": true,
+          "description": "Custom or future plan update content.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nReceivers that do not understand this content type should preserve the\nraw payload when storing, replaying, proxying, or forwarding plans, and\notherwise ignore it or display it generically.",
+          "not": {
+            "anyOf": [
+              {
+                "properties": {
+                  "type": {
+                    "const": "items",
+                    "type": "string"
+                  }
+                },
+                "required": ["type"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "type": {
+                    "const": "file",
+                    "type": "string"
+                  }
+                },
+                "required": ["type"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "type": {
+                    "const": "markdown",
+                    "type": "string"
+                  }
+                },
+                "required": ["type"],
+                "type": "object"
+              }
+            ]
+          },
+          "properties": {
+            "type": {
+              "description": "Custom or future plan update content type.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+              "type": "string"
+            }
+          },
+          "required": ["type"],
+          "title": "other",
+          "type": "object"
+        }
+      ],
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nUpdated content for a plan.",
+      "discriminator": {
+        "propertyName": "type"
+      }
     },
     "Position": {
       "description": "A zero-based position in a text document.\n\nThe meaning of `character` depends on the negotiated position encoding.",
@@ -5633,9 +6119,18 @@
       "x-side": "agent"
     },
     "Role": {
-      "description": "The sender or recipient of messages and data in a conversation.",
-      "enum": ["assistant", "user"],
-      "type": "string"
+      "anyOf": [
+        {
+          "enum": ["assistant", "user"],
+          "type": "string"
+        },
+        {
+          "description": "Custom or future role.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+          "title": "other",
+          "type": "string"
+        }
+      ],
+      "description": "The sender or recipient of messages and data in a conversation."
     },
     "SelectedPermissionOutcome": {
       "description": "The user selected one of the provided options.",
@@ -5658,7 +6153,7 @@
       "type": "object"
     },
     "SessionAdditionalDirectoriesCapabilities": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapabilities for additional session directories support.\n\nBy supplying `{}` it means that the agent supports the `additionalDirectories`\nfield on supported session lifecycle requests. Agents that also support\n`session/list` may return `SessionInfo.additionalDirectories` when they track\nthat state.",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapabilities for additional session directories support.\n\nBy supplying `{}` it means that the agent supports the `additionalDirectories`\nfield on supported session lifecycle requests. Agents that also support\n`session/list` may return `SessionInfo.additionalDirectories` to report the\ncomplete ordered additional-root list associated with a listed session.",
       "properties": {
         "_meta": {
           "additionalProperties": true,
@@ -5685,7 +6180,7 @@
               "type": "null"
             }
           ],
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nWhether the agent supports `additionalDirectories` on supported session lifecycle requests.\n\nAgents that also support `session/list` may return\n`SessionInfo.additionalDirectories` when they track that state."
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nWhether the agent supports `additionalDirectories` on supported session lifecycle requests.\n\nAgents that also support `session/list` may return\n`SessionInfo.additionalDirectories` to report the complete ordered\nadditional-root list associated with a listed session."
         },
         "close": {
           "anyOf": [
@@ -5776,11 +6271,7 @@
       "type": "string"
     },
     "SessionConfigOption": {
-      "description": "A session configuration option selector and its current state.",
-      "discriminator": {
-        "propertyName": "type"
-      },
-      "oneOf": [
+      "anyOf": [
         {
           "allOf": [
             {
@@ -5812,8 +6303,49 @@
           },
           "required": ["type"],
           "type": "object"
+        },
+        {
+          "additionalProperties": true,
+          "description": "Custom or future session configuration option payload.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nClients that do not understand this option type should preserve the raw\npayload when storing, replaying, proxying, or forwarding configuration\ndata, and otherwise ignore the option or display it generically.",
+          "not": {
+            "anyOf": [
+              {
+                "properties": {
+                  "type": {
+                    "const": "select",
+                    "type": "string"
+                  }
+                },
+                "required": ["type"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "type": {
+                    "const": "boolean",
+                    "type": "string"
+                  }
+                },
+                "required": ["type"],
+                "type": "object"
+              }
+            ]
+          },
+          "properties": {
+            "type": {
+              "description": "Custom or future session configuration option type.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+              "type": "string"
+            }
+          },
+          "required": ["type"],
+          "title": "other",
+          "type": "object"
         }
       ],
+      "description": "A session configuration option selector and its current state.",
+      "discriminator": {
+        "propertyName": "type"
+      },
       "properties": {
         "_meta": {
           "additionalProperties": true,
@@ -5869,7 +6401,7 @@
           "type": "string"
         },
         {
-          "description": "Unknown / uncategorized selector.",
+          "description": "Custom or future category.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
           "title": "other",
           "type": "string"
         }
@@ -6018,7 +6550,7 @@
           "type": ["object", "null"]
         },
         "additionalDirectories": {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAdditional workspace roots for this session, if the Agent reports them. Each path must be absolute.\n\nAgents may omit this field when they do not track or surface additional-root\nstate. When present, this is the complete additional-root list known to\nthe Agent for the session.",
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAdditional workspace roots reported for this session. Each path must be absolute.\n\nWhen present, this is the complete ordered additional-root list reported\nby the Agent. Omitted and empty values are equivalent: the response\nreports no additional roots.",
           "items": {
             "type": "string"
           },
@@ -6199,11 +6731,7 @@
       "type": "object"
     },
     "SessionUpdate": {
-      "description": "Different types of updates that can be sent during session processing.\n\nThese updates provide real-time feedback about the agent's progress.\n\nSee protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-turn#3-agent-reports-output)",
-      "discriminator": {
-        "propertyName": "sessionUpdate"
-      },
-      "oneOf": [
+      "anyOf": [
         {
           "allOf": [
             {
@@ -6303,6 +6831,38 @@
         {
           "allOf": [
             {
+              "$ref": "#/$defs/PlanUpdate"
+            }
+          ],
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA content update for a plan identified by ID.",
+          "properties": {
+            "sessionUpdate": {
+              "const": "plan_update",
+              "type": "string"
+            }
+          },
+          "required": ["sessionUpdate"],
+          "type": "object"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/PlanRemoved"
+            }
+          ],
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRemoval notice for a plan identified by ID.",
+          "properties": {
+            "sessionUpdate": {
+              "const": "plan_removed",
+              "type": "string"
+            }
+          },
+          "required": ["sessionUpdate"],
+          "type": "object"
+        },
+        {
+          "allOf": [
+            {
               "$ref": "#/$defs/AvailableCommandsUpdate"
             }
           ],
@@ -6379,10 +6939,161 @@
           },
           "required": ["sessionUpdate"],
           "type": "object"
+        },
+        {
+          "additionalProperties": true,
+          "description": "Custom or future session update.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nReceivers that do not understand this update type should preserve the\nraw payload when storing, replaying, proxying, or forwarding session\nhistory, and otherwise ignore it or display it generically.",
+          "not": {
+            "anyOf": [
+              {
+                "properties": {
+                  "sessionUpdate": {
+                    "const": "user_message_chunk",
+                    "type": "string"
+                  }
+                },
+                "required": ["sessionUpdate"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "sessionUpdate": {
+                    "const": "agent_message_chunk",
+                    "type": "string"
+                  }
+                },
+                "required": ["sessionUpdate"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "sessionUpdate": {
+                    "const": "agent_thought_chunk",
+                    "type": "string"
+                  }
+                },
+                "required": ["sessionUpdate"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "sessionUpdate": {
+                    "const": "tool_call",
+                    "type": "string"
+                  }
+                },
+                "required": ["sessionUpdate"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "sessionUpdate": {
+                    "const": "tool_call_update",
+                    "type": "string"
+                  }
+                },
+                "required": ["sessionUpdate"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "sessionUpdate": {
+                    "const": "plan",
+                    "type": "string"
+                  }
+                },
+                "required": ["sessionUpdate"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "sessionUpdate": {
+                    "const": "available_commands_update",
+                    "type": "string"
+                  }
+                },
+                "required": ["sessionUpdate"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "sessionUpdate": {
+                    "const": "current_mode_update",
+                    "type": "string"
+                  }
+                },
+                "required": ["sessionUpdate"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "sessionUpdate": {
+                    "const": "config_option_update",
+                    "type": "string"
+                  }
+                },
+                "required": ["sessionUpdate"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "sessionUpdate": {
+                    "const": "session_info_update",
+                    "type": "string"
+                  }
+                },
+                "required": ["sessionUpdate"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "sessionUpdate": {
+                    "const": "plan_update",
+                    "type": "string"
+                  }
+                },
+                "required": ["sessionUpdate"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "sessionUpdate": {
+                    "const": "plan_removed",
+                    "type": "string"
+                  }
+                },
+                "required": ["sessionUpdate"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "sessionUpdate": {
+                    "const": "usage_update",
+                    "type": "string"
+                  }
+                },
+                "required": ["sessionUpdate"],
+                "type": "object"
+              }
+            ]
+          },
+          "properties": {
+            "sessionUpdate": {
+              "description": "Custom or future session update type.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+              "type": "string"
+            }
+          },
+          "required": ["sessionUpdate"],
+          "title": "other",
+          "type": "object"
         }
-      ]
+      ],
+      "description": "Different types of updates that can be sent during session processing.\n\nThese updates provide real-time feedback about the agent's progress.\n\nSee protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-turn#3-agent-reports-output)",
+      "discriminator": {
+        "propertyName": "sessionUpdate"
+      }
     },
-    "SetProvidersRequest": {
+    "SetProviderRequest": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for `providers/set`.\n\nReplaces the full configuration for one provider id.",
       "properties": {
         "_meta": {
@@ -6419,7 +7130,7 @@
       "x-method": "providers/set",
       "x-side": "agent"
     },
-    "SetProvidersResponse": {
+    "SetProviderResponse": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nResponse to `providers/set`.",
       "properties": {
         "_meta": {
@@ -6660,8 +7371,7 @@
       "x-side": "agent"
     },
     "StopReason": {
-      "description": "Reasons why an agent stops processing a prompt turn.\n\nSee protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/prompt-turn#stop-reasons)",
-      "oneOf": [
+      "anyOf": [
         {
           "const": "end_turn",
           "description": "The turn ended successfully.",
@@ -6686,12 +7396,17 @@
           "const": "cancelled",
           "description": "The turn was cancelled by the client via `session/cancel`.\n\nThis stop reason MUST be returned when the client sends a `session/cancel`\nnotification, even if the cancellation causes exceptions in underlying operations.\nAgents should catch these exceptions and return this semantically meaningful\nresponse to confirm successful cancellation.",
           "type": "string"
+        },
+        {
+          "description": "Custom or future stop reason.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+          "title": "other",
+          "type": "string"
         }
-      ]
+      ],
+      "description": "Reasons why an agent stops processing a prompt turn.\n\nSee protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/prompt-turn#stop-reasons)"
     },
     "StringFormat": {
-      "description": "String format types for string properties in elicitation schemas.",
-      "oneOf": [
+      "anyOf": [
         {
           "const": "email",
           "description": "Email address format.",
@@ -6711,8 +7426,14 @@
           "const": "date-time",
           "description": "Date-time format (ISO 8601).",
           "type": "string"
+        },
+        {
+          "description": "Custom or future string format.\n\nUnknown formats are preserved. Implementations that do not understand a\nformat should treat it as an annotation rather than rejecting the schema.",
+          "title": "other",
+          "type": "string"
         }
-      ]
+      ],
+      "description": "String format types for string properties in elicitation schemas."
     },
     "StringPropertySchema": {
       "description": "Schema for string properties in an elicitation form.\n\nWhen `enum` or `oneOf` is set, this represents a single-select enum\nwith `\"type\": \"string\"`.",
@@ -7116,11 +7837,7 @@
       "type": "object"
     },
     "ToolCallContent": {
-      "description": "Content produced by a tool call.\n\nTool calls can produce different types of content including\nstandard content blocks (text, images) or file diffs.\n\nSee protocol docs: [Content](https://agentclientprotocol.com/protocol/tool-calls#content)",
-      "discriminator": {
-        "propertyName": "type"
-      },
-      "oneOf": [
+      "anyOf": [
         {
           "allOf": [
             {
@@ -7168,8 +7885,59 @@
           },
           "required": ["type"],
           "type": "object"
+        },
+        {
+          "additionalProperties": true,
+          "description": "Custom or future tool call content.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nReceivers that do not understand this content type should preserve the\nraw payload when storing, replaying, proxying, or forwarding tool call\noutput, and otherwise ignore it or display it generically.",
+          "not": {
+            "anyOf": [
+              {
+                "properties": {
+                  "type": {
+                    "const": "content",
+                    "type": "string"
+                  }
+                },
+                "required": ["type"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "type": {
+                    "const": "diff",
+                    "type": "string"
+                  }
+                },
+                "required": ["type"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "type": {
+                    "const": "terminal",
+                    "type": "string"
+                  }
+                },
+                "required": ["type"],
+                "type": "object"
+              }
+            ]
+          },
+          "properties": {
+            "type": {
+              "description": "Custom or future tool call content type.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+              "type": "string"
+            }
+          },
+          "required": ["type"],
+          "title": "other",
+          "type": "object"
         }
-      ]
+      ],
+      "description": "Content produced by a tool call.\n\nTool calls can produce different types of content including\nstandard content blocks (text, images) or file diffs.\n\nSee protocol docs: [Content](https://agentclientprotocol.com/protocol/tool-calls#content)",
+      "discriminator": {
+        "propertyName": "type"
+      }
     },
     "ToolCallId": {
       "description": "Unique identifier for a tool call within a session.",
@@ -7198,8 +7966,7 @@
       "type": "object"
     },
     "ToolCallStatus": {
-      "description": "Execution status of a tool call.\n\nTool calls progress through different statuses during their lifecycle.\n\nSee protocol docs: [Status](https://agentclientprotocol.com/protocol/tool-calls#status)",
-      "oneOf": [
+      "anyOf": [
         {
           "const": "pending",
           "description": "The tool call hasn't started running yet because the input is either\nstreaming or we're awaiting approval.",
@@ -7219,8 +7986,14 @@
           "const": "failed",
           "description": "The tool call failed with an error.",
           "type": "string"
+        },
+        {
+          "description": "Custom or future tool call status.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+          "title": "other",
+          "type": "string"
         }
-      ]
+      ],
+      "description": "Execution status of a tool call.\n\nTool calls progress through different statuses during their lifecycle.\n\nSee protocol docs: [Status](https://agentclientprotocol.com/protocol/tool-calls#status)"
     },
     "ToolCallUpdate": {
       "description": "An update to an existing tool call.\n\nUsed to report progress and results as tools execute. All fields except\nthe tool call ID are optional - only changed fields need to be included.\n\nSee protocol docs: [Updating](https://agentclientprotocol.com/protocol/tool-calls#updating)",
@@ -7289,8 +8062,7 @@
       "type": "object"
     },
     "ToolKind": {
-      "description": "Categories of tools that can be invoked.\n\nTool kinds help clients choose appropriate icons and optimize how they\ndisplay tool execution progress.\n\nSee protocol docs: [Creating](https://agentclientprotocol.com/protocol/tool-calls#creating)",
-      "oneOf": [
+      "anyOf": [
         {
           "const": "read",
           "description": "Reading files or data.",
@@ -7340,11 +8112,21 @@
           "const": "other",
           "description": "Other tool types (default).",
           "type": "string"
+        },
+        {
+          "description": "Custom or future tool kind.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+          "title": "unknown",
+          "type": "string"
         }
-      ]
+      ],
+      "description": "Categories of tools that can be invoked.\n\nTool kinds help clients choose appropriate icons and optimize how they\ndisplay tool execution progress.\n\nSee protocol docs: [Creating](https://agentclientprotocol.com/protocol/tool-calls#creating)"
     },
     "UnstructuredCommandInput": {
       "description": "All text that was typed after the command name is provided as input.",
+      "not": {
+        "required": ["type"],
+        "type": "object"
+      },
       "properties": {
         "_meta": {
           "additionalProperties": true,

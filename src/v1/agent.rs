@@ -335,14 +335,9 @@ impl AuthenticateResponse {
 
 // Logout
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Request parameters for the logout method.
 ///
 /// Terminates the current authenticated session.
-#[cfg(feature = "unstable_logout")]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = LOGOUT_METHOD_NAME))]
@@ -358,7 +353,6 @@ pub struct LogoutRequest {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_logout")]
 impl LogoutRequest {
     #[must_use]
     pub fn new() -> Self {
@@ -377,12 +371,7 @@ impl LogoutRequest {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Response to the `logout` method.
-#[cfg(feature = "unstable_logout")]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = LOGOUT_METHOD_NAME))]
@@ -398,7 +387,6 @@ pub struct LogoutResponse {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_logout")]
 impl LogoutResponse {
     #[must_use]
     pub fn new() -> Self {
@@ -417,12 +405,7 @@ impl LogoutResponse {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Authentication-related capabilities supported by the agent.
-#[cfg(feature = "unstable_logout")]
 #[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -444,7 +427,6 @@ pub struct AgentAuthCapabilities {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_logout")]
 impl AgentAuthCapabilities {
     #[must_use]
     pub fn new() -> Self {
@@ -470,14 +452,9 @@ impl AgentAuthCapabilities {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Logout capabilities supported by the agent.
 ///
 /// By supplying `{}` it means that the agent supports the logout method.
-#[cfg(feature = "unstable_logout")]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[non_exhaustive]
@@ -491,7 +468,6 @@ pub struct LogoutCapabilities {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_logout")]
 impl LogoutCapabilities {
     #[must_use]
     pub fn new() -> Self {
@@ -1921,11 +1897,11 @@ pub struct SessionInfo {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
-    /// Additional workspace roots for this session, if the Agent reports them. Each path must be absolute.
+    /// Additional workspace roots reported for this session. Each path must be absolute.
     ///
-    /// Agents may omit this field when they do not track or surface additional-root
-    /// state. When present, this is the complete additional-root list known to
-    /// the Agent for the session.
+    /// When present, this is the complete ordered additional-root list reported
+    /// by the Agent. Omitted and empty values are equivalent: the response
+    /// reports no additional roots.
     #[cfg(feature = "unstable_session_additional_directories")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<PathBuf>,
@@ -1965,7 +1941,7 @@ impl SessionInfo {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
-    /// Additional workspace roots for this session, if the Agent reports them. Each path must be absolute.
+    /// Additional workspace roots reported for this session. Each path must be absolute.
     #[cfg(feature = "unstable_session_additional_directories")]
     #[must_use]
     pub fn additional_directories(mut self, additional_directories: Vec<PathBuf>) -> Self {
@@ -3814,7 +3790,7 @@ impl ListProvidersResponse {
 #[schemars(extend("x-side" = "agent", "x-method" = PROVIDERS_SET_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct SetProvidersRequest {
+pub struct SetProviderRequest {
     /// Provider id to configure.
     pub id: String,
     /// Protocol type for this provider.
@@ -3835,7 +3811,7 @@ pub struct SetProvidersRequest {
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl SetProvidersRequest {
+impl SetProviderRequest {
     #[must_use]
     pub fn new(id: impl Into<String>, api_type: LlmProtocol, base_url: impl Into<String>) -> Self {
         Self {
@@ -3878,7 +3854,7 @@ impl SetProvidersRequest {
 #[schemars(extend("x-side" = "agent", "x-method" = PROVIDERS_SET_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct SetProvidersResponse {
+pub struct SetProviderResponse {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -3889,7 +3865,7 @@ pub struct SetProvidersResponse {
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl SetProvidersResponse {
+impl SetProviderResponse {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -3918,7 +3894,7 @@ impl SetProvidersResponse {
 #[schemars(extend("x-side" = "agent", "x-method" = PROVIDERS_DISABLE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct DisableProvidersRequest {
+pub struct DisableProviderRequest {
     /// Provider id to disable.
     pub id: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -3931,7 +3907,7 @@ pub struct DisableProvidersRequest {
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl DisableProvidersRequest {
+impl DisableProviderRequest {
     #[must_use]
     pub fn new(id: impl Into<String>) -> Self {
         Self {
@@ -3963,7 +3939,7 @@ impl DisableProvidersRequest {
 #[schemars(extend("x-side" = "agent", "x-method" = PROVIDERS_DISABLE_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct DisableProvidersResponse {
+pub struct DisableProviderResponse {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -3974,7 +3950,7 @@ pub struct DisableProvidersResponse {
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl DisableProvidersResponse {
+impl DisableProviderResponse {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -4017,12 +3993,7 @@ pub struct AgentCapabilities {
     pub mcp_capabilities: McpCapabilities,
     #[serde(default)]
     pub session_capabilities: SessionCapabilities,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Authentication-related capabilities supported by the agent.
-    #[cfg(feature = "unstable_logout")]
     #[serde(default)]
     pub auth: AgentAuthCapabilities,
     /// **UNSTABLE**
@@ -4097,12 +4068,7 @@ impl AgentCapabilities {
         self
     }
 
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Authentication-related capabilities supported by the agent.
-    #[cfg(feature = "unstable_logout")]
     #[must_use]
     pub fn auth(mut self, auth: AgentAuthCapabilities) -> Self {
         self.auth = auth;
@@ -4236,7 +4202,8 @@ pub struct SessionCapabilities {
     /// Whether the agent supports `additionalDirectories` on supported session lifecycle requests.
     ///
     /// Agents that also support `session/list` may return
-    /// `SessionInfo.additionalDirectories` when they track that state.
+    /// `SessionInfo.additionalDirectories` to report the complete ordered
+    /// additional-root list associated with a listed session.
     #[cfg(feature = "unstable_session_additional_directories")]
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[serde(default)]
@@ -4302,7 +4269,8 @@ impl SessionCapabilities {
     /// Whether the agent supports `additionalDirectories` on supported session lifecycle requests.
     ///
     /// Agents that also support `session/list` may return
-    /// `SessionInfo.additionalDirectories` when they track that state.
+    /// `SessionInfo.additionalDirectories` to report the complete ordered
+    /// additional-root list associated with a listed session.
     #[cfg(feature = "unstable_session_additional_directories")]
     #[must_use]
     pub fn additional_directories(
@@ -4429,8 +4397,8 @@ impl SessionDeleteCapabilities {
 ///
 /// By supplying `{}` it means that the agent supports the `additionalDirectories`
 /// field on supported session lifecycle requests. Agents that also support
-/// `session/list` may return `SessionInfo.additionalDirectories` when they track
-/// that state.
+/// `session/list` may return `SessionInfo.additionalDirectories` to report the
+/// complete ordered additional-root list associated with a listed session.
 #[cfg(feature = "unstable_session_additional_directories")]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -4777,7 +4745,6 @@ pub struct AgentMethodNames {
     /// Method for closing an active session.
     pub session_close: &'static str,
     /// Method for logging out of an authenticated session.
-    #[cfg(feature = "unstable_logout")]
     pub logout: &'static str,
     /// Method for starting an NES session.
     #[cfg(feature = "unstable_nes")]
@@ -4838,7 +4805,6 @@ pub const AGENT_METHOD_NAMES: AgentMethodNames = AgentMethodNames {
     session_fork: SESSION_FORK_METHOD_NAME,
     session_resume: SESSION_RESUME_METHOD_NAME,
     session_close: SESSION_CLOSE_METHOD_NAME,
-    #[cfg(feature = "unstable_logout")]
     logout: LOGOUT_METHOD_NAME,
     #[cfg(feature = "unstable_nes")]
     nes_start: NES_START_METHOD_NAME,
@@ -4903,7 +4869,6 @@ pub(crate) const SESSION_RESUME_METHOD_NAME: &str = "session/resume";
 /// Method name for closing an active session.
 pub(crate) const SESSION_CLOSE_METHOD_NAME: &str = "session/close";
 /// Method name for logging out of an authenticated session.
-#[cfg(feature = "unstable_logout")]
 pub(crate) const LOGOUT_METHOD_NAME: &str = "logout";
 
 /// All possible requests that a client can send to an agent.
@@ -4952,23 +4917,18 @@ pub enum ClientRequest {
     ///
     /// Replaces the configuration for a provider.
     #[cfg(feature = "unstable_llm_providers")]
-    SetProvidersRequest(SetProvidersRequest),
+    SetProviderRequest(SetProviderRequest),
     /// **UNSTABLE**
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
     /// Disables a provider.
     #[cfg(feature = "unstable_llm_providers")]
-    DisableProvidersRequest(DisableProvidersRequest),
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
+    DisableProviderRequest(DisableProviderRequest),
     /// Logs out of the current authenticated state.
     ///
     /// After a successful logout, all new sessions will require authentication.
     /// There is no guarantee about the behavior of already running sessions.
-    #[cfg(feature = "unstable_logout")]
     LogoutRequest(LogoutRequest),
     /// Creates a new conversation session with the agent.
     ///
@@ -5121,10 +5081,9 @@ impl ClientRequest {
             #[cfg(feature = "unstable_llm_providers")]
             Self::ListProvidersRequest(_) => AGENT_METHOD_NAMES.providers_list,
             #[cfg(feature = "unstable_llm_providers")]
-            Self::SetProvidersRequest(_) => AGENT_METHOD_NAMES.providers_set,
+            Self::SetProviderRequest(_) => AGENT_METHOD_NAMES.providers_set,
             #[cfg(feature = "unstable_llm_providers")]
-            Self::DisableProvidersRequest(_) => AGENT_METHOD_NAMES.providers_disable,
-            #[cfg(feature = "unstable_logout")]
+            Self::DisableProviderRequest(_) => AGENT_METHOD_NAMES.providers_disable,
             Self::LogoutRequest(_) => AGENT_METHOD_NAMES.logout,
             Self::NewSessionRequest(_) => AGENT_METHOD_NAMES.session_new,
             Self::LoadSessionRequest(_) => AGENT_METHOD_NAMES.session_load,
@@ -5170,10 +5129,9 @@ pub enum AgentResponse {
     #[cfg(feature = "unstable_llm_providers")]
     ListProvidersResponse(ListProvidersResponse),
     #[cfg(feature = "unstable_llm_providers")]
-    SetProvidersResponse(#[serde(default)] SetProvidersResponse),
+    SetProviderResponse(#[serde(default)] SetProviderResponse),
     #[cfg(feature = "unstable_llm_providers")]
-    DisableProvidersResponse(#[serde(default)] DisableProvidersResponse),
-    #[cfg(feature = "unstable_logout")]
+    DisableProviderResponse(#[serde(default)] DisableProviderResponse),
     LogoutResponse(#[serde(default)] LogoutResponse),
     NewSessionResponse(NewSessionResponse),
     LoadSessionResponse(#[serde(default)] LoadSessionResponse),
@@ -6429,14 +6387,14 @@ mod test_serialization {
 
     #[cfg(feature = "unstable_llm_providers")]
     #[test]
-    fn test_set_providers_request_serialization() {
+    fn test_set_provider_request_serialization() {
         use std::collections::HashMap;
 
         let mut headers = HashMap::new();
         headers.insert("Authorization".to_string(), "Bearer sk-test".to_string());
 
         let request =
-            SetProvidersRequest::new("main", LlmProtocol::OpenAi, "https://api.openai.com/v1")
+            SetProviderRequest::new("main", LlmProtocol::OpenAi, "https://api.openai.com/v1")
                 .headers(headers);
 
         let json = serde_json::to_value(&request).unwrap();
@@ -6452,7 +6410,7 @@ mod test_serialization {
             })
         );
 
-        let deserialized: SetProvidersRequest = serde_json::from_value(json).unwrap();
+        let deserialized: SetProviderRequest = serde_json::from_value(json).unwrap();
         assert_eq!(deserialized.id, "main");
         assert_eq!(deserialized.api_type, LlmProtocol::OpenAi);
         assert_eq!(deserialized.base_url, "https://api.openai.com/v1");
@@ -6465,9 +6423,9 @@ mod test_serialization {
 
     #[cfg(feature = "unstable_llm_providers")]
     #[test]
-    fn test_set_providers_request_omits_empty_headers() {
+    fn test_set_provider_request_omits_empty_headers() {
         let request =
-            SetProvidersRequest::new("main", LlmProtocol::Anthropic, "https://api.anthropic.com");
+            SetProviderRequest::new("main", LlmProtocol::Anthropic, "https://api.anthropic.com");
 
         let json = serde_json::to_value(&request).unwrap();
         // headers should be omitted when empty
@@ -6476,13 +6434,13 @@ mod test_serialization {
 
     #[cfg(feature = "unstable_llm_providers")]
     #[test]
-    fn test_disable_providers_request_serialization() {
-        let request = DisableProvidersRequest::new("secondary");
+    fn test_disable_provider_request_serialization() {
+        let request = DisableProviderRequest::new("secondary");
 
         let json = serde_json::to_value(&request).unwrap();
         assert_eq!(json, json!({ "id": "secondary" }));
 
-        let deserialized: DisableProvidersRequest = serde_json::from_value(json).unwrap();
+        let deserialized: DisableProviderRequest = serde_json::from_value(json).unwrap();
         assert_eq!(deserialized.id, "secondary");
     }
 

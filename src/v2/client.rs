@@ -3,10 +3,10 @@
 //! This module defines the Client trait and all associated types for implementing
 //! a client that interacts with AI coding agents via the Agent Client Protocol (ACP).
 
-use std::{path::PathBuf, sync::Arc};
+use std::{collections::BTreeMap, path::PathBuf, sync::Arc};
 
 use derive_more::{Display, From};
-use schemars::JsonSchema;
+use schemars::{JsonSchema, Schema};
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
@@ -19,6 +19,8 @@ use super::{
     ContentBlock, EnvVariable, ExtNotification, ExtRequest, ExtResponse, Meta, Plan,
     SessionConfigOption, SessionId, SessionModeId, ToolCall, ToolCallUpdate,
 };
+#[cfg(feature = "unstable_plan_operations")]
+use super::{PlanCapabilities, PlanRemoved, PlanUpdate};
 use crate::{IntoMaybeUndefined, IntoOption, MaybeUndefined, SkipListener};
 
 #[cfg(feature = "unstable_mcp_over_acp")]
@@ -102,6 +104,20 @@ pub enum SessionUpdate {
     /// The agent's execution plan for complex tasks.
     /// See protocol docs: [Agent Plan](https://agentclientprotocol.com/protocol/agent-plan)
     Plan(Plan),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// A content update for a plan identified by ID.
+    #[cfg(feature = "unstable_plan_operations")]
+    PlanUpdate(PlanUpdate),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Removal notice for a plan identified by ID.
+    #[cfg(feature = "unstable_plan_operations")]
+    PlanRemoved(PlanRemoved),
     /// Available commands are ready or have changed
     AvailableCommandsUpdate(AvailableCommandsUpdate),
     /// The current mode of the session has changed
@@ -119,6 +135,125 @@ pub enum SessionUpdate {
     /// Context window and cost update for the session.
     #[cfg(feature = "unstable_session_usage")]
     UsageUpdate(UsageUpdate),
+    /// Custom or future session update.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    ///
+    /// Receivers that do not understand this update type should preserve the
+    /// raw payload when storing, replaying, proxying, or forwarding session
+    /// history, and otherwise ignore it or display it generically.
+    #[serde(untagged)]
+    Other(OtherSessionUpdate),
+}
+
+/// Custom or future session update payload.
+///
+/// This preserves the unknown `sessionUpdate` discriminator and the rest of the
+/// update object for clients that store, replay, proxy, or forward session
+/// history.
+#[derive(Debug, Clone, Serialize, JsonSchema, PartialEq)]
+#[schemars(inline)]
+#[schemars(transform = other_session_update_schema)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct OtherSessionUpdate {
+    /// Custom or future session update type.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(rename = "sessionUpdate")]
+    pub session_update: String,
+    /// Additional fields from the unknown update payload.
+    #[serde(flatten)]
+    pub fields: BTreeMap<String, serde_json::Value>,
+}
+
+impl OtherSessionUpdate {
+    #[must_use]
+    pub fn new(
+        session_update: impl Into<String>,
+        mut fields: BTreeMap<String, serde_json::Value>,
+    ) -> Self {
+        fields.remove("sessionUpdate");
+        Self {
+            session_update: session_update.into(),
+            fields,
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for OtherSessionUpdate {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let session_update = fields
+            .remove("sessionUpdate")
+            .ok_or_else(|| serde::de::Error::missing_field("sessionUpdate"))?;
+        let serde_json::Value::String(session_update) = session_update else {
+            return Err(serde::de::Error::custom("`sessionUpdate` must be a string"));
+        };
+
+        if is_known_session_update(&session_update) {
+            return Err(serde::de::Error::custom(format!(
+                "known session update `{session_update}` did not match its schema"
+            )));
+        }
+
+        Ok(Self {
+            session_update,
+            fields,
+        })
+    }
+}
+
+fn is_known_session_update(session_update: &str) -> bool {
+    match session_update {
+        "user_message_chunk"
+        | "agent_message_chunk"
+        | "agent_thought_chunk"
+        | "tool_call"
+        | "tool_call_update"
+        | "plan"
+        | "available_commands_update"
+        | "current_mode_update"
+        | "config_option_update"
+        | "session_info_update" => true,
+        #[cfg(feature = "unstable_plan_operations")]
+        "plan_update" | "plan_removed" => true,
+        #[cfg(feature = "unstable_session_usage")]
+        "usage_update" => true,
+        _ => false,
+    }
+}
+
+fn other_session_update_schema(schema: &mut Schema) {
+    super::schema_util::reject_known_string_discriminators(
+        schema,
+        "sessionUpdate",
+        &[
+            "user_message_chunk",
+            "agent_message_chunk",
+            "agent_thought_chunk",
+            "tool_call",
+            "tool_call_update",
+            "plan",
+            "available_commands_update",
+            "current_mode_update",
+            "config_option_update",
+            "session_info_update",
+            #[cfg(feature = "unstable_plan_operations")]
+            "plan_update",
+            #[cfg(feature = "unstable_plan_operations")]
+            "plan_removed",
+            #[cfg(feature = "unstable_session_usage")]
+            "usage_update",
+        ],
+    );
 }
 
 /// The current mode of the session has changed
@@ -512,11 +647,69 @@ impl AvailableCommand {
 pub enum AvailableCommandInput {
     /// All text that was typed after the command name is provided as input.
     Unstructured(UnstructuredCommandInput),
+    /// Custom or future command input specification.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    ///
+    /// Clients that do not understand this input type should preserve the raw
+    /// payload when storing, replaying, proxying, or forwarding command
+    /// metadata, and otherwise ignore the input specification or display the
+    /// command without structured input.
+    Other(OtherAvailableCommandInput),
+}
+
+/// Custom or future command input specification.
+#[derive(Debug, Clone, Serialize, JsonSchema, PartialEq, Eq)]
+#[schemars(inline)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct OtherAvailableCommandInput {
+    /// Custom or future command input type.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(rename = "type")]
+    pub type_: String,
+    /// Additional fields from the unknown command input payload.
+    #[serde(flatten)]
+    pub fields: BTreeMap<String, serde_json::Value>,
+}
+
+impl OtherAvailableCommandInput {
+    #[must_use]
+    pub fn new(type_: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
+        fields.remove("type");
+        Self {
+            type_: type_.into(),
+            fields,
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for OtherAvailableCommandInput {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let type_ = fields
+            .remove("type")
+            .ok_or_else(|| serde::de::Error::missing_field("type"))?;
+        let serde_json::Value::String(type_) = type_ else {
+            return Err(serde::de::Error::custom("`type` must be a string"));
+        };
+
+        Ok(Self { type_, fields })
+    }
 }
 
 /// All text that was typed after the command name is provided as input.
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, JsonSchema, PartialEq, Eq)]
+#[schemars(transform = unstructured_command_input_schema)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct UnstructuredCommandInput {
@@ -550,6 +743,39 @@ impl UnstructuredCommandInput {
         self.meta = meta.into_option();
         self
     }
+}
+
+impl<'de> Deserialize<'de> for UnstructuredCommandInput {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(rename_all = "camelCase")]
+        struct RawUnstructuredCommandInput {
+            hint: String,
+            #[serde(rename = "_meta")]
+            meta: Option<Meta>,
+            #[serde(flatten)]
+            fields: BTreeMap<String, serde_json::Value>,
+        }
+
+        let raw = RawUnstructuredCommandInput::deserialize(deserializer)?;
+        if raw.fields.contains_key("type") {
+            return Err(serde::de::Error::custom(
+                "unstructured command input cannot include a `type` field",
+            ));
+        }
+
+        Ok(Self {
+            hint: raw.hint,
+            meta: raw.meta,
+        })
+    }
+}
+
+fn unstructured_command_input_schema(schema: &mut Schema) {
+    super::schema_util::reject_property(schema, "type");
 }
 
 // Permission
@@ -672,7 +898,7 @@ impl PermissionOptionId {
 /// The type of permission option being presented to the user.
 ///
 /// Helps clients choose appropriate icons and UI treatment.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum PermissionOptionKind {
@@ -684,6 +910,13 @@ pub enum PermissionOptionKind {
     RejectOnce,
     /// Reject this operation and remember the choice.
     RejectAlways,
+    /// Custom or future permission option kind.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(untagged)]
+    Other(String),
 }
 
 /// Response to a permission request.
@@ -1530,6 +1763,18 @@ pub struct ClientCapabilities {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
+    /// Whether the client supports `plan_update` and `plan_removed` session updates.
+    ///
+    /// Optional. Omitted means the client does not advertise support.
+    /// Supplying `{}` means the client can receive both update types.
+    #[cfg(feature = "unstable_plan_operations")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default)]
+    pub plan_capabilities: Option<PlanCapabilities>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
     /// Authentication capabilities supported by the client.
     /// Determines which authentication method types the agent may include
     /// in its `InitializeResponse`.
@@ -1592,6 +1837,24 @@ impl ClientCapabilities {
     #[must_use]
     pub fn terminal(mut self, terminal: bool) -> Self {
         self.terminal = terminal;
+        self
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Whether the client supports `plan_update` and `plan_removed` session updates.
+    ///
+    /// Omitted means the client does not advertise support.
+    /// Supplying `{}` means the client can receive both update types.
+    #[cfg(feature = "unstable_plan_operations")]
+    #[must_use]
+    pub fn plan_capabilities(
+        mut self,
+        plan_capabilities: impl IntoOption<PlanCapabilities>,
+    ) -> Self {
+        self.plan_capabilities = plan_capabilities.into_option();
         self
     }
 
@@ -2160,6 +2423,92 @@ mod tests {
             )
             .unwrap(),
             json!({})
+        );
+    }
+
+    #[test]
+    fn session_update_preserves_unknown_variant() {
+        use serde_json::json;
+
+        let update: SessionUpdate = serde_json::from_value(json!({
+            "sessionUpdate": "_status_badge",
+            "label": "Indexing",
+            "progress": 0.5
+        }))
+        .unwrap();
+
+        let SessionUpdate::Other(unknown) = update else {
+            panic!("expected unknown session update");
+        };
+
+        assert_eq!(unknown.session_update, "_status_badge");
+        assert_eq!(unknown.fields.get("label"), Some(&json!("Indexing")));
+        assert_eq!(unknown.fields.get("progress"), Some(&json!(0.5)));
+
+        assert_eq!(
+            serde_json::to_value(SessionUpdate::Other(unknown)).unwrap(),
+            json!({
+                "sessionUpdate": "_status_badge",
+                "label": "Indexing",
+                "progress": 0.5
+            })
+        );
+    }
+
+    #[test]
+    fn session_update_does_not_hide_malformed_known_variant() {
+        use serde_json::json;
+
+        assert!(
+            serde_json::from_value::<SessionUpdate>(json!({
+                "sessionUpdate": "agent_message_chunk"
+            }))
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn available_command_input_preserves_unknown_typed_variant() {
+        use serde_json::json;
+
+        let input: AvailableCommandInput = serde_json::from_value(json!({
+            "type": "_choices",
+            "hint": "Pick one",
+            "options": ["fast", "careful"]
+        }))
+        .unwrap();
+
+        let AvailableCommandInput::Other(unknown) = input else {
+            panic!("expected unknown command input");
+        };
+
+        assert_eq!(unknown.type_, "_choices");
+        assert_eq!(unknown.fields.get("hint"), Some(&json!("Pick one")));
+        assert_eq!(
+            unknown.fields.get("options"),
+            Some(&json!(["fast", "careful"]))
+        );
+        assert_eq!(
+            serde_json::to_value(AvailableCommandInput::Other(unknown)).unwrap(),
+            json!({
+                "type": "_choices",
+                "hint": "Pick one",
+                "options": ["fast", "careful"]
+            })
+        );
+    }
+
+    #[test]
+    fn available_command_input_unknown_does_not_hide_malformed_unstructured_variant() {
+        use serde_json::json;
+
+        assert!(serde_json::from_value::<AvailableCommandInput>(json!({})).is_err());
+        assert!(
+            serde_json::from_value::<AvailableCommandInput>(json!({
+                "type": 1,
+                "hint": "Pick one"
+            }))
+            .is_err()
         );
     }
 

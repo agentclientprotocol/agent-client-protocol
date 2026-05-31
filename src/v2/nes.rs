@@ -4,7 +4,9 @@
 //! document events, and a suggestion request/response flow. NES sessions are
 //! independent of chat sessions and have their own lifecycle.
 
-use schemars::JsonSchema;
+use std::collections::BTreeMap;
+
+use schemars::{JsonSchema, Schema};
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
@@ -1347,6 +1349,13 @@ pub enum NesTriggerKind {
     /// Triggered by an explicit user action (keyboard shortcut).
     #[serde(rename = "manual")]
     Manual,
+    /// Custom or future suggestion trigger kind.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(untagged)]
+    Other(String),
 }
 
 /// Request for a code suggestion.
@@ -1745,6 +1754,13 @@ pub enum NesDiagnosticSeverity {
     /// A hint.
     #[serde(rename = "hint")]
     Hint,
+    /// Custom or future diagnostic severity.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(untagged)]
+    Other(String),
 }
 
 // NES suggest response
@@ -1804,6 +1820,81 @@ pub enum NesSuggestion {
     Rename(NesRenameSuggestion),
     /// A search-and-replace suggestion.
     SearchAndReplace(NesSearchAndReplaceSuggestion),
+    /// Custom or future NES suggestion.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    ///
+    /// Receivers that do not understand this suggestion kind should preserve
+    /// the raw payload when storing, replaying, proxying, or forwarding
+    /// suggestions, and otherwise ignore it or display it generically.
+    #[serde(untagged)]
+    Other(OtherNesSuggestion),
+}
+
+/// Custom or future NES suggestion payload.
+#[derive(Debug, Clone, Serialize, JsonSchema, PartialEq, Eq)]
+#[schemars(inline)]
+#[schemars(transform = other_nes_suggestion_schema)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct OtherNesSuggestion {
+    /// Custom or future NES suggestion kind.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    pub kind: String,
+    /// Additional fields from the unknown NES suggestion payload.
+    #[serde(flatten)]
+    pub fields: BTreeMap<String, serde_json::Value>,
+}
+
+impl OtherNesSuggestion {
+    #[must_use]
+    pub fn new(kind: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
+        fields.remove("kind");
+        Self {
+            kind: kind.into(),
+            fields,
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for OtherNesSuggestion {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let kind = fields
+            .remove("kind")
+            .ok_or_else(|| serde::de::Error::missing_field("kind"))?;
+        let serde_json::Value::String(kind) = kind else {
+            return Err(serde::de::Error::custom("`kind` must be a string"));
+        };
+
+        if is_known_nes_suggestion_kind(&kind) {
+            return Err(serde::de::Error::custom(format!(
+                "known NES suggestion `{kind}` did not match its schema"
+            )));
+        }
+
+        Ok(Self { kind, fields })
+    }
+}
+
+fn is_known_nes_suggestion_kind(kind: &str) -> bool {
+    matches!(kind, "edit" | "jump" | "rename" | "searchAndReplace")
+}
+
+fn other_nes_suggestion_schema(schema: &mut Schema) {
+    super::schema_util::reject_known_string_discriminators(
+        schema,
+        "kind",
+        &["edit", "jump", "rename", "searchAndReplace"],
+    );
 }
 
 /// A text edit suggestion.
@@ -2076,6 +2167,13 @@ pub enum NesRejectReason {
     /// The request was cancelled before the agent returned a response.
     #[serde(rename = "cancelled")]
     Cancelled,
+    /// Custom or future rejection reason.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(untagged)]
+    Other(String),
 }
 
 #[cfg(test)]
@@ -2109,6 +2207,20 @@ mod tests {
         assert_eq!(
             serde_json::from_value::<PositionEncodingKind>(json!("utf-8")).unwrap(),
             PositionEncodingKind::Utf8
+        );
+        assert!(serde_json::from_value::<PositionEncodingKind>(json!("_future")).is_err());
+    }
+
+    #[test]
+    fn test_client_capabilities_skip_unknown_position_encodings() {
+        let caps: crate::v2::ClientCapabilities = serde_json::from_value(json!({
+            "positionEncodings": ["_future", "utf-8", "utf-16"]
+        }))
+        .unwrap();
+
+        assert_eq!(
+            caps.position_encodings,
+            vec![PositionEncodingKind::Utf8, PositionEncodingKind::Utf16]
         );
     }
 
@@ -2376,6 +2488,41 @@ mod tests {
     }
 
     #[test]
+    fn test_nes_suggestion_unknown_variant() {
+        let suggestion: NesSuggestion = serde_json::from_value(json!({
+            "kind": "_preview",
+            "id": "sugg_001",
+            "label": "Preview generated file"
+        }))
+        .unwrap();
+
+        let NesSuggestion::Other(unknown) = suggestion else {
+            panic!("expected unknown NES suggestion");
+        };
+
+        assert_eq!(unknown.kind, "_preview");
+        assert_eq!(unknown.fields.get("id"), Some(&json!("sugg_001")));
+        assert_eq!(
+            serde_json::to_value(NesSuggestion::Other(unknown)).unwrap(),
+            json!({
+                "kind": "_preview",
+                "id": "sugg_001",
+                "label": "Preview generated file"
+            })
+        );
+    }
+
+    #[test]
+    fn test_nes_suggestion_unknown_does_not_hide_malformed_known_variant() {
+        assert!(
+            serde_json::from_value::<NesSuggestion>(json!({
+                "kind": "edit"
+            }))
+            .is_err()
+        );
+    }
+
+    #[test]
     fn test_nes_suggestion_jump_serialization() {
         let suggestion = NesSuggestion::Jump(NesJumpSuggestion::new(
             "sugg_002",
@@ -2597,6 +2744,19 @@ mod tests {
             serde_json::to_value(&TextDocumentSyncKind::Incremental).unwrap(),
             json!("incremental")
         );
+        assert!(serde_json::from_value::<TextDocumentSyncKind>(json!("_future")).is_err());
+    }
+
+    #[test]
+    fn test_document_event_capabilities_drop_unknown_did_change_sync_kind() {
+        let caps: NesDocumentEventCapabilities = serde_json::from_value(json!({
+            "didChange": {
+                "syncKind": "_future"
+            }
+        }))
+        .unwrap();
+
+        assert_eq!(caps.did_change, None);
     }
 
     #[test]

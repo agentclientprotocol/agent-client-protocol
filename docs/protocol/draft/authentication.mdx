@@ -3,12 +3,7 @@ title: "Authentication"
 description: "Authenticating with agents and logging out"
 ---
 
-ACP authentication is negotiated during [initialization](/protocol/initialization). Agents advertise available authentication methods in `authMethods`, Clients choose one by calling `authenticate`, and Agents that support ending an authenticated state advertise the draft `logout` capability.
-
-<Note>
-  The `logout` method and `agentCapabilities.auth.logout` capability are still
-  unstable and may change before they are stabilized.
-</Note>
+ACP authentication is negotiated during [initialization](/protocol/initialization). Agents advertise available authentication methods in `authMethods`, Clients choose one by calling `authenticate`, and Agents that support ending an authenticated state advertise the `logout` capability.
 
 <br />
 
@@ -138,7 +133,7 @@ After successful authentication, the Client can create new sessions without rece
 
 ## Logging Out
 
-The draft `logout` method allows Clients to end the current authenticated state. Clients should only call it after verifying the Agent advertised `agentCapabilities.auth.logout` during initialization.
+The `logout` method allows Clients to end the current authenticated state. Clients should only call it after verifying the Agent advertised `agentCapabilities.auth.logout` during initialization.
 
 ```json
 {

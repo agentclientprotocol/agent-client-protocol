@@ -1,0 +1,96 @@
+---
+title: "v2 Enum Variant Extension"
+---
+
+Author(s): [@benbrandt](https://github.com/benbrandt)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+ACP v2 should make enum-like protocol values forward-compatible when a receiver has a safe fallback. Values beginning with `_` are reserved for implementation-specific extensions. Values that do not begin with `_` are reserved for ACP itself, including future ACP variants.
+
+This gives extensions a dedicated namespace without making older clients and agents reject additive informational protocol changes.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+ACP already uses `_` as the extension namespace for custom methods and session config categories. Session config categories also preserve unknown category strings, so older clients can handle newer categories gracefully.
+
+Most other string enum protocol fields are closed in the generated schema. Examples include roles, status values, stop reasons, and permission option kinds. SDKs and validators generated from those schemas can reject a message only because a newer ACP version added a variant the older implementation does not understand.
+
+That strictness is useful when the value controls whether a request can be fulfilled correctly. It is unnecessarily disruptive for notifications, display metadata, and other informational fields. A client can often ignore, preserve, forward, or display a generic fallback for an unknown session update, tool status, plan entry status, or UI hint.
+
+Without a shared namespace rule, extension authors also have no safe place to experiment with custom values without risking collisions with future ACP variants.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+ACP v2 should define one enum extension rule for ACP-owned values when the receiving side has an acceptable fallback:
+
+- Values beginning with `_` are reserved for implementation-specific extensions.
+- Values that do not begin with `_` are reserved for ACP.
+- Future ACP versions may add non-underscore values without treating that as an extension collision.
+- Extensions MUST NOT define custom non-underscore values.
+- Implementations MUST NOT treat an unknown non-underscore value as a custom extension.
+- Implementations SHOULD preserve unknown values when storing, replaying, proxying, or forwarding protocol data.
+- Implementations that cannot act on an unknown value SHOULD degrade gracefully according to the field's semantics.
+
+This applies to ACP-owned enum-like values where fallback behavior is acceptable. It does not apply to JSON-RPC fixed constants such as `"2.0"`, numeric code spaces such as JSON-RPC error codes, user-supplied elicitation option values such as `enum` or `oneOf` constants, or discriminators that are core to fulfilling a request. Elicitation schema annotations such as string `format` values can still be open because an implementation can safely treat an unknown format as an annotation.
+
+Tagged unions use string discriminator fields too. When ACP v2 opens one of these unions, it must preserve both the discriminator and the unknown object payload. The same `_` namespace rule applies. Raw fallbacks are appropriate for notification-style and display-data payloads that can be stored, replayed, proxied, forwarded, ignored, or rendered with a generic UI. Tagged unions that are core to request handling, such as elicitation actions, permission outcomes, schema-shape discriminators, and transport selectors, may remain closed and produce a deserialization error for unknown variants.
+
+## Shiny future
+
+> How will things play out once this feature exists?
+
+Adding a new ACP variant for an informational or notification-like field will not automatically make older v2 validators reject otherwise well-formed messages. Older implementations can preserve and forward data they do not understand, or fall back to generic display behavior when that is enough.
+
+Extensions get a clear rule: use `_vendor_or_feature`-style values for custom variants, and leave every non-underscore spelling available for ACP.
+
+Capabilities are still available when a sender needs to know whether the receiver can act on a value. This proposal makes the wire format tolerant first; capabilities can still gate behavior when behavior matters.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+The v2 Rust schema types should encode this convention directly where fallback behavior is safe:
+
+- String enum definitions list known values explicitly and include a fallback variant that captures the unknown string.
+- Notification-style and display-data tagged unions can add a raw fallback variant that captures the discriminator string and unknown payload object.
+- Raw tagged-union fallbacks must not hide malformed known variants. If a known discriminator is present but its payload is invalid, deserialization must still fail.
+- Untagged shape unions can add raw fallbacks only when there is a reliable discriminator field to distinguish a future/custom variant from a malformed known shape.
+- Core control-flow discriminators may remain closed when there is no safe fallback behavior.
+- SDKs should expose fallback variants that carry unknown values rather than silently discarding them.
+- Conversion from v2 to v1 should fail when an unknown v2 value cannot be represented in v1 without data loss.
+- v1 schemas remain unchanged.
+
+The fallback variant's Rust doc comment should document the `_` extension rule and the future-ACP reservation rule, so generated docs and schemas follow the type source of truth.
+
+This proposal does not require identical runtime behavior for every unknown value. Some fields can be ignored, some can be displayed generically, some can be preserved only for replay or proxying, and some should still fail because the receiver cannot safely continue. The cross-cutting rule is that `_` means extension-owned, non-underscore means ACP-owned, and parsers and validators should not fail solely because a value is unknown when that field has a defined fallback path.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Why not reserve all unknown values for custom extensions?
+
+That would block ACP from adding future standard variants without risking collisions with implementations that already claimed those names. Reserving non-underscore values for ACP gives the protocol room to grow while still giving extensions a predictable namespace.
+
+### Does this make every enum extensible?
+
+No. This proposal opens values only when the receiver has a safe fallback. If understanding the variant is required for correctness, the enum should remain closed or be gated by capability negotiation.
+
+### Why not use capabilities for every new variant?
+
+Capabilities are still useful when a sender needs to know whether the receiver can act on a variant. They do not solve parsing, validation, storage, replay, or proxying problems. The enum extension rule makes the wire format tolerant first; capabilities can still gate behavior when needed.
+
+### Does this mean implementations must understand every unknown variant?
+
+No. Implementations should preserve unknown values when practical and degrade gracefully according to the field's semantics. This proposal is about forward compatibility and namespace ownership, not requiring old software to implement future behavior.
+
+## Revision history
+
+2026-05-27: Initial draft

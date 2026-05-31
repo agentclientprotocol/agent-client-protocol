@@ -1,0 +1,181 @@
+---
+title: "Agent Plan"
+description: "How Agents communicate their execution plans"
+---
+
+Plans are execution strategies for complex tasks that require multiple steps.
+
+Agents may share plans with Clients through [`session/update`](./prompt-turn#3-agent-reports-output) notifications, providing real-time visibility into their thinking and progress.
+
+The existing `plan` update is the baseline format. Clients that advertise `planCapabilities` during [initialization](./initialization#client-capabilities) can also receive identified plan operations through `plan_update` and `plan_removed`.
+
+## Creating Plans
+
+When the language model creates an execution plan, the Agent **SHOULD** report it to the Client:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "plan",
+      "entries": [
+        {
+          "content": "Analyze the existing codebase structure",
+          "priority": "high",
+          "status": "pending"
+        },
+        {
+          "content": "Identify components that need refactoring",
+          "priority": "high",
+          "status": "pending"
+        },
+        {
+          "content": "Create unit tests for critical functions",
+          "priority": "medium",
+          "status": "pending"
+        }
+      ]
+    }
+  }
+}
+```
+
+<ParamField path="entries" type="PlanEntry[]" required>
+  An array of [plan entries](#plan-entries) representing the tasks to be
+  accomplished
+</ParamField>
+
+## Plan Operations
+
+Agents **MUST NOT** send `plan_update` or `plan_removed` unless the Client advertised `planCapabilities`. If the Client omits `planCapabilities`, the Agent **MUST** fall back to the existing `plan` update.
+
+`plan_update` carries a `plan` object with a `type` discriminator. Every plan format includes a required `id` so Clients can track multiple plans independently.
+
+### Item-Based Plans
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "plan_update",
+      "plan": {
+        "type": "items",
+        "id": "plan-1",
+        "entries": [
+          {
+            "content": "Analyze the existing codebase structure",
+            "priority": "high",
+            "status": "pending"
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+### Markdown Plans
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "plan_update",
+      "plan": {
+        "type": "markdown",
+        "id": "implementation-plan",
+        "content": "## Steps\n- [ ] Refactor module\n- [ ] Add tests"
+      }
+    }
+  }
+}
+```
+
+### File Plans
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "plan_update",
+      "plan": {
+        "type": "file",
+        "id": "design-doc",
+        "uri": "file:///tmp/plan.md"
+      }
+    }
+  }
+}
+```
+
+### Removing Plans
+
+Agents can remove a plan by sending `plan_removed` with the plan ID:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "plan_removed",
+      "id": "plan-1"
+    }
+  }
+}
+```
+
+In v2, `plan_update` plan `type` values can be custom or future variants when Clients can preserve or display them generically. Custom plan content types **MUST** begin with `_`; unknown non-underscore plan content types are reserved for future ACP variants. Every plan content variant still carries an `id` so Clients can track or remove it even when the content type is unknown.
+
+## Plan Entries
+
+Each plan entry represents a specific task or goal within the overall execution strategy:
+
+<ParamField path="content" type="string" required>
+  A human-readable description of what this task aims to accomplish
+</ParamField>
+
+<ParamField path="priority" type="PlanEntryPriority" required>
+  The relative importance of this task.
+
+- `high`
+- `medium`
+- `low`
+
+In v2, custom or future priority values can be used for display hints. Custom priorities **MUST** begin with `_`; unknown non-underscore priorities are reserved for future ACP variants.
+
+</ParamField>
+
+<ParamField path="status" type="PlanEntryStatus" required>
+  The current [execution status](#status) of this task
+
+- `pending`
+- `in_progress`
+- `completed`
+
+In v2, custom or future status values can be used when Clients can preserve or display a generic plan-entry state. Custom statuses **MUST** begin with `_`; unknown non-underscore statuses are reserved for future ACP variants.
+
+</ParamField>
+
+## Updating Plans
+
+As the Agent progresses through the plan, it **SHOULD** report updates by sending more `session/update` notifications with the same structure.
+
+The Agent **MUST** send a complete list of all plan entries in each update and their current status. The Client **MUST** replace the current plan completely.
+
+### Dynamic Planning
+
+Plans can evolve during execution. The Agent **MAY** add, remove, or modify plan entries as it discovers new requirements or completes tasks, allowing it to adapt based on what it learns.

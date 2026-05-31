@@ -9,7 +9,9 @@
 //!
 //! See: [Content](https://agentclientprotocol.com/protocol/content)
 
-use schemars::JsonSchema;
+use std::collections::BTreeMap;
+
+use schemars::{JsonSchema, Schema};
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
@@ -58,6 +60,85 @@ pub enum ContentBlock {
     ///
     /// Requires the `embeddedContext` prompt capability when included in prompts.
     Resource(EmbeddedResource),
+    /// Custom or future content block.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    ///
+    /// Receivers that do not understand this content block type should preserve
+    /// the raw payload when storing, replaying, proxying, or forwarding content,
+    /// and otherwise ignore it or display it generically.
+    #[serde(untagged)]
+    Other(OtherContentBlock),
+}
+
+/// Custom or future content block payload.
+#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+#[schemars(inline)]
+#[schemars(transform = other_content_block_schema)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct OtherContentBlock {
+    /// Custom or future content block type.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(rename = "type")]
+    pub type_: String,
+    /// Additional fields from the unknown content block payload.
+    #[serde(flatten)]
+    pub fields: BTreeMap<String, serde_json::Value>,
+}
+
+impl OtherContentBlock {
+    #[must_use]
+    pub fn new(type_: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
+        fields.remove("type");
+        Self {
+            type_: type_.into(),
+            fields,
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for OtherContentBlock {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let type_ = fields
+            .remove("type")
+            .ok_or_else(|| serde::de::Error::missing_field("type"))?;
+        let serde_json::Value::String(type_) = type_ else {
+            return Err(serde::de::Error::custom("`type` must be a string"));
+        };
+
+        if is_known_content_block_type(&type_) {
+            return Err(serde::de::Error::custom(format!(
+                "known content block `{type_}` did not match its schema"
+            )));
+        }
+
+        Ok(Self { type_, fields })
+    }
+}
+
+fn is_known_content_block_type(type_: &str) -> bool {
+    matches!(
+        type_,
+        "text" | "image" | "audio" | "resource_link" | "resource"
+    )
+}
+
+fn other_content_block_schema(schema: &mut Schema) {
+    super::schema_util::reject_known_string_discriminators(
+        schema,
+        "type",
+        &["text", "image", "audio", "resource_link", "resource"],
+    );
 }
 
 /// Text provided to or from an LLM.
@@ -517,6 +598,13 @@ impl Annotations {
 pub enum Role {
     Assistant,
     User,
+    /// Custom or future role.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(untagged)]
+    Other(String),
 }
 
 #[cfg(test)]
@@ -546,6 +634,51 @@ mod tests {
             ContentBlock::Text(c) => assert_eq!(c.text, "hello"),
             _ => panic!("Expected Text variant"),
         }
+    }
+
+    #[test]
+    fn role_preserves_unknown_variant() {
+        let role: Role = serde_json::from_str("\"critic\"").unwrap();
+        assert_eq!(role, Role::Other("critic".to_string()));
+        assert_eq!(serde_json::to_value(&role).unwrap(), "critic");
+    }
+
+    #[test]
+    fn content_block_preserves_unknown_variant() {
+        let block: ContentBlock = serde_json::from_value(serde_json::json!({
+            "type": "_widget",
+            "title": "Status",
+            "state": {"ok": true}
+        }))
+        .unwrap();
+
+        let ContentBlock::Other(unknown) = block else {
+            panic!("expected unknown content block");
+        };
+
+        assert_eq!(unknown.type_, "_widget");
+        assert_eq!(
+            unknown.fields.get("title"),
+            Some(&serde_json::json!("Status"))
+        );
+        assert_eq!(
+            serde_json::to_value(ContentBlock::Other(unknown)).unwrap(),
+            serde_json::json!({
+                "type": "_widget",
+                "title": "Status",
+                "state": {"ok": true}
+            })
+        );
+    }
+
+    #[test]
+    fn content_block_does_not_hide_malformed_known_variant() {
+        assert!(
+            serde_json::from_value::<ContentBlock>(serde_json::json!({
+                "type": "text"
+            }))
+            .is_err()
+        );
     }
 
     #[test]

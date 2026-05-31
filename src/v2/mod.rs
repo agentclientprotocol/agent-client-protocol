@@ -25,6 +25,7 @@ mod nes;
 mod plan;
 #[cfg(feature = "unstable_cancel_request")]
 mod protocol_level;
+pub(crate) mod schema_util;
 mod tool_call;
 
 pub use crate::rpc::{JsonRpcMessage, Notification, Request, RequestId};
