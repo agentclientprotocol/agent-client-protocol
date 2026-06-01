@@ -1279,7 +1279,6 @@ starting with '$/' it is free to ignore the notification."
                 }
                 "session/prompt" => self.agent.get("PromptRequest").unwrap(),
                 "session/cancel" => self.agent.get("CancelNotification").unwrap(),
-                "session/set_model" => self.agent.get("SetSessionModelRequest").unwrap(),
                 "session/close" => self.agent.get("CloseSessionRequest").unwrap(),
                 "logout" => self.agent.get("LogoutRequest").unwrap(),
                 "nes/start" => self.agent.get("StartNesRequest").unwrap(),

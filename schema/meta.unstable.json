@@ -27,8 +27,7 @@
     "session_prompt": "session/prompt",
     "session_resume": "session/resume",
     "session_set_config_option": "session/set_config_option",
-    "session_set_mode": "session/set_mode",
-    "session_set_model": "session/set_model"
+    "session_set_mode": "session/set_mode"
   },
   "clientMethods": {
     "elicitation_complete": "elicitation/complete",

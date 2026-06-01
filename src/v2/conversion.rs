@@ -3516,8 +3516,6 @@ impl IntoV1 for super::NewSessionResponse {
         Ok(crate::v1::NewSessionResponse {
             session_id: session_id.into_v1()?,
             modes: None,
-            #[cfg(feature = "unstable_session_model")]
-            models: None,
             config_options: config_options.into_v1()?,
             meta: meta.into_v1()?,
         })
@@ -3531,8 +3529,6 @@ impl IntoV2 for crate::v1::NewSessionResponse {
         let Self {
             session_id,
             modes: _,
-            #[cfg(feature = "unstable_session_model")]
-                models: _,
             config_options,
             meta,
         } = self;
@@ -3600,8 +3596,6 @@ impl IntoV1 for super::LoadSessionResponse {
         } = self;
         Ok(crate::v1::LoadSessionResponse {
             modes: None,
-            #[cfg(feature = "unstable_session_model")]
-            models: None,
             config_options: config_options.into_v1()?,
             meta: meta.into_v1()?,
         })
@@ -3614,8 +3608,6 @@ impl IntoV2 for crate::v1::LoadSessionResponse {
     fn into_v2(self) -> Result<Self::Output> {
         let Self {
             modes: _,
-            #[cfg(feature = "unstable_session_model")]
-                models: _,
             config_options,
             meta,
         } = self;
@@ -3687,8 +3679,6 @@ impl IntoV1 for super::ForkSessionResponse {
         Ok(crate::v1::ForkSessionResponse {
             session_id: session_id.into_v1()?,
             modes: None,
-            #[cfg(feature = "unstable_session_model")]
-            models: None,
             config_options: config_options.into_v1()?,
             meta: meta.into_v1()?,
         })
@@ -3703,8 +3693,6 @@ impl IntoV2 for crate::v1::ForkSessionResponse {
         let Self {
             session_id,
             modes: _,
-            #[cfg(feature = "unstable_session_model")]
-                models: _,
             config_options,
             meta,
         } = self;
@@ -3772,8 +3760,6 @@ impl IntoV1 for super::ResumeSessionResponse {
         } = self;
         Ok(crate::v1::ResumeSessionResponse {
             modes: None,
-            #[cfg(feature = "unstable_session_model")]
-            models: None,
             config_options: config_options.into_v1()?,
             meta: meta.into_v1()?,
         })
@@ -3786,8 +3772,6 @@ impl IntoV2 for crate::v1::ResumeSessionResponse {
     fn into_v2(self) -> Result<Self::Output> {
         let Self {
             modes: _,
-            #[cfg(feature = "unstable_session_model")]
-                models: _,
             config_options,
             meta,
         } = self;
@@ -5608,13 +5592,6 @@ impl IntoV2 for crate::v1::ClientRequest {
                 super::ClientRequest::SetSessionConfigOptionRequest(value.into_v2()?)
             }
             Self::PromptRequest(value) => super::ClientRequest::PromptRequest(value.into_v2()?),
-            #[cfg(feature = "unstable_session_model")]
-            Self::SetSessionModelRequest(_) => {
-                return Err(removed_v1_enum_variant(
-                    "ClientRequest",
-                    "session/set_model",
-                ));
-            }
             #[cfg(feature = "unstable_nes")]
             Self::StartNesRequest(value) => super::ClientRequest::StartNesRequest(value.into_v2()?),
             #[cfg(feature = "unstable_nes")]
@@ -5766,13 +5743,6 @@ impl IntoV2 for crate::v1::AgentResponse {
                 super::AgentResponse::SetSessionConfigOptionResponse(value.into_v2()?)
             }
             Self::PromptResponse(value) => super::AgentResponse::PromptResponse(value.into_v2()?),
-            #[cfg(feature = "unstable_session_model")]
-            Self::SetSessionModelResponse(_) => {
-                return Err(removed_v1_enum_variant(
-                    "AgentResponse",
-                    "session/set_model",
-                ));
-            }
             #[cfg(feature = "unstable_nes")]
             Self::StartNesResponse(value) => {
                 super::AgentResponse::StartNesResponse(value.into_v2()?)
@@ -9414,21 +9384,6 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "unstable_session_model")]
-    #[test]
-    fn v1_session_model_methods_do_not_convert_to_v2() {
-        assert_v1_to_v2_error(
-            v1::ClientRequest::SetSessionModelRequest(v1::SetSessionModelRequest::new(
-                "sess", "model-1",
-            )),
-            "v1 ClientRequest variant `session/set_model` cannot be represented in v2",
-        );
-        assert_v1_to_v2_error(
-            v1::AgentResponse::SetSessionModelResponse(v1::SetSessionModelResponse::new()),
-            "v1 AgentResponse variant `session/set_model` cannot be represented in v2",
-        );
-    }
-
     #[test]
     fn v1_session_response_modes_fall_back_to_none_in_v2() {
         let response = v1::NewSessionResponse::new("sess").modes(v1::SessionModeState::new(
@@ -9442,28 +9397,12 @@ mod tests {
         assert!(back_to_v1.modes.is_none());
     }
 
-    #[cfg(feature = "unstable_session_model")]
     #[test]
-    fn v1_session_response_models_fall_back_to_none_in_v2() {
-        let response = v1::NewSessionResponse::new("sess").models(v1::SessionModelState::new(
-            "model-1",
-            vec![v1::ModelInfo::new("model-1", "Model 1")],
-        ));
-
-        let as_v2: v2::NewSessionResponse = v1_to_v2(response).unwrap();
-        let back_to_v1: v1::NewSessionResponse = v2_to_v1(as_v2).unwrap();
-
-        assert!(back_to_v1.models.is_none());
-    }
-
-    #[test]
-    fn v2_session_response_converts_to_v1_without_mode_or_model_state() {
+    fn v2_session_response_converts_to_v1_without_mode_state() {
         let response: v1::NewSessionResponse =
             v2_to_v1(v2::NewSessionResponse::new("sess")).unwrap();
 
         assert!(response.modes.is_none());
-        #[cfg(feature = "unstable_session_model")]
-        assert!(response.models.is_none());
     }
 
     #[test]

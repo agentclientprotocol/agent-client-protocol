@@ -26,7 +26,6 @@ unstable = [
     "unstable_session_additional_directories",
     "unstable_session_delete",
     "unstable_session_fork",
-    "unstable_session_model",
     "unstable_session_usage",
     "unstable_message_id",
     "unstable_boolean_config",
@@ -46,7 +45,6 @@ unstable_plan_operations = []
 unstable_session_additional_directories = []
 unstable_session_delete = []
 unstable_session_fork = []
-unstable_session_model = []
 unstable_session_usage = []
 unstable_message_id = []
 unstable_boolean_config = []

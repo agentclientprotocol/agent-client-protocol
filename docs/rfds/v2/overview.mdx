@@ -39,8 +39,7 @@ Other RFDs will progress separately and are not dependent on breaking changes (s
 ### v2 Changes
 
 - Remove the dedicated session modes API from v2. This includes the `modes` session response fields, `session/set_mode`, `current_mode_update`, and the `SessionMode*` types.
-- Remove the unstable session model API from v2. This includes the `models` session response fields, `session/set_model`, `SessionModelState`, `ModelInfo`, and `ModelId`.
-- Agents should expose mode-like and model-related state through [Session Config Options](../session-config-options.mdx) instead.
+- Agents should expose mode-like and model-related state through [Session Config Options](../session-config-options.mdx) instead of dedicated mode or model selector APIs.
 
 ### RFDs to be Written
 
@@ -90,5 +89,6 @@ With the needed breaking changes, as much as possible I am targeting having a co
 
 ## Revision history
 
-2026-05-28: Recorded the v2 decision to remove session modes and unstable session models in favor of session config options
+2026-06-01: Recorded that model selection should remain represented by session config options instead of a dedicated selector API.
+2026-05-28: Recorded the v2 decision to remove session modes in favor of session config options
 2026-05-06: Initial draft

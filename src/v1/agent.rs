@@ -993,15 +993,6 @@ pub struct NewSessionResponse {
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[serde(default)]
     pub modes: Option<SessionModeState>,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// Initial model state if supported by the Agent
-    #[cfg(feature = "unstable_session_model")]
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[serde(default)]
-    pub models: Option<SessionModelState>,
     /// Initial session configuration options if supported by the Agent.
     #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
     #[serde(default)]
@@ -1021,8 +1012,6 @@ impl NewSessionResponse {
         Self {
             session_id: session_id.into(),
             modes: None,
-            #[cfg(feature = "unstable_session_model")]
-            models: None,
             config_options: None,
             meta: None,
         }
@@ -1034,18 +1023,6 @@ impl NewSessionResponse {
     #[must_use]
     pub fn modes(mut self, modes: impl IntoOption<SessionModeState>) -> Self {
         self.modes = modes.into_option();
-        self
-    }
-
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// Initial model state if supported by the Agent
-    #[cfg(feature = "unstable_session_model")]
-    #[must_use]
-    pub fn models(mut self, models: impl IntoOption<SessionModelState>) -> Self {
-        self.models = models.into_option();
         self
     }
 
@@ -1170,15 +1147,6 @@ pub struct LoadSessionResponse {
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[serde(default)]
     pub modes: Option<SessionModeState>,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// Initial model state if supported by the Agent
-    #[cfg(feature = "unstable_session_model")]
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[serde(default)]
-    pub models: Option<SessionModelState>,
     /// Initial session configuration options if supported by the Agent.
     #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
     #[serde(default)]
@@ -1204,18 +1172,6 @@ impl LoadSessionResponse {
     #[must_use]
     pub fn modes(mut self, modes: impl IntoOption<SessionModeState>) -> Self {
         self.modes = modes.into_option();
-        self
-    }
-
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// Initial model state if supported by the Agent
-    #[cfg(feature = "unstable_session_model")]
-    #[must_use]
-    pub fn models(mut self, models: impl IntoOption<SessionModelState>) -> Self {
-        self.models = models.into_option();
         self
     }
 
@@ -1354,15 +1310,6 @@ pub struct ForkSessionResponse {
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[serde(default)]
     pub modes: Option<SessionModeState>,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// Initial model state if supported by the Agent
-    #[cfg(feature = "unstable_session_model")]
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[serde(default)]
-    pub models: Option<SessionModelState>,
     /// Initial session configuration options if supported by the Agent.
     #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
     #[serde(default)]
@@ -1383,8 +1330,6 @@ impl ForkSessionResponse {
         Self {
             session_id: session_id.into(),
             modes: None,
-            #[cfg(feature = "unstable_session_model")]
-            models: None,
             config_options: None,
             meta: None,
         }
@@ -1396,18 +1341,6 @@ impl ForkSessionResponse {
     #[must_use]
     pub fn modes(mut self, modes: impl IntoOption<SessionModeState>) -> Self {
         self.modes = modes.into_option();
-        self
-    }
-
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// Initial model state if supported by the Agent
-    #[cfg(feature = "unstable_session_model")]
-    #[must_use]
-    pub fn models(mut self, models: impl IntoOption<SessionModelState>) -> Self {
-        self.models = models.into_option();
         self
     }
 
@@ -1534,15 +1467,6 @@ pub struct ResumeSessionResponse {
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[serde(default)]
     pub modes: Option<SessionModeState>,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// Initial model state if supported by the Agent
-    #[cfg(feature = "unstable_session_model")]
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[serde(default)]
-    pub models: Option<SessionModelState>,
     /// Initial session configuration options if supported by the Agent.
     #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
     #[serde(default)]
@@ -1568,18 +1492,6 @@ impl ResumeSessionResponse {
     #[must_use]
     pub fn modes(mut self, modes: impl IntoOption<SessionModeState>) -> Self {
         self.modes = modes.into_option();
-        self
-    }
-
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// Initial model state if supported by the Agent
-    #[cfg(feature = "unstable_session_model")]
-    #[must_use]
-    pub fn models(mut self, models: impl IntoOption<SessionModelState>) -> Self {
-        self.models = models.into_option();
         self
     }
 
@@ -3350,223 +3262,6 @@ impl Usage {
     }
 }
 
-// Model
-
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
-/// The set of models and the one currently active.
-#[cfg(feature = "unstable_session_model")]
-#[serde_as]
-#[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-#[non_exhaustive]
-pub struct SessionModelState {
-    /// The current model the Agent is in.
-    pub current_model_id: ModelId,
-    /// The set of models that the Agent can use
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    pub available_models: Vec<ModelInfo>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
-}
-
-#[cfg(feature = "unstable_session_model")]
-impl SessionModelState {
-    #[must_use]
-    pub fn new(current_model_id: impl Into<ModelId>, available_models: Vec<ModelInfo>) -> Self {
-        Self {
-            current_model_id: current_model_id.into(),
-            available_models,
-            meta: None,
-        }
-    }
-
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[must_use]
-    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
-        self.meta = meta.into_option();
-        self
-    }
-}
-
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
-/// A unique identifier for a model.
-#[cfg(feature = "unstable_session_model")]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
-#[serde(transparent)]
-#[from(Arc<str>, String, &'static str)]
-#[non_exhaustive]
-pub struct ModelId(pub Arc<str>);
-
-#[cfg(feature = "unstable_session_model")]
-impl ModelId {
-    #[must_use]
-    pub fn new(id: impl Into<Arc<str>>) -> Self {
-        Self(id.into())
-    }
-}
-
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
-/// Information about a selectable model.
-#[cfg(feature = "unstable_session_model")]
-#[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-#[non_exhaustive]
-pub struct ModelInfo {
-    /// Unique identifier for the model.
-    pub model_id: ModelId,
-    /// Human-readable name of the model.
-    pub name: String,
-    /// Optional description of the model.
-    #[serde(default)]
-    pub description: Option<String>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
-}
-
-#[cfg(feature = "unstable_session_model")]
-impl ModelInfo {
-    #[must_use]
-    pub fn new(model_id: impl Into<ModelId>, name: impl Into<String>) -> Self {
-        Self {
-            model_id: model_id.into(),
-            name: name.into(),
-            description: None,
-            meta: None,
-        }
-    }
-
-    /// Optional description of the model.
-    #[must_use]
-    pub fn description(mut self, description: impl IntoOption<String>) -> Self {
-        self.description = description.into_option();
-        self
-    }
-
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[must_use]
-    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
-        self.meta = meta.into_option();
-        self
-    }
-}
-
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
-/// Request parameters for setting a session model.
-#[cfg(feature = "unstable_session_model")]
-#[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = SESSION_SET_MODEL_METHOD_NAME))]
-#[serde(rename_all = "camelCase")]
-#[non_exhaustive]
-pub struct SetSessionModelRequest {
-    /// The ID of the session to set the model for.
-    pub session_id: SessionId,
-    /// The ID of the model to set.
-    pub model_id: ModelId,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
-}
-
-#[cfg(feature = "unstable_session_model")]
-impl SetSessionModelRequest {
-    #[must_use]
-    pub fn new(session_id: impl Into<SessionId>, model_id: impl Into<ModelId>) -> Self {
-        Self {
-            session_id: session_id.into(),
-            model_id: model_id.into(),
-            meta: None,
-        }
-    }
-
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[must_use]
-    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
-        self.meta = meta.into_option();
-        self
-    }
-}
-
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
-/// Response to `session/set_model` method.
-#[cfg(feature = "unstable_session_model")]
-#[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = SESSION_SET_MODEL_METHOD_NAME))]
-#[serde(rename_all = "camelCase")]
-#[non_exhaustive]
-pub struct SetSessionModelResponse {
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
-}
-
-#[cfg(feature = "unstable_session_model")]
-impl SetSessionModelResponse {
-    #[must_use]
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[must_use]
-    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
-        self.meta = meta.into_option();
-        self
-    }
-}
-
 // Providers
 
 /// **UNSTABLE**
@@ -4729,9 +4424,6 @@ pub struct AgentMethodNames {
     /// Method for exchanging MCP-over-ACP messages.
     #[cfg(feature = "unstable_mcp_over_acp")]
     pub mcp_message: &'static str,
-    /// Method for selecting a model for a given session.
-    #[cfg(feature = "unstable_session_model")]
-    pub session_set_model: &'static str,
     /// Method for listing existing sessions.
     pub session_list: &'static str,
     /// Method for deleting an existing session.
@@ -4796,8 +4488,6 @@ pub const AGENT_METHOD_NAMES: AgentMethodNames = AgentMethodNames {
     session_cancel: SESSION_CANCEL_METHOD_NAME,
     #[cfg(feature = "unstable_mcp_over_acp")]
     mcp_message: MCP_MESSAGE_METHOD_NAME,
-    #[cfg(feature = "unstable_session_model")]
-    session_set_model: SESSION_SET_MODEL_METHOD_NAME,
     session_list: SESSION_LIST_METHOD_NAME,
     #[cfg(feature = "unstable_session_delete")]
     session_delete: SESSION_DELETE_METHOD_NAME,
@@ -4853,9 +4543,6 @@ pub(crate) const SESSION_SET_CONFIG_OPTION_METHOD_NAME: &str = "session/set_conf
 pub(crate) const SESSION_PROMPT_METHOD_NAME: &str = "session/prompt";
 /// Method name for the cancel notification.
 pub(crate) const SESSION_CANCEL_METHOD_NAME: &str = "session/cancel";
-/// Method name for selecting a model for a given session.
-#[cfg(feature = "unstable_session_model")]
-pub(crate) const SESSION_SET_MODEL_METHOD_NAME: &str = "session/set_model";
 /// Method name for listing existing sessions.
 pub(crate) const SESSION_LIST_METHOD_NAME: &str = "session/list";
 /// Method name for deleting an existing session.
@@ -5024,13 +4711,6 @@ pub enum ClientRequest {
     ///
     /// See protocol docs: [Prompt Turn](https://agentclientprotocol.com/protocol/prompt-turn)
     PromptRequest(PromptRequest),
-    #[cfg(feature = "unstable_session_model")]
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// Select a model for a given session.
-    SetSessionModelRequest(SetSessionModelRequest),
     #[cfg(feature = "unstable_nes")]
     /// **UNSTABLE**
     ///
@@ -5097,8 +4777,6 @@ impl ClientRequest {
             Self::SetSessionModeRequest(_) => AGENT_METHOD_NAMES.session_set_mode,
             Self::SetSessionConfigOptionRequest(_) => AGENT_METHOD_NAMES.session_set_config_option,
             Self::PromptRequest(_) => AGENT_METHOD_NAMES.session_prompt,
-            #[cfg(feature = "unstable_session_model")]
-            Self::SetSessionModelRequest(_) => AGENT_METHOD_NAMES.session_set_model,
             #[cfg(feature = "unstable_nes")]
             Self::StartNesRequest(_) => AGENT_METHOD_NAMES.nes_start,
             #[cfg(feature = "unstable_nes")]
@@ -5145,8 +4823,6 @@ pub enum AgentResponse {
     SetSessionModeResponse(#[serde(default)] SetSessionModeResponse),
     SetSessionConfigOptionResponse(SetSessionConfigOptionResponse),
     PromptResponse(PromptResponse),
-    #[cfg(feature = "unstable_session_model")]
-    SetSessionModelResponse(#[serde(default)] SetSessionModelResponse),
     #[cfg(feature = "unstable_nes")]
     StartNesResponse(StartNesResponse),
     #[cfg(feature = "unstable_nes")]
