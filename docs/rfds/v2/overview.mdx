@@ -36,6 +36,12 @@ Current RFDs accepted as Drafts that are targeting v2 release
 
 Other RFDs will progress separately and are not dependent on breaking changes (specifically the new prompt lifecycle) and can land in either or both v1 and v2.
 
+### v2 Changes
+
+- Remove the dedicated session modes API from v2. This includes the `modes` session response fields, `session/set_mode`, `current_mode_update`, and the `SessionMode*` types.
+- Remove the unstable session model API from v2. This includes the `models` session response fields, `session/set_model`, `SessionModelState`, `ModelInfo`, and `ModelId`.
+- Agents should expose mode-like and model-related state through [Session Config Options](../session-config-options.mdx) instead.
+
 ### RFDs to be Written
 
 Changes under consideration that still need to be drafted or moved to draft:
@@ -51,7 +57,6 @@ Changes under consideration that still need to be drafted or moved to draft:
   - Response can provide available commands
   - Potentially config options
     - Get config options outside of a session (take a cwd?)
-- Remove session modes and (unstable) session models. These are replaces by session config options
 - [Plan variants](/rfds/plan-operations): Make this RFD the default and remove the old plan update
 - Subagent support
 
@@ -85,4 +90,5 @@ With the needed breaking changes, as much as possible I am targeting having a co
 
 ## Revision history
 
+2026-05-28: Recorded the v2 decision to remove session modes and unstable session models in favor of session config options
 2026-05-06: Initial draft

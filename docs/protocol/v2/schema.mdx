@@ -419,12 +419,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 <ResponseField name="configOptions" type={<><span><a href="#sessionconfigoption">SessionConfigOption[]</a></span><span> | null</span></>} >
   Initial session configuration options if supported by the Agent.
 </ResponseField>
-<ResponseField name="modes" type={<><span><a href="#sessionmodestate">SessionModeState</a></span><span> | null</span></>} >
-  Initial mode state if supported by the Agent
-
-See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/v2/session-modes)
-
-</ResponseField>
 
 <a id="session-new"></a>
 ### <span class="font-mono">session/new</span>
@@ -488,12 +482,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 </ResponseField>
 <ResponseField name="configOptions" type={<><span><a href="#sessionconfigoption">SessionConfigOption[]</a></span><span> | null</span></>} >
   Initial session configuration options if supported by the Agent.
-</ResponseField>
-<ResponseField name="modes" type={<><span><a href="#sessionmodestate">SessionModeState</a></span><span> | null</span></>} >
-  Initial mode state if supported by the Agent
-
-See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/v2/session-modes)
-
 </ResponseField>
 <ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
   Unique identifier for the created session.
@@ -640,12 +628,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 <ResponseField name="configOptions" type={<><span><a href="#sessionconfigoption">SessionConfigOption[]</a></span><span> | null</span></>} >
   Initial session configuration options if supported by the Agent.
 </ResponseField>
-<ResponseField name="modes" type={<><span><a href="#sessionmodestate">SessionModeState</a></span><span> | null</span></>} >
-  Initial mode state if supported by the Agent
-
-See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/v2/session-modes)
-
-</ResponseField>
 
 <a id="session-set_config_option"></a>
 ### <span class="font-mono">session/set_config_option</span>
@@ -696,63 +678,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 </ResponseField>
 <ResponseField name="configOptions" type={<a href="#sessionconfigoption">SessionConfigOption[]</a>} required>
   The full set of configuration options and their current values.
-</ResponseField>
-
-<a id="session-set_mode"></a>
-### <span class="font-mono">session/set_mode</span>
-
-Sets the current mode for a session.
-
-Allows switching between different agent modes (e.g., "ask", "architect", "code")
-that affect system prompts, tool availability, and permission behaviors.
-
-The mode must be one of the modes advertised in `availableModes` during session
-creation or loading. Agents may also change modes autonomously and notify the
-client via `current_mode_update` notifications.
-
-This method can be called at any time during a session, whether the Agent is
-idle or actively generating a response.
-
-See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/v2/session-modes)
-
-#### <span class="font-mono">SetSessionModeRequest</span>
-
-Request parameters for setting a session mode.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
-
-</ResponseField>
-<ResponseField name="modeId" type={<a href="#sessionmodeid">SessionModeId</a>} required>
-  The ID of the mode to set.
-</ResponseField>
-<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
-  The ID of the session to set the mode for.
-</ResponseField>
-
-#### <span class="font-mono">SetSessionModeResponse</span>
-
-Response to `session/set_mode` method.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
-
 </ResponseField>
 
 ## Client
@@ -1935,28 +1860,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 </ResponseField>
 <ResponseField name="content" type={<a href="#contentblock">ContentBlock</a>} required>
   A single item of content
-</ResponseField>
-
-## <span class="font-mono">CurrentModeUpdate</span>
-
-The current mode of the session has changed
-
-See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/v2/session-modes)
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
-
-</ResponseField>
-<ResponseField name="currentModeId" type={<a href="#sessionmodeid">SessionModeId</a>} required>
-  The ID of the current mode
 </ResponseField>
 
 ## <span class="font-mono">Diff</span>
@@ -3281,60 +3184,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 
-## <span class="font-mono">SessionMode</span>
-
-A mode the agent can operate in.
-
-See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/v2/session-modes)
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
-
-</ResponseField>
-<ResponseField name="description" type={"string | null"} >
-</ResponseField>
-<ResponseField name="id" type={<a href="#sessionmodeid">SessionModeId</a>} required>
-</ResponseField>
-<ResponseField name="name" type={"string"} required>
-</ResponseField>
-
-## <span class="font-mono">SessionModeId</span>
-
-Unique identifier for a Session Mode.
-
-**Type:** `string`
-
-## <span class="font-mono">SessionModeState</span>
-
-The set of modes and the one currently active.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
-
-</ResponseField>
-<ResponseField name="availableModes" type={<a href="#sessionmode">SessionMode[]</a>} required>
-  The set of modes that the Agent can operate in
-</ResponseField>
-<ResponseField name="currentModeId" type={<a href="#sessionmodeid">SessionModeId</a>} required>
-  The current mode the Agent is in.
-</ResponseField>
-
 ## <span class="font-mono">SessionResumeCapabilities</span>
 
 Capabilities for the `session/resume` method.
@@ -3569,31 +3418,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
   The discriminator value. Must be `"available_commands_update"`.
-</ResponseField>
-
-</Expandable>
-</ResponseField>
-
-<ResponseField name="current_mode_update" type="object">
-The current mode of the session has changed
-
-See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/v2/session-modes)
-
-<Expandable title="Properties">
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
-
-</ResponseField>
-<ResponseField name="currentModeId" type={<a href="#sessionmodeid">SessionModeId</a>} required>
-  The ID of the current mode
-</ResponseField>
-<ResponseField name="sessionUpdate" type={"string"} required>
-  The discriminator value. Must be `"current_mode_update"`.
 </ResponseField>
 
 </Expandable>

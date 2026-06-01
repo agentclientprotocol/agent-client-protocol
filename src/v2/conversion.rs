@@ -56,6 +56,12 @@ fn unknown_v2_enum_variant(type_name: &str, value: &str) -> ProtocolConversionEr
     ))
 }
 
+fn removed_v1_enum_variant(type_name: &str, value: &str) -> ProtocolConversionError {
+    ProtocolConversionError::new(format!(
+        "v1 {type_name} variant `{value}` cannot be represented in v2"
+    ))
+}
+
 /// Converts a [`ProtocolConversionError`] into a v1 [`Error`](crate::v1::Error)
 /// so callers can use `?` to bubble conversion failures through APIs that
 /// already speak the v1 error type.
@@ -863,9 +869,6 @@ impl IntoV1 for super::SessionUpdate {
             Self::AvailableCommandsUpdate(value) => {
                 crate::v1::SessionUpdate::AvailableCommandsUpdate(value.into_v1()?)
             }
-            Self::CurrentModeUpdate(value) => {
-                crate::v1::SessionUpdate::CurrentModeUpdate(value.into_v1()?)
-            }
             Self::ConfigOptionUpdate(value) => {
                 crate::v1::SessionUpdate::ConfigOptionUpdate(value.into_v1()?)
             }
@@ -908,8 +911,11 @@ impl IntoV2 for crate::v1::SessionUpdate {
             Self::AvailableCommandsUpdate(value) => {
                 super::SessionUpdate::AvailableCommandsUpdate(value.into_v2()?)
             }
-            Self::CurrentModeUpdate(value) => {
-                super::SessionUpdate::CurrentModeUpdate(value.into_v2()?)
+            Self::CurrentModeUpdate(_) => {
+                return Err(removed_v1_enum_variant(
+                    "SessionUpdate",
+                    "current_mode_update",
+                ));
             }
             Self::ConfigOptionUpdate(value) => {
                 super::SessionUpdate::ConfigOptionUpdate(value.into_v2()?)
@@ -919,36 +925,6 @@ impl IntoV2 for crate::v1::SessionUpdate {
             }
             #[cfg(feature = "unstable_session_usage")]
             Self::UsageUpdate(value) => super::SessionUpdate::UsageUpdate(value.into_v2()?),
-        })
-    }
-}
-
-impl IntoV1 for super::CurrentModeUpdate {
-    type Output = crate::v1::CurrentModeUpdate;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self {
-            current_mode_id,
-            meta,
-        } = self;
-        Ok(crate::v1::CurrentModeUpdate {
-            current_mode_id: current_mode_id.into_v1()?,
-            meta: meta.into_v1()?,
-        })
-    }
-}
-
-impl IntoV2 for crate::v1::CurrentModeUpdate {
-    type Output = super::CurrentModeUpdate;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        let Self {
-            current_mode_id,
-            meta,
-        } = self;
-        Ok(super::CurrentModeUpdate {
-            current_mode_id: current_mode_id.into_v2()?,
-            meta: meta.into_v2()?,
         })
     }
 }
@@ -3534,17 +3510,14 @@ impl IntoV1 for super::NewSessionResponse {
     fn into_v1(self) -> Result<Self::Output> {
         let Self {
             session_id,
-            modes,
-            #[cfg(feature = "unstable_session_model")]
-            models,
             config_options,
             meta,
         } = self;
         Ok(crate::v1::NewSessionResponse {
             session_id: session_id.into_v1()?,
-            modes: modes.into_v1()?,
+            modes: None,
             #[cfg(feature = "unstable_session_model")]
-            models: models.into_v1()?,
+            models: None,
             config_options: config_options.into_v1()?,
             meta: meta.into_v1()?,
         })
@@ -3557,17 +3530,14 @@ impl IntoV2 for crate::v1::NewSessionResponse {
     fn into_v2(self) -> Result<Self::Output> {
         let Self {
             session_id,
-            modes,
+            modes: _,
             #[cfg(feature = "unstable_session_model")]
-            models,
+                models: _,
             config_options,
             meta,
         } = self;
         Ok(super::NewSessionResponse {
             session_id: session_id.into_v2()?,
-            modes: modes.into_v2()?,
-            #[cfg(feature = "unstable_session_model")]
-            models: models.into_v2()?,
             config_options: config_options.into_v2()?,
             meta: meta.into_v2()?,
         })
@@ -3625,16 +3595,13 @@ impl IntoV1 for super::LoadSessionResponse {
 
     fn into_v1(self) -> Result<Self::Output> {
         let Self {
-            modes,
-            #[cfg(feature = "unstable_session_model")]
-            models,
             config_options,
             meta,
         } = self;
         Ok(crate::v1::LoadSessionResponse {
-            modes: modes.into_v1()?,
+            modes: None,
             #[cfg(feature = "unstable_session_model")]
-            models: models.into_v1()?,
+            models: None,
             config_options: config_options.into_v1()?,
             meta: meta.into_v1()?,
         })
@@ -3646,16 +3613,13 @@ impl IntoV2 for crate::v1::LoadSessionResponse {
 
     fn into_v2(self) -> Result<Self::Output> {
         let Self {
-            modes,
+            modes: _,
             #[cfg(feature = "unstable_session_model")]
-            models,
+                models: _,
             config_options,
             meta,
         } = self;
         Ok(super::LoadSessionResponse {
-            modes: modes.into_v2()?,
-            #[cfg(feature = "unstable_session_model")]
-            models: models.into_v2()?,
             config_options: config_options.into_v2()?,
             meta: meta.into_v2()?,
         })
@@ -3717,17 +3681,14 @@ impl IntoV1 for super::ForkSessionResponse {
     fn into_v1(self) -> Result<Self::Output> {
         let Self {
             session_id,
-            modes,
-            #[cfg(feature = "unstable_session_model")]
-            models,
             config_options,
             meta,
         } = self;
         Ok(crate::v1::ForkSessionResponse {
             session_id: session_id.into_v1()?,
-            modes: modes.into_v1()?,
+            modes: None,
             #[cfg(feature = "unstable_session_model")]
-            models: models.into_v1()?,
+            models: None,
             config_options: config_options.into_v1()?,
             meta: meta.into_v1()?,
         })
@@ -3741,17 +3702,14 @@ impl IntoV2 for crate::v1::ForkSessionResponse {
     fn into_v2(self) -> Result<Self::Output> {
         let Self {
             session_id,
-            modes,
+            modes: _,
             #[cfg(feature = "unstable_session_model")]
-            models,
+                models: _,
             config_options,
             meta,
         } = self;
         Ok(super::ForkSessionResponse {
             session_id: session_id.into_v2()?,
-            modes: modes.into_v2()?,
-            #[cfg(feature = "unstable_session_model")]
-            models: models.into_v2()?,
             config_options: config_options.into_v2()?,
             meta: meta.into_v2()?,
         })
@@ -3809,16 +3767,13 @@ impl IntoV1 for super::ResumeSessionResponse {
 
     fn into_v1(self) -> Result<Self::Output> {
         let Self {
-            modes,
-            #[cfg(feature = "unstable_session_model")]
-            models,
             config_options,
             meta,
         } = self;
         Ok(crate::v1::ResumeSessionResponse {
-            modes: modes.into_v1()?,
+            modes: None,
             #[cfg(feature = "unstable_session_model")]
-            models: models.into_v1()?,
+            models: None,
             config_options: config_options.into_v1()?,
             meta: meta.into_v1()?,
         })
@@ -3830,16 +3785,13 @@ impl IntoV2 for crate::v1::ResumeSessionResponse {
 
     fn into_v2(self) -> Result<Self::Output> {
         let Self {
-            modes,
+            modes: _,
             #[cfg(feature = "unstable_session_model")]
-            models,
+                models: _,
             config_options,
             meta,
         } = self;
         Ok(super::ResumeSessionResponse {
-            modes: modes.into_v2()?,
-            #[cfg(feature = "unstable_session_model")]
-            models: models.into_v2()?,
             config_options: config_options.into_v2()?,
             meta: meta.into_v2()?,
         })
@@ -4047,150 +3999,6 @@ impl IntoV2 for crate::v1::SessionInfo {
             additional_directories: additional_directories.into_v2()?,
             title: title.into_v2()?,
             updated_at: updated_at.into_v2()?,
-            meta: meta.into_v2()?,
-        })
-    }
-}
-
-impl IntoV1 for super::SessionModeState {
-    type Output = crate::v1::SessionModeState;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self {
-            current_mode_id,
-            available_modes,
-            meta,
-        } = self;
-        Ok(crate::v1::SessionModeState {
-            current_mode_id: current_mode_id.into_v1()?,
-            available_modes: available_modes.into_v1()?,
-            meta: meta.into_v1()?,
-        })
-    }
-}
-
-impl IntoV2 for crate::v1::SessionModeState {
-    type Output = super::SessionModeState;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        let Self {
-            current_mode_id,
-            available_modes,
-            meta,
-        } = self;
-        Ok(super::SessionModeState {
-            current_mode_id: current_mode_id.into_v2()?,
-            available_modes: available_modes.into_v2()?,
-            meta: meta.into_v2()?,
-        })
-    }
-}
-
-impl IntoV1 for super::SessionMode {
-    type Output = crate::v1::SessionMode;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self {
-            id,
-            name,
-            description,
-            meta,
-        } = self;
-        Ok(crate::v1::SessionMode {
-            id: id.into_v1()?,
-            name: name.into_v1()?,
-            description: description.into_v1()?,
-            meta: meta.into_v1()?,
-        })
-    }
-}
-
-impl IntoV2 for crate::v1::SessionMode {
-    type Output = super::SessionMode;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        let Self {
-            id,
-            name,
-            description,
-            meta,
-        } = self;
-        Ok(super::SessionMode {
-            id: id.into_v2()?,
-            name: name.into_v2()?,
-            description: description.into_v2()?,
-            meta: meta.into_v2()?,
-        })
-    }
-}
-
-impl IntoV1 for super::SessionModeId {
-    type Output = crate::v1::SessionModeId;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        Ok(crate::v1::SessionModeId(self.0.into_v1()?))
-    }
-}
-
-impl IntoV2 for crate::v1::SessionModeId {
-    type Output = super::SessionModeId;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        Ok(super::SessionModeId(self.0.into_v2()?))
-    }
-}
-
-impl IntoV1 for super::SetSessionModeRequest {
-    type Output = crate::v1::SetSessionModeRequest;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self {
-            session_id,
-            mode_id,
-            meta,
-        } = self;
-        Ok(crate::v1::SetSessionModeRequest {
-            session_id: session_id.into_v1()?,
-            mode_id: mode_id.into_v1()?,
-            meta: meta.into_v1()?,
-        })
-    }
-}
-
-impl IntoV2 for crate::v1::SetSessionModeRequest {
-    type Output = super::SetSessionModeRequest;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        let Self {
-            session_id,
-            mode_id,
-            meta,
-        } = self;
-        Ok(super::SetSessionModeRequest {
-            session_id: session_id.into_v2()?,
-            mode_id: mode_id.into_v2()?,
-            meta: meta.into_v2()?,
-        })
-    }
-}
-
-impl IntoV1 for super::SetSessionModeResponse {
-    type Output = crate::v1::SetSessionModeResponse;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self { meta } = self;
-        Ok(crate::v1::SetSessionModeResponse {
-            meta: meta.into_v1()?,
-        })
-    }
-}
-
-impl IntoV2 for crate::v1::SetSessionModeResponse {
-    type Output = super::SetSessionModeResponse;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        let Self { meta } = self;
-        Ok(super::SetSessionModeResponse {
             meta: meta.into_v2()?,
         })
     }
@@ -5028,160 +4836,6 @@ impl IntoV2 for crate::v1::Usage {
     }
 }
 
-#[cfg(feature = "unstable_session_model")]
-impl IntoV1 for super::SessionModelState {
-    type Output = crate::v1::SessionModelState;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self {
-            current_model_id,
-            available_models,
-            meta,
-        } = self;
-        Ok(crate::v1::SessionModelState {
-            current_model_id: current_model_id.into_v1()?,
-            available_models: available_models.into_v1()?,
-            meta: meta.into_v1()?,
-        })
-    }
-}
-
-#[cfg(feature = "unstable_session_model")]
-impl IntoV2 for crate::v1::SessionModelState {
-    type Output = super::SessionModelState;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        let Self {
-            current_model_id,
-            available_models,
-            meta,
-        } = self;
-        Ok(super::SessionModelState {
-            current_model_id: current_model_id.into_v2()?,
-            available_models: available_models.into_v2()?,
-            meta: meta.into_v2()?,
-        })
-    }
-}
-
-#[cfg(feature = "unstable_session_model")]
-impl IntoV1 for super::ModelId {
-    type Output = crate::v1::ModelId;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        Ok(crate::v1::ModelId(self.0.into_v1()?))
-    }
-}
-
-#[cfg(feature = "unstable_session_model")]
-impl IntoV2 for crate::v1::ModelId {
-    type Output = super::ModelId;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        Ok(super::ModelId(self.0.into_v2()?))
-    }
-}
-
-#[cfg(feature = "unstable_session_model")]
-impl IntoV1 for super::ModelInfo {
-    type Output = crate::v1::ModelInfo;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self {
-            model_id,
-            name,
-            description,
-            meta,
-        } = self;
-        Ok(crate::v1::ModelInfo {
-            model_id: model_id.into_v1()?,
-            name: name.into_v1()?,
-            description: description.into_v1()?,
-            meta: meta.into_v1()?,
-        })
-    }
-}
-
-#[cfg(feature = "unstable_session_model")]
-impl IntoV2 for crate::v1::ModelInfo {
-    type Output = super::ModelInfo;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        let Self {
-            model_id,
-            name,
-            description,
-            meta,
-        } = self;
-        Ok(super::ModelInfo {
-            model_id: model_id.into_v2()?,
-            name: name.into_v2()?,
-            description: description.into_v2()?,
-            meta: meta.into_v2()?,
-        })
-    }
-}
-
-#[cfg(feature = "unstable_session_model")]
-impl IntoV1 for super::SetSessionModelRequest {
-    type Output = crate::v1::SetSessionModelRequest;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self {
-            session_id,
-            model_id,
-            meta,
-        } = self;
-        Ok(crate::v1::SetSessionModelRequest {
-            session_id: session_id.into_v1()?,
-            model_id: model_id.into_v1()?,
-            meta: meta.into_v1()?,
-        })
-    }
-}
-
-#[cfg(feature = "unstable_session_model")]
-impl IntoV2 for crate::v1::SetSessionModelRequest {
-    type Output = super::SetSessionModelRequest;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        let Self {
-            session_id,
-            model_id,
-            meta,
-        } = self;
-        Ok(super::SetSessionModelRequest {
-            session_id: session_id.into_v2()?,
-            model_id: model_id.into_v2()?,
-            meta: meta.into_v2()?,
-        })
-    }
-}
-
-#[cfg(feature = "unstable_session_model")]
-impl IntoV1 for super::SetSessionModelResponse {
-    type Output = crate::v1::SetSessionModelResponse;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self { meta } = self;
-        Ok(crate::v1::SetSessionModelResponse {
-            meta: meta.into_v1()?,
-        })
-    }
-}
-
-#[cfg(feature = "unstable_session_model")]
-impl IntoV2 for crate::v1::SetSessionModelResponse {
-    type Output = super::SetSessionModelResponse;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        let Self { meta } = self;
-        Ok(super::SetSessionModelResponse {
-            meta: meta.into_v2()?,
-        })
-    }
-}
-
 #[cfg(feature = "unstable_llm_providers")]
 impl IntoV1 for super::LlmProtocol {
     type Output = crate::v1::LlmProtocol;
@@ -5873,17 +5527,10 @@ impl IntoV1 for super::ClientRequest {
             Self::CloseSessionRequest(value) => {
                 crate::v1::ClientRequest::CloseSessionRequest(value.into_v1()?)
             }
-            Self::SetSessionModeRequest(value) => {
-                crate::v1::ClientRequest::SetSessionModeRequest(value.into_v1()?)
-            }
             Self::SetSessionConfigOptionRequest(value) => {
                 crate::v1::ClientRequest::SetSessionConfigOptionRequest(value.into_v1()?)
             }
             Self::PromptRequest(value) => crate::v1::ClientRequest::PromptRequest(value.into_v1()?),
-            #[cfg(feature = "unstable_session_model")]
-            Self::SetSessionModelRequest(value) => {
-                crate::v1::ClientRequest::SetSessionModelRequest(value.into_v1()?)
-            }
             #[cfg(feature = "unstable_nes")]
             Self::StartNesRequest(value) => {
                 crate::v1::ClientRequest::StartNesRequest(value.into_v1()?)
@@ -5954,16 +5601,19 @@ impl IntoV2 for crate::v1::ClientRequest {
             Self::CloseSessionRequest(value) => {
                 super::ClientRequest::CloseSessionRequest(value.into_v2()?)
             }
-            Self::SetSessionModeRequest(value) => {
-                super::ClientRequest::SetSessionModeRequest(value.into_v2()?)
+            Self::SetSessionModeRequest(_) => {
+                return Err(removed_v1_enum_variant("ClientRequest", "session/set_mode"));
             }
             Self::SetSessionConfigOptionRequest(value) => {
                 super::ClientRequest::SetSessionConfigOptionRequest(value.into_v2()?)
             }
             Self::PromptRequest(value) => super::ClientRequest::PromptRequest(value.into_v2()?),
             #[cfg(feature = "unstable_session_model")]
-            Self::SetSessionModelRequest(value) => {
-                super::ClientRequest::SetSessionModelRequest(value.into_v2()?)
+            Self::SetSessionModelRequest(_) => {
+                return Err(removed_v1_enum_variant(
+                    "ClientRequest",
+                    "session/set_model",
+                ));
             }
             #[cfg(feature = "unstable_nes")]
             Self::StartNesRequest(value) => super::ClientRequest::StartNesRequest(value.into_v2()?),
@@ -6033,18 +5683,11 @@ impl IntoV1 for super::AgentResponse {
             Self::CloseSessionResponse(value) => {
                 crate::v1::AgentResponse::CloseSessionResponse(value.into_v1()?)
             }
-            Self::SetSessionModeResponse(value) => {
-                crate::v1::AgentResponse::SetSessionModeResponse(value.into_v1()?)
-            }
             Self::SetSessionConfigOptionResponse(value) => {
                 crate::v1::AgentResponse::SetSessionConfigOptionResponse(value.into_v1()?)
             }
             Self::PromptResponse(value) => {
                 crate::v1::AgentResponse::PromptResponse(value.into_v1()?)
-            }
-            #[cfg(feature = "unstable_session_model")]
-            Self::SetSessionModelResponse(value) => {
-                crate::v1::AgentResponse::SetSessionModelResponse(value.into_v1()?)
             }
             #[cfg(feature = "unstable_nes")]
             Self::StartNesResponse(value) => {
@@ -6116,16 +5759,19 @@ impl IntoV2 for crate::v1::AgentResponse {
             Self::CloseSessionResponse(value) => {
                 super::AgentResponse::CloseSessionResponse(value.into_v2()?)
             }
-            Self::SetSessionModeResponse(value) => {
-                super::AgentResponse::SetSessionModeResponse(value.into_v2()?)
+            Self::SetSessionModeResponse(_) => {
+                return Err(removed_v1_enum_variant("AgentResponse", "session/set_mode"));
             }
             Self::SetSessionConfigOptionResponse(value) => {
                 super::AgentResponse::SetSessionConfigOptionResponse(value.into_v2()?)
             }
             Self::PromptResponse(value) => super::AgentResponse::PromptResponse(value.into_v2()?),
             #[cfg(feature = "unstable_session_model")]
-            Self::SetSessionModelResponse(value) => {
-                super::AgentResponse::SetSessionModelResponse(value.into_v2()?)
+            Self::SetSessionModelResponse(_) => {
+                return Err(removed_v1_enum_variant(
+                    "AgentResponse",
+                    "session/set_model",
+                ));
             }
             #[cfg(feature = "unstable_nes")]
             Self::StartNesResponse(value) => {
@@ -9597,6 +9243,15 @@ mod tests {
         assert_eq!(error.message(), expected);
     }
 
+    fn assert_v1_to_v2_error<T>(value: T, expected: &str)
+    where
+        T: IntoV2,
+        T::Output: std::fmt::Debug,
+    {
+        let error = v1_to_v2(value).unwrap_err();
+        assert_eq!(error.message(), expected);
+    }
+
     #[test]
     fn converts_v2_initialize_request_to_v1_without_serde() {
         let request = v2::InitializeRequest::new(ProtocolVersion::V2);
@@ -9737,6 +9392,78 @@ mod tests {
             update,
             "v2 SessionUpdate variant `_status_badge` cannot be represented in v1",
         );
+    }
+
+    #[test]
+    fn v1_current_mode_update_does_not_convert_to_v2() {
+        assert_v1_to_v2_error(
+            v1::SessionUpdate::CurrentModeUpdate(v1::CurrentModeUpdate::new("ask")),
+            "v1 SessionUpdate variant `current_mode_update` cannot be represented in v2",
+        );
+    }
+
+    #[test]
+    fn v1_session_mode_methods_do_not_convert_to_v2() {
+        assert_v1_to_v2_error(
+            v1::ClientRequest::SetSessionModeRequest(v1::SetSessionModeRequest::new("sess", "ask")),
+            "v1 ClientRequest variant `session/set_mode` cannot be represented in v2",
+        );
+        assert_v1_to_v2_error(
+            v1::AgentResponse::SetSessionModeResponse(v1::SetSessionModeResponse::new()),
+            "v1 AgentResponse variant `session/set_mode` cannot be represented in v2",
+        );
+    }
+
+    #[cfg(feature = "unstable_session_model")]
+    #[test]
+    fn v1_session_model_methods_do_not_convert_to_v2() {
+        assert_v1_to_v2_error(
+            v1::ClientRequest::SetSessionModelRequest(v1::SetSessionModelRequest::new(
+                "sess", "model-1",
+            )),
+            "v1 ClientRequest variant `session/set_model` cannot be represented in v2",
+        );
+        assert_v1_to_v2_error(
+            v1::AgentResponse::SetSessionModelResponse(v1::SetSessionModelResponse::new()),
+            "v1 AgentResponse variant `session/set_model` cannot be represented in v2",
+        );
+    }
+
+    #[test]
+    fn v1_session_response_modes_fall_back_to_none_in_v2() {
+        let response = v1::NewSessionResponse::new("sess").modes(v1::SessionModeState::new(
+            "ask",
+            vec![v1::SessionMode::new("ask", "Ask")],
+        ));
+
+        let as_v2: v2::NewSessionResponse = v1_to_v2(response).unwrap();
+        let back_to_v1: v1::NewSessionResponse = v2_to_v1(as_v2).unwrap();
+
+        assert!(back_to_v1.modes.is_none());
+    }
+
+    #[cfg(feature = "unstable_session_model")]
+    #[test]
+    fn v1_session_response_models_fall_back_to_none_in_v2() {
+        let response = v1::NewSessionResponse::new("sess").models(v1::SessionModelState::new(
+            "model-1",
+            vec![v1::ModelInfo::new("model-1", "Model 1")],
+        ));
+
+        let as_v2: v2::NewSessionResponse = v1_to_v2(response).unwrap();
+        let back_to_v1: v1::NewSessionResponse = v2_to_v1(as_v2).unwrap();
+
+        assert!(back_to_v1.models.is_none());
+    }
+
+    #[test]
+    fn v2_session_response_converts_to_v1_without_mode_or_model_state() {
+        let response: v1::NewSessionResponse =
+            v2_to_v1(v2::NewSessionResponse::new("sess")).unwrap();
+
+        assert!(response.modes.is_none());
+        #[cfg(feature = "unstable_session_model")]
+        assert!(response.models.is_none());
     }
 
     #[test]

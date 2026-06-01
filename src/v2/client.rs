@@ -17,7 +17,7 @@ use super::{
 };
 use super::{
     ContentBlock, EnvVariable, ExtNotification, ExtRequest, ExtResponse, Meta, Plan,
-    SessionConfigOption, SessionId, SessionModeId, ToolCall, ToolCallUpdate,
+    SessionConfigOption, SessionId, ToolCall, ToolCallUpdate,
 };
 #[cfg(feature = "unstable_plan_operations")]
 use super::{PlanCapabilities, PlanRemoved, PlanUpdate};
@@ -120,10 +120,6 @@ pub enum SessionUpdate {
     PlanRemoved(PlanRemoved),
     /// Available commands are ready or have changed
     AvailableCommandsUpdate(AvailableCommandsUpdate),
-    /// The current mode of the session has changed
-    ///
-    /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
-    CurrentModeUpdate(CurrentModeUpdate),
     /// Session configuration options have been updated.
     ConfigOptionUpdate(ConfigOptionUpdate),
     /// Session metadata has been updated (title, timestamps, custom metadata)
@@ -220,7 +216,6 @@ fn is_known_session_update(session_update: &str) -> bool {
         | "tool_call_update"
         | "plan"
         | "available_commands_update"
-        | "current_mode_update"
         | "config_option_update"
         | "session_info_update" => true,
         #[cfg(feature = "unstable_plan_operations")]
@@ -243,7 +238,6 @@ fn other_session_update_schema(schema: &mut Schema) {
             "tool_call_update",
             "plan",
             "available_commands_update",
-            "current_mode_update",
             "config_option_update",
             "session_info_update",
             #[cfg(feature = "unstable_plan_operations")]
@@ -254,46 +248,6 @@ fn other_session_update_schema(schema: &mut Schema) {
             "usage_update",
         ],
     );
-}
-
-/// The current mode of the session has changed
-///
-/// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
-#[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-#[non_exhaustive]
-pub struct CurrentModeUpdate {
-    /// The ID of the current mode
-    pub current_mode_id: SessionModeId,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
-}
-
-impl CurrentModeUpdate {
-    #[must_use]
-    pub fn new(current_mode_id: impl Into<SessionModeId>) -> Self {
-        Self {
-            current_mode_id: current_mode_id.into(),
-            meta: None,
-        }
-    }
-
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[must_use]
-    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
-        self.meta = meta.into_option();
-        self
-    }
 }
 
 /// Session configuration options have been updated.

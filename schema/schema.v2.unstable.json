@@ -456,14 +456,6 @@
                 {
                   "allOf": [
                     {
-                      "$ref": "#/$defs/SetSessionModeResponse"
-                    }
-                  ],
-                  "title": "SetSessionModeResponse"
-                },
-                {
-                  "allOf": [
-                    {
                       "$ref": "#/$defs/SetSessionConfigOptionResponse"
                     }
                   ],
@@ -476,14 +468,6 @@
                     }
                   ],
                   "title": "PromptResponse"
-                },
-                {
-                  "allOf": [
-                    {
-                      "$ref": "#/$defs/SetSessionModelResponse"
-                    }
-                  ],
-                  "title": "SetSessionModelResponse"
                 },
                 {
                   "allOf": [
@@ -1423,15 +1407,6 @@
                 {
                   "allOf": [
                     {
-                      "$ref": "#/$defs/SetSessionModeRequest"
-                    }
-                  ],
-                  "description": "Sets the current mode for a session.\n\nAllows switching between different agent modes (e.g., \"ask\", \"architect\", \"code\")\nthat affect system prompts, tool availability, and permission behaviors.\n\nThe mode must be one of the modes advertised in `availableModes` during session\ncreation or loading. Agents may also change modes autonomously and notify the\nclient via `current_mode_update` notifications.\n\nThis method can be called at any time during a session, whether the Agent is\nidle or actively generating a response.\n\nSee protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)",
-                  "title": "SetSessionModeRequest"
-                },
-                {
-                  "allOf": [
-                    {
                       "$ref": "#/$defs/SetSessionConfigOptionRequest"
                     }
                   ],
@@ -1446,15 +1421,6 @@
                   ],
                   "description": "Processes a user prompt within a session.\n\nThis method handles the whole lifecycle of a prompt:\n- Receives user messages with optional context (files, images, etc.)\n- Processes the prompt using language models\n- Reports language model content and tool calls to the Clients\n- Requests permission to run tools\n- Executes any requested tool calls\n- Returns when the turn is complete with a stop reason\n\nSee protocol docs: [Prompt Turn](https://agentclientprotocol.com/protocol/prompt-turn)",
                   "title": "PromptRequest"
-                },
-                {
-                  "allOf": [
-                    {
-                      "$ref": "#/$defs/SetSessionModelRequest"
-                    }
-                  ],
-                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSelect a model for a given session.",
-                  "title": "SetSessionModelRequest"
                 },
                 {
                   "allOf": [
@@ -2199,26 +2165,6 @@
       "type": "object",
       "x-method": "terminal/create",
       "x-side": "client"
-    },
-    "CurrentModeUpdate": {
-      "description": "The current mode of the session has changed\n\nSee protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"]
-        },
-        "currentModeId": {
-          "allOf": [
-            {
-              "$ref": "#/$defs/SessionModeId"
-            }
-          ],
-          "description": "The ID of the current mode"
-        }
-      },
-      "required": ["currentModeId"],
-      "type": "object"
     },
     "DeleteSessionRequest": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for deleting an existing session from `session/list`.\n\nOnly available if the Agent supports the `sessionCapabilities.delete` capability.",
@@ -3146,28 +3092,6 @@
           },
           "type": ["array", "null"]
         },
-        "models": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/SessionModelState"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nInitial model state if supported by the Agent"
-        },
-        "modes": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/SessionModeState"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "Initial mode state if supported by the Agent\n\nSee protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)"
-        },
         "sessionId": {
           "allOf": [
             {
@@ -3609,28 +3533,6 @@
             "$ref": "#/$defs/SessionConfigOption"
           },
           "type": ["array", "null"]
-        },
-        "models": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/SessionModelState"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nInitial model state if supported by the Agent"
-        },
-        "modes": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/SessionModeState"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "Initial mode state if supported by the Agent\n\nSee protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)"
         }
       },
       "type": "object",
@@ -3948,38 +3850,6 @@
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nResponse to `mcp/message`.\n\nThis is the inner MCP response result payload. Any JSON value is valid.",
       "x-method": "mcp/message",
       "x-side": "both"
-    },
-    "ModelId": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA unique identifier for a model.",
-      "type": "string"
-    },
-    "ModelInfo": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nInformation about a selectable model.",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"]
-        },
-        "description": {
-          "description": "Optional description of the model.",
-          "type": ["string", "null"]
-        },
-        "modelId": {
-          "allOf": [
-            {
-              "$ref": "#/$defs/ModelId"
-            }
-          ],
-          "description": "Unique identifier for the model."
-        },
-        "name": {
-          "description": "Human-readable name of the model.",
-          "type": "string"
-        }
-      },
-      "required": ["modelId", "name"],
-      "type": "object"
     },
     "MultiSelectItems": {
       "anyOf": [
@@ -5054,28 +4924,6 @@
           },
           "type": ["array", "null"]
         },
-        "models": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/SessionModelState"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nInitial model state if supported by the Agent"
-        },
-        "modes": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/SessionModeState"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "Initial mode state if supported by the Agent\n\nSee protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)"
-        },
         "sessionId": {
           "allOf": [
             {
@@ -6090,28 +5938,6 @@
             "$ref": "#/$defs/SessionConfigOption"
           },
           "type": ["array", "null"]
-        },
-        "models": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/SessionModelState"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nInitial model state if supported by the Agent"
-        },
-        "modes": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/SessionModeState"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "Initial mode state if supported by the Agent\n\nSee protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)"
         }
       },
       "type": "object",
@@ -6610,85 +6436,6 @@
       },
       "type": "object"
     },
-    "SessionMode": {
-      "description": "A mode the agent can operate in.\n\nSee protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"]
-        },
-        "description": {
-          "type": ["string", "null"]
-        },
-        "id": {
-          "$ref": "#/$defs/SessionModeId"
-        },
-        "name": {
-          "type": "string"
-        }
-      },
-      "required": ["id", "name"],
-      "type": "object"
-    },
-    "SessionModeId": {
-      "description": "Unique identifier for a Session Mode.",
-      "type": "string"
-    },
-    "SessionModeState": {
-      "description": "The set of modes and the one currently active.",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"]
-        },
-        "availableModes": {
-          "description": "The set of modes that the Agent can operate in",
-          "items": {
-            "$ref": "#/$defs/SessionMode"
-          },
-          "type": "array"
-        },
-        "currentModeId": {
-          "allOf": [
-            {
-              "$ref": "#/$defs/SessionModeId"
-            }
-          ],
-          "description": "The current mode the Agent is in."
-        }
-      },
-      "required": ["currentModeId", "availableModes"],
-      "type": "object"
-    },
-    "SessionModelState": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nThe set of models and the one currently active.",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"]
-        },
-        "availableModels": {
-          "description": "The set of models that the Agent can use",
-          "items": {
-            "$ref": "#/$defs/ModelInfo"
-          },
-          "type": "array"
-        },
-        "currentModelId": {
-          "allOf": [
-            {
-              "$ref": "#/$defs/ModelId"
-            }
-          ],
-          "description": "The current model the Agent is in."
-        }
-      },
-      "required": ["currentModelId", "availableModels"],
-      "type": "object"
-    },
     "SessionNotification": {
       "description": "Notification containing a session update from the agent.\n\nUsed to stream real-time progress and results during prompt processing.\n\nSee protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-turn#3-agent-reports-output)",
       "properties": {
@@ -6879,22 +6626,6 @@
         {
           "allOf": [
             {
-              "$ref": "#/$defs/CurrentModeUpdate"
-            }
-          ],
-          "description": "The current mode of the session has changed\n\nSee protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)",
-          "properties": {
-            "sessionUpdate": {
-              "const": "current_mode_update",
-              "type": "string"
-            }
-          },
-          "required": ["sessionUpdate"],
-          "type": "object"
-        },
-        {
-          "allOf": [
-            {
               "$ref": "#/$defs/ConfigOptionUpdate"
             }
           ],
@@ -7009,16 +6740,6 @@
                 "properties": {
                   "sessionUpdate": {
                     "const": "available_commands_update",
-                    "type": "string"
-                  }
-                },
-                "required": ["sessionUpdate"],
-                "type": "object"
-              },
-              {
-                "properties": {
-                  "sessionUpdate": {
-                    "const": "current_mode_update",
                     "type": "string"
                   }
                 },
@@ -7225,92 +6946,6 @@
       "required": ["configOptions"],
       "type": "object",
       "x-method": "session/set_config_option",
-      "x-side": "agent"
-    },
-    "SetSessionModeRequest": {
-      "description": "Request parameters for setting a session mode.",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"]
-        },
-        "modeId": {
-          "allOf": [
-            {
-              "$ref": "#/$defs/SessionModeId"
-            }
-          ],
-          "description": "The ID of the mode to set."
-        },
-        "sessionId": {
-          "allOf": [
-            {
-              "$ref": "#/$defs/SessionId"
-            }
-          ],
-          "description": "The ID of the session to set the mode for."
-        }
-      },
-      "required": ["sessionId", "modeId"],
-      "type": "object",
-      "x-method": "session/set_mode",
-      "x-side": "agent"
-    },
-    "SetSessionModeResponse": {
-      "description": "Response to `session/set_mode` method.",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"]
-        }
-      },
-      "type": "object",
-      "x-method": "session/set_mode",
-      "x-side": "agent"
-    },
-    "SetSessionModelRequest": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for setting a session model.",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"]
-        },
-        "modelId": {
-          "allOf": [
-            {
-              "$ref": "#/$defs/ModelId"
-            }
-          ],
-          "description": "The ID of the model to set."
-        },
-        "sessionId": {
-          "allOf": [
-            {
-              "$ref": "#/$defs/SessionId"
-            }
-          ],
-          "description": "The ID of the session to set the model for."
-        }
-      },
-      "required": ["sessionId", "modelId"],
-      "type": "object",
-      "x-method": "session/set_model",
-      "x-side": "agent"
-    },
-    "SetSessionModelResponse": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nResponse to `session/set_model` method.",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"]
-        }
-      },
-      "type": "object",
-      "x-method": "session/set_model",
       "x-side": "agent"
     },
     "StartNesRequest": {
