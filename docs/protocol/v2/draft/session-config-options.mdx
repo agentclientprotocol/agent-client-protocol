@@ -3,14 +3,7 @@ title: "Session Config Options"
 description: "Flexible configuration selectors for agent sessions"
 ---
 
-Agents can provide an arbitrary list of configuration options for a session, allowing Clients to offer users customizable selectors for things like models, modes, reasoning levels, and more.
-
-<Info>
-  Session Config Options are the preferred way to expose session-level
-  configuration. If an Agent provides `configOptions`, Clients **SHOULD** use
-  them instead of the [`modes`](./session-modes) field. Modes will be removed in
-  a future version of the protocol.
-</Info>
+Agents can provide an arbitrary list of configuration options for a session, allowing Clients to offer users customizable selectors for things like modes, models, reasoning levels, and more.
 
 ## Initial State
 
@@ -263,20 +256,3 @@ This notification also contains the complete configuration state. Common reasons
 - Switching modes after completing a planning phase
 - Falling back to a different model due to rate limits or errors
 - Adjusting available options based on context discovered during execution
-
-## Relationship to Session Modes
-
-Session Config Options supersede the older [Session Modes](./session-modes) API. However, during the transition period, Agents that provide mode-like configuration **SHOULD** send both:
-
-- `configOptions` with a `category: "mode"` option for Clients that support config options
-- `modes` for Clients that only support the older API
-
-If an Agent provides both `configOptions` and `modes` in the session response:
-
-- Clients that support config options **SHOULD** use `configOptions` exclusively and ignore `modes`
-- Clients that don't support config options **SHOULD** fall back to `modes`
-- Agents **SHOULD** keep both in sync to ensure consistent behavior regardless of which field the Client uses
-
-<Card icon="gears" horizontal href="../session-modes">
-  Learn about the Session Modes API
-</Card>
