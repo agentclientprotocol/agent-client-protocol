@@ -43,7 +43,7 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
@@ -76,6 +76,11 @@ jobs:
 
       - name: Build
         run: cargo build --all-targets --all-features
+
+      - name: Check docs.rs build
+        env:
+          RUSTDOCFLAGS: --cfg docsrs
+        run: cargo +nightly doc -p agent-client-protocol-schema --all-features --no-deps
 
       - name: Run tests
         run: cargo test --all-features
