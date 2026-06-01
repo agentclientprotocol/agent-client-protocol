@@ -63,6 +63,23 @@ enum AcpTypes {
 }
 
 fn main() {
+    let schema_value = root_schema_value();
+
+    let root = env!("CARGO_MANIFEST_DIR");
+    let schema_dir = Path::new(root).join("schema");
+    let docs_protocol_dir = Path::new(root).join("docs").join("protocol");
+
+    fs::create_dir_all(schema_dir.clone()).unwrap();
+    fs::create_dir_all(docs_protocol_dir.clone()).unwrap();
+
+    write_schema(
+        &schema_value,
+        schema_dir.as_path(),
+        docs_protocol_dir.as_path(),
+    );
+}
+
+fn root_schema_value() -> serde_json::Value {
     let mut settings = SchemaSettings::draft2020_12();
     settings.untagged_enum_variant_titles = true;
     let mut bool_schemas = ReplaceBoolSchemas::default();
@@ -75,15 +92,10 @@ fn main() {
     let schema = generator.into_root_schema_for::<AcpTypes>();
 
     // Convert to serde_json::Value for post-processing
-    let schema_value = serde_json::to_value(&schema).unwrap();
+    serde_json::to_value(&schema).unwrap()
+}
 
-    let root = env!("CARGO_MANIFEST_DIR");
-    let schema_dir = Path::new(root).join("schema");
-    let docs_protocol_dir = Path::new(root).join("docs").join("protocol");
-
-    fs::create_dir_all(schema_dir.clone()).unwrap();
-    fs::create_dir_all(docs_protocol_dir.clone()).unwrap();
-
+fn write_schema(schema_value: &serde_json::Value, schema_dir: &Path, docs_protocol_dir: &Path) {
     // Each cfg combination owns exactly one filename, with disjoint write
     // sets so the generation runs that produce the published schemas
     // can run in any order without clobbering each other:
@@ -157,7 +169,7 @@ fn main() {
     // - `v2/schema.mdx`           — v2 docs only (hidden while v2 is drafted)
     // - `v2/draft/schema.mdx`     — v2 + unstable feature flags
     let mut markdown_gen = MarkdownGenerator::new(schema_file);
-    let mut markdown_doc = markdown_gen.generate(&schema_value);
+    let mut markdown_doc = markdown_gen.generate(schema_value);
 
     let protocol_doc_base = match (
         cfg!(feature = "unstable_protocol_v2"),
@@ -200,6 +212,88 @@ fn main() {
         None => println!("✓ Skipped stable v2 metadata"),
     }
     println!("✓ Generated {doc_file}");
+}
+
+#[cfg(test)]
+mod schema_annotation_tests {
+    use super::root_schema_value;
+    use serde_json::Value;
+    use std::{fs, path::Path};
+
+    const DEFAULT_ON_ERROR_EXTENSION: &str = "x-deserialize-default-on-error";
+    const SKIP_INVALID_ITEMS_EXTENSION: &str = "x-deserialize-skip-invalid-items";
+
+    #[test]
+    fn generated_schema_includes_tolerant_deserialization_extensions() {
+        let schema = root_schema_value();
+
+        let client_info = property_schema(&schema, "InitializeRequest", "clientInfo");
+        assert_bool_extension(client_info, DEFAULT_ON_ERROR_EXTENSION);
+        assert_no_extension(client_info, SKIP_INVALID_ITEMS_EXTENSION);
+
+        let auth_methods = property_schema(&schema, "InitializeResponse", "authMethods");
+        assert_bool_extension(auth_methods, DEFAULT_ON_ERROR_EXTENSION);
+        assert_bool_extension(auth_methods, SKIP_INVALID_ITEMS_EXTENSION);
+    }
+
+    #[test]
+    fn source_default_on_error_fields_are_schema_annotated() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+        for module_dir in ["src/v1", "src/v2"] {
+            for entry in fs::read_dir(root.join(module_dir)).unwrap() {
+                let path = entry.unwrap().path();
+                if path.extension().and_then(|ext| ext.to_str()) != Some("rs") {
+                    continue;
+                }
+
+                let source = fs::read_to_string(&path).unwrap();
+                let lines: Vec<_> = source.lines().collect();
+                for (line_index, line) in lines.iter().enumerate() {
+                    if !line.contains(r#"#[serde_as(deserialize_as = "DefaultOnError"#) {
+                        continue;
+                    }
+
+                    let annotation = lines.get(line_index + 1).copied().unwrap_or_default();
+                    assert!(
+                        annotation.contains(r#""x-deserialize-default-on-error" = true"#),
+                        "{}:{} missing {DEFAULT_ON_ERROR_EXTENSION}",
+                        path.display(),
+                        line_index + 1
+                    );
+
+                    if line.contains("VecSkipError") {
+                        assert!(
+                            annotation.contains(r#""x-deserialize-skip-invalid-items" = true"#),
+                            "{}:{} missing {SKIP_INVALID_ITEMS_EXTENSION}",
+                            path.display(),
+                            line_index + 1
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    fn property_schema<'a>(schema: &'a Value, def_name: &str, prop_name: &str) -> &'a Value {
+        schema
+            .pointer(&format!("/$defs/{def_name}/properties/{prop_name}"))
+            .unwrap_or_else(|| panic!("missing schema property {def_name}.{prop_name}"))
+    }
+
+    fn assert_bool_extension(schema: &Value, extension: &str) {
+        assert_eq!(
+            schema.get(extension).and_then(Value::as_bool),
+            Some(true),
+            "missing extension {extension} on {schema}"
+        );
+    }
+
+    fn assert_no_extension(schema: &Value, extension: &str) {
+        assert!(
+            schema.get(extension).is_none(),
+            "unexpected extension {extension} on {schema}"
+        );
+    }
 }
 
 mod markdown_generator {

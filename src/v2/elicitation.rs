@@ -735,10 +735,12 @@ impl ElicitationSchema {
 pub struct ElicitationCapabilities {
     /// Whether the client supports form-based elicitation.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub form: Option<ElicitationFormCapabilities>,
     /// Whether the client supports URL-based elicitation.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub url: Option<ElicitationUrlCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional

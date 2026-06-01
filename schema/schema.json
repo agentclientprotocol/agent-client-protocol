@@ -17,7 +17,8 @@
               "type": "null"
             }
           ],
-          "description": "Whether the agent supports the logout method.\n\nBy supplying `{}` it means that the agent supports the logout method."
+          "description": "Whether the agent supports the logout method.\n\nBy supplying `{}` it means that the agent supports the logout method.",
+          "x-deserialize-default-on-error": true
         }
       },
       "type": "object"
@@ -367,7 +368,9 @@
           "items": {
             "$ref": "#/$defs/Role"
           },
-          "type": ["array", "null"]
+          "type": ["array", "null"],
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "lastModified": {
           "type": ["string", "null"]
@@ -395,7 +398,8 @@
             {
               "type": "null"
             }
-          ]
+          ],
+          "x-deserialize-default-on-error": true
         },
         "data": {
           "type": "string"
@@ -497,7 +501,8 @@
               "type": "null"
             }
           ],
-          "description": "Input for the command if required"
+          "description": "Input for the command if required",
+          "x-deserialize-default-on-error": true
         },
         "name": {
           "description": "Command name (e.g., `create_plan`, `research_codebase`).",
@@ -534,7 +539,9 @@
           "items": {
             "$ref": "#/$defs/AvailableCommand"
           },
-          "type": "array"
+          "type": "array",
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         }
       },
       "required": ["availableCommands"],
@@ -937,7 +944,9 @@
           "items": {
             "$ref": "#/$defs/SessionConfigOption"
           },
-          "type": "array"
+          "type": "array",
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         }
       },
       "required": ["configOptions"],
@@ -1199,7 +1208,8 @@
             {
               "type": "null"
             }
-          ]
+          ],
+          "x-deserialize-default-on-error": true
         },
         "resource": {
           "$ref": "#/$defs/EmbeddedResourceResource"
@@ -1397,7 +1407,8 @@
             {
               "type": "null"
             }
-          ]
+          ],
+          "x-deserialize-default-on-error": true
         },
         "data": {
           "type": "string"
@@ -1468,7 +1479,8 @@
               "type": "null"
             }
           ],
-          "description": "Information about the Client name and version sent to the Agent.\n\nNote: in future versions of the protocol, this will be required."
+          "description": "Information about the Client name and version sent to the Agent.\n\nNote: in future versions of the protocol, this will be required.",
+          "x-deserialize-default-on-error": true
         },
         "protocolVersion": {
           "allOf": [
@@ -1523,7 +1535,8 @@
               "type": "null"
             }
           ],
-          "description": "Information about the Agent name and version sent to the Client.\n\nNote: in future versions of the protocol, this will be required."
+          "description": "Information about the Agent name and version sent to the Client.\n\nNote: in future versions of the protocol, this will be required.",
+          "x-deserialize-default-on-error": true
         },
         "authMethods": {
           "default": [],
@@ -1531,7 +1544,9 @@
           "items": {
             "$ref": "#/$defs/AuthMethod"
           },
-          "type": "array"
+          "type": "array",
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "protocolVersion": {
           "allOf": [
@@ -1624,7 +1639,9 @@
           "items": {
             "$ref": "#/$defs/SessionInfo"
           },
-          "type": "array"
+          "type": "array",
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         }
       },
       "required": ["sessions"],
@@ -1685,7 +1702,9 @@
           "items": {
             "$ref": "#/$defs/SessionConfigOption"
           },
-          "type": ["array", "null"]
+          "type": ["array", "null"],
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "modes": {
           "anyOf": [
@@ -1696,7 +1715,8 @@
               "type": "null"
             }
           ],
-          "description": "Initial mode state if supported by the Agent\n\nSee protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)"
+          "description": "Initial mode state if supported by the Agent\n\nSee protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)",
+          "x-deserialize-default-on-error": true
         }
       },
       "type": "object",
@@ -1940,7 +1960,9 @@
           "items": {
             "$ref": "#/$defs/SessionConfigOption"
           },
-          "type": ["array", "null"]
+          "type": ["array", "null"],
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "modes": {
           "anyOf": [
@@ -1951,7 +1973,8 @@
               "type": "null"
             }
           ],
-          "description": "Initial mode state if supported by the Agent\n\nSee protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)"
+          "description": "Initial mode state if supported by the Agent\n\nSee protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)",
+          "x-deserialize-default-on-error": true
         },
         "sessionId": {
           "allOf": [
@@ -2041,7 +2064,9 @@
           "items": {
             "$ref": "#/$defs/PlanEntry"
           },
-          "type": "array"
+          "type": "array",
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         }
       },
       "required": ["entries"],
@@ -2425,7 +2450,8 @@
             {
               "type": "null"
             }
-          ]
+          ],
+          "x-deserialize-default-on-error": true
         },
         "description": {
           "type": ["string", "null"]
@@ -2503,7 +2529,9 @@
           "items": {
             "$ref": "#/$defs/SessionConfigOption"
           },
-          "type": ["array", "null"]
+          "type": ["array", "null"],
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "modes": {
           "anyOf": [
@@ -2514,7 +2542,8 @@
               "type": "null"
             }
           ],
-          "description": "Initial mode state if supported by the Agent\n\nSee protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)"
+          "description": "Initial mode state if supported by the Agent\n\nSee protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)",
+          "x-deserialize-default-on-error": true
         }
       },
       "type": "object",
@@ -2574,7 +2603,8 @@
               "type": "null"
             }
           ],
-          "description": "Whether the agent supports `additionalDirectories` on supported session lifecycle requests.\n\nAgents that also support `session/list` may return\n`SessionInfo.additionalDirectories` to report the complete ordered\nadditional-root list associated with a listed session."
+          "description": "Whether the agent supports `additionalDirectories` on supported session lifecycle requests.\n\nAgents that also support `session/list` may return\n`SessionInfo.additionalDirectories` to report the complete ordered\nadditional-root list associated with a listed session.",
+          "x-deserialize-default-on-error": true
         },
         "close": {
           "anyOf": [
@@ -2585,7 +2615,8 @@
               "type": "null"
             }
           ],
-          "description": "Whether the agent supports `session/close`."
+          "description": "Whether the agent supports `session/close`.",
+          "x-deserialize-default-on-error": true
         },
         "list": {
           "anyOf": [
@@ -2596,7 +2627,8 @@
               "type": "null"
             }
           ],
-          "description": "Whether the agent supports `session/list`."
+          "description": "Whether the agent supports `session/list`.",
+          "x-deserialize-default-on-error": true
         },
         "resume": {
           "anyOf": [
@@ -2607,7 +2639,8 @@
               "type": "null"
             }
           ],
-          "description": "Whether the agent supports `session/resume`."
+          "description": "Whether the agent supports `session/resume`.",
+          "x-deserialize-default-on-error": true
         }
       },
       "type": "object"
@@ -2669,7 +2702,8 @@
               "type": "null"
             }
           ],
-          "description": "Optional semantic category for this option (UX only)."
+          "description": "Optional semantic category for this option (UX only).",
+          "x-deserialize-default-on-error": true
         },
         "description": {
           "description": "Optional description for the Client to display to the user.",
@@ -2856,11 +2890,13 @@
         },
         "title": {
           "description": "Human-readable title for the session",
-          "type": ["string", "null"]
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
         },
         "updatedAt": {
           "description": "ISO 8601 timestamp of last activity",
-          "type": ["string", "null"]
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
         }
       },
       "required": ["sessionId", "cwd"],
@@ -2934,7 +2970,9 @@
           "items": {
             "$ref": "#/$defs/SessionMode"
           },
-          "type": "array"
+          "type": "array",
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "currentModeId": {
           "allOf": [
@@ -3208,7 +3246,9 @@
           "items": {
             "$ref": "#/$defs/SessionConfigOption"
           },
-          "type": "array"
+          "type": "array",
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         }
       },
       "required": ["configOptions"],
@@ -3400,7 +3440,8 @@
             {
               "type": "null"
             }
-          ]
+          ],
+          "x-deserialize-default-on-error": true
         },
         "text": {
           "type": "string"
@@ -3443,7 +3484,9 @@
           "items": {
             "$ref": "#/$defs/ToolCallContent"
           },
-          "type": "array"
+          "type": "array",
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "kind": {
           "allOf": [
@@ -3458,7 +3501,9 @@
           "items": {
             "$ref": "#/$defs/ToolCallLocation"
           },
-          "type": "array"
+          "type": "array",
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "rawInput": {
           "description": "Raw input parameters sent to the tool."
@@ -3610,7 +3655,9 @@
           "items": {
             "$ref": "#/$defs/ToolCallContent"
           },
-          "type": ["array", "null"]
+          "type": ["array", "null"],
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "kind": {
           "anyOf": [
@@ -3621,14 +3668,17 @@
               "type": "null"
             }
           ],
-          "description": "Update the tool kind."
+          "description": "Update the tool kind.",
+          "x-deserialize-default-on-error": true
         },
         "locations": {
           "description": "Replace the locations collection.",
           "items": {
             "$ref": "#/$defs/ToolCallLocation"
           },
-          "type": ["array", "null"]
+          "type": ["array", "null"],
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "rawInput": {
           "description": "Update the raw input."
@@ -3645,7 +3695,8 @@
               "type": "null"
             }
           ],
-          "description": "Update the execution status."
+          "description": "Update the execution status.",
+          "x-deserialize-default-on-error": true
         },
         "title": {
           "description": "Update the human-readable title.",

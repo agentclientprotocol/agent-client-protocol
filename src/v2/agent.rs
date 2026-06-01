@@ -62,6 +62,7 @@ pub struct InitializeRequest {
     ///
     /// Note: in future versions of the protocol, this will be required.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub client_info: Option<Implementation>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -132,12 +133,14 @@ pub struct InitializeResponse {
     pub agent_capabilities: AgentCapabilities,
     /// Authentication methods supported by the agent.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default)]
     pub auth_methods: Vec<AuthMethod>,
     /// Information about the Agent name and version sent to the Client.
     ///
     /// Note: in future versions of the protocol, this will be required.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub agent_info: Option<Implementation>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -416,6 +419,7 @@ pub struct AgentAuthCapabilities {
     ///
     /// By supplying `{}` it means that the agent supports the logout method.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub logout: Option<LogoutCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1176,6 +1180,7 @@ pub struct NewSessionResponse {
     pub session_id: SessionId,
     /// Initial session configuration options if supported by the Agent.
     #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default)]
     pub config_options: Option<Vec<SessionConfigOption>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1303,6 +1308,7 @@ impl LoadSessionRequest {
 pub struct LoadSessionResponse {
     /// Initial session configuration options if supported by the Agent.
     #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default)]
     pub config_options: Option<Vec<SessionConfigOption>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1440,6 +1446,7 @@ pub struct ForkSessionResponse {
     pub session_id: SessionId,
     /// Initial session configuration options if supported by the Agent.
     #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default)]
     pub config_options: Option<Vec<SessionConfigOption>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1570,6 +1577,7 @@ impl ResumeSessionRequest {
 pub struct ResumeSessionResponse {
     /// Initial session configuration options if supported by the Agent.
     #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default)]
     pub config_options: Option<Vec<SessionConfigOption>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1756,6 +1764,7 @@ impl ListSessionsRequest {
 pub struct ListSessionsResponse {
     /// Array of session information objects
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     pub sessions: Vec<SessionInfo>,
     /// Opaque cursor token. If present, pass this in the next request's cursor parameter
     /// to fetch the next page. If absent, there are no more results.
@@ -1907,10 +1916,12 @@ pub struct SessionInfo {
 
     /// Human-readable title for the session
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub title: Option<String>,
     /// ISO 8601 timestamp of last activity
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub updated_at: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -2326,6 +2337,7 @@ pub struct SessionConfigOption {
     pub description: Option<String>,
     /// Optional semantic category for this option (UX only).
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub category: Option<SessionConfigOptionCategory>,
     /// Type-specific fields for this configuration option.
@@ -2588,6 +2600,7 @@ impl SetSessionConfigOptionRequest {
 pub struct SetSessionConfigOptionResponse {
     /// The full set of configuration options and their current values.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     pub config_options: Vec<SessionConfigOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -3097,6 +3110,7 @@ pub struct PromptResponse {
     /// Token usage for this turn (optional).
     #[cfg(feature = "unstable_session_usage")]
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub usage: Option<Usage>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -3337,6 +3351,7 @@ pub struct ProviderInfo {
     pub id: String,
     /// Supported protocol types for this provider.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     pub supported: Vec<LlmProtocol>,
     /// Whether this provider is mandatory and cannot be disabled via `providers/disable`.
     /// If true, clients must not call `providers/disable` for this id.
@@ -3438,6 +3453,7 @@ impl ListProvidersRequest {
 pub struct ListProvidersResponse {
     /// Configurable providers with current routing info suitable for UI display.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     pub providers: Vec<ProviderInfo>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -3698,6 +3714,7 @@ pub struct AgentCapabilities {
     /// By supplying `{}` it means that the agent supports provider configuration methods.
     #[cfg(feature = "unstable_llm_providers")]
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub providers: Option<ProvidersCapabilities>,
     /// **UNSTABLE**
@@ -3707,6 +3724,7 @@ pub struct AgentCapabilities {
     /// NES (Next Edit Suggestions) capabilities supported by the agent.
     #[cfg(feature = "unstable_nes")]
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub nes: Option<NesCapabilities>,
     /// **UNSTABLE**
@@ -3716,6 +3734,7 @@ pub struct AgentCapabilities {
     /// The position encoding selected by the agent from the client's supported encodings.
     #[cfg(feature = "unstable_nes")]
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub position_encoding: Option<PositionEncodingKind>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -3874,6 +3893,7 @@ impl ProvidersCapabilities {
 pub struct SessionCapabilities {
     /// Whether the agent supports `session/list`.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub list: Option<SessionListCapabilities>,
     /// **UNSTABLE**
@@ -3886,6 +3906,7 @@ pub struct SessionCapabilities {
     /// Supplying `{}` means the agent supports deleting sessions from `session/list`.
     #[cfg(feature = "unstable_session_delete")]
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub delete: Option<SessionDeleteCapabilities>,
     /// Whether the agent supports `additionalDirectories` on supported session lifecycle requests.
@@ -3894,6 +3915,7 @@ pub struct SessionCapabilities {
     /// `SessionInfo.additionalDirectories` to report the complete ordered
     /// additional-root list associated with a listed session.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub additional_directories: Option<SessionAdditionalDirectoriesCapabilities>,
     /// **UNSTABLE**
@@ -3903,14 +3925,17 @@ pub struct SessionCapabilities {
     /// Whether the agent supports `session/fork`.
     #[cfg(feature = "unstable_session_fork")]
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub fork: Option<SessionForkCapabilities>,
     /// Whether the agent supports `session/resume`.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub resume: Option<SessionResumeCapabilities>,
     /// Whether the agent supports `session/close`.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub close: Option<SessionCloseCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional

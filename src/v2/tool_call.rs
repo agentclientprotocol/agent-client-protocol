@@ -39,11 +39,13 @@ pub struct ToolCall {
     pub status: ToolCallStatus,
     /// Content produced by the tool call.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub content: Vec<ToolCallContent>,
     /// File locations affected by this tool call.
     /// Enables "follow-along" features in clients.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub locations: Vec<ToolCallLocation>,
     /// Raw input parameters sent to the tool.
@@ -218,20 +220,24 @@ impl ToolCallUpdate {
 pub struct ToolCallUpdateFields {
     /// Update the tool kind.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub kind: Option<ToolKind>,
     /// Update the execution status.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub status: Option<ToolCallStatus>,
     /// Update the human-readable title.
     pub title: Option<String>,
     /// Replace the content collection.
     #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default)]
     pub content: Option<Vec<ToolCallContent>>,
     /// Replace the locations collection.
     #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default)]
     pub locations: Option<Vec<ToolCallLocation>>,
     /// Update the raw input.

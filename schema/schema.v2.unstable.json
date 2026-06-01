@@ -43,7 +43,8 @@
               "type": "null"
             }
           ],
-          "description": "Whether the agent supports the logout method.\n\nBy supplying `{}` it means that the agent supports the logout method."
+          "description": "Whether the agent supports the logout method.\n\nBy supplying `{}` it means that the agent supports the logout method.",
+          "x-deserialize-default-on-error": true
         }
       },
       "type": "object"
@@ -92,7 +93,8 @@
               "type": "null"
             }
           ],
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNES (Next Edit Suggestions) capabilities supported by the agent."
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNES (Next Edit Suggestions) capabilities supported by the agent.",
+          "x-deserialize-default-on-error": true
         },
         "positionEncoding": {
           "anyOf": [
@@ -103,7 +105,8 @@
               "type": "null"
             }
           ],
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nThe position encoding selected by the agent from the client's supported encodings."
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nThe position encoding selected by the agent from the client's supported encodings.",
+          "x-deserialize-default-on-error": true
         },
         "promptCapabilities": {
           "allOf": [
@@ -127,7 +130,8 @@
               "type": "null"
             }
           ],
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nProvider configuration capabilities supported by the agent.\n\nBy supplying `{}` it means that the agent supports provider configuration methods."
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nProvider configuration capabilities supported by the agent.\n\nBy supplying `{}` it means that the agent supports provider configuration methods.",
+          "x-deserialize-default-on-error": true
         },
         "sessionCapabilities": {
           "allOf": [
@@ -545,7 +549,9 @@
           "items": {
             "$ref": "#/$defs/Role"
           },
-          "type": ["array", "null"]
+          "type": ["array", "null"],
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "lastModified": {
           "type": ["string", "null"]
@@ -573,7 +579,8 @@
             {
               "type": "null"
             }
-          ]
+          ],
+          "x-deserialize-default-on-error": true
         },
         "data": {
           "type": "string"
@@ -901,7 +908,8 @@
               "type": "null"
             }
           ],
-          "description": "Input for the command if required"
+          "description": "Input for the command if required",
+          "x-deserialize-default-on-error": true
         },
         "name": {
           "description": "Command name (e.g., `create_plan`, `research_codebase`).",
@@ -951,7 +959,9 @@
           "items": {
             "$ref": "#/$defs/AvailableCommand"
           },
-          "type": "array"
+          "type": "array",
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         }
       },
       "required": ["availableCommands"],
@@ -1068,7 +1078,8 @@
               "type": "null"
             }
           ],
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nElicitation capabilities supported by the client.\nDetermines which elicitation modes the agent may use."
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nElicitation capabilities supported by the client.\nDetermines which elicitation modes the agent may use.",
+          "x-deserialize-default-on-error": true
         },
         "fs": {
           "allOf": [
@@ -1091,7 +1102,8 @@
               "type": "null"
             }
           ],
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNES (Next Edit Suggestions) capabilities supported by the client."
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNES (Next Edit Suggestions) capabilities supported by the client.",
+          "x-deserialize-default-on-error": true
         },
         "planCapabilities": {
           "anyOf": [
@@ -1102,14 +1114,17 @@
               "type": "null"
             }
           ],
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nWhether the client supports `plan_update` and `plan_removed` session updates.\n\nOptional. Omitted means the client does not advertise support.\nSupplying `{}` means the client can receive both update types."
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nWhether the client supports `plan_update` and `plan_removed` session updates.\n\nOptional. Omitted means the client does not advertise support.\nSupplying `{}` means the client can receive both update types.",
+          "x-deserialize-default-on-error": true
         },
         "positionEncodings": {
           "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nThe position encodings supported by the client, in order of preference.",
           "items": {
             "$ref": "#/$defs/PositionEncodingKind"
           },
-          "type": "array"
+          "type": "array",
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "terminal": {
           "default": false,
@@ -1136,7 +1151,8 @@
               "type": "null"
             }
           ],
-          "description": "Whether the client supports the `jump` suggestion kind."
+          "description": "Whether the client supports the `jump` suggestion kind.",
+          "x-deserialize-default-on-error": true
         },
         "rename": {
           "anyOf": [
@@ -1147,7 +1163,8 @@
               "type": "null"
             }
           ],
-          "description": "Whether the client supports the `rename` suggestion kind."
+          "description": "Whether the client supports the `rename` suggestion kind.",
+          "x-deserialize-default-on-error": true
         },
         "searchAndReplace": {
           "anyOf": [
@@ -1158,7 +1175,8 @@
               "type": "null"
             }
           ],
-          "description": "Whether the client supports the `searchAndReplace` suggestion kind."
+          "description": "Whether the client supports the `searchAndReplace` suggestion kind.",
+          "x-deserialize-default-on-error": true
         }
       },
       "type": "object"
@@ -1722,7 +1740,9 @@
           "items": {
             "$ref": "#/$defs/SessionConfigOption"
           },
-          "type": "array"
+          "type": "array",
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         }
       },
       "required": ["configOptions"],
@@ -2497,7 +2517,8 @@
               "type": "null"
             }
           ],
-          "description": "Whether the client supports form-based elicitation."
+          "description": "Whether the client supports form-based elicitation.",
+          "x-deserialize-default-on-error": true
         },
         "url": {
           "anyOf": [
@@ -2508,7 +2529,8 @@
               "type": "null"
             }
           ],
-          "description": "Whether the client supports URL-based elicitation."
+          "description": "Whether the client supports URL-based elicitation.",
+          "x-deserialize-default-on-error": true
         }
       },
       "type": "object"
@@ -2846,7 +2868,8 @@
             {
               "type": "null"
             }
-          ]
+          ],
+          "x-deserialize-default-on-error": true
         },
         "resource": {
           "$ref": "#/$defs/EmbeddedResourceResource"
@@ -3090,7 +3113,9 @@
           "items": {
             "$ref": "#/$defs/SessionConfigOption"
           },
-          "type": ["array", "null"]
+          "type": ["array", "null"],
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "sessionId": {
           "allOf": [
@@ -3142,7 +3167,8 @@
             {
               "type": "null"
             }
-          ]
+          ],
+          "x-deserialize-default-on-error": true
         },
         "data": {
           "type": "string"
@@ -3216,7 +3242,8 @@
               "type": "null"
             }
           ],
-          "description": "Information about the Client name and version sent to the Agent.\n\nNote: in future versions of the protocol, this will be required."
+          "description": "Information about the Client name and version sent to the Agent.\n\nNote: in future versions of the protocol, this will be required.",
+          "x-deserialize-default-on-error": true
         },
         "protocolVersion": {
           "allOf": [
@@ -3272,7 +3299,8 @@
               "type": "null"
             }
           ],
-          "description": "Information about the Agent name and version sent to the Client.\n\nNote: in future versions of the protocol, this will be required."
+          "description": "Information about the Agent name and version sent to the Client.\n\nNote: in future versions of the protocol, this will be required.",
+          "x-deserialize-default-on-error": true
         },
         "authMethods": {
           "default": [],
@@ -3280,7 +3308,9 @@
           "items": {
             "$ref": "#/$defs/AuthMethod"
           },
-          "type": "array"
+          "type": "array",
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "protocolVersion": {
           "allOf": [
@@ -3390,7 +3420,9 @@
           "items": {
             "$ref": "#/$defs/ProviderInfo"
           },
-          "type": "array"
+          "type": "array",
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         }
       },
       "required": ["providers"],
@@ -3436,7 +3468,9 @@
           "items": {
             "$ref": "#/$defs/SessionInfo"
           },
-          "type": "array"
+          "type": "array",
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         }
       },
       "required": ["sessions"],
@@ -3532,7 +3566,9 @@
           "items": {
             "$ref": "#/$defs/SessionConfigOption"
           },
-          "type": ["array", "null"]
+          "type": ["array", "null"],
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         }
       },
       "type": "object",
@@ -3933,7 +3969,8 @@
               "type": "null"
             }
           ],
-          "description": "Context the agent wants attached to each suggestion request."
+          "description": "Context the agent wants attached to each suggestion request.",
+          "x-deserialize-default-on-error": true
         },
         "events": {
           "anyOf": [
@@ -3944,7 +3981,8 @@
               "type": "null"
             }
           ],
-          "description": "Events the agent wants to receive."
+          "description": "Events the agent wants to receive.",
+          "x-deserialize-default-on-error": true
         }
       },
       "type": "object"
@@ -3966,7 +4004,8 @@
               "type": "null"
             }
           ],
-          "description": "Whether the agent wants diagnostics context."
+          "description": "Whether the agent wants diagnostics context.",
+          "x-deserialize-default-on-error": true
         },
         "editHistory": {
           "anyOf": [
@@ -3977,7 +4016,8 @@
               "type": "null"
             }
           ],
-          "description": "Whether the agent wants edit history context."
+          "description": "Whether the agent wants edit history context.",
+          "x-deserialize-default-on-error": true
         },
         "openFiles": {
           "anyOf": [
@@ -3988,7 +4028,8 @@
               "type": "null"
             }
           ],
-          "description": "Whether the agent wants open files context."
+          "description": "Whether the agent wants open files context.",
+          "x-deserialize-default-on-error": true
         },
         "recentFiles": {
           "anyOf": [
@@ -3999,7 +4040,8 @@
               "type": "null"
             }
           ],
-          "description": "Whether the agent wants recent files context."
+          "description": "Whether the agent wants recent files context.",
+          "x-deserialize-default-on-error": true
         },
         "relatedSnippets": {
           "anyOf": [
@@ -4010,7 +4052,8 @@
               "type": "null"
             }
           ],
-          "description": "Whether the agent wants related snippets context."
+          "description": "Whether the agent wants related snippets context.",
+          "x-deserialize-default-on-error": true
         },
         "userActions": {
           "anyOf": [
@@ -4021,7 +4064,8 @@
               "type": "null"
             }
           ],
-          "description": "Whether the agent wants user actions context."
+          "description": "Whether the agent wants user actions context.",
+          "x-deserialize-default-on-error": true
         }
       },
       "type": "object"
@@ -4179,7 +4223,8 @@
               "type": "null"
             }
           ],
-          "description": "Whether the agent wants `document/didChange` events, and the sync kind."
+          "description": "Whether the agent wants `document/didChange` events, and the sync kind.",
+          "x-deserialize-default-on-error": true
         },
         "didClose": {
           "anyOf": [
@@ -4190,7 +4235,8 @@
               "type": "null"
             }
           ],
-          "description": "Whether the agent wants `document/didClose` events."
+          "description": "Whether the agent wants `document/didClose` events.",
+          "x-deserialize-default-on-error": true
         },
         "didFocus": {
           "anyOf": [
@@ -4201,7 +4247,8 @@
               "type": "null"
             }
           ],
-          "description": "Whether the agent wants `document/didFocus` events."
+          "description": "Whether the agent wants `document/didFocus` events.",
+          "x-deserialize-default-on-error": true
         },
         "didOpen": {
           "anyOf": [
@@ -4212,7 +4259,8 @@
               "type": "null"
             }
           ],
-          "description": "Whether the agent wants `document/didOpen` events."
+          "description": "Whether the agent wants `document/didOpen` events.",
+          "x-deserialize-default-on-error": true
         },
         "didSave": {
           "anyOf": [
@@ -4223,7 +4271,8 @@
               "type": "null"
             }
           ],
-          "description": "Whether the agent wants `document/didSave` events."
+          "description": "Whether the agent wants `document/didSave` events.",
+          "x-deserialize-default-on-error": true
         }
       },
       "type": "object"
@@ -4272,7 +4321,8 @@
               "type": "null"
             }
           ],
-          "description": "Optional suggested cursor position after applying edits."
+          "description": "Optional suggested cursor position after applying edits.",
+          "x-deserialize-default-on-error": true
         },
         "edits": {
           "description": "The text edits to apply.",
@@ -4310,7 +4360,8 @@
               "type": "null"
             }
           ],
-          "description": "Document event capabilities."
+          "description": "Document event capabilities.",
+          "x-deserialize-default-on-error": true
         }
       },
       "type": "object"
@@ -4383,7 +4434,8 @@
           "description": "Timestamp in milliseconds since epoch of when the file was last focused.",
           "format": "uint64",
           "minimum": 0,
-          "type": ["integer", "null"]
+          "type": ["integer", "null"],
+          "x-deserialize-default-on-error": true
         },
         "uri": {
           "description": "The URI of the file.",
@@ -4398,7 +4450,8 @@
               "type": "null"
             }
           ],
-          "description": "The visible range in the editor, if any."
+          "description": "The visible range in the editor, if any.",
+          "x-deserialize-default-on-error": true
         }
       },
       "required": ["uri", "languageId"],
@@ -4618,42 +4671,54 @@
           "items": {
             "$ref": "#/$defs/NesDiagnostic"
           },
-          "type": ["array", "null"]
+          "type": ["array", "null"],
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "editHistory": {
           "description": "Recent edit history.",
           "items": {
             "$ref": "#/$defs/NesEditHistoryEntry"
           },
-          "type": ["array", "null"]
+          "type": ["array", "null"],
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "openFiles": {
           "description": "Currently open files in the editor.",
           "items": {
             "$ref": "#/$defs/NesOpenFile"
           },
-          "type": ["array", "null"]
+          "type": ["array", "null"],
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "recentFiles": {
           "description": "Recently accessed files.",
           "items": {
             "$ref": "#/$defs/NesRecentFile"
           },
-          "type": ["array", "null"]
+          "type": ["array", "null"],
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "relatedSnippets": {
           "description": "Related code snippets.",
           "items": {
             "$ref": "#/$defs/NesRelatedSnippet"
           },
-          "type": ["array", "null"]
+          "type": ["array", "null"],
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "userActions": {
           "description": "Recent user actions (typing, navigation, etc.).",
           "items": {
             "$ref": "#/$defs/NesUserAction"
           },
-          "type": ["array", "null"]
+          "type": ["array", "null"],
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         }
       },
       "type": "object"
@@ -4922,7 +4987,9 @@
           "items": {
             "$ref": "#/$defs/SessionConfigOption"
           },
-          "type": ["array", "null"]
+          "type": ["array", "null"],
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "sessionId": {
           "allOf": [
@@ -5046,7 +5113,9 @@
           "items": {
             "$ref": "#/$defs/PlanEntry"
           },
-          "type": "array"
+          "type": "array",
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         }
       },
       "required": ["entries"],
@@ -5186,7 +5255,9 @@
           "items": {
             "$ref": "#/$defs/PlanEntry"
           },
-          "type": "array"
+          "type": "array",
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "id": {
           "allOf": [
@@ -5490,7 +5561,8 @@
               "type": "null"
             }
           ],
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nToken usage for this turn (optional)."
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nToken usage for this turn (optional).",
+          "x-deserialize-default-on-error": true
         },
         "userMessageId": {
           "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nThe acknowledged user message ID.\n\nIf the client provided a `messageId` in the [`PromptRequest`], the agent echoes it here\nto confirm it was recorded. If the client did not provide one, the agent MAY assign one\nand return it here. Absence of this field indicates the agent did not record a message ID.",
@@ -5560,7 +5632,9 @@
           "items": {
             "$ref": "#/$defs/LlmProtocol"
           },
-          "type": "array"
+          "type": "array",
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         }
       },
       "required": ["id", "supported", "required"],
@@ -5676,7 +5750,8 @@
               "type": "null"
             }
           ],
-          "description": "The reason for rejection."
+          "description": "The reason for rejection.",
+          "x-deserialize-default-on-error": true
         },
         "sessionId": {
           "allOf": [
@@ -5859,7 +5934,8 @@
             {
               "type": "null"
             }
-          ]
+          ],
+          "x-deserialize-default-on-error": true
         },
         "description": {
           "type": ["string", "null"]
@@ -5937,7 +6013,9 @@
           "items": {
             "$ref": "#/$defs/SessionConfigOption"
           },
-          "type": ["array", "null"]
+          "type": ["array", "null"],
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         }
       },
       "type": "object",
@@ -6006,7 +6084,8 @@
               "type": "null"
             }
           ],
-          "description": "Whether the agent supports `additionalDirectories` on supported session lifecycle requests.\n\nAgents that also support `session/list` may return\n`SessionInfo.additionalDirectories` to report the complete ordered\nadditional-root list associated with a listed session."
+          "description": "Whether the agent supports `additionalDirectories` on supported session lifecycle requests.\n\nAgents that also support `session/list` may return\n`SessionInfo.additionalDirectories` to report the complete ordered\nadditional-root list associated with a listed session.",
+          "x-deserialize-default-on-error": true
         },
         "close": {
           "anyOf": [
@@ -6017,7 +6096,8 @@
               "type": "null"
             }
           ],
-          "description": "Whether the agent supports `session/close`."
+          "description": "Whether the agent supports `session/close`.",
+          "x-deserialize-default-on-error": true
         },
         "delete": {
           "anyOf": [
@@ -6028,7 +6108,8 @@
               "type": "null"
             }
           ],
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nWhether the agent supports `session/delete`.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports deleting sessions from `session/list`."
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nWhether the agent supports `session/delete`.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports deleting sessions from `session/list`.",
+          "x-deserialize-default-on-error": true
         },
         "fork": {
           "anyOf": [
@@ -6039,7 +6120,8 @@
               "type": "null"
             }
           ],
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nWhether the agent supports `session/fork`."
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nWhether the agent supports `session/fork`.",
+          "x-deserialize-default-on-error": true
         },
         "list": {
           "anyOf": [
@@ -6050,7 +6132,8 @@
               "type": "null"
             }
           ],
-          "description": "Whether the agent supports `session/list`."
+          "description": "Whether the agent supports `session/list`.",
+          "x-deserialize-default-on-error": true
         },
         "resume": {
           "anyOf": [
@@ -6061,7 +6144,8 @@
               "type": "null"
             }
           ],
-          "description": "Whether the agent supports `session/resume`."
+          "description": "Whether the agent supports `session/resume`.",
+          "x-deserialize-default-on-error": true
         }
       },
       "type": "object"
@@ -6187,7 +6271,8 @@
               "type": "null"
             }
           ],
-          "description": "Optional semantic category for this option (UX only)."
+          "description": "Optional semantic category for this option (UX only).",
+          "x-deserialize-default-on-error": true
         },
         "description": {
           "description": "Optional description for the Client to display to the user.",
@@ -6396,11 +6481,13 @@
         },
         "title": {
           "description": "Human-readable title for the session",
-          "type": ["string", "null"]
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
         },
         "updatedAt": {
           "description": "ISO 8601 timestamp of last activity",
-          "type": ["string", "null"]
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
         }
       },
       "required": ["sessionId", "cwd"],
@@ -6940,7 +7027,9 @@
           "items": {
             "$ref": "#/$defs/SessionConfigOption"
           },
-          "type": "array"
+          "type": "array",
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         }
       },
       "required": ["configOptions"],
@@ -6965,14 +7054,17 @@
               "type": "null"
             }
           ],
-          "description": "Repository metadata, if the workspace is a git repository."
+          "description": "Repository metadata, if the workspace is a git repository.",
+          "x-deserialize-default-on-error": true
         },
         "workspaceFolders": {
           "description": "The workspace folders.",
           "items": {
             "$ref": "#/$defs/WorkspaceFolder"
           },
-          "type": ["array", "null"]
+          "type": ["array", "null"],
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "workspaceUri": {
           "description": "The root URI of the workspace.",
@@ -7146,7 +7238,8 @@
               "type": "null"
             }
           ],
-          "description": "Context for the suggestion, included based on agent capabilities."
+          "description": "Context for the suggestion, included based on agent capabilities.",
+          "x-deserialize-default-on-error": true
         },
         "position": {
           "allOf": [
@@ -7165,7 +7258,8 @@
               "type": "null"
             }
           ],
-          "description": "The current text selection range, if any."
+          "description": "The current text selection range, if any.",
+          "x-deserialize-default-on-error": true
         },
         "sessionId": {
           "allOf": [
@@ -7211,7 +7305,9 @@
           "items": {
             "$ref": "#/$defs/NesSuggestion"
           },
-          "type": "array"
+          "type": "array",
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         }
       },
       "required": ["suggestions"],
@@ -7330,7 +7426,8 @@
             {
               "type": "null"
             }
-          ]
+          ],
+          "x-deserialize-default-on-error": true
         },
         "text": {
           "type": "string"
@@ -7424,7 +7521,9 @@
           "items": {
             "$ref": "#/$defs/ToolCallContent"
           },
-          "type": "array"
+          "type": "array",
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "kind": {
           "allOf": [
@@ -7439,7 +7538,9 @@
           "items": {
             "$ref": "#/$defs/ToolCallLocation"
           },
-          "type": "array"
+          "type": "array",
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "rawInput": {
           "description": "Raw input parameters sent to the tool."
@@ -7643,7 +7744,9 @@
           "items": {
             "$ref": "#/$defs/ToolCallContent"
           },
-          "type": ["array", "null"]
+          "type": ["array", "null"],
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "kind": {
           "anyOf": [
@@ -7654,14 +7757,17 @@
               "type": "null"
             }
           ],
-          "description": "Update the tool kind."
+          "description": "Update the tool kind.",
+          "x-deserialize-default-on-error": true
         },
         "locations": {
           "description": "Replace the locations collection.",
           "items": {
             "$ref": "#/$defs/ToolCallLocation"
           },
-          "type": ["array", "null"]
+          "type": ["array", "null"],
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "rawInput": {
           "description": "Update the raw input."
@@ -7678,7 +7784,8 @@
               "type": "null"
             }
           ],
-          "description": "Update the execution status."
+          "description": "Update the execution status.",
+          "x-deserialize-default-on-error": true
         },
         "title": {
           "description": "Update the human-readable title.",
@@ -7858,7 +7965,8 @@
               "type": "null"
             }
           ],
-          "description": "Cumulative session cost (optional)."
+          "description": "Cumulative session cost (optional).",
+          "x-deserialize-default-on-error": true
         },
         "size": {
           "description": "Total context window size in tokens.",

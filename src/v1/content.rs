@@ -66,6 +66,7 @@ pub enum ContentBlock {
 #[non_exhaustive]
 pub struct TextContent {
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub annotations: Option<Annotations>,
     pub text: String,
@@ -120,6 +121,7 @@ impl<T: Into<String>> From<T> for ContentBlock {
 #[non_exhaustive]
 pub struct ImageContent {
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub annotations: Option<Annotations>,
     pub data: String,
@@ -178,6 +180,7 @@ impl ImageContent {
 #[non_exhaustive]
 pub struct AudioContent {
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub annotations: Option<Annotations>,
     pub data: String,
@@ -227,6 +230,7 @@ impl AudioContent {
 #[non_exhaustive]
 pub struct EmbeddedResource {
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub annotations: Option<Annotations>,
     pub resource: EmbeddedResourceResource,
@@ -378,6 +382,7 @@ impl BlobResourceContents {
 #[non_exhaustive]
 pub struct ResourceLink {
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub annotations: Option<Annotations>,
     pub description: Option<String>,
@@ -460,6 +465,7 @@ impl ResourceLink {
 #[non_exhaustive]
 pub struct Annotations {
     #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default)]
     pub audience: Option<Vec<Role>>,
     pub last_modified: Option<String>,

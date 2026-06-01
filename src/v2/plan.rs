@@ -37,6 +37,7 @@ pub struct Plan {
     /// When updating a plan, the agent must send a complete list of all entries
     /// with their current status. The client replaces the entire plan with each update.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     pub entries: Vec<PlanEntry>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -266,6 +267,7 @@ pub struct PlanItems {
     /// When updating an item-based plan, the agent must send a complete list of all entries
     /// with their current status. The client replaces that plan with each update.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     pub entries: Vec<PlanEntry>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
