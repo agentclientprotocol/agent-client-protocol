@@ -53,12 +53,9 @@ Before attempting to list sessions, Clients **MUST** verify that the Agent suppo
 
 If `sessionCapabilities.list` is not present, the Agent does not support listing sessions and Clients **MUST NOT** attempt to call `session/list`.
 
-<Note>
-  If the Agent also advertises the unstable
-  `sessionCapabilities.additionalDirectories` capability, returned `SessionInfo`
-  objects may include `additionalDirectories` to report additional workspace
-  roots for listed sessions.
-</Note>
+Agents that also advertise `sessionCapabilities.additionalDirectories` may
+include `additionalDirectories` in returned `SessionInfo` objects to report
+additional workspace roots for listed sessions.
 
 <Note>
   If the Agent advertises the unstable `sessionCapabilities.delete` capability,

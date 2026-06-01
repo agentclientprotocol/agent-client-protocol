@@ -390,6 +390,15 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
 
 </ResponseField>
+<ResponseField name="additionalDirectories" type={<><span>"string"</span><span>[]</span></>} >
+  Additional workspace roots to activate for this session. Each path must be absolute.
+
+When omitted or empty, no additional roots are activated. When non-empty,
+this is the complete resulting additional-root list for the loaded
+session. It may differ from any previously used or reported list as long as
+the request `cwd` matches the session's `cwd`.
+
+</ResponseField>
 <ResponseField name="cwd" type={"string"} required>
   The working directory for this session.
 </ResponseField>
@@ -453,6 +462,14 @@ metadata to their interactions. Implementations MUST NOT make assumptions about 
 these keys.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+<ResponseField name="additionalDirectories" type={<><span>"string"</span><span>[]</span></>} >
+  Additional workspace roots for this session. Each path must be absolute.
+
+These expand the session's filesystem scope without changing `cwd`, which
+remains the base for relative paths. When omitted or empty, no
+additional roots are activated for the new session.
 
 </ResponseField>
 <ResponseField name="cwd" type={"string"} required>
@@ -597,6 +614,15 @@ metadata to their interactions. Implementations MUST NOT make assumptions about 
 these keys.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+<ResponseField name="additionalDirectories" type={<><span>"string"</span><span>[]</span></>} >
+  Additional workspace roots to activate for this session. Each path must be absolute.
+
+When omitted or empty, no additional roots are activated. When non-empty,
+this is the complete resulting additional-root list for the resumed
+session. It may differ from any previously used or reported list as long as
+the request `cwd` matches the session's `cwd`.
 
 </ResponseField>
 <ResponseField name="cwd" type={"string"} required>
@@ -2822,6 +2848,28 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
   The ID of the option the user selected.
 </ResponseField>
 
+## <span class="font-mono">SessionAdditionalDirectoriesCapabilities</span>
+
+Capabilities for additional session directories support.
+
+By supplying `\{\}` it means that the agent supports the `additionalDirectories`
+field on supported session lifecycle requests. Agents that also support
+`session/list` may return `SessionInfo.additionalDirectories` to report the
+complete ordered additional-root list associated with a listed session.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+
 ## <span class="font-mono">SessionCapabilities</span>
 
 Session capabilities supported by the agent.
@@ -2844,6 +2892,14 @@ metadata to their interactions. Implementations MUST NOT make assumptions about 
 these keys.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+<ResponseField name="additionalDirectories" type={<><span><a href="#sessionadditionaldirectoriescapabilities">SessionAdditionalDirectoriesCapabilities</a></span><span> | null</span></>} >
+  Whether the agent supports `additionalDirectories` on supported session lifecycle requests.
+
+Agents that also support `session/list` may return
+`SessionInfo.additionalDirectories` to report the complete ordered
+additional-root list associated with a listed session.
 
 </ResponseField>
 <ResponseField name="close" type={<><span><a href="#sessionclosecapabilities">SessionCloseCapabilities</a></span><span> | null</span></>} >
@@ -3124,6 +3180,14 @@ metadata to their interactions. Implementations MUST NOT make assumptions about 
 these keys.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+<ResponseField name="additionalDirectories" type={<><span>"string"</span><span>[]</span></>} >
+  Additional workspace roots reported for this session. Each path must be absolute.
+
+When present, this is the complete ordered additional-root list reported
+by the Agent. Omitted and empty values are equivalent: the response
+reports no additional roots.
 
 </ResponseField>
 <ResponseField name="cwd" type={"string"} required>

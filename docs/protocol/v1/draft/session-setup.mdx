@@ -333,17 +333,10 @@ active.
 
 ## Additional Workspace Roots
 
-<Note>
-  This section describes the unstable
-  `sessionCapabilities.additionalDirectories` capability. Clients MUST gate
-  usage on that capability being present during initialization.
-</Note>
-
-When advertised, Clients MAY include `additionalDirectories` on supported
-session lifecycle requests to expand the session's effective filesystem root
-set. In the stable lifecycle pages, that means `session/new`, `session/load`,
-and `session/resume`. The same unstable field is also available on
-`session/fork` when that method is supported.
+Agents that advertise `sessionCapabilities.additionalDirectories` allow Clients
+to include `additionalDirectories` on supported session lifecycle requests to
+expand the session's effective filesystem root set. Supported stable lifecycle
+requests include `session/new`, `session/load`, and `session/resume`.
 
 ```json
 {
@@ -369,6 +362,8 @@ When present, `additionalDirectories` has the following behavior:
 - omitting the field or providing an empty array activates no additional roots for the resulting session
 - on `session/load` and `session/resume`, Clients must send the full intended additional-root list again; that list may differ from any previous or reported list as long as the request `cwd` matches the session's `cwd`, and omitting the field or providing an empty array does not restore stored roots implicitly
 
+Clients **MUST** only send `additionalDirectories` when the Agent advertises `sessionCapabilities.additionalDirectories`.
+
 ## Session ID
 
 The session ID returned by `session/new` is a unique identifier for the conversation context.
@@ -383,17 +378,14 @@ Clients use this ID to:
 
 ## Working Directory
 
-The `cwd` (current working directory) parameter establishes the primary file
-system context for the session. This directory:
+The `cwd` (current working directory) parameter establishes the primary file system context for the session. This directory:
 
 - **MUST** be an absolute path
 - **MUST** be used for the session regardless of where the Agent subprocess was spawned
 - **MUST** remain the base for relative-path resolution
 - **MUST** be part of the session's effective root set
 
-When the unstable `sessionCapabilities.additionalDirectories` capability is in
-use, the session's effective root set is `[cwd, ...additionalDirectories]`.
-Otherwise, the effective root set is just `cwd`.
+When `sessionCapabilities.additionalDirectories` is in use, the session's effective root set is `[cwd, ...additionalDirectories]`. This root set **SHOULD** serve as a boundary for tool operations on the file system.
 
 ## MCP Servers
 

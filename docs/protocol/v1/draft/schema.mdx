@@ -1069,11 +1069,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </ResponseField>
 <ResponseField name="additionalDirectories" type={<><span>"string"</span><span>[]</span></>} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Additional workspace roots to activate for this session. Each path must be absolute.
+  Additional workspace roots to activate for this session. Each path must be absolute.
 
 When omitted or empty, no additional roots are activated. When non-empty,
 this is the complete resulting additional-root list for the forked
@@ -1217,11 +1213,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </ResponseField>
 <ResponseField name="additionalDirectories" type={<><span>"string"</span><span>[]</span></>} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Additional workspace roots to activate for this session. Each path must be absolute.
+  Additional workspace roots to activate for this session. Each path must be absolute.
 
 When omitted or empty, no additional roots are activated. When non-empty,
 this is the complete resulting additional-root list for the loaded
@@ -1301,11 +1293,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </ResponseField>
 <ResponseField name="additionalDirectories" type={<><span>"string"</span><span>[]</span></>} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Additional workspace roots for this session. Each path must be absolute.
+  Additional workspace roots for this session. Each path must be absolute.
 
 These expand the session's filesystem scope without changing `cwd`, which
 remains the base for relative paths. When omitted or empty, no
@@ -1495,11 +1483,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </ResponseField>
 <ResponseField name="additionalDirectories" type={<><span>"string"</span><span>[]</span></>} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Additional workspace roots to activate for this session. Each path must be absolute.
+  Additional workspace roots to activate for this session. Each path must be absolute.
 
 When omitted or empty, no additional roots are activated. When non-empty,
 this is the complete resulting additional-root list for the resumed
@@ -6634,10 +6618,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 ## <span class="font-mono">SessionAdditionalDirectoriesCapabilities</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 Capabilities for additional session directories support.
 
 By supplying `\{\}` it means that the agent supports the `additionalDirectories`
@@ -6683,11 +6663,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </ResponseField>
 <ResponseField name="additionalDirectories" type={<><span><a href="#sessionadditionaldirectoriescapabilities">SessionAdditionalDirectoriesCapabilities</a></span><span> | null</span></>} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Whether the agent supports `additionalDirectories` on supported session lifecycle requests.
+  Whether the agent supports `additionalDirectories` on supported session lifecycle requests.
 
 Agents that also support `session/list` may return
 `SessionInfo.additionalDirectories` to report the complete ordered
@@ -7045,11 +7021,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </ResponseField>
 <ResponseField name="additionalDirectories" type={<><span>"string"</span><span>[]</span></>} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Additional workspace roots reported for this session. Each path must be absolute.
+  Additional workspace roots reported for this session. Each path must be absolute.
 
 When present, this is the complete ordered additional-root list reported
 by the Agent. Omitted and empty values are equivalent: the response

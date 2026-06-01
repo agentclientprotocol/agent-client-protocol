@@ -207,6 +207,15 @@ As a baseline, all Agents **MUST** support `session/new`, `session/prompt`, `ses
 
 Optionally, they **MAY** support other session methods and notifications by specifying additional capabilities.
 
+<ResponseField
+  name="additionalDirectories"
+  type="SessionAdditionalDirectoriesCapabilities Object"
+>
+  The Agent supports `additionalDirectories` on supported session lifecycle
+  requests. Omitted or `null` means the Agent does not advertise support.
+  Supplying `{}` means the Agent supports additional workspace roots.
+</ResponseField>
+
 <Note>
   `session/load` is still handled by the top-level `load_session` capability.
   This will be unified in future versions of the protocol.

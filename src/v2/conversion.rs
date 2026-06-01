@@ -3468,14 +3468,12 @@ impl IntoV1 for super::NewSessionRequest {
     fn into_v1(self) -> Result<Self::Output> {
         let Self {
             cwd,
-            #[cfg(feature = "unstable_session_additional_directories")]
             additional_directories,
             mcp_servers,
             meta,
         } = self;
         Ok(crate::v1::NewSessionRequest {
             cwd: cwd.into_v1()?,
-            #[cfg(feature = "unstable_session_additional_directories")]
             additional_directories: additional_directories.into_v1()?,
             mcp_servers: mcp_servers.into_v1()?,
             meta: meta.into_v1()?,
@@ -3489,14 +3487,12 @@ impl IntoV2 for crate::v1::NewSessionRequest {
     fn into_v2(self) -> Result<Self::Output> {
         let Self {
             cwd,
-            #[cfg(feature = "unstable_session_additional_directories")]
             additional_directories,
             mcp_servers,
             meta,
         } = self;
         Ok(super::NewSessionRequest {
             cwd: cwd.into_v2()?,
-            #[cfg(feature = "unstable_session_additional_directories")]
             additional_directories: additional_directories.into_v2()?,
             mcp_servers: mcp_servers.into_v2()?,
             meta: meta.into_v2()?,
@@ -3547,7 +3543,6 @@ impl IntoV1 for super::LoadSessionRequest {
         let Self {
             mcp_servers,
             cwd,
-            #[cfg(feature = "unstable_session_additional_directories")]
             additional_directories,
             session_id,
             meta,
@@ -3555,7 +3550,6 @@ impl IntoV1 for super::LoadSessionRequest {
         Ok(crate::v1::LoadSessionRequest {
             mcp_servers: mcp_servers.into_v1()?,
             cwd: cwd.into_v1()?,
-            #[cfg(feature = "unstable_session_additional_directories")]
             additional_directories: additional_directories.into_v1()?,
             session_id: session_id.into_v1()?,
             meta: meta.into_v1()?,
@@ -3570,7 +3564,6 @@ impl IntoV2 for crate::v1::LoadSessionRequest {
         let Self {
             mcp_servers,
             cwd,
-            #[cfg(feature = "unstable_session_additional_directories")]
             additional_directories,
             session_id,
             meta,
@@ -3578,7 +3571,6 @@ impl IntoV2 for crate::v1::LoadSessionRequest {
         Ok(super::LoadSessionRequest {
             mcp_servers: mcp_servers.into_v2()?,
             cwd: cwd.into_v2()?,
-            #[cfg(feature = "unstable_session_additional_directories")]
             additional_directories: additional_directories.into_v2()?,
             session_id: session_id.into_v2()?,
             meta: meta.into_v2()?,
@@ -3626,7 +3618,6 @@ impl IntoV1 for super::ForkSessionRequest {
         let Self {
             session_id,
             cwd,
-            #[cfg(feature = "unstable_session_additional_directories")]
             additional_directories,
             mcp_servers,
             meta,
@@ -3634,7 +3625,6 @@ impl IntoV1 for super::ForkSessionRequest {
         Ok(crate::v1::ForkSessionRequest {
             session_id: session_id.into_v1()?,
             cwd: cwd.into_v1()?,
-            #[cfg(feature = "unstable_session_additional_directories")]
             additional_directories: additional_directories.into_v1()?,
             mcp_servers: mcp_servers.into_v1()?,
             meta: meta.into_v1()?,
@@ -3650,7 +3640,6 @@ impl IntoV2 for crate::v1::ForkSessionRequest {
         let Self {
             session_id,
             cwd,
-            #[cfg(feature = "unstable_session_additional_directories")]
             additional_directories,
             mcp_servers,
             meta,
@@ -3658,7 +3647,6 @@ impl IntoV2 for crate::v1::ForkSessionRequest {
         Ok(super::ForkSessionRequest {
             session_id: session_id.into_v2()?,
             cwd: cwd.into_v2()?,
-            #[cfg(feature = "unstable_session_additional_directories")]
             additional_directories: additional_directories.into_v2()?,
             mcp_servers: mcp_servers.into_v2()?,
             meta: meta.into_v2()?,
@@ -3711,7 +3699,6 @@ impl IntoV1 for super::ResumeSessionRequest {
         let Self {
             session_id,
             cwd,
-            #[cfg(feature = "unstable_session_additional_directories")]
             additional_directories,
             mcp_servers,
             meta,
@@ -3719,7 +3706,6 @@ impl IntoV1 for super::ResumeSessionRequest {
         Ok(crate::v1::ResumeSessionRequest {
             session_id: session_id.into_v1()?,
             cwd: cwd.into_v1()?,
-            #[cfg(feature = "unstable_session_additional_directories")]
             additional_directories: additional_directories.into_v1()?,
             mcp_servers: mcp_servers.into_v1()?,
             meta: meta.into_v1()?,
@@ -3734,7 +3720,6 @@ impl IntoV2 for crate::v1::ResumeSessionRequest {
         let Self {
             session_id,
             cwd,
-            #[cfg(feature = "unstable_session_additional_directories")]
             additional_directories,
             mcp_servers,
             meta,
@@ -3742,7 +3727,6 @@ impl IntoV2 for crate::v1::ResumeSessionRequest {
         Ok(super::ResumeSessionRequest {
             session_id: session_id.into_v2()?,
             cwd: cwd.into_v2()?,
-            #[cfg(feature = "unstable_session_additional_directories")]
             additional_directories: additional_directories.into_v2()?,
             mcp_servers: mcp_servers.into_v2()?,
             meta: meta.into_v2()?,
@@ -3945,7 +3929,6 @@ impl IntoV1 for super::SessionInfo {
         let Self {
             session_id,
             cwd,
-            #[cfg(feature = "unstable_session_additional_directories")]
             additional_directories,
             title,
             updated_at,
@@ -3954,7 +3937,6 @@ impl IntoV1 for super::SessionInfo {
         Ok(crate::v1::SessionInfo {
             session_id: session_id.into_v1()?,
             cwd: cwd.into_v1()?,
-            #[cfg(feature = "unstable_session_additional_directories")]
             additional_directories: additional_directories.into_v1()?,
             title: title.into_v1()?,
             updated_at: updated_at.into_v1()?,
@@ -3970,7 +3952,6 @@ impl IntoV2 for crate::v1::SessionInfo {
         let Self {
             session_id,
             cwd,
-            #[cfg(feature = "unstable_session_additional_directories")]
             additional_directories,
             title,
             updated_at,
@@ -3979,7 +3960,6 @@ impl IntoV2 for crate::v1::SessionInfo {
         Ok(super::SessionInfo {
             session_id: session_id.into_v2()?,
             cwd: cwd.into_v2()?,
-            #[cfg(feature = "unstable_session_additional_directories")]
             additional_directories: additional_directories.into_v2()?,
             title: title.into_v2()?,
             updated_at: updated_at.into_v2()?,
@@ -5192,7 +5172,6 @@ impl IntoV1 for super::SessionCapabilities {
             list,
             #[cfg(feature = "unstable_session_delete")]
             delete,
-            #[cfg(feature = "unstable_session_additional_directories")]
             additional_directories,
             #[cfg(feature = "unstable_session_fork")]
             fork,
@@ -5204,7 +5183,6 @@ impl IntoV1 for super::SessionCapabilities {
             list: list.into_v1()?,
             #[cfg(feature = "unstable_session_delete")]
             delete: delete.into_v1()?,
-            #[cfg(feature = "unstable_session_additional_directories")]
             additional_directories: additional_directories.into_v1()?,
             #[cfg(feature = "unstable_session_fork")]
             fork: fork.into_v1()?,
@@ -5223,7 +5201,6 @@ impl IntoV2 for crate::v1::SessionCapabilities {
             list,
             #[cfg(feature = "unstable_session_delete")]
             delete,
-            #[cfg(feature = "unstable_session_additional_directories")]
             additional_directories,
             #[cfg(feature = "unstable_session_fork")]
             fork,
@@ -5235,7 +5212,6 @@ impl IntoV2 for crate::v1::SessionCapabilities {
             list: list.into_v2()?,
             #[cfg(feature = "unstable_session_delete")]
             delete: delete.into_v2()?,
-            #[cfg(feature = "unstable_session_additional_directories")]
             additional_directories: additional_directories.into_v2()?,
             #[cfg(feature = "unstable_session_fork")]
             fork: fork.into_v2()?,
@@ -5291,8 +5267,6 @@ impl IntoV2 for crate::v1::SessionDeleteCapabilities {
         })
     }
 }
-
-#[cfg(feature = "unstable_session_additional_directories")]
 impl IntoV1 for super::SessionAdditionalDirectoriesCapabilities {
     type Output = crate::v1::SessionAdditionalDirectoriesCapabilities;
 
@@ -5304,7 +5278,6 @@ impl IntoV1 for super::SessionAdditionalDirectoriesCapabilities {
     }
 }
 
-#[cfg(feature = "unstable_session_additional_directories")]
 impl IntoV2 for crate::v1::SessionAdditionalDirectoriesCapabilities {
     type Output = super::SessionAdditionalDirectoriesCapabilities;
 

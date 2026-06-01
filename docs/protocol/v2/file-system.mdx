@@ -46,7 +46,8 @@ The `fs/read_text_file` method allows Agents to read text file contents from the
 ```
 
 <ParamField path="sessionId" type="SessionId" required>
-  The [Session ID](/protocol/v2/session-setup#session-id) for this request
+  The [Session ID](/protocol/v2/session-setup#session-id) for this request. The
+  session determines which filesystem roots are in scope for the path.
 </ParamField>
 
 <ParamField path="path" type="string" required>

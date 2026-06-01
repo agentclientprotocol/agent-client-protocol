@@ -53,6 +53,10 @@ Before attempting to list sessions, Clients **MUST** verify that the Agent suppo
 
 If `sessionCapabilities.list` is not present, the Agent does not support listing sessions and Clients **MUST NOT** attempt to call `session/list`.
 
+Agents that also advertise `sessionCapabilities.additionalDirectories` may
+include `additionalDirectories` in returned `SessionInfo` objects to report
+additional workspace roots for listed sessions.
+
 ## Listing Sessions
 
 Clients discover existing sessions by calling the `session/list` method with optional filtering and pagination parameters:
@@ -126,6 +130,15 @@ The Agent **MUST** respond with a list of sessions and optional pagination metad
     <ResponseField name="cwd" type="string" required>
       Working directory for the session. Always an absolute path.
     </ResponseField>
+    <ResponseField name="additionalDirectories" type="string[]">
+      If the Agent advertises `sessionCapabilities.additionalDirectories`, it
+      MAY include this field to report the complete ordered additional-root list
+      associated with the listed session. Omitted and empty values are
+      equivalent: this `SessionInfo` response reports no additional roots.
+      Clients MUST NOT merge this field with prior values or infer additional
+      roots from agent-specific state.
+    </ResponseField>
+
     <ResponseField name="title" type="string">
       Human-readable title for the session. May be auto-generated from the first prompt.
     </ResponseField>
@@ -135,6 +148,7 @@ The Agent **MUST** respond with a list of sessions and optional pagination metad
     <ResponseField name="_meta" type="object">
       Agent-specific metadata. See [Extensibility](/protocol/v1/extensibility).
     </ResponseField>
+
   </Expandable>
 </ResponseField>
 
@@ -190,7 +204,11 @@ All fields are optional. Only include fields that have changed — omitted field
   Agent-specific metadata. See [Extensibility](/protocol/v1/extensibility).
 </ResponseField>
 
-The `sessionId` and `cwd` fields are **not** included in the update — `sessionId` is already in the notification's `params`, and `cwd` is immutable (set during [`session/new`](/protocol/v1/session-setup#creating-a-session)). Agents typically send this notification after the first meaningful exchange to auto-generate a title.
+The `sessionId`, `cwd`, and `additionalDirectories` fields are **not** included
+in the update. `sessionId` is already in the notification's `params`, `cwd` is
+immutable after session setup, and ACP does not currently define mid-session
+mutation for `additionalDirectories`. Agents typically send this notification
+after the first meaningful exchange to auto-generate a title.
 
 ## Interaction with Other Session Methods
 

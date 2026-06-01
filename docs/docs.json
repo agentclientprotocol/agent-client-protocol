@@ -212,7 +212,7 @@
           },
           {
             "group": "Preview",
-            "pages": ["rfds/rust-sdk-v1", "rfds/additional-directories"]
+            "pages": ["rfds/rust-sdk-v1"]
           },
           {
             "group": "Completed",
@@ -224,7 +224,8 @@
               "rfds/acp-agent-registry",
               "rfds/session-resume",
               "rfds/session-close",
-              "rfds/logout-method"
+              "rfds/logout-method",
+              "rfds/additional-directories"
             ]
           }
         ]
