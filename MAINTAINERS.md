@@ -2,7 +2,7 @@
 
 The current maintainers for ACP are:
 
-**Last updated:** February 19, 2026
+**Last updated:** June 1, 2026
 
 ## Lead Maintainers
 
@@ -13,11 +13,12 @@ The current maintainers for ACP are:
 
 ## Core Maintainers
 
-| Name          | GitHub                          |
-| ------------- | ------------------------------- |
-| Agus Zubiaga  | https://github.com/agu-z        |
-| Anna Zhdan    | https://github.com/anna239      |
-| Niko Matsakis | https://github.com/nikomatsakis |
+| Name             | GitHub                           |
+| ---------------- | -------------------------------- |
+| Agus Zubiaga     | https://github.com/agu-z         |
+| Anna Zhdan       | https://github.com/anna239       |
+| Niko Matsakis    | https://github.com/nikomatsakis  |
+| Vadim Briliantov | https://github.com/Ololoshechkin |
 
 ## SDK Maintainers
 
