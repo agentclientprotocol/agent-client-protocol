@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.13.5](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.13.4...v0.13.5) - 2026-06-01
+
+### Added
+
+- *(schema)* Experiment annotating lenient deserialize opportunities ([#1328](https://github.com/agentclientprotocol/agent-client-protocol/pull/1328))
+- Stabilize additionalDirectories for sessions ([#1327](https://github.com/agentclientprotocol/agent-client-protocol/pull/1327))
+- *(unstable)* Remove unstable session model API ([#1325](https://github.com/agentclientprotocol/agent-client-protocol/pull/1325))
+- *(unstable-v2)* Remove dedicated session modes and models apis from v2 ([#1324](https://github.com/agentclientprotocol/agent-client-protocol/pull/1324))
+- *(unstable)* Add v2 enum extension RFD and fallbacks ([#1304](https://github.com/agentclientprotocol/agent-client-protocol/pull/1304))
+
+### Other
+
+- Move existing protocol docs to v1 ([#1326](https://github.com/agentclientprotocol/agent-client-protocol/pull/1326))
+- Add some draft v2 protocol docs and schema ([#1306](https://github.com/agentclientprotocol/agent-client-protocol/pull/1306))
+
 ## [0.13.4](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.13.3...v0.13.4) - 2026-05-27
 
 ### Added
