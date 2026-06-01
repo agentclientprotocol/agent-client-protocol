@@ -152,24 +152,26 @@ fn main() {
     // Generate markdown documentation. Each cfg combination owns its own
     // doc file, so the `npm run generate` runs don't clobber each other:
     //
-    // - `schema.mdx`              — stable v1 (no features)
-    // - `draft/schema.mdx`        — v1 + unstable feature flags
+    // - `v1/schema.mdx`           — stable v1 (no features)
+    // - `v1/draft/schema.mdx`     — v1 + unstable feature flags
     // - `v2/schema.mdx`           — v2 docs only (hidden while v2 is drafted)
     // - `v2/draft/schema.mdx`     — v2 + unstable feature flags
     let mut markdown_gen = MarkdownGenerator::new(schema_file);
     let mut markdown_doc = markdown_gen.generate(&schema_value);
 
-    if cfg!(feature = "unstable_protocol_v2") {
-        let protocol_doc_base = if cfg!(feature = "unstable") {
-            "https://agentclientprotocol.com/protocol/v2/draft/"
-        } else {
-            "https://agentclientprotocol.com/protocol/v2/"
-        };
-        markdown_doc = markdown_doc.replace(
-            "https://agentclientprotocol.com/protocol/",
-            protocol_doc_base,
-        );
-    }
+    let protocol_doc_base = match (
+        cfg!(feature = "unstable_protocol_v2"),
+        cfg!(feature = "unstable"),
+    ) {
+        (true, true) => "https://agentclientprotocol.com/protocol/v2/draft/",
+        (true, false) => "https://agentclientprotocol.com/protocol/v2/",
+        (false, true) => "https://agentclientprotocol.com/protocol/v1/draft/",
+        (false, false) => "https://agentclientprotocol.com/protocol/v1/",
+    };
+    markdown_doc = markdown_doc.replace(
+        "https://agentclientprotocol.com/protocol/",
+        protocol_doc_base,
+    );
 
     let doc_file: &str = match (
         cfg!(feature = "unstable_protocol_v2"),
@@ -177,8 +179,8 @@ fn main() {
     ) {
         (true, true) => "v2/draft/schema.mdx",
         (true, false) => "v2/schema.mdx",
-        (false, true) => "draft/schema.mdx",
-        (false, false) => "schema.mdx",
+        (false, true) => "v1/draft/schema.mdx",
+        (false, false) => "v1/schema.mdx",
     };
 
     let doc_path = docs_protocol_dir.join(doc_file);

@@ -3,11 +3,11 @@ title: "Tool Calls"
 description: "How Agents report tool call execution"
 ---
 
-Tool calls represent actions that language models request Agents to perform during a [prompt turn](./prompt-turn). When an LLM determines it needs to interact with external systems—like reading files, running code, or fetching data—it generates tool calls that the Agent executes on its behalf.
+Tool calls represent actions that language models request Agents to perform during a [prompt turn](/protocol/v2/draft/prompt-turn). When an LLM determines it needs to interact with external systems—like reading files, running code, or fetching data—it generates tool calls that the Agent executes on its behalf.
 
-Agents report tool calls through [`session/update`](./prompt-turn#3-agent-reports-output) notifications, allowing Clients to display real-time progress and results to users.
+Agents report tool calls through [`session/update`](/protocol/v2/draft/prompt-turn#3-agent-reports-output) notifications, allowing Clients to display real-time progress and results to users.
 
-While Agents handle the actual execution, they may leverage Client capabilities like [permission requests](#requesting-permission) or [file system access](./file-system) to provide a richer, more integrated experience.
+While Agents handle the actual execution, they may leverage Client capabilities like [permission requests](#requesting-permission) or [file system access](/protocol/v2/draft/file-system) to provide a richer, more integrated experience.
 
 ## Creating
 
@@ -167,7 +167,7 @@ The Client responds with the user's decision:
 
 Clients **MAY** automatically allow or reject permission requests according to the user settings.
 
-If the current prompt turn gets [cancelled](./prompt-turn#cancellation), the Client **MUST** respond with the `"cancelled"` outcome:
+If the current prompt turn gets [cancelled](/protocol/v2/draft/prompt-turn#cancellation), the Client **MUST** respond with the `"cancelled"` outcome:
 
 ```json
 {
@@ -183,8 +183,8 @@ If the current prompt turn gets [cancelled](./prompt-turn#cancellation), the Cli
 
 <ResponseField name="outcome" type="RequestPermissionOutcome" required>
   The user's decision, either: - `cancelled` - The [prompt turn was
-  cancelled](./prompt-turn#cancellation) - `selected` with an `optionId` - The
-  ID of the selected permission option
+  cancelled](/protocol/v2/draft/prompt-turn#cancellation) - `selected` with an
+  `optionId` - The ID of the selected permission option
 </ResponseField>
 
 ### Permission Options
@@ -240,7 +240,7 @@ In v2, tool call content `type` values can also be custom or future variants. Im
 
 ### Regular Content
 
-Standard [content blocks](./content) like text, images, or resources:
+Standard [content blocks](/protocol/v2/draft/content) like text, images, or resources:
 
 ```json
 {
@@ -294,7 +294,7 @@ Live terminal output from command execution:
 
 When a terminal is embedded in a tool call, the Client displays live output as it's generated and continues to display it even after the terminal is released.
 
-<Card icon="terminal" horizontal href="./terminals">
+<Card icon="terminal" horizontal href="/protocol/v2/draft/terminals">
   Learn more about Terminals
 </Card>
 

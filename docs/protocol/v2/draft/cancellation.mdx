@@ -19,11 +19,11 @@ When a `$/cancel_request` notification is received by a supporting implementatio
 - **MAY** finish sending any pending notifications before responding
 - **MUST** send one of these responses for the original request:
   - A valid response with appropriate data (such as partial results or cancellation marker)
-  - An error response with code [`-32800` (Request Cancelled)](./schema#errorcode)
+  - An error response with code [`-32800` (Request Cancelled)](/protocol/v2/draft/schema#errorcode)
 
 The calling side **MAY** implement graceful cancellation processing by waiting for the response from the remote side.
 
-Cancellation **MAY** also be done explicitly on a per-feature basis within the protocol to cover specific scenarios (e.g., cancellation of a [prompt turn](./prompt-turn#cancellation))
+Cancellation **MAY** also be done explicitly on a per-feature basis within the protocol to cover specific scenarios (e.g., cancellation of a [prompt turn](/protocol/v2/draft/prompt-turn#cancellation))
 
 ## Internal Cancellation
 

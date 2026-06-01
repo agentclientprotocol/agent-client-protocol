@@ -5,9 +5,9 @@ description: "How Agents communicate their execution plans"
 
 Plans are execution strategies for complex tasks that require multiple steps.
 
-Agents may share plans with Clients through [`session/update`](./prompt-turn#3-agent-reports-output) notifications, providing real-time visibility into their thinking and progress.
+Agents may share plans with Clients through [`session/update`](/protocol/v2/draft/prompt-turn#3-agent-reports-output) notifications, providing real-time visibility into their thinking and progress.
 
-The existing `plan` update is the baseline format. Clients that advertise `planCapabilities` during [initialization](./initialization#client-capabilities) can also receive identified plan operations through `plan_update` and `plan_removed`.
+The existing `plan` update is the baseline format. Clients that advertise `planCapabilities` during [initialization](/protocol/v2/draft/initialization#client-capabilities) can also receive identified plan operations through `plan_update` and `plan_removed`.
 
 ## Creating Plans
 

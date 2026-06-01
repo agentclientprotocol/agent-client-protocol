@@ -5,7 +5,7 @@ description: "How all Agent Client Protocol connections begin"
 
 {/* todo! link to all concepts */}
 
-The Initialization phase allows [Clients](./overview#client) and [Agents](./overview#agent) to negotiate protocol versions, capabilities, and authentication methods.
+The Initialization phase allows [Clients](/protocol/v2/draft/overview#client) and [Agents](/protocol/v2/draft/overview#agent) to negotiate protocol versions, capabilities, and authentication methods.
 
 <br />
 
@@ -111,7 +111,7 @@ Capabilities are high-level and are not attached to a specific base protocol con
 
 Capabilities may specify the availability of protocol methods, notifications, or a subset of their parameters. They may also signal behaviors of the Agent or Client implementation.
 
-Implementations can also [advertise custom capabilities](./extensibility#advertising-custom-capabilities) using the `_meta` field to indicate support for protocol extensions.
+Implementations can also [advertise custom capabilities](/protocol/v2/draft/extensibility#advertising-custom-capabilities) using the `_meta` field to indicate support for protocol extensions.
 
 ### Client Capabilities
 
@@ -127,7 +127,7 @@ The Client **SHOULD** specify whether it supports the following capabilities:
   The `fs/write_text_file` method is available.
 </ParamField>
 
-<Card icon="file" horizontal href="./file-system">
+<Card icon="file" horizontal href="/protocol/v2/draft/file-system">
   Learn more about File System methods
 </Card>
 
@@ -138,7 +138,7 @@ The Client **SHOULD** specify whether it supports the following capabilities:
   manage shell commands.
 </ParamField>
 
-<Card icon="terminal" horizontal href="./terminals">
+<Card icon="terminal" horizontal href="/protocol/v2/draft/terminals">
   Learn more about Terminals
 </Card>
 
@@ -147,12 +147,13 @@ The Client **SHOULD** specify whether it supports the following capabilities:
 The Agent **SHOULD** specify whether it supports the following capabilities:
 
 <ResponseField name="loadSession" type="boolean" post={["default: false"]}>
-  The [`session/load`](./session-setup#loading-sessions) method is available.
+  The [`session/load`](/protocol/v2/draft/session-setup#loading-sessions) method
+  is available.
 </ResponseField>
 
 <ResponseField name="promptCapabilities" type="PromptCapabilities Object">
-  Object indicating the different types of [content](./content) that may be
-  included in `session/prompt` requests.
+  Object indicating the different types of [content](/protocol/v2/draft/content)
+  that may be included in `session/prompt` requests.
 </ResponseField>
 
 <ResponseField name="auth" type="AgentAuthCapabilities Object">
@@ -163,7 +164,7 @@ The Agent **SHOULD** specify whether it supports the following capabilities:
 
 As a baseline, all Agents **MUST** support `ContentBlock::Text` and `ContentBlock::ResourceLink` in `session/prompt` requests.
 
-Optionally, they **MAY** support richer types of [content](./content) by specifying the following capabilities:
+Optionally, they **MAY** support richer types of [content](/protocol/v2/draft/content) by specifying the following capabilities:
 
 <ResponseField name="image" type="boolean" post={["default: false"]}>
   The prompt may include `ContentBlock::Image`
@@ -193,10 +194,11 @@ Note: This transport has been deprecated by the MCP spec.
 #### Authentication Capabilities
 
 <ResponseField name="logout" type="LogoutCapabilities Object">
-  The [`logout`](./authentication#logging-out) method is available.
+  The [`logout`](/protocol/v2/draft/authentication#logging-out) method is
+  available.
 </ResponseField>
 
-<Card icon="shield-check" horizontal href="./authentication">
+<Card icon="shield-check" horizontal href="/protocol/v2/draft/authentication">
   Learn more about Authentication
 </Card>
 
@@ -236,4 +238,4 @@ Both Clients and Agents **SHOULD** provide information about their implementatio
 
 ---
 
-Once the connection is initialized, you're ready to [create a session](./session-setup) and begin the conversation with the Agent.
+Once the connection is initialized, you're ready to [create a session](/protocol/v2/draft/session-setup) and begin the conversation with the Agent.

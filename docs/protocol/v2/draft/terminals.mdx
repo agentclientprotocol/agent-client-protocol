@@ -7,7 +7,7 @@ The terminal methods allow Agents to execute shell commands within the Client's 
 
 ## Checking Support
 
-Before attempting to use terminal methods, Agents **MUST** verify that the Client supports this capability by checking the [Client Capabilities](./initialization#client-capabilities) field in the `initialize` response:
+Before attempting to use terminal methods, Agents **MUST** verify that the Client supports this capability by checking the [Client Capabilities](/protocol/v2/draft/initialization#client-capabilities) field in the `initialize` response:
 
 ```json highlight={7}
 {
@@ -50,7 +50,7 @@ The `terminal/create` method starts a command in a new terminal:
 ```
 
 <ParamField path="sessionId" type="SessionId" required>
-  The [Session ID](./session-setup#session-id) for this request
+  The [Session ID](/protocol/v2/draft/session-setup#session-id) for this request
 </ParamField>
 
 <ParamField path="command" type="string" required>
@@ -111,7 +111,7 @@ After creating the terminal, the Agent can use the `terminal/wait_for_exit` meth
 
 ## Embedding in Tool Calls
 
-Terminals can be embedded directly in [tool calls](./tool-calls) to provide real-time output to users:
+Terminals can be embedded directly in [tool calls](/protocol/v2/draft/tool-calls) to provide real-time output to users:
 
 ```json
 {
