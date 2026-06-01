@@ -8,13 +8,13 @@ Agents can provide an arbitrary list of configuration options for a session, all
 <Info>
   Session Config Options are the preferred way to expose session-level
   configuration. If an Agent provides `configOptions`, Clients **SHOULD** use
-  them instead of the [`modes`](./session-modes) field. Modes will be removed in
-  a future version of the protocol.
+  them instead of the [`modes`](/protocol/session-modes) field. Modes will be
+  removed in a future version of the protocol.
 </Info>
 
 ## Initial State
 
-During [Session Setup](./session-setup) the Agent **MAY** return a list of configuration options and their current values:
+During [Session Setup](/protocol/session-setup) the Agent **MAY** return a list of configuration options and their current values:
 
 ```json
 {
@@ -266,7 +266,7 @@ This notification also contains the complete configuration state. Common reasons
 
 ## Relationship to Session Modes
 
-Session Config Options supersede the older [Session Modes](./session-modes) API. However, during the transition period, Agents that provide mode-like configuration **SHOULD** send both:
+Session Config Options supersede the older [Session Modes](/protocol/session-modes) API. However, during the transition period, Agents that provide mode-like configuration **SHOULD** send both:
 
 - `configOptions` with a `category: "mode"` option for Clients that support config options
 - `modes` for Clients that only support the older API
@@ -277,6 +277,6 @@ If an Agent provides both `configOptions` and `modes` in the session response:
 - Clients that don't support config options **SHOULD** fall back to `modes`
 - Agents **SHOULD** keep both in sync to ensure consistent behavior regardless of which field the Client uses
 
-<Card icon="gears" horizontal href="../session-modes">
+<Card icon="gears" horizontal href="/protocol/session-modes">
   Learn about the Session Modes API
 </Card>

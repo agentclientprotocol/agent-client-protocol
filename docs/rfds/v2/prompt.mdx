@@ -34,7 +34,7 @@ In the spirit of allowing as much flexibility in the protocol for new paradigms 
 
 `session/prompt` is still a request, but both its response lifecycle and payload will change.
 
-The agent will respond once the prompt has been _accepted_, not when the turn is over. And the agent would be able to respond with the given id for that prompt, a current problem we have in the [message id RFD][./message-id] in terms of how to get the message id back soon enough.
+The agent will respond once the prompt has been _accepted_, not when the turn is over. And the agent would be able to respond with the given id for that prompt, a current problem we have in the [message id RFD](/rfds/message-id) in terms of how to get the message id back soon enough.
 
 ```json
 {
@@ -66,7 +66,7 @@ The question then turns to what makes up this notification. Which brings us to:
 
 **Who owns the user message id?**
 
-This is an open question at the moment for the [message id RFD](./message-id). If we allow the client to define the message id, this allows the client to eagerly create it and rely on it. However, if there isn't an agreement on "uniqueness", or if a given agent requires all message ids to be UUIDs or something similar, this could cause issues if both sides are allowed to treat ids as an opaque string, since there would need to be some agreement on how they are actually derived to ensure constraints.
+This is an open question at the moment for the [message id RFD](/rfds/message-id). If we allow the client to define the message id, this allows the client to eagerly create it and rely on it. However, if there isn't an agreement on "uniqueness", or if a given agent requires all message ids to be UUIDs or something similar, this could cause issues if both sides are allowed to treat ids as an opaque string, since there would need to be some agreement on how they are actually derived to ensure constraints.
 
 By allowing the agent to replay the message, we have a natural place for the agent to both provide the content as well as the id once it is inserted in the session. The client will be able to associate that a given user message was from their prompt request by seeing the same message id in the prompt response as this notification. Overall with message ids, I propose to let the agent continue to generate their own ids, and it is the sole source of truth. Ultimately the agent is responsible for the session persistence, and otherwise we may need to align on UUIDs or something similar for message ids, which may or may not fit well with the current agent implementations. If there is only one source for ids, we can continue to treat them as opaque strings that fit well into the agent's individual implementations.
 
