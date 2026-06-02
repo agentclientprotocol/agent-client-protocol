@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.13.6](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.13.5...v0.13.6) - 2026-06-02
+
+### Other
+
+- Render feature docs in docs.rs ([#1331](https://github.com/agentclientprotocol/agent-client-protocol/pull/1331))
+
 ## [0.13.5](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.13.4...v0.13.5) - 2026-06-01
 
 ### Added
