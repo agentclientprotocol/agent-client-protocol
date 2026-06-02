@@ -189,7 +189,6 @@
               "rfds/mcp-over-acp",
               "rfds/session-usage",
               "rfds/auth-methods",
-              "rfds/session-delete",
               "rfds/diff-delete",
               "rfds/boolean-config-option",
               "rfds/elicitation",
@@ -212,7 +211,7 @@
           },
           {
             "group": "Preview",
-            "pages": ["rfds/rust-sdk-v1"]
+            "pages": ["rfds/rust-sdk-v1", "rfds/session-delete"]
           },
           {
             "group": "Completed",
