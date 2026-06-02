@@ -451,7 +451,6 @@ pub struct ContentChunk {
     ///
     /// All chunks belonging to the same message share the same `messageId`.
     /// A change in `messageId` indicates a new message has started.
-    /// Both clients and agents MUST use UUID format for message IDs.
     #[cfg(feature = "unstable_message_id")]
     pub message_id: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -482,7 +481,6 @@ impl ContentChunk {
     ///
     /// All chunks belonging to the same message share the same `messageId`.
     /// A change in `messageId` indicates a new message has started.
-    /// Both clients and agents MUST use UUID format for message IDs.
     #[cfg(feature = "unstable_message_id")]
     #[must_use]
     pub fn message_id(mut self, message_id: impl IntoOption<String>) -> Self {

@@ -4641,15 +4641,11 @@ impl IntoV1 for super::PromptRequest {
     fn into_v1(self) -> Result<Self::Output> {
         let Self {
             session_id,
-            #[cfg(feature = "unstable_message_id")]
-            message_id,
             prompt,
             meta,
         } = self;
         Ok(crate::v1::PromptRequest {
             session_id: session_id.into_v1()?,
-            #[cfg(feature = "unstable_message_id")]
-            message_id: message_id.into_v1()?,
             prompt: prompt.into_v1()?,
             meta: meta.into_v1()?,
         })
@@ -4662,15 +4658,11 @@ impl IntoV2 for crate::v1::PromptRequest {
     fn into_v2(self) -> Result<Self::Output> {
         let Self {
             session_id,
-            #[cfg(feature = "unstable_message_id")]
-            message_id,
             prompt,
             meta,
         } = self;
         Ok(super::PromptRequest {
             session_id: session_id.into_v2()?,
-            #[cfg(feature = "unstable_message_id")]
-            message_id: message_id.into_v2()?,
             prompt: prompt.into_v2()?,
             meta: meta.into_v2()?,
         })
@@ -4682,16 +4674,12 @@ impl IntoV1 for super::PromptResponse {
 
     fn into_v1(self) -> Result<Self::Output> {
         let Self {
-            #[cfg(feature = "unstable_message_id")]
-            user_message_id,
             stop_reason,
             #[cfg(feature = "unstable_session_usage")]
             usage,
             meta,
         } = self;
         Ok(crate::v1::PromptResponse {
-            #[cfg(feature = "unstable_message_id")]
-            user_message_id: user_message_id.into_v1()?,
             stop_reason: stop_reason.into_v1()?,
             #[cfg(feature = "unstable_session_usage")]
             usage: usage.into_v1()?,
@@ -4705,16 +4693,12 @@ impl IntoV2 for crate::v1::PromptResponse {
 
     fn into_v2(self) -> Result<Self::Output> {
         let Self {
-            #[cfg(feature = "unstable_message_id")]
-            user_message_id,
             stop_reason,
             #[cfg(feature = "unstable_session_usage")]
             usage,
             meta,
         } = self;
         Ok(super::PromptResponse {
-            #[cfg(feature = "unstable_message_id")]
-            user_message_id: user_message_id.into_v2()?,
             stop_reason: stop_reason.into_v2()?,
             #[cfg(feature = "unstable_session_usage")]
             usage: usage.into_v2()?,

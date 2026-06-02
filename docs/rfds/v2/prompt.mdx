@@ -32,21 +32,19 @@ In the spirit of allowing as much flexibility in the protocol for new paradigms 
 
 ### Change the `session/prompt` response
 
-`session/prompt` is still a request, but both its response lifecycle and payload will change.
+`session/prompt` is still a request, but its response lifecycle will change.
 
-The agent will respond once the prompt has been _accepted_, not when the turn is over. And the agent would be able to respond with the given id for that prompt, a current problem we have in the [message id RFD](/rfds/message-id) in terms of how to get the message id back soon enough.
+The agent will respond once the prompt has been _accepted_, not when the turn is over. Message IDs do not need to be returned from the prompt response; per the [message id RFD](/rfds/message-id), the agent remains the source of truth for message IDs and provides them through the session update stream when it emits the accepted user message.
 
 ```json
 {
   "jsonrpc": "2.0",
   "id": "req_12345",
-  "result": {
-    "messageId": "msg_789xyz"
-  }
+  "result": {}
 }
 ```
 
-Given there will need to be some more exploration for Message IDs in general, I won't tie that RFD to this one unnecessarily, but it becomes a much more natural point to provide the information if we decide to do so.
+Given there will need to be some more exploration for Message IDs in general, I won't tie that RFD to this one unnecessarily. The accepted user message notification becomes the natural point to provide the ID if the agent has one.
 
 Queueing messages (still an ongoing discussion) would also fit much nicer in this pattern. Either by adding additional parameters or a separate method, we can allow a client to submit queued messages and either cancel or edit them before they get accepted without having to mess with the turn semantics of the previous prompt request approach. Again, queueing is decidedly not part of this RFD, but it seems to fall more naturally into this semantic change in the prompt request.
 
@@ -66,9 +64,9 @@ The question then turns to what makes up this notification. Which brings us to:
 
 **Who owns the user message id?**
 
-This is an open question at the moment for the [message id RFD](/rfds/message-id). If we allow the client to define the message id, this allows the client to eagerly create it and rely on it. However, if there isn't an agreement on "uniqueness", or if a given agent requires all message ids to be UUIDs or something similar, this could cause issues if both sides are allowed to treat ids as an opaque string, since there would need to be some agreement on how they are actually derived to ensure constraints.
+The [message id RFD](/rfds/message-id) proposes that the agent owns message IDs. This means the client cannot eagerly create a protocol message ID for a prompt, but it also means we avoid a shared uniqueness or UUID requirement between clients and agents.
 
-By allowing the agent to replay the message, we have a natural place for the agent to both provide the content as well as the id once it is inserted in the session. The client will be able to associate that a given user message was from their prompt request by seeing the same message id in the prompt response as this notification. Overall with message ids, I propose to let the agent continue to generate their own ids, and it is the sole source of truth. Ultimately the agent is responsible for the session persistence, and otherwise we may need to align on UUIDs or something similar for message ids, which may or may not fit well with the current agent implementations. If there is only one source for ids, we can continue to treat them as opaque strings that fit well into the agent's individual implementations.
+By allowing the agent to replay or acknowledge the user message as a session update, we have a natural place for the agent to provide both the content and the ID once it is inserted in the session. Ultimately the agent is responsible for session persistence. If there is only one source for IDs, we can continue to treat them as opaque strings that fit well into each agent's implementation.
 
 My current proposal is that this would look like the client sending the following message:
 
@@ -95,9 +93,7 @@ And the Agent responds with:
 {
   "jsonrpc": "2.0",
   "id": "req_12345",
-  "result": {
-    "messageId": "mess_456def"
-  }
+  "result": {}
 }
 ```
 
@@ -123,7 +119,7 @@ And also send the notification:
 }
 ```
 
-The client can then make sure the prompt sits nicely in the feed at the right place, and also allows for multiple clients to be attached to the same session because they would receive a user message that they didn't prompt.
+The client can then make sure the prompt sits nicely in the feed at the right place, and also allows for multiple clients to be attached to the same session because they would receive a user message that they didn't prompt. If the agent includes a `messageId` in that notification, the client can use that agent-provided ID for future message-specific operations.
 
 This is a new message type as well. Not a `user_message_chunk` but just a `user_message` that allows for sending the entire message at once. For v2 we will make sure to allow for the agent to do the same on their messages as well, providing both full and partial streaming update patterns for a given message.
 

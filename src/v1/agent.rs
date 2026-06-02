@@ -2969,17 +2969,6 @@ impl HttpHeader {
 pub struct PromptRequest {
     /// The ID of the session to send this user message to
     pub session_id: SessionId,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// A client-generated unique identifier for this user message.
-    ///
-    /// If provided, the Agent SHOULD echo this value as `userMessageId` in the
-    /// [`PromptResponse`] to confirm it was recorded.
-    /// Both clients and agents MUST use UUID format for message IDs.
-    #[cfg(feature = "unstable_message_id")]
-    pub message_id: Option<String>,
     /// The blocks of content that compose the user's message.
     ///
     /// As a baseline, the Agent MUST support [`ContentBlock::Text`] and [`ContentBlock::ResourceLink`],
@@ -3008,27 +2997,9 @@ impl PromptRequest {
     pub fn new(session_id: impl Into<SessionId>, prompt: Vec<ContentBlock>) -> Self {
         Self {
             session_id: session_id.into(),
-            #[cfg(feature = "unstable_message_id")]
-            message_id: None,
             prompt,
             meta: None,
         }
-    }
-
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// A client-generated unique identifier for this user message.
-    ///
-    /// If provided, the Agent SHOULD echo this value as `userMessageId` in the
-    /// [`PromptResponse`] to confirm it was recorded.
-    /// Both clients and agents MUST use UUID format for message IDs.
-    #[cfg(feature = "unstable_message_id")]
-    #[must_use]
-    pub fn message_id(mut self, message_id: impl IntoOption<String>) -> Self {
-        self.message_id = message_id.into_option();
-        self
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -3053,17 +3024,6 @@ impl PromptRequest {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct PromptResponse {
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// The acknowledged user message ID.
-    ///
-    /// If the client provided a `messageId` in the [`PromptRequest`], the agent echoes it here
-    /// to confirm it was recorded. If the client did not provide one, the agent MAY assign one
-    /// and return it here. Absence of this field indicates the agent did not record a message ID.
-    #[cfg(feature = "unstable_message_id")]
-    pub user_message_id: Option<String>,
     /// Indicates why the agent stopped processing the turn.
     pub stop_reason: StopReason,
     /// **UNSTABLE**
@@ -3089,29 +3049,11 @@ impl PromptResponse {
     #[must_use]
     pub fn new(stop_reason: StopReason) -> Self {
         Self {
-            #[cfg(feature = "unstable_message_id")]
-            user_message_id: None,
             stop_reason,
             #[cfg(feature = "unstable_session_usage")]
             usage: None,
             meta: None,
         }
-    }
-
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// The acknowledged user message ID.
-    ///
-    /// If the client provided a `messageId` in the [`PromptRequest`], the agent echoes it here
-    /// to confirm it was recorded. If the client did not provide one, the agent MAY assign one
-    /// and return it here. Absence of this field indicates the agent did not record a message ID.
-    #[cfg(feature = "unstable_message_id")]
-    #[must_use]
-    pub fn user_message_id(mut self, user_message_id: impl IntoOption<String>) -> Self {
-        self.user_message_id = user_message_id.into_option();
-        self
     }
 
     /// **UNSTABLE**
