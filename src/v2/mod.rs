@@ -5,8 +5,9 @@
 //! advertised by [`crate::ProtocolVersion::LATEST`]. The wire format is
 //! currently identical to v1 (the default crate-root types) and the types
 //! here exist only as a place to evolve v2 without disturbing the stable v1
-//! API. Both the type definitions and the [`conversion`] helpers may change
-//! at any time.
+//! API. The wire format intentionally diverges from v1 as draft v2 RFDs land.
+//! Both the type definitions and the [`conversion`] helpers may change at any
+//! time.
 //!
 //! [`unstable`]: https://docs.rs/crate/agent-client-protocol-schema/latest/features
 

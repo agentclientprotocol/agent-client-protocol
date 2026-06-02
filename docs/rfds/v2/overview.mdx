@@ -31,6 +31,7 @@ Current RFDs accepted as Drafts that are targeting v2 release
 - [New Prompt Lifecycle](./prompt.md)
 - [Enum Variant Extension](./enum-variant-extension.mdx)
 - [Client Filesystem and Terminal Surface](./client-filesystem-terminal-capabilities.mdx)
+- [Plan Variants](./plan-variants.mdx)
 - [Message IDs](../message-id.md)
   - [Fork from specified IDs](../session-fork.mds)
 - [Remote Transports](../streamable-http-websocket-transport.mdx)
@@ -42,6 +43,7 @@ Other RFDs will progress separately and are not dependent on breaking changes (s
 - Remove the dedicated session modes API from v2. This includes the `modes` session response fields, `session/set_mode`, `current_mode_update`, and the `SessionMode*` types.
 - Agents should expose mode-like and model-related state through [Session Config Options](../session-config-options.mdx) instead of dedicated mode or model selector APIs.
 - Remove the v1 Client filesystem and terminal execution surface from v2. This includes `clientCapabilities.fs`, the top-level `clientCapabilities.terminal` field, `fs/*` methods, `terminal/*` methods, and terminal tool-call content. Terminal authentication remains separate under `clientCapabilities.auth.terminal`.
+- Make [plan variants](./plan-variants.mdx) the default v2 plan shape by replacing the old `plan` session update with item-based `plan_update`.
 
 ### RFDs to be Written
 
@@ -58,7 +60,6 @@ Changes under consideration that still need to be drafted or moved to draft:
   - Response can provide available commands
   - Potentially config options
     - Get config options outside of a session (take a cwd?)
-- [Plan variants](/rfds/plan-operations): Make this RFD the default and remove the old plan update
 - Subagent support
 
 ## Shiny future
@@ -92,6 +93,7 @@ With the needed breaking changes, as much as possible I am targeting having a co
 ## Revision history
 
 2026-06-02: Recorded the v2 decision to remove Client filesystem and terminal execution capabilities, methods, and terminal tool-call content.
+2026-06-02: Added the v2 Plan Variants RFD to make item-based `plan_update` the default v2 plan shape.
 2026-06-01: Recorded that model selection should remain represented by session config options instead of a dedicated selector API.
 2026-05-28: Recorded the v2 decision to remove session modes in favor of session config options
 2026-05-06: Initial draft

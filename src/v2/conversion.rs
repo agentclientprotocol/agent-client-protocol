@@ -1,8 +1,8 @@
 //! Explicit conversion helpers for experimenting with ACP v2 while SDKs still speak v1.
 //!
-//! The v2 protocol types currently mirror v1. The conversions below intentionally move
-//! values field-by-field and variant-by-variant instead of serializing through JSON so
-//! future v2 shape changes have obvious edit points.
+//! The conversions below intentionally move values field-by-field and
+//! variant-by-variant instead of serializing through JSON so v2 shape changes
+//! have obvious edit points.
 
 use std::{
     collections::{BTreeMap, HashMap},
@@ -61,6 +61,8 @@ fn removed_v1_enum_variant(type_name: &str, value: &str) -> ProtocolConversionEr
         "v1 {type_name} variant `{value}` cannot be represented in v2"
     ))
 }
+
+const LEGACY_V1_PLAN_ID: &str = "main";
 
 /// Converts a [`ProtocolConversionError`] into a v1 [`Error`](crate::v1::Error)
 /// so callers can use `?` to bubble conversion failures through APIs that
@@ -436,26 +438,27 @@ impl IntoV2 for crate::v1::SessionId {
     }
 }
 
-impl IntoV1 for super::Plan {
+#[cfg(not(feature = "unstable_plan_operations"))]
+impl IntoV1 for super::PlanUpdate {
     type Output = crate::v1::Plan;
 
     fn into_v1(self) -> Result<Self::Output> {
-        let Self { entries, meta } = self;
-        Ok(crate::v1::Plan {
-            entries: entries.into_v1()?,
-            meta: meta.into_v1()?,
-        })
-    }
-}
-
-impl IntoV2 for crate::v1::Plan {
-    type Output = super::Plan;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        let Self { entries, meta } = self;
-        Ok(super::Plan {
-            entries: entries.into_v2()?,
-            meta: meta.into_v2()?,
+        let Self { plan, meta } = self;
+        Ok(match plan {
+            super::PlanUpdateContent::Items(items) => {
+                let super::PlanItems {
+                    id: _,
+                    entries,
+                    meta: items_meta,
+                } = items;
+                crate::v1::Plan {
+                    entries: entries.into_v1()?,
+                    meta: meta.or(items_meta).into_v1()?,
+                }
+            }
+            super::PlanUpdateContent::Other(value) => {
+                return Err(unknown_v2_enum_variant("PlanUpdateContent", &value.type_));
+            }
         })
     }
 }
@@ -638,30 +641,6 @@ impl IntoV2 for crate::v1::PlanRemoved {
         let Self { id, meta } = self;
         Ok(super::PlanRemoved {
             id: id.into_v2()?,
-            meta: meta.into_v2()?,
-        })
-    }
-}
-
-#[cfg(feature = "unstable_plan_operations")]
-impl IntoV1 for super::PlanCapabilities {
-    type Output = crate::v1::PlanCapabilities;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self { meta } = self;
-        Ok(crate::v1::PlanCapabilities {
-            meta: meta.into_v1()?,
-        })
-    }
-}
-
-#[cfg(feature = "unstable_plan_operations")]
-impl IntoV2 for crate::v1::PlanCapabilities {
-    type Output = super::PlanCapabilities;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        let Self { meta } = self;
-        Ok(super::PlanCapabilities {
             meta: meta.into_v2()?,
         })
     }
@@ -861,9 +840,10 @@ impl IntoV1 for super::SessionUpdate {
             Self::ToolCallUpdate(value) => {
                 crate::v1::SessionUpdate::ToolCallUpdate(value.into_v1()?)
             }
-            Self::Plan(value) => crate::v1::SessionUpdate::Plan(value.into_v1()?),
             #[cfg(feature = "unstable_plan_operations")]
             Self::PlanUpdate(value) => crate::v1::SessionUpdate::PlanUpdate(value.into_v1()?),
+            #[cfg(not(feature = "unstable_plan_operations"))]
+            Self::PlanUpdate(value) => crate::v1::SessionUpdate::Plan(value.into_v1()?),
             #[cfg(feature = "unstable_plan_operations")]
             Self::PlanRemoved(value) => crate::v1::SessionUpdate::PlanRemoved(value.into_v1()?),
             Self::AvailableCommandsUpdate(value) => {
@@ -903,7 +883,13 @@ impl IntoV2 for crate::v1::SessionUpdate {
             }
             Self::ToolCall(value) => super::SessionUpdate::ToolCall(value.into_v2()?),
             Self::ToolCallUpdate(value) => super::SessionUpdate::ToolCallUpdate(value.into_v2()?),
-            Self::Plan(value) => super::SessionUpdate::Plan(value.into_v2()?),
+            Self::Plan(value) => {
+                let crate::v1::Plan { entries, meta } = value;
+                super::SessionUpdate::PlanUpdate(super::PlanUpdate {
+                    plan: super::PlanUpdateContent::items(LEGACY_V1_PLAN_ID, entries.into_v2()?),
+                    meta: meta.into_v2()?,
+                })
+            }
             #[cfg(feature = "unstable_plan_operations")]
             Self::PlanUpdate(value) => super::SessionUpdate::PlanUpdate(value.into_v2()?),
             #[cfg(feature = "unstable_plan_operations")]
@@ -1631,8 +1617,6 @@ impl IntoV1 for super::ClientCapabilities {
 
     fn into_v1(self) -> Result<Self::Output> {
         let Self {
-            #[cfg(feature = "unstable_plan_operations")]
-            plan_capabilities,
             #[cfg(feature = "unstable_auth_methods")]
             auth,
             #[cfg(feature = "unstable_elicitation")]
@@ -1647,7 +1631,7 @@ impl IntoV1 for super::ClientCapabilities {
             fs: crate::v1::FileSystemCapabilities::default(),
             terminal: false,
             #[cfg(feature = "unstable_plan_operations")]
-            plan_capabilities: plan_capabilities.into_v1()?,
+            plan_capabilities: None,
             #[cfg(feature = "unstable_auth_methods")]
             auth: auth.into_v1()?,
             #[cfg(feature = "unstable_elicitation")]
@@ -1669,7 +1653,7 @@ impl IntoV2 for crate::v1::ClientCapabilities {
             fs: _,
             terminal: _,
             #[cfg(feature = "unstable_plan_operations")]
-            plan_capabilities,
+                plan_capabilities: _,
             #[cfg(feature = "unstable_auth_methods")]
             auth,
             #[cfg(feature = "unstable_elicitation")]
@@ -1681,8 +1665,6 @@ impl IntoV2 for crate::v1::ClientCapabilities {
             meta,
         } = self;
         Ok(super::ClientCapabilities {
-            #[cfg(feature = "unstable_plan_operations")]
-            plan_capabilities: plan_capabilities.into_v2()?,
             #[cfg(feature = "unstable_auth_methods")]
             auth: auth.into_v2()?,
             #[cfg(feature = "unstable_elicitation")]
@@ -8624,10 +8606,6 @@ mod tests {
     fn round_trips_initialize_request() {
         let client_capabilities = v1::ClientCapabilities::new();
 
-        #[cfg(feature = "unstable_plan_operations")]
-        let client_capabilities =
-            client_capabilities.plan_capabilities(v1::PlanCapabilities::new());
-
         let request = v1::InitializeRequest::new(ProtocolVersion::V1)
             .client_capabilities(client_capabilities)
             .client_info(v1::Implementation::new("test-client", "1.0.0").title("Test Client"));
@@ -8802,7 +8780,7 @@ mod tests {
     }
 
     #[test]
-    fn round_trips_session_notification_for_each_update_kind() {
+    fn round_trips_session_notification_for_unchanged_update_kinds() {
         let cases: Vec<v1::SessionUpdate> = vec![
             v1::SessionUpdate::UserMessageChunk(v1::ContentChunk::new(v1::ContentBlock::Text(
                 v1::TextContent::new("u"),
@@ -8818,11 +8796,6 @@ mod tests {
                 "tc",
                 v1::ToolCallUpdateFields::new().status(v1::ToolCallStatus::Completed),
             )),
-            v1::SessionUpdate::Plan(v1::Plan::new(vec![v1::PlanEntry::new(
-                "step",
-                v1::PlanEntryPriority::High,
-                v1::PlanEntryStatus::InProgress,
-            )])),
             #[cfg(feature = "unstable_plan_operations")]
             v1::SessionUpdate::PlanUpdate(v1::PlanUpdate::new(v1::PlanUpdateContent::markdown(
                 "plan-1",
@@ -8841,6 +8814,40 @@ mod tests {
                 notification,
             );
         }
+    }
+
+    #[test]
+    fn v1_plan_session_update_converts_to_v2_item_plan_update() {
+        let update = v1::SessionUpdate::Plan(v1::Plan::new(vec![v1::PlanEntry::new(
+            "step",
+            v1::PlanEntryPriority::High,
+            v1::PlanEntryStatus::InProgress,
+        )]));
+
+        let as_v2: v2::SessionUpdate = v1_to_v2(update.clone()).unwrap();
+        assert_eq!(
+            serde_json::to_value(&as_v2).unwrap(),
+            serde_json::json!({
+                "sessionUpdate": "plan_update",
+                "plan": {
+                    "type": "items",
+                    "id": LEGACY_V1_PLAN_ID,
+                    "entries": [
+                        {
+                            "content": "step",
+                            "priority": "high",
+                            "status": "in_progress"
+                        }
+                    ]
+                }
+            })
+        );
+
+        let back: v1::SessionUpdate = v2_to_v1(as_v2).unwrap();
+        #[cfg(not(feature = "unstable_plan_operations"))]
+        assert_eq!(back, update);
+        #[cfg(feature = "unstable_plan_operations")]
+        assert!(matches!(back, v1::SessionUpdate::PlanUpdate(_)));
     }
 
     #[test]
@@ -8936,11 +8943,13 @@ mod tests {
             )),
             "v2 AuthMethod variant `_oauth` cannot be represented in v1",
         );
-        #[cfg(feature = "unstable_plan_operations")]
         assert_v2_to_v1_error(
-            v2::PlanUpdateContent::Other(v2::OtherPlanUpdateContent::new(
-                "_timeline",
-                std::collections::BTreeMap::new(),
+            v2::PlanUpdate::new(v2::PlanUpdateContent::Other(
+                v2::OtherPlanUpdateContent::new(
+                    "_timeline",
+                    "plan-1",
+                    std::collections::BTreeMap::new(),
+                ),
             )),
             "v2 PlanUpdateContent variant `_timeline` cannot be represented in v1",
         );

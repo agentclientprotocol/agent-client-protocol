@@ -112,29 +112,33 @@ The Agent reports the model's output to the Client via `session/update` notifica
   "params": {
     "sessionId": "sess_abc123def456",
     "update": {
-      "sessionUpdate": "plan",
-      "entries": [
-        {
-          "content": "Check for syntax errors",
-          "priority": "high",
-          "status": "pending"
-        },
-        {
-          "content": "Identify potential type issues",
-          "priority": "medium",
-          "status": "pending"
-        },
-        {
-          "content": "Review error handling patterns",
-          "priority": "medium",
-          "status": "pending"
-        },
-        {
-          "content": "Suggest improvements",
-          "priority": "low",
-          "status": "pending"
-        }
-      ]
+      "sessionUpdate": "plan_update",
+      "plan": {
+        "type": "items",
+        "id": "plan-1",
+        "entries": [
+          {
+            "content": "Check for syntax errors",
+            "priority": "high",
+            "status": "pending"
+          },
+          {
+            "content": "Identify potential type issues",
+            "priority": "medium",
+            "status": "pending"
+          },
+          {
+            "content": "Review error handling patterns",
+            "priority": "medium",
+            "status": "pending"
+          },
+          {
+            "content": "Suggest improvements",
+            "priority": "low",
+            "status": "pending"
+          }
+        ]
+      }
     }
   }
 }

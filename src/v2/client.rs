@@ -10,17 +10,17 @@ use schemars::{JsonSchema, Schema};
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
+#[cfg(feature = "unstable_plan_operations")]
+use super::PlanRemoved;
 #[cfg(feature = "unstable_elicitation")]
 use super::{
     CompleteElicitationNotification, CreateElicitationRequest, CreateElicitationResponse,
     ElicitationCapabilities,
 };
 use super::{
-    ContentBlock, ExtNotification, ExtRequest, ExtResponse, Meta, Plan, SessionConfigOption,
+    ContentBlock, ExtNotification, ExtRequest, ExtResponse, Meta, PlanUpdate, SessionConfigOption,
     SessionId, ToolCall, ToolCallUpdate,
 };
-#[cfg(feature = "unstable_plan_operations")]
-use super::{PlanCapabilities, PlanRemoved, PlanUpdate};
 use crate::{IntoMaybeUndefined, IntoOption, MaybeUndefined, SkipListener};
 
 #[cfg(feature = "unstable_mcp_over_acp")]
@@ -101,15 +101,8 @@ pub enum SessionUpdate {
     ToolCall(ToolCall),
     /// Update on the status or results of a tool call.
     ToolCallUpdate(ToolCallUpdate),
-    /// The agent's execution plan for complex tasks.
-    /// See protocol docs: [Agent Plan](https://agentclientprotocol.com/protocol/agent-plan)
-    Plan(Plan),
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// A content update for a plan identified by ID.
-    #[cfg(feature = "unstable_plan_operations")]
+    /// See protocol docs: [Agent Plan](https://agentclientprotocol.com/protocol/agent-plan)
     PlanUpdate(PlanUpdate),
     /// **UNSTABLE**
     ///
@@ -214,12 +207,11 @@ fn is_known_session_update(session_update: &str) -> bool {
         | "agent_thought_chunk"
         | "tool_call"
         | "tool_call_update"
-        | "plan"
+        | "plan_update"
+        | "plan_removed"
         | "available_commands_update"
         | "config_option_update"
         | "session_info_update" => true,
-        #[cfg(feature = "unstable_plan_operations")]
-        "plan_update" | "plan_removed" => true,
         #[cfg(feature = "unstable_session_usage")]
         "usage_update" => true,
         _ => false,
@@ -236,14 +228,11 @@ fn other_session_update_schema(schema: &mut Schema) {
             "agent_thought_chunk",
             "tool_call",
             "tool_call_update",
-            "plan",
+            "plan_update",
+            "plan_removed",
             "available_commands_update",
             "config_option_update",
             "session_info_update",
-            #[cfg(feature = "unstable_plan_operations")]
-            "plan_update",
-            #[cfg(feature = "unstable_plan_operations")]
-            "plan_removed",
             #[cfg(feature = "unstable_session_usage")]
             "usage_update",
         ],
@@ -990,19 +979,6 @@ pub struct ClientCapabilities {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
-    /// Whether the client supports `plan_update` and `plan_removed` session updates.
-    ///
-    /// Optional. Omitted means the client does not advertise support.
-    /// Supplying `{}` means the client can receive both update types.
-    #[cfg(feature = "unstable_plan_operations")]
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
-    #[serde(default)]
-    pub plan_capabilities: Option<PlanCapabilities>,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Authentication capabilities supported by the client.
     /// Determines which authentication method types the agent may include
     /// in its `InitializeResponse`.
@@ -1054,24 +1030,6 @@ impl ClientCapabilities {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
-    }
-
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// Whether the client supports `plan_update` and `plan_removed` session updates.
-    ///
-    /// Omitted means the client does not advertise support.
-    /// Supplying `{}` means the client can receive both update types.
-    #[cfg(feature = "unstable_plan_operations")]
-    #[must_use]
-    pub fn plan_capabilities(
-        mut self,
-        plan_capabilities: impl IntoOption<PlanCapabilities>,
-    ) -> Self {
-        self.plan_capabilities = plan_capabilities.into_option();
-        self
     }
 
     /// **UNSTABLE**
@@ -1510,6 +1468,66 @@ mod tests {
                 "sessionUpdate": "agent_message_chunk"
             }))
             .is_err()
+        );
+        assert!(
+            serde_json::from_value::<SessionUpdate>(json!({
+                "sessionUpdate": "plan",
+                "entries": []
+            }))
+            .is_err()
+        );
+        assert!(
+            serde_json::from_value::<SessionUpdate>(json!({
+                "sessionUpdate": "plan_removed"
+            }))
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn test_plan_update_serialization() {
+        use serde_json::json;
+
+        let plan_update =
+            SessionUpdate::PlanUpdate(PlanUpdate::new(crate::v2::PlanUpdateContent::items(
+                "plan-1",
+                vec![crate::v2::PlanEntry::new(
+                    "Step 1",
+                    crate::v2::PlanEntryPriority::High,
+                    crate::v2::PlanEntryStatus::Pending,
+                )],
+            )));
+
+        assert_eq!(
+            serde_json::to_value(plan_update).unwrap(),
+            json!({
+                "sessionUpdate": "plan_update",
+                "plan": {
+                    "type": "items",
+                    "id": "plan-1",
+                    "entries": [
+                        {
+                            "content": "Step 1",
+                            "priority": "high",
+                            "status": "pending"
+                        }
+                    ]
+                }
+            })
+        );
+    }
+
+    #[cfg(feature = "unstable_plan_operations")]
+    #[test]
+    fn test_plan_removed_serialization() {
+        use serde_json::json;
+
+        assert_eq!(
+            serde_json::to_value(SessionUpdate::PlanRemoved(PlanRemoved::new("plan-1"))).unwrap(),
+            json!({
+                "sessionUpdate": "plan_removed",
+                "id": "plan-1"
+            })
         );
     }
 

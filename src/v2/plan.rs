@@ -5,13 +5,10 @@
 //!
 //! See: [Agent Plan](https://agentclientprotocol.com/protocol/agent-plan)
 
-#[cfg(feature = "unstable_plan_operations")]
 use std::{collections::BTreeMap, sync::Arc};
 
-#[cfg(feature = "unstable_plan_operations")]
 use derive_more::{Display, From};
 use schemars::JsonSchema;
-#[cfg(feature = "unstable_plan_operations")]
 use schemars::Schema;
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
@@ -19,69 +16,13 @@ use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 use super::Meta;
 use crate::{IntoOption, SkipListener};
 
-/// An execution plan for accomplishing complex tasks.
-///
-/// Plans consist of multiple entries representing individual tasks or goals.
-/// Agents report plans to clients to provide visibility into their execution strategy.
-/// Plans can evolve during execution as the agent discovers new requirements or completes tasks.
-///
-/// See protocol docs: [Agent Plan](https://agentclientprotocol.com/protocol/agent-plan)
-#[serde_as]
-#[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-#[non_exhaustive]
-pub struct Plan {
-    /// The list of tasks to be accomplished.
-    ///
-    /// When updating a plan, the agent must send a complete list of all entries
-    /// with their current status. The client replaces the entire plan with each update.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
-    pub entries: Vec<PlanEntry>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
-}
-
-impl Plan {
-    #[must_use]
-    pub fn new(entries: Vec<PlanEntry>) -> Self {
-        Self {
-            entries,
-            meta: None,
-        }
-    }
-
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[must_use]
-    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
-        self.meta = meta.into_option();
-        self
-    }
-}
-
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Unique identifier for a plan within a session.
-#[cfg(feature = "unstable_plan_operations")]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
 #[from(Arc<str>, String, &'static str)]
 #[non_exhaustive]
 pub struct PlanId(pub Arc<str>);
 
-#[cfg(feature = "unstable_plan_operations")]
 impl PlanId {
     #[must_use]
     pub fn new(id: impl Into<Arc<str>>) -> Self {
@@ -89,12 +30,7 @@ impl PlanId {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// A content update for a plan identified by ID.
-#[cfg(feature = "unstable_plan_operations")]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -111,7 +47,6 @@ pub struct PlanUpdate {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_plan_operations")]
 impl PlanUpdate {
     #[must_use]
     pub fn new(plan: PlanUpdateContent) -> Self {
@@ -130,12 +65,7 @@ impl PlanUpdate {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Updated content for a plan.
-#[cfg(feature = "unstable_plan_operations")]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(tag = "type", rename_all = "snake_case")]
 #[schemars(extend("discriminator" = {"propertyName": "type"}))]
@@ -143,9 +73,19 @@ impl PlanUpdate {
 pub enum PlanUpdateContent {
     /// Structured plan entries.
     Items(PlanItems),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
     /// A URI pointing to a file containing the plan.
+    #[cfg(feature = "unstable_plan_operations")]
     File(PlanFile),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
     /// Raw markdown content for the plan.
+    #[cfg(feature = "unstable_plan_operations")]
     Markdown(PlanMarkdown),
     /// Custom or future plan update content.
     ///
@@ -161,7 +101,6 @@ pub enum PlanUpdateContent {
 }
 
 /// Custom or future plan update content payload.
-#[cfg(feature = "unstable_plan_operations")]
 #[derive(Debug, Clone, Serialize, JsonSchema, PartialEq, Eq)]
 #[schemars(inline)]
 #[schemars(transform = other_plan_update_content_schema)]
@@ -175,24 +114,30 @@ pub struct OtherPlanUpdateContent {
     /// future ACP variants.
     #[serde(rename = "type")]
     pub type_: String,
+    /// The plan ID to update.
+    pub id: PlanId,
     /// Additional fields from the unknown plan update content payload.
     #[serde(flatten)]
     pub fields: BTreeMap<String, serde_json::Value>,
 }
 
-#[cfg(feature = "unstable_plan_operations")]
 impl OtherPlanUpdateContent {
     #[must_use]
-    pub fn new(type_: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
+    pub fn new(
+        type_: impl Into<String>,
+        id: impl Into<PlanId>,
+        mut fields: BTreeMap<String, serde_json::Value>,
+    ) -> Self {
         fields.remove("type");
+        fields.remove("id");
         Self {
             type_: type_.into(),
+            id: id.into(),
             fields,
         }
     }
 }
 
-#[cfg(feature = "unstable_plan_operations")]
 impl<'de> Deserialize<'de> for OtherPlanUpdateContent {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -205,6 +150,12 @@ impl<'de> Deserialize<'de> for OtherPlanUpdateContent {
         let serde_json::Value::String(type_) = type_ else {
             return Err(serde::de::Error::custom("`type` must be a string"));
         };
+        let id = fields
+            .remove("id")
+            .ok_or_else(|| serde::de::Error::missing_field("id"))?;
+        let serde_json::Value::String(id) = id else {
+            return Err(serde::de::Error::custom("`id` must be a string"));
+        };
 
         if is_known_plan_update_content_type(&type_) {
             return Err(serde::de::Error::custom(format!(
@@ -212,48 +163,48 @@ impl<'de> Deserialize<'de> for OtherPlanUpdateContent {
             )));
         }
 
-        Ok(Self { type_, fields })
+        Ok(Self {
+            type_,
+            id: PlanId::new(id),
+            fields,
+        })
     }
 }
 
-#[cfg(feature = "unstable_plan_operations")]
 fn is_known_plan_update_content_type(type_: &str) -> bool {
-    matches!(type_, "items" | "file" | "markdown")
+    KNOWN_PLAN_UPDATE_CONTENT_TYPES.contains(&type_)
 }
 
-#[cfg(feature = "unstable_plan_operations")]
 fn other_plan_update_content_schema(schema: &mut Schema) {
     super::schema_util::reject_known_string_discriminators(
         schema,
         "type",
-        &["items", "file", "markdown"],
+        KNOWN_PLAN_UPDATE_CONTENT_TYPES,
     );
 }
 
-#[cfg(feature = "unstable_plan_operations")]
+const KNOWN_PLAN_UPDATE_CONTENT_TYPES: &[&str] = &["items", "file", "markdown"];
+
 impl PlanUpdateContent {
     #[must_use]
     pub fn items(id: impl Into<PlanId>, entries: Vec<PlanEntry>) -> Self {
         Self::Items(PlanItems::new(id, entries))
     }
 
+    #[cfg(feature = "unstable_plan_operations")]
     #[must_use]
     pub fn file(id: impl Into<PlanId>, uri: impl Into<String>) -> Self {
         Self::File(PlanFile::new(id, uri))
     }
 
+    #[cfg(feature = "unstable_plan_operations")]
     #[must_use]
     pub fn markdown(id: impl Into<PlanId>, content: impl Into<String>) -> Self {
         Self::Markdown(PlanMarkdown::new(id, content))
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// A plan represented as structured entries.
-#[cfg(feature = "unstable_plan_operations")]
 #[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -278,7 +229,6 @@ pub struct PlanItems {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_plan_operations")]
 impl PlanItems {
     #[must_use]
     pub fn new(id: impl Into<PlanId>, entries: Vec<PlanEntry>) -> Self {
@@ -439,45 +389,6 @@ impl PlanRemoved {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
-/// Capabilities for receiving `plan_update` and `plan_removed` session updates.
-#[cfg(feature = "unstable_plan_operations")]
-#[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-#[non_exhaustive]
-pub struct PlanCapabilities {
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
-}
-
-#[cfg(feature = "unstable_plan_operations")]
-impl PlanCapabilities {
-    #[must_use]
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[must_use]
-    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
-        self.meta = meta.into_option();
-        self
-    }
-}
-
 /// A single entry in the execution plan.
 ///
 /// Represents a task or goal that the assistant intends to accomplish
@@ -578,7 +489,7 @@ pub enum PlanEntryStatus {
     Other(String),
 }
 
-#[cfg(all(test, feature = "unstable_plan_operations"))]
+#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -610,7 +521,8 @@ mod tests {
         };
 
         assert_eq!(unknown.type_, "_timeline");
-        assert_eq!(unknown.fields.get("id"), Some(&serde_json::json!("plan-1")));
+        assert_eq!(unknown.id.to_string(), "plan-1");
+        assert!(!unknown.fields.contains_key("id"));
         assert_eq!(
             serde_json::to_value(PlanUpdateContent::Other(unknown)).unwrap(),
             serde_json::json!({
@@ -626,6 +538,30 @@ mod tests {
         assert!(
             serde_json::from_value::<PlanUpdateContent>(serde_json::json!({
                 "type": "items"
+            }))
+            .is_err()
+        );
+        assert!(
+            serde_json::from_value::<PlanUpdateContent>(serde_json::json!({
+                "type": "file",
+                "id": "plan-1"
+            }))
+            .is_err()
+        );
+        assert!(
+            serde_json::from_value::<PlanUpdateContent>(serde_json::json!({
+                "type": "markdown",
+                "id": "plan-1"
+            }))
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn plan_update_content_requires_id_for_unknown_variant() {
+        assert!(
+            serde_json::from_value::<PlanUpdateContent>(serde_json::json!({
+                "type": "_timeline"
             }))
             .is_err()
         );
