@@ -188,6 +188,7 @@
               "rfds/proxy-chains",
               "rfds/mcp-over-acp",
               "rfds/session-usage",
+              "rfds/end-turn-token-usage",
               "rfds/auth-methods",
               "rfds/diff-delete",
               "rfds/boolean-config-option",

@@ -3071,7 +3071,7 @@ pub struct PromptResponse {
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
     /// Token usage for this turn (optional).
-    #[cfg(feature = "unstable_session_usage")]
+    #[cfg(feature = "unstable_end_turn_token_usage")]
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
@@ -3092,7 +3092,7 @@ impl PromptResponse {
             #[cfg(feature = "unstable_message_id")]
             user_message_id: None,
             stop_reason,
-            #[cfg(feature = "unstable_session_usage")]
+            #[cfg(feature = "unstable_end_turn_token_usage")]
             usage: None,
             meta: None,
         }
@@ -3119,7 +3119,7 @@ impl PromptResponse {
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
     /// Token usage for this turn.
-    #[cfg(feature = "unstable_session_usage")]
+    #[cfg(feature = "unstable_end_turn_token_usage")]
     #[must_use]
     pub fn usage(mut self, usage: impl IntoOption<Usage>) -> Self {
         self.usage = usage.into_option();
@@ -3170,7 +3170,7 @@ pub enum StopReason {
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
 /// Token usage information for a prompt turn.
-#[cfg(feature = "unstable_session_usage")]
+#[cfg(feature = "unstable_end_turn_token_usage")]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -3190,7 +3190,7 @@ pub struct Usage {
     pub cached_write_tokens: Option<u64>,
 }
 
-#[cfg(feature = "unstable_session_usage")]
+#[cfg(feature = "unstable_end_turn_token_usage")]
 impl Usage {
     #[must_use]
     pub fn new(total_tokens: u64, input_tokens: u64, output_tokens: u64) -> Self {
