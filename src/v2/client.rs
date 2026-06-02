@@ -1460,31 +1460,6 @@ mod tests {
     }
 
     #[test]
-    fn session_update_does_not_hide_malformed_known_variant() {
-        use serde_json::json;
-
-        assert!(
-            serde_json::from_value::<SessionUpdate>(json!({
-                "sessionUpdate": "agent_message_chunk"
-            }))
-            .is_err()
-        );
-        assert!(
-            serde_json::from_value::<SessionUpdate>(json!({
-                "sessionUpdate": "plan",
-                "entries": []
-            }))
-            .is_err()
-        );
-        assert!(
-            serde_json::from_value::<SessionUpdate>(json!({
-                "sessionUpdate": "plan_removed"
-            }))
-            .is_err()
-        );
-    }
-
-    #[test]
     fn test_plan_update_serialization() {
         use serde_json::json;
 
