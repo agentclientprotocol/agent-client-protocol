@@ -37,13 +37,7 @@ They **SHOULD** also provide a name and version to the Agent.
   "method": "initialize",
   "params": {
     "protocolVersion": 2,
-    "clientCapabilities": {
-      "fs": {
-        "readTextFile": true,
-        "writeTextFile": true
-      },
-      "terminal": true
-    },
+    "clientCapabilities": {},
     "clientInfo": {
       "name": "my-client",
       "title": "My Client",
@@ -115,32 +109,8 @@ Implementations can also [advertise custom capabilities](/protocol/v2/draft/exte
 
 ### Client Capabilities
 
-The Client **SHOULD** specify whether it supports the following capabilities:
-
-#### File System
-
-<ParamField path="readTextFile" type="boolean">
-  The `fs/read_text_file` method is available.
-</ParamField>
-
-<ParamField path="writeTextFile" type="boolean">
-  The `fs/write_text_file` method is available.
-</ParamField>
-
-<Card icon="file" horizontal href="/protocol/v2/draft/file-system">
-  Learn more about File System methods
-</Card>
-
-#### Terminal
-
-<ParamField path="terminal" type="boolean">
-  All `terminal/*` methods are available, allowing the Agent to execute and
-  manage shell commands.
-</ParamField>
-
-<Card icon="terminal" horizontal href="/protocol/v2/draft/terminals">
-  Learn more about Terminals
-</Card>
+Clients **MAY** include defined capability fields in `clientCapabilities`.
+Omitted fields mean unsupported.
 
 ### Agent Capabilities
 

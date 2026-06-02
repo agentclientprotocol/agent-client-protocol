@@ -1111,7 +1111,7 @@ pub struct NewSessionRequest {
     pub cwd: PathBuf,
     /// Additional workspace roots for this session. Each path must be absolute.
     ///
-    /// These expand the session's filesystem scope without changing `cwd`, which
+    /// These expand the session's workspace scope without changing `cwd`, which
     /// remains the base for relative paths. When omitted or empty, no
     /// additional roots are activated for the new session.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]

@@ -48,16 +48,16 @@ sequenceDiagram
     Client->>Agent: session/prompt (id=1, "Analyze file X")
     Agent-->>Client: session/update (agent started processing)
 
-    Note over Client,Agent: 2. Agent makes concurrent requests
-    Agent->>Client: terminal/create (id=2, "grep pattern file.txt")
-    Agent->>Client: session/request_permission (id=3, "read sensitive file")
+    Note over Client,Agent: 2. Agent makes concurrent permission requests
+    Agent->>Client: session/request_permission (id=2, "read sensitive file")
+    Agent->>Client: session/request_permission (id=3, "apply workspace changes")
 
     Note over Client,Agent: 3. Client cancels the prompt turn
     Client->>Agent: session/cancel (sessionId)
 
     Note over Client,Agent: 4. Agent cascades cancellation internally
-    Agent->>Client: $/cancel_request (id=2) [terminal request]
-  Agent->>Client: $/cancel_request (id=3) [permission request]
+    Agent->>Client: $/cancel_request (id=2) [permission request]
+    Agent->>Client: $/cancel_request (id=3) [permission request]
 
     Note over Client,Agent: 5. Client confirms individual cancellations
     Client->>Agent: response to id=2 (error -32800 "Cancelled")

@@ -31,18 +31,11 @@
   "clientMethods": {
     "elicitation_complete": "elicitation/complete",
     "elicitation_create": "elicitation/create",
-    "fs_read_text_file": "fs/read_text_file",
-    "fs_write_text_file": "fs/write_text_file",
     "mcp_connect": "mcp/connect",
     "mcp_disconnect": "mcp/disconnect",
     "mcp_message": "mcp/message",
     "session_request_permission": "session/request_permission",
-    "session_update": "session/update",
-    "terminal_create": "terminal/create",
-    "terminal_kill": "terminal/kill",
-    "terminal_output": "terminal/output",
-    "terminal_release": "terminal/release",
-    "terminal_wait_for_exit": "terminal/wait_for_exit"
+    "session_update": "session/update"
   },
   "protocolMethods": {
     "cancel_request": "$/cancel_request"

@@ -1412,498 +1412,6 @@ impl IntoV2 for crate::v1::SelectedPermissionOutcome {
     }
 }
 
-impl IntoV1 for super::WriteTextFileRequest {
-    type Output = crate::v1::WriteTextFileRequest;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self {
-            session_id,
-            path,
-            content,
-            meta,
-        } = self;
-        Ok(crate::v1::WriteTextFileRequest {
-            session_id: session_id.into_v1()?,
-            path: path.into_v1()?,
-            content: content.into_v1()?,
-            meta: meta.into_v1()?,
-        })
-    }
-}
-
-impl IntoV2 for crate::v1::WriteTextFileRequest {
-    type Output = super::WriteTextFileRequest;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        let Self {
-            session_id,
-            path,
-            content,
-            meta,
-        } = self;
-        Ok(super::WriteTextFileRequest {
-            session_id: session_id.into_v2()?,
-            path: path.into_v2()?,
-            content: content.into_v2()?,
-            meta: meta.into_v2()?,
-        })
-    }
-}
-
-impl IntoV1 for super::WriteTextFileResponse {
-    type Output = crate::v1::WriteTextFileResponse;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self { meta } = self;
-        Ok(crate::v1::WriteTextFileResponse {
-            meta: meta.into_v1()?,
-        })
-    }
-}
-
-impl IntoV2 for crate::v1::WriteTextFileResponse {
-    type Output = super::WriteTextFileResponse;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        let Self { meta } = self;
-        Ok(super::WriteTextFileResponse {
-            meta: meta.into_v2()?,
-        })
-    }
-}
-
-impl IntoV1 for super::ReadTextFileRequest {
-    type Output = crate::v1::ReadTextFileRequest;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self {
-            session_id,
-            path,
-            line,
-            limit,
-            meta,
-        } = self;
-        Ok(crate::v1::ReadTextFileRequest {
-            session_id: session_id.into_v1()?,
-            path: path.into_v1()?,
-            line: line.into_v1()?,
-            limit: limit.into_v1()?,
-            meta: meta.into_v1()?,
-        })
-    }
-}
-
-impl IntoV2 for crate::v1::ReadTextFileRequest {
-    type Output = super::ReadTextFileRequest;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        let Self {
-            session_id,
-            path,
-            line,
-            limit,
-            meta,
-        } = self;
-        Ok(super::ReadTextFileRequest {
-            session_id: session_id.into_v2()?,
-            path: path.into_v2()?,
-            line: line.into_v2()?,
-            limit: limit.into_v2()?,
-            meta: meta.into_v2()?,
-        })
-    }
-}
-
-impl IntoV1 for super::ReadTextFileResponse {
-    type Output = crate::v1::ReadTextFileResponse;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self { content, meta } = self;
-        Ok(crate::v1::ReadTextFileResponse {
-            content: content.into_v1()?,
-            meta: meta.into_v1()?,
-        })
-    }
-}
-
-impl IntoV2 for crate::v1::ReadTextFileResponse {
-    type Output = super::ReadTextFileResponse;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        let Self { content, meta } = self;
-        Ok(super::ReadTextFileResponse {
-            content: content.into_v2()?,
-            meta: meta.into_v2()?,
-        })
-    }
-}
-
-impl IntoV1 for super::TerminalId {
-    type Output = crate::v1::TerminalId;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        Ok(crate::v1::TerminalId(self.0.into_v1()?))
-    }
-}
-
-impl IntoV2 for crate::v1::TerminalId {
-    type Output = super::TerminalId;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        Ok(super::TerminalId(self.0.into_v2()?))
-    }
-}
-
-impl IntoV1 for super::CreateTerminalRequest {
-    type Output = crate::v1::CreateTerminalRequest;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self {
-            session_id,
-            command,
-            args,
-            env,
-            cwd,
-            output_byte_limit,
-            meta,
-        } = self;
-        Ok(crate::v1::CreateTerminalRequest {
-            session_id: session_id.into_v1()?,
-            command: command.into_v1()?,
-            args: args.into_v1()?,
-            env: env.into_v1()?,
-            cwd: cwd.into_v1()?,
-            output_byte_limit: output_byte_limit.into_v1()?,
-            meta: meta.into_v1()?,
-        })
-    }
-}
-
-impl IntoV2 for crate::v1::CreateTerminalRequest {
-    type Output = super::CreateTerminalRequest;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        let Self {
-            session_id,
-            command,
-            args,
-            env,
-            cwd,
-            output_byte_limit,
-            meta,
-        } = self;
-        Ok(super::CreateTerminalRequest {
-            session_id: session_id.into_v2()?,
-            command: command.into_v2()?,
-            args: args.into_v2()?,
-            env: env.into_v2()?,
-            cwd: cwd.into_v2()?,
-            output_byte_limit: output_byte_limit.into_v2()?,
-            meta: meta.into_v2()?,
-        })
-    }
-}
-
-impl IntoV1 for super::CreateTerminalResponse {
-    type Output = crate::v1::CreateTerminalResponse;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self { terminal_id, meta } = self;
-        Ok(crate::v1::CreateTerminalResponse {
-            terminal_id: terminal_id.into_v1()?,
-            meta: meta.into_v1()?,
-        })
-    }
-}
-
-impl IntoV2 for crate::v1::CreateTerminalResponse {
-    type Output = super::CreateTerminalResponse;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        let Self { terminal_id, meta } = self;
-        Ok(super::CreateTerminalResponse {
-            terminal_id: terminal_id.into_v2()?,
-            meta: meta.into_v2()?,
-        })
-    }
-}
-
-impl IntoV1 for super::TerminalOutputRequest {
-    type Output = crate::v1::TerminalOutputRequest;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self {
-            session_id,
-            terminal_id,
-            meta,
-        } = self;
-        Ok(crate::v1::TerminalOutputRequest {
-            session_id: session_id.into_v1()?,
-            terminal_id: terminal_id.into_v1()?,
-            meta: meta.into_v1()?,
-        })
-    }
-}
-
-impl IntoV2 for crate::v1::TerminalOutputRequest {
-    type Output = super::TerminalOutputRequest;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        let Self {
-            session_id,
-            terminal_id,
-            meta,
-        } = self;
-        Ok(super::TerminalOutputRequest {
-            session_id: session_id.into_v2()?,
-            terminal_id: terminal_id.into_v2()?,
-            meta: meta.into_v2()?,
-        })
-    }
-}
-
-impl IntoV1 for super::TerminalOutputResponse {
-    type Output = crate::v1::TerminalOutputResponse;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self {
-            output,
-            truncated,
-            exit_status,
-            meta,
-        } = self;
-        Ok(crate::v1::TerminalOutputResponse {
-            output: output.into_v1()?,
-            truncated: truncated.into_v1()?,
-            exit_status: exit_status.into_v1()?,
-            meta: meta.into_v1()?,
-        })
-    }
-}
-
-impl IntoV2 for crate::v1::TerminalOutputResponse {
-    type Output = super::TerminalOutputResponse;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        let Self {
-            output,
-            truncated,
-            exit_status,
-            meta,
-        } = self;
-        Ok(super::TerminalOutputResponse {
-            output: output.into_v2()?,
-            truncated: truncated.into_v2()?,
-            exit_status: exit_status.into_v2()?,
-            meta: meta.into_v2()?,
-        })
-    }
-}
-
-impl IntoV1 for super::ReleaseTerminalRequest {
-    type Output = crate::v1::ReleaseTerminalRequest;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self {
-            session_id,
-            terminal_id,
-            meta,
-        } = self;
-        Ok(crate::v1::ReleaseTerminalRequest {
-            session_id: session_id.into_v1()?,
-            terminal_id: terminal_id.into_v1()?,
-            meta: meta.into_v1()?,
-        })
-    }
-}
-
-impl IntoV2 for crate::v1::ReleaseTerminalRequest {
-    type Output = super::ReleaseTerminalRequest;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        let Self {
-            session_id,
-            terminal_id,
-            meta,
-        } = self;
-        Ok(super::ReleaseTerminalRequest {
-            session_id: session_id.into_v2()?,
-            terminal_id: terminal_id.into_v2()?,
-            meta: meta.into_v2()?,
-        })
-    }
-}
-
-impl IntoV1 for super::ReleaseTerminalResponse {
-    type Output = crate::v1::ReleaseTerminalResponse;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self { meta } = self;
-        Ok(crate::v1::ReleaseTerminalResponse {
-            meta: meta.into_v1()?,
-        })
-    }
-}
-
-impl IntoV2 for crate::v1::ReleaseTerminalResponse {
-    type Output = super::ReleaseTerminalResponse;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        let Self { meta } = self;
-        Ok(super::ReleaseTerminalResponse {
-            meta: meta.into_v2()?,
-        })
-    }
-}
-
-impl IntoV1 for super::KillTerminalRequest {
-    type Output = crate::v1::KillTerminalRequest;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self {
-            session_id,
-            terminal_id,
-            meta,
-        } = self;
-        Ok(crate::v1::KillTerminalRequest {
-            session_id: session_id.into_v1()?,
-            terminal_id: terminal_id.into_v1()?,
-            meta: meta.into_v1()?,
-        })
-    }
-}
-
-impl IntoV2 for crate::v1::KillTerminalRequest {
-    type Output = super::KillTerminalRequest;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        let Self {
-            session_id,
-            terminal_id,
-            meta,
-        } = self;
-        Ok(super::KillTerminalRequest {
-            session_id: session_id.into_v2()?,
-            terminal_id: terminal_id.into_v2()?,
-            meta: meta.into_v2()?,
-        })
-    }
-}
-
-impl IntoV1 for super::KillTerminalResponse {
-    type Output = crate::v1::KillTerminalResponse;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self { meta } = self;
-        Ok(crate::v1::KillTerminalResponse {
-            meta: meta.into_v1()?,
-        })
-    }
-}
-
-impl IntoV2 for crate::v1::KillTerminalResponse {
-    type Output = super::KillTerminalResponse;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        let Self { meta } = self;
-        Ok(super::KillTerminalResponse {
-            meta: meta.into_v2()?,
-        })
-    }
-}
-
-impl IntoV1 for super::WaitForTerminalExitRequest {
-    type Output = crate::v1::WaitForTerminalExitRequest;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self {
-            session_id,
-            terminal_id,
-            meta,
-        } = self;
-        Ok(crate::v1::WaitForTerminalExitRequest {
-            session_id: session_id.into_v1()?,
-            terminal_id: terminal_id.into_v1()?,
-            meta: meta.into_v1()?,
-        })
-    }
-}
-
-impl IntoV2 for crate::v1::WaitForTerminalExitRequest {
-    type Output = super::WaitForTerminalExitRequest;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        let Self {
-            session_id,
-            terminal_id,
-            meta,
-        } = self;
-        Ok(super::WaitForTerminalExitRequest {
-            session_id: session_id.into_v2()?,
-            terminal_id: terminal_id.into_v2()?,
-            meta: meta.into_v2()?,
-        })
-    }
-}
-
-impl IntoV1 for super::WaitForTerminalExitResponse {
-    type Output = crate::v1::WaitForTerminalExitResponse;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self { exit_status, meta } = self;
-        Ok(crate::v1::WaitForTerminalExitResponse {
-            exit_status: exit_status.into_v1()?,
-            meta: meta.into_v1()?,
-        })
-    }
-}
-
-impl IntoV2 for crate::v1::WaitForTerminalExitResponse {
-    type Output = super::WaitForTerminalExitResponse;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        let Self { exit_status, meta } = self;
-        Ok(super::WaitForTerminalExitResponse {
-            exit_status: exit_status.into_v2()?,
-            meta: meta.into_v2()?,
-        })
-    }
-}
-
-impl IntoV1 for super::TerminalExitStatus {
-    type Output = crate::v1::TerminalExitStatus;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self {
-            exit_code,
-            signal,
-            meta,
-        } = self;
-        Ok(crate::v1::TerminalExitStatus {
-            exit_code: exit_code.into_v1()?,
-            signal: signal.into_v1()?,
-            meta: meta.into_v1()?,
-        })
-    }
-}
-
-impl IntoV2 for crate::v1::TerminalExitStatus {
-    type Output = super::TerminalExitStatus;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        let Self {
-            exit_code,
-            signal,
-            meta,
-        } = self;
-        Ok(super::TerminalExitStatus {
-            exit_code: exit_code.into_v2()?,
-            signal: signal.into_v2()?,
-            meta: meta.into_v2()?,
-        })
-    }
-}
-
 #[cfg(feature = "unstable_mcp_over_acp")]
 impl IntoV1 for super::ConnectMcpRequest {
     type Output = crate::v1::ConnectMcpRequest;
@@ -2123,8 +1631,6 @@ impl IntoV1 for super::ClientCapabilities {
 
     fn into_v1(self) -> Result<Self::Output> {
         let Self {
-            fs,
-            terminal,
             #[cfg(feature = "unstable_plan_operations")]
             plan_capabilities,
             #[cfg(feature = "unstable_auth_methods")]
@@ -2138,8 +1644,8 @@ impl IntoV1 for super::ClientCapabilities {
             meta,
         } = self;
         Ok(crate::v1::ClientCapabilities {
-            fs: fs.into_v1()?,
-            terminal: terminal.into_v1()?,
+            fs: crate::v1::FileSystemCapabilities::default(),
+            terminal: false,
             #[cfg(feature = "unstable_plan_operations")]
             plan_capabilities: plan_capabilities.into_v1()?,
             #[cfg(feature = "unstable_auth_methods")]
@@ -2160,8 +1666,8 @@ impl IntoV2 for crate::v1::ClientCapabilities {
 
     fn into_v2(self) -> Result<Self::Output> {
         let Self {
-            fs,
-            terminal,
+            fs: _,
+            terminal: _,
             #[cfg(feature = "unstable_plan_operations")]
             plan_capabilities,
             #[cfg(feature = "unstable_auth_methods")]
@@ -2175,8 +1681,6 @@ impl IntoV2 for crate::v1::ClientCapabilities {
             meta,
         } = self;
         Ok(super::ClientCapabilities {
-            fs: fs.into_v2()?,
-            terminal: terminal.into_v2()?,
             #[cfg(feature = "unstable_plan_operations")]
             plan_capabilities: plan_capabilities.into_v2()?,
             #[cfg(feature = "unstable_auth_methods")]
@@ -2218,68 +1722,13 @@ impl IntoV2 for crate::v1::AuthCapabilities {
     }
 }
 
-impl IntoV1 for super::FileSystemCapabilities {
-    type Output = crate::v1::FileSystemCapabilities;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self {
-            read_text_file,
-            write_text_file,
-            meta,
-        } = self;
-        Ok(crate::v1::FileSystemCapabilities {
-            read_text_file: read_text_file.into_v1()?,
-            write_text_file: write_text_file.into_v1()?,
-            meta: meta.into_v1()?,
-        })
-    }
-}
-
-impl IntoV2 for crate::v1::FileSystemCapabilities {
-    type Output = super::FileSystemCapabilities;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        let Self {
-            read_text_file,
-            write_text_file,
-            meta,
-        } = self;
-        Ok(super::FileSystemCapabilities {
-            read_text_file: read_text_file.into_v2()?,
-            write_text_file: write_text_file.into_v2()?,
-            meta: meta.into_v2()?,
-        })
-    }
-}
-
 impl IntoV1 for super::AgentRequest {
     type Output = crate::v1::AgentRequest;
 
     fn into_v1(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::WriteTextFileRequest(value) => {
-                crate::v1::AgentRequest::WriteTextFileRequest(value.into_v1()?)
-            }
-            Self::ReadTextFileRequest(value) => {
-                crate::v1::AgentRequest::ReadTextFileRequest(value.into_v1()?)
-            }
             Self::RequestPermissionRequest(value) => {
                 crate::v1::AgentRequest::RequestPermissionRequest(value.into_v1()?)
-            }
-            Self::CreateTerminalRequest(value) => {
-                crate::v1::AgentRequest::CreateTerminalRequest(value.into_v1()?)
-            }
-            Self::TerminalOutputRequest(value) => {
-                crate::v1::AgentRequest::TerminalOutputRequest(value.into_v1()?)
-            }
-            Self::ReleaseTerminalRequest(value) => {
-                crate::v1::AgentRequest::ReleaseTerminalRequest(value.into_v1()?)
-            }
-            Self::WaitForTerminalExitRequest(value) => {
-                crate::v1::AgentRequest::WaitForTerminalExitRequest(value.into_v1()?)
-            }
-            Self::KillTerminalRequest(value) => {
-                crate::v1::AgentRequest::KillTerminalRequest(value.into_v1()?)
             }
             #[cfg(feature = "unstable_elicitation")]
             Self::CreateElicitationRequest(value) => {
@@ -2309,29 +1758,35 @@ impl IntoV2 for crate::v1::AgentRequest {
 
     fn into_v2(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::WriteTextFileRequest(value) => {
-                super::AgentRequest::WriteTextFileRequest(value.into_v2()?)
+            Self::WriteTextFileRequest(_) => {
+                return Err(removed_v1_enum_variant(
+                    "AgentRequest",
+                    "fs/write_text_file",
+                ));
             }
-            Self::ReadTextFileRequest(value) => {
-                super::AgentRequest::ReadTextFileRequest(value.into_v2()?)
+            Self::ReadTextFileRequest(_) => {
+                return Err(removed_v1_enum_variant("AgentRequest", "fs/read_text_file"));
             }
             Self::RequestPermissionRequest(value) => {
                 super::AgentRequest::RequestPermissionRequest(value.into_v2()?)
             }
-            Self::CreateTerminalRequest(value) => {
-                super::AgentRequest::CreateTerminalRequest(value.into_v2()?)
+            Self::CreateTerminalRequest(_) => {
+                return Err(removed_v1_enum_variant("AgentRequest", "terminal/create"));
             }
-            Self::TerminalOutputRequest(value) => {
-                super::AgentRequest::TerminalOutputRequest(value.into_v2()?)
+            Self::TerminalOutputRequest(_) => {
+                return Err(removed_v1_enum_variant("AgentRequest", "terminal/output"));
             }
-            Self::ReleaseTerminalRequest(value) => {
-                super::AgentRequest::ReleaseTerminalRequest(value.into_v2()?)
+            Self::ReleaseTerminalRequest(_) => {
+                return Err(removed_v1_enum_variant("AgentRequest", "terminal/release"));
             }
-            Self::WaitForTerminalExitRequest(value) => {
-                super::AgentRequest::WaitForTerminalExitRequest(value.into_v2()?)
+            Self::WaitForTerminalExitRequest(_) => {
+                return Err(removed_v1_enum_variant(
+                    "AgentRequest",
+                    "terminal/wait_for_exit",
+                ));
             }
-            Self::KillTerminalRequest(value) => {
-                super::AgentRequest::KillTerminalRequest(value.into_v2()?)
+            Self::KillTerminalRequest(_) => {
+                return Err(removed_v1_enum_variant("AgentRequest", "terminal/kill"));
             }
             #[cfg(feature = "unstable_elicitation")]
             Self::CreateElicitationRequest(value) => {
@@ -2361,29 +1816,8 @@ impl IntoV1 for super::ClientResponse {
 
     fn into_v1(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::WriteTextFileResponse(value) => {
-                crate::v1::ClientResponse::WriteTextFileResponse(value.into_v1()?)
-            }
-            Self::ReadTextFileResponse(value) => {
-                crate::v1::ClientResponse::ReadTextFileResponse(value.into_v1()?)
-            }
             Self::RequestPermissionResponse(value) => {
                 crate::v1::ClientResponse::RequestPermissionResponse(value.into_v1()?)
-            }
-            Self::CreateTerminalResponse(value) => {
-                crate::v1::ClientResponse::CreateTerminalResponse(value.into_v1()?)
-            }
-            Self::TerminalOutputResponse(value) => {
-                crate::v1::ClientResponse::TerminalOutputResponse(value.into_v1()?)
-            }
-            Self::ReleaseTerminalResponse(value) => {
-                crate::v1::ClientResponse::ReleaseTerminalResponse(value.into_v1()?)
-            }
-            Self::WaitForTerminalExitResponse(value) => {
-                crate::v1::ClientResponse::WaitForTerminalExitResponse(value.into_v1()?)
-            }
-            Self::KillTerminalResponse(value) => {
-                crate::v1::ClientResponse::KillTerminalResponse(value.into_v1()?)
             }
             #[cfg(feature = "unstable_elicitation")]
             Self::CreateElicitationResponse(value) => {
@@ -2413,29 +1847,41 @@ impl IntoV2 for crate::v1::ClientResponse {
 
     fn into_v2(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::WriteTextFileResponse(value) => {
-                super::ClientResponse::WriteTextFileResponse(value.into_v2()?)
+            Self::WriteTextFileResponse(_) => {
+                return Err(removed_v1_enum_variant(
+                    "ClientResponse",
+                    "fs/write_text_file",
+                ));
             }
-            Self::ReadTextFileResponse(value) => {
-                super::ClientResponse::ReadTextFileResponse(value.into_v2()?)
+            Self::ReadTextFileResponse(_) => {
+                return Err(removed_v1_enum_variant(
+                    "ClientResponse",
+                    "fs/read_text_file",
+                ));
             }
             Self::RequestPermissionResponse(value) => {
                 super::ClientResponse::RequestPermissionResponse(value.into_v2()?)
             }
-            Self::CreateTerminalResponse(value) => {
-                super::ClientResponse::CreateTerminalResponse(value.into_v2()?)
+            Self::CreateTerminalResponse(_) => {
+                return Err(removed_v1_enum_variant("ClientResponse", "terminal/create"));
             }
-            Self::TerminalOutputResponse(value) => {
-                super::ClientResponse::TerminalOutputResponse(value.into_v2()?)
+            Self::TerminalOutputResponse(_) => {
+                return Err(removed_v1_enum_variant("ClientResponse", "terminal/output"));
             }
-            Self::ReleaseTerminalResponse(value) => {
-                super::ClientResponse::ReleaseTerminalResponse(value.into_v2()?)
+            Self::ReleaseTerminalResponse(_) => {
+                return Err(removed_v1_enum_variant(
+                    "ClientResponse",
+                    "terminal/release",
+                ));
             }
-            Self::WaitForTerminalExitResponse(value) => {
-                super::ClientResponse::WaitForTerminalExitResponse(value.into_v2()?)
+            Self::WaitForTerminalExitResponse(_) => {
+                return Err(removed_v1_enum_variant(
+                    "ClientResponse",
+                    "terminal/wait_for_exit",
+                ));
             }
-            Self::KillTerminalResponse(value) => {
-                super::ClientResponse::KillTerminalResponse(value.into_v2()?)
+            Self::KillTerminalResponse(_) => {
+                return Err(removed_v1_enum_variant("ClientResponse", "terminal/kill"));
             }
             #[cfg(feature = "unstable_elicitation")]
             Self::CreateElicitationResponse(value) => {
@@ -2851,7 +2297,6 @@ impl IntoV1 for super::ToolCallContent {
         Ok(match self {
             Self::Content(value) => crate::v1::ToolCallContent::Content(value.into_v1()?),
             Self::Diff(value) => crate::v1::ToolCallContent::Diff(value.into_v1()?),
-            Self::Terminal(value) => crate::v1::ToolCallContent::Terminal(value.into_v1()?),
             Self::Other(value) => {
                 return Err(unknown_v2_enum_variant("ToolCallContent", &value.type_));
             }
@@ -2866,7 +2311,9 @@ impl IntoV2 for crate::v1::ToolCallContent {
         Ok(match self {
             Self::Content(value) => super::ToolCallContent::Content(value.into_v2()?),
             Self::Diff(value) => super::ToolCallContent::Diff(value.into_v2()?),
-            Self::Terminal(value) => super::ToolCallContent::Terminal(value.into_v2()?),
+            Self::Terminal(_) => {
+                return Err(removed_v1_enum_variant("ToolCallContent", "terminal"));
+            }
         })
     }
 }
@@ -2890,30 +2337,6 @@ impl IntoV2 for crate::v1::Content {
         let Self { content, meta } = self;
         Ok(super::Content {
             content: content.into_v2()?,
-            meta: meta.into_v2()?,
-        })
-    }
-}
-
-impl IntoV1 for super::Terminal {
-    type Output = crate::v1::Terminal;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self { terminal_id, meta } = self;
-        Ok(crate::v1::Terminal {
-            terminal_id: terminal_id.into_v1()?,
-            meta: meta.into_v1()?,
-        })
-    }
-}
-
-impl IntoV2 for crate::v1::Terminal {
-    type Output = super::Terminal;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        let Self { terminal_id, meta } = self;
-        Ok(super::Terminal {
-            terminal_id: terminal_id.into_v2()?,
             meta: meta.into_v2()?,
         })
     }
@@ -9199,12 +8622,7 @@ mod tests {
 
     #[test]
     fn round_trips_initialize_request() {
-        let client_capabilities =
-            v1::ClientCapabilities::new()
-                .terminal(true)
-                .fs(v1::FileSystemCapabilities::new()
-                    .read_text_file(true)
-                    .write_text_file(true));
+        let client_capabilities = v1::ClientCapabilities::new();
 
         #[cfg(feature = "unstable_plan_operations")]
         let client_capabilities =
@@ -9215,7 +8633,12 @@ mod tests {
             .client_info(v1::Implementation::new("test-client", "1.0.0").title("Test Client"));
 
         assert_v1_round_trip::<v1::InitializeRequest, v2::InitializeRequest>(request.clone());
-        assert_json_eq_after_v1_to_v2::<v1::InitializeRequest, v2::InitializeRequest>(request);
+        let converted: v2::InitializeRequest =
+            v1_to_v2(request).expect("v1 -> v2 conversion failed");
+        let converted_capabilities =
+            serde_json::to_value(converted.client_capabilities).expect("v2 serialize");
+        assert_eq!(converted_capabilities.get("fs"), None);
+        assert_eq!(converted_capabilities.get("terminal"), None);
     }
 
     #[test]
@@ -9224,6 +8647,118 @@ mod tests {
             .agent_info(v1::Implementation::new("test-agent", "2.0.0").title("Test Agent"));
         assert_v1_round_trip::<v1::InitializeResponse, v2::InitializeResponse>(response.clone());
         assert_json_eq_after_v1_to_v2::<v1::InitializeResponse, v2::InitializeResponse>(response);
+    }
+
+    #[test]
+    fn v1_client_fs_and_terminal_capabilities_are_removed_in_v2() {
+        let v1_capabilities =
+            v1::ClientCapabilities::new()
+                .terminal(true)
+                .fs(v1::FileSystemCapabilities::new()
+                    .read_text_file(true)
+                    .write_text_file(true));
+
+        let v2_capabilities: v2::ClientCapabilities =
+            v1_to_v2(v1_capabilities).expect("v1 -> v2 conversion");
+        let v2_json = serde_json::to_value(&v2_capabilities).expect("v2 serialize");
+        assert_eq!(
+            v2_json.get("fs"),
+            None,
+            "v2 ClientCapabilities must not include filesystem capabilities"
+        );
+        assert_eq!(
+            v2_json.get("terminal"),
+            None,
+            "v2 ClientCapabilities must not include terminal capabilities"
+        );
+
+        let v1_after: v1::ClientCapabilities =
+            v2_to_v1(v2_capabilities).expect("v2 -> v1 conversion");
+        assert!(!v1_after.fs.read_text_file);
+        assert!(!v1_after.fs.write_text_file);
+        assert!(!v1_after.terminal);
+    }
+
+    #[test]
+    fn v1_client_fs_and_terminal_methods_do_not_convert_to_v2() {
+        assert_v1_to_v2_error(
+            v1::AgentRequest::WriteTextFileRequest(v1::WriteTextFileRequest::new(
+                "sess",
+                "/workspace/file.txt",
+                "contents",
+            )),
+            "v1 AgentRequest variant `fs/write_text_file` cannot be represented in v2",
+        );
+        assert_v1_to_v2_error(
+            v1::AgentRequest::ReadTextFileRequest(v1::ReadTextFileRequest::new(
+                "sess",
+                "/workspace/file.txt",
+            )),
+            "v1 AgentRequest variant `fs/read_text_file` cannot be represented in v2",
+        );
+        assert_v1_to_v2_error(
+            v1::AgentRequest::CreateTerminalRequest(v1::CreateTerminalRequest::new("sess", "echo")),
+            "v1 AgentRequest variant `terminal/create` cannot be represented in v2",
+        );
+        assert_v1_to_v2_error(
+            v1::AgentRequest::TerminalOutputRequest(v1::TerminalOutputRequest::new("sess", "term")),
+            "v1 AgentRequest variant `terminal/output` cannot be represented in v2",
+        );
+        assert_v1_to_v2_error(
+            v1::AgentRequest::ReleaseTerminalRequest(v1::ReleaseTerminalRequest::new(
+                "sess", "term",
+            )),
+            "v1 AgentRequest variant `terminal/release` cannot be represented in v2",
+        );
+        assert_v1_to_v2_error(
+            v1::AgentRequest::WaitForTerminalExitRequest(v1::WaitForTerminalExitRequest::new(
+                "sess", "term",
+            )),
+            "v1 AgentRequest variant `terminal/wait_for_exit` cannot be represented in v2",
+        );
+        assert_v1_to_v2_error(
+            v1::AgentRequest::KillTerminalRequest(v1::KillTerminalRequest::new("sess", "term")),
+            "v1 AgentRequest variant `terminal/kill` cannot be represented in v2",
+        );
+
+        assert_v1_to_v2_error(
+            v1::ClientResponse::WriteTextFileResponse(v1::WriteTextFileResponse::new()),
+            "v1 ClientResponse variant `fs/write_text_file` cannot be represented in v2",
+        );
+        assert_v1_to_v2_error(
+            v1::ClientResponse::ReadTextFileResponse(v1::ReadTextFileResponse::new("contents")),
+            "v1 ClientResponse variant `fs/read_text_file` cannot be represented in v2",
+        );
+        assert_v1_to_v2_error(
+            v1::ClientResponse::CreateTerminalResponse(v1::CreateTerminalResponse::new("term")),
+            "v1 ClientResponse variant `terminal/create` cannot be represented in v2",
+        );
+        assert_v1_to_v2_error(
+            v1::ClientResponse::TerminalOutputResponse(v1::TerminalOutputResponse::new("", false)),
+            "v1 ClientResponse variant `terminal/output` cannot be represented in v2",
+        );
+        assert_v1_to_v2_error(
+            v1::ClientResponse::ReleaseTerminalResponse(v1::ReleaseTerminalResponse::new()),
+            "v1 ClientResponse variant `terminal/release` cannot be represented in v2",
+        );
+        assert_v1_to_v2_error(
+            v1::ClientResponse::WaitForTerminalExitResponse(v1::WaitForTerminalExitResponse::new(
+                v1::TerminalExitStatus::new(),
+            )),
+            "v1 ClientResponse variant `terminal/wait_for_exit` cannot be represented in v2",
+        );
+        assert_v1_to_v2_error(
+            v1::ClientResponse::KillTerminalResponse(v1::KillTerminalResponse::new()),
+            "v1 ClientResponse variant `terminal/kill` cannot be represented in v2",
+        );
+    }
+
+    #[test]
+    fn v1_terminal_tool_call_content_does_not_convert_to_v2() {
+        assert_v1_to_v2_error(
+            v1::ToolCallContent::Terminal(v1::Terminal::new("term")),
+            "v1 ToolCallContent variant `terminal` cannot be represented in v2",
+        );
     }
 
     #[test]

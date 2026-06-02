@@ -217,74 +217,11 @@
                 {
                   "allOf": [
                     {
-                      "$ref": "#/$defs/WriteTextFileRequest"
-                    }
-                  ],
-                  "description": "Writes content to a text file in the client's file system.\n\nOnly available if the client advertises the `fs.writeTextFile` capability.\nAllows the agent to create or modify files within the client's environment.\n\nSee protocol docs: [Client](https://agentclientprotocol.com/protocol/overview#client)",
-                  "title": "WriteTextFileRequest"
-                },
-                {
-                  "allOf": [
-                    {
-                      "$ref": "#/$defs/ReadTextFileRequest"
-                    }
-                  ],
-                  "description": "Reads content from a text file in the client's file system.\n\nOnly available if the client advertises the `fs.readTextFile` capability.\nAllows the agent to access file contents within the client's environment.\n\nSee protocol docs: [Client](https://agentclientprotocol.com/protocol/overview#client)",
-                  "title": "ReadTextFileRequest"
-                },
-                {
-                  "allOf": [
-                    {
                       "$ref": "#/$defs/RequestPermissionRequest"
                     }
                   ],
                   "description": "Requests permission from the user for a tool call operation.\n\nCalled by the agent when it needs user authorization before executing\na potentially sensitive operation. The client should present the options\nto the user and return their decision.\n\nIf the client cancels the prompt turn via `session/cancel`, it MUST\nrespond to this request with `RequestPermissionOutcome::Cancelled`.\n\nSee protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/tool-calls#requesting-permission)",
                   "title": "RequestPermissionRequest"
-                },
-                {
-                  "allOf": [
-                    {
-                      "$ref": "#/$defs/CreateTerminalRequest"
-                    }
-                  ],
-                  "description": "Executes a command in a new terminal\n\nOnly available if the `terminal` Client capability is set to `true`.\n\nReturns a `TerminalId` that can be used with other terminal methods\nto get the current output, wait for exit, and kill the command.\n\nThe `TerminalId` can also be used to embed the terminal in a tool call\nby using the `ToolCallContent::Terminal` variant.\n\nThe Agent is responsible for releasing the terminal by using the `terminal/release`\nmethod.\n\nSee protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)",
-                  "title": "CreateTerminalRequest"
-                },
-                {
-                  "allOf": [
-                    {
-                      "$ref": "#/$defs/TerminalOutputRequest"
-                    }
-                  ],
-                  "description": "Gets the terminal output and exit status\n\nReturns the current content in the terminal without waiting for the command to exit.\nIf the command has already exited, the exit status is included.\n\nSee protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)",
-                  "title": "TerminalOutputRequest"
-                },
-                {
-                  "allOf": [
-                    {
-                      "$ref": "#/$defs/ReleaseTerminalRequest"
-                    }
-                  ],
-                  "description": "Releases a terminal\n\nThe command is killed if it hasn't exited yet. Use `terminal/wait_for_exit`\nto wait for the command to exit before releasing the terminal.\n\nAfter release, the `TerminalId` can no longer be used with other `terminal/*` methods,\nbut tool calls that already contain it, continue to display its output.\n\nThe `terminal/kill` method can be used to terminate the command without releasing\nthe terminal, allowing the Agent to call `terminal/output` and other methods.\n\nSee protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)",
-                  "title": "ReleaseTerminalRequest"
-                },
-                {
-                  "allOf": [
-                    {
-                      "$ref": "#/$defs/WaitForTerminalExitRequest"
-                    }
-                  ],
-                  "description": "Waits for the terminal command to exit and return its exit status\n\nSee protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)",
-                  "title": "WaitForTerminalExitRequest"
-                },
-                {
-                  "allOf": [
-                    {
-                      "$ref": "#/$defs/KillTerminalRequest"
-                    }
-                  ],
-                  "description": "Kills the terminal command without releasing the terminal\n\nWhile `terminal/release` will also kill the command, this method will keep\nthe `TerminalId` valid so it can be used with other methods.\n\nThis method can be helpful when implementing command timeouts which terminate\nthe command as soon as elapsed, and then get the final output so it can be sent\nto the model.\n\nNote: Call `terminal/release` when `TerminalId` is no longer needed.\n\nSee protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)",
-                  "title": "KillTerminalRequest"
                 },
                 {
                   "allOf": [
@@ -1081,18 +1018,6 @@
           "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nElicitation capabilities supported by the client.\nDetermines which elicitation modes the agent may use.",
           "x-deserialize-default-on-error": true
         },
-        "fs": {
-          "allOf": [
-            {
-              "$ref": "#/$defs/FileSystemCapabilities"
-            }
-          ],
-          "default": {
-            "readTextFile": false,
-            "writeTextFile": false
-          },
-          "description": "File system capabilities supported by the client.\nDetermines which file operations the agent can request."
-        },
         "nes": {
           "anyOf": [
             {
@@ -1125,11 +1050,6 @@
           "type": "array",
           "x-deserialize-default-on-error": true,
           "x-deserialize-skip-invalid-items": true
-        },
-        "terminal": {
-          "default": false,
-          "description": "Whether the Client support all `terminal/*` methods.",
-          "type": "boolean"
         }
       },
       "type": "object"
@@ -1510,66 +1430,10 @@
                 {
                   "allOf": [
                     {
-                      "$ref": "#/$defs/WriteTextFileResponse"
-                    }
-                  ],
-                  "title": "WriteTextFileResponse"
-                },
-                {
-                  "allOf": [
-                    {
-                      "$ref": "#/$defs/ReadTextFileResponse"
-                    }
-                  ],
-                  "title": "ReadTextFileResponse"
-                },
-                {
-                  "allOf": [
-                    {
                       "$ref": "#/$defs/RequestPermissionResponse"
                     }
                   ],
                   "title": "RequestPermissionResponse"
-                },
-                {
-                  "allOf": [
-                    {
-                      "$ref": "#/$defs/CreateTerminalResponse"
-                    }
-                  ],
-                  "title": "CreateTerminalResponse"
-                },
-                {
-                  "allOf": [
-                    {
-                      "$ref": "#/$defs/TerminalOutputResponse"
-                    }
-                  ],
-                  "title": "TerminalOutputResponse"
-                },
-                {
-                  "allOf": [
-                    {
-                      "$ref": "#/$defs/ReleaseTerminalResponse"
-                    }
-                  ],
-                  "title": "ReleaseTerminalResponse"
-                },
-                {
-                  "allOf": [
-                    {
-                      "$ref": "#/$defs/WaitForTerminalExitResponse"
-                    }
-                  ],
-                  "title": "WaitForTerminalExitResponse"
-                },
-                {
-                  "allOf": [
-                    {
-                      "$ref": "#/$defs/KillTerminalResponse"
-                    }
-                  ],
-                  "title": "KillTerminalResponse"
                 },
                 {
                   "allOf": [
@@ -2116,74 +1980,6 @@
       },
       "type": "object",
       "x-method": "elicitation/create",
-      "x-side": "client"
-    },
-    "CreateTerminalRequest": {
-      "description": "Request to create a new terminal and execute a command.",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"]
-        },
-        "args": {
-          "description": "Array of command arguments.",
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "command": {
-          "description": "The command to execute.",
-          "type": "string"
-        },
-        "cwd": {
-          "description": "Working directory for the command (absolute path).",
-          "type": ["string", "null"]
-        },
-        "env": {
-          "description": "Environment variables for the command.",
-          "items": {
-            "$ref": "#/$defs/EnvVariable"
-          },
-          "type": "array"
-        },
-        "outputByteLimit": {
-          "description": "Maximum number of output bytes to retain.\n\nWhen the limit is exceeded, the Client truncates from the beginning of the output\nto stay within the limit.\n\nThe Client MUST ensure truncation happens at a character boundary to maintain valid\nstring output, even if this means the retained output is slightly less than the\nspecified limit.",
-          "format": "uint64",
-          "minimum": 0,
-          "type": ["integer", "null"]
-        },
-        "sessionId": {
-          "allOf": [
-            {
-              "$ref": "#/$defs/SessionId"
-            }
-          ],
-          "description": "The session ID for this request."
-        }
-      },
-      "required": ["sessionId", "command"],
-      "type": "object",
-      "x-method": "terminal/create",
-      "x-side": "client"
-    },
-    "CreateTerminalResponse": {
-      "description": "Response containing the ID of the created terminal.",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"]
-        },
-        "terminalId": {
-          "description": "The unique identifier for the created terminal.",
-          "type": "string"
-        }
-      },
-      "required": ["terminalId"],
-      "type": "object",
-      "x-method": "terminal/create",
       "x-side": "client"
     },
     "DeleteSessionRequest": {
@@ -3039,27 +2835,6 @@
     "ExtResponse": {
       "description": "Allows for sending an arbitrary response to an [`ExtRequest`] that is not part of the ACP spec.\nExtension methods provide a way to add custom functionality while maintaining\nprotocol compatibility.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)"
     },
-    "FileSystemCapabilities": {
-      "description": "File system capabilities that a client may support.\n\nSee protocol docs: [FileSystem](https://agentclientprotocol.com/protocol/initialization#filesystem)",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"]
-        },
-        "readTextFile": {
-          "default": false,
-          "description": "Whether the Client supports `fs/read_text_file` requests.",
-          "type": "boolean"
-        },
-        "writeTextFile": {
-          "default": false,
-          "description": "Whether the Client supports `fs/write_text_file` requests.",
-          "type": "boolean"
-        }
-      },
-      "type": "object"
-    },
     "ForkSessionRequest": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for forking an existing session.\n\nCreates a new session based on the context of an existing one, allowing\noperations like generating summaries without affecting the original session's history.\n\nOnly available if the Agent supports the `session.fork` capability.",
       "properties": {
@@ -3224,12 +2999,7 @@
           "default": {
             "auth": {
               "terminal": false
-            },
-            "fs": {
-              "readTextFile": false,
-              "writeTextFile": false
-            },
-            "terminal": false
+            }
           },
           "description": "Capabilities supported by the client."
         },
@@ -3354,45 +3124,6 @@
         }
       },
       "type": "object"
-    },
-    "KillTerminalRequest": {
-      "description": "Request to kill a terminal without releasing it.",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"]
-        },
-        "sessionId": {
-          "allOf": [
-            {
-              "$ref": "#/$defs/SessionId"
-            }
-          ],
-          "description": "The session ID for this request."
-        },
-        "terminalId": {
-          "description": "The ID of the terminal to kill.",
-          "type": "string"
-        }
-      },
-      "required": ["sessionId", "terminalId"],
-      "type": "object",
-      "x-method": "terminal/kill",
-      "x-side": "client"
-    },
-    "KillTerminalResponse": {
-      "description": "Response to `terminal/kill` method",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"]
-        }
-      },
-      "type": "object",
-      "x-method": "terminal/kill",
-      "x-side": "client"
     },
     "ListProvidersRequest": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for `providers/list`.",
@@ -4951,7 +4682,7 @@
           "type": ["object", "null"]
         },
         "additionalDirectories": {
-          "description": "Additional workspace roots for this session. Each path must be absolute.\n\nThese expand the session's filesystem scope without changing `cwd`, which\nremains the base for relative paths. When omitted or empty, no\nadditional roots are activated for the new session.",
+          "description": "Additional workspace roots for this session. Each path must be absolute.\n\nThese expand the session's workspace scope without changing `cwd`, which\nremains the base for relative paths. When omitted or empty, no\nadditional roots are activated for the new session.",
           "items": {
             "type": "string"
           },
@@ -5666,61 +5397,6 @@
       "required": ["start", "end"],
       "type": "object"
     },
-    "ReadTextFileRequest": {
-      "description": "Request to read content from a text file.\n\nOnly available if the client supports the `fs.readTextFile` capability.",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"]
-        },
-        "limit": {
-          "description": "Maximum number of lines to read.",
-          "format": "uint32",
-          "minimum": 0,
-          "type": ["integer", "null"]
-        },
-        "line": {
-          "description": "Line number to start reading from (1-based).",
-          "format": "uint32",
-          "minimum": 0,
-          "type": ["integer", "null"]
-        },
-        "path": {
-          "description": "Absolute path to the file to read.",
-          "type": "string"
-        },
-        "sessionId": {
-          "allOf": [
-            {
-              "$ref": "#/$defs/SessionId"
-            }
-          ],
-          "description": "The session ID for this request."
-        }
-      },
-      "required": ["sessionId", "path"],
-      "type": "object",
-      "x-method": "fs/read_text_file",
-      "x-side": "client"
-    },
-    "ReadTextFileResponse": {
-      "description": "Response containing the contents of a text file.",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"]
-        },
-        "content": {
-          "type": "string"
-        }
-      },
-      "required": ["content"],
-      "type": "object",
-      "x-method": "fs/read_text_file",
-      "x-side": "client"
-    },
     "RejectNesNotification": {
       "description": "Notification sent when a suggestion is rejected.",
       "properties": {
@@ -5758,45 +5434,6 @@
       "type": "object",
       "x-method": "nes/reject",
       "x-side": "agent"
-    },
-    "ReleaseTerminalRequest": {
-      "description": "Request to release a terminal and free its resources.",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"]
-        },
-        "sessionId": {
-          "allOf": [
-            {
-              "$ref": "#/$defs/SessionId"
-            }
-          ],
-          "description": "The session ID for this request."
-        },
-        "terminalId": {
-          "description": "The ID of the terminal to release.",
-          "type": "string"
-        }
-      },
-      "required": ["sessionId", "terminalId"],
-      "type": "object",
-      "x-method": "terminal/release",
-      "x-side": "client"
-    },
-    "ReleaseTerminalResponse": {
-      "description": "Response to terminal/release method",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"]
-        }
-      },
-      "type": "object",
-      "x-method": "terminal/release",
-      "x-side": "client"
     },
     "RequestId": {
       "anyOf": [
@@ -7307,101 +6944,6 @@
       "x-method": "nes/suggest",
       "x-side": "agent"
     },
-    "Terminal": {
-      "description": "Embed a terminal created with `terminal/create` by its id.\n\nThe terminal must be added before calling `terminal/release`.\n\nSee protocol docs: [Terminal](https://agentclientprotocol.com/protocol/terminals)",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"]
-        },
-        "terminalId": {
-          "type": "string"
-        }
-      },
-      "required": ["terminalId"],
-      "type": "object"
-    },
-    "TerminalExitStatus": {
-      "description": "Exit status of a terminal command.",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"]
-        },
-        "exitCode": {
-          "description": "The process exit code (may be null if terminated by signal).",
-          "format": "uint32",
-          "minimum": 0,
-          "type": ["integer", "null"]
-        },
-        "signal": {
-          "description": "The signal that terminated the process (may be null if exited normally).",
-          "type": ["string", "null"]
-        }
-      },
-      "type": "object"
-    },
-    "TerminalOutputRequest": {
-      "description": "Request to get the current output and status of a terminal.",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"]
-        },
-        "sessionId": {
-          "allOf": [
-            {
-              "$ref": "#/$defs/SessionId"
-            }
-          ],
-          "description": "The session ID for this request."
-        },
-        "terminalId": {
-          "description": "The ID of the terminal to get output from.",
-          "type": "string"
-        }
-      },
-      "required": ["sessionId", "terminalId"],
-      "type": "object",
-      "x-method": "terminal/output",
-      "x-side": "client"
-    },
-    "TerminalOutputResponse": {
-      "description": "Response containing the terminal output and exit status.",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"]
-        },
-        "exitStatus": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/TerminalExitStatus"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "Exit status if the command has completed."
-        },
-        "output": {
-          "description": "The terminal output captured so far.",
-          "type": "string"
-        },
-        "truncated": {
-          "description": "Whether the output was truncated due to byte limits.",
-          "type": "boolean"
-        }
-      },
-      "required": ["output", "truncated"],
-      "type": "object",
-      "x-method": "terminal/output",
-      "x-side": "client"
-    },
     "TextContent": {
       "description": "Text provided to or from an LLM.",
       "properties": {
@@ -7599,22 +7141,6 @@
           "type": "object"
         },
         {
-          "allOf": [
-            {
-              "$ref": "#/$defs/Terminal"
-            }
-          ],
-          "description": "Embed a terminal created with `terminal/create` by its id.\n\nThe terminal must be added before calling `terminal/release`.\n\nSee protocol docs: [Terminal](https://agentclientprotocol.com/protocol/terminals)",
-          "properties": {
-            "type": {
-              "const": "terminal",
-              "type": "string"
-            }
-          },
-          "required": ["type"],
-          "type": "object"
-        },
-        {
           "additionalProperties": true,
           "description": "Custom or future tool call content.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nReceivers that do not understand this content type should preserve the\nraw payload when storing, replaying, proxying, or forwarding tool call\noutput, and otherwise ignore it or display it generically.",
           "not": {
@@ -7633,16 +7159,6 @@
                 "properties": {
                   "type": {
                     "const": "diff",
-                    "type": "string"
-                  }
-                },
-                "required": ["type"],
-                "type": "object"
-              },
-              {
-                "properties": {
-                  "type": {
-                    "const": "terminal",
                     "type": "string"
                   }
                 },
@@ -7976,55 +7492,6 @@
       "required": ["used", "size"],
       "type": "object"
     },
-    "WaitForTerminalExitRequest": {
-      "description": "Request to wait for a terminal command to exit.",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"]
-        },
-        "sessionId": {
-          "allOf": [
-            {
-              "$ref": "#/$defs/SessionId"
-            }
-          ],
-          "description": "The session ID for this request."
-        },
-        "terminalId": {
-          "description": "The ID of the terminal to wait for.",
-          "type": "string"
-        }
-      },
-      "required": ["sessionId", "terminalId"],
-      "type": "object",
-      "x-method": "terminal/wait_for_exit",
-      "x-side": "client"
-    },
-    "WaitForTerminalExitResponse": {
-      "description": "Response containing the exit status of a terminal command.",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"]
-        },
-        "exitCode": {
-          "description": "The process exit code (may be null if terminated by signal).",
-          "format": "uint32",
-          "minimum": 0,
-          "type": ["integer", "null"]
-        },
-        "signal": {
-          "description": "The signal that terminated the process (may be null if exited normally).",
-          "type": ["string", "null"]
-        }
-      },
-      "type": "object",
-      "x-method": "terminal/wait_for_exit",
-      "x-side": "client"
-    },
     "WorkspaceFolder": {
       "description": "A workspace folder.",
       "properties": {
@@ -8039,49 +7506,6 @@
       },
       "required": ["uri", "name"],
       "type": "object"
-    },
-    "WriteTextFileRequest": {
-      "description": "Request to write content to a text file.\n\nOnly available if the client supports the `fs.writeTextFile` capability.",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"]
-        },
-        "content": {
-          "description": "The text content to write to the file.",
-          "type": "string"
-        },
-        "path": {
-          "description": "Absolute path to the file to write.",
-          "type": "string"
-        },
-        "sessionId": {
-          "allOf": [
-            {
-              "$ref": "#/$defs/SessionId"
-            }
-          ],
-          "description": "The session ID for this request."
-        }
-      },
-      "required": ["sessionId", "path", "content"],
-      "type": "object",
-      "x-method": "fs/write_text_file",
-      "x-side": "client"
-    },
-    "WriteTextFileResponse": {
-      "description": "Response to `fs/write_text_file`",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"]
-        }
-      },
-      "type": "object",
-      "x-method": "fs/write_text_file",
-      "x-side": "client"
     }
   },
   "$schema": "https://json-schema.org/draft/2020-12/schema",

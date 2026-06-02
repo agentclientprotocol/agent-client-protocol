@@ -1425,6 +1425,7 @@ starting with '$/' it is free to ignore the notification."
         }
     }
 
+    #[expect(clippy::too_many_lines)]
     fn extract_side_docs() -> SideDocs {
         let output = Command::new("cargo")
             .args([
@@ -1458,6 +1459,7 @@ starting with '$/' it is free to ignore the notification."
         if let Some(index) = doc["index"].as_object() {
             for (_, item) in index {
                 if item["name"].as_str() == Some("ClientRequest")
+                    && is_current_protocol_item(item)
                     && let Some(variants) = item["inner"]["enum"]["variants"].as_array()
                 {
                     for variant_id in variants {
@@ -1473,6 +1475,7 @@ starting with '$/' it is free to ignore the notification."
                 }
 
                 if item["name"].as_str() == Some("ClientNotification")
+                    && is_current_protocol_item(item)
                     && let Some(variants) = item["inner"]["enum"]["variants"].as_array()
                 {
                     for variant_id in variants {
@@ -1488,6 +1491,7 @@ starting with '$/' it is free to ignore the notification."
                 }
 
                 if item["name"].as_str() == Some("AgentRequest")
+                    && is_current_protocol_item(item)
                     && let Some(variants) = item["inner"]["enum"]["variants"].as_array()
                 {
                     for variant_id in variants {
@@ -1503,6 +1507,7 @@ starting with '$/' it is free to ignore the notification."
                 }
 
                 if item["name"].as_str() == Some("AgentNotification")
+                    && is_current_protocol_item(item)
                     && let Some(variants) = item["inner"]["enum"]["variants"].as_array()
                 {
                     for variant_id in variants {
@@ -1518,6 +1523,7 @@ starting with '$/' it is free to ignore the notification."
                 }
 
                 if item["name"].as_str() == Some("ProtocolLevelNotification")
+                    && is_current_protocol_item(item)
                     && let Some(variants) = item["inner"]["enum"]["variants"].as_array()
                 {
                     for variant_id in variants {
@@ -1535,6 +1541,18 @@ starting with '$/' it is free to ignore the notification."
         }
 
         side_docs
+    }
+
+    fn is_current_protocol_item(item: &Value) -> bool {
+        let Some(filename) = item["span"]["filename"].as_str() else {
+            return false;
+        };
+
+        if cfg!(feature = "unstable_protocol_v2") {
+            filename.starts_with("src/v2/")
+        } else {
+            filename.starts_with("src/v1/")
+        }
     }
 
     #[cfg(test)]

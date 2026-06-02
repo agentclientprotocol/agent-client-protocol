@@ -124,8 +124,6 @@
                   "protocol/v2/prompt-turn",
                   "protocol/v2/content",
                   "protocol/v2/tool-calls",
-                  "protocol/v2/file-system",
-                  "protocol/v2/terminals",
                   "protocol/v2/agent-plan",
                   "protocol/v2/session-config-options",
                   "protocol/v2/slash-commands",
@@ -145,9 +143,7 @@
                       "protocol/v2/draft/prompt-turn",
                       "protocol/v2/draft/content",
                       "protocol/v2/draft/tool-calls",
-                      "protocol/v2/draft/file-system",
                       "protocol/v2/draft/cancellation",
-                      "protocol/v2/draft/terminals",
                       "protocol/v2/draft/agent-plan",
                       "protocol/v2/draft/session-config-options",
                       "protocol/v2/draft/slash-commands",
@@ -203,6 +199,7 @@
                 "pages": [
                   "rfds/v2/prompt",
                   "rfds/v2/enum-variant-extension",
+                  "rfds/v2/client-filesystem-terminal-capabilities",
                   "rfds/message-id",
                   "rfds/streamable-http-websocket-transport"
                 ]

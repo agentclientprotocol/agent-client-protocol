@@ -7,7 +7,9 @@ Tool calls represent actions that language models request Agents to perform duri
 
 Agents report tool calls through [`session/update`](/protocol/v2/prompt-turn#3-agent-reports-output) notifications, allowing Clients to display real-time progress and results to users.
 
-While Agents handle the actual execution, they may leverage Client capabilities like [permission requests](#requesting-permission) or [file system access](/protocol/v2/file-system) to provide a richer, more integrated experience.
+While Agents handle the actual execution, they may use Client-mediated
+interactions like [permission requests](#requesting-permission) to provide a
+richer, more integrated experience.
 
 ## Creating
 
@@ -276,27 +278,6 @@ File modifications shown as diffs:
 <ParamField path="newText" type="string" required>
   The new content after modification
 </ParamField>
-
-### Terminals
-
-Live terminal output from command execution:
-
-```json
-{
-  "type": "terminal",
-  "terminalId": "term_xyz789"
-}
-```
-
-<ParamField path="terminalId" type="string" required>
-  The ID of a terminal created with `terminal/create`
-</ParamField>
-
-When a terminal is embedded in a tool call, the Client displays live output as it's generated and continues to display it even after the terminal is released.
-
-<Card icon="terminal" horizontal href="/protocol/v2/terminals">
-  Learn more about Terminals
-</Card>
 
 ## Following the Agent
 

@@ -11,7 +11,7 @@ use schemars::{JsonSchema, Schema};
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
-use super::{ContentBlock, Error, Meta, TerminalId};
+use super::{ContentBlock, Error, Meta};
 use crate::{IntoOption, SkipListener};
 
 /// Represents a tool call that the language model has requested.
@@ -483,12 +483,6 @@ pub enum ToolCallContent {
     Content(Content),
     /// File modification shown as a diff.
     Diff(Diff),
-    /// Embed a terminal created with `terminal/create` by its id.
-    ///
-    /// The terminal must be added before calling `terminal/release`.
-    ///
-    /// See protocol docs: [Terminal](https://agentclientprotocol.com/protocol/terminals)
-    Terminal(Terminal),
     /// Custom or future tool call content.
     ///
     /// Values beginning with `_` are reserved for implementation-specific
@@ -556,15 +550,11 @@ impl<'de> Deserialize<'de> for OtherToolCallContent {
 }
 
 fn is_known_tool_call_content_type(type_: &str) -> bool {
-    matches!(type_, "content" | "diff" | "terminal")
+    matches!(type_, "content" | "diff")
 }
 
 fn other_tool_call_content_schema(schema: &mut Schema) {
-    super::schema_util::reject_known_string_discriminators(
-        schema,
-        "type",
-        &["content", "diff", "terminal"],
-    );
+    super::schema_util::reject_known_string_discriminators(schema, "type", &["content", "diff"]);
 }
 
 impl<T: Into<ContentBlock>> From<T> for ToolCallContent {
@@ -601,47 +591,6 @@ impl Content {
     pub fn new(content: impl Into<ContentBlock>) -> Self {
         Self {
             content: content.into(),
-            meta: None,
-        }
-    }
-
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[must_use]
-    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
-        self.meta = meta.into_option();
-        self
-    }
-}
-
-/// Embed a terminal created with `terminal/create` by its id.
-///
-/// The terminal must be added before calling `terminal/release`.
-///
-/// See protocol docs: [Terminal](https://agentclientprotocol.com/protocol/terminals)
-#[skip_serializing_none]
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "camelCase")]
-#[non_exhaustive]
-pub struct Terminal {
-    pub terminal_id: TerminalId,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
-}
-
-impl Terminal {
-    #[must_use]
-    pub fn new(terminal_id: impl Into<TerminalId>) -> Self {
-        Self {
-            terminal_id: terminal_id.into(),
             meta: None,
         }
     }

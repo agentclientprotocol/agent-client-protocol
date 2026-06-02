@@ -1,0 +1,94 @@
+---
+title: "v2 Client Filesystem and Terminal Surface"
+---
+
+Author(s): [@benbrandt](https://github.com/benbrandt)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+ACP v2 will remove the standard Client filesystem and terminal execution surface. Specifically, v2 removes `clientCapabilities.fs`, the top-level `clientCapabilities.terminal` field, the Client filesystem methods, the Client terminal execution methods, and terminal tool-call content.
+
+This surface was intended to let Agents ask Clients to read or write files and run commands in a Client-managed terminal. In practice, it has not been widely adopted by both Clients and Agents, and many Agents are moving toward their own sandboxing and execution configuration instead.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+In v1, Clients can advertise filesystem access with:
+
+```json
+{
+  "clientCapabilities": {
+    "fs": {
+      "readTextFile": true,
+      "writeTextFile": true
+    },
+    "terminal": true
+  }
+}
+```
+
+Agents then use those fields to decide whether `fs/read_text_file`, `fs/write_text_file`, and `terminal/*` methods are available. Agents can also embed terminal output in tool calls using `ToolCallContent` with `type: "terminal"`.
+
+However, this hasn't been widely adopted. Both because not many clients outside of IDEs could even offer these, and even then, IDE support has been mixed. Also, this requires the Agent tools to handle both methods, and in practice, most stuck to their standard implementations.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+Remove the following standard v2 Client capability fields:
+
+- `clientCapabilities.fs`
+- `clientCapabilities.terminal`
+
+Remove the following standard v2 Client methods:
+
+- `fs/read_text_file`
+- `fs/write_text_file`
+- `terminal/create`
+- `terminal/output`
+- `terminal/release`
+- `terminal/wait_for_exit`
+- `terminal/kill`
+
+Remove terminal tool-call content from v2 as well. Without standard Client terminal methods, a standard terminal content type would no longer have a standard producer or lifetime model. This will be replaced by a richer way for agents to report their own terminal output.
+
+As this was always opt-in anyway, it should require minimal changes on the agent side, as they just no longer have to check these capabilities.
+
+This does not remove `clientCapabilities.auth.terminal`. That field belongs to the authentication methods proposal and only indicates whether a Client can run an Agent's terminal authentication flow for the user.
+
+## Shiny future
+
+> How will things play out once this feature exists?
+
+ACP v2 has less Client-side surface for behavior that is not seeing broad interoperable use. If clients want to offer specialized tooling in these areas, they can already expose a special MCP server to the agent to provide access.
+
+We will look at exploring configuration for Agent sandboxing and filesystem access in the future.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+- Remove `fs` and top-level `terminal` from the v2 `ClientCapabilities` schema.
+- Remove the v2 `FileSystemCapabilities` schema type because it is no longer referenced.
+- Remove the v2 filesystem and terminal request/response structs, method-name constants, RPC enum variants, and generated method metadata.
+- Remove v2 terminal tool-call content and its terminal ID dependency.
+- Keep v1 unchanged.
+- Cross-version conversion from v1 to v2 drops `fs` and top-level `terminal`.
+- Cross-version conversion from v2 to v1 maps filesystem and terminal execution support to unsupported.
+- Cross-version conversion from v1 to v2 returns an error for removed filesystem and terminal method variants or terminal tool-call content.
+- Update v2 initialization, overview, tool-call, and schema docs so Agents do not check these v1 capability fields or call these v1 methods for v2 connections.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Does this remove terminal authentication?
+
+No. Terminal authentication is represented by `clientCapabilities.auth.terminal`, not by the top-level `clientCapabilities.terminal` execution capability. This RFD only removes the top-level terminal execution capability.
+
+## Revision history
+
+2026-06-02: Initial draft

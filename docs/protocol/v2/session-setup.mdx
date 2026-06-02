@@ -58,7 +58,7 @@ Clients create a new session by calling the `session/new` method with:
     "cwd": "/home/user/project",
     "mcpServers": [
       {
-        "name": "filesystem",
+        "name": "workspace-tools",
         "command": "/path/to/mcp-server",
         "args": ["--stdio"],
         "env": []
@@ -121,9 +121,9 @@ To load an existing session, Clients **MUST** call the `session/load` method wit
     "cwd": "/home/user/project",
     "mcpServers": [
       {
-        "name": "filesystem",
+        "name": "workspace-tools",
         "command": "/path/to/mcp-server",
-        "args": ["--mode", "filesystem"],
+        "args": ["--mode", "workspace"],
         "env": []
       }
     ]
@@ -226,9 +226,9 @@ To resume an existing session without replaying prior messages, Clients **MUST**
     "cwd": "/home/user/project",
     "mcpServers": [
       {
-        "name": "filesystem",
+        "name": "workspace-tools",
         "command": "/path/to/mcp-server",
-        "args": ["--mode", "filesystem"],
+        "args": ["--mode", "workspace"],
         "env": []
       }
     ]
@@ -311,7 +311,7 @@ Agents MAY return an error if the session does not exist or is not currently act
 
 Agents that advertise `sessionCapabilities.additionalDirectories` allow Clients
 to include `additionalDirectories` on supported session lifecycle requests to
-expand the session's effective filesystem root set. Supported stable lifecycle
+expand the session's effective workspace root set. Supported stable lifecycle
 requests include `session/new`, `session/load`, and `session/resume`.
 
 ```json
@@ -406,7 +406,7 @@ Example stdio transport configuration:
 
 ```json
 {
-  "name": "filesystem",
+  "name": "workspace-tools",
   "command": "/path/to/mcp-server",
   "args": ["--stdio"],
   "env": [
