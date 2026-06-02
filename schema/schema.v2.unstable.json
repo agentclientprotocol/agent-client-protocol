@@ -6393,27 +6393,7 @@
               {
                 "properties": {
                   "sessionUpdate": {
-                    "const": "plan",
-                    "type": "string"
-                  }
-                },
-                "required": ["sessionUpdate"],
-                "type": "object"
-              },
-              {
-                "properties": {
-                  "sessionUpdate": {
                     "const": "plan_update",
-                    "type": "string"
-                  }
-                },
-                "required": ["sessionUpdate"],
-                "type": "object"
-              },
-              {
-                "properties": {
-                  "sessionUpdate": {
-                    "const": "plan_removed",
                     "type": "string"
                   }
                 },
@@ -6444,6 +6424,16 @@
                 "properties": {
                   "sessionUpdate": {
                     "const": "session_info_update",
+                    "type": "string"
+                  }
+                },
+                "required": ["sessionUpdate"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "sessionUpdate": {
+                    "const": "plan_removed",
                     "type": "string"
                   }
                 },

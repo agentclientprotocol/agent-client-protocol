@@ -208,7 +208,6 @@ fn is_known_session_update(session_update: &str) -> bool {
         | "tool_call"
         | "tool_call_update"
         | "plan_update"
-        | "plan_removed"
         | "available_commands_update"
         | "config_option_update"
         | "session_info_update" => true,
@@ -229,10 +228,11 @@ fn other_session_update_schema(schema: &mut Schema) {
             "tool_call",
             "tool_call_update",
             "plan_update",
-            "plan_removed",
             "available_commands_update",
             "config_option_update",
             "session_info_update",
+            #[cfg(feature = "unstable_plan_operations")]
+            "plan_removed",
             #[cfg(feature = "unstable_session_usage")]
             "usage_update",
         ],
