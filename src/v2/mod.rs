@@ -29,7 +29,7 @@ mod protocol_level;
 pub(crate) mod schema_util;
 mod tool_call;
 
-pub use crate::rpc::{JsonRpcMessage, Notification, Request, RequestId};
+pub use crate::rpc::{JsonRpcBatch, JsonRpcMessage, Notification, Request, RequestId};
 pub use agent::*;
 pub use client::*;
 pub use content::*;

@@ -130,6 +130,74 @@ impl<M> JsonRpcMessage<M> {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Display)]
+#[display("JSON-RPC batch must contain at least one message")]
+#[non_exhaustive]
+pub struct EmptyJsonRpcBatch;
+
+impl std::error::Error for EmptyJsonRpcBatch {}
+
+/// A non-empty JSON-RPC 2.0 batch message.
+#[derive(Debug, Serialize, JsonSchema)]
+#[schemars(inline)]
+#[serde(transparent)]
+#[allow(
+    clippy::exhaustive_structs,
+    reason = "This comes from the JSON-RPC specification itself"
+)]
+pub struct JsonRpcBatch<M>(#[schemars(length(min = 1))] Vec<JsonRpcMessage<M>>);
+
+impl<M> JsonRpcBatch<M> {
+    /// Creates a non-empty JSON-RPC batch.
+    ///
+    /// Returns an error if `messages` is empty, because JSON-RPC 2.0 treats an
+    /// empty batch array as an invalid request.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`EmptyJsonRpcBatch`] when `messages` is empty.
+    pub fn new(messages: Vec<JsonRpcMessage<M>>) -> Result<Self, EmptyJsonRpcBatch> {
+        if messages.is_empty() {
+            Err(EmptyJsonRpcBatch)
+        } else {
+            Ok(Self(messages))
+        }
+    }
+
+    /// Returns the messages in this batch.
+    #[must_use]
+    pub fn as_slice(&self) -> &[JsonRpcMessage<M>] {
+        &self.0
+    }
+
+    /// Consumes this batch and returns its messages.
+    #[must_use]
+    pub fn into_vec(self) -> Vec<JsonRpcMessage<M>> {
+        self.0
+    }
+}
+
+impl<M> TryFrom<Vec<JsonRpcMessage<M>>> for JsonRpcBatch<M> {
+    type Error = EmptyJsonRpcBatch;
+
+    fn try_from(messages: Vec<JsonRpcMessage<M>>) -> Result<Self, Self::Error> {
+        Self::new(messages)
+    }
+}
+
+impl<'de, M> Deserialize<'de> for JsonRpcBatch<M>
+where
+    M: Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let messages = Vec::<JsonRpcMessage<M>>::deserialize(deserializer)?;
+        Self::new(messages).map_err(serde::de::Error::custom)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -185,6 +253,44 @@ mod tests {
 
         let id = RequestId::Str("id".to_owned());
         assert_eq!(id.to_string(), "id");
+    }
+
+    #[test]
+    fn batch_deserialization_requires_at_least_one_message() {
+        let err = serde_json::from_value::<JsonRpcBatch<Notification<ClientNotification>>>(
+            Value::Array(Vec::new()),
+        )
+        .unwrap_err();
+        assert!(err.to_string().contains("at least one message"));
+    }
+
+    #[test]
+    fn batch_serialization_round_trips_non_empty_messages() {
+        let notification = JsonRpcMessage::wrap(Notification {
+            method: "cancel".into(),
+            params: Some(ClientNotification::CancelNotification(CancelNotification {
+                session_id: SessionId("test-123".into()),
+                meta: None,
+            })),
+        });
+
+        let batch = JsonRpcBatch::new(vec![notification]).unwrap();
+        let serialized = serde_json::to_value(&batch).unwrap();
+        assert_eq!(
+            serialized,
+            json!([{
+                "jsonrpc": "2.0",
+                "method": "cancel",
+                "params": {
+                    "sessionId": "test-123"
+                },
+            }])
+        );
+
+        let deserialized =
+            serde_json::from_value::<JsonRpcBatch<Notification<ClientNotification>>>(serialized)
+                .unwrap();
+        assert_eq!(deserialized.as_slice().len(), 1);
     }
 
     #[test]

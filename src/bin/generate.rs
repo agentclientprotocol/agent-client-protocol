@@ -2,8 +2,8 @@ use agent_client_protocol_schema::ProtocolVersion;
 #[cfg(feature = "unstable_protocol_v2")]
 use agent_client_protocol_schema::v2::{
     AGENT_METHOD_NAMES, AgentNotification, AgentRequest, AgentResponse, CLIENT_METHOD_NAMES,
-    ClientNotification, ClientRequest, ClientResponse, JsonRpcMessage, Notification, Request,
-    Response,
+    ClientNotification, ClientRequest, ClientResponse, JsonRpcBatch, JsonRpcMessage, Notification,
+    Request, Response,
 };
 #[cfg(all(feature = "unstable_cancel_request", feature = "unstable_protocol_v2"))]
 use agent_client_protocol_schema::v2::{PROTOCOL_LEVEL_METHOD_NAMES, ProtocolLevelNotification};
@@ -50,6 +50,32 @@ enum ClientOutgoingMessage {
     Notification(Notification<ClientNotification>),
 }
 
+/// Messages that an agent can include in a JSON-RPC batch call to a client.
+#[cfg(feature = "unstable_protocol_v2")]
+#[derive(Serialize, Deserialize, JsonSchema)]
+#[serde(untagged)]
+#[schemars(inline)]
+#[allow(clippy::large_enum_variant)]
+enum AgentBatchCallMessage {
+    Request(Request<AgentRequest>),
+    Notification(Notification<AgentNotification>),
+    #[cfg(feature = "unstable_cancel_request")]
+    ProtocolLevelNotification(Notification<ProtocolLevelNotification>),
+}
+
+/// Messages that a client can include in a JSON-RPC batch call to an agent.
+#[cfg(feature = "unstable_protocol_v2")]
+#[derive(Serialize, Deserialize, JsonSchema)]
+#[serde(untagged)]
+#[schemars(inline)]
+#[allow(clippy::large_enum_variant)]
+enum ClientBatchCallMessage {
+    Request(Request<ClientRequest>),
+    Notification(Notification<ClientNotification>),
+    #[cfg(feature = "unstable_cancel_request")]
+    ProtocolLevelNotification(Notification<ProtocolLevelNotification>),
+}
+
 #[expect(dead_code)]
 #[derive(JsonSchema)]
 #[serde(untagged)]
@@ -58,8 +84,16 @@ enum ClientOutgoingMessage {
 enum AcpTypes {
     Agent(JsonRpcMessage<AgentOutgoingMessage>),
     Client(JsonRpcMessage<ClientOutgoingMessage>),
+    #[cfg(feature = "unstable_protocol_v2")]
+    AgentBatchCall(JsonRpcBatch<AgentBatchCallMessage>),
+    #[cfg(feature = "unstable_protocol_v2")]
+    AgentBatchResponse(JsonRpcBatch<Response<AgentResponse>>),
+    #[cfg(feature = "unstable_protocol_v2")]
+    ClientBatchCall(JsonRpcBatch<ClientBatchCallMessage>),
+    #[cfg(feature = "unstable_protocol_v2")]
+    ClientBatchResponse(JsonRpcBatch<Response<ClientResponse>>),
     #[cfg(feature = "unstable_cancel_request")]
-    ProtocolLevel(ProtocolLevelNotification),
+    ProtocolLevel(JsonRpcMessage<Notification<ProtocolLevelNotification>>),
 }
 
 fn main() {
@@ -236,6 +270,72 @@ mod schema_annotation_tests {
         assert_bool_extension(auth_methods, SKIP_INVALID_ITEMS_EXTENSION);
     }
 
+    #[cfg(feature = "unstable_protocol_v2")]
+    #[test]
+    fn generated_v2_schema_includes_json_rpc_batch_messages() {
+        let schema = root_schema_value();
+        for title in [
+            "AgentBatchCall",
+            "AgentBatchResponse",
+            "ClientBatchCall",
+            "ClientBatchResponse",
+        ] {
+            let batch_schema = root_variant_schema(&schema, title);
+            assert_eq!(
+                batch_schema.get("type").and_then(Value::as_str),
+                Some("array")
+            );
+            assert_eq!(
+                batch_schema.get("minItems").and_then(Value::as_u64),
+                Some(1)
+            );
+        }
+
+        #[cfg(feature = "unstable_cancel_request")]
+        for title in ["AgentBatchCall", "ClientBatchCall"] {
+            let batch_schema = root_variant_schema(&schema, title);
+            assert!(
+                schema_contains_ref(batch_schema, "#/$defs/ProtocolLevelNotification"),
+                "missing ProtocolLevelNotification in {title}"
+            );
+        }
+
+        #[cfg(feature = "unstable_cancel_request")]
+        {
+            let protocol_level = root_variant_schema(&schema, "ProtocolLevel");
+            assert_eq!(
+                protocol_level
+                    .pointer("/properties/jsonrpc/enum/0")
+                    .and_then(Value::as_str),
+                Some("2.0")
+            );
+            assert_eq!(
+                protocol_level
+                    .pointer("/properties/method/type")
+                    .and_then(Value::as_str),
+                Some("string")
+            );
+
+            let protocol_notification = def_schema(&schema, "ProtocolLevelNotification");
+            assert_eq!(
+                protocol_notification
+                    .pointer("/properties/method/type")
+                    .and_then(Value::as_str),
+                Some("string")
+            );
+            assert!(
+                protocol_notification
+                    .pointer("/required")
+                    .and_then(Value::as_array)
+                    .is_some_and(|required| required.iter().any(|field| field == "method"))
+            );
+            assert!(
+                schema_contains_ref(protocol_notification, "#/$defs/CancelRequestNotification"),
+                "missing CancelRequestNotification in ProtocolLevelNotification"
+            );
+        }
+    }
+
     #[test]
     fn source_default_on_error_fields_are_schema_annotated() {
         let root = Path::new(env!("CARGO_MANIFEST_DIR"));
@@ -275,9 +375,28 @@ mod schema_annotation_tests {
     }
 
     fn property_schema<'a>(schema: &'a Value, def_name: &str, prop_name: &str) -> &'a Value {
-        schema
-            .pointer(&format!("/$defs/{def_name}/properties/{prop_name}"))
+        def_schema(schema, def_name)
+            .pointer(&format!("/properties/{prop_name}"))
             .unwrap_or_else(|| panic!("missing schema property {def_name}.{prop_name}"))
+    }
+
+    fn def_schema<'a>(schema: &'a Value, def_name: &str) -> &'a Value {
+        schema
+            .pointer(&format!("/$defs/{def_name}"))
+            .unwrap_or_else(|| panic!("missing schema definition {def_name}"))
+    }
+
+    #[cfg(feature = "unstable_protocol_v2")]
+    fn root_variant_schema<'a>(schema: &'a Value, title: &str) -> &'a Value {
+        schema
+            .get("anyOf")
+            .and_then(Value::as_array)
+            .and_then(|variants| {
+                variants
+                    .iter()
+                    .find(|variant| variant.get("title").and_then(Value::as_str) == Some(title))
+            })
+            .unwrap_or_else(|| panic!("missing root schema variant {title}"))
     }
 
     fn assert_bool_extension(schema: &Value, extension: &str) {
@@ -293,6 +412,20 @@ mod schema_annotation_tests {
             schema.get(extension).is_none(),
             "unexpected extension {extension} on {schema}"
         );
+    }
+
+    #[cfg(all(feature = "unstable_protocol_v2", feature = "unstable_cancel_request"))]
+    fn schema_contains_ref(schema: &Value, ref_path: &str) -> bool {
+        match schema {
+            Value::Object(object) => object.iter().any(|(key, value)| {
+                key == "$ref" && value.as_str() == Some(ref_path)
+                    || schema_contains_ref(value, ref_path)
+            }),
+            Value::Array(array) => array
+                .iter()
+                .any(|value| schema_contains_ref(value, ref_path)),
+            _ => false,
+        }
     }
 }
 

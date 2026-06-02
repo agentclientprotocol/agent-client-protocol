@@ -5261,6 +5261,37 @@
       "x-method": "session/prompt",
       "x-side": "agent"
     },
+    "ProtocolLevelNotification": {
+      "properties": {
+        "method": {
+          "type": "string"
+        },
+        "params": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/CancelRequestNotification"
+                    }
+                  ],
+                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or\nchanged at any point.\n\nCancels an ongoing request.\n\nThis is a notification sent by the side that sent a request to cancel that request.\n\nUpon receiving this notification, the receiver:\n\n1. MUST cancel the corresponding request activity and all nested activities\n2. MAY send any pending notifications.\n3. MUST send one of these responses for the original request:\n  - Valid response with appropriate data (partial results or cancellation marker)\n  - Error response with code `-32800` (Cancelled)\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/cancellation)",
+                  "title": "CancelRequestNotification"
+                }
+              ],
+              "description": "General protocol-level notifications that all sides are expected to\nimplement.\n\nNotifications whose methods start with '$/' are messages which\nare protocol implementation dependent and might not be implementable in all\nclients or agents. For example if the implementation uses a single threaded\nsynchronous programming language then there is little it can do to react to\na `$/cancel_request` notification. If an agent or client receives\nnotifications starting with '$/' it is free to ignore the notification.\n\nNotifications do not expect a response."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": ["method"],
+      "type": "object",
+      "x-docs-ignore": true
+    },
     "ProtocolVersion": {
       "description": "Protocol version identifier.\n\nThis version is only bumped for breaking changes.\nNon-breaking changes should be introduced via capabilities.",
       "format": "uint16",
@@ -7525,19 +7556,431 @@
       "type": "object"
     },
     {
-      "anyOf": [
-        {
-          "allOf": [
+      "description": "A non-empty JSON-RPC 2.0 batch message.",
+      "items": {
+        "anyOf": [
+          {
+            "allOf": [
+              {
+                "$ref": "#/$defs/AgentRequest"
+              }
+            ],
+            "title": "Request"
+          },
+          {
+            "allOf": [
+              {
+                "$ref": "#/$defs/AgentNotification"
+              }
+            ],
+            "title": "Notification"
+          },
+          {
+            "allOf": [
+              {
+                "$ref": "#/$defs/ProtocolLevelNotification"
+              }
+            ],
+            "title": "ProtocolLevelNotification"
+          }
+        ],
+        "description": "A message (request, response, or notification) with `\"jsonrpc\": \"2.0\"` specified as\n[required by JSON-RPC 2.0 Specification][1].\n\n[1]: https://www.jsonrpc.org/specification#compatibility",
+        "properties": {
+          "jsonrpc": {
+            "enum": ["2.0"],
+            "type": "string"
+          }
+        },
+        "required": ["jsonrpc"],
+        "type": "object"
+      },
+      "minItems": 1,
+      "title": "AgentBatchCall",
+      "type": "array"
+    },
+    {
+      "description": "A non-empty JSON-RPC 2.0 batch message.",
+      "items": {
+        "anyOf": [
+          {
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/RequestId"
+              },
+              "result": {
+                "anyOf": [
+                  {
+                    "allOf": [
+                      {
+                        "$ref": "#/$defs/InitializeResponse"
+                      }
+                    ],
+                    "title": "InitializeResponse"
+                  },
+                  {
+                    "allOf": [
+                      {
+                        "$ref": "#/$defs/AuthenticateResponse"
+                      }
+                    ],
+                    "title": "AuthenticateResponse"
+                  },
+                  {
+                    "allOf": [
+                      {
+                        "$ref": "#/$defs/ListProvidersResponse"
+                      }
+                    ],
+                    "title": "ListProvidersResponse"
+                  },
+                  {
+                    "allOf": [
+                      {
+                        "$ref": "#/$defs/SetProviderResponse"
+                      }
+                    ],
+                    "title": "SetProviderResponse"
+                  },
+                  {
+                    "allOf": [
+                      {
+                        "$ref": "#/$defs/DisableProviderResponse"
+                      }
+                    ],
+                    "title": "DisableProviderResponse"
+                  },
+                  {
+                    "allOf": [
+                      {
+                        "$ref": "#/$defs/LogoutResponse"
+                      }
+                    ],
+                    "title": "LogoutResponse"
+                  },
+                  {
+                    "allOf": [
+                      {
+                        "$ref": "#/$defs/NewSessionResponse"
+                      }
+                    ],
+                    "title": "NewSessionResponse"
+                  },
+                  {
+                    "allOf": [
+                      {
+                        "$ref": "#/$defs/LoadSessionResponse"
+                      }
+                    ],
+                    "title": "LoadSessionResponse"
+                  },
+                  {
+                    "allOf": [
+                      {
+                        "$ref": "#/$defs/ListSessionsResponse"
+                      }
+                    ],
+                    "title": "ListSessionsResponse"
+                  },
+                  {
+                    "allOf": [
+                      {
+                        "$ref": "#/$defs/DeleteSessionResponse"
+                      }
+                    ],
+                    "title": "DeleteSessionResponse"
+                  },
+                  {
+                    "allOf": [
+                      {
+                        "$ref": "#/$defs/ForkSessionResponse"
+                      }
+                    ],
+                    "title": "ForkSessionResponse"
+                  },
+                  {
+                    "allOf": [
+                      {
+                        "$ref": "#/$defs/ResumeSessionResponse"
+                      }
+                    ],
+                    "title": "ResumeSessionResponse"
+                  },
+                  {
+                    "allOf": [
+                      {
+                        "$ref": "#/$defs/CloseSessionResponse"
+                      }
+                    ],
+                    "title": "CloseSessionResponse"
+                  },
+                  {
+                    "allOf": [
+                      {
+                        "$ref": "#/$defs/SetSessionConfigOptionResponse"
+                      }
+                    ],
+                    "title": "SetSessionConfigOptionResponse"
+                  },
+                  {
+                    "allOf": [
+                      {
+                        "$ref": "#/$defs/PromptResponse"
+                      }
+                    ],
+                    "title": "PromptResponse"
+                  },
+                  {
+                    "allOf": [
+                      {
+                        "$ref": "#/$defs/StartNesResponse"
+                      }
+                    ],
+                    "title": "StartNesResponse"
+                  },
+                  {
+                    "allOf": [
+                      {
+                        "$ref": "#/$defs/SuggestNesResponse"
+                      }
+                    ],
+                    "title": "SuggestNesResponse"
+                  },
+                  {
+                    "allOf": [
+                      {
+                        "$ref": "#/$defs/CloseNesResponse"
+                      }
+                    ],
+                    "title": "CloseNesResponse"
+                  },
+                  {
+                    "allOf": [
+                      {
+                        "$ref": "#/$defs/ExtResponse"
+                      }
+                    ],
+                    "title": "ExtMethodResponse"
+                  },
+                  {
+                    "allOf": [
+                      {
+                        "$ref": "#/$defs/MessageMcpResponse"
+                      }
+                    ],
+                    "title": "MessageMcpResponse"
+                  }
+                ],
+                "description": "All possible responses that an agent can send to a client.\n\nThis enum is used internally for routing RPC responses. You typically won't need\nto use this directly - the responses are handled automatically by the connection.\n\nThese are responses to the corresponding `ClientRequest` variants."
+              }
+            },
+            "required": ["id", "result"],
+            "title": "Result",
+            "type": "object"
+          },
+          {
+            "properties": {
+              "error": {
+                "$ref": "#/$defs/Error"
+              },
+              "id": {
+                "$ref": "#/$defs/RequestId"
+              }
+            },
+            "required": ["id", "error"],
+            "title": "Error",
+            "type": "object"
+          }
+        ],
+        "description": "A message (request, response, or notification) with `\"jsonrpc\": \"2.0\"` specified as\n[required by JSON-RPC 2.0 Specification][1].\n\n[1]: https://www.jsonrpc.org/specification#compatibility",
+        "properties": {
+          "jsonrpc": {
+            "enum": ["2.0"],
+            "type": "string"
+          }
+        },
+        "required": ["jsonrpc"],
+        "type": "object",
+        "x-docs-ignore": true
+      },
+      "minItems": 1,
+      "title": "AgentBatchResponse",
+      "type": "array"
+    },
+    {
+      "description": "A non-empty JSON-RPC 2.0 batch message.",
+      "items": {
+        "anyOf": [
+          {
+            "allOf": [
+              {
+                "$ref": "#/$defs/ClientRequest"
+              }
+            ],
+            "title": "Request"
+          },
+          {
+            "allOf": [
+              {
+                "$ref": "#/$defs/ClientNotification"
+              }
+            ],
+            "title": "Notification"
+          },
+          {
+            "allOf": [
+              {
+                "$ref": "#/$defs/ProtocolLevelNotification"
+              }
+            ],
+            "title": "ProtocolLevelNotification"
+          }
+        ],
+        "description": "A message (request, response, or notification) with `\"jsonrpc\": \"2.0\"` specified as\n[required by JSON-RPC 2.0 Specification][1].\n\n[1]: https://www.jsonrpc.org/specification#compatibility",
+        "properties": {
+          "jsonrpc": {
+            "enum": ["2.0"],
+            "type": "string"
+          }
+        },
+        "required": ["jsonrpc"],
+        "type": "object"
+      },
+      "minItems": 1,
+      "title": "ClientBatchCall",
+      "type": "array"
+    },
+    {
+      "description": "A non-empty JSON-RPC 2.0 batch message.",
+      "items": {
+        "anyOf": [
+          {
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/RequestId"
+              },
+              "result": {
+                "anyOf": [
+                  {
+                    "allOf": [
+                      {
+                        "$ref": "#/$defs/RequestPermissionResponse"
+                      }
+                    ],
+                    "title": "RequestPermissionResponse"
+                  },
+                  {
+                    "allOf": [
+                      {
+                        "$ref": "#/$defs/CreateElicitationResponse"
+                      }
+                    ],
+                    "title": "CreateElicitationResponse"
+                  },
+                  {
+                    "allOf": [
+                      {
+                        "$ref": "#/$defs/ConnectMcpResponse"
+                      }
+                    ],
+                    "title": "ConnectMcpResponse"
+                  },
+                  {
+                    "allOf": [
+                      {
+                        "$ref": "#/$defs/DisconnectMcpResponse"
+                      }
+                    ],
+                    "title": "DisconnectMcpResponse"
+                  },
+                  {
+                    "allOf": [
+                      {
+                        "$ref": "#/$defs/ExtResponse"
+                      }
+                    ],
+                    "title": "ExtMethodResponse"
+                  },
+                  {
+                    "allOf": [
+                      {
+                        "$ref": "#/$defs/MessageMcpResponse"
+                      }
+                    ],
+                    "title": "MessageMcpResponse"
+                  }
+                ],
+                "description": "All possible responses that a client can send to an agent.\n\nThis enum is used internally for routing RPC responses. You typically won't need\nto use this directly - the responses are handled automatically by the connection.\n\nThese are responses to the corresponding `AgentRequest` variants."
+              }
+            },
+            "required": ["id", "result"],
+            "title": "Result",
+            "type": "object"
+          },
+          {
+            "properties": {
+              "error": {
+                "$ref": "#/$defs/Error"
+              },
+              "id": {
+                "$ref": "#/$defs/RequestId"
+              }
+            },
+            "required": ["id", "error"],
+            "title": "Error",
+            "type": "object"
+          }
+        ],
+        "description": "A message (request, response, or notification) with `\"jsonrpc\": \"2.0\"` specified as\n[required by JSON-RPC 2.0 Specification][1].\n\n[1]: https://www.jsonrpc.org/specification#compatibility",
+        "properties": {
+          "jsonrpc": {
+            "enum": ["2.0"],
+            "type": "string"
+          }
+        },
+        "required": ["jsonrpc"],
+        "type": "object",
+        "x-docs-ignore": true
+      },
+      "minItems": 1,
+      "title": "ClientBatchResponse",
+      "type": "array"
+    },
+    {
+      "description": "A message (request, response, or notification) with `\"jsonrpc\": \"2.0\"` specified as\n[required by JSON-RPC 2.0 Specification][1].\n\n[1]: https://www.jsonrpc.org/specification#compatibility",
+      "properties": {
+        "jsonrpc": {
+          "enum": ["2.0"],
+          "type": "string"
+        },
+        "method": {
+          "type": "string"
+        },
+        "params": {
+          "anyOf": [
             {
-              "$ref": "#/$defs/CancelRequestNotification"
+              "anyOf": [
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/CancelRequestNotification"
+                    }
+                  ],
+                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or\nchanged at any point.\n\nCancels an ongoing request.\n\nThis is a notification sent by the side that sent a request to cancel that request.\n\nUpon receiving this notification, the receiver:\n\n1. MUST cancel the corresponding request activity and all nested activities\n2. MAY send any pending notifications.\n3. MUST send one of these responses for the original request:\n  - Valid response with appropriate data (partial results or cancellation marker)\n  - Error response with code `-32800` (Cancelled)\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/cancellation)",
+                  "title": "CancelRequestNotification"
+                }
+              ],
+              "description": "General protocol-level notifications that all sides are expected to\nimplement.\n\nNotifications whose methods start with '$/' are messages which\nare protocol implementation dependent and might not be implementable in all\nclients or agents. For example if the implementation uses a single threaded\nsynchronous programming language then there is little it can do to react to\na `$/cancel_request` notification. If an agent or client receives\nnotifications starting with '$/' it is free to ignore the notification.\n\nNotifications do not expect a response."
+            },
+            {
+              "type": "null"
             }
-          ],
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or\nchanged at any point.\n\nCancels an ongoing request.\n\nThis is a notification sent by the side that sent a request to cancel that request.\n\nUpon receiving this notification, the receiver:\n\n1. MUST cancel the corresponding request activity and all nested activities\n2. MAY send any pending notifications.\n3. MUST send one of these responses for the original request:\n  - Valid response with appropriate data (partial results or cancellation marker)\n  - Error response with code `-32800` (Cancelled)\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/cancellation)",
-          "title": "CancelRequestNotification"
+          ]
         }
-      ],
-      "description": "General protocol-level notifications that all sides are expected to\nimplement.\n\nNotifications whose methods start with '$/' are messages which\nare protocol implementation dependent and might not be implementable in all\nclients or agents. For example if the implementation uses a single threaded\nsynchronous programming language then there is little it can do to react to\na `$/cancel_request` notification. If an agent or client receives\nnotifications starting with '$/' it is free to ignore the notification.\n\nNotifications do not expect a response.",
-      "title": "ProtocolLevel"
+      },
+      "required": ["jsonrpc", "method"],
+      "title": "ProtocolLevel",
+      "type": "object",
+      "x-docs-ignore": true
     }
   ],
   "title": "Agent Client Protocol"

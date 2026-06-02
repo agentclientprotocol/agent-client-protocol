@@ -12,6 +12,10 @@ The protocol follows the [JSON-RPC 2.0](https://www.jsonrpc.org/specification) s
 - **Methods**: Request-response pairs that expect a result or error
 - **Notifications**: One-way messages that don't expect a response
 
+ACP v2 follows JSON-RPC 2.0 batch behavior. See
+[Transports](/protocol/v2/transports#json-rpc-batch-messages) for batch
+handling requirements.
+
 ## Message Flow
 
 A typical flow follows this pattern:
