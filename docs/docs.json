@@ -183,7 +183,6 @@
               "rfds/agent-telemetry-export",
               "rfds/proxy-chains",
               "rfds/mcp-over-acp",
-              "rfds/session-usage",
               "rfds/end-turn-token-usage",
               "rfds/auth-methods",
               "rfds/diff-delete",
@@ -210,7 +209,11 @@
           },
           {
             "group": "Preview",
-            "pages": ["rfds/rust-sdk-v1", "rfds/session-delete"]
+            "pages": [
+              "rfds/rust-sdk-v1",
+              "rfds/session-delete",
+              "rfds/session-usage"
+            ]
           },
           {
             "group": "Completed",

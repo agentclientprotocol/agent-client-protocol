@@ -244,4 +244,5 @@ For agents that only provide usage during active prompting, the client UI may no
 - 2025-12-13: Changed from `session/status` request method to `session/update` notification with `sessionUpdate: "context_update"`. Made `cost` optional and removed `remaining` field (clients can compute as `size - used`). This approach provides more flexibility for agents and follows the same pattern as other dynamic session properties.
 - 2025-12-17: Renamed `reasoning_tokens` to `thought_tokens` for consistency with ACP terminology. Removed `percentage` field (clients can compute as `used / size * 100`).
 - 2025-12-19: Renamed `sessionUpdate: "context_update"` to `sessionUpdate: "usage_update"` to better reflect the payload semantics (includes both context window info and cumulative cost).
-- 2026-06-02: Split end-turn token accounting into a separate draft RFD and moved this context size and cost RFD toward Preview.
+- 2026-06-02: Split end-turn token accounting into a separate draft RFD.
+- 2026-06-03: Moved to Preview.
