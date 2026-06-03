@@ -86,7 +86,7 @@ Agents are programs that use generative AI to autonomously modify code. They typ
   post={[<a href="/protocol/v2/schema#session%2Fload">Schema</a>]}
 >
   [Load an existing session](/protocol/v2/session-setup#loading-sessions)
-  (requires `loadSession` capability).
+  (requires `session.load` capability).
 </ResponseField>
 
 <ResponseField
@@ -94,7 +94,7 @@ Agents are programs that use generative AI to autonomously modify code. They typ
   post={[<a href="/protocol/v2/schema#logout">Schema</a>]}
 >
   [End the current authenticated state](/protocol/v2/authentication#logging-out)
-  (requires `agentCapabilities.auth.logout` capability).
+  (requires `capabilities.auth.logout` capability).
 </ResponseField>
 
 ### Notifications

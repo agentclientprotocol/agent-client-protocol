@@ -84,11 +84,11 @@ The Agent **MUST** respond with a unique [Session ID](#session-id) that identifi
 
 ## Loading Sessions
 
-Agents that support the `loadSession` capability allow Clients to resume previous conversations with history replay. This feature enables persistence across restarts and sharing sessions between different Client instances.
+Agents that support the `session.load` capability allow Clients to resume previous conversations with history replay. This feature enables persistence across restarts and sharing sessions between different Client instances.
 
 ### Checking Support
 
-Before attempting to load a session, Clients **MUST** verify that the Agent supports this capability by checking the `loadSession` field in the `initialize` response:
+Before attempting to load a session, Clients **MUST** verify that the Agent supports this capability by checking the `session.load` field in the `initialize` response:
 
 ```json highlight={7}
 {
@@ -96,14 +96,16 @@ Before attempting to load a session, Clients **MUST** verify that the Agent supp
   "id": 0,
   "result": {
     "protocolVersion": 2,
-    "agentCapabilities": {
-      "loadSession": true
+    "capabilities": {
+      "session": {
+        "load": {}
+      }
     }
   }
 }
 ```
 
-If `loadSession` is `false` or not present, the Agent does not support loading sessions and Clients **MUST NOT** attempt to call `session/load`.
+If `session.load` is omitted or `null`, the Agent does not support loading sessions and Clients **MUST NOT** attempt to call `session/load`.
 
 ### Loading a Session
 
@@ -196,13 +198,13 @@ interrupted.
 
 ## Resuming Sessions
 
-Agents that advertise `sessionCapabilities.resume` allow Clients to reconnect to
+Agents that advertise `session.resume` allow Clients to reconnect to
 an existing session without replaying the conversation history.
 
 ### Checking Support
 
 Before attempting to resume a session, Clients **MUST** verify that the Agent
-supports this capability by checking for the `sessionCapabilities.resume` field
+supports this capability by checking for the `session.resume` field
 in the `initialize` response:
 
 ```json highlight={7-9}
@@ -211,8 +213,8 @@ in the `initialize` response:
   "id": 0,
   "result": {
     "protocolVersion": 2,
-    "agentCapabilities": {
-      "sessionCapabilities": {
+    "capabilities": {
+      "session": {
         "resume": {}
       }
     }
@@ -220,7 +222,7 @@ in the `initialize` response:
 }
 ```
 
-If `sessionCapabilities.resume` is not present, the Agent does not support
+If `session.resume` is not present, the Agent does not support
 resuming sessions and Clients **MUST NOT** attempt to call `session/resume`.
 
 ### Resuming a Session
@@ -270,14 +272,14 @@ feature is supported by the Agent.
 
 ## Closing Active Sessions
 
-Agents that advertise `sessionCapabilities.close` allow Clients to tell the
+Agents that advertise `session.close` allow Clients to tell the
 Agent to cancel any ongoing work for a session and free any resources
 associated with that active session.
 
 ### Checking Support
 
 Before attempting to close a session, Clients **MUST** verify that the Agent
-supports this capability by checking the `sessionCapabilities.close` field in
+supports this capability by checking the `session.close` field in
 the `initialize` response:
 
 ```json highlight={7-9}
@@ -286,8 +288,8 @@ the `initialize` response:
   "id": 0,
   "result": {
     "protocolVersion": 2,
-    "agentCapabilities": {
-      "sessionCapabilities": {
+    "capabilities": {
+      "session": {
         "close": {}
       }
     }
@@ -295,7 +297,7 @@ the `initialize` response:
 }
 ```
 
-If `sessionCapabilities.close` is not present, the Agent does not support
+If `session.close` is not present, the Agent does not support
 closing sessions and Clients **MUST NOT** attempt to call `session/close`.
 
 ### Closing a Session
@@ -337,7 +339,7 @@ active.
 
 ## Additional Workspace Roots
 
-Agents that advertise `sessionCapabilities.additionalDirectories` allow Clients
+Agents that advertise `session.additionalDirectories` allow Clients
 to include `additionalDirectories` on supported session lifecycle requests to
 expand the session's effective workspace root set. Supported stable lifecycle
 requests include `session/new`, `session/load`, and `session/resume`.
@@ -366,7 +368,7 @@ When present, `additionalDirectories` has the following behavior:
 - omitting the field or providing an empty array activates no additional roots for the resulting session
 - on `session/load` and `session/resume`, Clients must send the full intended additional-root list again; that list may differ from any previous or reported list as long as the request `cwd` matches the session's `cwd`, and omitting the field or providing an empty array does not restore stored roots implicitly
 
-Clients **MUST** only send `additionalDirectories` when the Agent advertises `sessionCapabilities.additionalDirectories`.
+Clients **MUST** only send `additionalDirectories` when the Agent advertises `session.additionalDirectories`.
 
 ## Session ID
 
@@ -376,9 +378,9 @@ Clients use this ID to:
 
 - Send prompt requests via `session/prompt`
 - Cancel ongoing operations via `session/cancel`
-- Load previous sessions via `session/load` (if the Agent supports the `loadSession` capability)
-- Resume previous sessions via `session/resume` (if the Agent supports the `sessionCapabilities.resume` capability)
-- Close active sessions via `session/close` (if the Agent supports the `sessionCapabilities.close` capability)
+- Load previous sessions via `session/load` (if the Agent supports the `session.load` capability)
+- Resume previous sessions via `session/resume` (if the Agent supports the `session.resume` capability)
+- Close active sessions via `session/close` (if the Agent supports the `session.close` capability)
 
 ## Working Directory
 
@@ -389,7 +391,7 @@ The `cwd` (current working directory) parameter establishes the primary file sys
 - **MUST** remain the base for relative-path resolution
 - **MUST** be part of the session's effective root set
 
-When `sessionCapabilities.additionalDirectories` is in use, the session's effective root set is `[cwd, ...additionalDirectories]`. This root set **SHOULD** serve as a boundary for tool operations on the file system.
+When `session.additionalDirectories` is in use, the session's effective root set is `[cwd, ...additionalDirectories]`. This root set **SHOULD** serve as a boundary for tool operations on the file system.
 
 ## MCP Servers
 
@@ -448,7 +450,7 @@ Example stdio transport configuration:
 
 #### HTTP Transport
 
-When the Agent supports `mcpCapabilities.http`, Clients can specify MCP servers configurations using the HTTP transport.
+When the Agent supports `mcp.http`, Clients can specify MCP servers configurations using the HTTP transport.
 
 <ParamField path="type" type="string" required>
   Must be `"http"` to indicate HTTP transport
@@ -497,7 +499,7 @@ Example HTTP transport configuration:
 
 #### SSE Transport
 
-When the Agent supports `mcpCapabilities.sse`, Clients can specify MCP servers configurations using the SSE transport.
+When the Agent supports `mcp.sse`, Clients can specify MCP servers configurations using the SSE transport.
 
 <Warning>This transport was deprecated by the MCP spec.</Warning>
 
@@ -552,8 +554,8 @@ Before using HTTP or SSE transports, Clients **MUST** verify the Agent's capabil
   "id": 0,
   "result": {
     "protocolVersion": 2,
-    "agentCapabilities": {
-      "mcpCapabilities": {
+    "capabilities": {
+      "mcp": {
         "http": true,
         "sse": true
       }
@@ -562,8 +564,8 @@ Before using HTTP or SSE transports, Clients **MUST** verify the Agent's capabil
 }
 ```
 
-If `mcpCapabilities.http` is `false` or not present, the Agent does not support HTTP transport.
-If `mcpCapabilities.sse` is `false` or not present, the Agent does not support SSE transport.
+If `mcp.http` is `false` or not present, the Agent does not support HTTP transport.
+If `mcp.sse` is `false` or not present, the Agent does not support SSE transport.
 
 Agents **SHOULD** connect to all MCP servers specified by the Client.
 

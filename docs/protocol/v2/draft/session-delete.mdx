@@ -32,7 +32,7 @@ sequenceDiagram
 
 ## Checking Support
 
-Before attempting to delete a session, Clients **MUST** verify that the Agent supports this capability by checking the unstable `sessionCapabilities.delete` field in the `initialize` response:
+Before attempting to delete a session, Clients **MUST** verify that the Agent supports this capability by checking the unstable `session.delete` field in the `initialize` response:
 
 ```json highlight={7-9}
 {
@@ -40,8 +40,8 @@ Before attempting to delete a session, Clients **MUST** verify that the Agent su
   "id": 0,
   "result": {
     "protocolVersion": 2,
-    "agentCapabilities": {
-      "sessionCapabilities": {
+    "capabilities": {
+      "session": {
         "delete": {}
       }
     }
@@ -49,7 +49,7 @@ Before attempting to delete a session, Clients **MUST** verify that the Agent su
 }
 ```
 
-If `sessionCapabilities.delete` is omitted or `null`, the Agent does not support deleting sessions and Clients **MUST NOT** attempt to call `session/delete`. Supplying `{}` means the Agent supports the method.
+If `session.delete` is omitted or `null`, the Agent does not support deleting sessions and Clients **MUST NOT** attempt to call `session/delete`. Supplying `{}` means the Agent supports the method.
 
 ## Deleting a Session
 
@@ -82,7 +82,7 @@ On success, the Agent returns an empty result:
 
 ## Semantics
 
-- Agents **MUST NOT** accept `session/delete` calls unless they advertised `sessionCapabilities.delete` during initialization.
+- Agents **MUST NOT** accept `session/delete` calls unless they advertised `session.delete` during initialization.
 - Deleted sessions no longer appear in future `session/list` results.
 - Deleting an already-deleted session, or a session that never existed, **SHOULD** succeed silently.
 - Agents may implement soft delete or hard delete. ACP only specifies the user-facing session-list behavior.

@@ -1228,7 +1228,7 @@ impl NewSessionResponse {
 
 /// Request parameters for loading an existing session.
 ///
-/// Only available if the Agent supports the `loadSession` capability.
+/// Only available if the Agent supports the `session.load` capability.
 ///
 /// See protocol docs: [Loading Sessions](https://agentclientprotocol.com/protocol/session-setup#loading-sessions)
 #[skip_serializing_none]
@@ -1498,7 +1498,7 @@ impl ForkSessionResponse {
 /// Resumes an existing session without returning previous messages (unlike `session/load`).
 /// This is useful for agents that can resume sessions but don't implement full session loading.
 ///
-/// Only available if the Agent supports the `sessionCapabilities.resume` capability.
+/// Only available if the Agent supports the `session.resume` capability.
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_RESUME_METHOD_NAME))]
@@ -1625,7 +1625,7 @@ impl ResumeSessionResponse {
 /// (treat it as if `session/cancel` was called) and then free up any resources
 /// associated with the session.
 ///
-/// Only available if the Agent supports the `sessionCapabilities.close` capability.
+/// Only available if the Agent supports the `session.close` capability.
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_CLOSE_METHOD_NAME))]
@@ -1702,7 +1702,7 @@ impl CloseSessionResponse {
 
 /// Request parameters for listing existing sessions.
 ///
-/// Only available if the Agent supports the `sessionCapabilities.list` capability.
+/// Only available if the Agent supports the `session.list` capability.
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_LIST_METHOD_NAME))]
@@ -1814,7 +1814,7 @@ impl ListSessionsResponse {
 ///
 /// Request parameters for deleting an existing session from `session/list`.
 ///
-/// Only available if the Agent supports the `sessionCapabilities.delete` capability.
+/// Only available if the Agent supports the `session.delete` capability.
 #[cfg(feature = "unstable_session_delete")]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -3633,9 +3633,6 @@ impl DisableProviderResponse {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct AgentCapabilities {
-    /// Whether the agent supports `session/load`.
-    #[serde(default)]
-    pub load_session: bool,
     /// Prompt capabilities supported by the agent.
     #[serde(default)]
     pub prompt: PromptCapabilities,
@@ -3692,13 +3689,6 @@ impl AgentCapabilities {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
-    }
-
-    /// Whether the agent supports `session/load`.
-    #[must_use]
-    pub fn load_session(mut self, load_session: bool) -> Self {
-        self.load_session = load_session;
-        self
     }
 
     /// Prompt capabilities supported by the agent.
@@ -3824,8 +3814,6 @@ impl ProvidersCapabilities {
 ///
 /// Optionally, they **MAY** support other session methods and notifications by specifying additional capabilities.
 ///
-/// Note: `session/load` is still handled by the top-level `load_session` capability. This will be unified in future versions of the protocol.
-///
 /// See protocol docs: [Session Capabilities](https://agentclientprotocol.com/protocol/initialization#session-capabilities)
 #[serde_as]
 #[skip_serializing_none]
@@ -3833,6 +3821,14 @@ impl ProvidersCapabilities {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SessionCapabilities {
+    /// Whether the agent supports `session/load`.
+    ///
+    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports loading sessions.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
+    pub load: Option<SessionLoadCapabilities>,
     /// Whether the agent supports `session/list`.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
@@ -3895,6 +3891,16 @@ impl SessionCapabilities {
         Self::default()
     }
 
+    /// Whether the agent supports `session/load`.
+    ///
+    /// Omitted or `null` both mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports loading sessions.
+    #[must_use]
+    pub fn load(mut self, load: impl IntoOption<SessionLoadCapabilities>) -> Self {
+        self.load = load.into_option();
+        self
+    }
+
     /// Whether the agent supports `session/list`.
     #[must_use]
     pub fn list(mut self, list: impl IntoOption<SessionListCapabilities>) -> Self {
@@ -3951,6 +3957,40 @@ impl SessionCapabilities {
     pub fn close(mut self, close: impl IntoOption<SessionCloseCapabilities>) -> Self {
         self.close = close.into_option();
         self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// Capabilities for the `session/load` method.
+///
+/// Supplying `{}` means the agent supports loading sessions.
+#[skip_serializing_none]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct SessionLoadCapabilities {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl SessionLoadCapabilities {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -4576,7 +4616,7 @@ pub enum ClientRequest {
     NewSessionRequest(NewSessionRequest),
     /// Loads an existing session to resume a previous conversation.
     ///
-    /// This method is only available if the agent advertises the `loadSession` capability.
+    /// This method is only available if the agent advertises the `session.load` capability.
     ///
     /// The agent should:
     /// - Restore the session context and conversation history
@@ -4587,7 +4627,7 @@ pub enum ClientRequest {
     LoadSessionRequest(LoadSessionRequest),
     /// Lists existing sessions known to the agent.
     ///
-    /// This method is only available if the agent advertises the `sessionCapabilities.list` capability.
+    /// This method is only available if the agent advertises the `session.list` capability.
     ///
     /// The agent should return metadata about sessions with optional filtering and pagination support.
     ListSessionsRequest(ListSessionsRequest),
@@ -4597,7 +4637,7 @@ pub enum ClientRequest {
     ///
     /// Deletes an existing session from `session/list`.
     ///
-    /// This method is only available if the agent advertises the `sessionCapabilities.delete` capability.
+    /// This method is only available if the agent advertises the `session.delete` capability.
     #[cfg(feature = "unstable_session_delete")]
     DeleteSessionRequest(DeleteSessionRequest),
     #[cfg(feature = "unstable_session_fork")]
@@ -4615,14 +4655,14 @@ pub enum ClientRequest {
     ForkSessionRequest(ForkSessionRequest),
     /// Resumes an existing session without returning previous messages.
     ///
-    /// This method is only available if the agent advertises the `sessionCapabilities.resume` capability.
+    /// This method is only available if the agent advertises the `session.resume` capability.
     ///
     /// The agent should resume the session context, allowing the conversation to continue
     /// without replaying the message history (unlike `session/load`).
     ResumeSessionRequest(ResumeSessionRequest),
     /// Closes an active session and frees up any resources associated with it.
     ///
-    /// This method is only available if the agent advertises the `sessionCapabilities.close` capability.
+    /// This method is only available if the agent advertises the `session.close` capability.
     ///
     /// The agent must cancel any ongoing work (as if `session/cancel` was called)
     /// and then free up any resources associated with the session.
@@ -5316,6 +5356,17 @@ mod test_serialization {
             Vec::<PathBuf>::new()
         );
     }
+    #[test]
+    fn test_session_load_capabilities_serialization() {
+        assert_eq!(
+            serde_json::to_value(SessionCapabilities::new().load(SessionLoadCapabilities::new()))
+                .unwrap(),
+            json!({
+                "load": {}
+            })
+        );
+    }
+
     #[test]
     fn test_session_additional_directories_capabilities_serialization() {
         assert_eq!(

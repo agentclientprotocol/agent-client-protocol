@@ -4498,7 +4498,6 @@ impl IntoV1 for super::AgentCapabilities {
 
     fn into_v1(self) -> Result<Self::Output> {
         let Self {
-            load_session,
             prompt,
             mcp,
             session,
@@ -4511,6 +4510,7 @@ impl IntoV1 for super::AgentCapabilities {
             position_encoding,
             meta,
         } = self;
+        let load_session = session.load.is_some();
         Ok(crate::v1::AgentCapabilities {
             load_session: load_session.into_v1()?,
             prompt_capabilities: prompt.into_v1()?,
@@ -4546,11 +4546,14 @@ impl IntoV2 for crate::v1::AgentCapabilities {
             position_encoding,
             meta,
         } = self;
+        let mut session = session_capabilities.into_v2()?;
+        if load_session {
+            session.load = Some(super::SessionLoadCapabilities::new());
+        }
         Ok(super::AgentCapabilities {
-            load_session: load_session.into_v2()?,
             prompt: prompt_capabilities.into_v2()?,
             mcp: mcp_capabilities.into_v2()?,
-            session: session_capabilities.into_v2()?,
+            session,
             auth: auth.into_v2()?,
             #[cfg(feature = "unstable_llm_providers")]
             providers: providers.into_v2()?,
@@ -4592,6 +4595,7 @@ impl IntoV1 for super::SessionCapabilities {
 
     fn into_v1(self) -> Result<Self::Output> {
         let Self {
+            load: _,
             list,
             #[cfg(feature = "unstable_session_delete")]
             delete,
@@ -4632,6 +4636,7 @@ impl IntoV2 for crate::v1::SessionCapabilities {
             meta,
         } = self;
         Ok(super::SessionCapabilities {
+            load: None,
             list: list.into_v2()?,
             #[cfg(feature = "unstable_session_delete")]
             delete: delete.into_v2()?,
@@ -8658,7 +8663,31 @@ mod tests {
         let response = v1::InitializeResponse::new(ProtocolVersion::V1)
             .agent_info(v1::Implementation::new("test-agent", "2.0.0").title("Test Agent"));
         assert_v1_round_trip::<v1::InitializeResponse, v2::InitializeResponse>(response.clone());
-        assert_json_eq_after_v1_to_v2::<v1::InitializeResponse, v2::InitializeResponse>(response);
+        let converted: v2::InitializeResponse =
+            v1_to_v2(response).expect("v1 -> v2 conversion failed");
+        let converted_json = serde_json::to_value(&converted).expect("v2 serialize");
+        assert_eq!(converted_json.get("agentCapabilities"), None);
+        assert!(converted_json.get("capabilities").is_some());
+        assert_eq!(converted_json.pointer("/capabilities/loadSession"), None);
+    }
+
+    #[test]
+    fn agent_load_session_capability_moves_between_v1_and_v2() {
+        let v1_capabilities = v1::AgentCapabilities::new().load_session(true);
+
+        let v2_capabilities: v2::AgentCapabilities =
+            v1_to_v2(v1_capabilities).expect("v1 -> v2 conversion");
+        assert!(v2_capabilities.session.load.is_some());
+        let v2_json = serde_json::to_value(&v2_capabilities).expect("v2 serialize");
+        assert_eq!(v2_json.get("loadSession"), None);
+        assert_eq!(
+            v2_json.pointer("/session/load"),
+            Some(&serde_json::json!({}))
+        );
+
+        let v1_after: v1::AgentCapabilities =
+            v2_to_v1(v2_capabilities).expect("v2 -> v1 conversion");
+        assert!(v1_after.load_session);
     }
 
     #[test]

@@ -34,7 +34,7 @@ sequenceDiagram
 
 ## Checking Support
 
-Before attempting to list sessions, Clients **MUST** verify that the Agent supports this capability by checking the `sessionCapabilities.list` field in the `initialize` response:
+Before attempting to list sessions, Clients **MUST** verify that the Agent supports this capability by checking the `session.list` field in the `initialize` response:
 
 ```json highlight={7-9}
 {
@@ -42,8 +42,8 @@ Before attempting to list sessions, Clients **MUST** verify that the Agent suppo
   "id": 0,
   "result": {
     "protocolVersion": 2,
-    "agentCapabilities": {
-      "sessionCapabilities": {
+    "capabilities": {
+      "session": {
         "list": {}
       }
     }
@@ -51,9 +51,9 @@ Before attempting to list sessions, Clients **MUST** verify that the Agent suppo
 }
 ```
 
-If `sessionCapabilities.list` is not present, the Agent does not support listing sessions and Clients **MUST NOT** attempt to call `session/list`.
+If `session.list` is not present, the Agent does not support listing sessions and Clients **MUST NOT** attempt to call `session/list`.
 
-Agents that also advertise `sessionCapabilities.additionalDirectories` may
+Agents that also advertise `session.additionalDirectories` may
 include `additionalDirectories` in returned `SessionInfo` objects to report
 additional workspace roots for listed sessions.
 
@@ -131,7 +131,7 @@ The Agent **MUST** respond with a list of sessions and optional pagination metad
       Working directory for the session. Always an absolute path.
     </ResponseField>
     <ResponseField name="additionalDirectories" type="string[]">
-      If the Agent advertises `sessionCapabilities.additionalDirectories`, it
+      If the Agent advertises `session.additionalDirectories`, it
       MAY include this field to report the complete ordered additional-root list
       associated with the listed session. Omitted and empty values are
       equivalent: this `SessionInfo` response reports no additional roots.

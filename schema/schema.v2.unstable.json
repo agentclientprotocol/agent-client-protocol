@@ -66,11 +66,6 @@
           "default": {},
           "description": "Authentication-related capabilities supported by the agent."
         },
-        "loadSession": {
-          "default": false,
-          "description": "Whether the agent supports `session/load`.",
-          "type": "boolean"
-        },
         "mcp": {
           "allOf": [
             {
@@ -1282,7 +1277,7 @@
                       "$ref": "#/$defs/LoadSessionRequest"
                     }
                   ],
-                  "description": "Loads an existing session to resume a previous conversation.\n\nThis method is only available if the agent advertises the `loadSession` capability.\n\nThe agent should:\n- Restore the session context and conversation history\n- Connect to the specified MCP servers\n- Stream the entire conversation history back to the client via notifications\n\nSee protocol docs: [Loading Sessions](https://agentclientprotocol.com/protocol/session-setup#loading-sessions)",
+                  "description": "Loads an existing session to resume a previous conversation.\n\nThis method is only available if the agent advertises the `session.load` capability.\n\nThe agent should:\n- Restore the session context and conversation history\n- Connect to the specified MCP servers\n- Stream the entire conversation history back to the client via notifications\n\nSee protocol docs: [Loading Sessions](https://agentclientprotocol.com/protocol/session-setup#loading-sessions)",
                   "title": "LoadSessionRequest"
                 },
                 {
@@ -1291,7 +1286,7 @@
                       "$ref": "#/$defs/ListSessionsRequest"
                     }
                   ],
-                  "description": "Lists existing sessions known to the agent.\n\nThis method is only available if the agent advertises the `sessionCapabilities.list` capability.\n\nThe agent should return metadata about sessions with optional filtering and pagination support.",
+                  "description": "Lists existing sessions known to the agent.\n\nThis method is only available if the agent advertises the `session.list` capability.\n\nThe agent should return metadata about sessions with optional filtering and pagination support.",
                   "title": "ListSessionsRequest"
                 },
                 {
@@ -1300,7 +1295,7 @@
                       "$ref": "#/$defs/DeleteSessionRequest"
                     }
                   ],
-                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nDeletes an existing session from `session/list`.\n\nThis method is only available if the agent advertises the `sessionCapabilities.delete` capability.",
+                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nDeletes an existing session from `session/list`.\n\nThis method is only available if the agent advertises the `session.delete` capability.",
                   "title": "DeleteSessionRequest"
                 },
                 {
@@ -1318,7 +1313,7 @@
                       "$ref": "#/$defs/ResumeSessionRequest"
                     }
                   ],
-                  "description": "Resumes an existing session without returning previous messages.\n\nThis method is only available if the agent advertises the `sessionCapabilities.resume` capability.\n\nThe agent should resume the session context, allowing the conversation to continue\nwithout replaying the message history (unlike `session/load`).",
+                  "description": "Resumes an existing session without returning previous messages.\n\nThis method is only available if the agent advertises the `session.resume` capability.\n\nThe agent should resume the session context, allowing the conversation to continue\nwithout replaying the message history (unlike `session/load`).",
                   "title": "ResumeSessionRequest"
                 },
                 {
@@ -1327,7 +1322,7 @@
                       "$ref": "#/$defs/CloseSessionRequest"
                     }
                   ],
-                  "description": "Closes an active session and frees up any resources associated with it.\n\nThis method is only available if the agent advertises the `sessionCapabilities.close` capability.\n\nThe agent must cancel any ongoing work (as if `session/cancel` was called)\nand then free up any resources associated with the session.",
+                  "description": "Closes an active session and frees up any resources associated with it.\n\nThis method is only available if the agent advertises the `session.close` capability.\n\nThe agent must cancel any ongoing work (as if `session/cancel` was called)\nand then free up any resources associated with the session.",
                   "title": "CloseSessionRequest"
                 },
                 {
@@ -1523,7 +1518,7 @@
       "x-side": "agent"
     },
     "CloseSessionRequest": {
-      "description": "Request parameters for closing an active session.\n\nIf supported, the agent **must** cancel any ongoing work related to the session\n(treat it as if `session/cancel` was called) and then free up any resources\nassociated with the session.\n\nOnly available if the Agent supports the `sessionCapabilities.close` capability.",
+      "description": "Request parameters for closing an active session.\n\nIf supported, the agent **must** cancel any ongoing work related to the session\n(treat it as if `session/cancel` was called) and then free up any resources\nassociated with the session.\n\nOnly available if the Agent supports the `session.close` capability.",
       "properties": {
         "_meta": {
           "additionalProperties": true,
@@ -1975,7 +1970,7 @@
       "x-side": "client"
     },
     "DeleteSessionRequest": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for deleting an existing session from `session/list`.\n\nOnly available if the Agent supports the `sessionCapabilities.delete` capability.",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for deleting an existing session from `session/list`.\n\nOnly available if the Agent supports the `session.delete` capability.",
       "properties": {
         "_meta": {
           "additionalProperties": true,
@@ -3059,7 +3054,6 @@
           ],
           "default": {
             "auth": {},
-            "loadSession": false,
             "mcp": {
               "acp": false,
               "http": false,
@@ -3154,7 +3148,7 @@
       "x-side": "agent"
     },
     "ListSessionsRequest": {
-      "description": "Request parameters for listing existing sessions.\n\nOnly available if the Agent supports the `sessionCapabilities.list` capability.",
+      "description": "Request parameters for listing existing sessions.\n\nOnly available if the Agent supports the `session.list` capability.",
       "properties": {
         "_meta": {
           "additionalProperties": true,
@@ -3237,7 +3231,7 @@
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nWell-known API protocol identifiers for LLM providers.\n\nAgents and clients MUST handle unknown protocol identifiers gracefully.\n\nProtocol names beginning with `_` are free for custom use, like other ACP extension methods.\nProtocol names that do not begin with `_` are reserved for the ACP spec."
     },
     "LoadSessionRequest": {
-      "description": "Request parameters for loading an existing session.\n\nOnly available if the Agent supports the `loadSession` capability.\n\nSee protocol docs: [Loading Sessions](https://agentclientprotocol.com/protocol/session-setup#loading-sessions)",
+      "description": "Request parameters for loading an existing session.\n\nOnly available if the Agent supports the `session.load` capability.\n\nSee protocol docs: [Loading Sessions](https://agentclientprotocol.com/protocol/session-setup#loading-sessions)",
       "properties": {
         "_meta": {
           "additionalProperties": true,
@@ -5593,7 +5587,7 @@
       "type": "object"
     },
     "ResumeSessionRequest": {
-      "description": "Request parameters for resuming an existing session.\n\nResumes an existing session without returning previous messages (unlike `session/load`).\nThis is useful for agents that can resume sessions but don't implement full session loading.\n\nOnly available if the Agent supports the `sessionCapabilities.resume` capability.",
+      "description": "Request parameters for resuming an existing session.\n\nResumes an existing session without returning previous messages (unlike `session/load`).\nThis is useful for agents that can resume sessions but don't implement full session loading.\n\nOnly available if the Agent supports the `session.resume` capability.",
       "properties": {
         "_meta": {
           "additionalProperties": true,
@@ -5700,7 +5694,7 @@
       "type": "object"
     },
     "SessionCapabilities": {
-      "description": "Session capabilities supported by the agent.\n\nAs a baseline, all Agents **MUST** support `session/new`, `session/prompt`, `session/cancel`, and `session/update`.\n\nOptionally, they **MAY** support other session methods and notifications by specifying additional capabilities.\n\nNote: `session/load` is still handled by the top-level `load_session` capability. This will be unified in future versions of the protocol.\n\nSee protocol docs: [Session Capabilities](https://agentclientprotocol.com/protocol/initialization#session-capabilities)",
+      "description": "Session capabilities supported by the agent.\n\nAs a baseline, all Agents **MUST** support `session/new`, `session/prompt`, `session/cancel`, and `session/update`.\n\nOptionally, they **MAY** support other session methods and notifications by specifying additional capabilities.\n\nSee protocol docs: [Session Capabilities](https://agentclientprotocol.com/protocol/initialization#session-capabilities)",
       "properties": {
         "_meta": {
           "additionalProperties": true,
@@ -5765,6 +5759,18 @@
             }
           ],
           "description": "Whether the agent supports `session/list`.",
+          "x-deserialize-default-on-error": true
+        },
+        "load": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SessionLoadCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Whether the agent supports `session/load`.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports loading sessions.",
           "x-deserialize-default-on-error": true
         },
         "resume": {
@@ -6146,6 +6152,17 @@
     },
     "SessionListCapabilities": {
       "description": "Capabilities for the `session/list` method.\n\nBy supplying `{}` it means that the agent supports listing of sessions.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object"
+    },
+    "SessionLoadCapabilities": {
+      "description": "Capabilities for the `session/load` method.\n\nSupplying `{}` means the agent supports loading sessions.",
       "properties": {
         "_meta": {
           "additionalProperties": true,

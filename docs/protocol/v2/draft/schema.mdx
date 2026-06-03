@@ -327,7 +327,7 @@ Note: in future versions of the protocol, this will be required.
 <ResponseField name="capabilities" type={<a href="#agentcapabilities">AgentCapabilities</a>} >
   Capabilities supported by the agent.
 
-    - Default: `{"auth":{},"loadSession":false,"mcp":{"acp":false,"http":false,"sse":false},"prompt":{"audio":false,"embeddedContext":false,"image":false},"session":{}}`
+    - Default: `{"auth":{},"mcp":{"acp":false,"http":false,"sse":false},"prompt":{"audio":false,"embeddedContext":false,"image":false},"session":{}}`
 
 </ResponseField>
 <ResponseField name="protocolVersion" type={<a href="#protocolversion">ProtocolVersion</a>} required>
@@ -923,7 +923,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 Closes an active session and frees up any resources associated with it.
 
-This method is only available if the agent advertises the `sessionCapabilities.close` capability.
+This method is only available if the agent advertises the `session.close` capability.
 
 The agent must cancel any ongoing work (as if `session/cancel` was called)
 and then free up any resources associated with the session.
@@ -936,7 +936,7 @@ If supported, the agent **must** cancel any ongoing work related to the session
 (treat it as if `session/cancel` was called) and then free up any resources
 associated with the session.
 
-Only available if the Agent supports the `sessionCapabilities.close` capability.
+Only available if the Agent supports the `session.close` capability.
 
 **Type:** Object
 
@@ -980,7 +980,7 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 Deletes an existing session from `session/list`.
 
-This method is only available if the agent advertises the `sessionCapabilities.delete` capability.
+This method is only available if the agent advertises the `session.delete` capability.
 
 #### <span class="font-mono">DeleteSessionRequest</span>
 
@@ -990,7 +990,7 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 Request parameters for deleting an existing session from `session/list`.
 
-Only available if the Agent supports the `sessionCapabilities.delete` capability.
+Only available if the Agent supports the `session.delete` capability.
 
 **Type:** Object
 
@@ -1119,7 +1119,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 Lists existing sessions known to the agent.
 
-This method is only available if the agent advertises the `sessionCapabilities.list` capability.
+This method is only available if the agent advertises the `session.list` capability.
 
 The agent should return metadata about sessions with optional filtering and pagination support.
 
@@ -1127,7 +1127,7 @@ The agent should return metadata about sessions with optional filtering and pagi
 
 Request parameters for listing existing sessions.
 
-Only available if the Agent supports the `sessionCapabilities.list` capability.
+Only available if the Agent supports the `session.list` capability.
 
 **Type:** Object
 
@@ -1177,7 +1177,7 @@ to fetch the next page. If absent, there are no more results.
 
 Loads an existing session to resume a previous conversation.
 
-This method is only available if the agent advertises the `loadSession` capability.
+This method is only available if the agent advertises the `session.load` capability.
 
 The agent should:
 
@@ -1191,7 +1191,7 @@ See protocol docs: [Loading Sessions](https://agentclientprotocol.com/protocol/v
 
 Request parameters for loading an existing session.
 
-Only available if the Agent supports the `loadSession` capability.
+Only available if the Agent supports the `session.load` capability.
 
 See protocol docs: [Loading Sessions](https://agentclientprotocol.com/protocol/v2/draft/session-setup#loading-sessions)
 
@@ -1415,7 +1415,7 @@ Token usage for this turn (optional).
 
 Resumes an existing session without returning previous messages.
 
-This method is only available if the agent advertises the `sessionCapabilities.resume` capability.
+This method is only available if the agent advertises the `session.resume` capability.
 
 The agent should resume the session context, allowing the conversation to continue
 without replaying the message history (unlike `session/load`).
@@ -1427,7 +1427,7 @@ Request parameters for resuming an existing session.
 Resumes an existing session without returning previous messages (unlike `session/load`).
 This is useful for agents that can resume sessions but don't implement full session loading.
 
-Only available if the Agent supports the `sessionCapabilities.resume` capability.
+Only available if the Agent supports the `session.resume` capability.
 
 **Type:** Object
 
@@ -2161,12 +2161,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
   Authentication-related capabilities supported by the agent.
 
     - Default: `{}`
-
-</ResponseField>
-<ResponseField name="loadSession" type={"boolean"} >
-  Whether the agent supports `session/load`.
-
-    - Default: `false`
 
 </ResponseField>
 <ResponseField name="mcp" type={<a href="#mcpcapabilities">McpCapabilities</a>} >
@@ -6193,8 +6187,6 @@ As a baseline, all Agents **MUST** support `session/new`, `session/prompt`, `ses
 
 Optionally, they **MAY** support other session methods and notifications by specifying additional capabilities.
 
-Note: `session/load` is still handled by the top-level `load_session` capability. This will be unified in future versions of the protocol.
-
 See protocol docs: [Session Capabilities](https://agentclientprotocol.com/protocol/v2/draft/initialization#session-capabilities)
 
 **Type:** Object
@@ -6241,6 +6233,13 @@ Whether the agent supports `session/fork`.
 </ResponseField>
 <ResponseField name="list" type={<><span><a href="#sessionlistcapabilities">SessionListCapabilities</a></span><span> | null</span></>} >
   Whether the agent supports `session/list`.
+</ResponseField>
+<ResponseField name="load" type={<><span><a href="#sessionloadcapabilities">SessionLoadCapabilities</a></span><span> | null</span></>} >
+  Whether the agent supports `session/load`.
+
+Optional. Omitted or `null` both mean the agent does not advertise support.
+Supplying `\{\}` means the agent supports loading sessions.
+
 </ResponseField>
 <ResponseField name="resume" type={<><span><a href="#sessionresumecapabilities">SessionResumeCapabilities</a></span><span> | null</span></>} >
   Whether the agent supports `session/resume`.
@@ -6649,6 +6648,25 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 Capabilities for the `session/list` method.
 
 By supplying `\{\}` it means that the agent supports listing of sessions.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+
+## <span class="font-mono">SessionLoadCapabilities</span>
+
+Capabilities for the `session/load` method.
+
+Supplying `\{\}` means the agent supports loading sessions.
 
 **Type:** Object
 

@@ -36,7 +36,7 @@ sequenceDiagram
 
 Agents advertise authentication options in the `authMethods` field of the `initialize` response. Each method has an `id` that the Client passes back to the Agent in a later `authenticate` request.
 
-Agents that support `logout` also advertise `agentCapabilities.auth.logout`:
+Agents that support `logout` also advertise `capabilities.auth.logout`:
 
 ```json highlight={7-11,12-18}
 {
@@ -44,7 +44,7 @@ Agents that support `logout` also advertise `agentCapabilities.auth.logout`:
   "id": 0,
   "result": {
     "protocolVersion": 2,
-    "agentCapabilities": {
+    "capabilities": {
       "auth": {
         "logout": {}
       }
@@ -60,7 +60,7 @@ Agents that support `logout` also advertise `agentCapabilities.auth.logout`:
 }
 ```
 
-If `agentCapabilities.auth.logout` is omitted or `null`, the Agent does not support `logout` and Clients **MUST NOT** call it. Supplying `{}` means the Agent supports the method.
+If `capabilities.auth.logout` is omitted or `null`, the Agent does not support `logout` and Clients **MUST NOT** call it. Supplying `{}` means the Agent supports the method.
 
 ### Authentication Method Types
 
@@ -114,7 +114,7 @@ After successful authentication, the Client can create new sessions without rece
 
 ## Logging Out
 
-The `logout` method allows Clients to end the current authenticated state. Clients should only call it after verifying the Agent advertised `agentCapabilities.auth.logout` during initialization.
+The `logout` method allows Clients to end the current authenticated state. Clients should only call it after verifying the Agent advertised `capabilities.auth.logout` during initialization.
 
 ```json
 {

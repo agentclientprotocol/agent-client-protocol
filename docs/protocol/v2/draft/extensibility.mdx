@@ -131,8 +131,10 @@ Implementations **SHOULD** use the `_meta` field in capability objects to advert
   "id": 0,
   "result": {
     "protocolVersion": 2,
-    "agentCapabilities": {
-      "loadSession": true,
+    "capabilities": {
+      "session": {
+        "load": {}
+      },
       "_meta": {
         "zed.dev": {
           "workspace": true,
