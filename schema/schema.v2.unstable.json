@@ -71,7 +71,7 @@
           "description": "Whether the agent supports `session/load`.",
           "type": "boolean"
         },
-        "mcpCapabilities": {
+        "mcp": {
           "allOf": [
             {
               "$ref": "#/$defs/McpCapabilities"
@@ -108,7 +108,7 @@
           "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nThe position encoding selected by the agent from the client's supported encodings.",
           "x-deserialize-default-on-error": true
         },
-        "promptCapabilities": {
+        "prompt": {
           "allOf": [
             {
               "$ref": "#/$defs/PromptCapabilities"
@@ -133,7 +133,7 @@
           "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nProvider configuration capabilities supported by the agent.\n\nBy supplying `{}` it means that the agent supports provider configuration methods.",
           "x-deserialize-default-on-error": true
         },
-        "sessionCapabilities": {
+        "session": {
           "allOf": [
             {
               "$ref": "#/$defs/SessionCapabilities"
@@ -2982,7 +2982,7 @@
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
         },
-        "clientCapabilities": {
+        "capabilities": {
           "allOf": [
             {
               "$ref": "#/$defs/ClientCapabilities"
@@ -3029,29 +3029,6 @@
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"]
         },
-        "agentCapabilities": {
-          "allOf": [
-            {
-              "$ref": "#/$defs/AgentCapabilities"
-            }
-          ],
-          "default": {
-            "auth": {},
-            "loadSession": false,
-            "mcpCapabilities": {
-              "acp": false,
-              "http": false,
-              "sse": false
-            },
-            "promptCapabilities": {
-              "audio": false,
-              "embeddedContext": false,
-              "image": false
-            },
-            "sessionCapabilities": {}
-          },
-          "description": "Capabilities supported by the agent."
-        },
         "agentInfo": {
           "anyOf": [
             {
@@ -3073,6 +3050,29 @@
           "type": "array",
           "x-deserialize-default-on-error": true,
           "x-deserialize-skip-invalid-items": true
+        },
+        "capabilities": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/AgentCapabilities"
+            }
+          ],
+          "default": {
+            "auth": {},
+            "loadSession": false,
+            "mcp": {
+              "acp": false,
+              "http": false,
+              "sse": false
+            },
+            "prompt": {
+              "audio": false,
+              "embeddedContext": false,
+              "image": false
+            },
+            "session": {}
+          },
+          "description": "Capabilities supported by the agent."
         },
         "protocolVersion": {
           "allOf": [
@@ -3373,7 +3373,7 @@
               "$ref": "#/$defs/McpServerHttp"
             }
           ],
-          "description": "HTTP transport configuration\n\nOnly available when the Agent capabilities indicate `mcp_capabilities.http` is `true`.",
+          "description": "HTTP transport configuration\n\nOnly available when the Agent capabilities indicate `mcp.http` is `true`.",
           "properties": {
             "type": {
               "const": "http",
@@ -3389,7 +3389,7 @@
               "$ref": "#/$defs/McpServerSse"
             }
           ],
-          "description": "SSE transport configuration\n\nOnly available when the Agent capabilities indicate `mcp_capabilities.sse` is `true`.",
+          "description": "SSE transport configuration\n\nOnly available when the Agent capabilities indicate `mcp.sse` is `true`.",
           "properties": {
             "type": {
               "const": "sse",
@@ -3405,7 +3405,7 @@
               "$ref": "#/$defs/McpServerAcp"
             }
           ],
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nACP transport configuration\n\nOnly available when the Agent capabilities indicate `mcp_capabilities.acp` is `true`.\nThe MCP server is provided by an ACP component and communicates over the ACP channel.",
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nACP transport configuration\n\nOnly available when the Agent capabilities indicate `mcp.acp` is `true`.\nThe MCP server is provided by an ACP component and communicates over the ACP channel.",
           "properties": {
             "type": {
               "const": "acp",

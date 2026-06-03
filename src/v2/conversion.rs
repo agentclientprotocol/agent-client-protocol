@@ -2428,13 +2428,13 @@ impl IntoV1 for super::InitializeRequest {
     fn into_v1(self) -> Result<Self::Output> {
         let Self {
             protocol_version,
-            client_capabilities,
+            capabilities,
             client_info,
             meta,
         } = self;
         Ok(crate::v1::InitializeRequest {
             protocol_version: protocol_version.into_v1()?,
-            client_capabilities: client_capabilities.into_v1()?,
+            client_capabilities: capabilities.into_v1()?,
             client_info: client_info.into_v1()?,
             meta: meta.into_v1()?,
         })
@@ -2453,7 +2453,7 @@ impl IntoV2 for crate::v1::InitializeRequest {
         } = self;
         Ok(super::InitializeRequest {
             protocol_version: protocol_version.into_v2()?,
-            client_capabilities: client_capabilities.into_v2()?,
+            capabilities: client_capabilities.into_v2()?,
             client_info: client_info.into_v2()?,
             meta: meta.into_v2()?,
         })
@@ -2466,7 +2466,7 @@ impl IntoV1 for super::InitializeResponse {
     fn into_v1(self) -> Result<Self::Output> {
         let Self {
             protocol_version,
-            agent_capabilities,
+            capabilities: agent_capabilities,
             auth_methods,
             agent_info,
             meta,
@@ -2494,7 +2494,7 @@ impl IntoV2 for crate::v1::InitializeResponse {
         } = self;
         Ok(super::InitializeResponse {
             protocol_version: protocol_version.into_v2()?,
-            agent_capabilities: agent_capabilities.into_v2()?,
+            capabilities: agent_capabilities.into_v2()?,
             auth_methods: auth_methods.into_v2()?,
             agent_info: agent_info.into_v2()?,
             meta: meta.into_v2()?,
@@ -4499,9 +4499,9 @@ impl IntoV1 for super::AgentCapabilities {
     fn into_v1(self) -> Result<Self::Output> {
         let Self {
             load_session,
-            prompt_capabilities,
-            mcp_capabilities,
-            session_capabilities,
+            prompt,
+            mcp,
+            session,
             auth,
             #[cfg(feature = "unstable_llm_providers")]
             providers,
@@ -4513,9 +4513,9 @@ impl IntoV1 for super::AgentCapabilities {
         } = self;
         Ok(crate::v1::AgentCapabilities {
             load_session: load_session.into_v1()?,
-            prompt_capabilities: prompt_capabilities.into_v1()?,
-            mcp_capabilities: mcp_capabilities.into_v1()?,
-            session_capabilities: session_capabilities.into_v1()?,
+            prompt_capabilities: prompt.into_v1()?,
+            mcp_capabilities: mcp.into_v1()?,
+            session_capabilities: session.into_v1()?,
             auth: auth.into_v1()?,
             #[cfg(feature = "unstable_llm_providers")]
             providers: providers.into_v1()?,
@@ -4548,9 +4548,9 @@ impl IntoV2 for crate::v1::AgentCapabilities {
         } = self;
         Ok(super::AgentCapabilities {
             load_session: load_session.into_v2()?,
-            prompt_capabilities: prompt_capabilities.into_v2()?,
-            mcp_capabilities: mcp_capabilities.into_v2()?,
-            session_capabilities: session_capabilities.into_v2()?,
+            prompt: prompt_capabilities.into_v2()?,
+            mcp: mcp_capabilities.into_v2()?,
+            session: session_capabilities.into_v2()?,
             auth: auth.into_v2()?,
             #[cfg(feature = "unstable_llm_providers")]
             providers: providers.into_v2()?,
@@ -8648,7 +8648,7 @@ mod tests {
         let converted: v2::InitializeRequest =
             v1_to_v2(request).expect("v1 -> v2 conversion failed");
         let converted_capabilities =
-            serde_json::to_value(converted.client_capabilities).expect("v2 serialize");
+            serde_json::to_value(converted.capabilities).expect("v2 serialize");
         assert_eq!(converted_capabilities.get("fs"), None);
         assert_eq!(converted_capabilities.get("terminal"), None);
     }

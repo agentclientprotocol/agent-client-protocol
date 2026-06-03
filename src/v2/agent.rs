@@ -57,7 +57,7 @@ pub struct InitializeRequest {
     pub protocol_version: ProtocolVersion,
     /// Capabilities supported by the client.
     #[serde(default)]
-    pub client_capabilities: ClientCapabilities,
+    pub capabilities: ClientCapabilities,
     /// Information about the Client name and version sent to the Agent.
     ///
     /// Note: in future versions of the protocol, this will be required.
@@ -79,7 +79,7 @@ impl InitializeRequest {
     pub fn new(protocol_version: ProtocolVersion) -> Self {
         Self {
             protocol_version,
-            client_capabilities: ClientCapabilities::default(),
+            capabilities: ClientCapabilities::default(),
             client_info: None,
             meta: None,
         }
@@ -87,8 +87,8 @@ impl InitializeRequest {
 
     /// Capabilities supported by the client.
     #[must_use]
-    pub fn client_capabilities(mut self, client_capabilities: ClientCapabilities) -> Self {
-        self.client_capabilities = client_capabilities;
+    pub fn capabilities(mut self, capabilities: ClientCapabilities) -> Self {
+        self.capabilities = capabilities;
         self
     }
 
@@ -130,7 +130,7 @@ pub struct InitializeResponse {
     pub protocol_version: ProtocolVersion,
     /// Capabilities supported by the agent.
     #[serde(default)]
-    pub agent_capabilities: AgentCapabilities,
+    pub capabilities: AgentCapabilities,
     /// Authentication methods supported by the agent.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
     #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
@@ -157,7 +157,7 @@ impl InitializeResponse {
     pub fn new(protocol_version: ProtocolVersion) -> Self {
         Self {
             protocol_version,
-            agent_capabilities: AgentCapabilities::default(),
+            capabilities: AgentCapabilities::default(),
             auth_methods: vec![],
             agent_info: None,
             meta: None,
@@ -166,8 +166,8 @@ impl InitializeResponse {
 
     /// Capabilities supported by the agent.
     #[must_use]
-    pub fn agent_capabilities(mut self, agent_capabilities: AgentCapabilities) -> Self {
-        self.agent_capabilities = agent_capabilities;
+    pub fn capabilities(mut self, capabilities: AgentCapabilities) -> Self {
+        self.capabilities = capabilities;
         self
     }
 
@@ -2646,11 +2646,11 @@ impl SetSessionConfigOptionResponse {
 pub enum McpServer {
     /// HTTP transport configuration
     ///
-    /// Only available when the Agent capabilities indicate `mcp_capabilities.http` is `true`.
+    /// Only available when the Agent capabilities indicate `mcp.http` is `true`.
     Http(McpServerHttp),
     /// SSE transport configuration
     ///
-    /// Only available when the Agent capabilities indicate `mcp_capabilities.sse` is `true`.
+    /// Only available when the Agent capabilities indicate `mcp.sse` is `true`.
     Sse(McpServerSse),
     /// **UNSTABLE**
     ///
@@ -2658,7 +2658,7 @@ pub enum McpServer {
     ///
     /// ACP transport configuration
     ///
-    /// Only available when the Agent capabilities indicate `mcp_capabilities.acp` is `true`.
+    /// Only available when the Agent capabilities indicate `mcp.acp` is `true`.
     /// The MCP server is provided by an ACP component and communicates over the ACP channel.
     #[cfg(feature = "unstable_mcp_over_acp")]
     Acp(McpServerAcp),
@@ -3638,12 +3638,12 @@ pub struct AgentCapabilities {
     pub load_session: bool,
     /// Prompt capabilities supported by the agent.
     #[serde(default)]
-    pub prompt_capabilities: PromptCapabilities,
+    pub prompt: PromptCapabilities,
     /// MCP capabilities supported by the agent.
     #[serde(default)]
-    pub mcp_capabilities: McpCapabilities,
+    pub mcp: McpCapabilities,
     #[serde(default)]
-    pub session_capabilities: SessionCapabilities,
+    pub session: SessionCapabilities,
     /// Authentication-related capabilities supported by the agent.
     #[serde(default)]
     pub auth: AgentAuthCapabilities,
@@ -3703,22 +3703,22 @@ impl AgentCapabilities {
 
     /// Prompt capabilities supported by the agent.
     #[must_use]
-    pub fn prompt_capabilities(mut self, prompt_capabilities: PromptCapabilities) -> Self {
-        self.prompt_capabilities = prompt_capabilities;
+    pub fn prompt(mut self, prompt: PromptCapabilities) -> Self {
+        self.prompt = prompt;
         self
     }
 
     /// MCP capabilities supported by the agent.
     #[must_use]
-    pub fn mcp_capabilities(mut self, mcp_capabilities: McpCapabilities) -> Self {
-        self.mcp_capabilities = mcp_capabilities;
+    pub fn mcp(mut self, mcp: McpCapabilities) -> Self {
+        self.mcp = mcp;
         self
     }
 
     /// Session capabilities supported by the agent.
     #[must_use]
-    pub fn session_capabilities(mut self, session_capabilities: SessionCapabilities) -> Self {
-        self.session_capabilities = session_capabilities;
+    pub fn session(mut self, session: SessionCapabilities) -> Self {
+        self.session = session;
         self
     }
 

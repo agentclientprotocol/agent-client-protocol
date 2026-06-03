@@ -276,7 +276,7 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
-<ResponseField name="clientCapabilities" type={<a href="#clientcapabilities">ClientCapabilities</a>} >
+<ResponseField name="capabilities" type={<a href="#clientcapabilities">ClientCapabilities</a>} >
   Capabilities supported by the client.
 
     - Default: `{"auth":{"terminal":false}}`
@@ -312,12 +312,6 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
-<ResponseField name="agentCapabilities" type={<a href="#agentcapabilities">AgentCapabilities</a>} >
-  Capabilities supported by the agent.
-
-    - Default: `{"auth":{},"loadSession":false,"mcpCapabilities":{"acp":false,"http":false,"sse":false},"promptCapabilities":{"audio":false,"embeddedContext":false,"image":false},"sessionCapabilities":{}}`
-
-</ResponseField>
 <ResponseField name="agentInfo" type={<><span><a href="#implementation">Implementation</a></span><span> | null</span></>} >
   Information about the Agent name and version sent to the Client.
 
@@ -328,6 +322,12 @@ Note: in future versions of the protocol, this will be required.
   Authentication methods supported by the agent.
 
     - Default: `[]`
+
+</ResponseField>
+<ResponseField name="capabilities" type={<a href="#agentcapabilities">AgentCapabilities</a>} >
+  Capabilities supported by the agent.
+
+    - Default: `{"auth":{},"loadSession":false,"mcp":{"acp":false,"http":false,"sse":false},"prompt":{"audio":false,"embeddedContext":false,"image":false},"session":{}}`
 
 </ResponseField>
 <ResponseField name="protocolVersion" type={<a href="#protocolversion">ProtocolVersion</a>} required>
@@ -2169,7 +2169,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
     - Default: `false`
 
 </ResponseField>
-<ResponseField name="mcpCapabilities" type={<a href="#mcpcapabilities">McpCapabilities</a>} >
+<ResponseField name="mcp" type={<a href="#mcpcapabilities">McpCapabilities</a>} >
   MCP capabilities supported by the agent.
 
     - Default: `{"acp":false,"http":false,"sse":false}`
@@ -2191,7 +2191,7 @@ This capability is not part of the spec yet, and may be removed or changed at an
 The position encoding selected by the agent from the client's supported encodings.
 
 </ResponseField>
-<ResponseField name="promptCapabilities" type={<a href="#promptcapabilities">PromptCapabilities</a>} >
+<ResponseField name="prompt" type={<a href="#promptcapabilities">PromptCapabilities</a>} >
   Prompt capabilities supported by the agent.
 
     - Default: `{"audio":false,"embeddedContext":false,"image":false}`
@@ -2207,7 +2207,7 @@ Provider configuration capabilities supported by the agent.
 By supplying `\{\}` it means that the agent supports provider configuration methods.
 
 </ResponseField>
-<ResponseField name="sessionCapabilities" type={<a href="#sessioncapabilities">SessionCapabilities</a>} >
+<ResponseField name="session" type={<a href="#sessioncapabilities">SessionCapabilities</a>} >
 
     - Default: `{}`
 
@@ -4123,7 +4123,7 @@ See protocol docs: [MCP Servers](https://agentclientprotocol.com/protocol/v2/dra
 <ResponseField name="http" type="object">
 HTTP transport configuration
 
-Only available when the Agent capabilities indicate `mcp_capabilities.http` is `true`.
+Only available when the Agent capabilities indicate `mcp.http` is `true`.
 
 <Expandable title="Properties">
 
@@ -4154,7 +4154,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 <ResponseField name="sse" type="object">
 SSE transport configuration
 
-Only available when the Agent capabilities indicate `mcp_capabilities.sse` is `true`.
+Only available when the Agent capabilities indicate `mcp.sse` is `true`.
 
 <Expandable title="Properties">
 
@@ -4189,7 +4189,7 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 ACP transport configuration
 
-Only available when the Agent capabilities indicate `mcp_capabilities.acp` is `true`.
+Only available when the Agent capabilities indicate `mcp.acp` is `true`.
 The MCP server is provided by an ACP component and communicates over the ACP channel.
 
 <Expandable title="Properties">
