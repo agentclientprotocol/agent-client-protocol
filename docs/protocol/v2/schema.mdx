@@ -1443,6 +1443,13 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 <ResponseField name="content" type={<a href="#contentblock">ContentBlock</a>} required>
   A single item of content
 </ResponseField>
+<ResponseField name="messageId" type={<a href="#messageid">MessageId</a>} required>
+  A unique identifier for the message this chunk belongs to.
+
+All chunks belonging to the same message share the same `messageId`.
+A change in `messageId` indicates a new message has started.
+
+</ResponseField>
 
 ## <span class="font-mono">Diff</span>
 
@@ -1979,6 +1986,12 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 <ResponseField name="name" type={"string"} required>
   Human-readable name identifying this MCP server.
 </ResponseField>
+
+## <span class="font-mono">MessageId</span>
+
+Unique identifier for a message within a session.
+
+**Type:** `string`
 
 ## <span class="font-mono">PermissionOption</span>
 
@@ -2905,6 +2918,13 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 <ResponseField name="content" type={<a href="#contentblock">ContentBlock</a>} required>
   A single item of content
 </ResponseField>
+<ResponseField name="messageId" type={<a href="#messageid">MessageId</a>} required>
+  A unique identifier for the message this chunk belongs to.
+
+All chunks belonging to the same message share the same `messageId`.
+A change in `messageId` indicates a new message has started.
+
+</ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
   The discriminator value. Must be `"user_message_chunk"`.
 </ResponseField>
@@ -2928,6 +2948,13 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 <ResponseField name="content" type={<a href="#contentblock">ContentBlock</a>} required>
   A single item of content
 </ResponseField>
+<ResponseField name="messageId" type={<a href="#messageid">MessageId</a>} required>
+  A unique identifier for the message this chunk belongs to.
+
+All chunks belonging to the same message share the same `messageId`.
+A change in `messageId` indicates a new message has started.
+
+</ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
   The discriminator value. Must be `"agent_message_chunk"`.
 </ResponseField>
@@ -2950,6 +2977,13 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 </ResponseField>
 <ResponseField name="content" type={<a href="#contentblock">ContentBlock</a>} required>
   A single item of content
+</ResponseField>
+<ResponseField name="messageId" type={<a href="#messageid">MessageId</a>} required>
+  A unique identifier for the message this chunk belongs to.
+
+All chunks belonging to the same message share the same `messageId`.
+A change in `messageId` indicates a new message has started.
+
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
   The discriminator value. Must be `"agent_thought_chunk"`.

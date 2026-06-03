@@ -193,6 +193,7 @@
               "rfds/custom-llm-endpoint",
               "rfds/model-config-category",
               "rfds/plan-operations",
+              "rfds/message-id",
               {
                 "group": "v2 Draft",
                 "expanded": true,
@@ -202,7 +203,6 @@
                   "rfds/v2/enum-variant-extension",
                   "rfds/v2/client-filesystem-terminal-capabilities",
                   "rfds/v2/plan-variants",
-                  "rfds/message-id",
                   "rfds/streamable-http-websocket-transport"
                 ]
               }

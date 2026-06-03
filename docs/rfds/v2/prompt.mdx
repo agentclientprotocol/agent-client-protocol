@@ -44,7 +44,7 @@ The agent will respond once the prompt has been _accepted_, not when the turn is
 }
 ```
 
-Given there will need to be some more exploration for Message IDs in general, I won't tie that RFD to this one unnecessarily. The accepted user message notification becomes the natural point to provide the ID if the agent has one.
+Given there will need to be some more exploration for Message IDs in general, I won't tie that RFD to this one unnecessarily. The accepted user message notification becomes the natural point to provide the required v2 message ID.
 
 Queueing messages (still an ongoing discussion) would also fit much nicer in this pattern. Either by adding additional parameters or a separate method, we can allow a client to submit queued messages and either cancel or edit them before they get accepted without having to mess with the turn semantics of the previous prompt request approach. Again, queueing is decidedly not part of this RFD, but it seems to fall more naturally into this semantic change in the prompt request.
 
@@ -119,7 +119,7 @@ And also send the notification:
 }
 ```
 
-The client can then make sure the prompt sits nicely in the feed at the right place, and also allows for multiple clients to be attached to the same session because they would receive a user message that they didn't prompt. If the agent includes a `messageId` in that notification, the client can use that agent-provided ID for future message-specific operations.
+The client can then make sure the prompt sits nicely in the feed at the right place, and also allows for multiple clients to be attached to the same session because they would receive a user message that they didn't prompt. The agent-provided `messageId` in that notification gives the client the ID for future message-specific operations.
 
 This is a new message type as well. Not a `user_message_chunk` but just a `user_message` that allows for sending the entire message at once. For v2 we will make sure to allow for the agent to do the same on their messages as well, providing both full and partial streaming update patterns for a given message.
 

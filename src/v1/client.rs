@@ -379,7 +379,7 @@ pub struct ContentChunk {
     /// All chunks belonging to the same message share the same `messageId`.
     /// A change in `messageId` indicates a new message has started.
     #[cfg(feature = "unstable_message_id")]
-    pub message_id: Option<String>,
+    pub message_id: Option<MessageId>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -410,7 +410,7 @@ impl ContentChunk {
     /// A change in `messageId` indicates a new message has started.
     #[cfg(feature = "unstable_message_id")]
     #[must_use]
-    pub fn message_id(mut self, message_id: impl IntoOption<String>) -> Self {
+    pub fn message_id(mut self, message_id: impl IntoOption<MessageId>) -> Self {
         self.message_id = message_id.into_option();
         self
     }
@@ -424,6 +424,29 @@ impl ContentChunk {
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
         self
+    }
+}
+
+/// Unique identifier for a message within a session.
+#[cfg(feature = "unstable_message_id")]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
+#[serde(transparent)]
+#[from(Arc<str>, String, &'static str)]
+#[non_exhaustive]
+pub struct MessageId(pub Arc<str>);
+
+#[cfg(feature = "unstable_message_id")]
+impl MessageId {
+    #[must_use]
+    pub fn new(id: impl Into<Arc<str>>) -> Self {
+        Self(id.into())
+    }
+}
+
+#[cfg(feature = "unstable_message_id")]
+impl IntoOption<MessageId> for &str {
+    fn into_option(self) -> Option<MessageId> {
+        Some(MessageId::new(self))
     }
 }
 

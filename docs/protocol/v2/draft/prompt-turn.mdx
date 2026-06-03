@@ -168,7 +168,7 @@ The Agent then reports text responses from the model:
 }
 ```
 
-The Agent **MAY** include an opaque `messageId` on message chunks. Chunks with the same `messageId` belong to the same message; a changed `messageId` indicates a new message.
+The Agent **MUST** include an opaque `messageId` on message chunks. Chunks with the same `messageId` belong to the same message; a changed `messageId` indicates a new message.
 
 If the model requested tool calls, these are also reported immediately:
 

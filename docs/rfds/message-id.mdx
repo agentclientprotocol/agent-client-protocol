@@ -114,13 +114,14 @@ For agent message chunks, the Agent also generates and includes a `messageId`:
 
 The `messageId` field would be:
 
-- **Optional** on `agent_message_chunk`, `user_message_chunk`, and `agent_thought_chunk` updates
+- **Optional in v1** on `agent_message_chunk`, `user_message_chunk`, and `agent_thought_chunk` updates. An omitted `messageId` and an explicit `null` are equivalent and both mean the Agent did not provide a message ID for that chunk.
+- **Required in v2** on `agent_message_chunk`, `user_message_chunk`, and `agent_thought_chunk` updates. The field MUST be present and MUST be a non-null string.
 - **Agent-generated** - the Agent is the only participant that creates protocol message IDs
 - **Unique per message** within a session
 - **Stable across chunks** - all chunks belonging to the same message share the same `messageId`
 - **Opaque** - Implementations treat it as an identifier without parsing its structure
 
-If an Agent supports message IDs and emits an accepted or replayed user message through `session/update`, it SHOULD include `messageId` on that user message update.
+In v1, if an Agent supports message IDs and emits an accepted or replayed user message through `session/update`, it SHOULD include `messageId` on that user message update. In v2, every streamed user, agent, and thought message chunk MUST include a `messageId`.
 
 ## Shiny future
 
@@ -168,11 +169,14 @@ Example future editing capability:
 ### Phase 1: Core Protocol Changes
 
 1. **Update schema** (`schema/schema.json`):
-   - Add optional `messageId` field (type: `string`) to `ContentChunk` (used by `AgentMessageChunk`, `UserMessageChunk`, `AgentThoughtChunk`)
+   - Add optional `messageId` field (type: `string`) to v1 `ContentChunk` (used by `AgentMessageChunk`, `UserMessageChunk`, `AgentThoughtChunk`)
+   - Add required `messageId` field (type: `string`) to v2 `ContentChunk`
 
 2. **Update Rust SDK** (`rust/client.rs` and `rust/agent.rs`):
-   - Add `message_id: Option<String>` field to `ContentChunk` struct
-   - Update serialization to include `messageId` in JSON output when present
+   - Add a dedicated `MessageId` newtype
+   - Add `message_id: Option<MessageId>` field to the v1 `ContentChunk` struct
+   - Add `message_id: MessageId` field to the v2 `ContentChunk` struct
+   - Update serialization to include `messageId` in JSON output when present for v1 and always for v2
 
 3. **Update TypeScript SDK** (if applicable):
    - Add `messageId` field to corresponding session update types
@@ -195,9 +199,9 @@ Example future editing capability:
 
 ### Backward Compatibility
 
-The `messageId` field is **optional** to ensure this is a non-breaking change. Agents SHOULD include the `messageId` field on message chunks they can identify, but it is not required for v1 compatibility. Features that rely on `messageId` (such as future message editing capabilities) will implicitly require the field to be present - Agents that don't provide it simply won't support those features.
+The `messageId` field is **optional in v1** to ensure this is a non-breaking change. Agents SHOULD include the `messageId` field on message chunks they can identify, but it is not required for v1 compatibility. Features that rely on `messageId` (such as future message editing capabilities) will implicitly require the field to be present - Agents that don't provide it simply won't support those features.
 
-Making this field required will be considered for a future v2 version of the protocol after wide adoption.
+The field is **required in v2**, where breaking protocol changes are allowed. v2 agents MUST include `messageId` on every streamed message chunk, and v2 clients can reject chunks where the field is omitted or `null`.
 
 ## Frequently asked questions
 
@@ -245,9 +249,9 @@ This matches other protocol identifiers (`sessionId`, `terminalId`, `toolCallId`
 
 ### Should this field be required or optional?
 
-The field is **optional** for v1 to ensure backward compatibility. Agents SHOULD include `messageId`, but it is not required. Features that depend on `messageId` (such as message editing) will implicitly require it - if an Agent doesn't provide `messageId`, those features simply won't be available.
+The field is **optional** for v1 to ensure backward compatibility. Agents SHOULD include `messageId`, but it is not required. In v1, omitting `messageId` and sending `null` are equivalent and both mean no message ID was provided.
 
-Making this field required will be considered for a future v2 version of the protocol.
+The field is **required** for v2. The key MUST be present and its value MUST be a non-null string.
 
 ### What format should message IDs use?
 
@@ -278,6 +282,7 @@ Future RFDs may propose extending `messageId` to other update types if use cases
 
 ## Revision history
 
+- **2026-06-03**: Moved the RFD out of the v2 Draft group while keeping v2-specific behavior; added a dedicated `MessageId` type, and made v2 require message IDs on streamed message chunks while v1 keeps optional message IDs for compatibility
 - **2026-06-02**: Updated the proposal so message IDs are Agent-generated only, removed client-provided prompt IDs and prompt response acknowledgments, and removed the UUID requirement in favor of opaque strings
 - **2026-02-17**: Added "Message ID Acknowledgment" section to clarify that presence/absence of `userMessageId` in response indicates whether the Agent recorded the ID; clarified that UUID format is MUST (not SHOULD) since both sides generate IDs; renamed response field to `userMessageId` for clarity (request keeps `messageId`)
 - **2026-01-29**: Updated to allow both clients and agents to generate message IDs using UUID format

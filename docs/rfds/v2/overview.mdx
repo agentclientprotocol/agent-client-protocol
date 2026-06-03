@@ -32,8 +32,6 @@ Current RFDs accepted as Drafts that are targeting v2 release
 - [Enum Variant Extension](./enum-variant-extension.mdx)
 - [Client Filesystem and Terminal Surface](./client-filesystem-terminal-capabilities.mdx)
 - [Plan Variants](./plan-variants.mdx)
-- [Message IDs](../message-id.md)
-  - [Fork from specified IDs](../session-fork.mds)
 - [Remote Transports](../streamable-http-websocket-transport.mdx)
 
 Other RFDs will progress separately and are not dependent on breaking changes (specifically the new prompt lifecycle) and can land in either or both v1 and v2.
@@ -44,6 +42,7 @@ Other RFDs will progress separately and are not dependent on breaking changes (s
 - Agents should expose mode-like and model-related state through [Session Config Options](../session-config-options.mdx) instead of dedicated mode or model selector APIs.
 - Remove the v1 Client filesystem and terminal execution surface from v2. This includes `clientCapabilities.fs`, the top-level `clientCapabilities.terminal` field, `fs/*` methods, `terminal/*` methods, and terminal tool-call content. Terminal authentication remains separate under `clientCapabilities.auth.terminal`.
 - Make [plan variants](./plan-variants.mdx) the default v2 plan shape by replacing the old `plan` session update with item-based `plan_update`.
+- Require [message IDs](../message-id.mdx) on streamed message chunks.
 - Follow JSON-RPC 2.0 batch request and notification behavior.
 
 ### RFDs to be Written

@@ -1836,11 +1836,15 @@
           "description": "A single item of content"
         },
         "messageId": {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA unique identifier for the message this chunk belongs to.\n\nAll chunks belonging to the same message share the same `messageId`.\nA change in `messageId` indicates a new message has started.",
-          "type": ["string", "null"]
+          "allOf": [
+            {
+              "$ref": "#/$defs/MessageId"
+            }
+          ],
+          "description": "A unique identifier for the message this chunk belongs to.\n\nAll chunks belonging to the same message share the same `messageId`.\nA change in `messageId` indicates a new message has started."
         }
       },
-      "required": ["content"],
+      "required": ["content", "messageId"],
       "type": "object"
     },
     "Cost": {
@@ -3538,6 +3542,10 @@
       },
       "required": ["name", "command", "args", "env"],
       "type": "object"
+    },
+    "MessageId": {
+      "description": "Unique identifier for a message within a session.",
+      "type": "string"
     },
     "MessageMcpNotification": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNotification parameters for `mcp/message`.\n\nThis is used when the wrapped MCP message is a notification and the outer JSON-RPC\nenvelope has no `id`.",

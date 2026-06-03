@@ -3512,7 +3512,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 <ResponseField name="content" type={<a href="#contentblock">ContentBlock</a>} required>
   A single item of content
 </ResponseField>
-<ResponseField name="messageId" type={"string | null"} >
+<ResponseField name="messageId" type={<><span><a href="#messageid">MessageId</a></span><span> | null</span></>} >
   **UNSTABLE**
 
 This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -4868,6 +4868,12 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 <ResponseField name="name" type={"string"} required>
   Human-readable name identifying this MCP server.
 </ResponseField>
+
+## <span class="font-mono">MessageId</span>
+
+Unique identifier for a message within a session.
+
+**Type:** `string`
 
 ## <span class="font-mono">MultiSelectItems</span>
 
@@ -7160,7 +7166,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 <ResponseField name="content" type={<a href="#contentblock">ContentBlock</a>} required>
   A single item of content
 </ResponseField>
-<ResponseField name="messageId" type={"string | null"} >
+<ResponseField name="messageId" type={<><span><a href="#messageid">MessageId</a></span><span> | null</span></>} >
   **UNSTABLE**
 
 This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -7194,7 +7200,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 <ResponseField name="content" type={<a href="#contentblock">ContentBlock</a>} required>
   A single item of content
 </ResponseField>
-<ResponseField name="messageId" type={"string | null"} >
+<ResponseField name="messageId" type={<><span><a href="#messageid">MessageId</a></span><span> | null</span></>} >
   **UNSTABLE**
 
 This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -7228,7 +7234,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 <ResponseField name="content" type={<a href="#contentblock">ContentBlock</a>} required>
   A single item of content
 </ResponseField>
-<ResponseField name="messageId" type={"string | null"} >
+<ResponseField name="messageId" type={<><span><a href="#messageid">MessageId</a></span><span> | null</span></>} >
   **UNSTABLE**
 
 This capability is not part of the spec yet, and may be removed or changed at any point.

@@ -175,7 +175,7 @@ Followed by the agent's response:
 }
 ```
 
-If the Agent provides message IDs during replay, each `messageId` is an opaque, unique identifier for the replayed message.
+During replay, the Agent **MUST** include an opaque, unique `messageId` for each replayed message.
 
 When **all** the conversation entries have been streamed to the Client, the
 Agent **MUST** respond to the original `session/load` request.

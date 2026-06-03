@@ -3074,12 +3074,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 <ResponseField name="content" type={<a href="#contentblock">ContentBlock</a>} required>
   A single item of content
 </ResponseField>
-<ResponseField name="messageId" type={"string | null"} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-A unique identifier for the message this chunk belongs to.
+<ResponseField name="messageId" type={<a href="#messageid">MessageId</a>} required>
+  A unique identifier for the message this chunk belongs to.
 
 All chunks belonging to the same message share the same `messageId`.
 A change in `messageId` indicates a new message has started.
@@ -4382,6 +4378,12 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 <ResponseField name="name" type={"string"} required>
   Human-readable name identifying this MCP server.
 </ResponseField>
+
+## <span class="font-mono">MessageId</span>
+
+Unique identifier for a message within a session.
+
+**Type:** `string`
 
 ## <span class="font-mono">MultiSelectItems</span>
 
@@ -6706,12 +6708,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 <ResponseField name="content" type={<a href="#contentblock">ContentBlock</a>} required>
   A single item of content
 </ResponseField>
-<ResponseField name="messageId" type={"string | null"} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-A unique identifier for the message this chunk belongs to.
+<ResponseField name="messageId" type={<a href="#messageid">MessageId</a>} required>
+  A unique identifier for the message this chunk belongs to.
 
 All chunks belonging to the same message share the same `messageId`.
 A change in `messageId` indicates a new message has started.
@@ -6740,12 +6738,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 <ResponseField name="content" type={<a href="#contentblock">ContentBlock</a>} required>
   A single item of content
 </ResponseField>
-<ResponseField name="messageId" type={"string | null"} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-A unique identifier for the message this chunk belongs to.
+<ResponseField name="messageId" type={<a href="#messageid">MessageId</a>} required>
+  A unique identifier for the message this chunk belongs to.
 
 All chunks belonging to the same message share the same `messageId`.
 A change in `messageId` indicates a new message has started.
@@ -6774,12 +6768,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 <ResponseField name="content" type={<a href="#contentblock">ContentBlock</a>} required>
   A single item of content
 </ResponseField>
-<ResponseField name="messageId" type={"string | null"} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-A unique identifier for the message this chunk belongs to.
+<ResponseField name="messageId" type={<a href="#messageid">MessageId</a>} required>
+  A unique identifier for the message this chunk belongs to.
 
 All chunks belonging to the same message share the same `messageId`.
 A change in `messageId` indicates a new message has started.

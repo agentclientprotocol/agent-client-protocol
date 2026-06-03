@@ -432,16 +432,11 @@ impl Cost {
 pub struct ContentChunk {
     /// A single item of content
     pub content: ContentBlock,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// A unique identifier for the message this chunk belongs to.
     ///
     /// All chunks belonging to the same message share the same `messageId`.
     /// A change in `messageId` indicates a new message has started.
-    #[cfg(feature = "unstable_message_id")]
-    pub message_id: Option<String>,
+    pub message_id: MessageId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -453,27 +448,21 @@ pub struct ContentChunk {
 
 impl ContentChunk {
     #[must_use]
-    pub fn new(content: ContentBlock) -> Self {
+    pub fn new(content: ContentBlock, message_id: impl Into<MessageId>) -> Self {
         Self {
             content,
-            #[cfg(feature = "unstable_message_id")]
-            message_id: None,
+            message_id: message_id.into(),
             meta: None,
         }
     }
 
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// A unique identifier for the message this chunk belongs to.
     ///
     /// All chunks belonging to the same message share the same `messageId`.
     /// A change in `messageId` indicates a new message has started.
-    #[cfg(feature = "unstable_message_id")]
     #[must_use]
-    pub fn message_id(mut self, message_id: impl IntoOption<String>) -> Self {
-        self.message_id = message_id.into_option();
+    pub fn message_id(mut self, message_id: impl Into<MessageId>) -> Self {
+        self.message_id = message_id.into();
         self
     }
 
@@ -486,6 +475,20 @@ impl ContentChunk {
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
         self
+    }
+}
+
+/// Unique identifier for a message within a session.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
+#[serde(transparent)]
+#[from(Arc<str>, String, &'static str)]
+#[non_exhaustive]
+pub struct MessageId(pub Arc<str>);
+
+impl MessageId {
+    #[must_use]
+    pub fn new(id: impl Into<Arc<str>>) -> Self {
+        Self(id.into())
     }
 }
 
