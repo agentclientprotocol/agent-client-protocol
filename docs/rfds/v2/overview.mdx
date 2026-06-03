@@ -54,13 +54,11 @@ Changes under consideration that still need to be drafted or moved to draft:
 - Streaming/Non-streaming consistency: Offer both options for both messages and tool calls
   - Also Terminal Output type for streaming terminal output from an agent
   - Expand diff types (delete, move)
-- Truncate/Edit support
 - session/new changes:
   - Providing starting message history
   - Response can provide available commands
   - Potentially config options
     - Get config options outside of a session (take a cwd?)
-- Subagent support
 
 ## Shiny future
 
@@ -92,9 +90,9 @@ With the needed breaking changes, as much as possible I am targeting having a co
 
 ## Revision history
 
-2026-06-02: Recorded the v2 decision to follow JSON-RPC 2.0 batch request and notification behavior.
-2026-06-02: Recorded the v2 decision to remove Client filesystem and terminal execution capabilities, methods, and terminal tool-call content.
-2026-06-02: Added the v2 Plan Variants RFD to make item-based `plan_update` the default v2 plan shape.
-2026-06-01: Recorded that model selection should remain represented by session config options instead of a dedicated selector API.
-2026-05-28: Recorded the v2 decision to remove session modes in favor of session config options
-2026-05-06: Initial draft
+- 2026-06-02: Recorded the v2 decision to follow JSON-RPC 2.0 batch request and notification behavior.
+- 2026-06-02: Recorded the v2 decision to remove Client filesystem and terminal execution capabilities, methods, and terminal tool-call content.
+- 2026-06-02: Added the v2 Plan Variants RFD to make item-based `plan_update` the default v2 plan shape.
+- 2026-06-01: Recorded that model selection should remain represented by session config options instead of a dedicated selector API.
+- 2026-05-28: Recorded the v2 decision to remove session modes in favor of session config options
+- 2026-05-06: Initial draft
