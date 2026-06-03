@@ -38,6 +38,10 @@ Clients may propagate fields to the agent for correlation purposes, such as `req
 
 Implementations **MUST NOT** add any custom fields at the root of a type that's part of the specification. All possible names are reserved for future protocol versions.
 
+## Observability
+
+The `_meta` field can carry correlation context such as W3C trace context keys. Actual telemetry data should be exported out of band with OpenTelemetry. See [Observability](/protocol/v1/draft/observability).
+
 ## Extension Methods
 
 The protocol reserves any method name starting with an underscore (`_`) for custom extensions. This allows implementations to add new functionality without the risk of conflicting with future protocol versions.
