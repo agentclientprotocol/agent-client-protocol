@@ -179,7 +179,6 @@
             "pages": [
               "rfds/session-fork",
               "rfds/request-cancellation",
-              "rfds/meta-propagation",
               "rfds/agent-telemetry-export",
               "rfds/proxy-chains",
               "rfds/mcp-over-acp",
@@ -222,6 +221,7 @@
               "rfds/session-config-options",
               "rfds/session-list",
               "rfds/session-info-update",
+              "rfds/meta-propagation",
               "rfds/acp-agent-registry",
               "rfds/session-resume",
               "rfds/session-close",
