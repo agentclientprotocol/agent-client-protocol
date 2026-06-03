@@ -23,7 +23,7 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
 
       - name: Read MSRV from Cargo.toml
         id: msrv
@@ -43,10 +43,10 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
 
       - name: Use Node.js
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
@@ -67,7 +67,7 @@ jobs:
         run: npm run format:check
 
       - name: Check for typos
-        uses: crate-ci/typos@7b04f660f4ee4f048d18fd341887cf28dfbedfe2
+        uses: crate-ci/typos@f8a58b6b53f2279f71eb605f03a4ae4d10608f45
         with:
           config: ./typos.toml
 
@@ -76,6 +76,11 @@ jobs:
 
       - name: Build
         run: cargo build --all-targets --all-features
+
+      - name: Check docs.rs build
+        env:
+          RUSTDOCFLAGS: --cfg docsrs
+        run: cargo +nightly doc -p agent-client-protocol-schema --all-features --no-deps
 
       - name: Run tests
         run: cargo test --all-features
@@ -91,7 +96,7 @@ jobs:
     outputs:
       changed: ${{ steps.rust-changes.outputs.changed }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -131,7 +136,7 @@ jobs:
         partition: ["1/4", "2/4", "3/4", "4/4"]
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
         with:
           persist-credentials: false
 
@@ -141,7 +146,7 @@ jobs:
           toolchain: stable
 
       - name: Install cargo-hack
-        uses: taiki-e/install-action@d9be7d8cda89035c9c843f78bd44d4f72d8403d4
+        uses: taiki-e/install-action@6887963ccf37a9ddcd8c5fa4baeb3e1e5fd61fa1
         with:
           tool: cargo-hack
 

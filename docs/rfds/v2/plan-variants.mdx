@@ -1,0 +1,104 @@
+---
+title: "v2 Plan Variants"
+---
+
+Author(s): [@benbrandt](https://github.com/benbrandt)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+ACP v2 should make the extensible `plan_update` shape the default plan notification, remove the old v1 `sessionUpdate: "plan"` shape from the v2 schema, and keep the rest of the plan operations work in the unstable plan-operations surface while that RFD continues.
+
+For now, v2 should stabilize only the item-based plan content variant:
+
+```json
+{
+  "sessionUpdate": "plan_update",
+  "plan": {
+    "type": "items",
+    "id": "plan-1",
+    "entries": [
+      { "content": "Step 1", "priority": "high", "status": "pending" }
+    ]
+  }
+}
+```
+
+The markdown, file, and removal pieces from [Plan Operations Support](/rfds/plan-operations) remain behind the unstable plan-operations feature while that RFD continues. V2 does not need a separate `planCapabilities` runtime handshake for those unstable operations.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+The v1 plan update is a flattened session update:
+
+```json
+{
+  "sessionUpdate": "plan",
+  "entries": [{ "content": "Step 1", "priority": "high", "status": "pending" }]
+}
+```
+
+This shape has no stable place for a plan ID or a content discriminator. Adding either field to the same `plan` variant would create a mixed old/new shape and make future plan formats harder to add cleanly.
+
+The Plan Operations RFD already introduced a more extensible tagged shape through `plan_update`, plus markdown, file, and removal operations. Those pieces are still useful, but v2 does not need to wait on them to adopt the extensible baseline.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+ACP v2 should:
+
+- Remove the old `sessionUpdate: "plan"` variant from the v2 schema.
+- Add `sessionUpdate: "plan_update"` to the default v2 schema.
+- Stabilize only the `plan.type: "items"` content variant for now.
+- Keep unknown plan content variants parseable and preservable using the [v2 enum variant extension](/rfds/v2/enum-variant-extension) rules.
+- Require every plan content variant, including unknown future/custom variants, to carry a plan `id`.
+- Remove `ClientCapabilities.planCapabilities` from v2.
+- Keep `markdown`, `file`, and `plan_removed` behind `unstable_plan_operations` until the Plan Operations RFD settles.
+
+The stable v2 `plan_update` shape does not require a capability. The unstable plan operations remain gated by the draft unstable protocol surface, not by a v2 `planCapabilities` field.
+
+### Compatibility
+
+When converting a v1 single-plan update to v2, implementations should use the item-based `plan_update` shape with a stable synthetic plan ID of `main`.
+
+When converting v2 back to a v1 surface that does not support unstable plan operations, an item-based `plan_update` can be represented as the old v1 `plan` update by dropping the plan ID. Other plan content variants cannot be represented without the unstable v1 plan operations surface.
+
+## Shiny future
+
+> How will things play out once this feature exists?
+
+The v2 schema has a single extensible place for plan content from the start. ACP can later promote markdown, file-backed, removal, or other plan operations without introducing another incompatible plan update shape.
+
+Clients that only understand item-based plans can still preserve or display unknown plan content generically, while extensions get the `_`-prefixed namespace defined by the enum variant extension RFD.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+1. Make `PlanUpdate`, `PlanUpdateContent`, `PlanItems`, and `PlanId` part of the default v2 Rust schema source.
+2. Remove `PlanCapabilities` from the v2 Rust schema source.
+3. Leave `PlanFile`, `PlanMarkdown`, and `PlanRemoved` behind `unstable_plan_operations`.
+4. Remove `SessionUpdate::Plan` from the v2 schema and make `SessionUpdate::PlanUpdate` the default plan variant.
+5. Keep the removed `sessionUpdate: "plan"` discriminator rejected so it cannot be accepted as an unknown v2 update.
+6. Require `id` on unknown `PlanUpdateContent` fallback payloads.
+7. Update v1/v2 conversion helpers so v1 `plan` maps to v2 `plan_update` with `id: "main"`.
+8. Regenerate v2 schema docs so the default v2 surface shows only the item-based tagged plan shape.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Why not wait for the Plan Operations RFD to complete?
+
+The item-based tagged shape is enough to make v2 extensible and remove the old flattened plan variant. The rest of the Plan Operations RFD can continue behind the unstable feature flag. V2 does not need `planCapabilities` because those operations are either part of the draft unstable protocol surface or absent from the stable schema.
+
+### Why use `main` for v1 conversion?
+
+The v1 shape represents exactly one plan and has no plan ID. A stable synthetic ID lets conversion preserve that single-plan meaning in v2 while keeping the v2 schema explicit about plan identity.
+
+## Revision history
+
+2026-06-02: Initial draft

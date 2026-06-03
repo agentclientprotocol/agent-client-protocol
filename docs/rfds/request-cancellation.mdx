@@ -77,7 +77,7 @@ When a `$/cancel_request` notification is received by a supporting implementatio
 - **MAY** finish sending any pending notifications before responding
 - **MUST** send one of these responses for the original request:
   - A valid response with appropriate data (such as partial results or cancellation marker)
-  - An error response with code [`-32800` (Request Cancelled)](./schema#errorcode)
+  - An error response with code [`-32800` (Request Cancelled)](/protocol/v1/draft/schema#errorcode)
 
 #### Internal Cancellation
 

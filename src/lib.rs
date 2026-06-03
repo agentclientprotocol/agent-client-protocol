@@ -1,3 +1,5 @@
+#![cfg_attr(docsrs, feature(doc_cfg))]
+
 //! [![Agent Client Protocol](https://zed.dev/img/acp/banner-dark.webp)](https://agentclientprotocol.com/)
 //!
 //! # Agent Client Protocol Schema
@@ -19,8 +21,9 @@
 //!
 //! - Wire-format types for every ACP method: request, response, and
 //!   notification structs grouped by which side handles them.
-//! - JSON-RPC envelope and routing types: [`JsonRpcMessage`], [`Request`],
-//!   [`Response`], [`Notification`], [`RequestId`], [`Error`].
+//! - JSON-RPC envelope and routing types: [`JsonRpcMessage`],
+//!   [`rpc::JsonRpcBatch`], [`Request`], [`Response`], [`Notification`],
+//!   [`RequestId`], [`Error`].
 //! - Aggregated routing enums: [`AgentRequest`], [`AgentResponse`],
 //!   [`AgentNotification`], and the matching client-side trio used by SDK
 //!   crates to dispatch incoming JSON-RPC messages.

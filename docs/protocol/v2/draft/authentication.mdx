@@ -81,7 +81,7 @@ Draft authentication method types provide additional information so Clients can 
 
 In v2, authentication method `type` values can be custom or future variants. Custom method types **MUST** begin with `_`. Unknown non-underscore method types are reserved for future ACP variants. Clients that do not understand a method type should preserve the raw method payload when storing, replaying, proxying, or forwarding initialization data, and otherwise ignore the method or display it generically.
 
-`terminal` methods require Client support. Clients advertise this during initialization with `clientCapabilities.auth.terminal`:
+`terminal` authentication methods require Client support. Clients advertise this during initialization with `clientCapabilities.auth.terminal`:
 
 ```json highlight={7-9}
 {

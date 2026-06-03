@@ -2,8 +2,8 @@ use agent_client_protocol_schema::ProtocolVersion;
 #[cfg(feature = "unstable_protocol_v2")]
 use agent_client_protocol_schema::v2::{
     AGENT_METHOD_NAMES, AgentNotification, AgentRequest, AgentResponse, CLIENT_METHOD_NAMES,
-    ClientNotification, ClientRequest, ClientResponse, JsonRpcMessage, Notification, Request,
-    Response,
+    ClientNotification, ClientRequest, ClientResponse, JsonRpcBatch, JsonRpcMessage, Notification,
+    Request, Response,
 };
 #[cfg(all(feature = "unstable_cancel_request", feature = "unstable_protocol_v2"))]
 use agent_client_protocol_schema::v2::{PROTOCOL_LEVEL_METHOD_NAMES, ProtocolLevelNotification};
@@ -50,6 +50,32 @@ enum ClientOutgoingMessage {
     Notification(Notification<ClientNotification>),
 }
 
+/// Messages that an agent can include in a JSON-RPC batch call to a client.
+#[cfg(feature = "unstable_protocol_v2")]
+#[derive(Serialize, Deserialize, JsonSchema)]
+#[serde(untagged)]
+#[schemars(inline)]
+#[allow(clippy::large_enum_variant)]
+enum AgentBatchCallMessage {
+    Request(Request<AgentRequest>),
+    Notification(Notification<AgentNotification>),
+    #[cfg(feature = "unstable_cancel_request")]
+    ProtocolLevelNotification(Notification<ProtocolLevelNotification>),
+}
+
+/// Messages that a client can include in a JSON-RPC batch call to an agent.
+#[cfg(feature = "unstable_protocol_v2")]
+#[derive(Serialize, Deserialize, JsonSchema)]
+#[serde(untagged)]
+#[schemars(inline)]
+#[allow(clippy::large_enum_variant)]
+enum ClientBatchCallMessage {
+    Request(Request<ClientRequest>),
+    Notification(Notification<ClientNotification>),
+    #[cfg(feature = "unstable_cancel_request")]
+    ProtocolLevelNotification(Notification<ProtocolLevelNotification>),
+}
+
 #[expect(dead_code)]
 #[derive(JsonSchema)]
 #[serde(untagged)]
@@ -58,11 +84,36 @@ enum ClientOutgoingMessage {
 enum AcpTypes {
     Agent(JsonRpcMessage<AgentOutgoingMessage>),
     Client(JsonRpcMessage<ClientOutgoingMessage>),
+    #[cfg(feature = "unstable_protocol_v2")]
+    AgentBatchCall(JsonRpcBatch<AgentBatchCallMessage>),
+    #[cfg(feature = "unstable_protocol_v2")]
+    AgentBatchResponse(JsonRpcBatch<Response<AgentResponse>>),
+    #[cfg(feature = "unstable_protocol_v2")]
+    ClientBatchCall(JsonRpcBatch<ClientBatchCallMessage>),
+    #[cfg(feature = "unstable_protocol_v2")]
+    ClientBatchResponse(JsonRpcBatch<Response<ClientResponse>>),
     #[cfg(feature = "unstable_cancel_request")]
-    ProtocolLevel(ProtocolLevelNotification),
+    ProtocolLevel(JsonRpcMessage<Notification<ProtocolLevelNotification>>),
 }
 
 fn main() {
+    let schema_value = root_schema_value();
+
+    let root = env!("CARGO_MANIFEST_DIR");
+    let schema_dir = Path::new(root).join("schema");
+    let docs_protocol_dir = Path::new(root).join("docs").join("protocol");
+
+    fs::create_dir_all(schema_dir.clone()).unwrap();
+    fs::create_dir_all(docs_protocol_dir.clone()).unwrap();
+
+    write_schema(
+        &schema_value,
+        schema_dir.as_path(),
+        docs_protocol_dir.as_path(),
+    );
+}
+
+fn root_schema_value() -> serde_json::Value {
     let mut settings = SchemaSettings::draft2020_12();
     settings.untagged_enum_variant_titles = true;
     let mut bool_schemas = ReplaceBoolSchemas::default();
@@ -75,15 +126,10 @@ fn main() {
     let schema = generator.into_root_schema_for::<AcpTypes>();
 
     // Convert to serde_json::Value for post-processing
-    let schema_value = serde_json::to_value(&schema).unwrap();
+    serde_json::to_value(&schema).unwrap()
+}
 
-    let root = env!("CARGO_MANIFEST_DIR");
-    let schema_dir = Path::new(root).join("schema");
-    let docs_protocol_dir = Path::new(root).join("docs").join("protocol");
-
-    fs::create_dir_all(schema_dir.clone()).unwrap();
-    fs::create_dir_all(docs_protocol_dir.clone()).unwrap();
-
+fn write_schema(schema_value: &serde_json::Value, schema_dir: &Path, docs_protocol_dir: &Path) {
     // Each cfg combination owns exactly one filename, with disjoint write
     // sets so the generation runs that produce the published schemas
     // can run in any order without clobbering each other:
@@ -152,24 +198,26 @@ fn main() {
     // Generate markdown documentation. Each cfg combination owns its own
     // doc file, so the `npm run generate` runs don't clobber each other:
     //
-    // - `schema.mdx`              — stable v1 (no features)
-    // - `draft/schema.mdx`        — v1 + unstable feature flags
+    // - `v1/schema.mdx`           — stable v1 (no features)
+    // - `v1/draft/schema.mdx`     — v1 + unstable feature flags
     // - `v2/schema.mdx`           — v2 docs only (hidden while v2 is drafted)
     // - `v2/draft/schema.mdx`     — v2 + unstable feature flags
     let mut markdown_gen = MarkdownGenerator::new(schema_file);
-    let mut markdown_doc = markdown_gen.generate(&schema_value);
+    let mut markdown_doc = markdown_gen.generate(schema_value);
 
-    if cfg!(feature = "unstable_protocol_v2") {
-        let protocol_doc_base = if cfg!(feature = "unstable") {
-            "https://agentclientprotocol.com/protocol/v2/draft/"
-        } else {
-            "https://agentclientprotocol.com/protocol/v2/"
-        };
-        markdown_doc = markdown_doc.replace(
-            "https://agentclientprotocol.com/protocol/",
-            protocol_doc_base,
-        );
-    }
+    let protocol_doc_base = match (
+        cfg!(feature = "unstable_protocol_v2"),
+        cfg!(feature = "unstable"),
+    ) {
+        (true, true) => "https://agentclientprotocol.com/protocol/v2/draft/",
+        (true, false) => "https://agentclientprotocol.com/protocol/v2/",
+        (false, true) => "https://agentclientprotocol.com/protocol/v1/draft/",
+        (false, false) => "https://agentclientprotocol.com/protocol/v1/",
+    };
+    markdown_doc = markdown_doc.replace(
+        "https://agentclientprotocol.com/protocol/",
+        protocol_doc_base,
+    );
 
     let doc_file: &str = match (
         cfg!(feature = "unstable_protocol_v2"),
@@ -177,8 +225,8 @@ fn main() {
     ) {
         (true, true) => "v2/draft/schema.mdx",
         (true, false) => "v2/schema.mdx",
-        (false, true) => "draft/schema.mdx",
-        (false, false) => "schema.mdx",
+        (false, true) => "v1/draft/schema.mdx",
+        (false, false) => "v1/schema.mdx",
     };
 
     let doc_path = docs_protocol_dir.join(doc_file);
@@ -198,6 +246,187 @@ fn main() {
         None => println!("✓ Skipped stable v2 metadata"),
     }
     println!("✓ Generated {doc_file}");
+}
+
+#[cfg(test)]
+mod schema_annotation_tests {
+    use super::root_schema_value;
+    use serde_json::Value;
+    use std::{fs, path::Path};
+
+    const DEFAULT_ON_ERROR_EXTENSION: &str = "x-deserialize-default-on-error";
+    const SKIP_INVALID_ITEMS_EXTENSION: &str = "x-deserialize-skip-invalid-items";
+
+    #[test]
+    fn generated_schema_includes_tolerant_deserialization_extensions() {
+        let schema = root_schema_value();
+
+        let client_info = property_schema(&schema, "InitializeRequest", "clientInfo");
+        assert_bool_extension(client_info, DEFAULT_ON_ERROR_EXTENSION);
+        assert_no_extension(client_info, SKIP_INVALID_ITEMS_EXTENSION);
+
+        let auth_methods = property_schema(&schema, "InitializeResponse", "authMethods");
+        assert_bool_extension(auth_methods, DEFAULT_ON_ERROR_EXTENSION);
+        assert_bool_extension(auth_methods, SKIP_INVALID_ITEMS_EXTENSION);
+    }
+
+    #[cfg(feature = "unstable_protocol_v2")]
+    #[test]
+    fn generated_v2_schema_includes_json_rpc_batch_messages() {
+        let schema = root_schema_value();
+        for title in [
+            "AgentBatchCall",
+            "AgentBatchResponse",
+            "ClientBatchCall",
+            "ClientBatchResponse",
+        ] {
+            let batch_schema = root_variant_schema(&schema, title);
+            assert_eq!(
+                batch_schema.get("type").and_then(Value::as_str),
+                Some("array")
+            );
+            assert_eq!(
+                batch_schema.get("minItems").and_then(Value::as_u64),
+                Some(1)
+            );
+        }
+
+        #[cfg(feature = "unstable_cancel_request")]
+        for title in ["AgentBatchCall", "ClientBatchCall"] {
+            let batch_schema = root_variant_schema(&schema, title);
+            assert!(
+                schema_contains_ref(batch_schema, "#/$defs/ProtocolLevelNotification"),
+                "missing ProtocolLevelNotification in {title}"
+            );
+        }
+
+        #[cfg(feature = "unstable_cancel_request")]
+        {
+            let protocol_level = root_variant_schema(&schema, "ProtocolLevel");
+            assert_eq!(
+                protocol_level
+                    .pointer("/properties/jsonrpc/enum/0")
+                    .and_then(Value::as_str),
+                Some("2.0")
+            );
+            assert_eq!(
+                protocol_level
+                    .pointer("/properties/method/type")
+                    .and_then(Value::as_str),
+                Some("string")
+            );
+
+            let protocol_notification = def_schema(&schema, "ProtocolLevelNotification");
+            assert_eq!(
+                protocol_notification
+                    .pointer("/properties/method/type")
+                    .and_then(Value::as_str),
+                Some("string")
+            );
+            assert!(
+                protocol_notification
+                    .pointer("/required")
+                    .and_then(Value::as_array)
+                    .is_some_and(|required| required.iter().any(|field| field == "method"))
+            );
+            assert!(
+                schema_contains_ref(protocol_notification, "#/$defs/CancelRequestNotification"),
+                "missing CancelRequestNotification in ProtocolLevelNotification"
+            );
+        }
+    }
+
+    #[test]
+    fn source_default_on_error_fields_are_schema_annotated() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+        for module_dir in ["src/v1", "src/v2"] {
+            for entry in fs::read_dir(root.join(module_dir)).unwrap() {
+                let path = entry.unwrap().path();
+                if path.extension().and_then(|ext| ext.to_str()) != Some("rs") {
+                    continue;
+                }
+
+                let source = fs::read_to_string(&path).unwrap();
+                let lines: Vec<_> = source.lines().collect();
+                for (line_index, line) in lines.iter().enumerate() {
+                    if !line.contains(r#"#[serde_as(deserialize_as = "DefaultOnError"#) {
+                        continue;
+                    }
+
+                    let annotation = lines.get(line_index + 1).copied().unwrap_or_default();
+                    assert!(
+                        annotation.contains(r#""x-deserialize-default-on-error" = true"#),
+                        "{}:{} missing {DEFAULT_ON_ERROR_EXTENSION}",
+                        path.display(),
+                        line_index + 1
+                    );
+
+                    if line.contains("VecSkipError") {
+                        assert!(
+                            annotation.contains(r#""x-deserialize-skip-invalid-items" = true"#),
+                            "{}:{} missing {SKIP_INVALID_ITEMS_EXTENSION}",
+                            path.display(),
+                            line_index + 1
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    fn property_schema<'a>(schema: &'a Value, def_name: &str, prop_name: &str) -> &'a Value {
+        def_schema(schema, def_name)
+            .pointer(&format!("/properties/{prop_name}"))
+            .unwrap_or_else(|| panic!("missing schema property {def_name}.{prop_name}"))
+    }
+
+    fn def_schema<'a>(schema: &'a Value, def_name: &str) -> &'a Value {
+        schema
+            .pointer(&format!("/$defs/{def_name}"))
+            .unwrap_or_else(|| panic!("missing schema definition {def_name}"))
+    }
+
+    #[cfg(feature = "unstable_protocol_v2")]
+    fn root_variant_schema<'a>(schema: &'a Value, title: &str) -> &'a Value {
+        schema
+            .get("anyOf")
+            .and_then(Value::as_array)
+            .and_then(|variants| {
+                variants
+                    .iter()
+                    .find(|variant| variant.get("title").and_then(Value::as_str) == Some(title))
+            })
+            .unwrap_or_else(|| panic!("missing root schema variant {title}"))
+    }
+
+    fn assert_bool_extension(schema: &Value, extension: &str) {
+        assert_eq!(
+            schema.get(extension).and_then(Value::as_bool),
+            Some(true),
+            "missing extension {extension} on {schema}"
+        );
+    }
+
+    fn assert_no_extension(schema: &Value, extension: &str) {
+        assert!(
+            schema.get(extension).is_none(),
+            "unexpected extension {extension} on {schema}"
+        );
+    }
+
+    #[cfg(all(feature = "unstable_protocol_v2", feature = "unstable_cancel_request"))]
+    fn schema_contains_ref(schema: &Value, ref_path: &str) -> bool {
+        match schema {
+            Value::Object(object) => object.iter().any(|(key, value)| {
+                key == "$ref" && value.as_str() == Some(ref_path)
+                    || schema_contains_ref(value, ref_path)
+            }),
+            Value::Array(array) => array
+                .iter()
+                .any(|value| schema_contains_ref(value, ref_path)),
+            _ => false,
+        }
+    }
 }
 
 mod markdown_generator {
@@ -1279,7 +1508,6 @@ starting with '$/' it is free to ignore the notification."
                 }
                 "session/prompt" => self.agent.get("PromptRequest").unwrap(),
                 "session/cancel" => self.agent.get("CancelNotification").unwrap(),
-                "session/set_model" => self.agent.get("SetSessionModelRequest").unwrap(),
                 "session/close" => self.agent.get("CloseSessionRequest").unwrap(),
                 "logout" => self.agent.get("LogoutRequest").unwrap(),
                 "nes/start" => self.agent.get("StartNesRequest").unwrap(),
@@ -1330,6 +1558,7 @@ starting with '$/' it is free to ignore the notification."
         }
     }
 
+    #[expect(clippy::too_many_lines)]
     fn extract_side_docs() -> SideDocs {
         let output = Command::new("cargo")
             .args([
@@ -1363,6 +1592,7 @@ starting with '$/' it is free to ignore the notification."
         if let Some(index) = doc["index"].as_object() {
             for (_, item) in index {
                 if item["name"].as_str() == Some("ClientRequest")
+                    && is_current_protocol_item(item)
                     && let Some(variants) = item["inner"]["enum"]["variants"].as_array()
                 {
                     for variant_id in variants {
@@ -1378,6 +1608,7 @@ starting with '$/' it is free to ignore the notification."
                 }
 
                 if item["name"].as_str() == Some("ClientNotification")
+                    && is_current_protocol_item(item)
                     && let Some(variants) = item["inner"]["enum"]["variants"].as_array()
                 {
                     for variant_id in variants {
@@ -1393,6 +1624,7 @@ starting with '$/' it is free to ignore the notification."
                 }
 
                 if item["name"].as_str() == Some("AgentRequest")
+                    && is_current_protocol_item(item)
                     && let Some(variants) = item["inner"]["enum"]["variants"].as_array()
                 {
                     for variant_id in variants {
@@ -1408,6 +1640,7 @@ starting with '$/' it is free to ignore the notification."
                 }
 
                 if item["name"].as_str() == Some("AgentNotification")
+                    && is_current_protocol_item(item)
                     && let Some(variants) = item["inner"]["enum"]["variants"].as_array()
                 {
                     for variant_id in variants {
@@ -1423,6 +1656,7 @@ starting with '$/' it is free to ignore the notification."
                 }
 
                 if item["name"].as_str() == Some("ProtocolLevelNotification")
+                    && is_current_protocol_item(item)
                     && let Some(variants) = item["inner"]["enum"]["variants"].as_array()
                 {
                     for variant_id in variants {
@@ -1440,6 +1674,18 @@ starting with '$/' it is free to ignore the notification."
         }
 
         side_docs
+    }
+
+    fn is_current_protocol_item(item: &Value) -> bool {
+        let Some(filename) = item["span"]["filename"].as_str() else {
+            return false;
+        };
+
+        if cfg!(feature = "unstable_protocol_v2") {
+            filename.starts_with("src/v2/")
+        } else {
+            filename.starts_with("src/v1/")
+        }
     }
 
     #[cfg(test)]

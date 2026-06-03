@@ -14,6 +14,7 @@ The following projects implement ACP directly, connect ACP agents to other envir
   - through the [CodeCompanion](https://github.com/olimorris/codecompanion.nvim) plugin
   - through the [carlos-algms/agentic.nvim](https://github.com/carlos-algms/agentic.nvim) plugin
   - through the [yetone/avante.nvim](https://github.com/yetone/avante.nvim) plugin
+  - through the [hermes.nvim](https://github.com/Ruddickmg/hermes.nvim) plugin
 - [Obsidian](https://obsidian.md) — through the [Agent Client](https://github.com/RAIT-09/obsidian-agent-client) plugin
 - [Unity ACP Client](https://github.com/3DLabInstruments/UnityACPClient)(Unity plugin)
 - [Unity Agent Client](https://github.com/nuskey8/UnityAgentClient) (Unity editor)
@@ -74,8 +75,10 @@ These mobile-first tools bring ACP and related coding-agent workflows to phones 
 - [OpenACP](https://github.com/Open-ACP/OpenACP) (Telegram, Discord, Slack) — self-hosted bridge for ACP agents; streams tool calls and responses in real time
 - [Telegram ACP Bot](https://github.com/mgaitan/telegram-acp-bot) (Telegram) — through the [`telegram-acp-bot`](https://github.com/mgaitan/telegram-acp-bot) connector
 - [Telegram-ACP](https://github.com/SuperKenVery/Telegram-ACP/) (Telegram) — Supports multi-thread chat and message streaming
+- [ACP Router](https://github.com/vcoderun/acprouter) (Telegram) - an ACP client surface for driving ACP agents from Telegram, with rich diffs, approvals and many more.
 - [WeChat ACP](https://github.com/formulahendry/wechat-acp) (WeChat)
 - [Sniptail](https://github.com/Justkog/sniptail) (Discord, Slack) - self-hosted chat bridge for running coding agents across your team’s repositories
+- [Lark ACP](https://github.com/4t145/lark-acp) (Lark/飞书)
 
 ## Frameworks
 
@@ -83,10 +86,12 @@ These frameworks add ACP support through dedicated integrations or adapters:
 
 - [AgentPool](https://phil65.github.io/agentpool/) — with built-in ACP integration for IDEs and external ACP agents
 - [fast-agent](https://fast-agent.ai/acp/) — through [`fast-agent-acp`](https://fast-agent.ai/acp/)
+- [ACP Kit](https://github.com/vcoderun/acpkit/) - adapter toolkit for exposing existing [Pydantic AI](https://pypi.org/project/pydantic-acp/) / [LangChain](https://pypi.org/project/langchain-acp/) agent runtimes through ACP.
 - [Koog](https://docs.koog.ai/agent-client-protocol/) — through the [`agents-features-acp`](https://github.com/JetBrains/koog/tree/develop/examples/notebooks/acp) integration
 - [LangChain / LangGraph](https://docs.langchain.com/oss/python/deepagents/acp) — through [Deep Agents ACP](https://docs.langchain.com/oss/python/deepagents/acp)
 - [LlamaIndex](https://github.com/AstraBert/workflows-acp) — through the [`workflows-acp`](https://github.com/AstraBert/workflows-acp) adapter for Agent Workflows
 - [LLMling-Agent](https://github.com/phil65/llmling-agent) — with built-in ACP support for running agents through ACP clients
+- [Mastra](https://mastra.ai/docs/agents/acp) — through the [`@mastra/acp`](https://mastra.ai/docs/agents/acp) package for wrapping external ACP agents as tools or subagents
 
 ## Connectors
 
@@ -95,5 +100,6 @@ These connectors bridge ACP into other environments and transport layers:
 - [ACP to AG-UI](https://github.com/namanrajpal/acp-to-agui) — bridges any ACP agent to web frontends via [AG-UI](https://docs.ag-ui.com) events over SSE; works with CopilotKit, AG-UI HttpAgent, or custom UIs (Web)
 - [AgentRQ](https://github.com/agentrq/acp-gateway) — bridges stdio-based ACP agents to the AgentRQ - Human-in-the-loop task collaboration service using MCP server.
 - [Aptove Bridge](https://github.com/aptove/bridge) — bridges stdio-based ACP agents to the Aptove mobile client over WebSocket
+- [ACP Remote](https://github.com/vcoderun/acpkit/tree/main/packages/transports/acpremote) - remote WebSocket transport for ACP agents and clients.
 - [OpenClaw](https://docs.openclaw.ai/cli/acp) — through the [`openclaw acp`](https://docs.openclaw.ai/cli/acp) bridge to an OpenClaw Gateway
 - [stdio Bus](https://stdiobus.com) – deterministic stdio-based kernel providing transport-level routing for ACP/MCP-style agent protocols.

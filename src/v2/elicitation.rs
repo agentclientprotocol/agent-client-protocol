@@ -735,10 +735,12 @@ impl ElicitationSchema {
 pub struct ElicitationCapabilities {
     /// Whether the client supports form-based elicitation.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub form: Option<ElicitationFormCapabilities>,
     /// Whether the client supports URL-based elicitation.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub url: Option<ElicitationUrlCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1521,12 +1523,9 @@ mod tests {
         );
     }
 
-    /// `ClientResponse` is `#[serde(untagged)]` with `WriteTextFileResponse` (which has
-    /// `#[serde(default)]`) listed first, so standalone deserialization is ambiguous.
-    /// In practice, the RPC layer selects the correct variant based on the originating
-    /// request method. These tests verify that serialization through `ClientResponse`
-    /// produces the correct flattened wire format and round-trips back via the
-    /// concrete `CreateElicitationResponse` type.
+    /// These tests verify that serialization through `ClientResponse` produces the
+    /// correct flattened wire format and round-trips back via the concrete
+    /// `CreateElicitationResponse` type.
     #[test]
     fn client_response_serialization_accept() {
         use crate::v2::ClientResponse;

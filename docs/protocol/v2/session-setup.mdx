@@ -3,9 +3,9 @@ title: "Session Setup"
 description: "Creating and loading sessions"
 ---
 
-Sessions represent a specific conversation or thread between the [Client](./overview#client) and [Agent](./overview#agent). Each session maintains its own context, conversation history, and state, allowing multiple independent interactions with the same Agent.
+Sessions represent a specific conversation or thread between the [Client](/protocol/v2/overview#client) and [Agent](/protocol/v2/overview#agent). Each session maintains its own context, conversation history, and state, allowing multiple independent interactions with the same Agent.
 
-Before creating a session, Clients **MUST** first complete the [initialization](./initialization) phase to establish protocol compatibility and capabilities.
+Before creating a session, Clients **MUST** first complete the [initialization](/protocol/v2/initialization) phase to establish protocol compatibility and capabilities.
 
 <br />
 
@@ -58,7 +58,7 @@ Clients create a new session by calling the `session/new` method with:
     "cwd": "/home/user/project",
     "mcpServers": [
       {
-        "name": "filesystem",
+        "name": "workspace-tools",
         "command": "/path/to/mcp-server",
         "args": ["--stdio"],
         "env": []
@@ -121,9 +121,9 @@ To load an existing session, Clients **MUST** call the `session/load` method wit
     "cwd": "/home/user/project",
     "mcpServers": [
       {
-        "name": "filesystem",
+        "name": "workspace-tools",
         "command": "/path/to/mcp-server",
-        "args": ["--mode", "filesystem"],
+        "args": ["--mode", "workspace"],
         "env": []
       }
     ]
@@ -226,9 +226,9 @@ To resume an existing session without replaying prior messages, Clients **MUST**
     "cwd": "/home/user/project",
     "mcpServers": [
       {
-        "name": "filesystem",
+        "name": "workspace-tools",
         "command": "/path/to/mcp-server",
-        "args": ["--mode", "filesystem"],
+        "args": ["--mode", "workspace"],
         "env": []
       }
     ]
@@ -246,7 +246,8 @@ Unlike `session/load`, the Agent **MUST NOT** replay the conversation history vi
 }
 ```
 
-The response **MAY** also include initial mode, model, or session configuration state when those features are supported by the Agent.
+The response **MAY** also include initial session configuration state when that
+feature is supported by the Agent.
 
 ## Closing Active Sessions
 
@@ -292,7 +293,7 @@ To close an active session, Clients **MUST** call the `session/close` method wit
   The ID of the active session to close.
 </ParamField>
 
-The Agent **MUST** cancel any ongoing work for that session as if [`session/cancel`](./prompt-turn#cancellation) had been called, then free the resources associated with the session.
+The Agent **MUST** cancel any ongoing work for that session as if [`session/cancel`](/protocol/v2/prompt-turn#cancellation) had been called, then free the resources associated with the session.
 
 On success, the Agent responds with an empty result object:
 
@@ -305,6 +306,39 @@ On success, the Agent responds with an empty result object:
 ```
 
 Agents MAY return an error if the session does not exist or is not currently active.
+
+## Additional Workspace Roots
+
+Agents that advertise `sessionCapabilities.additionalDirectories` allow Clients
+to include `additionalDirectories` on supported session lifecycle requests to
+expand the session's effective workspace root set. Supported stable lifecycle
+requests include `session/new`, `session/load`, and `session/resume`.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "session/load",
+  "params": {
+    "sessionId": "sess_789xyz",
+    "cwd": "/home/user/project",
+    "additionalDirectories": [
+      "/home/user/shared-lib",
+      "/home/user/product-docs"
+    ],
+    "mcpServers": []
+  }
+}
+```
+
+When present, `additionalDirectories` has the following behavior:
+
+- `cwd` remains the primary working directory and the base for relative paths
+- each `additionalDirectories` entry **MUST** be an absolute path
+- omitting the field or providing an empty array activates no additional roots for the resulting session
+- on `session/load` and `session/resume`, Clients must send the full intended additional-root list again; that list may differ from any previous or reported list as long as the request `cwd` matches the session's `cwd`, and omitting the field or providing an empty array does not restore stored roots implicitly
+
+Clients **MUST** only send `additionalDirectories` when the Agent advertises `sessionCapabilities.additionalDirectories`.
 
 ## Session ID
 
@@ -320,11 +354,14 @@ Clients use this ID to:
 
 ## Working Directory
 
-The `cwd` (current working directory) parameter establishes the file system context for the session. This directory:
+The `cwd` (current working directory) parameter establishes the primary file system context for the session. This directory:
 
 - **MUST** be an absolute path
 - **MUST** be used for the session regardless of where the Agent subprocess was spawned
-- **SHOULD** serve as a boundary for tool operations on the file system
+- **MUST** remain the base for relative-path resolution
+- **MUST** be part of the session's effective root set
+
+When `sessionCapabilities.additionalDirectories` is in use, the session's effective root set is `[cwd, ...additionalDirectories]`. This root set **SHOULD** serve as a boundary for tool operations on the file system.
 
 ## MCP Servers
 
@@ -369,7 +406,7 @@ Example stdio transport configuration:
 
 ```json
 {
-  "name": "filesystem",
+  "name": "workspace-tools",
   "command": "/path/to/mcp-server",
   "args": ["--stdio"],
   "env": [

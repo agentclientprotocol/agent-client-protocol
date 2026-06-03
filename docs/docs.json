@@ -62,39 +62,69 @@
           {
             "group": "Protocol",
             "pages": [
-              "protocol/overview",
-              "protocol/initialization",
-              "protocol/authentication",
-              "protocol/session-setup",
-              "protocol/session-list",
-              "protocol/prompt-turn",
-              "protocol/content",
-              "protocol/tool-calls",
-              "protocol/file-system",
-              "protocol/terminals",
-              "protocol/agent-plan",
-              "protocol/session-modes",
-              "protocol/session-config-options",
-              "protocol/slash-commands",
-              "protocol/extensibility",
-              "protocol/transports",
-              "protocol/schema",
+              {
+                "group": "v1",
+                "tag": "Latest",
+                "expanded": true,
+                "pages": [
+                  "protocol/v1/overview",
+                  "protocol/v1/initialization",
+                  "protocol/v1/authentication",
+                  "protocol/v1/session-setup",
+                  "protocol/v1/session-list",
+                  "protocol/v1/prompt-turn",
+                  "protocol/v1/content",
+                  "protocol/v1/tool-calls",
+                  "protocol/v1/file-system",
+                  "protocol/v1/terminals",
+                  "protocol/v1/agent-plan",
+                  "protocol/v1/session-modes",
+                  "protocol/v1/session-config-options",
+                  "protocol/v1/slash-commands",
+                  "protocol/v1/extensibility",
+                  "protocol/v1/transports",
+                  "protocol/v1/schema",
+                  {
+                    "group": "Draft: In Progress and May Change",
+                    "hidden": true,
+                    "pages": [
+                      "protocol/v1/draft/overview",
+                      "protocol/v1/draft/authentication",
+                      "protocol/v1/draft/initialization",
+                      "protocol/v1/draft/session-setup",
+                      "protocol/v1/draft/session-list",
+                      "protocol/v1/draft/session-delete",
+                      "protocol/v1/draft/prompt-turn",
+                      "protocol/v1/draft/content",
+                      "protocol/v1/draft/tool-calls",
+                      "protocol/v1/draft/file-system",
+                      "protocol/v1/draft/cancellation",
+                      "protocol/v1/draft/terminals",
+                      "protocol/v1/draft/agent-plan",
+                      "protocol/v1/draft/session-modes",
+                      "protocol/v1/draft/session-config-options",
+                      "protocol/v1/draft/slash-commands",
+                      "protocol/v1/draft/extensibility",
+                      "protocol/v1/draft/transports",
+                      "protocol/v1/draft/schema"
+                    ]
+                  }
+                ]
+              },
               {
                 "group": "v2",
+                "tag": "Draft",
                 "hidden": true,
                 "pages": [
                   "protocol/v2/overview",
-                  "protocol/v2/authentication",
                   "protocol/v2/initialization",
+                  "protocol/v2/authentication",
                   "protocol/v2/session-setup",
                   "protocol/v2/session-list",
                   "protocol/v2/prompt-turn",
                   "protocol/v2/content",
                   "protocol/v2/tool-calls",
-                  "protocol/v2/file-system",
-                  "protocol/v2/terminals",
                   "protocol/v2/agent-plan",
-                  "protocol/v2/session-modes",
                   "protocol/v2/session-config-options",
                   "protocol/v2/slash-commands",
                   "protocol/v2/extensibility",
@@ -113,11 +143,8 @@
                       "protocol/v2/draft/prompt-turn",
                       "protocol/v2/draft/content",
                       "protocol/v2/draft/tool-calls",
-                      "protocol/v2/draft/file-system",
                       "protocol/v2/draft/cancellation",
-                      "protocol/v2/draft/terminals",
                       "protocol/v2/draft/agent-plan",
-                      "protocol/v2/draft/session-modes",
                       "protocol/v2/draft/session-config-options",
                       "protocol/v2/draft/slash-commands",
                       "protocol/v2/draft/extensibility",
@@ -125,31 +152,6 @@
                       "protocol/v2/draft/schema"
                     ]
                   }
-                ]
-              },
-              {
-                "group": "Draft: In Progress and May Change",
-                "hidden": true,
-                "pages": [
-                  "protocol/draft/overview",
-                  "protocol/draft/authentication",
-                  "protocol/draft/initialization",
-                  "protocol/draft/session-setup",
-                  "protocol/draft/session-list",
-                  "protocol/draft/session-delete",
-                  "protocol/draft/prompt-turn",
-                  "protocol/draft/content",
-                  "protocol/draft/tool-calls",
-                  "protocol/draft/file-system",
-                  "protocol/draft/cancellation",
-                  "protocol/draft/terminals",
-                  "protocol/draft/agent-plan",
-                  "protocol/draft/session-modes",
-                  "protocol/draft/session-config-options",
-                  "protocol/draft/slash-commands",
-                  "protocol/draft/extensibility",
-                  "protocol/draft/transports",
-                  "protocol/draft/schema"
                 ]
               }
             ]
@@ -182,8 +184,8 @@
               "rfds/proxy-chains",
               "rfds/mcp-over-acp",
               "rfds/session-usage",
+              "rfds/end-turn-token-usage",
               "rfds/auth-methods",
-              "rfds/session-delete",
               "rfds/diff-delete",
               "rfds/boolean-config-option",
               "rfds/elicitation",
@@ -198,6 +200,8 @@
                 "pages": [
                   "rfds/v2/prompt",
                   "rfds/v2/enum-variant-extension",
+                  "rfds/v2/client-filesystem-terminal-capabilities",
+                  "rfds/v2/plan-variants",
                   "rfds/message-id",
                   "rfds/streamable-http-websocket-transport"
                 ]
@@ -206,7 +210,7 @@
           },
           {
             "group": "Preview",
-            "pages": ["rfds/rust-sdk-v1", "rfds/additional-directories"]
+            "pages": ["rfds/rust-sdk-v1", "rfds/session-delete"]
           },
           {
             "group": "Completed",
@@ -218,7 +222,8 @@
               "rfds/acp-agent-registry",
               "rfds/session-resume",
               "rfds/session-close",
-              "rfds/logout-method"
+              "rfds/logout-method",
+              "rfds/additional-directories"
             ]
           }
         ]
@@ -284,8 +289,8 @@
   },
   "redirects": [
     {
-      "source": "/overview/introduction",
-      "destination": "/get-started/introduction",
+      "source": "/overview/agents",
+      "destination": "/get-started/agents",
       "permanent": true
     },
     {
@@ -294,13 +299,203 @@
       "permanent": true
     },
     {
-      "source": "/overview/agents",
-      "destination": "/get-started/agents",
+      "source": "/overview/clients",
+      "destination": "/get-started/clients",
       "permanent": true
     },
     {
-      "source": "/overview/clients",
-      "destination": "/get-started/clients",
+      "source": "/overview/introduction",
+      "destination": "/get-started/introduction",
+      "permanent": true
+    },
+    {
+      "source": "/protocol/agent-plan",
+      "destination": "/protocol/v1/agent-plan",
+      "permanent": true
+    },
+    {
+      "source": "/protocol/authentication",
+      "destination": "/protocol/v1/authentication",
+      "permanent": true
+    },
+    {
+      "source": "/protocol/content",
+      "destination": "/protocol/v1/content",
+      "permanent": true
+    },
+    {
+      "source": "/protocol/draft/agent-plan",
+      "destination": "/protocol/v1/draft/agent-plan",
+      "permanent": true
+    },
+    {
+      "source": "/protocol/draft/authentication",
+      "destination": "/protocol/v1/draft/authentication",
+      "permanent": true
+    },
+    {
+      "source": "/protocol/draft/cancellation",
+      "destination": "/protocol/v1/draft/cancellation",
+      "permanent": true
+    },
+    {
+      "source": "/protocol/draft/content",
+      "destination": "/protocol/v1/draft/content",
+      "permanent": true
+    },
+    {
+      "source": "/protocol/draft/error",
+      "destination": "/protocol/v1/draft/error",
+      "permanent": true
+    },
+    {
+      "source": "/protocol/draft/extensibility",
+      "destination": "/protocol/v1/draft/extensibility",
+      "permanent": true
+    },
+    {
+      "source": "/protocol/draft/file-system",
+      "destination": "/protocol/v1/draft/file-system",
+      "permanent": true
+    },
+    {
+      "source": "/protocol/draft/initialization",
+      "destination": "/protocol/v1/draft/initialization",
+      "permanent": true
+    },
+    {
+      "source": "/protocol/draft/overview",
+      "destination": "/protocol/v1/draft/overview",
+      "permanent": true
+    },
+    {
+      "source": "/protocol/draft/prompt-turn",
+      "destination": "/protocol/v1/draft/prompt-turn",
+      "permanent": true
+    },
+    {
+      "source": "/protocol/draft/schema",
+      "destination": "/protocol/v1/draft/schema",
+      "permanent": true
+    },
+    {
+      "source": "/protocol/draft/session-config-options",
+      "destination": "/protocol/v1/draft/session-config-options",
+      "permanent": true
+    },
+    {
+      "source": "/protocol/draft/session-delete",
+      "destination": "/protocol/v1/draft/session-delete",
+      "permanent": true
+    },
+    {
+      "source": "/protocol/draft/session-list",
+      "destination": "/protocol/v1/draft/session-list",
+      "permanent": true
+    },
+    {
+      "source": "/protocol/draft/session-modes",
+      "destination": "/protocol/v1/draft/session-modes",
+      "permanent": true
+    },
+    {
+      "source": "/protocol/draft/session-setup",
+      "destination": "/protocol/v1/draft/session-setup",
+      "permanent": true
+    },
+    {
+      "source": "/protocol/draft/slash-commands",
+      "destination": "/protocol/v1/draft/slash-commands",
+      "permanent": true
+    },
+    {
+      "source": "/protocol/draft/terminals",
+      "destination": "/protocol/v1/draft/terminals",
+      "permanent": true
+    },
+    {
+      "source": "/protocol/draft/tool-calls",
+      "destination": "/protocol/v1/draft/tool-calls",
+      "permanent": true
+    },
+    {
+      "source": "/protocol/draft/transports",
+      "destination": "/protocol/v1/draft/transports",
+      "permanent": true
+    },
+    {
+      "source": "/protocol/error",
+      "destination": "/protocol/v1/error",
+      "permanent": true
+    },
+    {
+      "source": "/protocol/extensibility",
+      "destination": "/protocol/v1/extensibility",
+      "permanent": true
+    },
+    {
+      "source": "/protocol/file-system",
+      "destination": "/protocol/v1/file-system",
+      "permanent": true
+    },
+    {
+      "source": "/protocol/initialization",
+      "destination": "/protocol/v1/initialization",
+      "permanent": true
+    },
+    {
+      "source": "/protocol/overview",
+      "destination": "/protocol/v1/overview",
+      "permanent": true
+    },
+    {
+      "source": "/protocol/prompt-turn",
+      "destination": "/protocol/v1/prompt-turn",
+      "permanent": true
+    },
+    {
+      "source": "/protocol/schema",
+      "destination": "/protocol/v1/schema",
+      "permanent": true
+    },
+    {
+      "source": "/protocol/session-config-options",
+      "destination": "/protocol/v1/session-config-options",
+      "permanent": true
+    },
+    {
+      "source": "/protocol/session-list",
+      "destination": "/protocol/v1/session-list",
+      "permanent": true
+    },
+    {
+      "source": "/protocol/session-modes",
+      "destination": "/protocol/v1/session-modes",
+      "permanent": true
+    },
+    {
+      "source": "/protocol/session-setup",
+      "destination": "/protocol/v1/session-setup",
+      "permanent": true
+    },
+    {
+      "source": "/protocol/slash-commands",
+      "destination": "/protocol/v1/slash-commands",
+      "permanent": true
+    },
+    {
+      "source": "/protocol/terminals",
+      "destination": "/protocol/v1/terminals",
+      "permanent": true
+    },
+    {
+      "source": "/protocol/tool-calls",
+      "destination": "/protocol/v1/tool-calls",
+      "permanent": true
+    },
+    {
+      "source": "/protocol/transports",
+      "destination": "/protocol/v1/transports",
       "permanent": true
     },
     {

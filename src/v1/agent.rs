@@ -62,6 +62,7 @@ pub struct InitializeRequest {
     ///
     /// Note: in future versions of the protocol, this will be required.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub client_info: Option<Implementation>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -132,12 +133,14 @@ pub struct InitializeResponse {
     pub agent_capabilities: AgentCapabilities,
     /// Authentication methods supported by the agent.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default)]
     pub auth_methods: Vec<AuthMethod>,
     /// Information about the Agent name and version sent to the Client.
     ///
     /// Note: in future versions of the protocol, this will be required.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub agent_info: Option<Implementation>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -416,6 +419,7 @@ pub struct AgentAuthCapabilities {
     ///
     /// By supplying `{}` it means that the agent supports the logout method.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub logout: Option<LogoutCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -907,16 +911,11 @@ impl AuthMethodTerminal {
 pub struct NewSessionRequest {
     /// The working directory for this session. Must be an absolute path.
     pub cwd: PathBuf,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Additional workspace roots for this session. Each path must be absolute.
     ///
     /// These expand the session's filesystem scope without changing `cwd`, which
     /// remains the base for relative paths. When omitted or empty, no
     /// additional roots are activated for the new session.
-    #[cfg(feature = "unstable_session_additional_directories")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<PathBuf>,
     /// List of MCP (Model Context Protocol) servers the agent should connect to.
@@ -935,19 +934,13 @@ impl NewSessionRequest {
     pub fn new(cwd: impl Into<PathBuf>) -> Self {
         Self {
             cwd: cwd.into(),
-            #[cfg(feature = "unstable_session_additional_directories")]
             additional_directories: vec![],
             mcp_servers: vec![],
             meta: None,
         }
     }
 
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Additional workspace roots for this session. Each path must be absolute.
-    #[cfg(feature = "unstable_session_additional_directories")]
     #[must_use]
     pub fn additional_directories(mut self, additional_directories: Vec<PathBuf>) -> Self {
         self.additional_directories = additional_directories;
@@ -991,19 +984,12 @@ pub struct NewSessionResponse {
     ///
     /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub modes: Option<SessionModeState>,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// Initial model state if supported by the Agent
-    #[cfg(feature = "unstable_session_model")]
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[serde(default)]
-    pub models: Option<SessionModelState>,
     /// Initial session configuration options if supported by the Agent.
     #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default)]
     pub config_options: Option<Vec<SessionConfigOption>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1021,8 +1007,6 @@ impl NewSessionResponse {
         Self {
             session_id: session_id.into(),
             modes: None,
-            #[cfg(feature = "unstable_session_model")]
-            models: None,
             config_options: None,
             meta: None,
         }
@@ -1034,18 +1018,6 @@ impl NewSessionResponse {
     #[must_use]
     pub fn modes(mut self, modes: impl IntoOption<SessionModeState>) -> Self {
         self.modes = modes.into_option();
-        self
-    }
-
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// Initial model state if supported by the Agent
-    #[cfg(feature = "unstable_session_model")]
-    #[must_use]
-    pub fn models(mut self, models: impl IntoOption<SessionModelState>) -> Self {
-        self.models = models.into_option();
         self
     }
 
@@ -1088,17 +1060,12 @@ pub struct LoadSessionRequest {
     pub mcp_servers: Vec<McpServer>,
     /// The working directory for this session.
     pub cwd: PathBuf,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Additional workspace roots to activate for this session. Each path must be absolute.
     ///
     /// When omitted or empty, no additional roots are activated. When non-empty,
     /// this is the complete resulting additional-root list for the loaded
     /// session. It may differ from any previously used or reported list as long as
     /// the request `cwd` matches the session's `cwd`.
-    #[cfg(feature = "unstable_session_additional_directories")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<PathBuf>,
     /// The ID of the session to load.
@@ -1118,19 +1085,13 @@ impl LoadSessionRequest {
         Self {
             mcp_servers: vec![],
             cwd: cwd.into(),
-            #[cfg(feature = "unstable_session_additional_directories")]
             additional_directories: vec![],
             session_id: session_id.into(),
             meta: None,
         }
     }
 
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Additional workspace roots to activate for this session. Each path must be absolute.
-    #[cfg(feature = "unstable_session_additional_directories")]
     #[must_use]
     pub fn additional_directories(mut self, additional_directories: Vec<PathBuf>) -> Self {
         self.additional_directories = additional_directories;
@@ -1168,19 +1129,12 @@ pub struct LoadSessionResponse {
     ///
     /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub modes: Option<SessionModeState>,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// Initial model state if supported by the Agent
-    #[cfg(feature = "unstable_session_model")]
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[serde(default)]
-    pub models: Option<SessionModelState>,
     /// Initial session configuration options if supported by the Agent.
     #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default)]
     pub config_options: Option<Vec<SessionConfigOption>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1204,18 +1158,6 @@ impl LoadSessionResponse {
     #[must_use]
     pub fn modes(mut self, modes: impl IntoOption<SessionModeState>) -> Self {
         self.modes = modes.into_option();
-        self
-    }
-
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// Initial model state if supported by the Agent
-    #[cfg(feature = "unstable_session_model")]
-    #[must_use]
-    pub fn models(mut self, models: impl IntoOption<SessionModelState>) -> Self {
-        self.models = models.into_option();
         self
     }
 
@@ -1264,16 +1206,11 @@ pub struct ForkSessionRequest {
     pub session_id: SessionId,
     /// The working directory for this session.
     pub cwd: PathBuf,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Additional workspace roots to activate for this session. Each path must be absolute.
     ///
     /// When omitted or empty, no additional roots are activated. When non-empty,
     /// this is the complete resulting additional-root list for the forked
     /// session.
-    #[cfg(feature = "unstable_session_additional_directories")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<PathBuf>,
     /// List of MCP servers to connect to for this session.
@@ -1295,19 +1232,13 @@ impl ForkSessionRequest {
         Self {
             session_id: session_id.into(),
             cwd: cwd.into(),
-            #[cfg(feature = "unstable_session_additional_directories")]
             additional_directories: vec![],
             mcp_servers: vec![],
             meta: None,
         }
     }
 
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Additional workspace roots to activate for this session. Each path must be absolute.
-    #[cfg(feature = "unstable_session_additional_directories")]
     #[must_use]
     pub fn additional_directories(mut self, additional_directories: Vec<PathBuf>) -> Self {
         self.additional_directories = additional_directories;
@@ -1352,19 +1283,12 @@ pub struct ForkSessionResponse {
     ///
     /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub modes: Option<SessionModeState>,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// Initial model state if supported by the Agent
-    #[cfg(feature = "unstable_session_model")]
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[serde(default)]
-    pub models: Option<SessionModelState>,
     /// Initial session configuration options if supported by the Agent.
     #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default)]
     pub config_options: Option<Vec<SessionConfigOption>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1383,8 +1307,6 @@ impl ForkSessionResponse {
         Self {
             session_id: session_id.into(),
             modes: None,
-            #[cfg(feature = "unstable_session_model")]
-            models: None,
             config_options: None,
             meta: None,
         }
@@ -1396,18 +1318,6 @@ impl ForkSessionResponse {
     #[must_use]
     pub fn modes(mut self, modes: impl IntoOption<SessionModeState>) -> Self {
         self.modes = modes.into_option();
-        self
-    }
-
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// Initial model state if supported by the Agent
-    #[cfg(feature = "unstable_session_model")]
-    #[must_use]
-    pub fn models(mut self, models: impl IntoOption<SessionModelState>) -> Self {
-        self.models = models.into_option();
         self
     }
 
@@ -1451,17 +1361,12 @@ pub struct ResumeSessionRequest {
     pub session_id: SessionId,
     /// The working directory for this session.
     pub cwd: PathBuf,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Additional workspace roots to activate for this session. Each path must be absolute.
     ///
     /// When omitted or empty, no additional roots are activated. When non-empty,
     /// this is the complete resulting additional-root list for the resumed
     /// session. It may differ from any previously used or reported list as long as
     /// the request `cwd` matches the session's `cwd`.
-    #[cfg(feature = "unstable_session_additional_directories")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<PathBuf>,
     /// List of MCP servers to connect to for this session.
@@ -1482,19 +1387,13 @@ impl ResumeSessionRequest {
         Self {
             session_id: session_id.into(),
             cwd: cwd.into(),
-            #[cfg(feature = "unstable_session_additional_directories")]
             additional_directories: vec![],
             mcp_servers: vec![],
             meta: None,
         }
     }
 
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Additional workspace roots to activate for this session. Each path must be absolute.
-    #[cfg(feature = "unstable_session_additional_directories")]
     #[must_use]
     pub fn additional_directories(mut self, additional_directories: Vec<PathBuf>) -> Self {
         self.additional_directories = additional_directories;
@@ -1532,19 +1431,12 @@ pub struct ResumeSessionResponse {
     ///
     /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub modes: Option<SessionModeState>,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// Initial model state if supported by the Agent
-    #[cfg(feature = "unstable_session_model")]
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[serde(default)]
-    pub models: Option<SessionModelState>,
     /// Initial session configuration options if supported by the Agent.
     #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default)]
     pub config_options: Option<Vec<SessionConfigOption>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1568,18 +1460,6 @@ impl ResumeSessionResponse {
     #[must_use]
     pub fn modes(mut self, modes: impl IntoOption<SessionModeState>) -> Self {
         self.modes = modes.into_option();
-        self
-    }
-
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// Initial model state if supported by the Agent
-    #[cfg(feature = "unstable_session_model")]
-    #[must_use]
-    pub fn models(mut self, models: impl IntoOption<SessionModelState>) -> Self {
-        self.models = models.into_option();
         self
     }
 
@@ -1752,6 +1632,7 @@ impl ListSessionsRequest {
 pub struct ListSessionsResponse {
     /// Array of session information objects
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     pub sessions: Vec<SessionInfo>,
     /// Opaque cursor token. If present, pass this in the next request's cursor parameter
     /// to fetch the next page. If absent, there are no more results.
@@ -1893,25 +1774,22 @@ pub struct SessionInfo {
     pub session_id: SessionId,
     /// The working directory for this session. Must be an absolute path.
     pub cwd: PathBuf,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Additional workspace roots reported for this session. Each path must be absolute.
     ///
     /// When present, this is the complete ordered additional-root list reported
     /// by the Agent. Omitted and empty values are equivalent: the response
     /// reports no additional roots.
-    #[cfg(feature = "unstable_session_additional_directories")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<PathBuf>,
 
     /// Human-readable title for the session
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub title: Option<String>,
     /// ISO 8601 timestamp of last activity
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub updated_at: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1929,7 +1807,6 @@ impl SessionInfo {
         Self {
             session_id: session_id.into(),
             cwd: cwd.into(),
-            #[cfg(feature = "unstable_session_additional_directories")]
             additional_directories: vec![],
             title: None,
             updated_at: None,
@@ -1937,12 +1814,7 @@ impl SessionInfo {
         }
     }
 
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Additional workspace roots reported for this session. Each path must be absolute.
-    #[cfg(feature = "unstable_session_additional_directories")]
     #[must_use]
     pub fn additional_directories(mut self, additional_directories: Vec<PathBuf>) -> Self {
         self.additional_directories = additional_directories;
@@ -1988,6 +1860,7 @@ pub struct SessionModeState {
     pub current_mode_id: SessionModeId,
     /// The set of modes that the Agent can operate in
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     pub available_modes: Vec<SessionMode>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -2427,6 +2300,7 @@ pub struct SessionConfigOption {
     pub description: Option<String>,
     /// Optional semantic category for this option (UX only).
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub category: Option<SessionConfigOptionCategory>,
     /// Type-specific fields for this configuration option.
@@ -2689,6 +2563,7 @@ impl SetSessionConfigOptionRequest {
 pub struct SetSessionConfigOptionResponse {
     /// The full set of configuration options and their current values.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     pub config_options: Vec<SessionConfigOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -3094,17 +2969,6 @@ impl HttpHeader {
 pub struct PromptRequest {
     /// The ID of the session to send this user message to
     pub session_id: SessionId,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// A client-generated unique identifier for this user message.
-    ///
-    /// If provided, the Agent SHOULD echo this value as `userMessageId` in the
-    /// [`PromptResponse`] to confirm it was recorded.
-    /// Both clients and agents MUST use UUID format for message IDs.
-    #[cfg(feature = "unstable_message_id")]
-    pub message_id: Option<String>,
     /// The blocks of content that compose the user's message.
     ///
     /// As a baseline, the Agent MUST support [`ContentBlock::Text`] and [`ContentBlock::ResourceLink`],
@@ -3133,27 +2997,9 @@ impl PromptRequest {
     pub fn new(session_id: impl Into<SessionId>, prompt: Vec<ContentBlock>) -> Self {
         Self {
             session_id: session_id.into(),
-            #[cfg(feature = "unstable_message_id")]
-            message_id: None,
             prompt,
             meta: None,
         }
-    }
-
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// A client-generated unique identifier for this user message.
-    ///
-    /// If provided, the Agent SHOULD echo this value as `userMessageId` in the
-    /// [`PromptResponse`] to confirm it was recorded.
-    /// Both clients and agents MUST use UUID format for message IDs.
-    #[cfg(feature = "unstable_message_id")]
-    #[must_use]
-    pub fn message_id(mut self, message_id: impl IntoOption<String>) -> Self {
-        self.message_id = message_id.into_option();
-        self
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -3178,17 +3024,6 @@ impl PromptRequest {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct PromptResponse {
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// The acknowledged user message ID.
-    ///
-    /// If the client provided a `messageId` in the [`PromptRequest`], the agent echoes it here
-    /// to confirm it was recorded. If the client did not provide one, the agent MAY assign one
-    /// and return it here. Absence of this field indicates the agent did not record a message ID.
-    #[cfg(feature = "unstable_message_id")]
-    pub user_message_id: Option<String>,
     /// Indicates why the agent stopped processing the turn.
     pub stop_reason: StopReason,
     /// **UNSTABLE**
@@ -3196,8 +3031,9 @@ pub struct PromptResponse {
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
     /// Token usage for this turn (optional).
-    #[cfg(feature = "unstable_session_usage")]
+    #[cfg(feature = "unstable_end_turn_token_usage")]
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub usage: Option<Usage>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -3213,10 +3049,8 @@ impl PromptResponse {
     #[must_use]
     pub fn new(stop_reason: StopReason) -> Self {
         Self {
-            #[cfg(feature = "unstable_message_id")]
-            user_message_id: None,
             stop_reason,
-            #[cfg(feature = "unstable_session_usage")]
+            #[cfg(feature = "unstable_end_turn_token_usage")]
             usage: None,
             meta: None,
         }
@@ -3226,24 +3060,8 @@ impl PromptResponse {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
-    /// The acknowledged user message ID.
-    ///
-    /// If the client provided a `messageId` in the [`PromptRequest`], the agent echoes it here
-    /// to confirm it was recorded. If the client did not provide one, the agent MAY assign one
-    /// and return it here. Absence of this field indicates the agent did not record a message ID.
-    #[cfg(feature = "unstable_message_id")]
-    #[must_use]
-    pub fn user_message_id(mut self, user_message_id: impl IntoOption<String>) -> Self {
-        self.user_message_id = user_message_id.into_option();
-        self
-    }
-
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Token usage for this turn.
-    #[cfg(feature = "unstable_session_usage")]
+    #[cfg(feature = "unstable_end_turn_token_usage")]
     #[must_use]
     pub fn usage(mut self, usage: impl IntoOption<Usage>) -> Self {
         self.usage = usage.into_option();
@@ -3294,7 +3112,7 @@ pub enum StopReason {
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
 /// Token usage information for a prompt turn.
-#[cfg(feature = "unstable_session_usage")]
+#[cfg(feature = "unstable_end_turn_token_usage")]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -3314,7 +3132,7 @@ pub struct Usage {
     pub cached_write_tokens: Option<u64>,
 }
 
-#[cfg(feature = "unstable_session_usage")]
+#[cfg(feature = "unstable_end_turn_token_usage")]
 impl Usage {
     #[must_use]
     pub fn new(total_tokens: u64, input_tokens: u64, output_tokens: u64) -> Self {
@@ -3346,223 +3164,6 @@ impl Usage {
     #[must_use]
     pub fn cached_write_tokens(mut self, cached_write_tokens: impl IntoOption<u64>) -> Self {
         self.cached_write_tokens = cached_write_tokens.into_option();
-        self
-    }
-}
-
-// Model
-
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
-/// The set of models and the one currently active.
-#[cfg(feature = "unstable_session_model")]
-#[serde_as]
-#[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-#[non_exhaustive]
-pub struct SessionModelState {
-    /// The current model the Agent is in.
-    pub current_model_id: ModelId,
-    /// The set of models that the Agent can use
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    pub available_models: Vec<ModelInfo>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
-}
-
-#[cfg(feature = "unstable_session_model")]
-impl SessionModelState {
-    #[must_use]
-    pub fn new(current_model_id: impl Into<ModelId>, available_models: Vec<ModelInfo>) -> Self {
-        Self {
-            current_model_id: current_model_id.into(),
-            available_models,
-            meta: None,
-        }
-    }
-
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[must_use]
-    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
-        self.meta = meta.into_option();
-        self
-    }
-}
-
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
-/// A unique identifier for a model.
-#[cfg(feature = "unstable_session_model")]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
-#[serde(transparent)]
-#[from(Arc<str>, String, &'static str)]
-#[non_exhaustive]
-pub struct ModelId(pub Arc<str>);
-
-#[cfg(feature = "unstable_session_model")]
-impl ModelId {
-    #[must_use]
-    pub fn new(id: impl Into<Arc<str>>) -> Self {
-        Self(id.into())
-    }
-}
-
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
-/// Information about a selectable model.
-#[cfg(feature = "unstable_session_model")]
-#[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-#[non_exhaustive]
-pub struct ModelInfo {
-    /// Unique identifier for the model.
-    pub model_id: ModelId,
-    /// Human-readable name of the model.
-    pub name: String,
-    /// Optional description of the model.
-    #[serde(default)]
-    pub description: Option<String>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
-}
-
-#[cfg(feature = "unstable_session_model")]
-impl ModelInfo {
-    #[must_use]
-    pub fn new(model_id: impl Into<ModelId>, name: impl Into<String>) -> Self {
-        Self {
-            model_id: model_id.into(),
-            name: name.into(),
-            description: None,
-            meta: None,
-        }
-    }
-
-    /// Optional description of the model.
-    #[must_use]
-    pub fn description(mut self, description: impl IntoOption<String>) -> Self {
-        self.description = description.into_option();
-        self
-    }
-
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[must_use]
-    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
-        self.meta = meta.into_option();
-        self
-    }
-}
-
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
-/// Request parameters for setting a session model.
-#[cfg(feature = "unstable_session_model")]
-#[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = SESSION_SET_MODEL_METHOD_NAME))]
-#[serde(rename_all = "camelCase")]
-#[non_exhaustive]
-pub struct SetSessionModelRequest {
-    /// The ID of the session to set the model for.
-    pub session_id: SessionId,
-    /// The ID of the model to set.
-    pub model_id: ModelId,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
-}
-
-#[cfg(feature = "unstable_session_model")]
-impl SetSessionModelRequest {
-    #[must_use]
-    pub fn new(session_id: impl Into<SessionId>, model_id: impl Into<ModelId>) -> Self {
-        Self {
-            session_id: session_id.into(),
-            model_id: model_id.into(),
-            meta: None,
-        }
-    }
-
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[must_use]
-    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
-        self.meta = meta.into_option();
-        self
-    }
-}
-
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
-/// Response to `session/set_model` method.
-#[cfg(feature = "unstable_session_model")]
-#[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = SESSION_SET_MODEL_METHOD_NAME))]
-#[serde(rename_all = "camelCase")]
-#[non_exhaustive]
-pub struct SetSessionModelResponse {
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
-}
-
-#[cfg(feature = "unstable_session_model")]
-impl SetSessionModelResponse {
-    #[must_use]
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[must_use]
-    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
-        self.meta = meta.into_option();
         self
     }
 }
@@ -3644,6 +3245,7 @@ pub struct ProviderInfo {
     pub id: String,
     /// Supported protocol types for this provider.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     pub supported: Vec<LlmProtocol>,
     /// Whether this provider is mandatory and cannot be disabled via `providers/disable`.
     /// If true, clients must not call `providers/disable` for this id.
@@ -3745,6 +3347,7 @@ impl ListProvidersRequest {
 pub struct ListProvidersResponse {
     /// Configurable providers with current routing info suitable for UI display.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     pub providers: Vec<ProviderInfo>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -4005,6 +3608,7 @@ pub struct AgentCapabilities {
     /// By supplying `{}` it means that the agent supports provider configuration methods.
     #[cfg(feature = "unstable_llm_providers")]
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub providers: Option<ProvidersCapabilities>,
     /// **UNSTABLE**
@@ -4014,6 +3618,7 @@ pub struct AgentCapabilities {
     /// NES (Next Edit Suggestions) capabilities supported by the agent.
     #[cfg(feature = "unstable_nes")]
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub nes: Option<NesCapabilities>,
     /// **UNSTABLE**
@@ -4023,6 +3628,7 @@ pub struct AgentCapabilities {
     /// The position encoding selected by the agent from the client's supported encodings.
     #[cfg(feature = "unstable_nes")]
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub position_encoding: Option<PositionEncodingKind>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -4181,6 +3787,7 @@ impl ProvidersCapabilities {
 pub struct SessionCapabilities {
     /// Whether the agent supports `session/list`.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub list: Option<SessionListCapabilities>,
     /// **UNSTABLE**
@@ -4193,19 +3800,16 @@ pub struct SessionCapabilities {
     /// Supplying `{}` means the agent supports deleting sessions from `session/list`.
     #[cfg(feature = "unstable_session_delete")]
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub delete: Option<SessionDeleteCapabilities>,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Whether the agent supports `additionalDirectories` on supported session lifecycle requests.
     ///
     /// Agents that also support `session/list` may return
     /// `SessionInfo.additionalDirectories` to report the complete ordered
     /// additional-root list associated with a listed session.
-    #[cfg(feature = "unstable_session_additional_directories")]
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub additional_directories: Option<SessionAdditionalDirectoriesCapabilities>,
     /// **UNSTABLE**
@@ -4215,14 +3819,17 @@ pub struct SessionCapabilities {
     /// Whether the agent supports `session/fork`.
     #[cfg(feature = "unstable_session_fork")]
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub fork: Option<SessionForkCapabilities>,
     /// Whether the agent supports `session/resume`.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub resume: Option<SessionResumeCapabilities>,
     /// Whether the agent supports `session/close`.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub close: Option<SessionCloseCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -4262,16 +3869,11 @@ impl SessionCapabilities {
         self
     }
 
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Whether the agent supports `additionalDirectories` on supported session lifecycle requests.
     ///
     /// Agents that also support `session/list` may return
     /// `SessionInfo.additionalDirectories` to report the complete ordered
     /// additional-root list associated with a listed session.
-    #[cfg(feature = "unstable_session_additional_directories")]
     #[must_use]
     pub fn additional_directories(
         mut self,
@@ -4389,17 +3991,12 @@ impl SessionDeleteCapabilities {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Capabilities for additional session directories support.
 ///
 /// By supplying `{}` it means that the agent supports the `additionalDirectories`
 /// field on supported session lifecycle requests. Agents that also support
 /// `session/list` may return `SessionInfo.additionalDirectories` to report the
 /// complete ordered additional-root list associated with a listed session.
-#[cfg(feature = "unstable_session_additional_directories")]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[non_exhaustive]
@@ -4413,7 +4010,6 @@ pub struct SessionAdditionalDirectoriesCapabilities {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_session_additional_directories")]
 impl SessionAdditionalDirectoriesCapabilities {
     #[must_use]
     pub fn new() -> Self {
@@ -4729,9 +4325,6 @@ pub struct AgentMethodNames {
     /// Method for exchanging MCP-over-ACP messages.
     #[cfg(feature = "unstable_mcp_over_acp")]
     pub mcp_message: &'static str,
-    /// Method for selecting a model for a given session.
-    #[cfg(feature = "unstable_session_model")]
-    pub session_set_model: &'static str,
     /// Method for listing existing sessions.
     pub session_list: &'static str,
     /// Method for deleting an existing session.
@@ -4796,8 +4389,6 @@ pub const AGENT_METHOD_NAMES: AgentMethodNames = AgentMethodNames {
     session_cancel: SESSION_CANCEL_METHOD_NAME,
     #[cfg(feature = "unstable_mcp_over_acp")]
     mcp_message: MCP_MESSAGE_METHOD_NAME,
-    #[cfg(feature = "unstable_session_model")]
-    session_set_model: SESSION_SET_MODEL_METHOD_NAME,
     session_list: SESSION_LIST_METHOD_NAME,
     #[cfg(feature = "unstable_session_delete")]
     session_delete: SESSION_DELETE_METHOD_NAME,
@@ -4853,9 +4444,6 @@ pub(crate) const SESSION_SET_CONFIG_OPTION_METHOD_NAME: &str = "session/set_conf
 pub(crate) const SESSION_PROMPT_METHOD_NAME: &str = "session/prompt";
 /// Method name for the cancel notification.
 pub(crate) const SESSION_CANCEL_METHOD_NAME: &str = "session/cancel";
-/// Method name for selecting a model for a given session.
-#[cfg(feature = "unstable_session_model")]
-pub(crate) const SESSION_SET_MODEL_METHOD_NAME: &str = "session/set_model";
 /// Method name for listing existing sessions.
 pub(crate) const SESSION_LIST_METHOD_NAME: &str = "session/list";
 /// Method name for deleting an existing session.
@@ -5024,13 +4612,6 @@ pub enum ClientRequest {
     ///
     /// See protocol docs: [Prompt Turn](https://agentclientprotocol.com/protocol/prompt-turn)
     PromptRequest(PromptRequest),
-    #[cfg(feature = "unstable_session_model")]
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// Select a model for a given session.
-    SetSessionModelRequest(SetSessionModelRequest),
     #[cfg(feature = "unstable_nes")]
     /// **UNSTABLE**
     ///
@@ -5097,8 +4678,6 @@ impl ClientRequest {
             Self::SetSessionModeRequest(_) => AGENT_METHOD_NAMES.session_set_mode,
             Self::SetSessionConfigOptionRequest(_) => AGENT_METHOD_NAMES.session_set_config_option,
             Self::PromptRequest(_) => AGENT_METHOD_NAMES.session_prompt,
-            #[cfg(feature = "unstable_session_model")]
-            Self::SetSessionModelRequest(_) => AGENT_METHOD_NAMES.session_set_model,
             #[cfg(feature = "unstable_nes")]
             Self::StartNesRequest(_) => AGENT_METHOD_NAMES.nes_start,
             #[cfg(feature = "unstable_nes")]
@@ -5145,8 +4724,6 @@ pub enum AgentResponse {
     SetSessionModeResponse(#[serde(default)] SetSessionModeResponse),
     SetSessionConfigOptionResponse(SetSessionConfigOptionResponse),
     PromptResponse(PromptResponse),
-    #[cfg(feature = "unstable_session_model")]
-    SetSessionModelResponse(#[serde(default)] SetSessionModelResponse),
     #[cfg(feature = "unstable_nes")]
     StartNesResponse(StartNesResponse),
     #[cfg(feature = "unstable_nes")]
@@ -5674,8 +5251,6 @@ mod test_serialization {
             })
         );
     }
-
-    #[cfg(feature = "unstable_session_additional_directories")]
     #[test]
     fn test_session_additional_directories_serialization() {
         assert_eq!(
@@ -5736,8 +5311,6 @@ mod test_serialization {
             Vec::<PathBuf>::new()
         );
     }
-
-    #[cfg(feature = "unstable_session_additional_directories")]
     #[test]
     fn test_session_additional_directories_capabilities_serialization() {
         assert_eq!(

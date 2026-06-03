@@ -1,0 +1,140 @@
+---
+title: "End-Turn Token Usage"
+---
+
+- Author(s): [@ahmedhesham6](https://github.com/ahmedhesham6)
+- Champion: [@benbrandt](https://github.com/benbrandt)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Explore a standard way for agents to report token usage when a prompt turn ends.
+
+This RFD is intentionally kept in Draft while token accounting semantics are still being refined. Session-level context window size and cumulative cost are covered separately in the [Session Context Size and Cost RFD](/rfds/session-usage).
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+ACP does not currently define a stable token usage shape for completed prompt turns. Agents may receive token accounting from model providers, but provider responses differ in what they count and when the final numbers become available.
+
+This creates several problems:
+
+- **No standard turn summary** - Clients cannot show a consistent token breakdown after a turn completes
+- **Provider mismatch** - Input, output, reasoning, and cache token categories do not map cleanly across all providers
+- **Ambiguous totals** - It is unclear whether reported values should describe only the completed turn or cumulative session usage
+- **Prompt lifecycle coupling** - The shape needs clear semantics across stop reasons, streaming updates, and model requests
+
+The session-level context and cost proposal no longer depends on resolving these token accounting questions.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+The current strawman is to add an optional `usage` field to `PromptResponse`, returned when a prompt turn completes:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "stopReason": "end_turn",
+    "usage": {
+      "totalTokens": 53000,
+      "inputTokens": 35000,
+      "outputTokens": 12000,
+      "thoughtTokens": 5000,
+      "cachedReadTokens": 5000,
+      "cachedWriteTokens": 1000
+    }
+  }
+}
+```
+
+This shape is not ready for Preview. The RFD should resolve the open design questions before standardizing it.
+
+### Strawman Fields
+
+- `usage` (object, optional, nullable) - Token usage reported for the completed prompt turn
+  - If `usage` is omitted or `null`, the agent is not reporting token usage for this turn.
+- `totalTokens` (number, required, non-null) - Total token count according to the final accounting semantics
+- `inputTokens` (number, required, non-null) - Input token count according to the final accounting semantics
+- `outputTokens` (number, required, non-null) - Output token count according to the final accounting semantics
+- `thoughtTokens` (number, optional, nullable) - Thought or reasoning tokens, if the model exposes them
+- `cachedReadTokens` (number, optional, nullable) - Cache read tokens, if the model exposes them
+- `cachedWriteTokens` (number, optional, nullable) - Cache write tokens, if the model exposes them
+
+For the optional token fields, omission and `null` are equivalent. Both mean the agent is not reporting that token category.
+
+### Open Questions
+
+1. **Per-turn vs cumulative** - Should token values describe only the completed prompt turn, cumulative session totals, or both?
+2. **Provider category mapping** - How should ACP map provider-specific categories such as reasoning, cache read, cache write, audio, image, or tool-related tokens?
+3. **Streaming semantics** - Should partial usage be allowed during streaming, or should the protocol only report final usage on `PromptResponse`?
+4. **Stop reason semantics** - Should usage be included for `end_turn`, `max_tokens`, `max_turn_requests`, `refusal`, and `cancelled` stop reasons?
+5. **Cost separation** - Should any per-turn cost estimate exist here, or should cost remain exclusively cumulative session state in `usage_update`?
+6. **Naming** - Should field names use `Tokens` suffixes, a nested provider breakdown, or another structure that better matches future extensibility?
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+**For Users:**
+
+- Users can see how many tokens a completed turn consumed
+- Users can understand when expensive reasoning or cache behavior affected a turn
+- Users can compare turn behavior without confusing it with total context window utilization
+
+**For Client Implementations:**
+
+- Clients can show consistent post-turn usage summaries
+- Clients can distinguish context window state from turn-level token accounting
+- Clients can build analytics without depending on provider-specific response shapes
+
+**For Agent Implementations:**
+
+- Agents get a standard place to report final token accounting when providers expose it
+- Agents can omit categories they cannot calculate
+- Agents can avoid forcing provider-specific accounting into session context updates
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+1. Resolve whether token counts are per-turn, cumulative, or represented as separate fields.
+2. Decide which token categories are standardized and how provider-specific categories can be represented without losing information.
+3. Decide whether streaming usage updates are part of this RFD or a separate extension.
+4. Gate this Rust crate surface behind the `unstable_end_turn_token_usage` feature.
+5. Update the prompt lifecycle docs with the final semantics.
+6. Update the schema and SDK types after the semantics are stable.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Why keep this as a separate RFD?
+
+The remaining questions are different from context window and cost reporting. Keeping this RFD separate lets context size and cost move to Preview without locking token accounting into a shape before the protocol has a clearer model for completed turns.
+
+### Why keep token usage out of `usage_update`?
+
+`usage_update` reports session-level context size and cumulative cost. End-turn token accounting is tied to a completed prompt response and may need different semantics, especially around per-turn and cumulative model usage.
+
+### Why not move this to Preview with context size and cost?
+
+Context size and cost have a clear session-level contract. Token usage still needs agreement on accounting semantics, provider category mapping, and how it interacts with turn completion.
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+**Everything in `usage_update`** - Rejected for now because turn-level token accounting should not be conflated with session context state.
+
+**Only cumulative totals** - Simple for dashboards, but less useful for understanding the cost of a specific completed prompt turn.
+
+**Only per-turn totals** - Useful for post-turn summaries, but may not satisfy clients that want cumulative session analytics.
+
+**Provider-specific blobs** - Preserves information, but makes client UI inconsistent and harder to standardize.
+
+## Revision history
+
+- 2026-06-02: Split from the original combined session usage and context RFD for separate draft discussion.

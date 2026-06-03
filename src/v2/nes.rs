@@ -104,10 +104,12 @@ impl Range {
 pub struct NesCapabilities {
     /// Events the agent wants to receive.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub events: Option<NesEventCapabilities>,
     /// Context the agent wants attached to each suggestion request.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub context: Option<NesContextCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -158,6 +160,7 @@ impl NesCapabilities {
 pub struct NesEventCapabilities {
     /// Document event capabilities.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub document: Option<NesDocumentEventCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -202,22 +205,27 @@ impl NesEventCapabilities {
 pub struct NesDocumentEventCapabilities {
     /// Whether the agent wants `document/didOpen` events.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub did_open: Option<NesDocumentDidOpenCapabilities>,
     /// Whether the agent wants `document/didChange` events, and the sync kind.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub did_change: Option<NesDocumentDidChangeCapabilities>,
     /// Whether the agent wants `document/didClose` events.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub did_close: Option<NesDocumentDidCloseCapabilities>,
     /// Whether the agent wants `document/didSave` events.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub did_save: Option<NesDocumentDidSaveCapabilities>,
     /// Whether the agent wants `document/didFocus` events.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub did_focus: Option<NesDocumentDidFocusCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -433,26 +441,32 @@ impl NesDocumentDidFocusCapabilities {
 pub struct NesContextCapabilities {
     /// Whether the agent wants recent files context.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub recent_files: Option<NesRecentFilesCapabilities>,
     /// Whether the agent wants related snippets context.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub related_snippets: Option<NesRelatedSnippetsCapabilities>,
     /// Whether the agent wants edit history context.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub edit_history: Option<NesEditHistoryCapabilities>,
     /// Whether the agent wants user actions context.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub user_actions: Option<NesUserActionsCapabilities>,
     /// Whether the agent wants open files context.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub open_files: Option<NesOpenFilesCapabilities>,
     /// Whether the agent wants diagnostics context.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub diagnostics: Option<NesDiagnosticsCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -679,14 +693,17 @@ impl NesDiagnosticsCapabilities {
 pub struct ClientNesCapabilities {
     /// Whether the client supports the `jump` suggestion kind.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub jump: Option<NesJumpCapabilities>,
     /// Whether the client supports the `rename` suggestion kind.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub rename: Option<NesRenameCapabilities>,
     /// Whether the client supports the `searchAndReplace` suggestion kind.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub search_and_replace: Option<NesSearchAndReplaceCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1103,10 +1120,12 @@ pub struct StartNesRequest {
     pub workspace_uri: Option<String>,
     /// The workspace folders.
     #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default)]
     pub workspace_folders: Option<Vec<WorkspaceFolder>>,
     /// Repository metadata, if the workspace is a git repository.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub repository: Option<NesRepository>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1376,12 +1395,14 @@ pub struct SuggestNesRequest {
     pub position: Position,
     /// The current text selection range, if any.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub selection: Option<Range>,
     /// What triggered this suggestion request.
     pub trigger_kind: NesTriggerKind,
     /// Context for the suggestion, included based on agent capabilities.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub context: Option<NesSuggestContext>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1447,26 +1468,32 @@ impl SuggestNesRequest {
 pub struct NesSuggestContext {
     /// Recently accessed files.
     #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default)]
     pub recent_files: Option<Vec<NesRecentFile>>,
     /// Related code snippets.
     #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default)]
     pub related_snippets: Option<Vec<NesRelatedSnippet>>,
     /// Recent edit history.
     #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default)]
     pub edit_history: Option<Vec<NesEditHistoryEntry>>,
     /// Recent user actions (typing, navigation, etc.).
     #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default)]
     pub user_actions: Option<Vec<NesUserAction>>,
     /// Currently open files in the editor.
     #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default)]
     pub open_files: Option<Vec<NesOpenFile>>,
     /// Current diagnostics (errors, warnings).
     #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default)]
     pub diagnostics: Option<Vec<NesDiagnostic>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1674,10 +1701,12 @@ pub struct NesOpenFile {
     pub language_id: String,
     /// The visible range in the editor, if any.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub visible_range: Option<Range>,
     /// Timestamp in milliseconds since epoch of when the file was last focused.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub last_focused_ms: Option<u64>,
 }
@@ -1775,6 +1804,7 @@ pub enum NesDiagnosticSeverity {
 pub struct SuggestNesResponse {
     /// The list of suggestions.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     pub suggestions: Vec<NesSuggestion>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -1912,6 +1942,7 @@ pub struct NesEditSuggestion {
     pub edits: Vec<NesTextEdit>,
     /// Optional suggested cursor position after applying edits.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub cursor_position: Option<Position>,
 }
@@ -2111,6 +2142,7 @@ pub struct RejectNesNotification {
     pub id: String,
     /// The reason for rejection.
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub reason: Option<NesRejectReason>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional

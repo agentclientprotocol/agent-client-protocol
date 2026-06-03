@@ -6,11 +6,49 @@ rss: true
 
 This page tracks lifecycle changes for ACP Requests for Dialog. For broader ACP announcements, see [Updates](/updates).
 
+<Update label="June 2, 2026" tags={["Draft"]}>
+## v2 Plan Variants RFD moves to Draft stage
+
+The RFD for making item-based `plan_update` the default v2 plan shape has been moved to Draft stage. Please review the [RFD](/rfds/v2/plan-variants) for more information on replacing the old v1 `plan` update in v2 while the broader Plan Operations RFD continues.
+
+</Update>
+
+<Update label="June 2, 2026" tags={["Draft"]}>
+## End-Turn Token Usage RFD moves to Draft stage
+
+The end-turn token usage portions of the original Session Usage RFD have been split into a separate Draft RFD for further design work. Please review the [RFD](/rfds/end-turn-token-usage) for more information on the current proposal and provide feedback.
+
+</Update>
+
+<Update label="June 2, 2026" tags={["Preview"]}>
+## session/delete RFD moves to Preview stage
+
+The RFD for allowing clients to delete a given session has been moved to Preview stage. Please review the [RFD](/rfds/session-delete) for more information on the current proposal and provide feedback before the feature is stabilized.
+
+</Update>
+
+<Update label="June 1, 2026" tags={["Removed"]}>
+## Unstable Session Model API removed
+
+The never-stabilized `session/set_model` API and related session model response fields have been removed from the protocol artifacts. Agents should continue to expose model selection through [Session Config Options](/rfds/session-config-options).
+
+</Update>
+
+<Update label="June 1, 2026" tags={["Completed"]}>
+## Additional Directories RFD moves to Completed
+
+The RFD for allowing clients to specify additional workspace roots for session lifecycle requests has been stabilized and is now a part of the protocol. Please review the [documentation](/protocol/v1/session-setup#additional-workspace-roots) for more information.
+
+</Update>
+
 <Update label="May 27, 2026" tags={["Draft"]}>
 ## v2 Enum Variant Extension RFD moves to Draft stage
 
 The RFD for reserving `_`-prefixed enum variants for extensions while preserving non-underscore variants for future ACP versions has been moved to Draft stage. Please review the [RFD](/rfds/v2/enum-variant-extension) for more information on the current proposal and provide feedback as work on v2 continues.
 
+</Update>
+
+<Update label="May 27, 2026" tags={["Draft"]}>
 ## Plan Operations Support RFD moves to Draft stage
 
 The RFD for adding `plan_update` and `plan_removed` session update types has been moved to Draft stage. Please review the [RFD](/rfds/plan-operations) for more information on the current proposal and provide feedback as work on the implementation begins.
@@ -20,7 +58,7 @@ The RFD for adding `plan_update` and `plan_removed` session update types has bee
 <Update label="May 22, 2026" tags={["Completed"]}>
 ## Logout Method RFD moves to Completed
 
-The RFD for the `logout` method has been stabilized and is now a part of the protocol. Please review the [documentation](/protocol/authentication#logging-out) for more information.
+The RFD for the `logout` method has been stabilized and is now a part of the protocol. Please review the [documentation](/protocol/v1/authentication#logging-out) for more information.
 
 </Update>
 
@@ -62,14 +100,14 @@ The RFD for how the prompt lifecycle will work in v2 of the protocol been moved 
 <Update label="April 23, 2026" tags={["Completed"]}>
 ## session/close RFD moves to Completed
 
-The RFD for the `session/close` method has been stabilized and is now a part of the protocol. Please review the [documentation](/protocol/session-setup#closing-active-sessions) for more information.
+The RFD for the `session/close` method has been stabilized and is now a part of the protocol. Please review the [documentation](/protocol/v1/session-setup#closing-active-sessions) for more information.
 
 </Update>
 
 <Update label="April 22, 2026" tags={["Completed"]}>
 ## session/resume RFD moves to Completed
 
-The RFD for the `session/resume` method has been stabilized and is now a part of the protocol. Please review the [documentation](/protocol/session-setup#resuming-sessions) for more information.
+The RFD for the `session/resume` method has been stabilized and is now a part of the protocol. Please review the [documentation](/protocol/v1/session-setup#resuming-sessions) for more information.
 
 </Update>
 
@@ -115,11 +153,11 @@ The RFD for the initial version of the ACP Registry has been completed. Please r
 
 ## session_info_update Notification RFD moves to Completed
 
-The RFD for the session_info_update notification has been stabilized and is now a part of the protocol. Please review the [documentation](/protocol/session-list#updating-session-metadata) for more information.
+The RFD for the session_info_update notification has been stabilized and is now a part of the protocol. Please review the [documentation](/protocol/v1/session-list#updating-session-metadata) for more information.
 
 ## session/list RFD moves to Completed
 
-The RFD for the session/list method has been stabilized and is now a part of the protocol. Please review the [documentation](/protocol/session-list) for more information.
+The RFD for the session/list method has been stabilized and is now a part of the protocol. Please review the [documentation](/protocol/v1/session-list) for more information.
 
 </Update>
 
@@ -177,7 +215,7 @@ The RFD for the ACP Registry has been moved to Preview stage. Please review the 
 <Update label="February 4, 2026" tags={["Completed"]}>
 ## Session Config Options RFD moves to Completed
 
-The RFD for adding more generic Session Config Options to the protocol has been stabilized and is now a part of the protocol. Please review the [documentation](/protocol/session-config-options) for more information.
+The RFD for adding more generic Session Config Options to the protocol has been stabilized and is now a part of the protocol. Please review the [documentation](/protocol/v1/session-config-options) for more information.
 
 </Update>
 
