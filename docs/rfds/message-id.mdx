@@ -282,6 +282,7 @@ Future RFDs may propose extending `messageId` to other update types if use cases
 
 ## Revision history
 
+- **2026-06-03**: Moved the v1 portion of the RFD to Preview while v2-specific behavior remains part of the v2 draft work
 - **2026-06-03**: Moved the RFD out of the v2 Draft group while keeping v2-specific behavior; added a dedicated `MessageId` type, and made v2 require message IDs on streamed message chunks while v1 keeps optional message IDs for compatibility
 - **2026-06-02**: Updated the proposal so message IDs are Agent-generated only, removed client-provided prompt IDs and prompt response acknowledgments, and removed the UUID requirement in favor of opaque strings
 - **2026-02-17**: Added "Message ID Acknowledgment" section to clarify that presence/absence of `userMessageId` in response indicates whether the Agent recorded the ID; clarified that UUID format is MUST (not SHOULD) since both sides generate IDs; renamed response field to `userMessageId` for clarity (request keeps `messageId`)

@@ -192,7 +192,6 @@
               "rfds/custom-llm-endpoint",
               "rfds/model-config-category",
               "rfds/plan-operations",
-              "rfds/message-id",
               {
                 "group": "v2 Draft",
                 "expanded": true,
@@ -212,7 +211,8 @@
             "pages": [
               "rfds/rust-sdk-v1",
               "rfds/session-delete",
-              "rfds/session-usage"
+              "rfds/session-usage",
+              "rfds/message-id"
             ]
           },
           {
