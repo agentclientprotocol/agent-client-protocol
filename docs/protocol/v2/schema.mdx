@@ -152,7 +152,7 @@ Note: in future versions of the protocol, this will be required.
 <ResponseField name="capabilities" type={<a href="#agentcapabilities">AgentCapabilities</a>} >
   Capabilities supported by the agent.
 
-    - Default: `{"auth":{},"mcp":{"http":false,"sse":false},"prompt":{"audio":false,"embeddedContext":false,"image":false},"session":{}}`
+    - Default: `{"auth":{},"mcp":{},"prompt":{},"session":{}}`
 
 </ResponseField>
 <ResponseField name="protocolVersion" type={<a href="#protocolversion">ProtocolVersion</a>} required>
@@ -873,13 +873,13 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 <ResponseField name="mcp" type={<a href="#mcpcapabilities">McpCapabilities</a>} >
   MCP capabilities supported by the agent.
 
-    - Default: `{"http":false,"sse":false}`
+    - Default: `{}`
 
 </ResponseField>
 <ResponseField name="prompt" type={<a href="#promptcapabilities">PromptCapabilities</a>} >
   Prompt capabilities supported by the agent.
 
-    - Default: `{"audio":false,"embeddedContext":false,"image":false}`
+    - Default: `{}`
 
 </ResponseField>
 <ResponseField name="session" type={<a href="#sessioncapabilities">SessionCapabilities</a>} >
@@ -1783,16 +1783,37 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
 
 </ResponseField>
-<ResponseField name="http" type={"boolean"} >
+<ResponseField name="http" type={<><span><a href="#mcphttpcapabilities">McpHttpCapabilities</a></span><span> | null</span></>} >
   Agent supports `McpServer::Http`.
 
-    - Default: `false`
+Optional. Omitted or `null` both mean the agent does not advertise support.
+Supplying `\{\}` means the agent supports HTTP MCP server transports.
 
 </ResponseField>
-<ResponseField name="sse" type={"boolean"} >
+<ResponseField name="sse" type={<><span><a href="#mcpssecapabilities">McpSseCapabilities</a></span><span> | null</span></>} >
   Agent supports `McpServer::Sse`.
 
-    - Default: `false`
+Optional. Omitted or `null` both mean the agent does not advertise support.
+Supplying `\{\}` means the agent supports SSE MCP server transports.
+
+</ResponseField>
+
+## <span class="font-mono">McpHttpCapabilities</span>
+
+Capabilities for HTTP MCP server transports.
+
+Supplying `\{\}` means the agent supports HTTP MCP server transports.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
 
 </ResponseField>
 
@@ -1810,7 +1831,7 @@ See protocol docs: [MCP Servers](https://agentclientprotocol.com/protocol/v2/ses
 <ResponseField name="http" type="object">
 HTTP transport configuration
 
-Only available when the Agent capabilities indicate `mcp.http` is `true`.
+Only available when the Agent capabilities include `mcp.http`.
 
 <Expandable title="Properties">
 
@@ -1841,7 +1862,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 <ResponseField name="sse" type="object">
 SSE transport configuration
 
-Only available when the Agent capabilities indicate `mcp.sse` is `true`.
+Only available when the Agent capabilities include `mcp.sse`.
 
 <Expandable title="Properties">
 
@@ -1979,6 +2000,25 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
   Human-readable name identifying this MCP server.
+</ResponseField>
+
+## <span class="font-mono">McpSseCapabilities</span>
+
+Capabilities for SSE MCP server transports.
+
+Supplying `\{\}` means the agent supports SSE MCP server transports.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
 </ResponseField>
 
 ## <span class="font-mono">MessageId</span>
@@ -2261,6 +2301,25 @@ future ACP variants.
 </Expandable>
 </ResponseField>
 
+## <span class="font-mono">PromptAudioCapabilities</span>
+
+Capabilities for audio content in prompt requests.
+
+Supplying `\{\}` means the agent supports audio content in prompts.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+
 ## <span class="font-mono">PromptCapabilities</span>
 
 Prompt capabilities supported by the agent in `session/prompt` requests.
@@ -2288,25 +2347,66 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
 
 </ResponseField>
-<ResponseField name="audio" type={"boolean"} >
+<ResponseField name="audio" type={<><span><a href="#promptaudiocapabilities">PromptAudioCapabilities</a></span><span> | null</span></>} >
   Agent supports `ContentBlock::Audio`.
 
-    - Default: `false`
+Optional. Omitted or `null` both mean the agent does not advertise support.
+Supplying `\{\}` means the agent supports audio content in prompts.
 
 </ResponseField>
-<ResponseField name="embeddedContext" type={"boolean"} >
+<ResponseField name="embeddedContext" type={<><span><a href="#promptembeddedcontextcapabilities">PromptEmbeddedContextCapabilities</a></span><span> | null</span></>} >
   Agent supports embedded context in `session/prompt` requests.
 
 When enabled, the Client is allowed to include `ContentBlock::Resource`
 in prompt requests for pieces of context that are referenced in the message.
 
-    - Default: `false`
+Optional. Omitted or `null` both mean the agent does not advertise support.
+Supplying `\{\}` means the agent supports embedded context in prompts.
 
 </ResponseField>
-<ResponseField name="image" type={"boolean"} >
+<ResponseField name="image" type={<><span><a href="#promptimagecapabilities">PromptImageCapabilities</a></span><span> | null</span></>} >
   Agent supports `ContentBlock::Image`.
 
-    - Default: `false`
+Optional. Omitted or `null` both mean the agent does not advertise support.
+Supplying `\{\}` means the agent supports image content in prompts.
+
+</ResponseField>
+
+## <span class="font-mono">PromptEmbeddedContextCapabilities</span>
+
+Capabilities for embedded context in prompt requests.
+
+Supplying `\{\}` means the agent supports embedded context in prompts.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+
+## <span class="font-mono">PromptImageCapabilities</span>
+
+Capabilities for image content in prompt requests.
+
+Supplying `\{\}` means the agent supports image content in prompts.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
 
 </ResponseField>
 

@@ -1719,7 +1719,7 @@ impl IntoV1 for super::AuthCapabilities {
     fn into_v1(self) -> Result<Self::Output> {
         let Self { terminal, meta } = self;
         Ok(crate::v1::AuthCapabilities {
-            terminal: terminal.into_v1()?,
+            terminal: terminal.is_some(),
             meta: meta.into_v1()?,
         })
     }
@@ -1732,7 +1732,7 @@ impl IntoV2 for crate::v1::AuthCapabilities {
     fn into_v2(self) -> Result<Self::Output> {
         let Self { terminal, meta } = self;
         Ok(super::AuthCapabilities {
-            terminal: terminal.into_v2()?,
+            terminal: terminal.then(super::TerminalAuthCapabilities::new),
             meta: meta.into_v2()?,
         })
     }
@@ -4796,9 +4796,9 @@ impl IntoV1 for super::PromptCapabilities {
             meta,
         } = self;
         Ok(crate::v1::PromptCapabilities {
-            image: image.into_v1()?,
-            audio: audio.into_v1()?,
-            embedded_context: embedded_context.into_v1()?,
+            image: image.is_some(),
+            audio: audio.is_some(),
+            embedded_context: embedded_context.is_some(),
             meta: meta.into_v1()?,
         })
     }
@@ -4815,9 +4815,9 @@ impl IntoV2 for crate::v1::PromptCapabilities {
             meta,
         } = self;
         Ok(super::PromptCapabilities {
-            image: image.into_v2()?,
-            audio: audio.into_v2()?,
-            embedded_context: embedded_context.into_v2()?,
+            image: image.then(super::PromptImageCapabilities::new),
+            audio: audio.then(super::PromptAudioCapabilities::new),
+            embedded_context: embedded_context.then(super::PromptEmbeddedContextCapabilities::new),
             meta: meta.into_v2()?,
         })
     }
@@ -4835,10 +4835,10 @@ impl IntoV1 for super::McpCapabilities {
             meta,
         } = self;
         Ok(crate::v1::McpCapabilities {
-            http: http.into_v1()?,
-            sse: sse.into_v1()?,
+            http: http.is_some(),
+            sse: sse.is_some(),
             #[cfg(feature = "unstable_mcp_over_acp")]
-            acp: acp.into_v1()?,
+            acp: acp.is_some(),
             meta: meta.into_v1()?,
         })
     }
@@ -4856,10 +4856,10 @@ impl IntoV2 for crate::v1::McpCapabilities {
             meta,
         } = self;
         Ok(super::McpCapabilities {
-            http: http.into_v2()?,
-            sse: sse.into_v2()?,
+            http: http.then(super::McpHttpCapabilities::new),
+            sse: sse.then(super::McpSseCapabilities::new),
             #[cfg(feature = "unstable_mcp_over_acp")]
-            acp: acp.into_v2()?,
+            acp: acp.then(super::McpAcpCapabilities::new),
             meta: meta.into_v2()?,
         })
     }
@@ -8688,6 +8688,74 @@ mod tests {
         let v1_after: v1::AgentCapabilities =
             v2_to_v1(v2_capabilities).expect("v2 -> v1 conversion");
         assert!(v1_after.load_session);
+    }
+
+    #[test]
+    fn v1_prompt_capability_bools_convert_to_v2_objects() {
+        let v1_capabilities = v1::PromptCapabilities::new()
+            .image(true)
+            .audio(true)
+            .embedded_context(true);
+
+        let v2_capabilities: v2::PromptCapabilities =
+            v1_to_v2(v1_capabilities).expect("v1 -> v2 conversion");
+        let v2_json = serde_json::to_value(&v2_capabilities).expect("v2 serialize");
+        assert_eq!(v2_json.pointer("/image"), Some(&serde_json::json!({})));
+        assert_eq!(v2_json.pointer("/audio"), Some(&serde_json::json!({})));
+        assert_eq!(
+            v2_json.pointer("/embeddedContext"),
+            Some(&serde_json::json!({}))
+        );
+
+        let v1_after: v1::PromptCapabilities =
+            v2_to_v1(v2_capabilities).expect("v2 -> v1 conversion");
+        assert!(v1_after.image);
+        assert!(v1_after.audio);
+        assert!(v1_after.embedded_context);
+    }
+
+    #[test]
+    fn v1_mcp_capability_bools_convert_to_v2_objects() {
+        let v1_capabilities = v1::McpCapabilities::new().http(true).sse(true);
+
+        let v2_capabilities: v2::McpCapabilities =
+            v1_to_v2(v1_capabilities).expect("v1 -> v2 conversion");
+        let v2_json = serde_json::to_value(&v2_capabilities).expect("v2 serialize");
+        assert_eq!(v2_json.pointer("/http"), Some(&serde_json::json!({})));
+        assert_eq!(v2_json.pointer("/sse"), Some(&serde_json::json!({})));
+
+        let v1_after: v1::McpCapabilities = v2_to_v1(v2_capabilities).expect("v2 -> v1 conversion");
+        assert!(v1_after.http);
+        assert!(v1_after.sse);
+    }
+
+    #[cfg(feature = "unstable_mcp_over_acp")]
+    #[test]
+    fn v1_mcp_acp_capability_bool_converts_to_v2_object() {
+        let v1_capabilities = v1::McpCapabilities::new().acp(true);
+
+        let v2_capabilities: v2::McpCapabilities =
+            v1_to_v2(v1_capabilities).expect("v1 -> v2 conversion");
+        let v2_json = serde_json::to_value(&v2_capabilities).expect("v2 serialize");
+        assert_eq!(v2_json.pointer("/acp"), Some(&serde_json::json!({})));
+
+        let v1_after: v1::McpCapabilities = v2_to_v1(v2_capabilities).expect("v2 -> v1 conversion");
+        assert!(v1_after.acp);
+    }
+
+    #[cfg(feature = "unstable_auth_methods")]
+    #[test]
+    fn v1_auth_terminal_capability_bool_converts_to_v2_object() {
+        let v1_capabilities = v1::AuthCapabilities::new().terminal(true);
+
+        let v2_capabilities: v2::AuthCapabilities =
+            v1_to_v2(v1_capabilities).expect("v1 -> v2 conversion");
+        let v2_json = serde_json::to_value(&v2_capabilities).expect("v2 serialize");
+        assert_eq!(v2_json.pointer("/terminal"), Some(&serde_json::json!({})));
+
+        let v1_after: v1::AuthCapabilities =
+            v2_to_v1(v2_capabilities).expect("v2 -> v1 conversion");
+        assert!(v1_after.terminal);
     }
 
     #[test]

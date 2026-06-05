@@ -44,12 +44,17 @@ Other RFDs will progress separately and are not dependent on breaking changes (s
 - Make [plan variants](./plan-variants.mdx) the default v2 plan shape by replacing the old `plan` session update with item-based `plan_update`.
 - Require [message IDs](../message-id.mdx) on streamed message chunks.
 - Follow JSON-RPC 2.0 batch request and notification behavior.
+- Clean up capability naming and organization:
+  - Use a single `capabilities` field in both `initialize` params and results, replacing the v1-style `clientCapabilities` and `agentCapabilities` fields.
+  - Use concise capability group names such as `prompt`, `mcp`, `session`, and `auth`, replacing names like `promptCapabilities`, `mcpCapabilities`, and `sessionCapabilities`.
+  - Move `loadSession` into the session capability group as `session.load`.
+  - Represent support markers as capability objects instead of booleans. Supplying `{}` means supported, while omission or `null` means unsupported. Booleans remain appropriate for actual data or configuration inside an already-advertised capability.
 
 ### RFDs to be Written
 
 Changes under consideration that still need to be drafted or moved to draft:
 
-- Capabilities: clean up naming and organization, as well as make some more capabilities required.
+- Capabilities: decide whether any additional capability groups should become required.
 - Streaming/Non-streaming consistency: Offer both options for both messages and tool calls
   - Also Terminal Output type for streaming terminal output from an agent
   - Expand diff types (delete, move)
@@ -89,6 +94,7 @@ With the needed breaking changes, as much as possible I am targeting having a co
 
 ## Revision history
 
+- 2026-06-05: Recorded the v2 capability cleanup: unified initialize capability fields, shorter capability group names, `session.load`, and object-shaped support markers.
 - 2026-06-02: Recorded the v2 decision to follow JSON-RPC 2.0 batch request and notification behavior.
 - 2026-06-02: Recorded the v2 decision to remove Client filesystem and terminal execution capabilities, methods, and terminal tool-call content.
 - 2026-06-02: Added the v2 Plan Variants RFD to make item-based `plan_update` the default v2 plan shape.

@@ -92,12 +92,16 @@ In v2, authentication method `type` values can be custom or future variants. Cus
     "protocolVersion": 2,
     "capabilities": {
       "auth": {
-        "terminal": true
+        "terminal": {}
       }
     }
   }
 }
 ```
+
+If `capabilities.auth.terminal` is omitted or `null`, the Client does not
+advertise support for terminal authentication methods. Supplying `{}` means the
+Client supports terminal authentication methods.
 
 See the [draft schema](/protocol/v2/draft/schema#authmethod) for the full `AuthMethod` definitions.
 

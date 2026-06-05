@@ -556,16 +556,17 @@ Before using HTTP or SSE transports, Clients **MUST** verify the Agent's capabil
     "protocolVersion": 2,
     "capabilities": {
       "mcp": {
-        "http": true,
-        "sse": true
+        "http": {},
+        "sse": {}
       }
     }
   }
 }
 ```
 
-If `mcp.http` is `false` or not present, the Agent does not support HTTP transport.
-If `mcp.sse` is `false` or not present, the Agent does not support SSE transport.
+If `mcp.http` is omitted or `null`, the Agent does not support HTTP transport.
+If `mcp.sse` is omitted or `null`, the Agent does not support SSE transport.
+Supplying `{}` means the Agent supports the corresponding transport.
 
 Agents **SHOULD** connect to all MCP servers specified by the Client.
 

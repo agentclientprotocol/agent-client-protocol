@@ -2646,11 +2646,11 @@ impl SetSessionConfigOptionResponse {
 pub enum McpServer {
     /// HTTP transport configuration
     ///
-    /// Only available when the Agent capabilities indicate `mcp.http` is `true`.
+    /// Only available when the Agent capabilities include `mcp.http`.
     Http(McpServerHttp),
     /// SSE transport configuration
     ///
-    /// Only available when the Agent capabilities indicate `mcp.sse` is `true`.
+    /// Only available when the Agent capabilities include `mcp.sse`.
     Sse(McpServerSse),
     /// **UNSTABLE**
     ///
@@ -2658,7 +2658,7 @@ pub enum McpServer {
     ///
     /// ACP transport configuration
     ///
-    /// Only available when the Agent capabilities indicate `mcp.acp` is `true`.
+    /// Only available when the Agent capabilities include `mcp.acp`.
     /// The MCP server is provided by an ACP component and communicates over the ACP channel.
     #[cfg(feature = "unstable_mcp_over_acp")]
     Acp(McpServerAcp),
@@ -4236,23 +4236,39 @@ impl SessionCloseCapabilities {
 /// the agent can process.
 ///
 /// See protocol docs: [Prompt Capabilities](https://agentclientprotocol.com/protocol/initialization#prompt-capabilities)
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct PromptCapabilities {
     /// Agent supports [`ContentBlock::Image`].
+    ///
+    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports image content in prompts.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
-    pub image: bool,
+    pub image: Option<PromptImageCapabilities>,
     /// Agent supports [`ContentBlock::Audio`].
+    ///
+    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports audio content in prompts.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
-    pub audio: bool,
+    pub audio: Option<PromptAudioCapabilities>,
     /// Agent supports embedded context in `session/prompt` requests.
     ///
     /// When enabled, the Client is allowed to include [`ContentBlock::Resource`]
     /// in prompt requests for pieces of context that are referenced in the message.
+    ///
+    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports embedded context in prompts.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
-    pub embedded_context: bool,
+    pub embedded_context: Option<PromptEmbeddedContextCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -4269,16 +4285,22 @@ impl PromptCapabilities {
     }
 
     /// Agent supports [`ContentBlock::Image`].
+    ///
+    /// Omitted or `null` both mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports image content in prompts.
     #[must_use]
-    pub fn image(mut self, image: bool) -> Self {
-        self.image = image;
+    pub fn image(mut self, image: impl IntoOption<PromptImageCapabilities>) -> Self {
+        self.image = image.into_option();
         self
     }
 
     /// Agent supports [`ContentBlock::Audio`].
+    ///
+    /// Omitted or `null` both mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports audio content in prompts.
     #[must_use]
-    pub fn audio(mut self, audio: bool) -> Self {
-        self.audio = audio;
+    pub fn audio(mut self, audio: impl IntoOption<PromptAudioCapabilities>) -> Self {
+        self.audio = audio.into_option();
         self
     }
 
@@ -4286,9 +4308,15 @@ impl PromptCapabilities {
     ///
     /// When enabled, the Client is allowed to include [`ContentBlock::Resource`]
     /// in prompt requests for pieces of context that are referenced in the message.
+    ///
+    /// Omitted or `null` both mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports embedded context in prompts.
     #[must_use]
-    pub fn embedded_context(mut self, embedded_context: bool) -> Self {
-        self.embedded_context = embedded_context;
+    pub fn embedded_context(
+        mut self,
+        embedded_context: impl IntoOption<PromptEmbeddedContextCapabilities>,
+    ) -> Self {
+        self.embedded_context = embedded_context.into_option();
         self
     }
 
@@ -4304,26 +4332,144 @@ impl PromptCapabilities {
     }
 }
 
+/// Capabilities for image content in prompt requests.
+///
+/// Supplying `{}` means the agent supports image content in prompts.
+#[skip_serializing_none]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct PromptImageCapabilities {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl PromptImageCapabilities {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// Capabilities for audio content in prompt requests.
+///
+/// Supplying `{}` means the agent supports audio content in prompts.
+#[skip_serializing_none]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct PromptAudioCapabilities {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl PromptAudioCapabilities {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// Capabilities for embedded context in prompt requests.
+///
+/// Supplying `{}` means the agent supports embedded context in prompts.
+#[skip_serializing_none]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct PromptEmbeddedContextCapabilities {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl PromptEmbeddedContextCapabilities {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
 /// MCP capabilities supported by the agent
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct McpCapabilities {
     /// Agent supports [`McpServer::Http`].
+    ///
+    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports HTTP MCP server transports.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
-    pub http: bool,
+    pub http: Option<McpHttpCapabilities>,
     /// Agent supports [`McpServer::Sse`].
+    ///
+    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports SSE MCP server transports.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
-    pub sse: bool,
+    pub sse: Option<McpSseCapabilities>,
     /// **UNSTABLE**
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
     /// Agent supports [`McpServer::Acp`].
     #[cfg(feature = "unstable_mcp_over_acp")]
+    ///
+    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports ACP MCP server transports.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
-    pub acp: bool,
+    pub acp: Option<McpAcpCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -4340,16 +4486,22 @@ impl McpCapabilities {
     }
 
     /// Agent supports [`McpServer::Http`].
+    ///
+    /// Omitted or `null` both mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports HTTP MCP server transports.
     #[must_use]
-    pub fn http(mut self, http: bool) -> Self {
-        self.http = http;
+    pub fn http(mut self, http: impl IntoOption<McpHttpCapabilities>) -> Self {
+        self.http = http.into_option();
         self
     }
 
     /// Agent supports [`McpServer::Sse`].
+    ///
+    /// Omitted or `null` both mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports SSE MCP server transports.
     #[must_use]
-    pub fn sse(mut self, sse: bool) -> Self {
-        self.sse = sse;
+    pub fn sse(mut self, sse: impl IntoOption<McpSseCapabilities>) -> Self {
+        self.sse = sse.into_option();
         self
     }
 
@@ -4359,10 +4511,121 @@ impl McpCapabilities {
     ///
     /// Agent supports [`McpServer::Acp`].
     #[cfg(feature = "unstable_mcp_over_acp")]
+    ///
+    /// Omitted or `null` both mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports ACP MCP server transports.
     #[must_use]
-    pub fn acp(mut self, acp: bool) -> Self {
-        self.acp = acp;
+    pub fn acp(mut self, acp: impl IntoOption<McpAcpCapabilities>) -> Self {
+        self.acp = acp.into_option();
         self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// Capabilities for HTTP MCP server transports.
+///
+/// Supplying `{}` means the agent supports HTTP MCP server transports.
+#[skip_serializing_none]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct McpHttpCapabilities {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl McpHttpCapabilities {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// Capabilities for SSE MCP server transports.
+///
+/// Supplying `{}` means the agent supports SSE MCP server transports.
+#[skip_serializing_none]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct McpSseCapabilities {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl McpSseCapabilities {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Capabilities for ACP MCP server transports.
+///
+/// Supplying `{}` means the agent supports ACP MCP server transports.
+#[cfg(feature = "unstable_mcp_over_acp")]
+#[skip_serializing_none]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct McpAcpCapabilities {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl McpAcpCapabilities {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -6133,5 +6396,68 @@ mod test_serialization {
 
         let deserialized: AgentCapabilities = serde_json::from_value(json).unwrap();
         assert!(deserialized.providers.is_some());
+    }
+
+    #[test]
+    fn test_prompt_capabilities_serialize_supported_content_as_objects() {
+        let caps = PromptCapabilities::new()
+            .image(PromptImageCapabilities::new())
+            .audio(PromptAudioCapabilities::new())
+            .embedded_context(PromptEmbeddedContextCapabilities::new());
+
+        assert_eq!(
+            serde_json::to_value(&caps).unwrap(),
+            json!({
+                "image": {},
+                "audio": {},
+                "embeddedContext": {}
+            })
+        );
+
+        let deserialized: PromptCapabilities = serde_json::from_value(json!({
+            "image": null,
+            "audio": false,
+            "embeddedContext": {}
+        }))
+        .unwrap();
+        assert!(deserialized.image.is_none());
+        assert!(deserialized.audio.is_none());
+        assert!(deserialized.embedded_context.is_some());
+    }
+
+    #[test]
+    fn test_mcp_capabilities_serialize_supported_transports_as_objects() {
+        let caps = McpCapabilities::new()
+            .http(McpHttpCapabilities::new())
+            .sse(McpSseCapabilities::new());
+
+        assert_eq!(
+            serde_json::to_value(&caps).unwrap(),
+            json!({
+                "http": {},
+                "sse": {}
+            })
+        );
+
+        let deserialized: McpCapabilities = serde_json::from_value(json!({
+            "http": null,
+            "sse": false
+        }))
+        .unwrap();
+        assert!(deserialized.http.is_none());
+        assert!(deserialized.sse.is_none());
+    }
+
+    #[cfg(feature = "unstable_mcp_over_acp")]
+    #[test]
+    fn test_mcp_capabilities_serialize_acp_support_as_object() {
+        let caps = McpCapabilities::new().acp(McpAcpCapabilities::new());
+
+        assert_eq!(
+            serde_json::to_value(&caps).unwrap(),
+            json!({
+                "acp": {}
+            })
+        );
     }
 }

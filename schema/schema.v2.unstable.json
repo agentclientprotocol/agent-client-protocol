@@ -72,11 +72,7 @@
               "$ref": "#/$defs/McpCapabilities"
             }
           ],
-          "default": {
-            "acp": false,
-            "http": false,
-            "sse": false
-          },
+          "default": {},
           "description": "MCP capabilities supported by the agent."
         },
         "nes": {
@@ -109,11 +105,7 @@
               "$ref": "#/$defs/PromptCapabilities"
             }
           ],
-          "default": {
-            "audio": false,
-            "embeddedContext": false,
-            "image": false
-          },
+          "default": {},
           "description": "Prompt capabilities supported by the agent."
         },
         "providers": {
@@ -533,9 +525,16 @@
           "type": ["object", "null"]
         },
         "terminal": {
-          "default": false,
-          "description": "Whether the client supports `terminal` authentication methods.\n\nWhen `true`, the agent may include `terminal` entries in its authentication methods.",
-          "type": "boolean"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TerminalAuthCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Whether the client supports `terminal` authentication methods.\n\nOptional. Omitted or `null` both mean the client does not advertise support.\nSupplying `{}` means the agent may include `terminal` entries in its authentication methods.",
+          "x-deserialize-default-on-error": true
         }
       },
       "type": "object"
@@ -996,9 +995,7 @@
               "$ref": "#/$defs/AuthCapabilities"
             }
           ],
-          "default": {
-            "terminal": false
-          },
+          "default": {},
           "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAuthentication capabilities supported by the client.\nDetermines which authentication method types the agent may include\nin its `InitializeResponse`."
         },
         "elicitation": {
@@ -2984,9 +2981,7 @@
             }
           ],
           "default": {
-            "auth": {
-              "terminal": false
-            }
+            "auth": {}
           },
           "description": "Capabilities supported by the client."
         },
@@ -3054,16 +3049,8 @@
           ],
           "default": {
             "auth": {},
-            "mcp": {
-              "acp": false,
-              "http": false,
-              "sse": false
-            },
-            "prompt": {
-              "audio": false,
-              "embeddedContext": false,
-              "image": false
-            },
+            "mcp": {},
+            "prompt": {},
             "session": {}
           },
           "description": "Capabilities supported by the agent."
@@ -3329,6 +3316,17 @@
       "x-method": "logout",
       "x-side": "agent"
     },
+    "McpAcpCapabilities": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapabilities for ACP MCP server transports.\n\nSupplying `{}` means the agent supports ACP MCP server transports.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object"
+    },
     "McpCapabilities": {
       "description": "MCP capabilities supported by the agent",
       "properties": {
@@ -3338,19 +3336,40 @@
           "type": ["object", "null"]
         },
         "acp": {
-          "default": false,
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAgent supports [`McpServer::Acp`].",
-          "type": "boolean"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/McpAcpCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAgent supports [`McpServer::Acp`].\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports ACP MCP server transports.",
+          "x-deserialize-default-on-error": true
         },
         "http": {
-          "default": false,
-          "description": "Agent supports [`McpServer::Http`].",
-          "type": "boolean"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/McpHttpCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Agent supports [`McpServer::Http`].\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports HTTP MCP server transports.",
+          "x-deserialize-default-on-error": true
         },
         "sse": {
-          "default": false,
-          "description": "Agent supports [`McpServer::Sse`].",
-          "type": "boolean"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/McpSseCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Agent supports [`McpServer::Sse`].\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports SSE MCP server transports.",
+          "x-deserialize-default-on-error": true
         }
       },
       "type": "object"
@@ -3358,6 +3377,17 @@
     "McpConnectionId": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA unique identifier for an active MCP-over-ACP connection.",
       "type": "string"
+    },
+    "McpHttpCapabilities": {
+      "description": "Capabilities for HTTP MCP server transports.\n\nSupplying `{}` means the agent supports HTTP MCP server transports.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object"
     },
     "McpServer": {
       "anyOf": [
@@ -3367,7 +3397,7 @@
               "$ref": "#/$defs/McpServerHttp"
             }
           ],
-          "description": "HTTP transport configuration\n\nOnly available when the Agent capabilities indicate `mcp.http` is `true`.",
+          "description": "HTTP transport configuration\n\nOnly available when the Agent capabilities include `mcp.http`.",
           "properties": {
             "type": {
               "const": "http",
@@ -3383,7 +3413,7 @@
               "$ref": "#/$defs/McpServerSse"
             }
           ],
-          "description": "SSE transport configuration\n\nOnly available when the Agent capabilities indicate `mcp.sse` is `true`.",
+          "description": "SSE transport configuration\n\nOnly available when the Agent capabilities include `mcp.sse`.",
           "properties": {
             "type": {
               "const": "sse",
@@ -3399,7 +3429,7 @@
               "$ref": "#/$defs/McpServerAcp"
             }
           ],
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nACP transport configuration\n\nOnly available when the Agent capabilities indicate `mcp.acp` is `true`.\nThe MCP server is provided by an ACP component and communicates over the ACP channel.",
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nACP transport configuration\n\nOnly available when the Agent capabilities include `mcp.acp`.\nThe MCP server is provided by an ACP component and communicates over the ACP channel.",
           "properties": {
             "type": {
               "const": "acp",
@@ -3535,6 +3565,17 @@
         }
       },
       "required": ["name", "command", "args", "env"],
+      "type": "object"
+    },
+    "McpSseCapabilities": {
+      "description": "Capabilities for SSE MCP server transports.\n\nSupplying `{}` means the agent supports SSE MCP server transports.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        }
+      },
       "type": "object"
     },
     "MessageId": {
@@ -5174,6 +5215,17 @@
         }
       ]
     },
+    "PromptAudioCapabilities": {
+      "description": "Capabilities for audio content in prompt requests.\n\nSupplying `{}` means the agent supports audio content in prompts.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object"
+    },
     "PromptCapabilities": {
       "description": "Prompt capabilities supported by the agent in `session/prompt` requests.\n\nBaseline agent functionality requires support for [`ContentBlock::Text`]\nand [`ContentBlock::ResourceLink`] in prompt requests.\n\nOther variants must be explicitly opted in to.\nCapabilities for different types of content in prompt requests.\n\nIndicates which content types beyond the baseline (text and resource links)\nthe agent can process.\n\nSee protocol docs: [Prompt Capabilities](https://agentclientprotocol.com/protocol/initialization#prompt-capabilities)",
       "properties": {
@@ -5183,19 +5235,62 @@
           "type": ["object", "null"]
         },
         "audio": {
-          "default": false,
-          "description": "Agent supports [`ContentBlock::Audio`].",
-          "type": "boolean"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PromptAudioCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Agent supports [`ContentBlock::Audio`].\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports audio content in prompts.",
+          "x-deserialize-default-on-error": true
         },
         "embeddedContext": {
-          "default": false,
-          "description": "Agent supports embedded context in `session/prompt` requests.\n\nWhen enabled, the Client is allowed to include [`ContentBlock::Resource`]\nin prompt requests for pieces of context that are referenced in the message.",
-          "type": "boolean"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PromptEmbeddedContextCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Agent supports embedded context in `session/prompt` requests.\n\nWhen enabled, the Client is allowed to include [`ContentBlock::Resource`]\nin prompt requests for pieces of context that are referenced in the message.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports embedded context in prompts.",
+          "x-deserialize-default-on-error": true
         },
         "image": {
-          "default": false,
-          "description": "Agent supports [`ContentBlock::Image`].",
-          "type": "boolean"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PromptImageCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Agent supports [`ContentBlock::Image`].\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports image content in prompts.",
+          "x-deserialize-default-on-error": true
+        }
+      },
+      "type": "object"
+    },
+    "PromptEmbeddedContextCapabilities": {
+      "description": "Capabilities for embedded context in prompt requests.\n\nSupplying `{}` means the agent supports embedded context in prompts.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object"
+    },
+    "PromptImageCapabilities": {
+      "description": "Capabilities for image content in prompt requests.\n\nSupplying `{}` means the agent supports image content in prompts.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
         }
       },
       "type": "object"
@@ -6937,6 +7032,17 @@
       "type": "object",
       "x-method": "nes/suggest",
       "x-side": "agent"
+    },
+    "TerminalAuthCapabilities": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapabilities for terminal authentication methods.\n\nSupplying `{}` means the client supports terminal authentication methods.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        }
+      },
+      "type": "object"
     },
     "TextContent": {
       "description": "Text provided to or from an LLM.",

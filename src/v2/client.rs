@@ -1104,6 +1104,7 @@ impl ClientCapabilities {
 /// method types the client can handle. This governs opt-in types that require
 /// additional client-side support.
 #[cfg(feature = "unstable_auth_methods")]
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -1111,9 +1112,12 @@ impl ClientCapabilities {
 pub struct AuthCapabilities {
     /// Whether the client supports `terminal` authentication methods.
     ///
-    /// When `true`, the agent may include `terminal` entries in its authentication methods.
+    /// Optional. Omitted or `null` both mean the client does not advertise support.
+    /// Supplying `{}` means the agent may include `terminal` entries in its authentication methods.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
-    pub terminal: bool,
+    pub terminal: Option<TerminalAuthCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -1132,12 +1136,52 @@ impl AuthCapabilities {
 
     /// Whether the client supports `terminal` authentication methods.
     ///
-    /// When `true`, the agent may include `AuthMethod::Terminal`
-    /// entries in its authentication methods.
+    /// Omitted or `null` both mean the client does not advertise support.
+    /// Supplying `{}` means the agent may include `AuthMethod::Terminal` entries in its authentication methods.
     #[must_use]
-    pub fn terminal(mut self, terminal: bool) -> Self {
-        self.terminal = terminal;
+    pub fn terminal(mut self, terminal: impl IntoOption<TerminalAuthCapabilities>) -> Self {
+        self.terminal = terminal.into_option();
         self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Capabilities for terminal authentication methods.
+///
+/// Supplying `{}` means the client supports terminal authentication methods.
+#[cfg(feature = "unstable_auth_methods")]
+#[skip_serializing_none]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct TerminalAuthCapabilities {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_auth_methods")]
+impl TerminalAuthCapabilities {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1642,5 +1686,26 @@ mod tests {
         }))
         .unwrap();
         assert_eq!(request_with_null_params.params, None);
+    }
+
+    #[cfg(feature = "unstable_auth_methods")]
+    #[test]
+    fn test_auth_capabilities_serialize_terminal_support_as_object() {
+        use serde_json::json;
+
+        let capabilities = AuthCapabilities::new().terminal(TerminalAuthCapabilities::new());
+
+        assert_eq!(
+            serde_json::to_value(&capabilities).unwrap(),
+            json!({
+                "terminal": {}
+            })
+        );
+
+        let deserialized: AuthCapabilities = serde_json::from_value(json!({
+            "terminal": false
+        }))
+        .unwrap();
+        assert!(deserialized.terminal.is_none());
     }
 }
