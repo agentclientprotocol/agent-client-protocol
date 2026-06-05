@@ -61,6 +61,30 @@ Clients MUST accept, store, and return cookies set by the server on all HTTP-bas
 
 The `initialize` → `initialized` → messages → close lifecycle is identical regardless of transport. The `Acp-Connection-Id` binds requests to the initialized connection and its negotiated capabilities. Session identity is carried in JSON-RPC message bodies via the `sessionId` field.
 
+## Durability and reliability expectations
+
+> What guarantees does this transport make, and what is deferred?
+
+This RFD is targeted for inclusion in **v1** as an additive feature, with more robust durability and reliability primitives coming in **v2**. The lists below clarify what implementers can expect from using the HTTP/WS transport in different versions of ACP
+
+### v1
+
+In v1, durability and reliability are the implementer's responsibility — the protocol provides the building blocks, not the guarantees. Specifically, you can expect:
+
+- **Sessions survive disconnects.** A session persists on the server independently of any one connection, so after a dropped connection a client can reconnect and resume it via `session/load`.
+- **Session affinity is preserved across reconnects.** Required client cookie support lets a load balancer route a reconnecting client back to the same backend; deployments without native sticky sessions can supply affinity themselves using an external store such as Redis keyed by connection/session ID.
+- **Reconnect and retry are up to the implementer.** Detecting a dropped connection and re-establishing it is handled at the SDK/host layer, optionally via a local proxy.
+- **Liveness detection is up to the implementer.** Keeping intermediaries from timing out and detecting half-open or unresponsive connections is done with SDK/host-level transport and application ping/pong, not by the protocol.
+- **In-flight messages are not replayed.** There is no message sequencing or stream resumption, so server→client messages emitted while a client was disconnected are not redelivered on reconnect.
+
+### v2
+
+- **Message IDs on streamed messages.** Streamed message chunks carry IDs (a "last replay ID"), enabling reliable retry and resumption after a reconnect.
+- **Stream resumability.** SSE `Last-Event-ID`-style resumption lets a reconnecting client replay messages missed while disconnected.
+- **Defined reconnection semantics.** Reconnection scenarios are addressed by the protocol/SDKs rather than left entirely to each implementer.
+- **More reliable notification update cycles.** v2 tightens the update/notification lifecycle to reduce lost or out-of-order updates.
+- **Standardized keepalive.** Both transport-level and application-level ping/pong become part of the protocol's reliability story, enabling more sophisticated awareness by both client and server of when the other end has crashed.
+
 ## Shiny future
 
 > How will things play out once this feature exists?
@@ -326,7 +350,7 @@ The agent task is spawned once per connection. Server→client messages are rout
 | DELETE terminates session                  | ✅ (terminates connection)                  | Compliant            |
 | 404 for unknown sessions                   | ✅ (unknown connection IDs)                 | Compliant            |
 | Batch requests                             | ❌ (returns 501)                            | Documented deviation |
-| Resumability (Last-Event-ID)               | ❌                                          | Future work          |
+| Resumability (Last-Event-ID)               | ❌                                          | Deferred to v2       |
 | Protocol version header                    | ❌                                          | Future work          |
 
 ### Deviations from MCP Streamable HTTP
@@ -338,7 +362,7 @@ The agent task is spawned once per connection. Server→client messages are rout
 5. **WebSocket extension**: MCP doesn't define WebSocket. ACP adds it as a required client capability. Clients MUST support WebSocket, and servers MAY choose to only support WebSocket connections.
 6. **Cookie support required**: Clients MUST handle cookies on HTTP transports for the duration of the connection, enabling sticky sessions and per-connection server state.
 7. **No batch requests**: Returns 501. May be added later.
-8. **No resumability yet in reference implementation**: SSE event IDs and `Last-Event-ID` resumption planned as follow-up.
+8. **No resumability yet in reference implementation**: SSE event IDs and `Last-Event-ID` resumption are deferred to v2 (see [Durability and reliability expectations](#durability-and-reliability-expectations)).
 
 ### Implementation Plan
 
@@ -396,4 +420,5 @@ HTTP/2 provides multiplexing, allowing many concurrent POST requests alongside t
 - **2026-04-01**: Introduced a two-header identity model: `Acp-Connection-Id` (returned at `initialize`, binds to the connection) and `Acp-Session-Id` (returned at `session/new`, scopes to a session). This addresses feedback that the original single `Acp-Session-Id` conflated transport binding with ACP session identity, and enables session-scoped GET listener streams for targeted server-to-client event delivery. Removed connection-scoped GET streams — all GET SSE listeners now require both `Acp-Connection-Id` and `Acp-Session-Id`.
 - **2026-04-15**: Minor edits
 - **2026-04-23**: Major revision to single long-lived GET stream model. Changed from per-request SSE streams to a single connection-scoped GET stream for all server→client messages. POST requests (except `initialize`) now return 202 Accepted immediately. `initialize` returns 200 OK with JSON response body. Required HTTP/2 for multiplexing. This change makes the HTTP usage more similar to WebSocket and supports better the bidirectional nature of ACP.
+- **2026-06-05**: Added a "Durability and reliability expectations" section splitting out what implementers can expect in v1 (sessions survive disconnects, session affinity is preserved across reconnects, and reconnect/retry/liveness are the implementer's responsibility with no in-flight message replay) versus v2 (message IDs, stream resumability, defined reconnection semantics, more reliable notification cycles, and standardized keepalive). Marked Last-Event-ID resumability as deferred to v2.
 - **2026-05-04**: Split the single GET stream into two: a connection-scoped stream (GET with `Acp-Connection-Id`) for connection-level messages such as responses to `session/new` and `session/load`, and session-scoped streams (GET with `Acp-Connection-Id` + `Acp-Session-Id`) for session updates, server-to-client requests like `request_permission`, and responses to session-scoped POSTs. Routing happens on HTTP headers rather than JSON-RPC body inspection; per-session streams have independent lifetimes.
