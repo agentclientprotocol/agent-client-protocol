@@ -96,6 +96,9 @@ impl Range {
 // Agent NES capabilities
 
 /// NES capabilities advertised by the agent during initialization.
+///
+/// Supplying `{}` means the agent supports the NES method surface. Omitted or
+/// `null` both mean the agent does not advertise support for `nes/*` methods.
 #[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]

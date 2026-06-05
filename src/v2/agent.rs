@@ -2635,7 +2635,7 @@ impl SetSessionConfigOptionResponse {
 pub enum McpServer {
     /// HTTP transport configuration
     ///
-    /// Only available when the Agent capabilities include `mcp.http`.
+    /// Only available when the Agent capabilities include `session.mcp.http`.
     Http(McpServerHttp),
     /// **UNSTABLE**
     ///
@@ -2643,13 +2643,13 @@ pub enum McpServer {
     ///
     /// ACP transport configuration
     ///
-    /// Only available when the Agent capabilities include `mcp.acp`.
+    /// Only available when the Agent capabilities include `session.mcp.acp`.
     /// The MCP server is provided by an ACP component and communicates over the ACP channel.
     #[cfg(feature = "unstable_mcp_over_acp")]
     Acp(McpServerAcp),
     /// Stdio transport configuration
     ///
-    /// Only available when the Agent capabilities include `mcp.stdio`.
+    /// Only available when the Agent capabilities include `session.mcp.stdio`.
     Stdio(McpServerStdio),
     /// Custom or future MCP server transport configuration.
     ///
@@ -3652,14 +3652,16 @@ impl DisableProviderResponse {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct AgentCapabilities {
-    /// Prompt capabilities supported by the agent.
+    /// Session capabilities supported by the agent.
+    ///
+    /// Optional. Omitted or `null` both mean the agent does not support the
+    /// `session/*` method surface. Supplying `{}` means the agent supports the
+    /// baseline session methods: `session/new`, `session/prompt`,
+    /// `session/cancel`, and `session/update`.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
-    pub prompt: PromptCapabilities,
-    /// MCP capabilities supported by the agent.
-    #[serde(default)]
-    pub mcp: McpCapabilities,
-    #[serde(default)]
-    pub session: SessionCapabilities,
+    pub session: Option<SessionCapabilities>,
     /// Authentication-related capabilities supported by the agent.
     #[serde(default)]
     pub auth: AgentAuthCapabilities,
@@ -3710,24 +3712,15 @@ impl AgentCapabilities {
         Self::default()
     }
 
-    /// Prompt capabilities supported by the agent.
-    #[must_use]
-    pub fn prompt(mut self, prompt: PromptCapabilities) -> Self {
-        self.prompt = prompt;
-        self
-    }
-
-    /// MCP capabilities supported by the agent.
-    #[must_use]
-    pub fn mcp(mut self, mcp: McpCapabilities) -> Self {
-        self.mcp = mcp;
-        self
-    }
-
     /// Session capabilities supported by the agent.
+    ///
+    /// Omitted or `null` both mean the agent does not support the `session/*`
+    /// method surface. Supplying `{}` means the agent supports the baseline
+    /// session methods: `session/new`, `session/prompt`, `session/cancel`, and
+    /// `session/update`.
     #[must_use]
-    pub fn session(mut self, session: SessionCapabilities) -> Self {
-        self.session = session;
+    pub fn session(mut self, session: impl IntoOption<SessionCapabilities>) -> Self {
+        self.session = session.into_option();
         self
     }
 
@@ -3829,9 +3822,12 @@ impl ProvidersCapabilities {
 
 /// Session capabilities supported by the agent.
 ///
-/// As a baseline, all Agents **MUST** support `session/new`, `session/prompt`, `session/cancel`, and `session/update`.
+/// Supplying `{}` means the agent supports the baseline session methods:
+/// `session/new`, `session/prompt`, `session/cancel`, and `session/update`.
 ///
-/// Optionally, they **MAY** support other session methods and notifications by specifying additional capabilities.
+/// Agents that support sessions **MAY** support additional session methods,
+/// prompt content types, and MCP transports by specifying additional
+/// capabilities.
 ///
 /// See protocol docs: [Session Capabilities](https://agentclientprotocol.com/protocol/initialization#session-capabilities)
 #[serde_as]
@@ -3840,6 +3836,23 @@ impl ProvidersCapabilities {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SessionCapabilities {
+    /// Prompt capabilities supported by the agent in `session/prompt` requests.
+    ///
+    /// Optional. Omitted or `null` both mean the agent does not advertise any
+    /// prompt extensions beyond the baseline text and resource-link content
+    /// required by `session/prompt`.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
+    pub prompt: Option<PromptCapabilities>,
+    /// MCP capabilities supported by the agent for session lifecycle requests.
+    ///
+    /// Optional. Omitted or `null` both mean the agent does not advertise MCP
+    /// server transport support for sessions.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
+    pub mcp: Option<McpCapabilities>,
     /// Whether the agent supports `session/load`.
     ///
     /// Optional. Omitted or `null` both mean the agent does not advertise support.
@@ -3903,6 +3916,27 @@ impl SessionCapabilities {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Prompt capabilities supported by the agent in `session/prompt` requests.
+    ///
+    /// Omitted or `null` both mean the agent does not advertise any prompt
+    /// extensions beyond the baseline text and resource-link content required by
+    /// `session/prompt`.
+    #[must_use]
+    pub fn prompt(mut self, prompt: impl IntoOption<PromptCapabilities>) -> Self {
+        self.prompt = prompt.into_option();
+        self
+    }
+
+    /// MCP capabilities supported by the agent for session lifecycle requests.
+    ///
+    /// Omitted or `null` both mean the agent does not advertise MCP server
+    /// transport support for sessions.
+    #[must_use]
+    pub fn mcp(mut self, mcp: impl IntoOption<McpCapabilities>) -> Self {
+        self.mcp = mcp.into_option();
+        self
     }
 
     /// Whether the agent supports `session/load`.
@@ -4437,7 +4471,7 @@ impl PromptEmbeddedContextCapabilities {
     }
 }
 
-/// MCP capabilities supported by the agent
+/// MCP capabilities supported by the agent for session lifecycle requests.
 #[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -6393,6 +6427,41 @@ mod test_serialization {
 
         let deserialized: AgentCapabilities = serde_json::from_value(json).unwrap();
         assert!(deserialized.providers.is_some());
+    }
+
+    #[test]
+    fn test_agent_capabilities_session_is_explicit() {
+        let json = serde_json::to_value(AgentCapabilities::new()).unwrap();
+        assert!(json.get("session").is_none());
+
+        let caps = AgentCapabilities::new().session(
+            SessionCapabilities::new()
+                .prompt(PromptCapabilities::new().image(PromptImageCapabilities::new()))
+                .mcp(McpCapabilities::new().stdio(McpStdioCapabilities::new()))
+                .load(SessionLoadCapabilities::new()),
+        );
+
+        assert_eq!(
+            serde_json::to_value(&caps).unwrap(),
+            json!({
+                "auth": {},
+                "session": {
+                    "prompt": {
+                        "image": {}
+                    },
+                    "mcp": {
+                        "stdio": {}
+                    },
+                    "load": {}
+                }
+            })
+        );
+
+        let deserialized: AgentCapabilities = serde_json::from_value(json!({
+            "session": false
+        }))
+        .unwrap();
+        assert!(deserialized.session.is_none());
     }
 
     #[test]

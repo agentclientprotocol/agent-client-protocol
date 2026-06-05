@@ -57,16 +57,16 @@ The Agent **MUST** respond with the chosen [protocol version](#protocol-version)
     "protocolVersion": 2,
     "capabilities": {
       "session": {
+        "prompt": {
+          "image": {},
+          "audio": {},
+          "embeddedContext": {}
+        },
+        "mcp": {
+          "stdio": {},
+          "http": {}
+        },
         "load": {}
-      },
-      "prompt": {
-        "image": {},
-        "audio": {},
-        "embeddedContext": {}
-      },
-      "mcp": {
-        "stdio": {},
-        "http": {}
       }
     },
     "agentInfo": {
@@ -103,7 +103,8 @@ All capabilities included in the `initialize` request are **OPTIONAL**. Clients 
 
 The introduction of new capabilities is not considered a breaking change. Therefore, Clients and Agents **MUST** treat all capabilities omitted in the `initialize` request as **UNSUPPORTED**.
 
-Capabilities are high-level and are not attached to a specific base protocol concept.
+Capabilities may advertise top-level method surfaces or nested features that
+only apply within a supported surface.
 
 Capabilities may specify the availability of protocol methods, notifications, or a subset of their parameters. They may also signal behaviors of the Agent or Client implementation.
 
@@ -119,18 +120,60 @@ Omitted fields mean unsupported. Extension-specific capabilities belong in
 
 The Agent **SHOULD** specify whether it supports the following capabilities:
 
-<ResponseField name="prompt" type="PromptCapabilities Object">
-  Object indicating the different types of [content](/protocol/v2/content) that
-  may be included in `session/prompt` requests.
+<ResponseField name="session" type="SessionCapabilities Object">
+  The Agent supports the `session/*` method surface. Omitted or `null` means the
+  Agent does not support session methods. Supplying `{}` means the Agent
+  supports the baseline session methods: `session/new`, `session/prompt`,
+  `session/cancel`, and `session/update`.
 </ResponseField>
 
 <ResponseField name="auth" type="AgentAuthCapabilities Object">
   Authentication-related capabilities supported by the Agent.
 </ResponseField>
 
-#### Prompt capabilities
+#### Session Capabilities
 
-As a baseline, all Agents **MUST** support `ContentBlock::Text` and `ContentBlock::ResourceLink` in `session/prompt` requests.
+Supplying `session: {}` means the Agent supports `session/new`, `session/prompt`, `session/cancel`, and `session/update`.
+
+Optionally, Agents **MAY** support prompt extensions, MCP server transports, and additional session methods by specifying nested capabilities.
+
+<ResponseField name="prompt" type="PromptCapabilities Object">
+  Object indicating the different types of [content](/protocol/v2/content) that
+  may be included in `session/prompt` requests. Omitted or `null` means the
+  Agent does not advertise any prompt extensions beyond the baseline text and
+  resource-link content required by `session/prompt`.
+</ResponseField>
+
+<ResponseField name="mcp" type="McpCapabilities Object">
+  Object indicating the MCP server transports that may be included in session
+  lifecycle requests. Omitted or `null` means the Agent does not advertise MCP
+  server transport support for sessions.
+</ResponseField>
+
+<ResponseField name="load" type="SessionLoadCapabilities Object">
+  The [`session/load`](/protocol/v2/session-setup#loading-sessions) method is
+  available. Omitted or `null` means the Agent does not advertise support.
+  Supplying `{}` means the Agent supports loading sessions.
+</ResponseField>
+
+<ResponseField name="delete" type="SessionDeleteCapabilities Object">
+  The [`session/delete`](/protocol/v2/session-delete) method is available.
+  Omitted or `null` means the Agent does not advertise support. Supplying `{}`
+  means the Agent supports deleting sessions from `session/list`.
+</ResponseField>
+
+<ResponseField
+  name="additionalDirectories"
+  type="SessionAdditionalDirectoriesCapabilities Object"
+>
+  The Agent supports `additionalDirectories` on supported session lifecycle
+  requests. Omitted or `null` means the Agent does not advertise support.
+  Supplying `{}` means the Agent supports additional workspace roots.
+</ResponseField>
+
+#### Session Prompt Capabilities
+
+As a baseline, Agents that advertise `session` **MUST** support `ContentBlock::Text` and `ContentBlock::ResourceLink` in `session/prompt` requests.
 
 Optionally, they **MAY** support richer types of [content](/protocol/v2/content) by specifying the following capabilities:
 
@@ -155,7 +198,7 @@ Optionally, they **MAY** support richer types of [content](/protocol/v2/content)
   embedded context in prompts.
 </ResponseField>
 
-#### MCP capabilities
+#### Session MCP Capabilities
 
 <ResponseField name="stdio" type="McpStdioCapabilities Object">
   The Agent supports connecting to MCP servers over stdio. Omitted or `null`
@@ -178,33 +221,6 @@ Optionally, they **MAY** support richer types of [content](/protocol/v2/content)
 <Card icon="shield-check" horizontal href="/protocol/v2/authentication">
   Learn more about Authentication
 </Card>
-
-#### Session Capabilities
-
-As a baseline, all Agents **MUST** support `session/new`, `session/prompt`, `session/cancel`, and `session/update`.
-
-Optionally, they **MAY** support other session methods and notifications by specifying additional capabilities.
-
-<ResponseField name="load" type="SessionLoadCapabilities Object">
-  The [`session/load`](/protocol/v2/session-setup#loading-sessions) method is
-  available. Omitted or `null` means the Agent does not advertise support.
-  Supplying `{}` means the Agent supports loading sessions.
-</ResponseField>
-
-<ResponseField name="delete" type="SessionDeleteCapabilities Object">
-  The [`session/delete`](/protocol/v2/session-delete) method is available.
-  Omitted or `null` means the Agent does not advertise support. Supplying `{}`
-  means the Agent supports deleting sessions from `session/list`.
-</ResponseField>
-
-<ResponseField
-  name="additionalDirectories"
-  type="SessionAdditionalDirectoriesCapabilities Object"
->
-  The Agent supports `additionalDirectories` on supported session lifecycle
-  requests. Omitted or `null` means the Agent does not advertise support.
-  Supplying `{}` means the Agent supports additional workspace roots.
-</ResponseField>
 
 ## Implementation Information
 

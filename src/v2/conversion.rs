@@ -4434,8 +4434,6 @@ impl IntoV1 for super::AgentCapabilities {
 
     fn into_v1(self) -> Result<Self::Output> {
         let Self {
-            prompt,
-            mcp,
             session,
             auth,
             #[cfg(feature = "unstable_llm_providers")]
@@ -4446,7 +4444,16 @@ impl IntoV1 for super::AgentCapabilities {
             position_encoding,
             meta,
         } = self;
+        let Some(mut session) = session else {
+            return Err(ProtocolConversionError::new(
+                "v2 AgentCapabilities without `session` cannot be represented in v1",
+            ));
+        };
+
         let load_session = session.load.is_some();
+        let prompt = session.prompt.take().unwrap_or_default();
+        let mcp = session.mcp.take().unwrap_or_default();
+
         Ok(crate::v1::AgentCapabilities {
             load_session: load_session.into_v1()?,
             prompt_capabilities: prompt.into_v1()?,
@@ -4486,10 +4493,11 @@ impl IntoV2 for crate::v1::AgentCapabilities {
         if load_session {
             session.load = Some(super::SessionLoadCapabilities::new());
         }
+        session.prompt = Some(prompt_capabilities.into_v2()?);
+        session.mcp = Some(mcp_capabilities.into_v2()?);
+
         Ok(super::AgentCapabilities {
-            prompt: prompt_capabilities.into_v2()?,
-            mcp: mcp_capabilities.into_v2()?,
-            session,
+            session: Some(session),
             auth: auth.into_v2()?,
             #[cfg(feature = "unstable_llm_providers")]
             providers: providers.into_v2()?,
@@ -4531,6 +4539,8 @@ impl IntoV1 for super::SessionCapabilities {
 
     fn into_v1(self) -> Result<Self::Output> {
         let Self {
+            prompt: _,
+            mcp: _,
             load: _,
             list,
             delete,
@@ -4569,6 +4579,8 @@ impl IntoV2 for crate::v1::SessionCapabilities {
             meta,
         } = self;
         Ok(super::SessionCapabilities {
+            prompt: None,
+            mcp: None,
             load: None,
             list: list.into_v2()?,
             delete: delete.into_v2()?,
@@ -8603,7 +8615,11 @@ mod tests {
 
         let v2_capabilities: v2::AgentCapabilities =
             v1_to_v2(v1_capabilities).expect("v1 -> v2 conversion");
-        assert!(v2_capabilities.session.load.is_some());
+        let session = v2_capabilities
+            .session
+            .as_ref()
+            .expect("v1 capabilities imply v2 session support");
+        assert!(session.load.is_some());
         let v2_json = serde_json::to_value(&v2_capabilities).expect("v2 serialize");
         assert_eq!(v2_json.get("loadSession"), None);
         assert_eq!(
@@ -8614,6 +8630,15 @@ mod tests {
         let v1_after: v1::AgentCapabilities =
             v2_to_v1(v2_capabilities).expect("v2 -> v1 conversion");
         assert!(v1_after.load_session);
+    }
+
+    #[test]
+    fn v2_agent_capabilities_without_session_do_not_convert_to_v1() {
+        let error = v2::AgentCapabilities::new().into_v1().unwrap_err();
+        assert_eq!(
+            error.message(),
+            "v2 AgentCapabilities without `session` cannot be represented in v1"
+        );
     }
 
     #[test]

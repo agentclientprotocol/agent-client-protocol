@@ -400,7 +400,7 @@ When `session.additionalDirectories` is in use, the session's effective root set
 
 The [Model Context Protocol (MCP)](https://modelcontextprotocol.io) allows Agents to access external tools and data sources. When creating a session, Clients **MAY** include connection details for MCP servers that the Agent should connect to.
 
-MCP servers can be connected to using different transports. Agents advertise supported transports during initialization using `mcp.stdio`, `mcp.http`, and any extension-specific transport capabilities.
+MCP servers can be connected to using different transports. Agents advertise supported transports during initialization using `session.mcp.stdio`, `session.mcp.http`, and any extension-specific transport capabilities.
 
 ### Transport Types
 
@@ -408,7 +408,7 @@ Every MCP server object has a `type` discriminator that identifies its transport
 
 #### Stdio Transport
 
-When the Agent supports `mcp.stdio`, Clients can specify MCP servers configurations using the stdio transport.
+When the Agent supports `session.mcp.stdio`, Clients can specify MCP servers configurations using the stdio transport.
 
 <ParamField path="type" type="string" required>
   Must be `"stdio"` to indicate stdio transport
@@ -458,7 +458,7 @@ Example stdio transport configuration:
 
 #### HTTP Transport
 
-When the Agent supports `mcp.http`, Clients can specify MCP servers configurations using the HTTP transport.
+When the Agent supports `session.mcp.http`, Clients can specify MCP servers configurations using the HTTP transport.
 
 <ParamField path="type" type="string" required>
   Must be `"http"` to indicate HTTP transport
@@ -516,17 +516,19 @@ Before using stdio or HTTP transports, Clients **MUST** verify the Agent's capab
   "result": {
     "protocolVersion": 2,
     "capabilities": {
-      "mcp": {
-        "stdio": {},
-        "http": {}
+      "session": {
+        "mcp": {
+          "stdio": {},
+          "http": {}
+        }
       }
     }
   }
 }
 ```
 
-If `mcp.stdio` is omitted or `null`, the Agent does not support stdio transport.
-If `mcp.http` is omitted or `null`, the Agent does not support HTTP transport.
+If `session.mcp.stdio` is omitted or `null`, the Agent does not support stdio transport.
+If `session.mcp.http` is omitted or `null`, the Agent does not support HTTP transport.
 Supplying `{}` means the Agent supports the corresponding transport.
 
 Agents **SHOULD** connect to all MCP servers specified by the Client.

@@ -152,7 +152,7 @@ Note: in future versions of the protocol, this will be required.
 <ResponseField name="capabilities" type={<a href="#agentcapabilities">AgentCapabilities</a>} >
   Capabilities supported by the agent.
 
-    - Default: `{"auth":{},"mcp":{},"prompt":{},"session":{}}`
+    - Default: `{"auth":{}}`
 
 </ResponseField>
 <ResponseField name="protocolVersion" type={<a href="#protocolversion">ProtocolVersion</a>} required>
@@ -916,21 +916,13 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
     - Default: `{}`
 
 </ResponseField>
-<ResponseField name="mcp" type={<a href="#mcpcapabilities">McpCapabilities</a>} >
-  MCP capabilities supported by the agent.
+<ResponseField name="session" type={<><span><a href="#sessioncapabilities">SessionCapabilities</a></span><span> | null</span></>} >
+  Session capabilities supported by the agent.
 
-    - Default: `{}`
-
-</ResponseField>
-<ResponseField name="prompt" type={<a href="#promptcapabilities">PromptCapabilities</a>} >
-  Prompt capabilities supported by the agent.
-
-    - Default: `{}`
-
-</ResponseField>
-<ResponseField name="session" type={<a href="#sessioncapabilities">SessionCapabilities</a>} >
-
-    - Default: `{}`
+Optional. Omitted or `null` both mean the agent does not support the
+`session/*` method surface. Supplying `\{\}` means the agent supports the
+baseline session methods: `session/new`, `session/prompt`,
+`session/cancel`, and `session/update`.
 
 </ResponseField>
 
@@ -1830,7 +1822,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 ## <span class="font-mono">McpCapabilities</span>
 
-MCP capabilities supported by the agent
+MCP capabilities supported by the agent for session lifecycle requests.
 
 **Type:** Object
 
@@ -1892,7 +1884,7 @@ See protocol docs: [MCP Servers](https://agentclientprotocol.com/protocol/v2/ses
 <ResponseField name="http" type="object">
 HTTP transport configuration
 
-Only available when the Agent capabilities include `mcp.http`.
+Only available when the Agent capabilities include `session.mcp.http`.
 
 <Expandable title="Properties">
 
@@ -1923,7 +1915,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 <ResponseField name="stdio" type="object">
 Stdio transport configuration
 
-Only available when the Agent capabilities include `mcp.stdio`.
+Only available when the Agent capabilities include `session.mcp.stdio`.
 
 <Expandable title="Properties">
 
@@ -2625,9 +2617,12 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 Session capabilities supported by the agent.
 
-As a baseline, all Agents **MUST** support `session/new`, `session/prompt`, `session/cancel`, and `session/update`.
+Supplying `\{\}` means the agent supports the baseline session methods:
+`session/new`, `session/prompt`, `session/cancel`, and `session/update`.
 
-Optionally, they **MAY** support other session methods and notifications by specifying additional capabilities.
+Agents that support sessions **MAY** support additional session methods,
+prompt content types, and MCP transports by specifying additional
+capabilities.
 
 See protocol docs: [Session Capabilities](https://agentclientprotocol.com/protocol/v2/initialization#session-capabilities)
 
@@ -2669,6 +2664,21 @@ Supplying `\{\}` means the agent supports deleting sessions from `session/list`.
 
 Optional. Omitted or `null` both mean the agent does not advertise support.
 Supplying `\{\}` means the agent supports loading sessions.
+
+</ResponseField>
+<ResponseField name="mcp" type={<><span><a href="#mcpcapabilities">McpCapabilities</a></span><span> | null</span></>} >
+  MCP capabilities supported by the agent for session lifecycle requests.
+
+Optional. Omitted or `null` both mean the agent does not advertise MCP
+server transport support for sessions.
+
+</ResponseField>
+<ResponseField name="prompt" type={<><span><a href="#promptcapabilities">PromptCapabilities</a></span><span> | null</span></>} >
+  Prompt capabilities supported by the agent in `session/prompt` requests.
+
+Optional. Omitted or `null` both mean the agent does not advertise any
+prompt extensions beyond the baseline text and resource-link content
+required by `session/prompt`.
 
 </ResponseField>
 <ResponseField name="resume" type={<><span><a href="#sessionresumecapabilities">SessionResumeCapabilities</a></span><span> | null</span></>} >

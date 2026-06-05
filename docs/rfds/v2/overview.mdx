@@ -46,12 +46,13 @@ Other RFDs will progress separately and are not dependent on breaking changes (s
 - Follow JSON-RPC 2.0 batch request and notification behavior.
 - Clean up capability naming and organization:
   - Use a single `capabilities` field in both `initialize` params and results, replacing the v1-style `clientCapabilities` and `agentCapabilities` fields.
-  - Use concise capability group names such as `prompt`, `mcp`, `session`, and `auth`, replacing names like `promptCapabilities`, `mcpCapabilities`, and `sessionCapabilities`.
-  - Move `loadSession` into the session capability group as `session.load`.
+  - Use concise capability group names such as `session` and `auth`, replacing names like `sessionCapabilities`.
+  - Make `session` optional so non-session agents, such as NES-only agents, can omit it.
+  - Move session-scoped capability groups under `session`, including `prompt`, `mcp`, and `loadSession` as `session.prompt`, `session.mcp`, and `session.load`.
   - Represent support markers as capability objects instead of booleans. Supplying `{}` means supported, while omission or `null` means unsupported. Booleans remain appropriate for actual data or configuration inside an already-advertised capability.
 - Align MCP server transports with the current MCP transport model:
   - Remove the deprecated HTTP+SSE MCP transport from v2.
-  - Make stdio an explicit `mcp.stdio` capability so Agents that cannot launch local subprocesses can opt out.
+  - Make stdio an explicit `session.mcp.stdio` capability so Agents that cannot launch local subprocesses can opt out.
   - Require MCP server configurations to include a `type` discriminator, including `type: "stdio"`, so unknown future transports can be preserved as extension/future variants.
   - Keep HTTP as the remote MCP server transport capability.
 
@@ -100,7 +101,7 @@ With the needed breaking changes, as much as possible I am targeting having a co
 
 ## Revision history
 
-- 2026-06-05: Recorded the v2 capability cleanup: unified initialize capability fields, shorter capability group names, `session.load`, object-shaped support markers, explicit `mcp.stdio`, removal of deprecated MCP SSE transport, and tagged MCP server transport configs.
+- 2026-06-05: Recorded the v2 capability cleanup: unified initialize capability fields, optional `session` support for NES-only agents, session-scoped `prompt`, `mcp`, and `loadSession` capabilities, object-shaped support markers, explicit `session.mcp.stdio`, removal of deprecated MCP SSE transport, and tagged MCP server transport configs.
 - 2026-06-02: Recorded the v2 decision to follow JSON-RPC 2.0 batch request and notification behavior.
 - 2026-06-02: Recorded the v2 decision to remove Client filesystem and terminal execution capabilities, methods, and terminal tool-call content.
 - 2026-06-02: Added the v2 Plan Variants RFD to make item-based `plan_update` the default v2 plan shape.

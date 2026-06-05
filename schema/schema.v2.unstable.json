@@ -66,15 +66,6 @@
           "default": {},
           "description": "Authentication-related capabilities supported by the agent."
         },
-        "mcp": {
-          "allOf": [
-            {
-              "$ref": "#/$defs/McpCapabilities"
-            }
-          ],
-          "default": {},
-          "description": "MCP capabilities supported by the agent."
-        },
         "nes": {
           "anyOf": [
             {
@@ -99,15 +90,6 @@
           "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nThe position encoding selected by the agent from the client's supported encodings.",
           "x-deserialize-default-on-error": true
         },
-        "prompt": {
-          "allOf": [
-            {
-              "$ref": "#/$defs/PromptCapabilities"
-            }
-          ],
-          "default": {},
-          "description": "Prompt capabilities supported by the agent."
-        },
         "providers": {
           "anyOf": [
             {
@@ -121,12 +103,16 @@
           "x-deserialize-default-on-error": true
         },
         "session": {
-          "allOf": [
+          "anyOf": [
             {
               "$ref": "#/$defs/SessionCapabilities"
+            },
+            {
+              "type": "null"
             }
           ],
-          "default": {}
+          "description": "Session capabilities supported by the agent.\n\nOptional. Omitted or `null` both mean the agent does not support the\n`session/*` method surface. Supplying `{}` means the agent supports the\nbaseline session methods: `session/new`, `session/prompt`,\n`session/cancel`, and `session/update`.",
+          "x-deserialize-default-on-error": true
         }
       },
       "type": "object"
@@ -3048,10 +3034,7 @@
             }
           ],
           "default": {
-            "auth": {},
-            "mcp": {},
-            "prompt": {},
-            "session": {}
+            "auth": {}
           },
           "description": "Capabilities supported by the agent."
         },
@@ -3328,7 +3311,7 @@
       "type": "object"
     },
     "McpCapabilities": {
-      "description": "MCP capabilities supported by the agent",
+      "description": "MCP capabilities supported by the agent for session lifecycle requests.",
       "properties": {
         "_meta": {
           "additionalProperties": true,
@@ -3397,7 +3380,7 @@
               "$ref": "#/$defs/McpServerHttp"
             }
           ],
-          "description": "HTTP transport configuration\n\nOnly available when the Agent capabilities include `mcp.http`.",
+          "description": "HTTP transport configuration\n\nOnly available when the Agent capabilities include `session.mcp.http`.",
           "properties": {
             "type": {
               "const": "http",
@@ -3413,7 +3396,7 @@
               "$ref": "#/$defs/McpServerAcp"
             }
           ],
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nACP transport configuration\n\nOnly available when the Agent capabilities include `mcp.acp`.\nThe MCP server is provided by an ACP component and communicates over the ACP channel.",
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nACP transport configuration\n\nOnly available when the Agent capabilities include `session.mcp.acp`.\nThe MCP server is provided by an ACP component and communicates over the ACP channel.",
           "properties": {
             "type": {
               "const": "acp",
@@ -3429,7 +3412,7 @@
               "$ref": "#/$defs/McpServerStdio"
             }
           ],
-          "description": "Stdio transport configuration\n\nOnly available when the Agent capabilities include `mcp.stdio`.",
+          "description": "Stdio transport configuration\n\nOnly available when the Agent capabilities include `session.mcp.stdio`.",
           "properties": {
             "type": {
               "const": "stdio",
@@ -3729,7 +3712,7 @@
       "type": "object"
     },
     "NesCapabilities": {
-      "description": "NES capabilities advertised by the agent during initialization.",
+      "description": "NES capabilities advertised by the agent during initialization.\n\nSupplying `{}` means the agent supports the NES method surface. Omitted or\n`null` both mean the agent does not advertise support for `nes/*` methods.",
       "properties": {
         "_meta": {
           "additionalProperties": true,
@@ -5803,7 +5786,7 @@
       "type": "object"
     },
     "SessionCapabilities": {
-      "description": "Session capabilities supported by the agent.\n\nAs a baseline, all Agents **MUST** support `session/new`, `session/prompt`, `session/cancel`, and `session/update`.\n\nOptionally, they **MAY** support other session methods and notifications by specifying additional capabilities.\n\nSee protocol docs: [Session Capabilities](https://agentclientprotocol.com/protocol/initialization#session-capabilities)",
+      "description": "Session capabilities supported by the agent.\n\nSupplying `{}` means the agent supports the baseline session methods:\n`session/new`, `session/prompt`, `session/cancel`, and `session/update`.\n\nAgents that support sessions **MAY** support additional session methods,\nprompt content types, and MCP transports by specifying additional\ncapabilities.\n\nSee protocol docs: [Session Capabilities](https://agentclientprotocol.com/protocol/initialization#session-capabilities)",
       "properties": {
         "_meta": {
           "additionalProperties": true,
@@ -5880,6 +5863,30 @@
             }
           ],
           "description": "Whether the agent supports `session/load`.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports loading sessions.",
+          "x-deserialize-default-on-error": true
+        },
+        "mcp": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/McpCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "MCP capabilities supported by the agent for session lifecycle requests.\n\nOptional. Omitted or `null` both mean the agent does not advertise MCP\nserver transport support for sessions.",
+          "x-deserialize-default-on-error": true
+        },
+        "prompt": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PromptCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Prompt capabilities supported by the agent in `session/prompt` requests.\n\nOptional. Omitted or `null` both mean the agent does not advertise any\nprompt extensions beyond the baseline text and resource-link content\nrequired by `session/prompt`.",
           "x-deserialize-default-on-error": true
         },
         "resume": {
