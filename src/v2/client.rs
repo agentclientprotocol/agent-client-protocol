@@ -1501,7 +1501,7 @@ mod tests {
             json!({
                 "sessionUpdate": "usage_update",
                 "used": 53000,
-                "size": 200000
+                "size": 200_000
             })
         );
 
@@ -1513,7 +1513,7 @@ mod tests {
             json!({
                 "sessionUpdate": "usage_update",
                 "used": 53000,
-                "size": 200000,
+                "size": 200_000,
                 "cost": {
                     "amount": 0.045,
                     "currency": "USD"
@@ -1524,7 +1524,7 @@ mod tests {
         let SessionUpdate::UsageUpdate(update) = serde_json::from_value(json!({
             "sessionUpdate": "usage_update",
             "used": 53000,
-            "size": 200000,
+            "size": 200_000,
             "cost": null
         }))
         .unwrap() else {

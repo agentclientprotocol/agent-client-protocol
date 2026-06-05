@@ -8885,7 +8885,7 @@ mod tests {
     #[test]
     fn v2_unknown_mcp_transport_does_not_convert_to_v1() {
         assert_v2_to_v1_error(
-            v2::McpServer::Other(v2::OtherMcpServer::new("websocket", Default::default())),
+            v2::McpServer::Other(v2::OtherMcpServer::new("websocket", BTreeMap::default())),
             "v2 McpServer variant `websocket` cannot be represented in v1",
         );
     }
