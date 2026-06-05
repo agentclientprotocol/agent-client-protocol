@@ -3818,7 +3818,6 @@ impl IntoV1 for super::McpServer {
     fn into_v1(self) -> Result<Self::Output> {
         Ok(match self {
             Self::Http(value) => crate::v1::McpServer::Http(value.into_v1()?),
-            Self::Sse(value) => crate::v1::McpServer::Sse(value.into_v1()?),
             #[cfg(feature = "unstable_mcp_over_acp")]
             Self::Acp(value) => crate::v1::McpServer::Acp(value.into_v1()?),
             Self::Stdio(value) => crate::v1::McpServer::Stdio(value.into_v1()?),
@@ -3832,7 +3831,7 @@ impl IntoV2 for crate::v1::McpServer {
     fn into_v2(self) -> Result<Self::Output> {
         Ok(match self {
             Self::Http(value) => super::McpServer::Http(value.into_v2()?),
-            Self::Sse(value) => super::McpServer::Sse(value.into_v2()?),
+            Self::Sse(_) => return Err(removed_v1_enum_variant("McpServer", "sse")),
             #[cfg(feature = "unstable_mcp_over_acp")]
             Self::Acp(value) => super::McpServer::Acp(value.into_v2()?),
             Self::Stdio(value) => super::McpServer::Stdio(value.into_v2()?),
@@ -3870,44 +3869,6 @@ impl IntoV2 for crate::v1::McpServerHttp {
             meta,
         } = self;
         Ok(super::McpServerHttp {
-            name: name.into_v2()?,
-            url: url.into_v2()?,
-            headers: headers.into_v2()?,
-            meta: meta.into_v2()?,
-        })
-    }
-}
-
-impl IntoV1 for super::McpServerSse {
-    type Output = crate::v1::McpServerSse;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self {
-            name,
-            url,
-            headers,
-            meta,
-        } = self;
-        Ok(crate::v1::McpServerSse {
-            name: name.into_v1()?,
-            url: url.into_v1()?,
-            headers: headers.into_v1()?,
-            meta: meta.into_v1()?,
-        })
-    }
-}
-
-impl IntoV2 for crate::v1::McpServerSse {
-    type Output = super::McpServerSse;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        let Self {
-            name,
-            url,
-            headers,
-            meta,
-        } = self;
-        Ok(super::McpServerSse {
             name: name.into_v2()?,
             url: url.into_v2()?,
             headers: headers.into_v2()?,
@@ -4828,15 +4789,15 @@ impl IntoV1 for super::McpCapabilities {
 
     fn into_v1(self) -> Result<Self::Output> {
         let Self {
+            stdio: _,
             http,
-            sse,
             #[cfg(feature = "unstable_mcp_over_acp")]
             acp,
             meta,
         } = self;
         Ok(crate::v1::McpCapabilities {
             http: http.is_some(),
-            sse: sse.is_some(),
+            sse: false,
             #[cfg(feature = "unstable_mcp_over_acp")]
             acp: acp.is_some(),
             meta: meta.into_v1()?,
@@ -4850,14 +4811,14 @@ impl IntoV2 for crate::v1::McpCapabilities {
     fn into_v2(self) -> Result<Self::Output> {
         let Self {
             http,
-            sse,
+            sse: _,
             #[cfg(feature = "unstable_mcp_over_acp")]
             acp,
             meta,
         } = self;
         Ok(super::McpCapabilities {
+            stdio: Some(super::McpStdioCapabilities::new()),
             http: http.then(super::McpHttpCapabilities::new),
-            sse: sse.then(super::McpSseCapabilities::new),
             #[cfg(feature = "unstable_mcp_over_acp")]
             acp: acp.then(super::McpAcpCapabilities::new),
             meta: meta.into_v2()?,
@@ -8715,18 +8676,19 @@ mod tests {
     }
 
     #[test]
-    fn v1_mcp_capability_bools_convert_to_v2_objects() {
+    fn v1_mcp_capabilities_convert_to_v2_transport_objects() {
         let v1_capabilities = v1::McpCapabilities::new().http(true).sse(true);
 
         let v2_capabilities: v2::McpCapabilities =
             v1_to_v2(v1_capabilities).expect("v1 -> v2 conversion");
         let v2_json = serde_json::to_value(&v2_capabilities).expect("v2 serialize");
+        assert_eq!(v2_json.pointer("/stdio"), Some(&serde_json::json!({})));
         assert_eq!(v2_json.pointer("/http"), Some(&serde_json::json!({})));
-        assert_eq!(v2_json.pointer("/sse"), Some(&serde_json::json!({})));
+        assert_eq!(v2_json.pointer("/sse"), None);
 
         let v1_after: v1::McpCapabilities = v2_to_v1(v2_capabilities).expect("v2 -> v1 conversion");
         assert!(v1_after.http);
-        assert!(v1_after.sse);
+        assert!(!v1_after.sse);
     }
 
     #[cfg(feature = "unstable_mcp_over_acp")]
@@ -8871,11 +8833,18 @@ mod tests {
     }
 
     #[test]
+    fn v1_mcp_sse_transport_does_not_convert_to_v2() {
+        assert_v1_to_v2_error(
+            v1::McpServer::Sse(v1::McpServerSse::new("events", "https://example.com/sse")),
+            "v1 McpServer variant `sse` cannot be represented in v2",
+        );
+    }
+
+    #[test]
     fn round_trips_new_session_request_with_mcp_variants() {
         let request = v1::NewSessionRequest::new("/workspace").mcp_servers(vec![
             v1::McpServer::Stdio(v1::McpServerStdio::new("local", "/usr/bin/mcp")),
             v1::McpServer::Http(v1::McpServerHttp::new("remote", "https://example.com")),
-            v1::McpServer::Sse(v1::McpServerSse::new("events", "https://example.com/sse")),
         ]);
 
         assert_v1_round_trip::<v1::NewSessionRequest, v2::NewSessionRequest>(request.clone());

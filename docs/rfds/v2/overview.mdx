@@ -49,6 +49,10 @@ Other RFDs will progress separately and are not dependent on breaking changes (s
   - Use concise capability group names such as `prompt`, `mcp`, `session`, and `auth`, replacing names like `promptCapabilities`, `mcpCapabilities`, and `sessionCapabilities`.
   - Move `loadSession` into the session capability group as `session.load`.
   - Represent support markers as capability objects instead of booleans. Supplying `{}` means supported, while omission or `null` means unsupported. Booleans remain appropriate for actual data or configuration inside an already-advertised capability.
+- Align MCP server transports with the current MCP transport model:
+  - Remove the deprecated HTTP+SSE MCP transport from v2.
+  - Make stdio an explicit `mcp.stdio` capability so Agents that cannot launch local subprocesses can opt out.
+  - Keep HTTP as the remote MCP server transport capability.
 
 ### RFDs to be Written
 
@@ -94,7 +98,7 @@ With the needed breaking changes, as much as possible I am targeting having a co
 
 ## Revision history
 
-- 2026-06-05: Recorded the v2 capability cleanup: unified initialize capability fields, shorter capability group names, `session.load`, and object-shaped support markers.
+- 2026-06-05: Recorded the v2 capability cleanup: unified initialize capability fields, shorter capability group names, `session.load`, object-shaped support markers, explicit `mcp.stdio`, and removal of deprecated MCP SSE transport.
 - 2026-06-02: Recorded the v2 decision to follow JSON-RPC 2.0 batch request and notification behavior.
 - 2026-06-02: Recorded the v2 decision to remove Client filesystem and terminal execution capabilities, methods, and terminal tool-call content.
 - 2026-06-02: Added the v2 Plan Variants RFD to make item-based `plan_update` the default v2 plan shape.

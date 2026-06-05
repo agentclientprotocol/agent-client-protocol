@@ -65,8 +65,8 @@ The Agent **MUST** respond with the chosen [protocol version](#protocol-version)
         "embeddedContext": {}
       },
       "mcp": {
-        "http": {},
-        "sse": {}
+        "stdio": {},
+        "http": {}
       }
     },
     "agentInfo": {
@@ -157,19 +157,16 @@ Optionally, they **MAY** support richer types of [content](/protocol/v2/content)
 
 #### MCP capabilities
 
+<ResponseField name="stdio" type="McpStdioCapabilities Object">
+  The Agent supports connecting to MCP servers over stdio. Omitted or `null`
+  means the Agent does not advertise support. Supplying `{}` means the Agent
+  supports stdio MCP server transports.
+</ResponseField>
+
 <ResponseField name="http" type="McpHttpCapabilities Object">
   The Agent supports connecting to MCP servers over HTTP. Omitted or `null`
   means the Agent does not advertise support. Supplying `{}` means the Agent
   supports HTTP MCP server transports.
-</ResponseField>
-
-<ResponseField name="sse" type="McpSseCapabilities Object">
-  The Agent supports connecting to MCP servers over SSE. Omitted or `null` means
-  the Agent does not advertise support. Supplying `{}` means the Agent supports
-  SSE MCP server transports.
-
-Note: This transport has been deprecated by the MCP spec.
-
 </ResponseField>
 
 #### Authentication Capabilities

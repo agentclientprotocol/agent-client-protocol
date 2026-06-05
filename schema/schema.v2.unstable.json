@@ -3359,16 +3359,16 @@
           "description": "Agent supports [`McpServer::Http`].\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports HTTP MCP server transports.",
           "x-deserialize-default-on-error": true
         },
-        "sse": {
+        "stdio": {
           "anyOf": [
             {
-              "$ref": "#/$defs/McpSseCapabilities"
+              "$ref": "#/$defs/McpStdioCapabilities"
             },
             {
               "type": "null"
             }
           ],
-          "description": "Agent supports [`McpServer::Sse`].\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports SSE MCP server transports.",
+          "description": "Agent supports [`McpServer::Stdio`].\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports stdio MCP server transports.",
           "x-deserialize-default-on-error": true
         }
       },
@@ -3410,22 +3410,6 @@
         {
           "allOf": [
             {
-              "$ref": "#/$defs/McpServerSse"
-            }
-          ],
-          "description": "SSE transport configuration\n\nOnly available when the Agent capabilities include `mcp.sse`.",
-          "properties": {
-            "type": {
-              "const": "sse",
-              "type": "string"
-            }
-          },
-          "required": ["type"],
-          "type": "object"
-        },
-        {
-          "allOf": [
-            {
               "$ref": "#/$defs/McpServerAcp"
             }
           ],
@@ -3445,7 +3429,7 @@
               "$ref": "#/$defs/McpServerStdio"
             }
           ],
-          "description": "Stdio transport configuration\n\nAll Agents MUST support this transport.",
+          "description": "Stdio transport configuration\n\nOnly available when the Agent capabilities include `mcp.stdio`.",
           "title": "stdio"
         }
       ],
@@ -3506,33 +3490,6 @@
       "required": ["name", "url", "headers"],
       "type": "object"
     },
-    "McpServerSse": {
-      "description": "SSE transport configuration for MCP.",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"]
-        },
-        "headers": {
-          "description": "HTTP headers to set when making requests to the MCP server.",
-          "items": {
-            "$ref": "#/$defs/HttpHeader"
-          },
-          "type": "array"
-        },
-        "name": {
-          "description": "Human-readable name identifying this MCP server.",
-          "type": "string"
-        },
-        "url": {
-          "description": "URL to the MCP server.",
-          "type": "string"
-        }
-      },
-      "required": ["name", "url", "headers"],
-      "type": "object"
-    },
     "McpServerStdio": {
       "description": "Stdio transport configuration for MCP.",
       "properties": {
@@ -3567,8 +3524,8 @@
       "required": ["name", "command", "args", "env"],
       "type": "object"
     },
-    "McpSseCapabilities": {
-      "description": "Capabilities for SSE MCP server transports.\n\nSupplying `{}` means the agent supports SSE MCP server transports.",
+    "McpStdioCapabilities": {
+      "description": "Capabilities for stdio MCP server transports.\n\nSupplying `{}` means the agent supports stdio MCP server transports.",
       "properties": {
         "_meta": {
           "additionalProperties": true,

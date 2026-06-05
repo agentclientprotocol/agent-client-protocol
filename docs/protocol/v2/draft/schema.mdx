@@ -4110,11 +4110,11 @@ Optional. Omitted or `null` both mean the agent does not advertise support.
 Supplying `\{\}` means the agent supports HTTP MCP server transports.
 
 </ResponseField>
-<ResponseField name="sse" type={<><span><a href="#mcpssecapabilities">McpSseCapabilities</a></span><span> | null</span></>} >
-  Agent supports `McpServer::Sse`.
+<ResponseField name="stdio" type={<><span><a href="#mcpstdiocapabilities">McpStdioCapabilities</a></span><span> | null</span></>} >
+  Agent supports `McpServer::Stdio`.
 
 Optional. Omitted or `null` both mean the agent does not advertise support.
-Supplying `\{\}` means the agent supports SSE MCP server transports.
+Supplying `\{\}` means the agent supports stdio MCP server transports.
 
 </ResponseField>
 
@@ -4189,37 +4189,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </Expandable>
 </ResponseField>
 
-<ResponseField name="sse" type="object">
-SSE transport configuration
-
-Only available when the Agent capabilities include `mcp.sse`.
-
-<Expandable title="Properties">
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="headers" type={<a href="#httpheader">HttpHeader[]</a>} required>
-  HTTP headers to set when making requests to the MCP server.
-</ResponseField>
-<ResponseField name="name" type={"string"} required>
-  Human-readable name identifying this MCP server.
-</ResponseField>
-<ResponseField name="type" type={"string"} required>
-  The discriminator value. Must be `"sse"`.
-</ResponseField>
-<ResponseField name="url" type={"string"} required>
-  URL to the MCP server.
-</ResponseField>
-
-</Expandable>
-</ResponseField>
-
 <ResponseField name="acp" type="object">
 **UNSTABLE**
 
@@ -4260,7 +4229,7 @@ on the same ACP connection.
 <ResponseField name="stdio">
 Stdio transport configuration
 
-All Agents MUST support this transport.
+Only available when the Agent capabilities include `mcp.stdio`.
 
 <Expandable title="Properties">
 
@@ -4362,32 +4331,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
   URL to the MCP server.
 </ResponseField>
 
-## <span class="font-mono">McpServerSse</span>
-
-SSE transport configuration for MCP.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="headers" type={<a href="#httpheader">HttpHeader[]</a>} required>
-  HTTP headers to set when making requests to the MCP server.
-</ResponseField>
-<ResponseField name="name" type={"string"} required>
-  Human-readable name identifying this MCP server.
-</ResponseField>
-<ResponseField name="url" type={"string"} required>
-  URL to the MCP server.
-</ResponseField>
-
 ## <span class="font-mono">McpServerStdio</span>
 
 Stdio transport configuration for MCP.
@@ -4417,11 +4360,11 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
   Human-readable name identifying this MCP server.
 </ResponseField>
 
-## <span class="font-mono">McpSseCapabilities</span>
+## <span class="font-mono">McpStdioCapabilities</span>
 
-Capabilities for SSE MCP server transports.
+Capabilities for stdio MCP server transports.
 
-Supplying `\{\}` means the agent supports SSE MCP server transports.
+Supplying `\{\}` means the agent supports stdio MCP server transports.
 
 **Type:** Object
 
