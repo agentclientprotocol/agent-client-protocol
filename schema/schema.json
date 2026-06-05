@@ -1092,6 +1092,17 @@
             }
           ],
           "description": "A single item of content"
+        },
+        "messageId": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MessageId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "A unique identifier for the message this chunk belongs to.\n\nAll chunks belonging to the same message share the same `messageId`.\nA change in `messageId` indicates a new message has started."
         }
       },
       "required": ["content"],
@@ -1982,6 +1993,10 @@
       },
       "required": ["name", "command", "args", "env"],
       "type": "object"
+    },
+    "MessageId": {
+      "description": "Unique identifier for a message within a session.",
+      "type": "string"
     },
     "NewSessionRequest": {
       "description": "Request parameters for creating a new session.\n\nSee protocol docs: [Creating a Session](https://agentclientprotocol.com/protocol/session-setup#creating-a-session)",

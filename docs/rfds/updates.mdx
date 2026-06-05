@@ -7,6 +7,13 @@ rss: true
 This page tracks lifecycle changes for ACP Requests for Dialog. For broader ACP announcements, see [Updates](/updates).
 
 <Update label="June 5, 2026" tags={["Completed"]}>
+## Message ID RFD moves to Completed
+
+The RFD for adding agent-generated `messageId` fields to streamed message chunks has been stabilized and is now part of the protocol. In v1, message IDs are optional on message chunks for compatibility; in v2, they are required. Please review the [documentation](/protocol/v1/prompt-turn#message-ids) for more information.
+
+</Update>
+
+<Update label="June 5, 2026" tags={["Completed"]}>
 ## Session Context Size and Cost RFD moves to Completed
 
 The RFD for `usage_update` session notifications has been stabilized and is now a part of the protocol. Agents can report session-level context window size and optional cumulative cost through `session/update`. Please review the [documentation](/protocol/v1/prompt-turn#session-usage-updates) for more information.

@@ -44,7 +44,7 @@ The agent will respond once the prompt has been _accepted_, not when the turn is
 }
 ```
 
-Given there will need to be some more exploration for Message IDs in general, I won't tie that RFD to this one unnecessarily. The accepted user message notification becomes the natural point to provide the required v2 message ID.
+The completed Message ID RFD keeps message IDs agent-owned. The accepted user message notification becomes the natural point to provide the required v2 message ID.
 
 Queueing messages (still an ongoing discussion) would also fit much nicer in this pattern. Either by adding additional parameters or a separate method, we can allow a client to submit queued messages and either cancel or edit them before they get accepted without having to mess with the turn semantics of the previous prompt request approach. Again, queueing is decidedly not part of this RFD, but it seems to fall more naturally into this semantic change in the prompt request.
 
@@ -64,7 +64,7 @@ The question then turns to what makes up this notification. Which brings us to:
 
 **Who owns the user message id?**
 
-The [message id RFD](/rfds/message-id) proposes that the agent owns message IDs. This means the client cannot eagerly create a protocol message ID for a prompt, but it also means we avoid a shared uniqueness or UUID requirement between clients and agents.
+The [message id RFD](/rfds/message-id) defines that the agent owns message IDs. This means the client cannot eagerly create a protocol message ID for a prompt, but it also means we avoid a shared uniqueness or UUID requirement between clients and agents.
 
 By allowing the agent to replay or acknowledge the user message as a session update, we have a natural place for the agent to provide both the content and the ID once it is inserted in the session. Ultimately the agent is responsible for session persistence. If there is only one source for IDs, we can continue to treat them as opaque strings that fit well into each agent's implementation.
 

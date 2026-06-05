@@ -438,7 +438,6 @@ impl IntoV2 for crate::v1::SessionId {
     }
 }
 
-#[cfg(feature = "unstable_message_id")]
 impl IntoV1 for super::MessageId {
     type Output = crate::v1::MessageId;
 
@@ -447,7 +446,6 @@ impl IntoV1 for super::MessageId {
     }
 }
 
-#[cfg(feature = "unstable_message_id")]
 impl IntoV2 for crate::v1::MessageId {
     type Output = super::MessageId;
 
@@ -1066,11 +1064,8 @@ impl IntoV1 for super::ContentChunk {
             message_id,
             meta,
         } = self;
-        #[cfg(not(feature = "unstable_message_id"))]
-        drop(message_id);
         Ok(crate::v1::ContentChunk {
             content: content.into_v1()?,
-            #[cfg(feature = "unstable_message_id")]
             message_id: Some(message_id.into_v1()?),
             meta: meta.into_v1()?,
         })
@@ -1083,31 +1078,20 @@ impl IntoV2 for crate::v1::ContentChunk {
     fn into_v2(self) -> Result<Self::Output> {
         let Self {
             content,
-            #[cfg(feature = "unstable_message_id")]
             message_id,
             meta,
         } = self;
-        #[cfg(not(feature = "unstable_message_id"))]
-        {
-            drop((content, meta));
-            Err(ProtocolConversionError::new(
-                "v1 ContentChunk without messageId cannot be represented in v2",
-            ))
-        }
-        #[cfg(feature = "unstable_message_id")]
-        {
-            Ok(super::ContentChunk {
-                content: content.into_v2()?,
-                message_id: message_id
-                    .ok_or_else(|| {
-                        ProtocolConversionError::new(
-                            "v1 ContentChunk without messageId cannot be represented in v2",
-                        )
-                    })?
-                    .into_v2()?,
-                meta: meta.into_v2()?,
-            })
-        }
+        Ok(super::ContentChunk {
+            content: content.into_v2()?,
+            message_id: message_id
+                .ok_or_else(|| {
+                    ProtocolConversionError::new(
+                        "v1 ContentChunk without messageId cannot be represented in v2",
+                    )
+                })?
+                .into_v2()?,
+            meta: meta.into_v2()?,
+        })
     }
 }
 
@@ -8892,18 +8876,14 @@ mod tests {
 
     #[test]
     fn round_trips_session_notification_for_unchanged_update_kinds() {
-        #[cfg(feature = "unstable_message_id")]
         fn content_chunk(text: &str, message_id: &str) -> v1::ContentChunk {
             let chunk = v1::ContentChunk::new(v1::ContentBlock::Text(v1::TextContent::new(text)));
             chunk.message_id(message_id)
         }
 
         let cases: Vec<v1::SessionUpdate> = vec![
-            #[cfg(feature = "unstable_message_id")]
             v1::SessionUpdate::UserMessageChunk(content_chunk("u", "msg_user")),
-            #[cfg(feature = "unstable_message_id")]
             v1::SessionUpdate::AgentMessageChunk(content_chunk("a", "msg_agent")),
-            #[cfg(feature = "unstable_message_id")]
             v1::SessionUpdate::AgentThoughtChunk(content_chunk("t", "msg_thought")),
             v1::SessionUpdate::ToolCall(v1::ToolCall::new("tc", "title")),
             v1::SessionUpdate::ToolCallUpdate(v1::ToolCallUpdate::new(

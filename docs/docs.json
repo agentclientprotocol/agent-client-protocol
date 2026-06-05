@@ -209,7 +209,7 @@
           },
           {
             "group": "Preview",
-            "pages": ["rfds/rust-sdk-v1", "rfds/message-id"]
+            "pages": ["rfds/rust-sdk-v1"]
           },
           {
             "group": "Completed",
@@ -218,6 +218,7 @@
               "rfds/session-config-options",
               "rfds/session-list",
               "rfds/session-usage",
+              "rfds/message-id",
               "rfds/session-delete",
               "rfds/session-info-update",
               "rfds/meta-propagation",

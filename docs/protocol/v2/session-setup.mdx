@@ -147,6 +147,7 @@ For example, a user message from the conversation history:
     "sessionId": "sess_789xyz",
     "update": {
       "sessionUpdate": "user_message_chunk",
+      "messageId": "msg_user_8f7a1",
       "content": {
         "type": "text",
         "text": "What's the capital of France?"
@@ -166,6 +167,7 @@ Followed by the agent's response:
     "sessionId": "sess_789xyz",
     "update": {
       "sessionUpdate": "agent_message_chunk",
+      "messageId": "msg_agent_c42b9",
       "content": {
         "type": "text",
         "text": "The capital of France is Paris."
@@ -174,6 +176,8 @@ Followed by the agent's response:
   }
 }
 ```
+
+During replay, the Agent **MUST** include an opaque, unique `messageId` for each replayed message.
 
 When **all** the conversation entries have been streamed to the Client, the Agent **MUST** respond to the original `session/load` request.
 

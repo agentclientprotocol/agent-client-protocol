@@ -1459,6 +1459,37 @@ mod tests {
     }
 
     #[test]
+    fn test_content_chunk_message_id_serialization() {
+        use serde_json::json;
+
+        assert_eq!(
+            serde_json::to_value(SessionUpdate::AgentMessageChunk(ContentChunk::new(
+                ContentBlock::Text(crate::v2::TextContent::new("Hello")),
+                "msg_agent_c42b9",
+            )))
+            .unwrap(),
+            json!({
+                "sessionUpdate": "agent_message_chunk",
+                "messageId": "msg_agent_c42b9",
+                "content": {
+                    "type": "text",
+                    "text": "Hello"
+                }
+            })
+        );
+
+        let err = serde_json::from_value::<ContentChunk>(json!({
+            "content": {
+                "type": "text",
+                "text": "Hello"
+            }
+        }))
+        .unwrap_err();
+
+        assert!(err.to_string().contains("messageId"), "{err}");
+    }
+
+    #[test]
     fn test_usage_update_serialization() {
         use serde_json::json;
 

@@ -70,7 +70,7 @@ Add a `messageId` field to `AgentMessageChunk`, `UserMessageChunk`, and `AgentTh
 
 ### Proposed Structure
 
-The `session/prompt` response does not include a message ID. In v1, there won't be a message ID for user-submitted messages. In v2, the agent will replay the message and attach the appropriate message ID to the user message.
+The `session/prompt` request and response do not include a message ID. Clients do not create protocol message IDs. If the Agent emits the accepted user message through `session/update`, it generates and attaches the appropriate message ID to that user message.
 
 If the Agent sends `user_message_chunk` updates (e.g., during `session/load`), it uses the user message ID:
 
@@ -282,6 +282,7 @@ Future RFDs may propose extending `messageId` to other update types if use cases
 
 ## Revision history
 
+- **2026-06-05**: Moved to Completed and stabilized optional v1 `messageId` in the stable protocol artifacts
 - **2026-06-03**: Moved the v1 portion of the RFD to Preview while v2-specific behavior remains part of the v2 draft work
 - **2026-06-03**: Moved the RFD out of the v2 Draft group while keeping v2-specific behavior; added a dedicated `MessageId` type, and made v2 require message IDs on streamed message chunks while v1 keeps optional message IDs for compatibility
 - **2026-06-02**: Updated the proposal so message IDs are Agent-generated only, removed client-provided prompt IDs and prompt response acknowledgments, and removed the UUID requirement in favor of opaque strings

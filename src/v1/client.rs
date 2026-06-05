@@ -353,15 +353,10 @@ impl Cost {
 pub struct ContentChunk {
     /// A single item of content
     pub content: ContentBlock,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// A unique identifier for the message this chunk belongs to.
     ///
     /// All chunks belonging to the same message share the same `messageId`.
     /// A change in `messageId` indicates a new message has started.
-    #[cfg(feature = "unstable_message_id")]
     pub message_id: Option<MessageId>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -377,21 +372,15 @@ impl ContentChunk {
     pub fn new(content: ContentBlock) -> Self {
         Self {
             content,
-            #[cfg(feature = "unstable_message_id")]
             message_id: None,
             meta: None,
         }
     }
 
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// A unique identifier for the message this chunk belongs to.
     ///
     /// All chunks belonging to the same message share the same `messageId`.
     /// A change in `messageId` indicates a new message has started.
-    #[cfg(feature = "unstable_message_id")]
     #[must_use]
     pub fn message_id(mut self, message_id: impl IntoOption<MessageId>) -> Self {
         self.message_id = message_id.into_option();
@@ -411,14 +400,12 @@ impl ContentChunk {
 }
 
 /// Unique identifier for a message within a session.
-#[cfg(feature = "unstable_message_id")]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
 #[from(Arc<str>, String, &'static str)]
 #[non_exhaustive]
 pub struct MessageId(pub Arc<str>);
 
-#[cfg(feature = "unstable_message_id")]
 impl MessageId {
     #[must_use]
     pub fn new(id: impl Into<Arc<str>>) -> Self {
@@ -426,7 +413,6 @@ impl MessageId {
     }
 }
 
-#[cfg(feature = "unstable_message_id")]
 impl IntoOption<MessageId> for &str {
     fn into_option(self) -> Option<MessageId> {
         Some(MessageId::new(self))
@@ -2216,6 +2202,55 @@ mod tests {
             .unwrap(),
             json!({})
         );
+    }
+
+    #[test]
+    fn test_content_chunk_message_id_serialization() {
+        use serde_json::json;
+
+        assert_eq!(
+            serde_json::to_value(SessionUpdate::AgentMessageChunk(ContentChunk::new(
+                ContentBlock::Text(crate::TextContent::new("Hello"))
+            )))
+            .unwrap(),
+            json!({
+                "sessionUpdate": "agent_message_chunk",
+                "content": {
+                    "type": "text",
+                    "text": "Hello"
+                }
+            })
+        );
+
+        assert_eq!(
+            serde_json::to_value(SessionUpdate::AgentMessageChunk(
+                ContentChunk::new(ContentBlock::Text(crate::TextContent::new("Hello")))
+                    .message_id("msg_agent_c42b9")
+            ))
+            .unwrap(),
+            json!({
+                "sessionUpdate": "agent_message_chunk",
+                "messageId": "msg_agent_c42b9",
+                "content": {
+                    "type": "text",
+                    "text": "Hello"
+                }
+            })
+        );
+
+        let SessionUpdate::AgentMessageChunk(chunk) = serde_json::from_value(json!({
+            "sessionUpdate": "agent_message_chunk",
+            "messageId": null,
+            "content": {
+                "type": "text",
+                "text": "Hello"
+            }
+        }))
+        .unwrap() else {
+            panic!("expected agent message chunk");
+        };
+
+        assert_eq!(chunk.message_id, None);
     }
 
     #[test]
