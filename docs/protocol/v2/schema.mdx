@@ -1491,6 +1491,21 @@ A change in `messageId` indicates a new message has started.
 
 </ResponseField>
 
+## <span class="font-mono">Cost</span>
+
+Cost information for a session.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="amount" type={"number"} required>
+  Total cumulative cost for session.
+</ResponseField>
+<ResponseField name="currency" type={"string"} required>
+  ISO 4217 currency code (e.g., "USD", "EUR").
+</ResponseField>
+
 ## <span class="font-mono">Diff</span>
 
 A diff representing file modifications.
@@ -3339,6 +3354,41 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 </Expandable>
 </ResponseField>
 
+<ResponseField name="usage_update" type="object">
+Context window and cost update for the session.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+<ResponseField name="cost" type={<><span><a href="#cost">Cost</a></span><span> | null</span></>} >
+  Cumulative session cost (optional).
+</ResponseField>
+<ResponseField name="sessionUpdate" type={"string"} required>
+  The discriminator value. Must be `"usage_update"`.
+</ResponseField>
+<ResponseField name="size" type={"uint64"} required>
+  Total context window size in tokens.
+
+    - Minimum: `0`
+
+</ResponseField>
+<ResponseField name="used" type={"uint64"} required>
+  Tokens currently in context.
+
+    - Minimum: `0`
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 <ResponseField name="other" type="object">
 Custom or future session update.
 
@@ -3787,4 +3837,36 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 </ResponseField>
 <ResponseField name="hint" type={"string"} required>
   A hint to display when the input hasn't been provided yet
+</ResponseField>
+
+## <span class="font-mono">UsageUpdate</span>
+
+Context window and cost update for a session.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+<ResponseField name="cost" type={<><span><a href="#cost">Cost</a></span><span> | null</span></>} >
+  Cumulative session cost (optional).
+</ResponseField>
+<ResponseField name="size" type={"uint64"} required>
+  Total context window size in tokens.
+
+    - Minimum: `0`
+
+</ResponseField>
+<ResponseField name="used" type={"uint64"} required>
+  Tokens currently in context.
+
+    - Minimum: `0`
+
 </ResponseField>

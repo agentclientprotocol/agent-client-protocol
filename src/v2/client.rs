@@ -117,12 +117,7 @@ pub enum SessionUpdate {
     ConfigOptionUpdate(ConfigOptionUpdate),
     /// Session metadata has been updated (title, timestamps, custom metadata)
     SessionInfoUpdate(SessionInfoUpdate),
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Context window and cost update for the session.
-    #[cfg(feature = "unstable_session_usage")]
     UsageUpdate(UsageUpdate),
     /// Custom or future session update.
     ///
@@ -201,20 +196,19 @@ impl<'de> Deserialize<'de> for OtherSessionUpdate {
 }
 
 fn is_known_session_update(session_update: &str) -> bool {
-    match session_update {
+    matches!(
+        session_update,
         "user_message_chunk"
-        | "agent_message_chunk"
-        | "agent_thought_chunk"
-        | "tool_call"
-        | "tool_call_update"
-        | "plan_update"
-        | "available_commands_update"
-        | "config_option_update"
-        | "session_info_update" => true,
-        #[cfg(feature = "unstable_session_usage")]
-        "usage_update" => true,
-        _ => false,
-    }
+            | "agent_message_chunk"
+            | "agent_thought_chunk"
+            | "tool_call"
+            | "tool_call_update"
+            | "plan_update"
+            | "available_commands_update"
+            | "config_option_update"
+            | "session_info_update"
+            | "usage_update"
+    )
 }
 
 fn other_session_update_schema(schema: &mut Schema) {
@@ -233,7 +227,6 @@ fn other_session_update_schema(schema: &mut Schema) {
             "session_info_update",
             #[cfg(feature = "unstable_plan_operations")]
             "plan_removed",
-            #[cfg(feature = "unstable_session_usage")]
             "usage_update",
         ],
     );
@@ -336,12 +329,7 @@ impl SessionInfoUpdate {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Context window and cost update for a session.
-#[cfg(feature = "unstable_session_usage")]
 #[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
@@ -366,7 +354,6 @@ pub struct UsageUpdate {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_session_usage")]
 impl UsageUpdate {
     #[must_use]
     pub fn new(used: u64, size: u64) -> Self {
@@ -397,12 +384,7 @@ impl UsageUpdate {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Cost information for a session.
-#[cfg(feature = "unstable_session_usage")]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -413,7 +395,6 @@ pub struct Cost {
     pub currency: String,
 }
 
-#[cfg(feature = "unstable_session_usage")]
 impl Cost {
     #[must_use]
     pub fn new(amount: f64, currency: impl Into<String>) -> Self {
@@ -1475,6 +1456,51 @@ mod tests {
             .unwrap(),
             json!({})
         );
+    }
+
+    #[test]
+    fn test_usage_update_serialization() {
+        use serde_json::json;
+
+        assert_eq!(
+            serde_json::to_value(SessionUpdate::UsageUpdate(UsageUpdate::new(
+                53_000, 200_000
+            )))
+            .unwrap(),
+            json!({
+                "sessionUpdate": "usage_update",
+                "used": 53000,
+                "size": 200000
+            })
+        );
+
+        assert_eq!(
+            serde_json::to_value(SessionUpdate::UsageUpdate(
+                UsageUpdate::new(53_000, 200_000).cost(Cost::new(0.045, "USD"))
+            ))
+            .unwrap(),
+            json!({
+                "sessionUpdate": "usage_update",
+                "used": 53000,
+                "size": 200000,
+                "cost": {
+                    "amount": 0.045,
+                    "currency": "USD"
+                }
+            })
+        );
+
+        let SessionUpdate::UsageUpdate(update) = serde_json::from_value(json!({
+            "sessionUpdate": "usage_update",
+            "used": 53000,
+            "size": 200000,
+            "cost": null
+        }))
+        .unwrap() else {
+            panic!("expected usage update");
+        };
+
+        assert_eq!(update.cost, None);
     }
 
     #[test]

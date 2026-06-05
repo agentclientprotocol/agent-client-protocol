@@ -1097,6 +1097,22 @@
       "required": ["content"],
       "type": "object"
     },
+    "Cost": {
+      "description": "Cost information for a session.",
+      "properties": {
+        "amount": {
+          "description": "Total cumulative cost for session.",
+          "format": "double",
+          "type": "number"
+        },
+        "currency": {
+          "description": "ISO 4217 currency code (e.g., \"USD\", \"EUR\").",
+          "type": "string"
+        }
+      },
+      "required": ["amount", "currency"],
+      "type": "object"
+    },
     "CreateTerminalRequest": {
       "description": "Request to create a new terminal and execute a command.",
       "properties": {
@@ -3267,6 +3283,22 @@
           },
           "required": ["sessionUpdate"],
           "type": "object"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/UsageUpdate"
+            }
+          ],
+          "description": "Context window and cost update for the session.",
+          "properties": {
+            "sessionUpdate": {
+              "const": "usage_update",
+              "type": "string"
+            }
+          },
+          "required": ["sessionUpdate"],
+          "type": "object"
         }
       ]
     },
@@ -3858,6 +3890,42 @@
         }
       },
       "required": ["hint"],
+      "type": "object"
+    },
+    "UsageUpdate": {
+      "description": "Context window and cost update for a session.",
+      "properties": {
+        "_meta": {
+          "additionalProperties": true,
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"]
+        },
+        "cost": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Cost"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Cumulative session cost (optional).",
+          "x-deserialize-default-on-error": true
+        },
+        "size": {
+          "description": "Total context window size in tokens.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "used": {
+          "description": "Tokens currently in context.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": ["used", "size"],
       "type": "object"
     },
     "WaitForTerminalExitRequest": {

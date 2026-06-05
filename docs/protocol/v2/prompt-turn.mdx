@@ -186,6 +186,31 @@ If the model requested tool calls, these are also reported immediately:
 }
 ```
 
+#### Session Usage Updates
+
+The Agent **MAY** also report current session context and cumulative cost state with a `usage_update`:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "usage_update",
+      "used": 53000,
+      "size": 200000,
+      "cost": {
+        "amount": 0.045,
+        "currency": "USD"
+      }
+    }
+  }
+}
+```
+
+`used` and `size` are required and non-null token counts for the current session context. `cost` is optional and, if present, `amount` and `currency` are required. `currency` is an ISO 4217 currency code like `"USD"`.
+
 ### 4. Check for Completion
 
 If there are no pending tool calls, the turn ends and the Agent **MUST** respond to the original `session/prompt` request with a `StopReason`:

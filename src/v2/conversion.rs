@@ -873,7 +873,6 @@ impl IntoV1 for super::SessionUpdate {
             Self::SessionInfoUpdate(value) => {
                 crate::v1::SessionUpdate::SessionInfoUpdate(value.into_v1()?)
             }
-            #[cfg(feature = "unstable_session_usage")]
             Self::UsageUpdate(value) => crate::v1::SessionUpdate::UsageUpdate(value.into_v1()?),
             Self::Other(value) => {
                 return Err(unknown_v2_enum_variant(
@@ -927,7 +926,6 @@ impl IntoV2 for crate::v1::SessionUpdate {
             Self::SessionInfoUpdate(value) => {
                 super::SessionUpdate::SessionInfoUpdate(value.into_v2()?)
             }
-            #[cfg(feature = "unstable_session_usage")]
             Self::UsageUpdate(value) => super::SessionUpdate::UsageUpdate(value.into_v2()?),
         })
     }
@@ -997,7 +995,6 @@ impl IntoV2 for crate::v1::SessionInfoUpdate {
     }
 }
 
-#[cfg(feature = "unstable_session_usage")]
 impl IntoV1 for super::UsageUpdate {
     type Output = crate::v1::UsageUpdate;
 
@@ -1017,7 +1014,6 @@ impl IntoV1 for super::UsageUpdate {
     }
 }
 
-#[cfg(feature = "unstable_session_usage")]
 impl IntoV2 for crate::v1::UsageUpdate {
     type Output = super::UsageUpdate;
 
@@ -1037,7 +1033,6 @@ impl IntoV2 for crate::v1::UsageUpdate {
     }
 }
 
-#[cfg(feature = "unstable_session_usage")]
 impl IntoV1 for super::Cost {
     type Output = crate::v1::Cost;
 
@@ -1050,7 +1045,6 @@ impl IntoV1 for super::Cost {
     }
 }
 
-#[cfg(feature = "unstable_session_usage")]
 impl IntoV2 for crate::v1::Cost {
     type Output = super::Cost;
 
@@ -8924,6 +8918,9 @@ mod tests {
             #[cfg(feature = "unstable_plan_operations")]
             v1::SessionUpdate::PlanRemoved(v1::PlanRemoved::new("plan-1")),
             v1::SessionUpdate::SessionInfoUpdate(v1::SessionInfoUpdate::new().title("hi")),
+            v1::SessionUpdate::UsageUpdate(
+                v1::UsageUpdate::new(53_000, 200_000).cost(v1::Cost::new(0.045, "USD")),
+            ),
         ];
         for update in cases {
             let notification = v1::SessionNotification::new("sess", update);

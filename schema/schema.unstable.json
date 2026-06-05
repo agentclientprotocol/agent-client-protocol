@@ -1861,7 +1861,7 @@
       "type": "object"
     },
     "Cost": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCost information for a session.",
+      "description": "Cost information for a session.",
       "properties": {
         "amount": {
           "description": "Total cumulative cost for session.",
@@ -6575,7 +6575,7 @@
               "$ref": "#/$defs/UsageUpdate"
             }
           ],
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nContext window and cost update for the session.",
+          "description": "Context window and cost update for the session.",
           "properties": {
             "sessionUpdate": {
               "const": "usage_update",
@@ -7607,7 +7607,7 @@
       "type": "object"
     },
     "UsageUpdate": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nContext window and cost update for a session.",
+      "description": "Context window and cost update for a session.",
       "properties": {
         "_meta": {
           "additionalProperties": true,
