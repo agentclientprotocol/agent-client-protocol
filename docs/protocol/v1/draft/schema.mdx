@@ -973,19 +973,11 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 <a id="session-delete"></a>
 ### <span class="font-mono">session/delete</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 Deletes an existing session from `session/list`.
 
 This method is only available if the agent advertises the `sessionCapabilities.delete` capability.
 
 #### <span class="font-mono">DeleteSessionRequest</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Request parameters for deleting an existing session from `session/list`.
 
@@ -1008,10 +1000,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 </ResponseField>
 
 #### <span class="font-mono">DeleteSessionResponse</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Response from deleting a session.
 
@@ -6655,11 +6643,7 @@ additional-root list associated with a listed session.
   Whether the agent supports `session/close`.
 </ResponseField>
 <ResponseField name="delete" type={<><span><a href="#sessiondeletecapabilities">SessionDeleteCapabilities</a></span><span> | null</span></>} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Whether the agent supports `session/delete`.
+  Whether the agent supports `session/delete`.
 
 Optional. Omitted or `null` both mean the agent does not advertise support.
 Supplying `\{\}` means the agent supports deleting sessions from `session/list`.
@@ -6929,10 +6913,6 @@ Unique identifier for a session configuration option value.
 **Type:** `string`
 
 ## <span class="font-mono">SessionDeleteCapabilities</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Capabilities for the `session/delete` method.
 

@@ -32,7 +32,7 @@ sequenceDiagram
 
 ## Checking Support
 
-Before attempting to delete a session, Clients **MUST** verify that the Agent supports this capability by checking the unstable `session.delete` field in the `initialize` response:
+Before attempting to delete a session, Clients **MUST** verify that the Agent supports this capability by checking the `session.delete` field in the `initialize` response:
 
 ```json highlight={7-9}
 {

@@ -1676,14 +1676,9 @@ impl ListSessionsResponse {
 
 // Delete session
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Request parameters for deleting an existing session from `session/list`.
 ///
 /// Only available if the Agent supports the `sessionCapabilities.delete` capability.
-#[cfg(feature = "unstable_session_delete")]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_DELETE_METHOD_NAME))]
@@ -1701,7 +1696,6 @@ pub struct DeleteSessionRequest {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_session_delete")]
 impl DeleteSessionRequest {
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>) -> Self {
@@ -1723,12 +1717,7 @@ impl DeleteSessionRequest {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Response from deleting a session.
-#[cfg(feature = "unstable_session_delete")]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_DELETE_METHOD_NAME))]
@@ -1744,7 +1733,6 @@ pub struct DeleteSessionResponse {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_session_delete")]
 impl DeleteSessionResponse {
     #[must_use]
     pub fn new() -> Self {
@@ -3790,15 +3778,10 @@ pub struct SessionCapabilities {
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub list: Option<SessionListCapabilities>,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Whether the agent supports `session/delete`.
     ///
     /// Optional. Omitted or `null` both mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports deleting sessions from `session/list`.
-    #[cfg(feature = "unstable_session_delete")]
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
@@ -3854,15 +3837,10 @@ impl SessionCapabilities {
         self
     }
 
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Whether the agent supports `session/delete`.
     ///
     /// Omitted or `null` both mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports deleting sessions from `session/list`.
-    #[cfg(feature = "unstable_session_delete")]
     #[must_use]
     pub fn delete(mut self, delete: impl IntoOption<SessionDeleteCapabilities>) -> Self {
         self.delete = delete.into_option();
@@ -3951,14 +3929,9 @@ impl SessionListCapabilities {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Capabilities for the `session/delete` method.
 ///
 /// Supplying `{}` means the agent supports deleting sessions from `session/list`.
-#[cfg(feature = "unstable_session_delete")]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[non_exhaustive]
@@ -3972,7 +3945,6 @@ pub struct SessionDeleteCapabilities {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_session_delete")]
 impl SessionDeleteCapabilities {
     #[must_use]
     pub fn new() -> Self {
@@ -4328,7 +4300,6 @@ pub struct AgentMethodNames {
     /// Method for listing existing sessions.
     pub session_list: &'static str,
     /// Method for deleting an existing session.
-    #[cfg(feature = "unstable_session_delete")]
     pub session_delete: &'static str,
     /// Method for forking an existing session.
     #[cfg(feature = "unstable_session_fork")]
@@ -4390,7 +4361,6 @@ pub const AGENT_METHOD_NAMES: AgentMethodNames = AgentMethodNames {
     #[cfg(feature = "unstable_mcp_over_acp")]
     mcp_message: MCP_MESSAGE_METHOD_NAME,
     session_list: SESSION_LIST_METHOD_NAME,
-    #[cfg(feature = "unstable_session_delete")]
     session_delete: SESSION_DELETE_METHOD_NAME,
     #[cfg(feature = "unstable_session_fork")]
     session_fork: SESSION_FORK_METHOD_NAME,
@@ -4447,7 +4417,6 @@ pub(crate) const SESSION_CANCEL_METHOD_NAME: &str = "session/cancel";
 /// Method name for listing existing sessions.
 pub(crate) const SESSION_LIST_METHOD_NAME: &str = "session/list";
 /// Method name for deleting an existing session.
-#[cfg(feature = "unstable_session_delete")]
 pub(crate) const SESSION_DELETE_METHOD_NAME: &str = "session/delete";
 /// Method name for forking an existing session.
 #[cfg(feature = "unstable_session_fork")]
@@ -4548,14 +4517,9 @@ pub enum ClientRequest {
     ///
     /// The agent should return metadata about sessions with optional filtering and pagination support.
     ListSessionsRequest(ListSessionsRequest),
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Deletes an existing session from `session/list`.
     ///
     /// This method is only available if the agent advertises the `sessionCapabilities.delete` capability.
-    #[cfg(feature = "unstable_session_delete")]
     DeleteSessionRequest(DeleteSessionRequest),
     #[cfg(feature = "unstable_session_fork")]
     /// **UNSTABLE**
@@ -4669,7 +4633,6 @@ impl ClientRequest {
             Self::NewSessionRequest(_) => AGENT_METHOD_NAMES.session_new,
             Self::LoadSessionRequest(_) => AGENT_METHOD_NAMES.session_load,
             Self::ListSessionsRequest(_) => AGENT_METHOD_NAMES.session_list,
-            #[cfg(feature = "unstable_session_delete")]
             Self::DeleteSessionRequest(_) => AGENT_METHOD_NAMES.session_delete,
             #[cfg(feature = "unstable_session_fork")]
             Self::ForkSessionRequest(_) => AGENT_METHOD_NAMES.session_fork,
@@ -4715,7 +4678,6 @@ pub enum AgentResponse {
     NewSessionResponse(NewSessionResponse),
     LoadSessionResponse(#[serde(default)] LoadSessionResponse),
     ListSessionsResponse(ListSessionsResponse),
-    #[cfg(feature = "unstable_session_delete")]
     DeleteSessionResponse(#[serde(default)] DeleteSessionResponse),
     #[cfg(feature = "unstable_session_fork")]
     ForkSessionResponse(ForkSessionResponse),
@@ -5223,7 +5185,6 @@ mod test_serialization {
         assert!(matches!(deserialized, AuthMethod::Agent(_)));
     }
 
-    #[cfg(feature = "unstable_session_delete")]
     #[test]
     fn test_session_delete_serialization() {
         assert_eq!(AGENT_METHOD_NAMES.session_delete, "session/delete");

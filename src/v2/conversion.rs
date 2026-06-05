@@ -3251,7 +3251,6 @@ impl IntoV2 for crate::v1::CloseSessionResponse {
     }
 }
 
-#[cfg(feature = "unstable_session_delete")]
 impl IntoV1 for super::DeleteSessionRequest {
     type Output = crate::v1::DeleteSessionRequest;
 
@@ -3264,7 +3263,6 @@ impl IntoV1 for super::DeleteSessionRequest {
     }
 }
 
-#[cfg(feature = "unstable_session_delete")]
 impl IntoV2 for crate::v1::DeleteSessionRequest {
     type Output = super::DeleteSessionRequest;
 
@@ -3277,7 +3275,6 @@ impl IntoV2 for crate::v1::DeleteSessionRequest {
     }
 }
 
-#[cfg(feature = "unstable_session_delete")]
 impl IntoV1 for super::DeleteSessionResponse {
     type Output = crate::v1::DeleteSessionResponse;
 
@@ -3289,7 +3286,6 @@ impl IntoV1 for super::DeleteSessionResponse {
     }
 }
 
-#[cfg(feature = "unstable_session_delete")]
 impl IntoV2 for crate::v1::DeleteSessionResponse {
     type Output = super::DeleteSessionResponse;
 
@@ -4559,7 +4555,6 @@ impl IntoV1 for super::SessionCapabilities {
         let Self {
             load: _,
             list,
-            #[cfg(feature = "unstable_session_delete")]
             delete,
             additional_directories,
             #[cfg(feature = "unstable_session_fork")]
@@ -4570,7 +4565,6 @@ impl IntoV1 for super::SessionCapabilities {
         } = self;
         Ok(crate::v1::SessionCapabilities {
             list: list.into_v1()?,
-            #[cfg(feature = "unstable_session_delete")]
             delete: delete.into_v1()?,
             additional_directories: additional_directories.into_v1()?,
             #[cfg(feature = "unstable_session_fork")]
@@ -4588,7 +4582,6 @@ impl IntoV2 for crate::v1::SessionCapabilities {
     fn into_v2(self) -> Result<Self::Output> {
         let Self {
             list,
-            #[cfg(feature = "unstable_session_delete")]
             delete,
             additional_directories,
             #[cfg(feature = "unstable_session_fork")]
@@ -4600,7 +4593,6 @@ impl IntoV2 for crate::v1::SessionCapabilities {
         Ok(super::SessionCapabilities {
             load: None,
             list: list.into_v2()?,
-            #[cfg(feature = "unstable_session_delete")]
             delete: delete.into_v2()?,
             additional_directories: additional_directories.into_v2()?,
             #[cfg(feature = "unstable_session_fork")]
@@ -4634,7 +4626,6 @@ impl IntoV2 for crate::v1::SessionListCapabilities {
     }
 }
 
-#[cfg(feature = "unstable_session_delete")]
 impl IntoV1 for super::SessionDeleteCapabilities {
     type Output = crate::v1::SessionDeleteCapabilities;
 
@@ -4646,7 +4637,6 @@ impl IntoV1 for super::SessionDeleteCapabilities {
     }
 }
 
-#[cfg(feature = "unstable_session_delete")]
 impl IntoV2 for crate::v1::SessionDeleteCapabilities {
     type Output = super::SessionDeleteCapabilities;
 
@@ -4860,7 +4850,6 @@ impl IntoV1 for super::ClientRequest {
             Self::ListSessionsRequest(value) => {
                 crate::v1::ClientRequest::ListSessionsRequest(value.into_v1()?)
             }
-            #[cfg(feature = "unstable_session_delete")]
             Self::DeleteSessionRequest(value) => {
                 crate::v1::ClientRequest::DeleteSessionRequest(value.into_v1()?)
             }
@@ -4934,7 +4923,6 @@ impl IntoV2 for crate::v1::ClientRequest {
             Self::ListSessionsRequest(value) => {
                 super::ClientRequest::ListSessionsRequest(value.into_v2()?)
             }
-            #[cfg(feature = "unstable_session_delete")]
             Self::DeleteSessionRequest(value) => {
                 super::ClientRequest::DeleteSessionRequest(value.into_v2()?)
             }
@@ -5009,7 +4997,6 @@ impl IntoV1 for super::AgentResponse {
             Self::ListSessionsResponse(value) => {
                 crate::v1::AgentResponse::ListSessionsResponse(value.into_v1()?)
             }
-            #[cfg(feature = "unstable_session_delete")]
             Self::DeleteSessionResponse(value) => {
                 crate::v1::AgentResponse::DeleteSessionResponse(value.into_v1()?)
             }
@@ -5085,7 +5072,6 @@ impl IntoV2 for crate::v1::AgentResponse {
             Self::ListSessionsResponse(value) => {
                 super::AgentResponse::ListSessionsResponse(value.into_v2()?)
             }
-            #[cfg(feature = "unstable_session_delete")]
             Self::DeleteSessionResponse(value) => {
                 super::AgentResponse::DeleteSessionResponse(value.into_v2()?)
             }

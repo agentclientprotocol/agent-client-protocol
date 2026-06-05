@@ -191,6 +191,12 @@ Optionally, they **MAY** support other session methods and notifications by spec
   Supplying `{}` means the Agent supports loading sessions.
 </ResponseField>
 
+<ResponseField name="delete" type="SessionDeleteCapabilities Object">
+  The [`session/delete`](/protocol/v2/session-delete) method is available.
+  Omitted or `null` means the Agent does not advertise support. Supplying `{}`
+  means the Agent supports deleting sessions from `session/list`.
+</ResponseField>
+
 <ResponseField
   name="additionalDirectories"
   type="SessionAdditionalDirectoriesCapabilities Object"

@@ -297,6 +297,52 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
 
 </ResponseField>
 
+<a id="session-delete"></a>
+### <span class="font-mono">session/delete</span>
+
+Deletes an existing session from `session/list`.
+
+This method is only available if the agent advertises the `sessionCapabilities.delete` capability.
+
+#### <span class="font-mono">DeleteSessionRequest</span>
+
+Request parameters for deleting an existing session from `session/list`.
+
+Only available if the Agent supports the `sessionCapabilities.delete` capability.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+
+</ResponseField>
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The ID of the session to delete.
+</ResponseField>
+
+#### <span class="font-mono">DeleteSessionResponse</span>
+
+Response from deleting a session.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+
+</ResponseField>
+
 <a id="session-list"></a>
 ### <span class="font-mono">session/list</span>
 
@@ -2866,6 +2912,13 @@ additional-root list associated with a listed session.
 <ResponseField name="close" type={<><span><a href="#sessionclosecapabilities">SessionCloseCapabilities</a></span><span> | null</span></>} >
   Whether the agent supports `session/close`.
 </ResponseField>
+<ResponseField name="delete" type={<><span><a href="#sessiondeletecapabilities">SessionDeleteCapabilities</a></span><span> | null</span></>} >
+  Whether the agent supports `session/delete`.
+
+Optional. Omitted or `null` both mean the agent does not advertise support.
+Supplying `\{\}` means the agent supports deleting sessions from `session/list`.
+
+</ResponseField>
 <ResponseField name="list" type={<><span><a href="#sessionlistcapabilities">SessionListCapabilities</a></span><span> | null</span></>} >
   Whether the agent supports `session/list`.
 </ResponseField>
@@ -3056,6 +3109,25 @@ Possible values for a session configuration option.
 Unique identifier for a session configuration option value.
 
 **Type:** `string`
+
+## <span class="font-mono">SessionDeleteCapabilities</span>
+
+Capabilities for the `session/delete` method.
+
+Supplying `\{\}` means the agent supports deleting sessions from `session/list`.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+
+</ResponseField>
 
 ## <span class="font-mono">SessionId</span>
 

@@ -72,6 +72,7 @@
                   "protocol/v1/authentication",
                   "protocol/v1/session-setup",
                   "protocol/v1/session-list",
+                  "protocol/v1/session-delete",
                   "protocol/v1/prompt-turn",
                   "protocol/v1/content",
                   "protocol/v1/tool-calls",
@@ -121,6 +122,7 @@
                   "protocol/v2/authentication",
                   "protocol/v2/session-setup",
                   "protocol/v2/session-list",
+                  "protocol/v2/session-delete",
                   "protocol/v2/prompt-turn",
                   "protocol/v2/content",
                   "protocol/v2/tool-calls",
@@ -209,7 +211,6 @@
             "group": "Preview",
             "pages": [
               "rfds/rust-sdk-v1",
-              "rfds/session-delete",
               "rfds/session-usage",
               "rfds/message-id"
             ]
@@ -220,6 +221,7 @@
               "rfds/introduce-rfd-process",
               "rfds/session-config-options",
               "rfds/session-list",
+              "rfds/session-delete",
               "rfds/session-info-update",
               "rfds/meta-propagation",
               "rfds/acp-agent-registry",
