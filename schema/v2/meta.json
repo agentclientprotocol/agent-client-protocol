@@ -1,0 +1,21 @@
+{
+  "agentMethods": {
+    "authenticate": "authenticate",
+    "initialize": "initialize",
+    "logout": "logout",
+    "session_cancel": "session/cancel",
+    "session_close": "session/close",
+    "session_delete": "session/delete",
+    "session_list": "session/list",
+    "session_load": "session/load",
+    "session_new": "session/new",
+    "session_prompt": "session/prompt",
+    "session_resume": "session/resume",
+    "session_set_config_option": "session/set_config_option"
+  },
+  "clientMethods": {
+    "session_request_permission": "session/request_permission",
+    "session_update": "session/update"
+  },
+  "version": 2
+}

@@ -27,9 +27,6 @@
 //! - Aggregated routing enums: [`AgentRequest`], [`AgentResponse`],
 //!   [`AgentNotification`], and the matching client-side trio used by SDK
 //!   crates to dispatch incoming JSON-RPC messages.
-//! - The `generate` binary that emits the published `schema.json`,
-//!   `meta.json`, and the accompanying mdx documentation consumed by the
-//!   protocol website and registry.
 //!
 //! ## Versioning
 //!

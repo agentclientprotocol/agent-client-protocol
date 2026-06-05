@@ -14,6 +14,11 @@ categories = ["development-tools", "api-bindings"]
 include = ["/src/**/*.rs", "/README.md", "/LICENSE", "/Cargo.toml"]
 rust-version = "1.88.0"
 
+[workspace]
+default-members = [".", "schema/v1", "schema/v2"]
+members = ["schema/v1", "schema/v2"]
+resolver = "3"
+
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]

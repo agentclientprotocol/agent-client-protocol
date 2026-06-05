@@ -1,0 +1,9 @@
+[package]
+name = "agent-client-protocol-json-schema-v1"
+version = "1.13.6"
+edition = "2024"
+license = "Apache-2.0"
+description = "Version marker for ACP v1 JSON Schema GitHub releases"
+repository = "https://github.com/agentclientprotocol/agent-client-protocol"
+publish = false
+include = ["/Cargo.toml", "/CHANGELOG.md", "/src/lib.rs", "/*.json"]

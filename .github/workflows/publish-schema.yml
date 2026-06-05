@@ -13,15 +13,23 @@ jobs:
   upload-schema:
     permissions:
       contents: write # to upload release assets
-    if: github.repository_owner == 'agentclientprotocol' && startsWith(github.event.release.name, 'v')
+    if: github.repository_owner == 'agentclientprotocol' && (startsWith(github.event.release.tag_name, 'schema-v1') || startsWith(github.event.release.tag_name, 'schema-v2'))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
-      - name: Upload schema files to release
+      - name: Upload v1 schema files to release
+        if: startsWith(github.event.release.tag_name, 'schema-v1')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload "${{ github.event.release.name }}" schema/schema.json schema/meta.json schema/schema.unstable.json schema/meta.unstable.json
+          gh release upload "${{ github.event.release.tag_name }}" schema/v1/*.json
+
+      - name: Upload v2 schema files to release
+        if: startsWith(github.event.release.tag_name, 'schema-v2')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ github.event.release.tag_name }}" schema/v2/*.json

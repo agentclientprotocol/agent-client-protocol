@@ -14,7 +14,7 @@ The published crate and schema package versions describe the Rust crate and JSON
 
 **The current stable ACP protocol version is `1`.**
 
-ACP wire compatibility is determined separately by the protocol version exchanged during `initialize` via `protocolVersion`. The `version` field in `schema/meta*.json` also describes the ACP protocol version that the corresponding schema represents.
+ACP wire compatibility is determined separately by the protocol version exchanged during `initialize` via `protocolVersion`. The `version` field in the versioned `schema/*/meta*.json` files also describes the ACP protocol version that the corresponding schema represents.
 
 This means two versions of the JSON Schema artifacts can describe the same wire-compatible ACP protocol version while having different schema structure for SDK generators. For example, a release might change how definitions are organized, named, or emitted in the JSON Schema in a way that affects downstream code generation without changing the JSON messages exchanged by ACP clients and agents.
 
@@ -22,7 +22,7 @@ Consumers should not infer wire compatibility from the crate or schema package v
 
 ## Integrations
 
-- [Schema](./schema/schema.json)
+- [Schema](./schema/v1/schema.json)
 - [Agents](https://agentclientprotocol.com/overview/agents)
 - [Clients](https://agentclientprotocol.com/overview/clients)
 - Official Libraries
