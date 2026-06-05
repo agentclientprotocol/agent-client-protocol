@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.13.6](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.13.5...v0.13.6) - 2026-06-05
+
+### Added
+
+- *(schema)* Stabilize optional message IDs ([#1372](https://github.com/agentclientprotocol/agent-client-protocol/pull/1372))
+- *(schema)* Stabilize session usage updates ([#1371](https://github.com/agentclientprotocol/agent-client-protocol/pull/1371))
+- *(schema)* Stabilize session/delete ([#1370](https://github.com/agentclientprotocol/agent-client-protocol/pull/1370))
+- *(unstable-v2)* Remove MCP SSE transport and make stdio opt-in ([#1368](https://github.com/agentclientprotocol/agent-client-protocol/pull/1368))
+- *(unstable-v2)* Clean up capability objects ([#1367](https://github.com/agentclientprotocol/agent-client-protocol/pull/1367))
+- *(unstable-v2)* Require message IDs in v2 chunks ([#1352](https://github.com/agentclientprotocol/agent-client-protocol/pull/1352))
+- *(unstable-v2)* Adopt plan_update as v2 plan shape ([#1347](https://github.com/agentclientprotocol/agent-client-protocol/pull/1347))
+- *(unstable-v2)* Remove v2 client filesystem and terminal surface ([#1346](https://github.com/agentclientprotocol/agent-client-protocol/pull/1346))
+
+### Fixed
+
+- *(unstable)* Fix plan capability key ([#1369](https://github.com/agentclientprotocol/agent-client-protocol/pull/1369))
+
+### Other
+
+- *(rfd)* Add JSON-RPC batch guidance for v2 ([#1348](https://github.com/agentclientprotocol/agent-client-protocol/pull/1348))
+- *(rfd)* Split end-turn token usage from session usage ([#1345](https://github.com/agentclientprotocol/agent-client-protocol/pull/1345))
+- *(rfd)* Clarify agent-owned message IDs in RFDs ([#1344](https://github.com/agentclientprotocol/agent-client-protocol/pull/1344))
+- *(deps)* bump the minor group with 5 updates ([#1341](https://github.com/agentclientprotocol/agent-client-protocol/pull/1341))
+- Render feature docs in docs.rs ([#1331](https://github.com/agentclientprotocol/agent-client-protocol/pull/1331))
+
 ## [0.13.5](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.13.4...v0.13.5) - 2026-06-01
 
 ### Added
