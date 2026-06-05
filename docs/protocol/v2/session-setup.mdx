@@ -58,6 +58,7 @@ Clients create a new session by calling the `session/new` method with:
     "cwd": "/home/user/project",
     "mcpServers": [
       {
+        "type": "stdio",
         "name": "workspace-tools",
         "command": "/path/to/mcp-server",
         "args": ["--stdio"],
@@ -123,6 +124,7 @@ To load an existing session, Clients **MUST** call the `session/load` method wit
     "cwd": "/home/user/project",
     "mcpServers": [
       {
+        "type": "stdio",
         "name": "workspace-tools",
         "command": "/path/to/mcp-server",
         "args": ["--mode", "workspace"],
@@ -228,6 +230,7 @@ To resume an existing session without replaying prior messages, Clients **MUST**
     "cwd": "/home/user/project",
     "mcpServers": [
       {
+        "type": "stdio",
         "name": "workspace-tools",
         "command": "/path/to/mcp-server",
         "args": ["--mode", "workspace"],
@@ -373,9 +376,15 @@ MCP servers can be connected to using different transports. Agents advertise sup
 
 ### Transport Types
 
+Every MCP server object has a `type` discriminator that identifies its transport. Custom implementation-specific transport types **MUST** begin with `_`; unknown non-underscore transport types are reserved for future ACP variants.
+
 #### Stdio Transport
 
 When the Agent supports `mcp.stdio`, Clients can specify MCP servers configurations using the stdio transport.
+
+<ParamField path="type" type="string" required>
+  Must be `"stdio"` to indicate stdio transport
+</ParamField>
 
 <ParamField path="name" type="string" required>
   A human-readable identifier for the server
@@ -406,6 +415,7 @@ Example stdio transport configuration:
 
 ```json
 {
+  "type": "stdio",
   "name": "workspace-tools",
   "command": "/path/to/mcp-server",
   "args": ["--stdio"],

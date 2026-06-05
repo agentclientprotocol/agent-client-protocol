@@ -3821,6 +3821,7 @@ impl IntoV1 for super::McpServer {
             #[cfg(feature = "unstable_mcp_over_acp")]
             Self::Acp(value) => crate::v1::McpServer::Acp(value.into_v1()?),
             Self::Stdio(value) => crate::v1::McpServer::Stdio(value.into_v1()?),
+            Self::Other(value) => return Err(unknown_v2_enum_variant("McpServer", &value.type_)),
         })
     }
 }
@@ -8841,6 +8842,14 @@ mod tests {
     }
 
     #[test]
+    fn v2_unknown_mcp_transport_does_not_convert_to_v1() {
+        assert_v2_to_v1_error(
+            v2::McpServer::Other(v2::OtherMcpServer::new("websocket", Default::default())),
+            "v2 McpServer variant `websocket` cannot be represented in v1",
+        );
+    }
+
+    #[test]
     fn round_trips_new_session_request_with_mcp_variants() {
         let request = v1::NewSessionRequest::new("/workspace").mcp_servers(vec![
             v1::McpServer::Stdio(v1::McpServerStdio::new("local", "/usr/bin/mcp")),
@@ -8848,7 +8857,29 @@ mod tests {
         ]);
 
         assert_v1_round_trip::<v1::NewSessionRequest, v2::NewSessionRequest>(request.clone());
-        assert_json_eq_after_v1_to_v2::<v1::NewSessionRequest, v2::NewSessionRequest>(request);
+
+        let v2_request: v2::NewSessionRequest = v1_to_v2(request).expect("v1 -> v2 conversion");
+        assert_eq!(
+            serde_json::to_value(&v2_request).expect("v2 serialize"),
+            serde_json::json!({
+                "cwd": "/workspace",
+                "mcpServers": [
+                    {
+                        "type": "stdio",
+                        "name": "local",
+                        "command": "/usr/bin/mcp",
+                        "args": [],
+                        "env": []
+                    },
+                    {
+                        "type": "http",
+                        "name": "remote",
+                        "url": "https://example.com",
+                        "headers": []
+                    }
+                ]
+            })
+        );
     }
 
     #[test]

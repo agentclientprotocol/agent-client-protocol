@@ -2642,6 +2642,7 @@ impl SetSessionConfigOptionResponse {
 /// See protocol docs: [MCP Servers](https://agentclientprotocol.com/protocol/session-setup#mcp-servers)
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(tag = "type", rename_all = "snake_case")]
+#[schemars(extend("discriminator" = {"propertyName": "type"}))]
 #[non_exhaustive]
 pub enum McpServer {
     /// HTTP transport configuration
@@ -2661,8 +2662,93 @@ pub enum McpServer {
     /// Stdio transport configuration
     ///
     /// Only available when the Agent capabilities include `mcp.stdio`.
-    #[serde(untagged)]
     Stdio(McpServerStdio),
+    /// Custom or future MCP server transport configuration.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    ///
+    /// Receivers that do not understand this transport should preserve the raw
+    /// payload when storing, replaying, proxying, or forwarding session setup
+    /// data, and otherwise ignore it or reject the server configuration.
+    #[serde(untagged)]
+    Other(OtherMcpServer),
+}
+
+/// Custom or future MCP server transport payload.
+#[derive(Debug, Clone, Serialize, JsonSchema, PartialEq, Eq)]
+#[schemars(inline)]
+#[schemars(transform = other_mcp_server_schema)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct OtherMcpServer {
+    /// Custom or future MCP server transport type.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(rename = "type")]
+    pub type_: String,
+    /// Additional fields from the unknown MCP server transport payload.
+    #[serde(flatten)]
+    pub fields: BTreeMap<String, serde_json::Value>,
+}
+
+impl OtherMcpServer {
+    #[must_use]
+    pub fn new(type_: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
+        fields.remove("type");
+        Self {
+            type_: type_.into(),
+            fields,
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for OtherMcpServer {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let type_ = fields
+            .remove("type")
+            .ok_or_else(|| serde::de::Error::missing_field("type"))?;
+        let serde_json::Value::String(type_) = type_ else {
+            return Err(serde::de::Error::custom("`type` must be a string"));
+        };
+
+        if is_known_mcp_server_type(&type_) {
+            return Err(serde::de::Error::custom(format!(
+                "known MCP server transport `{type_}` did not match its schema"
+            )));
+        }
+
+        Ok(Self { type_, fields })
+    }
+}
+
+fn is_known_mcp_server_type(type_: &str) -> bool {
+    match type_ {
+        "http" | "stdio" => true,
+        #[cfg(feature = "unstable_mcp_over_acp")]
+        "acp" => true,
+        _ => false,
+    }
+}
+
+fn other_mcp_server_schema(schema: &mut Schema) {
+    super::schema_util::reject_known_string_discriminators(
+        schema,
+        "type",
+        &[
+            "http",
+            "stdio",
+            #[cfg(feature = "unstable_mcp_over_acp")]
+            "acp",
+        ],
+    );
 }
 
 /// HTTP transport configuration for MCP.
@@ -5169,6 +5255,7 @@ mod test_serialization {
         assert_eq!(
             json,
             json!({
+                "type": "stdio",
                 "name": "test-server",
                 "command": "/usr/bin/server",
                 "args": ["--port", "3000"],
@@ -5199,6 +5286,51 @@ mod test_serialization {
             }
             _ => panic!("Expected Stdio variant"),
         }
+    }
+
+    #[test]
+    fn test_mcp_server_unknown_transport_serialization() {
+        let json = json!({
+            "type": "websocket",
+            "name": "future-server",
+            "url": "wss://example.com/mcp",
+            "protocolVersion": "2026-01-01"
+        });
+
+        let deserialized: McpServer = serde_json::from_value(json.clone()).unwrap();
+        let McpServer::Other(OtherMcpServer { type_, fields }) = &deserialized else {
+            panic!("Expected Other variant");
+        };
+
+        assert_eq!(type_, "websocket");
+        assert_eq!(fields["name"], "future-server");
+        assert_eq!(fields["url"], "wss://example.com/mcp");
+        assert_eq!(fields["protocolVersion"], "2026-01-01");
+        assert_eq!(serde_json::to_value(&deserialized).unwrap(), json);
+    }
+
+    #[test]
+    fn test_mcp_server_stdio_requires_type() {
+        let result = serde_json::from_value::<McpServer>(json!({
+            "name": "test-server",
+            "command": "/usr/bin/server",
+            "args": [],
+            "env": []
+        }));
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_mcp_server_unknown_does_not_hide_malformed_known_transport() {
+        let result = serde_json::from_value::<McpServer>(json!({
+            "type": "stdio",
+            "name": "test-server",
+            "args": [],
+            "env": []
+        }));
+
+        assert!(result.is_err());
     }
 
     #[test]

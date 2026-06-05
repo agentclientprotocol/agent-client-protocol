@@ -4226,7 +4226,7 @@ on the same ACP connection.
 </Expandable>
 </ResponseField>
 
-<ResponseField name="stdio">
+<ResponseField name="stdio" type="object">
 Stdio transport configuration
 
 Only available when the Agent capabilities include `mcp.stdio`.
@@ -4252,6 +4252,34 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
   Human-readable name identifying this MCP server.
+</ResponseField>
+<ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"stdio"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="other" type="object">
+Custom or future MCP server transport configuration.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+Receivers that do not understand this transport should preserve the raw
+payload when storing, replaying, proxying, or forwarding session setup
+data, and otherwise ignore it or reject the server configuration.
+
+<Expandable title="Properties">
+
+<ResponseField name="type" type={"string"} required>
+  Custom or future MCP server transport type.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
 </ResponseField>
 
 </Expandable>

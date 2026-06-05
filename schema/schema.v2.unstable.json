@@ -3430,10 +3430,67 @@
             }
           ],
           "description": "Stdio transport configuration\n\nOnly available when the Agent capabilities include `mcp.stdio`.",
-          "title": "stdio"
+          "properties": {
+            "type": {
+              "const": "stdio",
+              "type": "string"
+            }
+          },
+          "required": ["type"],
+          "type": "object"
+        },
+        {
+          "additionalProperties": true,
+          "description": "Custom or future MCP server transport configuration.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nReceivers that do not understand this transport should preserve the raw\npayload when storing, replaying, proxying, or forwarding session setup\ndata, and otherwise ignore it or reject the server configuration.",
+          "not": {
+            "anyOf": [
+              {
+                "properties": {
+                  "type": {
+                    "const": "http",
+                    "type": "string"
+                  }
+                },
+                "required": ["type"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "type": {
+                    "const": "stdio",
+                    "type": "string"
+                  }
+                },
+                "required": ["type"],
+                "type": "object"
+              },
+              {
+                "properties": {
+                  "type": {
+                    "const": "acp",
+                    "type": "string"
+                  }
+                },
+                "required": ["type"],
+                "type": "object"
+              }
+            ]
+          },
+          "properties": {
+            "type": {
+              "description": "Custom or future MCP server transport type.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+              "type": "string"
+            }
+          },
+          "required": ["type"],
+          "title": "other",
+          "type": "object"
         }
       ],
-      "description": "Configuration for connecting to an MCP (Model Context Protocol) server.\n\nMCP servers provide tools and context that the agent can use when\nprocessing prompts.\n\nSee protocol docs: [MCP Servers](https://agentclientprotocol.com/protocol/session-setup#mcp-servers)"
+      "description": "Configuration for connecting to an MCP (Model Context Protocol) server.\n\nMCP servers provide tools and context that the agent can use when\nprocessing prompts.\n\nSee protocol docs: [MCP Servers](https://agentclientprotocol.com/protocol/session-setup#mcp-servers)",
+      "discriminator": {
+        "propertyName": "type"
+      }
     },
     "McpServerAcp": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nACP transport configuration for MCP.\n\nThe MCP server is provided by an ACP component and communicates over the ACP channel\nusing `mcp/connect`, `mcp/message`, and `mcp/disconnect`.",
