@@ -36,14 +36,14 @@ All variants carry a required `id: string` that identifies the plan, and an opti
 
 Additionally, introduce a `plan_removed` session update type that carries only a plan `id` to signal dismissal. This keeps `plan_update` focused purely on content updates and makes removal a distinct, self-describing event.
 
-The existing `plan` session update type is **not modified** and continues to work as before. Agents that want multi-plan support, new plan formats, or removal capabilities use `plan_update` and `plan_removed` only when the client advertises `planCapabilities`; otherwise they fall back to the existing `plan` session update type.
+The existing `plan` session update type is **not modified** and continues to work as before. Agents that want multi-plan support, new plan formats, or removal capabilities use `plan_update` and `plan_removed` only when the client advertises `plan`; otherwise they fall back to the existing `plan` session update type.
 
 ### Client Capabilities
 
 Add to `ClientCapabilities`:
 
 ```
-planCapabilities?: PlanCapabilities
+plan?: PlanCapabilities
 ```
 
 This field is optional. When present as `{}`, it signals the client supports the `plan_update` and `plan_removed` session update types. When omitted, the client does not advertise support, and the agent must fall back to the existing `plan` session update type.
@@ -64,7 +64,7 @@ Agent sends a `plan_removed` session update with the plan's `id` to dismiss it. 
 
 > How will things will play out once this feature exists?
 
-Agents will be able to present plans in the format most natural to them — structured checklists for step-by-step execution, markdown for free-form design docs, or file URIs for large plans generated externally. Clients that support `plan_update` can show multiple concurrent plans (e.g., a high-level strategy and a detailed implementation checklist), and dismiss plans that are no longer relevant. Clients that don't advertise `planCapabilities` continue to receive the existing `plan` updates with no changes.
+Agents will be able to present plans in the format most natural to them — structured checklists for step-by-step execution, markdown for free-form design docs, or file URIs for large plans generated externally. Clients that support `plan_update` can show multiple concurrent plans (e.g., a high-level strategy and a detailed implementation checklist), and dismiss plans that are no longer relevant. Clients that don't advertise `plan` continue to receive the existing `plan` updates with no changes.
 
 ## Implementation details and plan
 
@@ -137,7 +137,7 @@ Removal:
 
 ### Why a new session update type instead of extending the existing `plan`?
 
-The existing `plan` variant flattens `Plan`'s `entries` field directly into the `SessionUpdate` discriminated union object. Adding a nested `plan` field, optional `id`, and polymorphic types to the same variant would require breaking the existing format or complex dual-deserialization logic. A new `plan_update` variant avoids this, but agents must only send it to clients that advertised `planCapabilities`; clients that do not advertise support can continue to receive the existing `plan` update.
+The existing `plan` variant flattens `Plan`'s `entries` field directly into the `SessionUpdate` discriminated union object. Adding a nested `plan` field, optional `id`, and polymorphic types to the same variant would require breaking the existing format or complex dual-deserialization logic. A new `plan_update` variant avoids this, but agents must only send it to clients that advertised `plan`; clients that do not advertise support can continue to receive the existing `plan` update.
 
 ### Why a separate `plan_removed` session update type instead of a removal variant inside `plan_update`?
 

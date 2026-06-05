@@ -1665,7 +1665,7 @@ impl IntoV1 for super::ClientCapabilities {
             fs: crate::v1::FileSystemCapabilities::default(),
             terminal: false,
             #[cfg(feature = "unstable_plan_operations")]
-            plan_capabilities: None,
+            plan: None,
             #[cfg(feature = "unstable_auth_methods")]
             auth: auth.into_v1()?,
             #[cfg(feature = "unstable_elicitation")]
@@ -1687,7 +1687,7 @@ impl IntoV2 for crate::v1::ClientCapabilities {
             fs: _,
             terminal: _,
             #[cfg(feature = "unstable_plan_operations")]
-                plan_capabilities: _,
+                plan: _,
             #[cfg(feature = "unstable_auth_methods")]
             auth,
             #[cfg(feature = "unstable_elicitation")]

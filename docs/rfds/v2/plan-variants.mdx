@@ -25,7 +25,7 @@ For now, v2 should stabilize only the item-based plan content variant:
 }
 ```
 
-The markdown, file, and removal pieces from [Plan Operations Support](/rfds/plan-operations) remain behind the unstable plan-operations feature while that RFD continues. V2 does not need a separate `planCapabilities` runtime handshake for those unstable operations.
+The markdown, file, and removal pieces from [Plan Operations Support](/rfds/plan-operations) remain behind the unstable plan-operations feature while that RFD continues. V2 does not need a separate `plan` runtime handshake for those unstable operations.
 
 ## Status quo
 
@@ -55,10 +55,10 @@ ACP v2 should:
 - Stabilize only the `plan.type: "items"` content variant for now.
 - Keep unknown plan content variants parseable and preservable using the [v2 enum variant extension](/rfds/v2/enum-variant-extension) rules.
 - Require every plan content variant, including unknown future/custom variants, to carry a plan `id`.
-- Remove `ClientCapabilities.planCapabilities` from v2.
+- Remove `ClientCapabilities.plan` from v2.
 - Keep `markdown`, `file`, and `plan_removed` behind `unstable_plan_operations` until the Plan Operations RFD settles.
 
-The stable v2 `plan_update` shape does not require a capability. The unstable plan operations remain gated by the draft unstable protocol surface, not by a v2 `planCapabilities` field.
+The stable v2 `plan_update` shape does not require a capability. The unstable plan operations remain gated by the draft unstable protocol surface, not by a v2 `plan` field.
 
 ### Compatibility
 
@@ -93,7 +93,7 @@ Clients that only understand item-based plans can still preserve or display unkn
 
 ### Why not wait for the Plan Operations RFD to complete?
 
-The item-based tagged shape is enough to make v2 extensible and remove the old flattened plan variant. The rest of the Plan Operations RFD can continue behind the unstable feature flag. V2 does not need `planCapabilities` because those operations are either part of the draft unstable protocol surface or absent from the stable schema.
+The item-based tagged shape is enough to make v2 extensible and remove the old flattened plan variant. The rest of the Plan Operations RFD can continue behind the unstable feature flag. V2 does not need `plan` because those operations are either part of the draft unstable protocol surface or absent from the stable schema.
 
 ### Why use `main` for v1 conversion?
 

@@ -1579,7 +1579,7 @@ pub struct ClientCapabilities {
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
-    pub plan_capabilities: Option<PlanCapabilities>,
+    pub plan: Option<PlanCapabilities>,
     /// **UNSTABLE**
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -1662,11 +1662,8 @@ impl ClientCapabilities {
     /// Supplying `{}` means the client can receive both update types.
     #[cfg(feature = "unstable_plan_operations")]
     #[must_use]
-    pub fn plan_capabilities(
-        mut self,
-        plan_capabilities: impl IntoOption<PlanCapabilities>,
-    ) -> Self {
-        self.plan_capabilities = plan_capabilities.into_option();
+    pub fn plan(mut self, plan: impl IntoOption<PlanCapabilities>) -> Self {
+        self.plan = plan.into_option();
         self
     }
 
@@ -2293,14 +2290,14 @@ mod tests {
             })
         );
 
-        let capabilities = ClientCapabilities::new().plan_capabilities(PlanCapabilities::new());
+        let capabilities = ClientCapabilities::new().plan(PlanCapabilities::new());
         let json = serde_json::to_value(&capabilities).unwrap();
-        assert_eq!(json["planCapabilities"], json!({}));
+        assert_eq!(json["plan"], json!({}));
 
         assert_eq!(
-            serde_json::from_value::<ClientCapabilities>(json!({ "planCapabilities": null }))
+            serde_json::from_value::<ClientCapabilities>(json!({ "plan": null }))
                 .unwrap()
-                .plan_capabilities,
+                .plan,
             None
         );
     }
