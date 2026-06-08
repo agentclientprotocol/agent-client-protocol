@@ -38,7 +38,7 @@ Agents advertise authentication options in the `authMethods` field of the `initi
 
 Agents that support `logout` also advertise `capabilities.auth.logout`:
 
-```json highlight={7-11,12-18}
+```json highlight={7-11,12-19}
 {
   "jsonrpc": "2.0",
   "id": 0,
@@ -53,6 +53,7 @@ Agents that support `logout` also advertise `capabilities.auth.logout`:
       {
         "id": "agent-login",
         "name": "Agent login",
+        "type": "agent",
         "description": "Sign in using the agent's login flow"
       }
     ]
@@ -64,12 +65,13 @@ If `capabilities.auth.logout` is omitted or `null`, the Agent does not support `
 
 ### Authentication method types
 
-The default authentication method type is `agent`, where the Agent handles authentication itself. When no `type` is present, the method is treated as `agent`:
+The standard authentication method type is `agent`, where the Agent handles authentication itself. Every authentication method must include a `type` discriminator:
 
 ```json
 {
   "id": "agent-login",
   "name": "Agent login",
+  "type": "agent",
   "description": "Sign in using the agent's login flow"
 }
 ```

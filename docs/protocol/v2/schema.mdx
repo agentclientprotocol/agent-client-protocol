@@ -979,9 +979,39 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 Describes an available authentication method.
 
 The `type` field acts as the discriminator in the serialized JSON form.
-When no `type` is present, the method is treated as `agent`.
 
 **Type:** Union
+
+<ResponseField name="agent" type="object">
+Agent handles authentication itself.
+
+The `type` discriminator value is `agent`.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+<ResponseField name="description" type={"string | null"} >
+  Optional description providing more details about this authentication method.
+</ResponseField>
+<ResponseField name="id" type={"string"} required>
+  Unique identifier for this authentication method.
+</ResponseField>
+<ResponseField name="name" type={"string"} required>
+  Human-readable name of the authentication method.
+</ResponseField>
+<ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"agent"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
 
 <ResponseField name="other" type="object">
 Custom or future authentication method.
@@ -1025,39 +1055,11 @@ future ACP variants.
 </Expandable>
 </ResponseField>
 
-<ResponseField name="agent">
-Agent handles authentication itself.
-
-This is the default when no `type` is specified.
-
-<Expandable title="Properties">
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
-
-</ResponseField>
-<ResponseField name="description" type={"string | null"} >
-  Optional description providing more details about this authentication method.
-</ResponseField>
-<ResponseField name="id" type={"string"} required>
-  Unique identifier for this authentication method.
-</ResponseField>
-<ResponseField name="name" type={"string"} required>
-  Human-readable name of the authentication method.
-</ResponseField>
-
-</Expandable>
-</ResponseField>
-
 ## <span class="font-mono">AuthMethodAgent</span>
 
 Agent handles authentication itself.
 
-This is the default authentication method type.
+The `type` discriminator value is `agent`.
 
 **Type:** Object
 

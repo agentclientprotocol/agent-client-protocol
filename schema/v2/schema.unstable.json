@@ -590,6 +590,22 @@
           "type": "object"
         },
         {
+          "allOf": [
+            {
+              "$ref": "#/$defs/AuthMethodAgent"
+            }
+          ],
+          "description": "Agent handles authentication itself.\n\nThe `type` discriminator value is `agent`.",
+          "properties": {
+            "type": {
+              "const": "agent",
+              "type": "string"
+            }
+          },
+          "required": ["type"],
+          "type": "object"
+        },
+        {
           "additionalProperties": true,
           "description": "Custom or future authentication method.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nClients that do not understand this method type should preserve the raw\npayload when storing, replaying, proxying, or forwarding initialization\ndata, and otherwise ignore the method or display it generically.",
           "not": {
@@ -652,21 +668,12 @@
           "required": ["type", "id", "name"],
           "title": "other",
           "type": "object"
-        },
-        {
-          "allOf": [
-            {
-              "$ref": "#/$defs/AuthMethodAgent"
-            }
-          ],
-          "description": "Agent handles authentication itself.\n\nThis is the default when no `type` is specified.",
-          "title": "agent"
         }
       ],
-      "description": "Describes an available authentication method.\n\nThe `type` field acts as the discriminator in the serialized JSON form.\nWhen no `type` is present, the method is treated as `agent`."
+      "description": "Describes an available authentication method.\n\nThe `type` field acts as the discriminator in the serialized JSON form."
     },
     "AuthMethodAgent": {
-      "description": "Agent handles authentication itself.\n\nThis is the default authentication method type.",
+      "description": "Agent handles authentication itself.\n\nThe `type` discriminator value is `agent`.",
       "not": {
         "properties": {
           "type": {

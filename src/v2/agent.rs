@@ -506,7 +506,6 @@ impl AuthMethodId {
 /// Describes an available authentication method.
 ///
 /// The `type` field acts as the discriminator in the serialized JSON form.
-/// When no `type` is present, the method is treated as `agent`.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(tag = "type", rename_all = "snake_case")]
 #[non_exhaustive]
@@ -525,6 +524,10 @@ pub enum AuthMethod {
     /// Client runs an interactive terminal for the user to authenticate via a TUI.
     #[cfg(feature = "unstable_auth_methods")]
     Terminal(AuthMethodTerminal),
+    /// Agent handles authentication itself.
+    ///
+    /// The `type` discriminator value is `agent`.
+    Agent(AuthMethodAgent),
     /// Custom or future authentication method.
     ///
     /// Values beginning with `_` are reserved for implementation-specific
@@ -536,11 +539,6 @@ pub enum AuthMethod {
     /// data, and otherwise ignore the method or display it generically.
     #[serde(untagged)]
     Other(OtherAuthMethod),
-    /// Agent handles authentication itself.
-    ///
-    /// This is the default when no `type` is specified.
-    #[serde(untagged)]
-    Agent(AuthMethodAgent),
 }
 
 impl AuthMethod {
@@ -739,7 +737,7 @@ fn other_auth_method_schema(schema: &mut Schema) {
 
 /// Agent handles authentication itself.
 ///
-/// This is the default authentication method type.
+/// The `type` discriminator value is `agent`.
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, JsonSchema, PartialEq, Eq)]
 #[schemars(transform = auth_method_agent_schema)]
@@ -814,12 +812,12 @@ impl<'de> Deserialize<'de> for AuthMethodAgent {
             None | Some(Some("agent")) => {}
             Some(None) => {
                 return Err(serde::de::Error::custom(
-                    "default authentication method `type` must be omitted or `agent`",
+                    "agent authentication method `type` must be omitted or `agent`",
                 ));
             }
             Some(Some(_)) => {
                 return Err(serde::de::Error::custom(
-                    "default authentication method cannot include a non-agent `type`",
+                    "agent authentication method cannot include a non-agent `type`",
                 ));
             }
         }
@@ -5475,13 +5473,12 @@ mod test_serialization {
             json,
             json!({
                 "id": "default-auth",
-                "name": "Default Auth"
+                "name": "Default Auth",
+                "type": "agent"
             })
         );
         // description should be omitted when None
         assert!(!json.as_object().unwrap().contains_key("description"));
-        // Agent variant should not emit a `type` field (backward compat)
-        assert!(!json.as_object().unwrap().contains_key("type"));
 
         let deserialized: AuthMethod = serde_json::from_value(json).unwrap();
         match deserialized {
@@ -5494,8 +5491,7 @@ mod test_serialization {
     }
 
     #[test]
-    fn test_auth_method_explicit_agent_deserialization() {
-        // An explicit `"type": "agent"` should also deserialize to Agent
+    fn test_auth_method_agent_deserialization() {
         let json = json!({
             "id": "agent-auth",
             "name": "Agent Auth",
@@ -5507,12 +5503,34 @@ mod test_serialization {
     }
 
     #[test]
+    fn test_auth_method_agent_requires_type() {
+        assert!(
+            serde_json::from_value::<AuthMethod>(json!({
+                "id": "agent-auth",
+                "name": "Agent Auth"
+            }))
+            .is_err()
+        );
+    }
+
+    #[test]
     fn test_auth_method_agent_rejects_null_type() {
         assert!(
             serde_json::from_value::<AuthMethod>(json!({
                 "id": "agent-auth",
                 "name": "Agent Auth",
                 "type": null
+            }))
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn test_auth_method_unknown_does_not_hide_malformed_agent() {
+        assert!(
+            serde_json::from_value::<AuthMethod>(json!({
+                "id": "agent-auth",
+                "type": "agent"
             }))
             .is_err()
         );
