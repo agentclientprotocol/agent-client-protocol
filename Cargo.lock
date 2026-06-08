@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "agent-client-protocol-json-schema-v1"
-version = "1.13.6"
+version = "1.13.7"
 
 [[package]]
 name = "agent-client-protocol-json-schema-v2"
