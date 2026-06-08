@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.13.7](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.13.6...v0.13.7) - 2026-06-08
+
+### Added
+
+- *(unstable-v2)* Nest session-scoped capabilities under session ([#1373](https://github.com/agentclientprotocol/agent-client-protocol/pull/1373))
+
+### Other
+
+- Fix versioning for new schema git releases ([#1382](https://github.com/agentclientprotocol/agent-client-protocol/pull/1382))
+- add acp.cr Crystal community library ([#1381](https://github.com/agentclientprotocol/agent-client-protocol/pull/1381))
+- *(rfd)* add v1/v2 durability and reliability expectations to remote transport RFD ([#1376](https://github.com/agentclientprotocol/agent-client-protocol/pull/1376))
+- Setup separate publishes for JSON Schemas ([#1377](https://github.com/agentclientprotocol/agent-client-protocol/pull/1377))
+
 ## [0.13.6](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.13.5...v0.13.6) - 2026-06-05
 
 ### Added
