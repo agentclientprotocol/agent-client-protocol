@@ -389,17 +389,6 @@
     },
     "AuthMethodAgent": {
       "description": "Agent handles authentication itself.\n\nThe `type` discriminator value is `agent`.",
-      "not": {
-        "properties": {
-          "type": {
-            "not": {
-              "const": "agent"
-            }
-          }
-        },
-        "required": ["type"],
-        "type": "object"
-      },
       "properties": {
         "_meta": {
           "additionalProperties": true,

@@ -39,24 +39,3 @@ pub(crate) fn reject_property(schema: &mut Schema, property_name: &str) {
         }),
     );
 }
-
-pub(crate) fn reject_string_property_except(
-    schema: &mut Schema,
-    property_name: &str,
-    allowed_value: &str,
-) {
-    schema.insert(
-        "not".into(),
-        json!({
-            "properties": {
-                property_name: {
-                    "not": {
-                        "const": allowed_value
-                    }
-                }
-            },
-            "required": [property_name],
-            "type": "object"
-        }),
-    );
-}

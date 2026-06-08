@@ -16,7 +16,7 @@ use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 use super::{
     ClientCapabilities, ContentBlock, ExtNotification, ExtRequest, ExtResponse, Meta, SessionId,
 };
-use crate::{IntoOption, MaybeUndefined, ProtocolVersion, SkipListener};
+use crate::{IntoOption, ProtocolVersion, SkipListener};
 
 #[cfg(feature = "unstable_mcp_over_acp")]
 use super::mcp::{
@@ -739,8 +739,7 @@ fn other_auth_method_schema(schema: &mut Schema) {
 ///
 /// The `type` discriminator value is `agent`.
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, JsonSchema, PartialEq, Eq)]
-#[schemars(transform = auth_method_agent_schema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct AuthMethodAgent {
@@ -787,52 +786,6 @@ impl AuthMethodAgent {
         self.meta = meta.into_option();
         self
     }
-}
-
-impl<'de> Deserialize<'de> for AuthMethodAgent {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        #[derive(Deserialize)]
-        #[serde(rename_all = "camelCase")]
-        struct RawAuthMethodAgent {
-            id: AuthMethodId,
-            name: String,
-            description: Option<String>,
-            #[serde(rename = "_meta")]
-            meta: Option<Meta>,
-            #[serde(rename = "type")]
-            #[serde(default)]
-            type_: MaybeUndefined<String>,
-        }
-
-        let raw = RawAuthMethodAgent::deserialize(deserializer)?;
-        match raw.type_.as_opt_deref() {
-            None | Some(Some("agent")) => {}
-            Some(None) => {
-                return Err(serde::de::Error::custom(
-                    "agent authentication method `type` must be omitted or `agent`",
-                ));
-            }
-            Some(Some(_)) => {
-                return Err(serde::de::Error::custom(
-                    "agent authentication method cannot include a non-agent `type`",
-                ));
-            }
-        }
-
-        Ok(Self {
-            id: raw.id,
-            name: raw.name,
-            description: raw.description,
-            meta: raw.meta,
-        })
-    }
-}
-
-fn auth_method_agent_schema(schema: &mut Schema) {
-    super::schema_util::reject_string_property_except(schema, "type", "agent");
 }
 
 /// **UNSTABLE**
