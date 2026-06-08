@@ -3182,54 +3182,8 @@ A change in `messageId` indicates a new message has started.
 </Expandable>
 </ResponseField>
 
-<ResponseField name="tool_call" type="object">
-Notification that a new tool call has been initiated.
-
-<Expandable title="Properties">
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
-
-</ResponseField>
-<ResponseField name="content" type={<a href="#toolcallcontent">ToolCallContent[]</a>} >
-  Content produced by the tool call.
-</ResponseField>
-<ResponseField name="kind" type={<a href="#toolkind">ToolKind</a>} >
-  The category of tool being invoked.
-Helps clients choose appropriate icons and UI treatment.
-</ResponseField>
-<ResponseField name="locations" type={<a href="#toolcalllocation">ToolCallLocation[]</a>} >
-  File locations affected by this tool call.
-Enables "follow-along" features in clients.
-</ResponseField>
-<ResponseField name="rawInput" type={"object"} >
-  Raw input parameters sent to the tool.
-</ResponseField>
-<ResponseField name="rawOutput" type={"object"} >
-  Raw output returned by the tool.
-</ResponseField>
-<ResponseField name="sessionUpdate" type={"string"} required>
-  The discriminator value. Must be `"tool_call"`.
-</ResponseField>
-<ResponseField name="status" type={<a href="#toolcallstatus">ToolCallStatus</a>} >
-  Current execution status of the tool call.
-</ResponseField>
-<ResponseField name="title" type={"string"} required>
-  Human-readable title describing what the tool is doing.
-</ResponseField>
-<ResponseField name="toolCallId" type={<a href="#toolcallid">ToolCallId</a>} required>
-  Unique identifier for this tool call within the session.
-</ResponseField>
-
-</Expandable>
-</ResponseField>
-
 <ResponseField name="tool_call_update" type="object">
-Update on the status or results of a tool call.
+A tool call has been created or updated.
 
 <Expandable title="Properties">
 
@@ -3242,31 +3196,33 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="content" type={<><span><a href="#toolcallcontent">ToolCallContent[]</a></span><span> | null</span></>} >
-  Replace the content collection.
+  Content produced by the tool call.
 </ResponseField>
 <ResponseField name="kind" type={<><span><a href="#toolkind">ToolKind</a></span><span> | null</span></>} >
-  Update the tool kind.
+  The category of tool being invoked.
+Helps clients choose appropriate icons and UI treatment.
 </ResponseField>
 <ResponseField name="locations" type={<><span><a href="#toolcalllocation">ToolCallLocation[]</a></span><span> | null</span></>} >
-  Replace the locations collection.
+  File locations affected by this tool call.
+Enables "follow-along" features in clients.
 </ResponseField>
 <ResponseField name="rawInput" type={"object"} >
-  Update the raw input.
+  Raw input parameters sent to the tool.
 </ResponseField>
 <ResponseField name="rawOutput" type={"object"} >
-  Update the raw output.
+  Raw output returned by the tool.
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
   The discriminator value. Must be `"tool_call_update"`.
 </ResponseField>
 <ResponseField name="status" type={<><span><a href="#toolcallstatus">ToolCallStatus</a></span><span> | null</span></>} >
-  Update the execution status.
+  Current execution status of the tool call.
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
-  Update the human-readable title.
+  Human-readable title describing what the tool is doing.
 </ResponseField>
 <ResponseField name="toolCallId" type={<a href="#toolcallid">ToolCallId</a>} required>
-  The ID of the tool call being updated.
+  Unique identifier for this tool call within the session.
 </ResponseField>
 
 </Expandable>
@@ -3518,54 +3474,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 <ResponseField name="uri" type={"string"} required>
 </ResponseField>
 
-## <span class="font-mono">ToolCall</span>
-
-Represents a tool call that the language model has requested.
-
-Tool calls are actions that the agent executes on behalf of the language model,
-such as reading files, executing code, or fetching data from external sources.
-
-See protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/v2/tool-calls)
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
-
-</ResponseField>
-<ResponseField name="content" type={<a href="#toolcallcontent">ToolCallContent[]</a>} >
-  Content produced by the tool call.
-</ResponseField>
-<ResponseField name="kind" type={<a href="#toolkind">ToolKind</a>} >
-  The category of tool being invoked.
-Helps clients choose appropriate icons and UI treatment.
-</ResponseField>
-<ResponseField name="locations" type={<a href="#toolcalllocation">ToolCallLocation[]</a>} >
-  File locations affected by this tool call.
-Enables "follow-along" features in clients.
-</ResponseField>
-<ResponseField name="rawInput" type={"object"} >
-  Raw input parameters sent to the tool.
-</ResponseField>
-<ResponseField name="rawOutput" type={"object"} >
-  Raw output returned by the tool.
-</ResponseField>
-<ResponseField name="status" type={<a href="#toolcallstatus">ToolCallStatus</a>} >
-  Current execution status of the tool call.
-</ResponseField>
-<ResponseField name="title" type={"string"} required>
-  Human-readable title describing what the tool is doing.
-</ResponseField>
-<ResponseField name="toolCallId" type={<a href="#toolcallid">ToolCallId</a>} required>
-  Unique identifier for this tool call within the session.
-</ResponseField>
-
 ## <span class="font-mono">ToolCallContent</span>
 
 Content produced by a tool call.
@@ -3729,12 +3637,19 @@ future ACP variants.
 
 ## <span class="font-mono">ToolCallUpdate</span>
 
-An update to an existing tool call.
+Represents an upsert for a tool call that the language model has requested.
 
-Used to report progress and results as tools execute. All fields except
-the tool call ID are optional - only changed fields need to be included.
+Tool calls are actions that the agent executes on behalf of the language model,
+such as reading files, executing code, or fetching data from external sources.
 
-See protocol docs: [Updating](https://agentclientprotocol.com/protocol/v2/tool-calls#updating)
+Only `ToolCallUpdate::tool_call_id` is required. Other fields have patch semantics:
+omitted fields leave the existing tool call value unchanged, `null` clears or
+unsets the value, and concrete values replace the previous value. For
+collection fields, concrete arrays replace the previous collection, and both
+`null` and `[]` clear the collection. When a client receives a tool call ID it
+has not seen before, omitted fields use client defaults.
+
+See protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/v2/tool-calls)
 
 **Type:** Object
 
@@ -3749,28 +3664,30 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="content" type={<><span><a href="#toolcallcontent">ToolCallContent[]</a></span><span> | null</span></>} >
-  Replace the content collection.
+  Content produced by the tool call.
 </ResponseField>
 <ResponseField name="kind" type={<><span><a href="#toolkind">ToolKind</a></span><span> | null</span></>} >
-  Update the tool kind.
+  The category of tool being invoked.
+Helps clients choose appropriate icons and UI treatment.
 </ResponseField>
 <ResponseField name="locations" type={<><span><a href="#toolcalllocation">ToolCallLocation[]</a></span><span> | null</span></>} >
-  Replace the locations collection.
+  File locations affected by this tool call.
+Enables "follow-along" features in clients.
 </ResponseField>
 <ResponseField name="rawInput" type={"object"} >
-  Update the raw input.
+  Raw input parameters sent to the tool.
 </ResponseField>
 <ResponseField name="rawOutput" type={"object"} >
-  Update the raw output.
+  Raw output returned by the tool.
 </ResponseField>
 <ResponseField name="status" type={<><span><a href="#toolcallstatus">ToolCallStatus</a></span><span> | null</span></>} >
-  Update the execution status.
+  Current execution status of the tool call.
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
-  Update the human-readable title.
+  Human-readable title describing what the tool is doing.
 </ResponseField>
 <ResponseField name="toolCallId" type={<a href="#toolcallid">ToolCallId</a>} required>
-  The ID of the tool call being updated.
+  Unique identifier for this tool call within the session.
 </ResponseField>
 
 ## <span class="font-mono">ToolKind</span>

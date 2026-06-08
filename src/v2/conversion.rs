@@ -852,7 +852,6 @@ impl IntoV1 for super::SessionUpdate {
             Self::AgentThoughtChunk(value) => {
                 crate::v1::SessionUpdate::AgentThoughtChunk(value.into_v1()?)
             }
-            Self::ToolCall(value) => crate::v1::SessionUpdate::ToolCall(value.into_v1()?),
             Self::ToolCallUpdate(value) => {
                 crate::v1::SessionUpdate::ToolCallUpdate(value.into_v1()?)
             }
@@ -896,7 +895,7 @@ impl IntoV2 for crate::v1::SessionUpdate {
             Self::AgentThoughtChunk(value) => {
                 super::SessionUpdate::AgentThoughtChunk(value.into_v2()?)
             }
-            Self::ToolCall(value) => super::SessionUpdate::ToolCall(value.into_v2()?),
+            Self::ToolCall(value) => super::SessionUpdate::ToolCallUpdate(value.into_v2()?),
             Self::ToolCallUpdate(value) => super::SessionUpdate::ToolCallUpdate(value.into_v2()?),
             Self::Plan(value) => {
                 let crate::v1::Plan { entries, meta } = value;
@@ -2060,8 +2059,43 @@ impl IntoV2 for crate::v1::ExtNotification {
     }
 }
 
-impl IntoV1 for super::ToolCall {
-    type Output = crate::v1::ToolCall;
+fn maybe_undefined_value_into_v1_option<T>(
+    value: crate::MaybeUndefined<T>,
+) -> Result<Option<T::Output>>
+where
+    T: IntoV1,
+{
+    match value {
+        crate::MaybeUndefined::Value(value) => Ok(Some(value.into_v1()?)),
+        crate::MaybeUndefined::Null | crate::MaybeUndefined::Undefined => Ok(None),
+    }
+}
+
+fn maybe_undefined_vec_into_v1_option<T>(
+    value: crate::MaybeUndefined<Vec<T>>,
+) -> Result<Option<Vec<T::Output>>>
+where
+    T: IntoV1,
+{
+    match value {
+        crate::MaybeUndefined::Value(value) => Ok(Some(value.into_v1()?)),
+        crate::MaybeUndefined::Null => Ok(Some(Vec::new())),
+        crate::MaybeUndefined::Undefined => Ok(None),
+    }
+}
+
+fn option_into_v2_maybe_undefined<T>(value: Option<T>) -> Result<crate::MaybeUndefined<T::Output>>
+where
+    T: IntoV2,
+{
+    match value {
+        Some(value) => Ok(crate::MaybeUndefined::Value(value.into_v2()?)),
+        None => Ok(crate::MaybeUndefined::Undefined),
+    }
+}
+
+impl IntoV1 for super::ToolCallUpdate {
+    type Output = crate::v1::ToolCallUpdate;
 
     fn into_v1(self) -> Result<Self::Output> {
         let Self {
@@ -2075,22 +2109,24 @@ impl IntoV1 for super::ToolCall {
             raw_output,
             meta,
         } = self;
-        Ok(crate::v1::ToolCall {
+        Ok(crate::v1::ToolCallUpdate {
             tool_call_id: tool_call_id.into_v1()?,
-            title: title.into_v1()?,
-            kind: kind.into_v1()?,
-            status: status.into_v1()?,
-            content: content.into_v1()?,
-            locations: locations.into_v1()?,
-            raw_input: raw_input.into_v1()?,
-            raw_output: raw_output.into_v1()?,
+            fields: crate::v1::ToolCallUpdateFields {
+                kind: maybe_undefined_value_into_v1_option(kind)?,
+                status: maybe_undefined_value_into_v1_option(status)?,
+                title: maybe_undefined_value_into_v1_option(title)?,
+                content: maybe_undefined_vec_into_v1_option(content)?,
+                locations: maybe_undefined_vec_into_v1_option(locations)?,
+                raw_input: maybe_undefined_value_into_v1_option(raw_input)?,
+                raw_output: maybe_undefined_value_into_v1_option(raw_output)?,
+            },
             meta: meta.into_v1()?,
         })
     }
 }
 
 impl IntoV2 for crate::v1::ToolCall {
-    type Output = super::ToolCall;
+    type Output = super::ToolCallUpdate;
 
     fn into_v2(self) -> Result<Self::Output> {
         let Self {
@@ -2104,33 +2140,32 @@ impl IntoV2 for crate::v1::ToolCall {
             raw_output,
             meta,
         } = self;
-        Ok(super::ToolCall {
+        Ok(super::ToolCallUpdate {
             tool_call_id: tool_call_id.into_v2()?,
-            title: title.into_v2()?,
-            kind: kind.into_v2()?,
-            status: status.into_v2()?,
-            content: content.into_v2()?,
-            locations: locations.into_v2()?,
-            raw_input: raw_input.into_v2()?,
-            raw_output: raw_output.into_v2()?,
+            title: crate::MaybeUndefined::Value(title.into_v2()?),
+            kind: if matches!(kind, crate::v1::ToolKind::Other) {
+                crate::MaybeUndefined::Undefined
+            } else {
+                crate::MaybeUndefined::Value(kind.into_v2()?)
+            },
+            status: if matches!(status, crate::v1::ToolCallStatus::Pending) {
+                crate::MaybeUndefined::Undefined
+            } else {
+                crate::MaybeUndefined::Value(status.into_v2()?)
+            },
+            content: if content.is_empty() {
+                crate::MaybeUndefined::Undefined
+            } else {
+                crate::MaybeUndefined::Value(content.into_v2()?)
+            },
+            locations: if locations.is_empty() {
+                crate::MaybeUndefined::Undefined
+            } else {
+                crate::MaybeUndefined::Value(locations.into_v2()?)
+            },
+            raw_input: option_into_v2_maybe_undefined(raw_input)?,
+            raw_output: option_into_v2_maybe_undefined(raw_output)?,
             meta: meta.into_v2()?,
-        })
-    }
-}
-
-impl IntoV1 for super::ToolCallUpdate {
-    type Output = crate::v1::ToolCallUpdate;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self {
-            tool_call_id,
-            fields,
-            meta,
-        } = self;
-        Ok(crate::v1::ToolCallUpdate {
-            tool_call_id: tool_call_id.into_v1()?,
-            fields: fields.into_v1()?,
-            meta: meta.into_v1()?,
         })
     }
 }
@@ -2144,60 +2179,25 @@ impl IntoV2 for crate::v1::ToolCallUpdate {
             fields,
             meta,
         } = self;
+        let crate::v1::ToolCallUpdateFields {
+            kind,
+            status,
+            title,
+            content,
+            locations,
+            raw_input,
+            raw_output,
+        } = fields;
         Ok(super::ToolCallUpdate {
             tool_call_id: tool_call_id.into_v2()?,
-            fields: fields.into_v2()?,
+            kind: option_into_v2_maybe_undefined(kind)?,
+            status: option_into_v2_maybe_undefined(status)?,
+            title: option_into_v2_maybe_undefined(title)?,
+            content: option_into_v2_maybe_undefined(content)?,
+            locations: option_into_v2_maybe_undefined(locations)?,
+            raw_input: option_into_v2_maybe_undefined(raw_input)?,
+            raw_output: option_into_v2_maybe_undefined(raw_output)?,
             meta: meta.into_v2()?,
-        })
-    }
-}
-
-impl IntoV1 for super::ToolCallUpdateFields {
-    type Output = crate::v1::ToolCallUpdateFields;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self {
-            kind,
-            status,
-            title,
-            content,
-            locations,
-            raw_input,
-            raw_output,
-        } = self;
-        Ok(crate::v1::ToolCallUpdateFields {
-            kind: kind.into_v1()?,
-            status: status.into_v1()?,
-            title: title.into_v1()?,
-            content: content.into_v1()?,
-            locations: locations.into_v1()?,
-            raw_input: raw_input.into_v1()?,
-            raw_output: raw_output.into_v1()?,
-        })
-    }
-}
-
-impl IntoV2 for crate::v1::ToolCallUpdateFields {
-    type Output = super::ToolCallUpdateFields;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        let Self {
-            kind,
-            status,
-            title,
-            content,
-            locations,
-            raw_input,
-            raw_output,
-        } = self;
-        Ok(super::ToolCallUpdateFields {
-            kind: kind.into_v2()?,
-            status: status.into_v2()?,
-            title: title.into_v2()?,
-            content: content.into_v2()?,
-            locations: locations.into_v2()?,
-            raw_input: raw_input.into_v2()?,
-            raw_output: raw_output.into_v2()?,
         })
     }
 }
@@ -8936,7 +8936,7 @@ mod tests {
     }
 
     #[test]
-    fn round_trips_tool_call_with_diff_and_locations() {
+    fn v1_tool_call_converts_to_v2_upsert_with_diff_and_locations() {
         let tool_call = v1::ToolCall::new("tc_1", "editing files")
             .kind(v1::ToolKind::Edit)
             .status(v1::ToolCallStatus::InProgress)
@@ -8947,8 +8947,65 @@ mod tests {
             .raw_input(serde_json::json!({"foo": "bar"}))
             .raw_output(serde_json::json!({"ok": true}));
 
-        assert_v1_round_trip::<v1::ToolCall, v2::ToolCall>(tool_call.clone());
-        assert_json_eq_after_v1_to_v2::<v1::ToolCall, v2::ToolCall>(tool_call);
+        let converted: v2::ToolCallUpdate = v1_to_v2(tool_call).expect("v1 -> v2 conversion");
+        assert_eq!(
+            serde_json::to_value(&converted).expect("v2 serialize"),
+            serde_json::json!({
+                "toolCallId": "tc_1",
+                "title": "editing files",
+                "kind": "edit",
+                "status": "in_progress",
+                "content": [
+                    {
+                        "type": "diff",
+                        "path": "/path",
+                        "oldText": "old contents",
+                        "newText": "new contents"
+                    }
+                ],
+                "locations": [
+                    {
+                        "path": "/path",
+                        "line": 42
+                    }
+                ],
+                "rawInput": {
+                    "foo": "bar"
+                },
+                "rawOutput": {
+                    "ok": true
+                }
+            })
+        );
+
+        let back: v1::ToolCallUpdate = v2_to_v1(converted).expect("v2 -> v1 conversion");
+        assert_eq!(back.tool_call_id.0.as_ref(), "tc_1");
+        assert_eq!(back.fields.title.as_deref(), Some("editing files"));
+        assert_eq!(back.fields.kind, Some(v1::ToolKind::Edit));
+        assert_eq!(back.fields.status, Some(v1::ToolCallStatus::InProgress));
+        assert_eq!(back.fields.content.as_ref().map(Vec::len), Some(1));
+        assert_eq!(back.fields.locations.as_ref().map(Vec::len), Some(1));
+        assert_eq!(
+            back.fields.raw_input,
+            Some(serde_json::json!({"foo": "bar"}))
+        );
+        assert_eq!(
+            back.fields.raw_output,
+            Some(serde_json::json!({"ok": true}))
+        );
+    }
+
+    #[test]
+    fn v1_tool_call_update_round_trips_through_v2_tool_call_update_upsert() {
+        let update = v1::ToolCallUpdate::new(
+            "tc",
+            v1::ToolCallUpdateFields::new()
+                .status(v1::ToolCallStatus::Completed)
+                .content(Vec::new()),
+        );
+
+        assert_v1_round_trip::<v1::ToolCallUpdate, v2::ToolCallUpdate>(update.clone());
+        assert_json_eq_after_v1_to_v2::<v1::ToolCallUpdate, v2::ToolCallUpdate>(update);
     }
 
     #[test]
@@ -8962,11 +9019,6 @@ mod tests {
             v1::SessionUpdate::UserMessageChunk(content_chunk("u", "msg_user")),
             v1::SessionUpdate::AgentMessageChunk(content_chunk("a", "msg_agent")),
             v1::SessionUpdate::AgentThoughtChunk(content_chunk("t", "msg_thought")),
-            v1::SessionUpdate::ToolCall(v1::ToolCall::new("tc", "title")),
-            v1::SessionUpdate::ToolCallUpdate(v1::ToolCallUpdate::new(
-                "tc",
-                v1::ToolCallUpdateFields::new().status(v1::ToolCallStatus::Completed),
-            )),
             #[cfg(feature = "unstable_plan_operations")]
             v1::SessionUpdate::PlanUpdate(v1::PlanUpdate::new(v1::PlanUpdateContent::markdown(
                 "plan-1",
@@ -8988,6 +9040,54 @@ mod tests {
                 notification,
             );
         }
+    }
+
+    #[test]
+    fn v1_tool_call_session_updates_convert_to_unified_v2_tool_call_update() {
+        let create = v1::SessionNotification::new(
+            "sess",
+            v1::SessionUpdate::ToolCall(v1::ToolCall::new("tc", "title")),
+        );
+        let create_v2: v2::SessionNotification = v1_to_v2(create).expect("v1 -> v2 conversion");
+        assert!(matches!(
+            create_v2.update,
+            v2::SessionUpdate::ToolCallUpdate(_)
+        ));
+        assert_eq!(
+            serde_json::to_value(&create_v2).expect("v2 serialize"),
+            serde_json::json!({
+                "sessionId": "sess",
+                "update": {
+                    "sessionUpdate": "tool_call_update",
+                    "toolCallId": "tc",
+                    "title": "title"
+                }
+            })
+        );
+
+        let update = v1::SessionNotification::new(
+            "sess",
+            v1::SessionUpdate::ToolCallUpdate(v1::ToolCallUpdate::new(
+                "tc",
+                v1::ToolCallUpdateFields::new().status(v1::ToolCallStatus::Completed),
+            )),
+        );
+        let update_v2: v2::SessionNotification = v1_to_v2(update).expect("v1 -> v2 conversion");
+        assert!(matches!(
+            update_v2.update,
+            v2::SessionUpdate::ToolCallUpdate(_)
+        ));
+        assert_eq!(
+            serde_json::to_value(&update_v2).expect("v2 serialize"),
+            serde_json::json!({
+                "sessionId": "sess",
+                "update": {
+                    "sessionUpdate": "tool_call_update",
+                    "toolCallId": "tc",
+                    "status": "completed"
+                }
+            })
+        );
     }
 
     #[test]

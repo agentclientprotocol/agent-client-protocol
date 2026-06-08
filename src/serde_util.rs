@@ -22,6 +22,7 @@ use std::{
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde_with::{DeserializeAs, de::DeserializeAsWrap};
 
 // ---- SkipListener ----
 
@@ -526,6 +527,21 @@ impl<T> From<Option<Option<T>>> for MaybeUndefined<T> {
             Some(None) => Self::Null,
             None => Self::Undefined,
         }
+    }
+}
+
+impl<'de, T, TAs> DeserializeAs<'de, MaybeUndefined<T>> for MaybeUndefined<TAs>
+where
+    TAs: DeserializeAs<'de, T>,
+{
+    fn deserialize_as<D>(deserializer: D) -> Result<MaybeUndefined<T>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Option::<DeserializeAsWrap<T, TAs>>::deserialize(deserializer).map(|value| match value {
+            Some(value) => MaybeUndefined::Value(value.into_inner()),
+            None => MaybeUndefined::Null,
+        })
     }
 }
 

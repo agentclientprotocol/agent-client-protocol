@@ -32,6 +32,7 @@ Current RFDs accepted as Drafts that are targeting v2 release
 - [Enum Variant Extension](./enum-variant-extension.mdx)
 - [Client Filesystem and Terminal Surface](./client-filesystem-terminal-capabilities.mdx)
 - [Plan Variants](./plan-variants.mdx)
+- [Tool Call Updates](./tool-call-updates.mdx)
 - [Remote Transports](../streamable-http-websocket-transport.mdx)
 
 Other RFDs will progress separately and are not dependent on breaking changes (specifically the new prompt lifecycle) and can land in either or both v1 and v2.
@@ -42,6 +43,7 @@ Other RFDs will progress separately and are not dependent on breaking changes (s
 - Agents should expose mode-like and model-related state through [Session Config Options](../session-config-options.mdx) instead of dedicated mode or model selector APIs.
 - Remove the v1 Client filesystem and terminal execution surface from v2. This includes `clientCapabilities.fs`, the top-level `clientCapabilities.terminal` field, `fs/*` methods, `terminal/*` methods, and terminal tool-call content. Terminal authentication remains separate under `clientCapabilities.auth.terminal`.
 - Make [plan variants](./plan-variants.mdx) the default v2 plan shape by replacing the old `plan` session update with item-based `plan_update`.
+- Replace the v1 split between `tool_call` and `tool_call_update` with a single [tool-call update](./tool-call-updates.mdx) upsert shape keyed by `toolCallId`.
 - Require [message IDs](../message-id.mdx) on streamed message chunks.
 - Follow JSON-RPC 2.0 batch request and notification behavior.
 - Clean up capability naming and organization:
@@ -61,7 +63,6 @@ Other RFDs will progress separately and are not dependent on breaking changes (s
 Changes under consideration that still need to be drafted or moved to draft:
 
 - Capabilities: decide whether any additional capability groups should become required.
-- Audit remaining enums and clean up any "untagged" enum variants that still block graceful handling of new variants.
 - Streaming/Non-streaming consistency: Offer both options for both messages and tool calls
   - Also Terminal Output type for streaming terminal output from an agent
   - Expand diff types (delete, move)
@@ -70,6 +71,7 @@ Changes under consideration that still need to be drafted or moved to draft:
   - Response can provide available commands
   - Potentially config options
     - Get config options outside of a session (take a cwd?)
+- MCP: tool timeouts, more lifecycle methods
 
 ## Shiny future
 
@@ -101,6 +103,7 @@ With the needed breaking changes, as much as possible I am targeting having a co
 
 ## Revision history
 
+- 2026-06-08: Added the v2 Tool Call Updates RFD to make `tool_call_update` the single upsert-style tool-call session update.
 - 2026-06-05: Recorded the v2 capability cleanup: unified initialize capability fields, optional `session` support for NES-only agents, session-scoped `prompt`, `mcp`, and `loadSession` capabilities, object-shaped support markers, explicit `session.mcp.stdio`, removal of deprecated MCP SSE transport, and tagged MCP server transport configs.
 - 2026-06-02: Recorded the v2 decision to follow JSON-RPC 2.0 batch request and notification behavior.
 - 2026-06-02: Recorded the v2 decision to remove Client filesystem and terminal execution capabilities, methods, and terminal tool-call content.

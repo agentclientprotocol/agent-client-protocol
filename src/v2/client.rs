@@ -19,7 +19,7 @@ use super::{
 };
 use super::{
     ContentBlock, ExtNotification, ExtRequest, ExtResponse, Meta, PlanUpdate, SessionConfigOption,
-    SessionId, ToolCall, ToolCallUpdate,
+    SessionId, ToolCallUpdate,
 };
 use crate::{IntoMaybeUndefined, IntoOption, MaybeUndefined, SkipListener};
 
@@ -97,9 +97,7 @@ pub enum SessionUpdate {
     AgentMessageChunk(ContentChunk),
     /// A chunk of the agent's internal reasoning being streamed.
     AgentThoughtChunk(ContentChunk),
-    /// Notification that a new tool call has been initiated.
-    ToolCall(ToolCall),
-    /// Update on the status or results of a tool call.
+    /// A tool call has been created or updated.
     ToolCallUpdate(ToolCallUpdate),
     /// A content update for a plan identified by ID.
     /// See protocol docs: [Agent Plan](https://agentclientprotocol.com/protocol/agent-plan)
@@ -201,7 +199,6 @@ fn is_known_session_update(session_update: &str) -> bool {
         "user_message_chunk"
             | "agent_message_chunk"
             | "agent_thought_chunk"
-            | "tool_call"
             | "tool_call_update"
             | "plan_update"
             | "available_commands_update"
@@ -219,7 +216,6 @@ fn other_session_update_schema(schema: &mut Schema) {
             "user_message_chunk",
             "agent_message_chunk",
             "agent_thought_chunk",
-            "tool_call",
             "tool_call_update",
             "plan_update",
             "available_commands_update",

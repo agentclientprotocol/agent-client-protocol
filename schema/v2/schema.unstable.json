@@ -6389,26 +6389,10 @@
         {
           "allOf": [
             {
-              "$ref": "#/$defs/ToolCall"
-            }
-          ],
-          "description": "Notification that a new tool call has been initiated.",
-          "properties": {
-            "sessionUpdate": {
-              "const": "tool_call",
-              "type": "string"
-            }
-          },
-          "required": ["sessionUpdate"],
-          "type": "object"
-        },
-        {
-          "allOf": [
-            {
               "$ref": "#/$defs/ToolCallUpdate"
             }
           ],
-          "description": "Update on the status or results of a tool call.",
+          "description": "A tool call has been created or updated.",
           "properties": {
             "sessionUpdate": {
               "const": "tool_call_update",
@@ -6543,16 +6527,6 @@
                 "properties": {
                   "sessionUpdate": {
                     "const": "agent_thought_chunk",
-                    "type": "string"
-                  }
-                },
-                "required": ["sessionUpdate"],
-                "type": "object"
-              },
-              {
-                "properties": {
-                  "sessionUpdate": {
-                    "const": "tool_call",
                     "type": "string"
                   }
                 },
@@ -7170,70 +7144,6 @@
       "required": ["anyOf"],
       "type": "object"
     },
-    "ToolCall": {
-      "description": "Represents a tool call that the language model has requested.\n\nTool calls are actions that the agent executes on behalf of the language model,\nsuch as reading files, executing code, or fetching data from external sources.\n\nSee protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/tool-calls)",
-      "properties": {
-        "_meta": {
-          "additionalProperties": true,
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"]
-        },
-        "content": {
-          "description": "Content produced by the tool call.",
-          "items": {
-            "$ref": "#/$defs/ToolCallContent"
-          },
-          "type": "array",
-          "x-deserialize-default-on-error": true,
-          "x-deserialize-skip-invalid-items": true
-        },
-        "kind": {
-          "allOf": [
-            {
-              "$ref": "#/$defs/ToolKind"
-            }
-          ],
-          "description": "The category of tool being invoked.\nHelps clients choose appropriate icons and UI treatment."
-        },
-        "locations": {
-          "description": "File locations affected by this tool call.\nEnables \"follow-along\" features in clients.",
-          "items": {
-            "$ref": "#/$defs/ToolCallLocation"
-          },
-          "type": "array",
-          "x-deserialize-default-on-error": true,
-          "x-deserialize-skip-invalid-items": true
-        },
-        "rawInput": {
-          "description": "Raw input parameters sent to the tool."
-        },
-        "rawOutput": {
-          "description": "Raw output returned by the tool."
-        },
-        "status": {
-          "allOf": [
-            {
-              "$ref": "#/$defs/ToolCallStatus"
-            }
-          ],
-          "description": "Current execution status of the tool call."
-        },
-        "title": {
-          "description": "Human-readable title describing what the tool is doing.",
-          "type": "string"
-        },
-        "toolCallId": {
-          "allOf": [
-            {
-              "$ref": "#/$defs/ToolCallId"
-            }
-          ],
-          "description": "Unique identifier for this tool call within the session."
-        }
-      },
-      "required": ["toolCallId", "title"],
-      "type": "object"
-    },
     "ToolCallContent": {
       "anyOf": [
         {
@@ -7368,7 +7278,7 @@
       "description": "Execution status of a tool call.\n\nTool calls progress through different statuses during their lifecycle.\n\nSee protocol docs: [Status](https://agentclientprotocol.com/protocol/tool-calls#status)"
     },
     "ToolCallUpdate": {
-      "description": "An update to an existing tool call.\n\nUsed to report progress and results as tools execute. All fields except\nthe tool call ID are optional - only changed fields need to be included.\n\nSee protocol docs: [Updating](https://agentclientprotocol.com/protocol/tool-calls#updating)",
+      "description": "Represents an upsert for a tool call that the language model has requested.\n\nTool calls are actions that the agent executes on behalf of the language model,\nsuch as reading files, executing code, or fetching data from external sources.\n\nOnly [`ToolCallUpdate::tool_call_id`] is required. Other fields have patch semantics:\nomitted fields leave the existing tool call value unchanged, `null` clears or\nunsets the value, and concrete values replace the previous value. For\ncollection fields, concrete arrays replace the previous collection, and both\n`null` and `[]` clear the collection. When a client receives a tool call ID it\nhas not seen before, omitted fields use client defaults.\n\nSee protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/tool-calls)",
       "properties": {
         "_meta": {
           "additionalProperties": true,
@@ -7376,7 +7286,7 @@
           "type": ["object", "null"]
         },
         "content": {
-          "description": "Replace the content collection.",
+          "description": "Content produced by the tool call.",
           "items": {
             "$ref": "#/$defs/ToolCallContent"
           },
@@ -7393,11 +7303,10 @@
               "type": "null"
             }
           ],
-          "description": "Update the tool kind.",
-          "x-deserialize-default-on-error": true
+          "description": "The category of tool being invoked.\nHelps clients choose appropriate icons and UI treatment."
         },
         "locations": {
-          "description": "Replace the locations collection.",
+          "description": "File locations affected by this tool call.\nEnables \"follow-along\" features in clients.",
           "items": {
             "$ref": "#/$defs/ToolCallLocation"
           },
@@ -7406,10 +7315,10 @@
           "x-deserialize-skip-invalid-items": true
         },
         "rawInput": {
-          "description": "Update the raw input."
+          "description": "Raw input parameters sent to the tool."
         },
         "rawOutput": {
-          "description": "Update the raw output."
+          "description": "Raw output returned by the tool."
         },
         "status": {
           "anyOf": [
@@ -7420,11 +7329,10 @@
               "type": "null"
             }
           ],
-          "description": "Update the execution status.",
-          "x-deserialize-default-on-error": true
+          "description": "Current execution status of the tool call."
         },
         "title": {
-          "description": "Update the human-readable title.",
+          "description": "Human-readable title describing what the tool is doing.",
           "type": ["string", "null"]
         },
         "toolCallId": {
@@ -7433,7 +7341,7 @@
               "$ref": "#/$defs/ToolCallId"
             }
           ],
-          "description": "The ID of the tool call being updated."
+          "description": "Unique identifier for this tool call within the session."
         }
       },
       "required": ["toolCallId"],

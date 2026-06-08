@@ -30,15 +30,15 @@ sequenceDiagram
         Agent->>Client: session/update (agent_message_chunk)
 
         opt Tool calls requested
-            Agent->>Client: session/update (tool_call)
+            Agent->>Client: session/update (tool_call_update)
             opt Permission required
                 Agent->>Client: session/request_permission
                 Note left of Client: User grants/denies
                 Client-->>Agent: Permission response
             end
-            Agent->>Client: session/update (tool_call status: in_progress)
+            Agent->>Client: session/update (tool_call_update status: in_progress)
             Note right of Agent: Execute tool
-            Agent->>Client: session/update (tool_call status: completed)
+            Agent->>Client: session/update (tool_call_update status: completed)
             Note right of Agent: Send tool results<br/>back to LLM
         end
 
@@ -181,7 +181,7 @@ If the model requested tool calls, these are also reported immediately:
   "params": {
     "sessionId": "sess_abc123def456",
     "update": {
-      "sessionUpdate": "tool_call",
+      "sessionUpdate": "tool_call_update",
       "toolCallId": "call_001",
       "title": "Analyzing Python code",
       "kind": "other",

@@ -11,13 +11,20 @@ use schemars::{JsonSchema, Schema};
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
-use super::{ContentBlock, Error, Meta};
-use crate::{IntoOption, SkipListener};
+use super::{ContentBlock, Meta};
+use crate::{IntoMaybeUndefined, IntoOption, MaybeUndefined, SkipListener};
 
-/// Represents a tool call that the language model has requested.
+/// Represents an upsert for a tool call that the language model has requested.
 ///
 /// Tool calls are actions that the agent executes on behalf of the language model,
 /// such as reading files, executing code, or fetching data from external sources.
+///
+/// Only [`ToolCallUpdate::tool_call_id`] is required. Other fields have patch semantics:
+/// omitted fields leave the existing tool call value unchanged, `null` clears or
+/// unsets the value, and concrete values replace the previous value. For
+/// collection fields, concrete arrays replace the previous collection, and both
+/// `null` and `[]` clear the collection. When a client receives a tool call ID it
+/// has not seen before, omitted fields use client defaults.
 ///
 /// See protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/tool-calls)
 #[serde_as]
@@ -25,156 +32,36 @@ use crate::{IntoOption, SkipListener};
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct ToolCall {
+pub struct ToolCallUpdate {
     /// Unique identifier for this tool call within the session.
     pub tool_call_id: ToolCallId,
     /// Human-readable title describing what the tool is doing.
-    pub title: String,
+    #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
+    pub title: MaybeUndefined<String>,
     /// The category of tool being invoked.
     /// Helps clients choose appropriate icons and UI treatment.
-    #[serde(default, skip_serializing_if = "ToolKind::is_default")]
-    pub kind: ToolKind,
+    #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
+    pub kind: MaybeUndefined<ToolKind>,
     /// Current execution status of the tool call.
-    #[serde(default, skip_serializing_if = "ToolCallStatus::is_default")]
-    pub status: ToolCallStatus,
+    #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
+    pub status: MaybeUndefined<ToolCallStatus>,
     /// Content produced by the tool call.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<VecSkipError<_, SkipListener>>>")]
     #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub content: Vec<ToolCallContent>,
+    #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
+    pub content: MaybeUndefined<Vec<ToolCallContent>>,
     /// File locations affected by this tool call.
     /// Enables "follow-along" features in clients.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<VecSkipError<_, SkipListener>>>")]
     #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub locations: Vec<ToolCallLocation>,
+    #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
+    pub locations: MaybeUndefined<Vec<ToolCallLocation>>,
     /// Raw input parameters sent to the tool.
-    pub raw_input: Option<serde_json::Value>,
+    #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
+    pub raw_input: MaybeUndefined<serde_json::Value>,
     /// Raw output returned by the tool.
-    pub raw_output: Option<serde_json::Value>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
-}
-
-impl ToolCall {
-    #[must_use]
-    pub fn new(tool_call_id: impl Into<ToolCallId>, title: impl Into<String>) -> Self {
-        Self {
-            tool_call_id: tool_call_id.into(),
-            title: title.into(),
-            kind: ToolKind::default(),
-            status: ToolCallStatus::default(),
-            content: Vec::default(),
-            locations: Vec::default(),
-            raw_input: None,
-            raw_output: None,
-            meta: None,
-        }
-    }
-
-    /// The category of tool being invoked.
-    /// Helps clients choose appropriate icons and UI treatment.
-    #[must_use]
-    pub fn kind(mut self, kind: ToolKind) -> Self {
-        self.kind = kind;
-        self
-    }
-
-    /// Current execution status of the tool call.
-    #[must_use]
-    pub fn status(mut self, status: ToolCallStatus) -> Self {
-        self.status = status;
-        self
-    }
-
-    /// Content produced by the tool call.
-    #[must_use]
-    pub fn content(mut self, content: Vec<ToolCallContent>) -> Self {
-        self.content = content;
-        self
-    }
-
-    /// File locations affected by this tool call.
-    /// Enables "follow-along" features in clients.
-    #[must_use]
-    pub fn locations(mut self, locations: Vec<ToolCallLocation>) -> Self {
-        self.locations = locations;
-        self
-    }
-
-    /// Raw input parameters sent to the tool.
-    #[must_use]
-    pub fn raw_input(mut self, raw_input: impl IntoOption<serde_json::Value>) -> Self {
-        self.raw_input = raw_input.into_option();
-        self
-    }
-
-    /// Raw output returned by the tool.
-    #[must_use]
-    pub fn raw_output(mut self, raw_output: impl IntoOption<serde_json::Value>) -> Self {
-        self.raw_output = raw_output.into_option();
-        self
-    }
-
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[must_use]
-    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
-        self.meta = meta.into_option();
-        self
-    }
-
-    /// Update an existing tool call with the values in the provided update
-    /// fields. Fields with collections of values are overwritten, not extended.
-    pub fn update(&mut self, fields: ToolCallUpdateFields) {
-        if let Some(title) = fields.title {
-            self.title = title;
-        }
-        if let Some(kind) = fields.kind {
-            self.kind = kind;
-        }
-        if let Some(status) = fields.status {
-            self.status = status;
-        }
-        if let Some(content) = fields.content {
-            self.content = content;
-        }
-        if let Some(locations) = fields.locations {
-            self.locations = locations;
-        }
-        if let Some(raw_input) = fields.raw_input {
-            self.raw_input = Some(raw_input);
-        }
-        if let Some(raw_output) = fields.raw_output {
-            self.raw_output = Some(raw_output);
-        }
-    }
-}
-
-/// An update to an existing tool call.
-///
-/// Used to report progress and results as tools execute. All fields except
-/// the tool call ID are optional - only changed fields need to be included.
-///
-/// See protocol docs: [Updating](https://agentclientprotocol.com/protocol/tool-calls#updating)
-#[skip_serializing_none]
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "camelCase")]
-#[non_exhaustive]
-pub struct ToolCallUpdate {
-    /// The ID of the tool call being updated.
-    pub tool_call_id: ToolCallId,
-    /// Fields being updated.
-    #[serde(flatten)]
-    pub fields: ToolCallUpdateFields,
+    #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
+    pub raw_output: MaybeUndefined<serde_json::Value>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -186,12 +73,69 @@ pub struct ToolCallUpdate {
 
 impl ToolCallUpdate {
     #[must_use]
-    pub fn new(tool_call_id: impl Into<ToolCallId>, fields: ToolCallUpdateFields) -> Self {
+    pub fn new(tool_call_id: impl Into<ToolCallId>) -> Self {
         Self {
             tool_call_id: tool_call_id.into(),
-            fields,
+            title: MaybeUndefined::Undefined,
+            kind: MaybeUndefined::Undefined,
+            status: MaybeUndefined::Undefined,
+            content: MaybeUndefined::Undefined,
+            locations: MaybeUndefined::Undefined,
+            raw_input: MaybeUndefined::Undefined,
+            raw_output: MaybeUndefined::Undefined,
             meta: None,
         }
+    }
+
+    /// Human-readable title describing what the tool is doing.
+    #[must_use]
+    pub fn title(mut self, title: impl IntoMaybeUndefined<String>) -> Self {
+        self.title = title.into_maybe_undefined();
+        self
+    }
+
+    /// The category of tool being invoked.
+    /// Helps clients choose appropriate icons and UI treatment.
+    #[must_use]
+    pub fn kind(mut self, kind: impl IntoMaybeUndefined<ToolKind>) -> Self {
+        self.kind = kind.into_maybe_undefined();
+        self
+    }
+
+    /// Current execution status of the tool call.
+    #[must_use]
+    pub fn status(mut self, status: impl IntoMaybeUndefined<ToolCallStatus>) -> Self {
+        self.status = status.into_maybe_undefined();
+        self
+    }
+
+    /// Content produced by the tool call.
+    #[must_use]
+    pub fn content(mut self, content: impl IntoMaybeUndefined<Vec<ToolCallContent>>) -> Self {
+        self.content = content.into_maybe_undefined();
+        self
+    }
+
+    /// File locations affected by this tool call.
+    /// Enables "follow-along" features in clients.
+    #[must_use]
+    pub fn locations(mut self, locations: impl IntoMaybeUndefined<Vec<ToolCallLocation>>) -> Self {
+        self.locations = locations.into_maybe_undefined();
+        self
+    }
+
+    /// Raw input parameters sent to the tool.
+    #[must_use]
+    pub fn raw_input(mut self, raw_input: impl IntoMaybeUndefined<serde_json::Value>) -> Self {
+        self.raw_input = raw_input.into_maybe_undefined();
+        self
+    }
+
+    /// Raw output returned by the tool.
+    #[must_use]
+    pub fn raw_output(mut self, raw_output: impl IntoMaybeUndefined<serde_json::Value>) -> Self {
+        self.raw_output = raw_output.into_maybe_undefined();
+        self
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -204,166 +148,33 @@ impl ToolCallUpdate {
         self.meta = meta.into_option();
         self
     }
-}
 
-/// Optional fields that can be updated in a tool call.
-///
-/// All fields are optional - only include the ones being changed.
-/// Collections (content, locations) are overwritten, not extended.
-///
-/// See protocol docs: [Updating](https://agentclientprotocol.com/protocol/tool-calls#updating)
-#[serde_as]
-#[skip_serializing_none]
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "camelCase")]
-#[non_exhaustive]
-pub struct ToolCallUpdateFields {
-    /// Update the tool kind.
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
-    #[serde(default)]
-    pub kind: Option<ToolKind>,
-    /// Update the execution status.
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
-    #[serde(default)]
-    pub status: Option<ToolCallStatus>,
-    /// Update the human-readable title.
-    pub title: Option<String>,
-    /// Replace the content collection.
-    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
-    #[serde(default)]
-    pub content: Option<Vec<ToolCallContent>>,
-    /// Replace the locations collection.
-    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
-    #[serde(default)]
-    pub locations: Option<Vec<ToolCallLocation>>,
-    /// Update the raw input.
-    pub raw_input: Option<serde_json::Value>,
-    /// Update the raw output.
-    pub raw_output: Option<serde_json::Value>,
-}
-
-impl ToolCallUpdateFields {
-    #[must_use]
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Update the tool kind.
-    #[must_use]
-    pub fn kind(mut self, kind: impl IntoOption<ToolKind>) -> Self {
-        self.kind = kind.into_option();
-        self
-    }
-
-    /// Update the execution status.
-    #[must_use]
-    pub fn status(mut self, status: impl IntoOption<ToolCallStatus>) -> Self {
-        self.status = status.into_option();
-        self
-    }
-
-    /// Update the human-readable title.
-    #[must_use]
-    pub fn title(mut self, title: impl IntoOption<String>) -> Self {
-        self.title = title.into_option();
-        self
-    }
-
-    /// Replace the content collection.
-    #[must_use]
-    pub fn content(mut self, content: impl IntoOption<Vec<ToolCallContent>>) -> Self {
-        self.content = content.into_option();
-        self
-    }
-
-    /// Replace the locations collection.
-    #[must_use]
-    pub fn locations(mut self, locations: impl IntoOption<Vec<ToolCallLocation>>) -> Self {
-        self.locations = locations.into_option();
-        self
-    }
-
-    /// Update the raw input.
-    #[must_use]
-    pub fn raw_input(mut self, raw_input: impl IntoOption<serde_json::Value>) -> Self {
-        self.raw_input = raw_input.into_option();
-        self
-    }
-
-    /// Update the raw output.
-    #[must_use]
-    pub fn raw_output(mut self, raw_output: impl IntoOption<serde_json::Value>) -> Self {
-        self.raw_output = raw_output.into_option();
-        self
-    }
-}
-
-/// If a given tool call doesn't exist yet, allows for attempting to construct
-/// one from a tool call update if possible.
-impl TryFrom<ToolCallUpdate> for ToolCall {
-    type Error = Error;
-
-    fn try_from(update: ToolCallUpdate) -> Result<Self, Self::Error> {
-        let ToolCallUpdate {
-            tool_call_id,
-            fields:
-                ToolCallUpdateFields {
-                    kind,
-                    status,
-                    title,
-                    content,
-                    locations,
-                    raw_input,
-                    raw_output,
-                },
-            meta,
-        } = update;
-
-        Ok(Self {
-            tool_call_id,
-            title: title.ok_or_else(|| {
-                Error::invalid_params().data(serde_json::json!("title is required for a tool call"))
-            })?,
-            kind: kind.unwrap_or_default(),
-            status: status.unwrap_or_default(),
-            content: content.unwrap_or_default(),
-            locations: locations.unwrap_or_default(),
-            raw_input,
-            raw_output,
-            meta,
-        })
-    }
-}
-
-impl From<ToolCall> for ToolCallUpdate {
-    fn from(value: ToolCall) -> Self {
-        let ToolCall {
-            tool_call_id,
-            title,
-            kind,
-            status,
-            content,
-            locations,
-            raw_input,
-            raw_output,
-            meta,
-        } = value;
-        Self {
-            tool_call_id,
-            fields: ToolCallUpdateFields {
-                kind: Some(kind),
-                status: Some(status),
-                title: Some(title),
-                content: Some(content),
-                locations: Some(locations),
-                raw_input,
-                raw_output,
-            },
-            meta,
+    /// Applies a later tool-call patch to this stored tool-call state.
+    ///
+    /// Fields set to `null` are preserved as `null` so callers can decide how to
+    /// render an explicitly cleared value.
+    pub fn apply_update(&mut self, update: ToolCallUpdate) {
+        debug_assert_eq!(self.tool_call_id, update.tool_call_id);
+        if !update.title.is_undefined() {
+            self.title = update.title;
+        }
+        if !update.kind.is_undefined() {
+            self.kind = update.kind;
+        }
+        if !update.status.is_undefined() {
+            self.status = update.status;
+        }
+        if !update.content.is_undefined() {
+            self.content = update.content;
+        }
+        if !update.locations.is_undefined() {
+            self.locations = update.locations;
+        }
+        if !update.raw_input.is_undefined() {
+            self.raw_input = update.raw_input;
+        }
+        if !update.raw_output.is_undefined() {
+            self.raw_output = update.raw_output;
         }
     }
 }
@@ -428,12 +239,6 @@ pub enum ToolKind {
     Unknown(String),
 }
 
-impl ToolKind {
-    fn is_default(&self) -> bool {
-        matches!(self, ToolKind::Other)
-    }
-}
-
 /// Execution status of a tool call.
 ///
 /// Tool calls progress through different statuses during their lifecycle.
@@ -460,12 +265,6 @@ pub enum ToolCallStatus {
     /// future ACP variants.
     #[serde(untagged)]
     Other(String),
-}
-
-impl ToolCallStatus {
-    fn is_default(&self) -> bool {
-        matches!(self, ToolCallStatus::Pending)
-    }
 }
 
 /// Content produced by a tool call.
@@ -719,6 +518,93 @@ impl ToolCallLocation {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::MaybeUndefined;
+
+    #[test]
+    fn tool_call_serializes_as_upsert() {
+        let tool_call = ToolCallUpdate::new("tc_1")
+            .title("Reading configuration")
+            .status(ToolCallStatus::InProgress)
+            .raw_input(serde_json::json!({"path": "settings.json"}));
+
+        assert_eq!(
+            serde_json::to_value(tool_call).unwrap(),
+            serde_json::json!({
+                "toolCallId": "tc_1",
+                "title": "Reading configuration",
+                "status": "in_progress",
+                "rawInput": {
+                    "path": "settings.json"
+                }
+            })
+        );
+    }
+
+    #[test]
+    fn tool_call_update_distinguishes_omitted_null_and_value() {
+        let tool_call = ToolCallUpdate::new("tc_1")
+            .status(ToolCallStatus::Completed)
+            .content(None::<Vec<ToolCallContent>>);
+
+        assert_eq!(
+            serde_json::to_value(tool_call).unwrap(),
+            serde_json::json!({
+                "toolCallId": "tc_1",
+                "status": "completed",
+                "content": null
+            })
+        );
+
+        let deserialized: ToolCallUpdate = serde_json::from_value(serde_json::json!({
+            "toolCallId": "tc_1",
+            "status": null,
+            "locations": []
+        }))
+        .unwrap();
+        assert_eq!(deserialized.title, MaybeUndefined::Undefined);
+        assert_eq!(deserialized.status, MaybeUndefined::Null);
+        assert_eq!(deserialized.locations, MaybeUndefined::Value(Vec::new()));
+    }
+
+    #[test]
+    fn tool_call_update_skips_malformed_list_items() {
+        let deserialized: ToolCallUpdate = serde_json::from_value(serde_json::json!({
+            "toolCallId": "tc_1",
+            "content": [
+                {
+                    "type": "content",
+                    "content": {
+                        "type": "text",
+                        "text": "ok"
+                    }
+                },
+                {
+                    "type": "diff",
+                    "path": "/bad"
+                }
+            ],
+            "locations": [
+                {
+                    "path": "/ok",
+                    "line": 3
+                },
+                {
+                    "line": 4
+                }
+            ]
+        }))
+        .unwrap();
+
+        let MaybeUndefined::Value(content) = deserialized.content else {
+            panic!("content should deserialize to a value");
+        };
+        assert_eq!(content.len(), 1);
+
+        let MaybeUndefined::Value(locations) = deserialized.locations else {
+            panic!("locations should deserialize to a value");
+        };
+        assert_eq!(locations.len(), 1);
+    }
 
     #[test]
     fn tool_kind_preserves_unknown_variant() {

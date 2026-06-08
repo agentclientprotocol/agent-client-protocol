@@ -11,9 +11,9 @@ While Agents handle the actual execution, they may use Client-mediated
 interactions like [permission requests](#requesting-permission) to provide a
 richer, more integrated experience.
 
-## Creating
+## Reporting
 
-When the language model requests a tool invocation, the Agent **SHOULD** report it to the Client:
+When the language model requests a tool invocation, the Agent **SHOULD** report it to the Client with a `tool_call_update`:
 
 ```json
 {
@@ -22,7 +22,7 @@ When the language model requests a tool invocation, the Agent **SHOULD** report 
   "params": {
     "sessionId": "sess_abc123def456",
     "update": {
-      "sessionUpdate": "tool_call",
+      "sessionUpdate": "tool_call_update",
       "toolCallId": "call_001",
       "title": "Reading configuration file",
       "kind": "read",
@@ -36,8 +36,9 @@ When the language model requests a tool invocation, the Agent **SHOULD** report 
   A unique identifier for this tool call within the session
 </ParamField>
 
-<ParamField path="title" type="string" required>
-  A human-readable title describing what the tool is doing
+<ParamField path="title" type="string">
+  A human-readable title describing what the tool is doing. Agents **SHOULD**
+  include the title the first time they report a `toolCallId`.
 </ParamField>
 
 <ParamField path="kind" type="ToolKind">
@@ -77,11 +78,15 @@ In v2, custom or future tool kinds can be used when Clients can fall back to gen
   The raw output returned by the tool
 </ParamField>
 
+The `tool_call_update` notification is an upsert keyed by `toolCallId`. For
+existing tool calls, omitted fields leave the previous value unchanged, `null`
+explicitly clears or unsets the field, and concrete values replace the previous
+value. For a new `toolCallId`, omitted fields use Client defaults. `content` and
+`locations` are replaced as whole arrays; send `[]` or `null` to clear them.
+
 ## Updating
 
 As tools execute, Agents send updates to report progress and results.
-
-Updates use the `session/update` notification with `tool_call_update`:
 
 ```json
 {
