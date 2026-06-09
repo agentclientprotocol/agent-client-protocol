@@ -832,8 +832,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 Handles session update notifications from the agent.
 
 This is a notification endpoint (no response expected) that receives
-real-time updates about session progress, including message chunks,
-tool calls, and execution plans.
+real-time updates about session progress, including message updates,
+message chunks, tool calls, and execution plans.
 
 Note: Clients SHOULD continue accepting tool call updates even after
 sending a `session/cancel` notification, as the agent may send final
@@ -926,6 +926,76 @@ Optional. Omitted or `null` both mean the agent does not support the
 baseline session methods: `session/new`, `session/prompt`,
 `session/cancel`, and `session/update`.
 
+</ResponseField>
+
+## <span class="font-mono">AgentMessage</span>
+
+An agent message upsert.
+
+Only `AgentMessage::message_id` is required. Other fields have patch
+semantics: omitted fields leave the existing message value unchanged, `null`
+clears or unsets the value, and concrete values replace the previous value.
+For a new `messageId`, omitted fields use client defaults. `content` is
+replaced as a whole array; send `[]` or `null` to clear it.
+
+Message updates and chunks are applied in the order they are received. When
+an `agent_message` update includes `content`, that array replaces any
+content previously accumulated for the message, including content from
+earlier chunks. Later chunks with the same `messageId` append to the current
+content.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+<ResponseField name="content" type={<><span><a href="#contentblock">ContentBlock[]</a></span><span> | null</span></>} >
+  Complete replacement content for this message.
+</ResponseField>
+<ResponseField name="messageId" type={<a href="#messageid">MessageId</a>} required>
+  A unique identifier for the message.
+</ResponseField>
+
+## <span class="font-mono">AgentThought</span>
+
+An agent thought or reasoning message upsert.
+
+Only `AgentThought::message_id` is required. Other fields have patch
+semantics: omitted fields leave the existing thought value unchanged, `null`
+clears or unsets the value, and concrete values replace the previous value.
+For a new `messageId`, omitted fields use client defaults. `content` is
+replaced as a whole array; send `[]` or `null` to clear it.
+
+Message updates and chunks are applied in the order they are received. When
+an `agent_thought` update includes `content`, that array replaces any
+content previously accumulated for the thought, including content from
+earlier chunks. Later chunks with the same `messageId` append to the current
+content.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+<ResponseField name="content" type={<><span><a href="#contentblock">ContentBlock[]</a></span><span> | null</span></>} >
+  Complete replacement content for this thought message.
+</ResponseField>
+<ResponseField name="messageId" type={<a href="#messageid">MessageId</a>} required>
+  A unique identifier for the thought message.
 </ResponseField>
 
 ## <span class="font-mono">Annotations</span>
@@ -1276,7 +1346,8 @@ it's text from language models, images for analysis, or embedded resources for c
 Content blocks appear in:
 
 - User prompts sent via `session/prompt`
-- Language model output streamed through `session/update` notifications
+- Language model output reported through `session/update` notifications as
+  message updates or streamed chunks
 - Progress updates and results from tool calls
 
 This structure is compatible with the Model Context Protocol (MCP), enabling
@@ -3122,6 +3193,36 @@ A change in `messageId` indicates a new message has started.
 </Expandable>
 </ResponseField>
 
+<ResponseField name="user_message" type="object">
+A user message has been created or updated.
+
+Agents can send this when they accept or replay a user message. When a
+client receives another `user_message` update with the same `messageId`,
+fields in the new update patch the previous fields for that message.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+<ResponseField name="content" type={<><span><a href="#contentblock">ContentBlock[]</a></span><span> | null</span></>} >
+  Complete replacement content for this message.
+</ResponseField>
+<ResponseField name="messageId" type={<a href="#messageid">MessageId</a>} required>
+  A unique identifier for the message.
+</ResponseField>
+<ResponseField name="sessionUpdate" type={"string"} required>
+  The discriminator value. Must be `"user_message"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 <ResponseField name="agent_message_chunk" type="object">
 A chunk of the agent's response being streamed.
 
@@ -3152,6 +3253,36 @@ A change in `messageId` indicates a new message has started.
 </Expandable>
 </ResponseField>
 
+<ResponseField name="agent_message" type="object">
+An agent message has been created or updated.
+
+Agents can send this in addition to streamed chunks. When a client
+receives another `agent_message` update with the same `messageId`,
+fields in the new update patch the previous fields for that message.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+<ResponseField name="content" type={<><span><a href="#contentblock">ContentBlock[]</a></span><span> | null</span></>} >
+  Complete replacement content for this message.
+</ResponseField>
+<ResponseField name="messageId" type={<a href="#messageid">MessageId</a>} required>
+  A unique identifier for the message.
+</ResponseField>
+<ResponseField name="sessionUpdate" type={"string"} required>
+  The discriminator value. Must be `"agent_message"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 <ResponseField name="agent_thought_chunk" type="object">
 A chunk of the agent's internal reasoning being streamed.
 
@@ -3177,6 +3308,36 @@ A change in `messageId` indicates a new message has started.
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
   The discriminator value. Must be `"agent_thought_chunk"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="agent_thought" type="object">
+An agent thought or reasoning message has been created or updated.
+
+Agents can send this in addition to streamed chunks. When a client
+receives another `agent_thought` update with the same `messageId`,
+fields in the new update patch the previous fields for that message.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+<ResponseField name="content" type={<><span><a href="#contentblock">ContentBlock[]</a></span><span> | null</span></>} >
+  Complete replacement content for this thought message.
+</ResponseField>
+<ResponseField name="messageId" type={<a href="#messageid">MessageId</a>} required>
+  A unique identifier for the thought message.
+</ResponseField>
+<ResponseField name="sessionUpdate" type={"string"} required>
+  The discriminator value. Must be `"agent_thought"`.
 </ResponseField>
 
 </Expandable>
@@ -3800,4 +3961,39 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
     - Minimum: `0`
 
+</ResponseField>
+
+## <span class="font-mono">UserMessage</span>
+
+A user message upsert.
+
+Only `UserMessage::message_id` is required. Other fields have patch
+semantics: omitted fields leave the existing message value unchanged, `null`
+clears or unsets the value, and concrete values replace the previous value.
+For a new `messageId`, omitted fields use client defaults. `content` is
+replaced as a whole array; send `[]` or `null` to clear it.
+
+Message updates and chunks are applied in the order they are received. When
+a `user_message` update includes `content`, that array replaces any content
+previously accumulated for the message, including content from earlier
+chunks. Later chunks with the same `messageId` append to the current
+content.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+<ResponseField name="content" type={<><span><a href="#contentblock">ContentBlock[]</a></span><span> | null</span></>} >
+  Complete replacement content for this message.
+</ResponseField>
+<ResponseField name="messageId" type={<a href="#messageid">MessageId</a>} required>
+  A unique identifier for the message.
 </ResponseField>

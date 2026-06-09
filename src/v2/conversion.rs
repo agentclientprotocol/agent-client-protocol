@@ -98,6 +98,29 @@ pub trait IntoV1 {
     fn into_v1(self) -> Result<Self::Output>;
 }
 
+/// Converts a value from the v2 draft type namespace into one or more v1 values.
+///
+/// Use this trait for protocol values where a single v2 value may need to fan
+/// out into multiple v1 values. For example, a whole v2 message update contains
+/// an array of content blocks, while v1 represents those blocks as separate
+/// chunk updates.
+///
+/// This is intentionally not blanket-implemented for every [`IntoV1`] type.
+/// Keeping one-to-one and one-to-many conversions separate makes future v2
+/// fan-out cases explicit and avoids trait coherence conflicts when an
+/// existing one-to-one shape grows a v2-only variant that needs fan-out.
+pub trait IntoV1Many {
+    /// The corresponding v1 item type.
+    type Output;
+
+    /// Converts this value into one or more corresponding v1 items.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ProtocolConversionError`] when a value cannot be represented in v1.
+    fn into_v1_many(self) -> Result<Vec<Self::Output>>;
+}
+
 /// Converts a value from the v1 type namespace into the matching v2 draft type.
 pub trait IntoV2 {
     /// The corresponding v2 draft type.
@@ -121,6 +144,25 @@ where
     T: IntoV1,
 {
     value.into_v1()
+}
+
+/// Converts a v2 draft value into one or more corresponding v1 values.
+///
+/// One-to-many conversions are stateless. When a v2 update's semantics depend
+/// on previously delivered updates, this helper can only reject cases that are
+/// visible in the value being converted. For example, a content-bearing whole
+/// message update can be emitted as v1 chunks, but v1 cannot represent the
+/// replacement semantics if the v1 side has already received content for that
+/// `messageId`.
+///
+/// # Errors
+///
+/// Returns [`ProtocolConversionError`] when a value cannot be represented in v1.
+pub fn v2_to_v1_many<T>(value: T) -> Result<Vec<T::Output>>
+where
+    T: IntoV1Many,
+{
+    value.into_v1_many()
 }
 
 /// Converts a v1 value into the corresponding v2 draft value type.
@@ -419,6 +461,59 @@ where
     type Output = super::JsonRpcMessage<Message::Output>;
     fn into_v2(self) -> Result<Self::Output> {
         Ok(super::JsonRpcMessage::wrap(self.into_inner().into_v2()?))
+    }
+}
+
+impl IntoV1Many for super::Notification<super::AgentNotification> {
+    type Output = crate::v1::Notification<crate::v1::AgentNotification>;
+
+    fn into_v1_many(self) -> Result<Vec<Self::Output>> {
+        let Self { method, params } = self;
+        let Some(params) = params else {
+            return Ok(vec![crate::v1::Notification {
+                method,
+                params: None,
+            }]);
+        };
+
+        params
+            .into_v1_many()?
+            .into_iter()
+            .map(|params| {
+                Ok(crate::v1::Notification {
+                    method: method.clone(),
+                    params: Some(params),
+                })
+            })
+            .collect()
+    }
+}
+
+impl IntoV1Many for super::JsonRpcMessage<super::Notification<super::AgentNotification>> {
+    type Output = crate::v1::JsonRpcMessage<crate::v1::Notification<crate::v1::AgentNotification>>;
+
+    fn into_v1_many(self) -> Result<Vec<Self::Output>> {
+        self.into_inner()
+            .into_v1_many()?
+            .into_iter()
+            .map(|message| Ok(crate::v1::JsonRpcMessage::wrap(message)))
+            .collect()
+    }
+}
+
+impl IntoV1Many for super::JsonRpcBatch<super::Notification<super::AgentNotification>> {
+    type Output = crate::v1::JsonRpcMessage<crate::v1::Notification<crate::v1::AgentNotification>>;
+
+    fn into_v1_many(self) -> Result<Vec<Self::Output>> {
+        let messages = self
+            .into_vec()
+            .into_iter()
+            .map(IntoV1Many::into_v1_many)
+            .collect::<Result<Vec<_>>>()?
+            .into_iter()
+            .flatten()
+            .collect();
+        Ok(messages)
     }
 }
 
@@ -804,20 +899,28 @@ impl IntoV2 for crate::v1::ProtocolLevelNotification {
     }
 }
 
-impl IntoV1 for super::SessionNotification {
+impl IntoV1Many for super::SessionNotification {
     type Output = crate::v1::SessionNotification;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn into_v1_many(self) -> Result<Vec<Self::Output>> {
         let Self {
             session_id,
             update,
             meta,
         } = self;
-        Ok(crate::v1::SessionNotification {
-            session_id: session_id.into_v1()?,
-            update: update.into_v1()?,
-            meta: meta.into_v1()?,
-        })
+        let session_id = session_id.into_v1()?;
+        let meta = meta.into_v1()?;
+        update
+            .into_v1_many()?
+            .into_iter()
+            .map(|update| {
+                Ok(crate::v1::SessionNotification {
+                    session_id: session_id.clone(),
+                    update,
+                    meta: meta.clone(),
+                })
+            })
+            .collect()
     }
 }
 
@@ -838,39 +941,74 @@ impl IntoV2 for crate::v1::SessionNotification {
     }
 }
 
-impl IntoV1 for super::SessionUpdate {
+impl IntoV1Many for super::SessionUpdate {
     type Output = crate::v1::SessionUpdate;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn into_v1_many(self) -> Result<Vec<Self::Output>> {
         Ok(match self {
             Self::UserMessageChunk(value) => {
-                crate::v1::SessionUpdate::UserMessageChunk(value.into_v1()?)
+                vec![crate::v1::SessionUpdate::UserMessageChunk(value.into_v1()?)]
             }
+            Self::UserMessage(value) => v2_message_update_into_v1_chunks(
+                "user_message",
+                value.message_id,
+                value.content,
+                value.meta,
+                crate::v1::SessionUpdate::UserMessageChunk,
+            )?,
             Self::AgentMessageChunk(value) => {
-                crate::v1::SessionUpdate::AgentMessageChunk(value.into_v1()?)
+                vec![crate::v1::SessionUpdate::AgentMessageChunk(
+                    value.into_v1()?,
+                )]
             }
+            Self::AgentMessage(value) => v2_message_update_into_v1_chunks(
+                "agent_message",
+                value.message_id,
+                value.content,
+                value.meta,
+                crate::v1::SessionUpdate::AgentMessageChunk,
+            )?,
             Self::AgentThoughtChunk(value) => {
-                crate::v1::SessionUpdate::AgentThoughtChunk(value.into_v1()?)
+                vec![crate::v1::SessionUpdate::AgentThoughtChunk(
+                    value.into_v1()?,
+                )]
             }
+            Self::AgentThought(value) => v2_message_update_into_v1_chunks(
+                "agent_thought",
+                value.message_id,
+                value.content,
+                value.meta,
+                crate::v1::SessionUpdate::AgentThoughtChunk,
+            )?,
             Self::ToolCallUpdate(value) => {
-                crate::v1::SessionUpdate::ToolCallUpdate(value.into_v1()?)
+                vec![crate::v1::SessionUpdate::ToolCallUpdate(value.into_v1()?)]
             }
             #[cfg(feature = "unstable_plan_operations")]
-            Self::PlanUpdate(value) => crate::v1::SessionUpdate::PlanUpdate(value.into_v1()?),
+            Self::PlanUpdate(value) => vec![crate::v1::SessionUpdate::PlanUpdate(value.into_v1()?)],
             #[cfg(not(feature = "unstable_plan_operations"))]
-            Self::PlanUpdate(value) => crate::v1::SessionUpdate::Plan(value.into_v1()?),
+            Self::PlanUpdate(value) => vec![crate::v1::SessionUpdate::Plan(value.into_v1()?)],
             #[cfg(feature = "unstable_plan_operations")]
-            Self::PlanRemoved(value) => crate::v1::SessionUpdate::PlanRemoved(value.into_v1()?),
+            Self::PlanRemoved(value) => {
+                vec![crate::v1::SessionUpdate::PlanRemoved(value.into_v1()?)]
+            }
             Self::AvailableCommandsUpdate(value) => {
-                crate::v1::SessionUpdate::AvailableCommandsUpdate(value.into_v1()?)
+                vec![crate::v1::SessionUpdate::AvailableCommandsUpdate(
+                    value.into_v1()?,
+                )]
             }
             Self::ConfigOptionUpdate(value) => {
-                crate::v1::SessionUpdate::ConfigOptionUpdate(value.into_v1()?)
+                vec![crate::v1::SessionUpdate::ConfigOptionUpdate(
+                    value.into_v1()?,
+                )]
             }
             Self::SessionInfoUpdate(value) => {
-                crate::v1::SessionUpdate::SessionInfoUpdate(value.into_v1()?)
+                vec![crate::v1::SessionUpdate::SessionInfoUpdate(
+                    value.into_v1()?,
+                )]
             }
-            Self::UsageUpdate(value) => crate::v1::SessionUpdate::UsageUpdate(value.into_v1()?),
+            Self::UsageUpdate(value) => {
+                vec![crate::v1::SessionUpdate::UsageUpdate(value.into_v1()?)]
+            }
             Self::Other(value) => {
                 return Err(unknown_v2_enum_variant(
                     "SessionUpdate",
@@ -879,6 +1017,54 @@ impl IntoV1 for super::SessionUpdate {
             }
         })
     }
+}
+
+fn v2_message_update_into_v1_chunks(
+    variant: &str,
+    message_id: super::MessageId,
+    content: crate::MaybeUndefined<Vec<super::ContentBlock>>,
+    meta: crate::MaybeUndefined<super::Meta>,
+    wrap: impl Fn(crate::v1::ContentChunk) -> crate::v1::SessionUpdate,
+) -> Result<Vec<crate::v1::SessionUpdate>> {
+    let content = match content {
+        crate::MaybeUndefined::Value(content) if !content.is_empty() => content,
+        crate::MaybeUndefined::Value(_) => {
+            return Err(ProtocolConversionError::new(format!(
+                "v2 SessionUpdate variant `{variant}` with empty content cannot be represented in v1 chunks"
+            )));
+        }
+        crate::MaybeUndefined::Null => {
+            return Err(ProtocolConversionError::new(format!(
+                "v2 SessionUpdate variant `{variant}` with null content cannot be represented in v1 chunks"
+            )));
+        }
+        crate::MaybeUndefined::Undefined => {
+            return Err(ProtocolConversionError::new(format!(
+                "v2 SessionUpdate variant `{variant}` without content cannot be represented in v1 chunks"
+            )));
+        }
+    };
+    let message_id = message_id.into_v1()?;
+    let meta = match meta {
+        crate::MaybeUndefined::Value(meta) => Some(meta.into_v1()?),
+        crate::MaybeUndefined::Null => {
+            return Err(ProtocolConversionError::new(format!(
+                "v2 SessionUpdate variant `{variant}` with null _meta cannot be represented in v1 chunks"
+            )));
+        }
+        crate::MaybeUndefined::Undefined => None,
+    };
+
+    content
+        .into_iter()
+        .map(|content| {
+            Ok(wrap(crate::v1::ContentChunk {
+                content: content.into_v1()?,
+                message_id: Some(message_id.clone()),
+                meta: meta.clone(),
+            }))
+        })
+        .collect()
 }
 
 impl IntoV2 for crate::v1::SessionUpdate {
@@ -1899,24 +2085,34 @@ impl IntoV2 for crate::v1::ClientResponse {
     }
 }
 
-impl IntoV1 for super::AgentNotification {
+impl IntoV1Many for super::AgentNotification {
     type Output = crate::v1::AgentNotification;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn into_v1_many(self) -> Result<Vec<Self::Output>> {
         Ok(match self {
             Self::SessionNotification(value) => {
-                crate::v1::AgentNotification::SessionNotification(value.into_v1()?)
+                value
+                    .into_v1_many()?
+                    .into_iter()
+                    .map(|value| Ok(crate::v1::AgentNotification::SessionNotification(value)))
+                    .collect();
             }
             #[cfg(feature = "unstable_elicitation")]
             Self::CompleteElicitationNotification(value) => {
-                crate::v1::AgentNotification::CompleteElicitationNotification(value.into_v1()?)
+                vec![
+                    crate::v1::AgentNotification::CompleteElicitationNotification(value.into_v1()?),
+                ]
             }
             #[cfg(feature = "unstable_mcp_over_acp")]
             Self::MessageMcpNotification(value) => {
-                crate::v1::AgentNotification::MessageMcpNotification(value.into_v1()?)
+                vec![crate::v1::AgentNotification::MessageMcpNotification(
+                    value.into_v1()?,
+                )]
             }
             Self::ExtNotification(value) => {
-                crate::v1::AgentNotification::ExtNotification(value.into_v1()?)
+                vec![crate::v1::AgentNotification::ExtNotification(
+                    value.into_v1()?,
+                )]
             }
         })
     }
@@ -8588,6 +8784,15 @@ mod tests {
         assert_eq!(error.message(), expected);
     }
 
+    fn assert_v2_to_v1_many_error<T>(value: T, expected: &str)
+    where
+        T: IntoV1Many,
+        T::Output: std::fmt::Debug,
+    {
+        let error = v2_to_v1_many(value).unwrap_err();
+        assert_eq!(error.message(), expected);
+    }
+
     fn assert_v1_to_v2_error<T>(value: T, expected: &str)
     where
         T: IntoV2,
@@ -9033,11 +9238,21 @@ mod tests {
         ];
         for update in cases {
             let notification = v1::SessionNotification::new("sess", update);
-            assert_v1_round_trip::<v1::SessionNotification, v2::SessionNotification>(
-                notification.clone(),
+            let original_json = serde_json::to_value(&notification).expect("v1 serialize");
+            let as_v2: v2::SessionNotification =
+                v1_to_v2(notification.clone()).expect("v1 -> v2 conversion");
+            let v2_json = serde_json::to_value(&as_v2).expect("v2 serialize");
+            assert_eq!(
+                original_json, v2_json,
+                "JSON shape diverged after v1 -> v2 conversion"
             );
-            assert_json_eq_after_v1_to_v2::<v1::SessionNotification, v2::SessionNotification>(
-                notification,
+
+            let back = v2_to_v1_many(as_v2).expect("v2 -> v1 conversion");
+            assert_eq!(back, vec![notification]);
+            let back_json = serde_json::to_value(&back[0]).expect("v1 serialize after round trip");
+            assert_eq!(
+                original_json, back_json,
+                "JSON shape diverged after v2 -> v1 conversion"
             );
         }
     }
@@ -9091,6 +9306,188 @@ mod tests {
     }
 
     #[test]
+    fn v2_full_messages_convert_to_v1_message_chunks() {
+        let mut meta = v2::Meta::new();
+        meta.insert("source".to_string(), serde_json::json!("full"));
+
+        let chunks = v2_to_v1_many(v2::SessionUpdate::UserMessage(
+            v2::UserMessage::new("msg_user")
+                .content(vec![
+                    v2::ContentBlock::Text(v2::TextContent::new("hello")),
+                    v2::ContentBlock::Text(v2::TextContent::new("world")),
+                ])
+                .meta(meta.clone()),
+        ))
+        .expect("v2 -> v1 conversion");
+        assert_eq!(
+            chunks,
+            vec![
+                v1::SessionUpdate::UserMessageChunk(
+                    v1::ContentChunk::new(v1::ContentBlock::Text(v1::TextContent::new("hello")))
+                        .message_id("msg_user")
+                        .meta(meta.clone())
+                ),
+                v1::SessionUpdate::UserMessageChunk(
+                    v1::ContentChunk::new(v1::ContentBlock::Text(v1::TextContent::new("world")))
+                        .message_id("msg_user")
+                        .meta(meta)
+                ),
+            ]
+        );
+
+        assert_eq!(
+            v2_to_v1_many(v2::SessionUpdate::AgentMessage(
+                v2::AgentMessage::new("msg_agent")
+                    .content(vec![v2::ContentBlock::Text(v2::TextContent::new("hello"))])
+            ))
+            .expect("v2 -> v1 conversion"),
+            vec![v1::SessionUpdate::AgentMessageChunk(
+                v1::ContentChunk::new(v1::ContentBlock::Text(v1::TextContent::new("hello")))
+                    .message_id("msg_agent")
+            )]
+        );
+
+        assert_eq!(
+            v2_to_v1_many(v2::SessionUpdate::AgentThought(
+                v2::AgentThought::new("msg_thought").content(vec![v2::ContentBlock::Text(
+                    v2::TextContent::new("thinking")
+                )])
+            ))
+            .expect("v2 -> v1 conversion"),
+            vec![v1::SessionUpdate::AgentThoughtChunk(
+                v1::ContentChunk::new(v1::ContentBlock::Text(v1::TextContent::new("thinking")))
+                    .message_id("msg_thought")
+            )]
+        );
+    }
+
+    #[test]
+    fn v2_full_message_session_notification_fans_out_to_v1_chunk_notifications() {
+        let notification = v2::SessionNotification::new(
+            "sess",
+            v2::SessionUpdate::AgentMessage(v2::AgentMessage::new("msg_agent").content(vec![
+                v2::ContentBlock::Text(v2::TextContent::new("hello")),
+                v2::ContentBlock::Text(v2::TextContent::new("world")),
+            ])),
+        );
+
+        let notifications = v2_to_v1_many(notification).expect("v2 -> v1 conversion");
+        assert_eq!(
+            notifications,
+            vec![
+                v1::SessionNotification::new(
+                    "sess",
+                    v1::SessionUpdate::AgentMessageChunk(
+                        v1::ContentChunk::new(v1::ContentBlock::Text(v1::TextContent::new(
+                            "hello"
+                        )))
+                        .message_id("msg_agent")
+                    )
+                ),
+                v1::SessionNotification::new(
+                    "sess",
+                    v1::SessionUpdate::AgentMessageChunk(
+                        v1::ContentChunk::new(v1::ContentBlock::Text(v1::TextContent::new(
+                            "world"
+                        )))
+                        .message_id("msg_agent")
+                    )
+                ),
+            ]
+        );
+    }
+
+    #[test]
+    fn v2_json_rpc_agent_notification_fans_out_to_v1_chunk_notifications() {
+        let message = v2::JsonRpcMessage::wrap(v2::Notification {
+            method: "session/update".into(),
+            params: Some(v2::AgentNotification::SessionNotification(Box::new(
+                v2::SessionNotification::new(
+                    "sess",
+                    v2::SessionUpdate::AgentMessage(v2::AgentMessage::new("msg_agent").content(
+                        vec![
+                            v2::ContentBlock::Text(v2::TextContent::new("hello")),
+                            v2::ContentBlock::Text(v2::TextContent::new("world")),
+                        ],
+                    )),
+                ),
+            ))),
+        });
+
+        let messages = v2_to_v1_many(message).expect("v2 -> v1 conversion");
+        let json = messages
+            .into_iter()
+            .map(|message| serde_json::to_value(message).expect("serialize v1 message"))
+            .collect::<Vec<_>>();
+        assert_eq!(
+            json,
+            vec![
+                serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "method": "session/update",
+                    "params": {
+                        "sessionId": "sess",
+                        "update": {
+                            "sessionUpdate": "agent_message_chunk",
+                            "content": {
+                                "type": "text",
+                                "text": "hello"
+                            },
+                            "messageId": "msg_agent"
+                        }
+                    }
+                }),
+                serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "method": "session/update",
+                    "params": {
+                        "sessionId": "sess",
+                        "update": {
+                            "sessionUpdate": "agent_message_chunk",
+                            "content": {
+                                "type": "text",
+                                "text": "world"
+                            },
+                            "messageId": "msg_agent"
+                        }
+                    }
+                }),
+            ]
+        );
+    }
+
+    #[test]
+    fn v2_message_patches_and_clears_do_not_convert_to_v1_chunks() {
+        assert_v2_to_v1_many_error(
+            v2::SessionUpdate::AgentMessage(v2::AgentMessage::new("msg_agent")),
+            "v2 SessionUpdate variant `agent_message` without content cannot be represented in v1 chunks",
+        );
+
+        assert_v2_to_v1_many_error(
+            v2::SessionUpdate::AgentMessage(
+                v2::AgentMessage::new("msg_agent").content(None::<Vec<v2::ContentBlock>>),
+            ),
+            "v2 SessionUpdate variant `agent_message` with null content cannot be represented in v1 chunks",
+        );
+
+        assert_v2_to_v1_many_error(
+            v2::SessionUpdate::AgentMessage(
+                v2::AgentMessage::new("msg_agent").content(Vec::<v2::ContentBlock>::new()),
+            ),
+            "v2 SessionUpdate variant `agent_message` with empty content cannot be represented in v1 chunks",
+        );
+
+        assert_v2_to_v1_many_error(
+            v2::SessionUpdate::AgentMessage(
+                v2::AgentMessage::new("msg_agent")
+                    .content(vec![v2::ContentBlock::Text(v2::TextContent::new("hello"))])
+                    .meta(None::<v2::Meta>),
+            ),
+            "v2 SessionUpdate variant `agent_message` with null _meta cannot be represented in v1 chunks",
+        );
+    }
+
+    #[test]
     fn v1_content_chunk_without_message_id_does_not_convert_to_v2() {
         assert_v1_to_v2_error(
             v1::ContentChunk::new(v1::ContentBlock::Text(v1::TextContent::new("missing"))),
@@ -9125,11 +9522,14 @@ mod tests {
             })
         );
 
-        let back: v1::SessionUpdate = v2_to_v1(as_v2).unwrap();
+        let back = v2_to_v1_many(as_v2).unwrap();
         #[cfg(not(feature = "unstable_plan_operations"))]
-        assert_eq!(back, update);
+        assert_eq!(back, vec![update]);
         #[cfg(feature = "unstable_plan_operations")]
-        assert!(matches!(back, v1::SessionUpdate::PlanUpdate(_)));
+        assert!(matches!(
+            back.as_slice(),
+            [v1::SessionUpdate::PlanUpdate(_)]
+        ));
     }
 
     #[test]
@@ -9139,7 +9539,7 @@ mod tests {
             std::collections::BTreeMap::new(),
         ));
 
-        assert_v2_to_v1_error(
+        assert_v2_to_v1_many_error(
             update,
             "v2 SessionUpdate variant `_status_badge` cannot be represented in v1",
         );

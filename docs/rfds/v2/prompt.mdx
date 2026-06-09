@@ -121,7 +121,7 @@ And also send the notification:
 
 The client can then make sure the prompt sits nicely in the feed at the right place, and also allows for multiple clients to be attached to the same session because they would receive a user message that they didn't prompt. The agent-provided `messageId` in that notification gives the client the ID for future message-specific operations.
 
-This is a new message type as well. Not a `user_message_chunk` but just a `user_message` that allows for sending the entire message at once. For v2 we will make sure to allow for the agent to do the same on their messages as well, providing both full and partial streaming update patterns for a given message.
+This is a new message type as well. Not a `user_message_chunk` but just a `user_message` that allows for sending the entire message at once. The [Message Updates and Chunks](./message-updates.mdx) RFD defines the corresponding whole-message update and streamed-chunk patterns for user messages, agent messages, and agent thoughts.
 
 #### `state_change` notification
 

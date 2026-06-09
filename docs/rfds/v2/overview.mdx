@@ -33,6 +33,7 @@ Current RFDs accepted as Drafts that are targeting v2 release
 - [Client Filesystem and Terminal Surface](./client-filesystem-terminal-capabilities.mdx)
 - [Plan Variants](./plan-variants.mdx)
 - [Tool Call Updates](./tool-call-updates.mdx)
+- [Message Updates and Chunks](./message-updates.mdx)
 - [Remote Transports](../streamable-http-websocket-transport.mdx)
 
 Other RFDs will progress separately and are not dependent on breaking changes (specifically the new prompt lifecycle) and can land in either or both v1 and v2.
@@ -44,6 +45,7 @@ Other RFDs will progress separately and are not dependent on breaking changes (s
 - Remove the v1 Client filesystem and terminal execution surface from v2. This includes `clientCapabilities.fs`, the top-level `clientCapabilities.terminal` field, `fs/*` methods, `terminal/*` methods, and terminal tool-call content. Terminal authentication remains separate under `clientCapabilities.auth.terminal`.
 - Make [plan variants](./plan-variants.mdx) the default v2 plan shape by replacing the old `plan` session update with item-based `plan_update`.
 - Replace the v1 split between `tool_call` and `tool_call_update` with a single [tool-call update](./tool-call-updates.mdx) upsert shape keyed by `toolCallId`.
+- Add [whole-message updates](./message-updates.mdx) for `user_message`, `agent_message`, and `agent_thought` alongside streamed chunks. Message updates are upserts keyed by `messageId`; their `content` arrays replace current message content, while chunks append to the current content.
 - Require [message IDs](../message-id.mdx) on streamed message chunks.
 - Follow JSON-RPC 2.0 batch request and notification behavior.
 - Clean up capability naming and organization:
@@ -63,8 +65,9 @@ Other RFDs will progress separately and are not dependent on breaking changes (s
 Changes under consideration that still need to be drafted or moved to draft:
 
 - Capabilities: decide whether any additional capability groups should become required.
-- Streaming/Non-streaming consistency: Offer both options for both messages and tool calls
-  - Also Terminal Output type for streaming terminal output from an agent
+- Streaming/Non-streaming consistency follow-ups:
+  - Tool-call streaming
+  - Terminal Output type for streaming terminal output from an agent
   - Expand diff types (delete, move)
 - session/new changes:
   - Providing starting message history
@@ -103,6 +106,7 @@ With the needed breaking changes, as much as possible I am targeting having a co
 
 ## Revision history
 
+- 2026-06-09: Added the v2 Message Updates and Chunks RFD to define whole-message upserts alongside streamed message chunks.
 - 2026-06-08: Added the v2 Tool Call Updates RFD to make `tool_call_update` the single upsert-style tool-call session update.
 - 2026-06-05: Recorded the v2 capability cleanup: unified initialize capability fields, optional `session` support for NES-only agents, session-scoped `prompt`, `mcp`, and `loadSession` capabilities, object-shaped support markers, explicit `session.mcp.stdio`, removal of deprecated MCP SSE transport, and tagged MCP server transport configs.
 - 2026-06-02: Recorded the v2 decision to follow JSON-RPC 2.0 batch request and notification behavior.

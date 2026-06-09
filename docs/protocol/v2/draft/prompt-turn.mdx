@@ -27,7 +27,7 @@ sequenceDiagram
     loop Until completion
         Note right of Agent: LLM responds with<br/>content/tool calls
         Agent->>Client: session/update (plan)
-        Agent->>Client: session/update (agent_message_chunk)
+        Agent->>Client: session/update (agent_message)
 
         opt Tool calls requested
             Agent->>Client: session/update (tool_call_update)
@@ -101,6 +101,28 @@ The turn begins when the Client sends a `session/prompt`:
 
 Upon receiving the prompt request, the Agent processes the user's message and sends it to the language model, which **MAY** respond with text content, tool calls, or both.
 
+If the Agent reports the accepted user message through `session/update`, it can send either a `user_message` update with the full `content` array or streamed `user_message_chunk` updates.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "user_message",
+      "messageId": "msg_user_8f7a1",
+      "content": [
+        {
+          "type": "text",
+          "text": "Can you analyze this code for potential issues?"
+        }
+      ]
+    }
+  }
+}
+```
+
 ### 3. Agent Reports Output
 
 The Agent reports the model's output to the Client via `session/update` notifications. This may include the Agent's plan for accomplishing the task:
@@ -148,7 +170,42 @@ The Agent reports the model's output to the Client via `session/update` notifica
   Learn more about Agent Plans
 </Card>
 
-The Agent then reports text responses from the model:
+The Agent can report the model's text response as an `agent_message` update with the full `content` array:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "agent_message",
+      "messageId": "msg_agent_c42b9",
+      "content": [
+        {
+          "type": "text",
+          "text": "I'll analyze your code for potential issues. Let me examine it..."
+        }
+      ]
+    }
+  }
+}
+```
+
+The Agent **MUST** include an opaque `messageId` on message updates and message chunks.
+
+User, agent, and thought messages can each be reported either as a message update with a full `content` array or as streamed chunks. `user_message`, `agent_message`, and `agent_thought` updates are upserts keyed by `messageId`: omitted fields leave the existing message unchanged, `null` clears a field, and concrete values replace the previous value. `content` arrays replace the whole message content; send `[]` or `null` to clear content. Chunk updates with the same `messageId` append content; a changed `messageId` indicates a new message.
+
+Clients apply message updates and chunks in the order they are received for each `messageId`:
+
+- A message update without `content` leaves the current content unchanged, so Agents can update `_meta` or future optional fields without resending content.
+- A message update with `content` replaces all content currently stored for that message, including content accumulated from earlier chunks.
+- A message update with `content: []` or `content: null` clears the message content.
+- A chunk appends its `content` to whatever content is current for that message, whether that content came from an earlier message update or earlier chunks.
+
+For example, if an Agent sends `agent_message` with `content: [A]`, then sends `agent_message_chunk` with `B`, the rendered message content is `[A, B]`. If it later sends another `agent_message` with `content: [C]`, the rendered content becomes `[C]`; the earlier full content and chunks are replaced. Subsequent chunks append to `[C]`.
+
+For streaming agent text, the Agent can use `agent_message_chunk` updates:
 
 ```json
 {
@@ -161,14 +218,34 @@ The Agent then reports text responses from the model:
       "messageId": "msg_agent_c42b9",
       "content": {
         "type": "text",
-        "text": "I'll analyze your code for potential issues. Let me examine it..."
+        "text": " Let me examine it..."
       }
     }
   }
 }
 ```
 
-The Agent **MUST** include an opaque `messageId` on message chunks. Chunks with the same `messageId` belong to the same message; a changed `messageId` indicates a new message.
+The Agent can report internal reasoning with the same message-update or chunk patterns. `agent_thought` updates patch fields for the same thought `messageId`; `agent_thought_chunk` updates append new content.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "agent_thought",
+      "messageId": "msg_thought_a12",
+      "content": [
+        {
+          "type": "text",
+          "text": "Need to inspect the loop body before suggesting a fix."
+        }
+      ]
+    }
+  }
+}
+```
 
 If the model requested tool calls, these are also reported immediately:
 

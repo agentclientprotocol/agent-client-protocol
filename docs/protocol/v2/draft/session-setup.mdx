@@ -30,7 +30,7 @@ sequenceDiagram
         Note over Agent,Client: Replay conversation history...
         Agent->>Client: session/update
         Agent->>Client: session/update
-        Note over Agent,Client: All content streamed
+        Note over Agent,Client: All content reported
         Agent-->>Client: session/load response
     else
         Client->>Agent: session/resume (sessionId)
@@ -137,7 +137,7 @@ To load an existing session, Clients **MUST** call the `session/load` method wit
 }
 ```
 
-The Agent **MUST** replay the entire conversation to the Client in the form of `session/update` notifications (like `session/prompt`).
+The Agent **MUST** replay the entire conversation to the Client in the form of `session/update` notifications (like `session/prompt`). User, agent, and thought messages can each be replayed as message updates with full `content` arrays or as chunks.
 
 For example, a user message from the conversation history:
 
@@ -148,12 +148,14 @@ For example, a user message from the conversation history:
   "params": {
     "sessionId": "sess_789xyz",
     "update": {
-      "sessionUpdate": "user_message_chunk",
+      "sessionUpdate": "user_message",
       "messageId": "msg_user_8f7a1",
-      "content": {
-        "type": "text",
-        "text": "What's the capital of France?"
-      }
+      "content": [
+        {
+          "type": "text",
+          "text": "What's the capital of France?"
+        }
+      ]
     }
   }
 }
@@ -168,20 +170,24 @@ Followed by the agent's response:
   "params": {
     "sessionId": "sess_789xyz",
     "update": {
-      "sessionUpdate": "agent_message_chunk",
+      "sessionUpdate": "agent_message",
       "messageId": "msg_agent_c42b9",
-      "content": {
-        "type": "text",
-        "text": "The capital of France is Paris."
-      }
+      "content": [
+        {
+          "type": "text",
+          "text": "The capital of France is Paris."
+        }
+      ]
     }
   }
 }
 ```
 
-During replay, the Agent **MUST** include an opaque, unique `messageId` for each replayed message.
+During replay, the Agent **MUST** include an opaque, unique `messageId` for each replayed message. `user_message`, `agent_message`, and `agent_thought` updates are upserts keyed by `messageId`; their `content` arrays replace the whole message content, while chunk updates with the same `messageId` append content.
 
-When **all** the conversation entries have been streamed to the Client, the
+Clients apply replayed message updates and chunks in the order they are received. If a message update with `content` arrives after chunks for the same `messageId`, it replaces the content accumulated from those chunks. If chunks arrive after a message update, they append to that update's current content. Message updates that omit `content` can update `_meta` or future fields without changing the current content.
+
+When **all** the conversation entries have been reported to the Client, the
 Agent **MUST** respond to the original `session/load` request.
 
 ```json

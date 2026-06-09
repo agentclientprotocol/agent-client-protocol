@@ -93,10 +93,28 @@ impl SessionNotification {
 pub enum SessionUpdate {
     /// A chunk of the user's message being streamed.
     UserMessageChunk(ContentChunk),
+    /// A user message has been created or updated.
+    ///
+    /// Agents can send this when they accept or replay a user message. When a
+    /// client receives another `user_message` update with the same `messageId`,
+    /// fields in the new update patch the previous fields for that message.
+    UserMessage(UserMessage),
     /// A chunk of the agent's response being streamed.
     AgentMessageChunk(ContentChunk),
+    /// An agent message has been created or updated.
+    ///
+    /// Agents can send this in addition to streamed chunks. When a client
+    /// receives another `agent_message` update with the same `messageId`,
+    /// fields in the new update patch the previous fields for that message.
+    AgentMessage(AgentMessage),
     /// A chunk of the agent's internal reasoning being streamed.
     AgentThoughtChunk(ContentChunk),
+    /// An agent thought or reasoning message has been created or updated.
+    ///
+    /// Agents can send this in addition to streamed chunks. When a client
+    /// receives another `agent_thought` update with the same `messageId`,
+    /// fields in the new update patch the previous fields for that message.
+    AgentThought(AgentThought),
     /// A tool call has been created or updated.
     ToolCallUpdate(ToolCallUpdate),
     /// A content update for a plan identified by ID.
@@ -197,8 +215,11 @@ fn is_known_session_update(session_update: &str) -> bool {
     matches!(
         session_update,
         "user_message_chunk"
+            | "user_message"
             | "agent_message_chunk"
+            | "agent_message"
             | "agent_thought_chunk"
+            | "agent_thought"
             | "tool_call_update"
             | "plan_update"
             | "available_commands_update"
@@ -214,8 +235,11 @@ fn other_session_update_schema(schema: &mut Schema) {
         "sessionUpdate",
         &[
             "user_message_chunk",
+            "user_message",
             "agent_message_chunk",
+            "agent_message",
             "agent_thought_chunk",
+            "agent_thought",
             "tool_call_update",
             "plan_update",
             "available_commands_update",
@@ -451,6 +475,231 @@ impl ContentChunk {
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
+        self
+    }
+}
+
+/// A user message upsert.
+///
+/// Only [`UserMessage::message_id`] is required. Other fields have patch
+/// semantics: omitted fields leave the existing message value unchanged, `null`
+/// clears or unsets the value, and concrete values replace the previous value.
+/// For a new `messageId`, omitted fields use client defaults. `content` is
+/// replaced as a whole array; send `[]` or `null` to clear it.
+///
+/// Message updates and chunks are applied in the order they are received. When
+/// a `user_message` update includes `content`, that array replaces any content
+/// previously accumulated for the message, including content from earlier
+/// chunks. Later chunks with the same `messageId` append to the current
+/// content.
+#[serde_as]
+#[skip_serializing_none]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct UserMessage {
+    /// A unique identifier for the message.
+    pub message_id: MessageId,
+    /// Complete replacement content for this message.
+    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<VecSkipError<_, SkipListener>>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
+    #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
+    pub content: MaybeUndefined<Vec<ContentBlock>>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(
+        rename = "_meta",
+        default,
+        skip_serializing_if = "MaybeUndefined::is_undefined"
+    )]
+    pub meta: MaybeUndefined<Meta>,
+}
+
+impl UserMessage {
+    #[must_use]
+    pub fn new(message_id: impl Into<MessageId>) -> Self {
+        Self {
+            message_id: message_id.into(),
+            content: MaybeUndefined::Undefined,
+            meta: MaybeUndefined::Undefined,
+        }
+    }
+
+    /// A unique identifier for the message.
+    #[must_use]
+    pub fn message_id(mut self, message_id: impl Into<MessageId>) -> Self {
+        self.message_id = message_id.into();
+        self
+    }
+
+    /// Complete replacement content for this message.
+    #[must_use]
+    pub fn content(mut self, content: impl IntoMaybeUndefined<Vec<ContentBlock>>) -> Self {
+        self.content = content.into_maybe_undefined();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoMaybeUndefined<Meta>) -> Self {
+        self.meta = meta.into_maybe_undefined();
+        self
+    }
+}
+
+/// An agent message upsert.
+///
+/// Only [`AgentMessage::message_id`] is required. Other fields have patch
+/// semantics: omitted fields leave the existing message value unchanged, `null`
+/// clears or unsets the value, and concrete values replace the previous value.
+/// For a new `messageId`, omitted fields use client defaults. `content` is
+/// replaced as a whole array; send `[]` or `null` to clear it.
+///
+/// Message updates and chunks are applied in the order they are received. When
+/// an `agent_message` update includes `content`, that array replaces any
+/// content previously accumulated for the message, including content from
+/// earlier chunks. Later chunks with the same `messageId` append to the current
+/// content.
+#[serde_as]
+#[skip_serializing_none]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct AgentMessage {
+    /// A unique identifier for the message.
+    pub message_id: MessageId,
+    /// Complete replacement content for this message.
+    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<VecSkipError<_, SkipListener>>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
+    #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
+    pub content: MaybeUndefined<Vec<ContentBlock>>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(
+        rename = "_meta",
+        default,
+        skip_serializing_if = "MaybeUndefined::is_undefined"
+    )]
+    pub meta: MaybeUndefined<Meta>,
+}
+
+impl AgentMessage {
+    #[must_use]
+    pub fn new(message_id: impl Into<MessageId>) -> Self {
+        Self {
+            message_id: message_id.into(),
+            content: MaybeUndefined::Undefined,
+            meta: MaybeUndefined::Undefined,
+        }
+    }
+
+    /// A unique identifier for the message.
+    #[must_use]
+    pub fn message_id(mut self, message_id: impl Into<MessageId>) -> Self {
+        self.message_id = message_id.into();
+        self
+    }
+
+    /// Complete replacement content for this message.
+    #[must_use]
+    pub fn content(mut self, content: impl IntoMaybeUndefined<Vec<ContentBlock>>) -> Self {
+        self.content = content.into_maybe_undefined();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoMaybeUndefined<Meta>) -> Self {
+        self.meta = meta.into_maybe_undefined();
+        self
+    }
+}
+
+/// An agent thought or reasoning message upsert.
+///
+/// Only [`AgentThought::message_id`] is required. Other fields have patch
+/// semantics: omitted fields leave the existing thought value unchanged, `null`
+/// clears or unsets the value, and concrete values replace the previous value.
+/// For a new `messageId`, omitted fields use client defaults. `content` is
+/// replaced as a whole array; send `[]` or `null` to clear it.
+///
+/// Message updates and chunks are applied in the order they are received. When
+/// an `agent_thought` update includes `content`, that array replaces any
+/// content previously accumulated for the thought, including content from
+/// earlier chunks. Later chunks with the same `messageId` append to the current
+/// content.
+#[serde_as]
+#[skip_serializing_none]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct AgentThought {
+    /// A unique identifier for the thought message.
+    pub message_id: MessageId,
+    /// Complete replacement content for this thought message.
+    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<VecSkipError<_, SkipListener>>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
+    #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
+    pub content: MaybeUndefined<Vec<ContentBlock>>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(
+        rename = "_meta",
+        default,
+        skip_serializing_if = "MaybeUndefined::is_undefined"
+    )]
+    pub meta: MaybeUndefined<Meta>,
+}
+
+impl AgentThought {
+    #[must_use]
+    pub fn new(message_id: impl Into<MessageId>) -> Self {
+        Self {
+            message_id: message_id.into(),
+            content: MaybeUndefined::Undefined,
+            meta: MaybeUndefined::Undefined,
+        }
+    }
+
+    /// A unique identifier for the thought message.
+    #[must_use]
+    pub fn message_id(mut self, message_id: impl Into<MessageId>) -> Self {
+        self.message_id = message_id.into();
+        self
+    }
+
+    /// Complete replacement content for this thought message.
+    #[must_use]
+    pub fn content(mut self, content: impl IntoMaybeUndefined<Vec<ContentBlock>>) -> Self {
+        self.content = content.into_maybe_undefined();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoMaybeUndefined<Meta>) -> Self {
+        self.meta = meta.into_maybe_undefined();
         self
     }
 }
@@ -1345,8 +1594,8 @@ pub enum AgentNotification {
     /// Handles session update notifications from the agent.
     ///
     /// This is a notification endpoint (no response expected) that receives
-    /// real-time updates about session progress, including message chunks,
-    /// tool calls, and execution plans.
+    /// real-time updates about session progress, including message updates,
+    /// message chunks, tool calls, and execution plans.
     ///
     /// Note: Clients SHOULD continue accepting tool call updates even after
     /// sending a `session/cancel` notification, as the agent may send final
@@ -1482,6 +1731,144 @@ mod tests {
         .unwrap_err();
 
         assert!(err.to_string().contains("messageId"), "{err}");
+    }
+
+    #[test]
+    fn test_full_message_serialization() {
+        use serde_json::json;
+
+        assert_eq!(
+            serde_json::to_value(SessionUpdate::UserMessage(
+                UserMessage::new("msg_user_8f7a1").content(vec![ContentBlock::Text(
+                    crate::v2::TextContent::new("Hello")
+                )])
+            ))
+            .unwrap(),
+            json!({
+                "sessionUpdate": "user_message",
+                "messageId": "msg_user_8f7a1",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "Hello"
+                    }
+                ]
+            })
+        );
+
+        assert_eq!(
+            serde_json::to_value(SessionUpdate::AgentMessage(
+                AgentMessage::new("msg_agent_c42b9").content(vec![ContentBlock::Text(
+                    crate::v2::TextContent::new("Hello")
+                )])
+            ))
+            .unwrap(),
+            json!({
+                "sessionUpdate": "agent_message",
+                "messageId": "msg_agent_c42b9",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "Hello"
+                    }
+                ]
+            })
+        );
+
+        assert_eq!(
+            serde_json::to_value(SessionUpdate::AgentThought(
+                AgentThought::new("msg_thought_a12").content(vec![ContentBlock::Text(
+                    crate::v2::TextContent::new("Need to inspect the call sites first.")
+                )])
+            ))
+            .unwrap(),
+            json!({
+                "sessionUpdate": "agent_thought",
+                "messageId": "msg_thought_a12",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "Need to inspect the call sites first."
+                    }
+                ]
+            })
+        );
+    }
+
+    #[test]
+    fn test_message_upsert_serialization() {
+        use serde_json::json;
+
+        assert_eq!(
+            serde_json::to_value(SessionUpdate::UserMessage(
+                UserMessage::new("msg_empty").content(Vec::<ContentBlock>::new())
+            ))
+            .unwrap(),
+            json!({
+                "sessionUpdate": "user_message",
+                "messageId": "msg_empty",
+                "content": []
+            })
+        );
+
+        let empty = serde_json::from_value::<UserMessage>(json!({
+            "messageId": "msg_empty",
+            "content": []
+        }))
+        .unwrap();
+        assert!(matches!(
+            empty.content,
+            MaybeUndefined::Value(ref content) if content.is_empty()
+        ));
+
+        let patch = serde_json::from_value::<AgentMessage>(json!({
+            "messageId": "msg_agent_c42b9"
+        }))
+        .unwrap();
+        assert_eq!(patch.content, MaybeUndefined::Undefined);
+        assert_eq!(patch.meta, MaybeUndefined::Undefined);
+
+        let patch = serde_json::from_value::<AgentThought>(json!({
+            "messageId": "msg_thought_a12"
+        }))
+        .unwrap();
+        assert_eq!(patch.content, MaybeUndefined::Undefined);
+
+        let clear = serde_json::from_value::<UserMessage>(json!({
+            "messageId": "msg_user_8f7a1",
+            "content": null
+        }))
+        .unwrap();
+        assert_eq!(clear.content, MaybeUndefined::Null);
+
+        let mut meta = Meta::new();
+        meta.insert("source".to_string(), json!("replay"));
+
+        assert_eq!(
+            serde_json::to_value(SessionUpdate::UserMessage(
+                UserMessage::new("msg_user_8f7a1").meta(meta)
+            ))
+            .unwrap(),
+            json!({
+                "sessionUpdate": "user_message",
+                "messageId": "msg_user_8f7a1",
+                "_meta": {
+                    "source": "replay"
+                }
+            })
+        );
+
+        assert_eq!(
+            serde_json::to_value(SessionUpdate::UserMessage(
+                UserMessage::new("msg_user_8f7a1").meta(None::<Meta>)
+            ))
+            .unwrap(),
+            json!({
+                "sessionUpdate": "user_message",
+                "messageId": "msg_user_8f7a1",
+                "_meta": null
+            })
+        );
     }
 
     #[test]

@@ -887,7 +887,7 @@
       }
     },
     "ContentBlock": {
-      "description": "Content blocks represent displayable information in the Agent Client Protocol.\n\nThey provide a structured way to handle various types of user-facing content—whether\nit's text from language models, images for analysis, or embedded resources for context.\n\nContent blocks appear in:\n- User prompts sent via `session/prompt`\n- Language model output streamed through `session/update` notifications\n- Progress updates and results from tool calls\n\nThis structure is compatible with the Model Context Protocol (MCP), enabling\nagents to seamlessly forward content from MCP tool outputs without transformation.\n\nSee protocol docs: [Content](https://agentclientprotocol.com/protocol/content)",
+      "description": "Content blocks represent displayable information in the Agent Client Protocol.\n\nThey provide a structured way to handle various types of user-facing content—whether\nit's text from language models, images for analysis, or embedded resources for context.\n\nContent blocks appear in:\n- User prompts sent via `session/prompt`\n- Language model output reported through `session/update` notifications as\n  message updates or streamed chunks\n- Progress updates and results from tool calls\n\nThis structure is compatible with the Model Context Protocol (MCP), enabling\nagents to seamlessly forward content from MCP tool outputs without transformation.\n\nSee protocol docs: [Content](https://agentclientprotocol.com/protocol/content)",
       "anyOf": [
         {
           "description": "Text content. May be plain text or formatted with Markdown.\n\nAll agents MUST support text content blocks in prompts.\nClients SHOULD render this text as Markdown.",
@@ -4751,7 +4751,7 @@
               "anyOf": [
                 {
                   "title": "SessionNotification",
-                  "description": "Handles session update notifications from the agent.\n\nThis is a notification endpoint (no response expected) that receives\nreal-time updates about session progress, including message chunks,\ntool calls, and execution plans.\n\nNote: Clients SHOULD continue accepting tool call updates even after\nsending a `session/cancel` notification, as the agent may send final\nupdates before responding with the cancelled stop reason.\n\nSee protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-turn#3-agent-reports-output)",
+                  "description": "Handles session update notifications from the agent.\n\nThis is a notification endpoint (no response expected) that receives\nreal-time updates about session progress, including message updates,\nmessage chunks, tool calls, and execution plans.\n\nNote: Clients SHOULD continue accepting tool call updates even after\nsending a `session/cancel` notification, as the agent may send final\nupdates before responding with the cancelled stop reason.\n\nSee protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-turn#3-agent-reports-output)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/SessionNotification"
@@ -4846,6 +4846,22 @@
           ]
         },
         {
+          "description": "A user message has been created or updated.\n\nAgents can send this when they accept or replay a user message. When a\nclient receives another `user_message` update with the same `messageId`,\nfields in the new update patch the previous fields for that message.",
+          "type": "object",
+          "properties": {
+            "sessionUpdate": {
+              "type": "string",
+              "const": "user_message"
+            }
+          },
+          "required": ["sessionUpdate"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/UserMessage"
+            }
+          ]
+        },
+        {
           "description": "A chunk of the agent's response being streamed.",
           "type": "object",
           "properties": {
@@ -4862,6 +4878,22 @@
           ]
         },
         {
+          "description": "An agent message has been created or updated.\n\nAgents can send this in addition to streamed chunks. When a client\nreceives another `agent_message` update with the same `messageId`,\nfields in the new update patch the previous fields for that message.",
+          "type": "object",
+          "properties": {
+            "sessionUpdate": {
+              "type": "string",
+              "const": "agent_message"
+            }
+          },
+          "required": ["sessionUpdate"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/AgentMessage"
+            }
+          ]
+        },
+        {
           "description": "A chunk of the agent's internal reasoning being streamed.",
           "type": "object",
           "properties": {
@@ -4874,6 +4906,22 @@
           "allOf": [
             {
               "$ref": "#/$defs/ContentChunk"
+            }
+          ]
+        },
+        {
+          "description": "An agent thought or reasoning message has been created or updated.\n\nAgents can send this in addition to streamed chunks. When a client\nreceives another `agent_thought` update with the same `messageId`,\nfields in the new update patch the previous fields for that message.",
+          "type": "object",
+          "properties": {
+            "sessionUpdate": {
+              "type": "string",
+              "const": "agent_thought"
+            }
+          },
+          "required": ["sessionUpdate"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/AgentThought"
             }
           ]
         },
@@ -5017,6 +5065,16 @@
                 "properties": {
                   "sessionUpdate": {
                     "type": "string",
+                    "const": "user_message"
+                  }
+                },
+                "required": ["sessionUpdate"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "sessionUpdate": {
+                    "type": "string",
                     "const": "agent_message_chunk"
                   }
                 },
@@ -5027,7 +5085,27 @@
                 "properties": {
                   "sessionUpdate": {
                     "type": "string",
+                    "const": "agent_message"
+                  }
+                },
+                "required": ["sessionUpdate"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "sessionUpdate": {
+                    "type": "string",
                     "const": "agent_thought_chunk"
+                  }
+                },
+                "required": ["sessionUpdate"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "sessionUpdate": {
+                    "type": "string",
+                    "const": "agent_thought"
                   }
                 },
                 "required": ["sessionUpdate"]
@@ -5142,6 +5220,93 @@
         }
       },
       "required": ["content", "messageId"]
+    },
+    "UserMessage": {
+      "description": "A user message upsert.\n\nOnly [`UserMessage::message_id`] is required. Other fields have patch\nsemantics: omitted fields leave the existing message value unchanged, `null`\nclears or unsets the value, and concrete values replace the previous value.\nFor a new `messageId`, omitted fields use client defaults. `content` is\nreplaced as a whole array; send `[]` or `null` to clear it.\n\nMessage updates and chunks are applied in the order they are received. When\na `user_message` update includes `content`, that array replaces any content\npreviously accumulated for the message, including content from earlier\nchunks. Later chunks with the same `messageId` append to the current\ncontent.",
+      "type": "object",
+      "properties": {
+        "messageId": {
+          "description": "A unique identifier for the message.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/MessageId"
+            }
+          ]
+        },
+        "content": {
+          "description": "Complete replacement content for this message.",
+          "type": ["array", "null"],
+          "items": {
+            "$ref": "#/$defs/ContentBlock"
+          },
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"],
+          "additionalProperties": true
+        }
+      },
+      "required": ["messageId"]
+    },
+    "AgentMessage": {
+      "description": "An agent message upsert.\n\nOnly [`AgentMessage::message_id`] is required. Other fields have patch\nsemantics: omitted fields leave the existing message value unchanged, `null`\nclears or unsets the value, and concrete values replace the previous value.\nFor a new `messageId`, omitted fields use client defaults. `content` is\nreplaced as a whole array; send `[]` or `null` to clear it.\n\nMessage updates and chunks are applied in the order they are received. When\nan `agent_message` update includes `content`, that array replaces any\ncontent previously accumulated for the message, including content from\nearlier chunks. Later chunks with the same `messageId` append to the current\ncontent.",
+      "type": "object",
+      "properties": {
+        "messageId": {
+          "description": "A unique identifier for the message.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/MessageId"
+            }
+          ]
+        },
+        "content": {
+          "description": "Complete replacement content for this message.",
+          "type": ["array", "null"],
+          "items": {
+            "$ref": "#/$defs/ContentBlock"
+          },
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"],
+          "additionalProperties": true
+        }
+      },
+      "required": ["messageId"]
+    },
+    "AgentThought": {
+      "description": "An agent thought or reasoning message upsert.\n\nOnly [`AgentThought::message_id`] is required. Other fields have patch\nsemantics: omitted fields leave the existing thought value unchanged, `null`\nclears or unsets the value, and concrete values replace the previous value.\nFor a new `messageId`, omitted fields use client defaults. `content` is\nreplaced as a whole array; send `[]` or `null` to clear it.\n\nMessage updates and chunks are applied in the order they are received. When\nan `agent_thought` update includes `content`, that array replaces any\ncontent previously accumulated for the thought, including content from\nearlier chunks. Later chunks with the same `messageId` append to the current\ncontent.",
+      "type": "object",
+      "properties": {
+        "messageId": {
+          "description": "A unique identifier for the thought message.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/MessageId"
+            }
+          ]
+        },
+        "content": {
+          "description": "Complete replacement content for this thought message.",
+          "type": ["array", "null"],
+          "items": {
+            "$ref": "#/$defs/ContentBlock"
+          },
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"],
+          "additionalProperties": true
+        }
+      },
+      "required": ["messageId"]
     },
     "PlanUpdateContent": {
       "description": "Updated content for a plan.",

@@ -25,7 +25,8 @@ use crate::{IntoOption, SkipListener};
 ///
 /// Content blocks appear in:
 /// - User prompts sent via `session/prompt`
-/// - Language model output streamed through `session/update` notifications
+/// - Language model output reported through `session/update` notifications as
+///   message updates or streamed chunks
 /// - Progress updates and results from tool calls
 ///
 /// This structure is compatible with the Model Context Protocol (MCP), enabling

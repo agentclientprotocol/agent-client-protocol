@@ -1,0 +1,164 @@
+---
+title: "v2 Message Updates and Chunks"
+---
+
+Author(s): [@benbrandt](https://github.com/benbrandt)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+ACP v2 should support both whole-message updates and streamed message chunks for user messages, agent messages, and agent thoughts. Whole-message updates are upserts keyed by `messageId`, while chunks append content to the message with the matching `messageId`.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+ACP v1 primarily reports user, agent, and thought messages as chunks:
+
+```json
+{
+  "sessionUpdate": "agent_message_chunk",
+  "messageId": "msg_agent_c42b9",
+  "content": {
+    "type": "text",
+    "text": "Analyzing..."
+  }
+}
+```
+
+Chunks are a natural fit for streaming model output, but they are awkward for session replay, accepted user-message acknowledgments, and cases where the Agent already has the whole message available. Also, there is no way for an agent to _redact_ content from a message if needed due to guardrail apis.
+
+The v2 prompt lifecycle also needs a clear way for Agents to acknowledge or replay accepted user messages. The [Message ID RFD](../message-id.mdx) keeps message IDs agent-owned, so the Agent needs a session update that can provide both the accepted user-message content and its `messageId`.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+ACP v2 should define whole-message session updates:
+
+- `user_message`
+- `agent_message`
+- `agent_thought`
+
+Each whole-message update is an upsert keyed by `messageId`:
+
+- `messageId` is required.
+- `content` and `_meta` are patch fields.
+- An omitted patch field leaves the previous value unchanged.
+- `null` explicitly clears or unsets the field.
+- Any concrete value replaces the previous value.
+- `content` is replaced as a whole array, not appended.
+- `[]` and `null` both clear `content`.
+- For a new `messageId`, omitted fields use Client defaults.
+
+The matching chunk updates remain:
+
+- `user_message_chunk`
+- `agent_message_chunk`
+- `agent_thought_chunk`
+
+Chunks append their single `content` item to the current content of the message with the matching `messageId`.
+
+### Interaction between updates and chunks
+
+Clients apply message updates and chunks in the order they are received for each `messageId`.
+
+If a message update includes `content`, that content array replaces all content currently stored for the message, including content accumulated from earlier chunks:
+
+```json
+[
+  {
+    "sessionUpdate": "agent_message_chunk",
+    "messageId": "m1",
+    "content": { "type": "text", "text": "A" }
+  },
+  {
+    "sessionUpdate": "agent_message_chunk",
+    "messageId": "m1",
+    "content": { "type": "text", "text": "B" }
+  },
+  {
+    "sessionUpdate": "agent_message",
+    "messageId": "m1",
+    "content": [{ "type": "text", "text": "C" }]
+  }
+]
+```
+
+After this sequence, the message content is `[C]`.
+
+If chunks arrive after a message update, they append to the update's current content:
+
+```json
+[
+  {
+    "sessionUpdate": "agent_message",
+    "messageId": "m1",
+    "content": [{ "type": "text", "text": "A" }]
+  },
+  {
+    "sessionUpdate": "agent_message_chunk",
+    "messageId": "m1",
+    "content": { "type": "text", "text": "B" }
+  }
+]
+```
+
+After this sequence, the message content is `[A, B]`.
+
+If a message update omits `content`, it does not change the current content. This lets Agents update `_meta` or future optional fields without resending the whole content array:
+
+```json
+{
+  "sessionUpdate": "agent_message",
+  "messageId": "m1",
+  "_meta": { "source": "replay" }
+}
+```
+
+## Shiny future
+
+> How will things play out once this feature exists?
+
+Agents can choose the reporting style that matches the data they have:
+
+- use whole-message updates for replay, accepted user messages, and already-complete model output;
+- use chunks for streaming output;
+- combine both when an Agent needs to seed content and then stream more, or correct/replace content after streaming.
+
+The upsert shape also leaves room for future message-level fields, such as annotations or provenance, without forcing Agents to resend content for metadata-only updates.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+1. Add the `user_message`, `agent_message`, and `agent_thought` session update variants to v2.
+2. Require `messageId` on whole-message updates and chunks.
+3. Represent `content` and `_meta` as three-state patch fields so omitted, `null`, and concrete values can be distinguished.
+4. Document ordering semantics between whole-message updates and chunks in the protocol docs.
+5. Convert content-bearing whole-message updates to v1 by fanning out one v1 chunk per content block. This is equivalent only when the v1 side has not already received content for that `messageId`; v1 has no way to replace earlier chunks. Patch-only updates, `content: null`, `content: []`, and `_meta: null` cannot be represented by v1 chunks and should fail conversion rather than silently dropping the update.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Why are message updates upserts instead of required full snapshots?
+
+Upserts let Agents update `_meta` or future optional message fields without resending the whole content array.
+
+### Why does `content` replace instead of append?
+
+Appending is already represented by chunks. A whole-message update needs to be able to replay, correct, or replace the current content for a message. Making `content` a replacement array gives each update type a distinct behavior: message updates replace fields, chunks append content.
+
+### What happens when a message update arrives before any chunks?
+
+The Client creates or updates the message for that `messageId`. Later chunks with the same `messageId` append to the current content.
+
+### What happens when chunks arrive before a message update?
+
+The Client appends those chunks to the message for that `messageId`. A later message update with `content` replaces the accumulated content.
+
+## Revision history
+
+- 2026-06-09: Initial draft.
