@@ -1250,7 +1250,7 @@ pub enum AgentRequest {
     /// respond to this request with `RequestPermissionOutcome::Cancelled`.
     ///
     /// See protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/tool-calls#requesting-permission)
-    RequestPermissionRequest(RequestPermissionRequest),
+    RequestPermissionRequest(Box<RequestPermissionRequest>),
     /// **UNSTABLE**
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -1339,7 +1339,6 @@ pub enum ClientResponse {
 /// Notifications do not expect a response.
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(untagged)]
-#[expect(clippy::large_enum_variant)]
 #[schemars(inline)]
 #[non_exhaustive]
 pub enum AgentNotification {
@@ -1354,7 +1353,7 @@ pub enum AgentNotification {
     /// updates before responding with the cancelled stop reason.
     ///
     /// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-turn#3-agent-reports-output)
-    SessionNotification(SessionNotification),
+    SessionNotification(Box<SessionNotification>),
     /// **UNSTABLE**
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.

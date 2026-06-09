@@ -1909,6 +1909,7 @@ pub(crate) const ELICITATION_COMPLETE_NOTIFICATION: &str = "elicitation/complete
 #[serde(untagged)]
 #[schemars(inline)]
 #[non_exhaustive]
+#[allow(clippy::large_enum_variant)]
 pub enum AgentRequest {
     /// Writes content to a text file in the client's file system.
     ///

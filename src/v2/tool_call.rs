@@ -279,7 +279,7 @@ pub enum ToolCallStatus {
 #[non_exhaustive]
 pub enum ToolCallContent {
     /// Standard content block (text, images, resources).
-    Content(Content),
+    Content(Box<Content>),
     /// File modification shown as a diff.
     Diff(Diff),
     /// Custom or future tool call content.
@@ -358,7 +358,7 @@ fn other_tool_call_content_schema(schema: &mut Schema) {
 
 impl<T: Into<ContentBlock>> From<T> for ToolCallContent {
     fn from(content: T) -> Self {
-        ToolCallContent::Content(Content::new(content))
+        ToolCallContent::Content(Box::new(Content::new(content)))
     }
 }
 

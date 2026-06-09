@@ -306,7 +306,6 @@ impl IntoOption<serde_json::Value> for Cow<'_, str> {
 ///     a: MaybeUndefined<i32>,
 /// }
 /// ```
-#[allow(missing_docs)]
 #[derive(Copy, Clone, Default, PartialEq, PartialOrd, Eq, Ord, Debug, Hash, JsonSchema)]
 #[schemars(with = "Option<Option<T>>", inline)]
 #[expect(clippy::exhaustive_enums)]

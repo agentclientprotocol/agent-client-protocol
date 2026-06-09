@@ -4800,7 +4800,6 @@ pub(crate) const LOGOUT_METHOD_NAME: &str = "logout";
 #[serde(untagged)]
 #[schemars(inline)]
 #[non_exhaustive]
-#[allow(clippy::large_enum_variant)]
 pub enum ClientRequest {
     /// Establishes the connection with a client and negotiates protocol capabilities.
     ///
@@ -4812,7 +4811,7 @@ pub enum ClientRequest {
     /// The agent should respond with its supported protocol version and capabilities.
     ///
     /// See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)
-    InitializeRequest(InitializeRequest),
+    InitializeRequest(Box<InitializeRequest>),
     /// Authenticates the client using the specified authentication method.
     ///
     /// Called when the agent requires authentication before allowing session creation.
@@ -5011,9 +5010,8 @@ impl ClientRequest {
 #[serde(untagged)]
 #[schemars(inline)]
 #[non_exhaustive]
-#[allow(clippy::large_enum_variant)]
 pub enum AgentResponse {
-    InitializeResponse(InitializeResponse),
+    InitializeResponse(Box<InitializeResponse>),
     AuthenticateResponse(#[serde(default)] AuthenticateResponse),
     #[cfg(feature = "unstable_llm_providers")]
     ListProvidersResponse(ListProvidersResponse),

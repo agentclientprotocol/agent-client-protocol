@@ -466,6 +466,7 @@ impl ToolCallStatus {
 #[serde(tag = "type", rename_all = "snake_case")]
 #[schemars(extend("discriminator" = {"propertyName": "type"}))]
 #[non_exhaustive]
+#[expect(clippy::large_enum_variant)]
 pub enum ToolCallContent {
     /// Standard content block (text, images, resources).
     Content(Content),

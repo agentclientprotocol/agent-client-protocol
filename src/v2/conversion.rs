@@ -1761,7 +1761,7 @@ impl IntoV2 for crate::v1::AgentRequest {
                 return Err(removed_v1_enum_variant("AgentRequest", "fs/read_text_file"));
             }
             Self::RequestPermissionRequest(value) => {
-                super::AgentRequest::RequestPermissionRequest(value.into_v2()?)
+                super::AgentRequest::RequestPermissionRequest(Box::new(value.into_v2()?))
             }
             Self::CreateTerminalRequest(_) => {
                 return Err(removed_v1_enum_variant("AgentRequest", "terminal/create"));
@@ -1928,7 +1928,7 @@ impl IntoV2 for crate::v1::AgentNotification {
     fn into_v2(self) -> Result<Self::Output> {
         Ok(match self {
             Self::SessionNotification(value) => {
-                super::AgentNotification::SessionNotification(value.into_v2()?)
+                super::AgentNotification::SessionNotification(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_elicitation")]
             Self::CompleteElicitationNotification(value) => {
@@ -2303,7 +2303,7 @@ impl IntoV2 for crate::v1::ToolCallContent {
 
     fn into_v2(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::Content(value) => super::ToolCallContent::Content(value.into_v2()?),
+            Self::Content(value) => super::ToolCallContent::Content(Box::new(value.into_v2()?)),
             Self::Diff(value) => super::ToolCallContent::Diff(value.into_v2()?),
             Self::Terminal(_) => {
                 return Err(removed_v1_enum_variant("ToolCallContent", "terminal"));
@@ -4922,7 +4922,7 @@ impl IntoV2 for crate::v1::ClientRequest {
     fn into_v2(self) -> Result<Self::Output> {
         Ok(match self {
             Self::InitializeRequest(value) => {
-                super::ClientRequest::InitializeRequest(value.into_v2()?)
+                super::ClientRequest::InitializeRequest(Box::new(value.into_v2()?))
             }
             Self::AuthenticateRequest(value) => {
                 super::ClientRequest::AuthenticateRequest(value.into_v2()?)
@@ -5071,7 +5071,7 @@ impl IntoV2 for crate::v1::AgentResponse {
     fn into_v2(self) -> Result<Self::Output> {
         Ok(match self {
             Self::InitializeResponse(value) => {
-                super::AgentResponse::InitializeResponse(value.into_v2()?)
+                super::AgentResponse::InitializeResponse(Box::new(value.into_v2()?))
             }
             Self::AuthenticateResponse(value) => {
                 super::AgentResponse::AuthenticateResponse(value.into_v2()?)
