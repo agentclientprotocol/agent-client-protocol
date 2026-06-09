@@ -48,3 +48,20 @@ mod version;
 pub use serde_util::*;
 pub use v1::*;
 pub use version::*;
+
+#[cfg(test)]
+mod serde_json_feature_tests {
+    use serde_json::Value;
+
+    #[test]
+    fn serde_json_values_preserve_object_key_order() {
+        let Value::Object(object) =
+            serde_json::from_str::<Value>(r#"{"z":1,"a":2,"m":3}"#).unwrap()
+        else {
+            panic!("expected JSON object");
+        };
+
+        let keys = object.keys().map(String::as_str).collect::<Vec<_>>();
+        assert_eq!(keys, ["z", "a", "m"]);
+    }
+}

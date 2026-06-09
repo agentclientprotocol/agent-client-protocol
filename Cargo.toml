@@ -65,8 +65,11 @@ path = "src/bin/generate.rs"
 anyhow = "1"
 derive_more = { version = "2", features = ["from", "display"] }
 schemars = { version = "1" }
+# `rc` is required for Arc-based protocol strings and RawValue payloads.
 serde = { version = "1", features = ["derive", "rc"] }
-serde_json = { version = "1", features = ["raw_value"] }
+# `raw_value` powers extension passthrough payloads; `preserve_order` keeps
+# caller-supplied object key order in arbitrary JSON values and maps.
+serde_json = { version = "1", features = ["preserve_order", "raw_value"] }
 serde_with = { version = "3.20.0", features = ["json", "schemars_1"] }
 strum = { version = "0.28", features = ["derive"] }
 tracing = { version = "0.1", default-features = false, optional = true }
