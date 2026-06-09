@@ -278,7 +278,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 <ResponseField name="clientCapabilities" type={<a href="#clientcapabilities">ClientCapabilities</a>} >
   Capabilities supported by the client.
 
-    - Default: `{"auth":{"terminal":false},"fs":{"readTextFile":false,"writeTextFile":false},"terminal":false}`
+    - Default: `{"fs":{"readTextFile":false,"writeTextFile":false},"terminal":false,"auth":{"terminal":false}}`
 
 </ResponseField>
 <ResponseField name="clientInfo" type={<><span><a href="#implementation">Implementation</a></span><span> | null</span></>} >
@@ -314,7 +314,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 <ResponseField name="agentCapabilities" type={<a href="#agentcapabilities">AgentCapabilities</a>} >
   Capabilities supported by the agent.
 
-    - Default: `{"auth":{},"loadSession":false,"mcpCapabilities":{"acp":false,"http":false,"sse":false},"promptCapabilities":{"audio":false,"embeddedContext":false,"image":false},"sessionCapabilities":{}}`
+    - Default: `{"loadSession":false,"promptCapabilities":{"image":false,"audio":false,"embeddedContext":false},"mcpCapabilities":{"http":false,"sse":false,"acp":false},"sessionCapabilities":{},"auth":{}}`
 
 </ResponseField>
 <ResponseField name="agentInfo" type={<><span><a href="#implementation">Implementation</a></span><span> | null</span></>} >
@@ -2671,7 +2671,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 <ResponseField name="mcpCapabilities" type={<a href="#mcpcapabilities">McpCapabilities</a>} >
   MCP capabilities supported by the agent.
 
-    - Default: `{"acp":false,"http":false,"sse":false}`
+    - Default: `{"http":false,"sse":false,"acp":false}`
 
 </ResponseField>
 <ResponseField name="nes" type={<><span><a href="#nescapabilities">NesCapabilities</a></span><span> | null</span></>} >
@@ -2693,7 +2693,7 @@ The position encoding selected by the agent from the client's supported encoding
 <ResponseField name="promptCapabilities" type={<a href="#promptcapabilities">PromptCapabilities</a>} >
   Prompt capabilities supported by the agent.
 
-    - Default: `{"audio":false,"embeddedContext":false,"image":false}`
+    - Default: `{"image":false,"audio":false,"embeddedContext":false}`
 
 </ResponseField>
 <ResponseField name="providers" type={<><span><a href="#providerscapabilities">ProvidersCapabilities</a></span><span> | null</span></>} >

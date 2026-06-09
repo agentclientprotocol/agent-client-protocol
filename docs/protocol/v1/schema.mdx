@@ -140,7 +140,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
 <ResponseField name="agentCapabilities" type={<a href="#agentcapabilities">AgentCapabilities</a>} >
   Capabilities supported by the agent.
 
-    - Default: `{"auth":{},"loadSession":false,"mcpCapabilities":{"http":false,"sse":false},"promptCapabilities":{"audio":false,"embeddedContext":false,"image":false},"sessionCapabilities":{}}`
+    - Default: `{"loadSession":false,"promptCapabilities":{"image":false,"audio":false,"embeddedContext":false},"mcpCapabilities":{"http":false,"sse":false},"sessionCapabilities":{},"auth":{}}`
 
 </ResponseField>
 <ResponseField name="agentInfo" type={<><span><a href="#implementation">Implementation</a></span><span> | null</span></>} >
@@ -1437,7 +1437,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
 <ResponseField name="promptCapabilities" type={<a href="#promptcapabilities">PromptCapabilities</a>} >
   Prompt capabilities supported by the agent.
 
-    - Default: `{"audio":false,"embeddedContext":false,"image":false}`
+    - Default: `{"image":false,"audio":false,"embeddedContext":false}`
 
 </ResponseField>
 <ResponseField name="sessionCapabilities" type={<a href="#sessioncapabilities">SessionCapabilities</a>} >
