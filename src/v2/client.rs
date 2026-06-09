@@ -457,16 +457,6 @@ impl ContentChunk {
         }
     }
 
-    /// A unique identifier for the message this chunk belongs to.
-    ///
-    /// All chunks belonging to the same message share the same `messageId`.
-    /// A change in `messageId` indicates a new message has started.
-    #[must_use]
-    pub fn message_id(mut self, message_id: impl Into<MessageId>) -> Self {
-        self.message_id = message_id.into();
-        self
-    }
-
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -526,13 +516,6 @@ impl UserMessage {
             content: MaybeUndefined::Undefined,
             meta: MaybeUndefined::Undefined,
         }
-    }
-
-    /// A unique identifier for the message.
-    #[must_use]
-    pub fn message_id(mut self, message_id: impl Into<MessageId>) -> Self {
-        self.message_id = message_id.into();
-        self
     }
 
     /// Complete replacement content for this message.
@@ -603,13 +586,6 @@ impl AgentMessage {
         }
     }
 
-    /// A unique identifier for the message.
-    #[must_use]
-    pub fn message_id(mut self, message_id: impl Into<MessageId>) -> Self {
-        self.message_id = message_id.into();
-        self
-    }
-
     /// Complete replacement content for this message.
     #[must_use]
     pub fn content(mut self, content: impl IntoMaybeUndefined<Vec<ContentBlock>>) -> Self {
@@ -676,13 +652,6 @@ impl AgentThought {
             content: MaybeUndefined::Undefined,
             meta: MaybeUndefined::Undefined,
         }
-    }
-
-    /// A unique identifier for the thought message.
-    #[must_use]
-    pub fn message_id(mut self, message_id: impl Into<MessageId>) -> Self {
-        self.message_id = message_id.into();
-        self
     }
 
     /// Complete replacement content for this thought message.

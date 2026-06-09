@@ -2091,7 +2091,7 @@ impl IntoV1Many for super::AgentNotification {
     fn into_v1_many(self) -> Result<Vec<Self::Output>> {
         Ok(match self {
             Self::SessionNotification(value) => {
-                value
+                return value
                     .into_v1_many()?
                     .into_iter()
                     .map(|value| Ok(crate::v1::AgentNotification::SessionNotification(value)))
