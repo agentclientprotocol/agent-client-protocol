@@ -38,6 +38,7 @@ sequenceDiagram
             end
             Agent->>Client: session/update (tool_call_update status: in_progress)
             Note right of Agent: Execute tool
+            Agent->>Client: session/update (tool_call_content_chunk)
             Agent->>Client: session/update (tool_call_update status: completed)
             Note right of Agent: Send tool results<br/>back to LLM
         end
@@ -328,7 +329,30 @@ Once permission is granted (if required), the Agent **SHOULD** invoke the tool a
 }
 ```
 
-As the tool runs, the Agent **MAY** send additional updates, providing real-time feedback about tool execution progress.
+As the tool runs, the Agent **MAY** send additional updates, providing real-time feedback about tool execution progress. When the tool produces incremental content, the Agent can stream each item with `tool_call_content_chunk`:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "tool_call_content_chunk",
+      "toolCallId": "call_001",
+      "content": {
+        "type": "content",
+        "content": {
+          "type": "text",
+          "text": "Checked syntax..."
+        }
+      }
+    }
+  }
+}
+```
+
+Clients append each `tool_call_content_chunk` to the current content for that `toolCallId`. A later `tool_call_update` with `content` replaces the accumulated content.
 
 While tools execute on the Agent, they **MAY** leverage Client capabilities such as the file system (`fs`) methods to access resources within the Client's environment.
 

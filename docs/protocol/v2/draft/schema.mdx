@@ -7047,6 +7047,33 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </Expandable>
 </ResponseField>
 
+<ResponseField name="tool_call_content_chunk" type="object">
+A chunk of tool-call content being streamed.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys. This field is optional; omitted or `null` means there is no
+chunk-level metadata.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="content" type={<a href="#toolcallcontent">ToolCallContent</a>} required>
+  A single item of content produced by the tool call.
+</ResponseField>
+<ResponseField name="sessionUpdate" type={"string"} required>
+  The discriminator value. Must be `"tool_call_content_chunk"`.
+</ResponseField>
+<ResponseField name="toolCallId" type={<a href="#toolcallid">ToolCallId</a>} required>
+  The ID of the tool call this content belongs to.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 <ResponseField name="tool_call_update" type="object">
 A tool call has been created or updated.
 
@@ -7609,6 +7636,35 @@ future ACP variants.
 </ResponseField>
 
 </Expandable>
+</ResponseField>
+
+## <span class="font-mono">ToolCallContentChunk</span>
+
+A streamed item of tool-call content.
+
+Tool-call content chunks append one `ToolCallContent` item to the current
+content for the matching `ToolCallId`. Agents can use
+`ToolCallUpdate::content` when they need to replace the whole content
+collection instead.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys. This field is optional; omitted or `null` means there is no
+chunk-level metadata.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="content" type={<a href="#toolcallcontent">ToolCallContent</a>} required>
+  A single item of content produced by the tool call.
+</ResponseField>
+<ResponseField name="toolCallId" type={<a href="#toolcallid">ToolCallId</a>} required>
+  The ID of the tool call this content belongs to.
 </ResponseField>
 
 ## <span class="font-mono">ToolCallId</span>

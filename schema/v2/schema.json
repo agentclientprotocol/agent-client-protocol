@@ -2687,6 +2687,22 @@
           ]
         },
         {
+          "description": "A chunk of tool-call content being streamed.",
+          "type": "object",
+          "properties": {
+            "sessionUpdate": {
+              "type": "string",
+              "const": "tool_call_content_chunk"
+            }
+          },
+          "required": ["sessionUpdate"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/ToolCallContentChunk"
+            }
+          ]
+        },
+        {
           "description": "A tool call has been created or updated.",
           "type": "object",
           "properties": {
@@ -2851,6 +2867,16 @@
                   "sessionUpdate": {
                     "type": "string",
                     "const": "agent_thought"
+                  }
+                },
+                "required": ["sessionUpdate"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "sessionUpdate": {
+                    "type": "string",
+                    "const": "tool_call_content_chunk"
                   }
                 },
                 "required": ["sessionUpdate"]
@@ -3042,6 +3068,34 @@
         }
       },
       "required": ["messageId"]
+    },
+    "ToolCallContentChunk": {
+      "description": "A streamed item of tool-call content.\n\nTool-call content chunks append one [`ToolCallContent`] item to the current\ncontent for the matching [`ToolCallId`]. Agents can use\n[`ToolCallUpdate::content`] when they need to replace the whole content\ncollection instead.",
+      "type": "object",
+      "properties": {
+        "toolCallId": {
+          "description": "The ID of the tool call this content belongs to.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/ToolCallId"
+            }
+          ]
+        },
+        "content": {
+          "description": "A single item of content produced by the tool call.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/ToolCallContent"
+            }
+          ]
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys. This field is optional; omitted or `null` means there is no\nchunk-level metadata.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"],
+          "additionalProperties": true
+        }
+      },
+      "required": ["toolCallId", "content"]
     },
     "PlanUpdateContent": {
       "description": "Updated content for a plan.",

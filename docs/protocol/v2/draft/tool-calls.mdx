@@ -83,6 +83,9 @@ existing tool calls, omitted fields leave the previous value unchanged, `null`
 explicitly clears or unsets the field, and concrete values replace the previous
 value. For a new `toolCallId`, omitted fields use Client defaults. `content` and
 `locations` are replaced as whole arrays; send `[]` or `null` to clear them.
+Use `tool_call_content_chunk` when a tool produces content incrementally and the
+Client should append each item instead of replacing the whole `content`
+collection.
 
 ## Updating
 
@@ -113,6 +116,48 @@ As tools execute, Agents send updates to report progress and results.
 ```
 
 All fields except `toolCallId` are optional in updates. Only the fields being changed need to be included.
+
+## Streaming Content
+
+As tools execute, Agents **MAY** stream individual content items with
+`tool_call_content_chunk`:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "tool_call_content_chunk",
+      "toolCallId": "call_001",
+      "content": {
+        "type": "content",
+        "content": {
+          "type": "text",
+          "text": "Found 3 configuration files..."
+        }
+      }
+    }
+  }
+}
+```
+
+<ParamField path="toolCallId" type="ToolCallId" required>
+  The ID of the tool call this content belongs to
+</ParamField>
+
+<ParamField path="content" type="ToolCallContent" required>
+  A single [content item](#content) produced by the tool call
+</ParamField>
+
+Clients apply `tool_call_update` and `tool_call_content_chunk` notifications in
+the order they are received for each `toolCallId`. A
+`tool_call_content_chunk` appends its `content` item to the current tool-call
+content. A later `tool_call_update` with `content` replaces all content
+currently stored for that tool call, including content accumulated from earlier
+chunks. Later chunks append to that replacement content. A `tool_call_update`
+with `content: []` or `content: null` clears the tool-call content.
 
 ## Requesting Permission
 

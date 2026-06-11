@@ -19,7 +19,7 @@ use super::{
 };
 use super::{
     ContentBlock, ExtNotification, ExtRequest, ExtResponse, Meta, PlanUpdate, SessionConfigOption,
-    SessionId, ToolCallUpdate,
+    SessionId, ToolCallContentChunk, ToolCallUpdate,
 };
 use crate::{IntoMaybeUndefined, IntoOption, MaybeUndefined, SkipListener};
 
@@ -115,6 +115,8 @@ pub enum SessionUpdate {
     /// receives another `agent_thought` update with the same `messageId`,
     /// fields in the new update patch the previous fields for that message.
     AgentThought(AgentThought),
+    /// A chunk of tool-call content being streamed.
+    ToolCallContentChunk(ToolCallContentChunk),
     /// A tool call has been created or updated.
     ToolCallUpdate(ToolCallUpdate),
     /// A content update for a plan identified by ID.
@@ -220,6 +222,7 @@ fn is_known_session_update(session_update: &str) -> bool {
             | "agent_message"
             | "agent_thought_chunk"
             | "agent_thought"
+            | "tool_call_content_chunk"
             | "tool_call_update"
             | "plan_update"
             | "available_commands_update"
@@ -240,6 +243,7 @@ fn other_session_update_schema(schema: &mut Schema) {
             "agent_message",
             "agent_thought_chunk",
             "agent_thought",
+            "tool_call_content_chunk",
             "tool_call_update",
             "plan_update",
             "available_commands_update",
@@ -1700,6 +1704,45 @@ mod tests {
         .unwrap_err();
 
         assert!(err.to_string().contains("messageId"), "{err}");
+    }
+
+    #[test]
+    fn test_tool_call_content_chunk_serialization() {
+        use serde_json::json;
+
+        assert_eq!(
+            serde_json::to_value(SessionUpdate::ToolCallContentChunk(
+                ToolCallContentChunk::new(
+                    "call_001",
+                    crate::v2::ContentBlock::Text(crate::v2::TextContent::new("partial output")),
+                )
+            ))
+            .unwrap(),
+            json!({
+                "sessionUpdate": "tool_call_content_chunk",
+                "toolCallId": "call_001",
+                "content": {
+                    "type": "content",
+                    "content": {
+                        "type": "text",
+                        "text": "partial output"
+                    }
+                }
+            })
+        );
+
+        let err = serde_json::from_value::<ToolCallContentChunk>(json!({
+            "content": {
+                "type": "content",
+                "content": {
+                    "type": "text",
+                    "text": "partial output"
+                }
+            }
+        }))
+        .unwrap_err();
+
+        assert!(err.to_string().contains("toolCallId"), "{err}");
     }
 
     #[test]

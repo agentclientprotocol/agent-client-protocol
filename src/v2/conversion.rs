@@ -980,6 +980,11 @@ impl IntoV1Many for super::SessionUpdate {
                 value.meta,
                 crate::v1::SessionUpdate::AgentThoughtChunk,
             )?,
+            Self::ToolCallContentChunk(_) => {
+                return Err(ProtocolConversionError::new(
+                    "v2 SessionUpdate variant `tool_call_content_chunk` cannot be represented in v1 because v1 tool-call content updates replace content instead of appending",
+                ));
+            }
             Self::ToolCallUpdate(value) => {
                 vec![crate::v1::SessionUpdate::ToolCallUpdate(value.into_v1()?)]
             }
@@ -9484,6 +9489,17 @@ mod tests {
                     .meta(None::<v2::Meta>),
             ),
             "v2 SessionUpdate variant `agent_message` with null _meta cannot be represented in v1 chunks",
+        );
+    }
+
+    #[test]
+    fn v2_tool_call_content_chunk_does_not_convert_to_v1_replacement_update() {
+        assert_v2_to_v1_many_error(
+            v2::SessionUpdate::ToolCallContentChunk(v2::ToolCallContentChunk::new(
+                "tc_1",
+                v2::ContentBlock::Text(v2::TextContent::new("partial output")),
+            )),
+            "v2 SessionUpdate variant `tool_call_content_chunk` cannot be represented in v1 because v1 tool-call content updates replace content instead of appending",
         );
     }
 
