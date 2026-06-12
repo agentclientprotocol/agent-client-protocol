@@ -1,0 +1,28 @@
+---
+title: "Observability"
+description: "Exporting agent telemetry out of band"
+---
+
+ACP does not define telemetry messages. Agents that produce traces, metrics, or structured logs should export them out of band with [OpenTelemetry](https://opentelemetry.io/) rather than over the ACP transport.
+
+Clients that want telemetry **MAY** run a local OTLP receiver and configure subprocess agents with standard [OpenTelemetry Protocol exporter environment variables](https://opentelemetry.io/docs/specs/otel/protocol/exporter/) when launching them over [stdio](/protocol/v2/draft/transports#stdio):
+
+```sh
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+OTEL_SERVICE_NAME=agent-name
+```
+
+Clients **SHOULD** respect user-provided `OTEL_*` environment variables. If a variable is already set in the agent launch environment, the client **SHOULD** preserve that value instead of replacing it. This allows users to direct agent telemetry to their own collector or backend.
+
+Clients **SHOULD NOT** pass backend authentication headers or credentials directly to agents. If backend authentication is required, the local receiver or collector should add those credentials while forwarding telemetry. Agents and clients **SHOULD** avoid recording prompt contents, generated content, secrets, access tokens, file contents, or other sensitive data unless the user has explicitly enabled that behavior.
+
+Agents **MAY** use their language's OpenTelemetry SDK and standard environment-based auto-configuration. Agents do not need ACP-specific telemetry messages or custom JSON-RPC methods.
+
+Telemetry export failures **SHOULD NOT** fail ACP requests or block protocol message handling. Agents **MUST NOT** write telemetry payloads to `stdout`, because `stdout` is reserved for valid ACP messages on stdio transports. Agents **MAY** continue to write human-readable diagnostics to `stderr` as described in [Transports](/protocol/v2/draft/transports#stdio).
+
+## Trace Correlation
+
+Telemetry export is complementary to trace context propagation through [`params._meta`](/protocol/v2/draft/extensibility#the-_meta-field). Clients can propagate W3C trace context keys such as `traceparent`, `tracestate`, and `baggage` in `_meta`; agents can use that context as the parent for spans they export through OpenTelemetry.
+
+For telemetry contents, naming, and model-call attributes, follow OpenTelemetry resources such as the [semantic conventions](https://opentelemetry.io/docs/specs/semconv/) and [Generative AI semantic conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/).
