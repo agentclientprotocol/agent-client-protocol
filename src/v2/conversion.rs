@@ -3582,6 +3582,61 @@ impl IntoV2 for crate::v1::SessionInfo {
     }
 }
 
+impl IntoV1 for super::SetSessionTitleRequest {
+    type Output = crate::v1::SetSessionTitleRequest;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        let Self {
+            session_id,
+            title,
+            meta,
+        } = self;
+        Ok(crate::v1::SetSessionTitleRequest {
+            session_id: session_id.into_v1()?,
+            title,
+            meta: meta.into_v1()?,
+        })
+    }
+}
+
+impl IntoV2 for crate::v1::SetSessionTitleRequest {
+    type Output = super::SetSessionTitleRequest;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        let Self {
+            session_id,
+            title,
+            meta,
+        } = self;
+        Ok(super::SetSessionTitleRequest {
+            session_id: session_id.into_v2()?,
+            title,
+            meta: meta.into_v2()?,
+        })
+    }
+}
+
+impl IntoV1 for super::SetSessionTitleResponse {
+    type Output = crate::v1::SetSessionTitleResponse;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        let Self { meta } = self;
+        Ok(crate::v1::SetSessionTitleResponse {
+            meta: meta.into_v1()?,
+        })
+    }
+}
+
+impl IntoV2 for crate::v1::SetSessionTitleResponse {
+    type Output = super::SetSessionTitleResponse;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        let Self { meta } = self;
+        Ok(super::SetSessionTitleResponse {
+            meta: meta.into_v2()?,
+        })
+    }
+}
 impl IntoV1 for super::SessionConfigId {
     type Output = crate::v1::SessionConfigId;
 
@@ -4771,6 +4826,7 @@ impl super::SessionCapabilities {
             fork,
             resume,
             close,
+            set_title,
             meta,
         } = self;
 
@@ -4783,6 +4839,7 @@ impl super::SessionCapabilities {
                 fork: fork.into_v1()?,
                 resume: resume.into_v1()?,
                 close: close.into_v1()?,
+                set_title: set_title.into_v1()?,
                 meta: meta.into_v1()?,
             },
             prompt_capabilities: prompt.unwrap_or_default().into_v1()?,
@@ -4812,6 +4869,7 @@ impl super::SessionCapabilities {
             fork,
             resume,
             close,
+            set_title,
             meta,
         } = session_capabilities;
 
@@ -4826,6 +4884,7 @@ impl super::SessionCapabilities {
             fork: fork.into_v2()?,
             resume: resume.into_v2()?,
             close: close.into_v2()?,
+            set_title: set_title.into_v2()?,
             meta: meta.into_v2()?,
         })
     }
@@ -4964,6 +5023,28 @@ impl IntoV2 for crate::v1::SessionCloseCapabilities {
     }
 }
 
+impl IntoV1 for super::SessionSetTitleCapabilities {
+    type Output = crate::v1::SessionSetTitleCapabilities;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        let Self { meta } = self;
+        Ok(crate::v1::SessionSetTitleCapabilities {
+            meta: meta.into_v1()?,
+        })
+    }
+}
+
+impl IntoV2 for crate::v1::SessionSetTitleCapabilities {
+    type Output = super::SessionSetTitleCapabilities;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        let Self { meta } = self;
+        Ok(super::SessionSetTitleCapabilities {
+            meta: meta.into_v2()?,
+        })
+    }
+}
+
 impl IntoV1 for super::PromptCapabilities {
     type Output = crate::v1::PromptCapabilities;
 
@@ -5090,6 +5171,9 @@ impl IntoV1 for super::ClientRequest {
             Self::CloseSessionRequest(value) => {
                 crate::v1::ClientRequest::CloseSessionRequest(value.into_v1()?)
             }
+            Self::SetSessionTitleRequest(value) => {
+                crate::v1::ClientRequest::SetSessionTitleRequest(value.into_v1()?)
+            }
             Self::SetSessionConfigOptionRequest(value) => {
                 crate::v1::ClientRequest::SetSessionConfigOptionRequest(value.into_v1()?)
             }
@@ -5166,6 +5250,9 @@ impl IntoV2 for crate::v1::ClientRequest {
             Self::SetSessionModeRequest(_) => {
                 return Err(removed_v1_enum_variant("ClientRequest", "session/set_mode"));
             }
+            Self::SetSessionTitleRequest(value) => {
+                super::ClientRequest::SetSessionTitleRequest(value.into_v2()?)
+            }
             Self::SetSessionConfigOptionRequest(value) => {
                 super::ClientRequest::SetSessionConfigOptionRequest(value.into_v2()?)
             }
@@ -5236,6 +5323,9 @@ impl IntoV1 for super::AgentResponse {
             }
             Self::CloseSessionResponse(value) => {
                 crate::v1::AgentResponse::CloseSessionResponse(value.into_v1()?)
+            }
+            Self::SetSessionTitleResponse(value) => {
+                crate::v1::AgentResponse::SetSessionTitleResponse(value.into_v1()?)
             }
             Self::SetSessionConfigOptionResponse(value) => {
                 crate::v1::AgentResponse::SetSessionConfigOptionResponse(value.into_v1()?)
@@ -5314,6 +5404,9 @@ impl IntoV2 for crate::v1::AgentResponse {
             }
             Self::SetSessionModeResponse(_) => {
                 return Err(removed_v1_enum_variant("AgentResponse", "session/set_mode"));
+            }
+            Self::SetSessionTitleResponse(value) => {
+                super::AgentResponse::SetSessionTitleResponse(value.into_v2()?)
             }
             Self::SetSessionConfigOptionResponse(value) => {
                 super::AgentResponse::SetSessionConfigOptionResponse(value.into_v2()?)
