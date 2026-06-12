@@ -1509,7 +1509,7 @@
       ]
     },
     "EnumOption": {
-      "description": "A titled enum option with a const value and human-readable title.",
+      "description": "A titled enum option with a const value, human-readable title, and optional description.",
       "type": "object",
       "properties": {
         "const": {
@@ -1519,6 +1519,10 @@
         "title": {
           "description": "Human-readable title for this option.",
           "type": "string"
+        },
+        "description": {
+          "description": "Optional description for this option value.",
+          "type": ["string", "null"]
         }
       },
       "required": ["const", "title"]

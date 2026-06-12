@@ -60,7 +60,8 @@ pub enum ElicitationSchemaType {
     Object,
 }
 
-/// A titled enum option with a const value and human-readable title.
+/// A titled enum option with a const value, human-readable title, and optional description.
+#[skip_serializing_none]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[non_exhaustive]
 pub struct EnumOption {
@@ -69,6 +70,8 @@ pub struct EnumOption {
     pub value: String,
     /// Human-readable title for this option.
     pub title: String,
+    /// Optional description for this option value.
+    pub description: Option<String>,
 }
 
 impl EnumOption {
@@ -78,7 +81,15 @@ impl EnumOption {
         Self {
             value: value.into(),
             title: title.into(),
+            description: None,
         }
+    }
+
+    /// Optional description for this option value.
+    #[must_use]
+    pub fn description(mut self, description: impl IntoOption<String>) -> Self {
+        self.description = description.into_option();
+        self
     }
 }
 
@@ -1763,7 +1774,7 @@ mod tests {
         let schema = ElicitationSchema::new().property(
             "country",
             StringPropertySchema::new().one_of(vec![
-                EnumOption::new("us", "United States"),
+                EnumOption::new("us", "United States").description("Use US English spelling."),
                 EnumOption::new("uk", "United Kingdom"),
             ]),
             true,
@@ -1775,12 +1786,20 @@ mod tests {
         assert_eq!(one_of.len(), 2);
         assert_eq!(one_of[0]["const"], "us");
         assert_eq!(one_of[0]["title"], "United States");
+        assert_eq!(one_of[0]["description"], "Use US English spelling.");
+        assert!(one_of[1].get("description").is_none());
 
         let roundtripped: ElicitationSchema = serde_json::from_value(json).unwrap();
         if let ElicitationPropertySchema::String(s) =
             roundtripped.properties.get("country").unwrap()
         {
-            assert_eq!(s.one_of.as_ref().unwrap().len(), 2);
+            let one_of = s.one_of.as_ref().unwrap();
+            assert_eq!(one_of.len(), 2);
+            assert_eq!(
+                one_of[0].description.as_deref(),
+                Some("Use US English spelling.")
+            );
+            assert!(one_of[1].description.is_none());
         } else {
             panic!("expected String variant");
         }
