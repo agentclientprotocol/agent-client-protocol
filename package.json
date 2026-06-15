@@ -28,7 +28,7 @@
     "docs": "cd docs && npx mint dev"
   },
   "devDependencies": {
-    "mint": "^4.2.599",
-    "prettier": "^3.8.3"
+    "mint": "^4.2.616",
+    "prettier": "^3.8.4"
   }
 }
