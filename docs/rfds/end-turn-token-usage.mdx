@@ -32,7 +32,7 @@ The session-level context and cost proposal no longer depends on resolving these
 
 > What are you proposing to improve the situation?
 
-The current strawman is to add an optional `usage` field to `PromptResponse`, returned when a prompt turn completes:
+The current strawman is to add an optional `usage` field to the turn-completion signal. In v1, that signal is `PromptResponse`. In v2, where `session/prompt` returns when the prompt is accepted, the same `usage` object is carried on the idle `state_update` session update that ends the turn.
 
 ```json
 {
@@ -47,6 +47,31 @@ The current strawman is to add an optional `usage` field to `PromptResponse`, re
       "thoughtTokens": 5000,
       "cachedReadTokens": 5000,
       "cachedWriteTokens": 1000
+    }
+  }
+}
+```
+
+For v2, the equivalent carrier is:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "state_update",
+      "state": "idle",
+      "stopReason": "end_turn",
+      "usage": {
+        "totalTokens": 53000,
+        "inputTokens": 35000,
+        "outputTokens": 12000,
+        "thoughtTokens": 5000,
+        "cachedReadTokens": 5000,
+        "cachedWriteTokens": 1000
+      }
     }
   }
 }
@@ -71,7 +96,7 @@ For the optional token fields, omission and `null` are equivalent. Both mean the
 
 1. **Per-turn vs cumulative** - Should token values describe only the completed prompt turn, cumulative session totals, or both?
 2. **Provider category mapping** - How should ACP map provider-specific categories such as reasoning, cache read, cache write, audio, image, or tool-related tokens?
-3. **Streaming semantics** - Should partial usage be allowed during streaming, or should the protocol only report final usage on `PromptResponse`?
+3. **Streaming semantics** - Should partial usage be allowed during streaming, or should the protocol only report final usage on the turn-completion signal?
 4. **Stop reason semantics** - Should usage be included for `end_turn`, `max_tokens`, `max_turn_requests`, `refusal`, and `cancelled` stop reasons?
 5. **Cost separation** - Should any per-turn cost estimate exist here, or should cost remain exclusively cumulative session state in `usage_update`?
 6. **Naming** - Should field names use `Tokens` suffixes, a nested provider breakdown, or another structure that better matches future extensibility?
@@ -119,7 +144,7 @@ The remaining questions are different from context window and cost reporting. Ke
 
 ### Why keep token usage out of `usage_update`?
 
-`usage_update` reports session-level context size and cumulative cost. End-turn token accounting is tied to a completed prompt response and may need different semantics, especially around per-turn and cumulative model usage.
+`usage_update` reports session-level context size and cumulative cost. End-turn token accounting is tied to turn completion and may need different semantics, especially around per-turn and cumulative model usage.
 
 ### Why not move this to Preview with context size and cost?
 

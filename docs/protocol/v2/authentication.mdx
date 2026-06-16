@@ -76,7 +76,7 @@ The standard authentication method type is `agent`, where the Agent handles auth
 }
 ```
 
-In v2, authentication method `type` values can be custom or future variants. Custom method types **MUST** begin with `_`. Unknown non-underscore method types are reserved for future ACP variants. Clients that do not understand a method type should preserve the raw method payload when storing, replaying, proxying, or forwarding initialization data, and otherwise ignore the method or display it generically.
+Authentication method `type` values can be custom or future variants. Custom method types **MUST** begin with `_`. Unknown non-underscore method types are reserved for future ACP variants. Clients that do not understand a method type should preserve the raw method payload when storing, replaying, proxying, or forwarding initialization data, and otherwise ignore the method or display it generically.
 
 See the [schema](/protocol/v2/schema#authmethod) for the full stable `AuthMethod` definition.
 

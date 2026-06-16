@@ -45,7 +45,7 @@ sequenceDiagram
 ## JSON-RPC Batch Messages
 
 JSON-RPC 2.0 allows a sender to combine multiple request and notification
-objects in a single batch array. ACP v2 follows the JSON-RPC 2.0 batch rules. A
+objects in a single batch array. ACP follows the JSON-RPC 2.0 batch rules. A
 client or agent **MAY** send an array filled with Request objects. A Notification
 is a Request object without an `id`, so notification-only and mixed
 request/notification batches are valid.

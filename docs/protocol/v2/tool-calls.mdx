@@ -54,7 +54,7 @@ When the language model requests a tool invocation, the Agent **SHOULD** report 
 
 Tool kinds help Clients choose appropriate icons and optimize how they display tool execution progress.
 
-In v2, custom or future tool kinds can be used when Clients can fall back to generic tool display behavior. Custom tool kinds **MUST** begin with `_`. Unknown non-underscore tool kinds are reserved for future ACP variants.
+Custom or future tool kinds can be used when Clients can fall back to generic tool display behavior. Custom tool kinds **MUST** begin with `_`. Unknown non-underscore tool kinds are reserved for future ACP variants.
 
 </ParamField>
 
@@ -259,7 +259,7 @@ Each permission option provided to the Client contains:
 - `reject_once` - Reject this operation only this time
 - `reject_always` - Reject this operation and remember the choice
 
-In v2, custom or future permission option kinds can be used as UI hints. Custom kinds **MUST** begin with `_`. Unknown non-underscore kinds are reserved for future ACP variants. Clients that do not understand a kind should preserve the value and use a generic permission option treatment.
+Custom or future permission option kinds can be used as UI hints. Custom kinds **MUST** begin with `_`. Unknown non-underscore kinds are reserved for future ACP variants. Clients that do not understand a kind should preserve the value and use a generic permission option treatment.
 
 </ParamField>
 
@@ -282,13 +282,13 @@ Tool calls progress through different statuses during their lifecycle:
 
 <ResponseField name="failed">The tool call failed with an error</ResponseField>
 
-In v2, custom or future status values can be used when Clients can display a generic progress state. Custom status values **MUST** begin with `_`; unknown non-underscore statuses are reserved for future ACP variants.
+Custom or future status values can be used when Clients can display a generic progress state. Custom status values **MUST** begin with `_`; unknown non-underscore statuses are reserved for future ACP variants.
 
 ## Content
 
 Tool calls can produce different types of content:
 
-In v2, tool call content `type` values can also be custom or future variants. Implementations should preserve unknown content payloads when storing, replaying, proxying, or forwarding tool calls, and otherwise render a generic content item or ignore the item if no safe display is available.
+Tool call content `type` values can also be custom or future variants. Implementations should preserve unknown content payloads when storing, replaying, proxying, or forwarding tool calls, and otherwise render a generic content item or ignore the item if no safe display is available.
 
 ### Regular Content
 

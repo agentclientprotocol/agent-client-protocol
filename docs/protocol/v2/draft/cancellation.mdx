@@ -46,7 +46,8 @@ sequenceDiagram
 
     Note over Client,Agent: 1. Session prompt in progress
     Client->>Agent: session/prompt (id=1, "Analyze file X")
-    Agent-->>Client: session/update (agent started processing)
+    Agent-->>Client: response to id=1 ({})
+    Agent->>Client: session/update (state_update: running)
 
     Note over Client,Agent: 2. Agent makes concurrent permission requests
     Agent->>Client: session/request_permission (id=2, "read sensitive file")
@@ -64,5 +65,5 @@ sequenceDiagram
     Client->>Agent: response to id=3 (error -32800 "Cancelled")
 
     Note over Client,Agent: 6. Agent completes prompt cancellation
-    Agent->>Client: response to id=1 (stopReason: "cancelled")
+    Agent->>Client: session/update (state_update: idle, stopReason: "cancelled")
 ```

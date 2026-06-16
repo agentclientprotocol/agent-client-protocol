@@ -149,7 +149,7 @@ This approach provides flexibility for different agent implementations:
 4. Document the `session/update` notification variant in the protocol docs.
 5. Add examples showing when agents should send context window and cost updates.
 
-This RFD does not add end-turn token usage to `PromptResponse`. That proposal remains in draft in the [End-Turn Token Usage RFD](/rfds/end-turn-token-usage).
+This RFD does not add end-turn token usage to the turn-completion signal. That proposal remains in draft in the [End-Turn Token Usage RFD](/rfds/end-turn-token-usage).
 
 ## Frequently asked questions
 
@@ -176,7 +176,7 @@ The `usage_update` notification provides the raw values clients need:
 | 90-95%     | Orange indicator, recommend "Start new session or summarize"     |
 | > 95%      | Red indicator, warn "Next prompt may fail - handoff recommended" |
 
-### Why is cost in `session/update` instead of `PromptResponse`?
+### Why is cost in `session/update` instead of the turn-completion signal?
 
 Cost is cumulative session state, similar to context window utilization:
 
@@ -229,7 +229,7 @@ For agents that only provide usage during active prompting, the client UI may no
 
 ### What alternative approaches did you consider, and why did you settle on this one?
 
-**Everything in `PromptResponse`** - Simpler, but context window and cost are session state that users may want independently of prompt turns.
+**Everything in the turn-completion signal** - Simpler, but context window and cost are session state that users may want independently of prompt turns.
 
 **Request/response with `session/status`** - Requires clients to poll, and some agents do not have APIs to query current status without a prompt.
 

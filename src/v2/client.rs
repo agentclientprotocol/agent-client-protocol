@@ -12,6 +12,8 @@ use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
 #[cfg(feature = "unstable_plan_operations")]
 use super::PlanRemoved;
+#[cfg(feature = "unstable_end_turn_token_usage")]
+use super::Usage;
 #[cfg(feature = "unstable_elicitation")]
 use super::{
     CompleteElicitationNotification, CreateElicitationRequest, CreateElicitationResponse,
@@ -19,7 +21,7 @@ use super::{
 };
 use super::{
     ContentBlock, ExtNotification, ExtRequest, ExtResponse, Meta, PlanUpdate, SessionConfigOption,
-    SessionId, ToolCallContentChunk, ToolCallUpdate,
+    SessionId, StopReason, ToolCallContentChunk, ToolCallUpdate,
 };
 use crate::{IntoMaybeUndefined, IntoOption, MaybeUndefined, SkipListener};
 
@@ -115,6 +117,12 @@ pub enum SessionUpdate {
     /// receives another `agent_thought` update with the same `messageId`,
     /// fields in the new update patch the previous fields for that message.
     AgentThought(AgentThought),
+    /// The agent's session state has changed.
+    ///
+    /// Agents send this to report when work starts, completes, or pauses while
+    /// waiting for user action. Turn completion is reported here instead
+    /// of in the `session/prompt` response.
+    StateUpdate(StateUpdate),
     /// A chunk of tool-call content being streamed.
     ToolCallContentChunk(ToolCallContentChunk),
     /// A tool call has been created or updated.
@@ -222,6 +230,7 @@ fn is_known_session_update(session_update: &str) -> bool {
             | "agent_message"
             | "agent_thought_chunk"
             | "agent_thought"
+            | "state_update"
             | "tool_call_content_chunk"
             | "tool_call_update"
             | "plan_update"
@@ -243,6 +252,7 @@ fn other_session_update_schema(schema: &mut Schema) {
             "agent_message",
             "agent_thought_chunk",
             "agent_thought",
+            "state_update",
             "tool_call_content_chunk",
             "tool_call_update",
             "plan_update",
@@ -406,6 +416,240 @@ impl UsageUpdate {
         self.meta = meta.into_option();
         self
     }
+}
+
+/// The agent's session state has changed.
+///
+/// This update is the mechanism for reporting turn lifecycle transitions.
+/// A `session/prompt` response only acknowledges that the prompt was accepted;
+/// agents use `state_update` notifications to report that processing has started,
+/// that the session is idle, or that progress is blocked on user action.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[serde(tag = "state", rename_all = "snake_case")]
+#[schemars(extend("discriminator" = {"propertyName": "state"}))]
+#[non_exhaustive]
+pub enum StateUpdate {
+    /// The agent is actively processing work in the session.
+    Running(RunningStateUpdate),
+    /// The agent is not currently processing work in the session.
+    Idle(IdleStateUpdate),
+    /// The agent is waiting on user action before it can continue.
+    RequiresAction(RequiresActionStateUpdate),
+    /// Custom or future session state.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(untagged)]
+    Other(OtherStateUpdate),
+}
+
+/// The agent is actively processing work in the session.
+#[skip_serializing_none]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct RunningStateUpdate {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl RunningStateUpdate {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// The agent is not currently processing work in the session.
+#[serde_as]
+#[skip_serializing_none]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct IdleStateUpdate {
+    /// Indicates why the agent stopped processing the turn.
+    ///
+    /// Optional. Omitted or `null` both mean the agent is not reporting a stop reason.
+    /// Agents SHOULD include this when the idle transition ends a running turn.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
+    pub stop_reason: Option<StopReason>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Token usage for the completed turn.
+    ///
+    /// Optional. Omitted or `null` both mean the agent is not reporting token
+    /// usage for this state update.
+    #[cfg(feature = "unstable_end_turn_token_usage")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
+    pub usage: Option<Usage>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl IdleStateUpdate {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Indicates why the agent stopped processing the turn.
+    #[must_use]
+    pub fn stop_reason(mut self, stop_reason: impl IntoOption<StopReason>) -> Self {
+        self.stop_reason = stop_reason.into_option();
+        self
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Token usage for the completed turn.
+    #[cfg(feature = "unstable_end_turn_token_usage")]
+    #[must_use]
+    pub fn usage(mut self, usage: impl IntoOption<Usage>) -> Self {
+        self.usage = usage.into_option();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// The agent is waiting on user action before it can continue.
+#[skip_serializing_none]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct RequiresActionStateUpdate {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl RequiresActionStateUpdate {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// Custom or future session state payload.
+///
+/// This preserves the unknown `state` discriminator and the rest of the state
+/// object for clients that store, replay, proxy, or forward session history.
+#[derive(Debug, Clone, Serialize, JsonSchema, PartialEq)]
+#[schemars(inline)]
+#[schemars(transform = other_state_update_schema)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct OtherStateUpdate {
+    /// Custom or future session state.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(rename = "state")]
+    pub state: String,
+    /// Additional fields from the unknown state payload.
+    #[serde(flatten)]
+    pub fields: BTreeMap<String, serde_json::Value>,
+}
+
+impl OtherStateUpdate {
+    #[must_use]
+    pub fn new(state: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
+        fields.remove("state");
+        Self {
+            state: state.into(),
+            fields,
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for OtherStateUpdate {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let state = fields
+            .remove("state")
+            .ok_or_else(|| serde::de::Error::missing_field("state"))?;
+        let serde_json::Value::String(state) = state else {
+            return Err(serde::de::Error::custom("`state` must be a string"));
+        };
+
+        if is_known_state_update(&state) {
+            return Err(serde::de::Error::custom(format!(
+                "known state update `{state}` did not match its schema"
+            )));
+        }
+
+        Ok(Self { state, fields })
+    }
+}
+
+fn is_known_state_update(state: &str) -> bool {
+    matches!(state, "running" | "idle" | "requires_action")
+}
+
+fn other_state_update_schema(schema: &mut Schema) {
+    super::schema_util::reject_known_string_discriminators(
+        schema,
+        "state",
+        &["running", "idle", "requires_action"],
+    );
 }
 
 /// Cost information for a session.
@@ -1592,7 +1836,8 @@ pub enum AgentNotification {
     ///
     /// Note: Clients SHOULD continue accepting tool call updates even after
     /// sending a `session/cancel` notification, as the agent may send final
-    /// updates before responding with the cancelled stop reason.
+    /// updates before reporting an idle `state_update` with the cancelled
+    /// stop reason.
     ///
     /// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-turn#3-agent-reports-output)
     SessionNotification(Box<SessionNotification>),
@@ -1946,6 +2191,69 @@ mod tests {
         };
 
         assert_eq!(update.cost, None);
+    }
+
+    #[test]
+    fn test_state_update_serialization() {
+        use serde_json::json;
+
+        assert_eq!(
+            serde_json::to_value(SessionUpdate::StateUpdate(StateUpdate::Running(
+                RunningStateUpdate::new()
+            )))
+            .unwrap(),
+            json!({
+                "sessionUpdate": "state_update",
+                "state": "running"
+            })
+        );
+
+        assert_eq!(
+            serde_json::to_value(SessionUpdate::StateUpdate(StateUpdate::Idle(
+                IdleStateUpdate::new().stop_reason(StopReason::EndTurn)
+            )))
+            .unwrap(),
+            json!({
+                "sessionUpdate": "state_update",
+                "state": "idle",
+                "stopReason": "end_turn"
+            })
+        );
+
+        let SessionUpdate::StateUpdate(update) = serde_json::from_value(json!({
+            "sessionUpdate": "state_update",
+            "state": "requires_action"
+        }))
+        .unwrap() else {
+            panic!("expected state update");
+        };
+
+        assert!(matches!(update, StateUpdate::RequiresAction(_)));
+
+        let SessionUpdate::StateUpdate(StateUpdate::Idle(update)) = serde_json::from_value(json!({
+            "sessionUpdate": "state_update",
+            "state": "idle",
+            "stopReason": null
+        }))
+        .unwrap() else {
+            panic!("expected idle state update");
+        };
+
+        assert_eq!(update.stop_reason, None);
+
+        let SessionUpdate::StateUpdate(StateUpdate::Other(update)) =
+            serde_json::from_value(json!({
+                "sessionUpdate": "state_update",
+                "state": "_paused",
+                "label": "Paused"
+            }))
+            .unwrap()
+        else {
+            panic!("expected unknown state update");
+        };
+
+        assert_eq!(update.state, "_paused");
+        assert_eq!(update.fields["label"], json!("Paused"));
     }
 
     #[test]

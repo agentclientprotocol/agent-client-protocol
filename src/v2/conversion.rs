@@ -1030,6 +1030,11 @@ impl IntoV1Many for super::SessionUpdate {
                 value.meta,
                 crate::v1::SessionUpdate::AgentThoughtChunk,
             )?,
+            Self::StateUpdate(_) => {
+                return Err(ProtocolConversionError::new(
+                    "v2 SessionUpdate variant `state_update` cannot be represented in v1 because v1 reports turn completion in the session/prompt response",
+                ));
+            }
             Self::ToolCallContentChunk(_) => {
                 return Err(ProtocolConversionError::new(
                     "v2 SessionUpdate variant `tool_call_content_chunk` cannot be represented in v1 because v1 tool-call content updates replace content instead of appending",
@@ -4324,18 +4329,9 @@ impl IntoV1 for super::PromptResponse {
     type Output = crate::v1::PromptResponse;
 
     fn into_v1(self) -> Result<Self::Output> {
-        let Self {
-            stop_reason,
-            #[cfg(feature = "unstable_end_turn_token_usage")]
-            usage,
-            meta,
-        } = self;
-        Ok(crate::v1::PromptResponse {
-            stop_reason: stop_reason.into_v1()?,
-            #[cfg(feature = "unstable_end_turn_token_usage")]
-            usage: usage.into_v1()?,
-            meta: meta.into_v1()?,
-        })
+        Err(ProtocolConversionError::new(
+            "v2 PromptResponse cannot be represented in v1 because v2 reports turn completion with state_update session updates",
+        ))
     }
 }
 
@@ -4343,18 +4339,9 @@ impl IntoV2 for crate::v1::PromptResponse {
     type Output = super::PromptResponse;
 
     fn into_v2(self) -> Result<Self::Output> {
-        let Self {
-            stop_reason,
-            #[cfg(feature = "unstable_end_turn_token_usage")]
-            usage,
-            meta,
-        } = self;
-        Ok(super::PromptResponse {
-            stop_reason: stop_reason.into_v2()?,
-            #[cfg(feature = "unstable_end_turn_token_usage")]
-            usage: usage.into_v2()?,
-            meta: meta.into_v2()?,
-        })
+        Err(ProtocolConversionError::new(
+            "v1 PromptResponse cannot be represented in v2 by itself because v2 reports turn completion with state_update session updates",
+        ))
     }
 }
 
@@ -9361,6 +9348,18 @@ mod tests {
     }
 
     #[test]
+    fn prompt_responses_do_not_convert_across_v1_v2_lifecycle_boundary() {
+        assert_v2_to_v1_error(
+            v2::PromptResponse::new(),
+            "v2 PromptResponse cannot be represented in v1 because v2 reports turn completion with state_update session updates",
+        );
+        assert_v1_to_v2_error(
+            v1::PromptResponse::new(v1::StopReason::EndTurn),
+            "v1 PromptResponse cannot be represented in v2 by itself because v2 reports turn completion with state_update session updates",
+        );
+    }
+
+    #[test]
     fn v1_tool_call_converts_to_v2_upsert_with_diff_and_locations() {
         let tool_call = v1::ToolCall::new("tc_1", "editing files")
             .kind(v1::ToolKind::Edit)
@@ -9773,6 +9772,16 @@ mod tests {
         assert_v2_to_v1_many_error(
             update,
             "v2 SessionUpdate variant `_status_badge` cannot be represented in v1",
+        );
+    }
+
+    #[test]
+    fn v2_state_update_does_not_convert_to_v1() {
+        assert_v2_to_v1_many_error(
+            v2::SessionUpdate::StateUpdate(v2::StateUpdate::Idle(
+                v2::IdleStateUpdate::new().stop_reason(v2::StopReason::EndTurn),
+            )),
+            "v2 SessionUpdate variant `state_update` cannot be represented in v1 because v1 reports turn completion in the session/prompt response",
         );
     }
 

@@ -3,7 +3,9 @@ title: "Prompt Turn"
 description: "Understanding the core conversation flow"
 ---
 
-A prompt turn represents a complete interaction cycle between the [Client](/protocol/v2/overview#client) and [Agent](/protocol/v2/overview#agent), starting with a user message and continuing until the Agent completes its response. This may involve multiple exchanges with the language model and tool invocations.
+A prompt turn represents a period of work in a session, often starting with a user message and continuing until the [Agent](/protocol/v2/overview#agent) reports that the session is idle again. This may involve multiple exchanges with the language model and tool invocations.
+
+`session/prompt` only lasts until the Agent accepts the prompt. The Agent reports the accepted user message, running state, output, and completion through `session/update` notifications.
 
 Before sending prompts, Clients **MUST** first complete the [initialization](/protocol/v2/initialization) phase and [session setup](/protocol/v2/session-setup).
 
@@ -22,9 +24,11 @@ sequenceDiagram
 
     Note left of Client: User sends message
     Client->>Agent: session/prompt (user message)
-    Note right of Agent: Process with LLM
+    Agent-->>Client: session/prompt response ({})
+    Agent->>Client: session/update (user_message)
+    Agent->>Client: session/update (state_update: running)
 
-    loop Until completion
+    loop While session is running
         Note right of Agent: LLM responds with<br/>content/tool calls
         Agent->>Client: session/update (plan)
         Agent->>Client: session/update (agent_message)
@@ -33,8 +37,10 @@ sequenceDiagram
             Agent->>Client: session/update (tool_call_update)
             opt Permission required
                 Agent->>Client: session/request_permission
+                Agent->>Client: session/update (state_update: requires_action)
                 Note left of Client: User grants/denies
                 Client-->>Agent: Permission response
+                Agent->>Client: session/update (state_update: running)
             end
             Agent->>Client: session/update (tool_call_update status: in_progress)
             Note right of Agent: Execute tool
@@ -47,11 +53,11 @@ sequenceDiagram
           Note left of Client: User cancels prompt
           Client->>Agent: session/cancel
           Note right of Agent: Abort operations
-          Agent-->>Client: session/prompt response (cancelled)
+          Agent->>Client: session/update (state_update: idle, stopReason: cancelled)
       end
     end
 
-    Agent-->>Client: session/prompt response (stopReason)
+    Agent->>Client: session/update (state_update: idle, stopReason)
 
 ```
 
@@ -98,11 +104,19 @@ The turn begins when the Client sends a `session/prompt`:
 
 </ParamField>
 
-### 2. Agent Processing
+### 2. Prompt Accepted
 
-Upon receiving the prompt request, the Agent processes the user's message and sends it to the language model, which **MAY** respond with text content, tool calls, or both.
+Upon receiving a prompt request, the Agent **MUST** respond once it has accepted the prompt. The response body is empty because turn completion is reported through `state_update` notifications, not through the `session/prompt` response:
 
-If the Agent reports the accepted user message through `session/update`, it can send either a `user_message` update with the full `content` array or streamed `user_message_chunk` updates.
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {}
+}
+```
+
+After accepting the prompt, the Agent **MUST** report where the user message was inserted in session history. It can send either a `user_message` update with the full `content` array or streamed `user_message_chunk` updates. This update is the source of truth for the agent-owned `messageId`.
 
 ```json
 {
@@ -125,6 +139,24 @@ If the Agent reports the accepted user message through `session/update`, it can 
 ```
 
 ### 3. Agent Reports Output
+
+When the Agent starts or resumes processing work for the session, it **MUST** send a `state_update` notification with `state: "running"`:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "state_update",
+      "state": "running"
+    }
+  }
+}
+```
+
+The language model **MAY** respond with text content, tool calls, or both.
 
 The Agent reports the model's output to the Client via `session/update` notifications. This may include the Agent's plan for accomplishing the task:
 
@@ -294,25 +326,32 @@ The Agent **MAY** also report current session context and cumulative cost state 
 
 `used` and `size` are required and non-null token counts for the current session context. `cost` is optional and, if present, `amount` and `currency` are required. `currency` is an ISO 4217 currency code like `"USD"`.
 
-### 4. Check for Completion
+### 4. Report Completion
 
-If there are no pending tool calls, the turn ends and the Agent **MUST** respond to the original `session/prompt` request with a `StopReason`:
+If there is no pending work, the Agent **MUST** report that the session is idle with a `state_update` notification. When the idle transition ends a turn, the Agent **MUST** include the corresponding [`StopReason`](#stop-reasons):
 
 ```json
 {
   "jsonrpc": "2.0",
-  "id": 2,
-  "result": {
-    "stopReason": "end_turn"
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "state_update",
+      "state": "idle",
+      "stopReason": "end_turn"
+    }
   }
 }
 ```
 
-Agents **MAY** stop the turn at any point by returning the corresponding [`StopReason`](#stop-reasons).
+Agents **MAY** stop the turn at any point by sending an idle `state_update` session update with the corresponding [`StopReason`](#stop-reasons).
 
 ### 5. Tool Invocation and Status Reporting
 
 Before proceeding with execution, the Agent **MAY** request permission from the Client via the `session/request_permission` method.
+
+While waiting for a permission response or other user action, the Agent **SHOULD** send a `state_update` notification with `state: "requires_action"`. When the Agent resumes processing, it **SHOULD** send another `state_update` notification with `state: "running"`.
 
 Once permission is granted (if required), the Agent **SHOULD** invoke the tool and report a status update marking the tool as `in_progress`:
 
@@ -356,7 +395,7 @@ As the tool runs, the Agent **MAY** send additional updates, providing real-time
 
 Clients append each `tool_call_content_chunk` to the current content for that `toolCallId`. A later `tool_call_update` with `content` replaces the accumulated content.
 
-While tools execute on the Agent, they **MAY** leverage Client capabilities such as the file system (`fs`) methods to access resources within the Client's environment.
+While tools execute on the Agent, they **MAY** leverage Client capabilities negotiated during initialization.
 
 When the tool completes, the Agent sends another update with the final status and any content:
 
@@ -392,11 +431,11 @@ When the tool completes, the Agent sends another update with the final status an
 
 The Agent sends the tool results back to the language model as another request.
 
-The cycle returns to [step 2](#2-agent-processing), continuing until the language model completes its response without requesting additional tool calls or the turn gets stopped by the Agent or cancelled by the Client.
+The cycle returns to [step 3](#3-agent-reports-output), continuing until the language model completes its response without requesting additional tool calls or the turn gets stopped by the Agent or cancelled by the Client.
 
 ## Stop Reasons
 
-When an Agent stops a turn, it must specify the corresponding `StopReason`:
+When an Agent stops a turn, it must specify the corresponding `StopReason` on an idle `state_update` session update:
 
 <ResponseField name="end_turn">
   The language model finishes responding without requesting more tools
@@ -414,7 +453,21 @@ When an Agent stops a turn, it must specify the corresponding `StopReason`:
 
 <ResponseField name="cancelled">The Client cancels the turn</ResponseField>
 
-In v2, custom or future stop reasons can be used when Clients can display a generic stopped state. Custom stop reasons **MUST** begin with `_`; unknown non-underscore stop reasons are reserved for future ACP variants.
+Custom or future stop reasons can be used when Clients can display a generic stopped state. Custom stop reasons **MUST** begin with `_`; unknown non-underscore stop reasons are reserved for future ACP variants.
+
+## Session States
+
+<ResponseField name="running">
+  The Agent is actively processing work in the session.
+</ResponseField>
+
+<ResponseField name="idle">
+  The Agent is not currently processing work in the session.
+</ResponseField>
+
+<ResponseField name="requires_action">
+  The Agent is waiting on user action before it can continue.
+</ResponseField>
 
 ## Cancellation
 
@@ -436,18 +489,18 @@ The Client **MUST** respond to all pending `session/request_permission` requests
 
 When the Agent receives this notification, it **SHOULD** stop all language model requests and all tool call invocations as soon as possible.
 
-After all ongoing operations have been successfully aborted and pending updates have been sent, the Agent **MUST** respond to the original `session/prompt` request with the `cancelled` [stop reason](#stop-reasons).
+After all ongoing operations have been successfully aborted and pending updates have been sent, the Agent **MUST** send an idle `state_update` session update with the `cancelled` [stop reason](#stop-reasons).
 
 <Warning>
-  API client libraries and tools often throw an exception when their operation is aborted, which may propagate as an error response to `session/prompt`.
+  API client libraries and tools often throw an exception when their operation is aborted, which may otherwise be surfaced as a generic failure.
 
 Clients often display unrecognized errors from the Agent to the user, which would be undesirable for cancellations as they aren't considered errors.
 
-Agents **MUST** catch these errors and return the semantically meaningful `cancelled` stop reason, so that Clients can reliably confirm the cancellation.
+Agents **MUST** catch these errors and report the semantically meaningful `cancelled` stop reason on a `state_update` notification, so that Clients can reliably confirm the cancellation.
 
 </Warning>
 
-The Agent **MAY** send `session/update` notifications with content or tool call updates after receiving the `session/cancel` notification, but it **MUST** ensure that it does so before responding to the `session/prompt` request.
+The Agent **MAY** send `session/update` notifications with content or tool call updates after receiving the `session/cancel` notification, but it **MUST** ensure that it does so before sending the idle `state_update` session update that reports cancellation.
 
 The Client **SHOULD** still accept tool call updates received after sending `session/cancel`.
 

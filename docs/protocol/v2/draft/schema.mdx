@@ -4,10 +4,9 @@ description: "Schema definitions for the Agent Client Protocol"
 ---
 
 <Note>
-  This v2 schema file is generated in this repository at
+  This schema file is generated in this repository at
   [`schema/v2/schema.unstable.json`](https://github.com/agentclientprotocol/agent-client-protocol/blob/main/schema/v2/schema.unstable.json).
-  ACP v2 remains hidden while it is being drafted, and v2 schema GitHub releases
-  are not published yet.
+  GitHub releases for this schema are not published yet.
 </Note>
 
 ## Agent
@@ -1318,14 +1317,14 @@ Used in all subsequent requests for this conversation.
 
 Processes a user prompt within a session.
 
-This method handles the whole lifecycle of a prompt:
+This request accepts the prompt:
 
 - Receives user messages with optional context (files, images, etc.)
-- Processes the prompt using language models
-- Reports language model content and tool calls to the Clients
-- Requests permission to run tools
-- Executes any requested tool calls
-- Returns when the turn is complete with a stop reason
+- Returns once the prompt is accepted
+
+After acceptance, the Agent reports the accepted user message,
+processing state, output, tool calls, and completion through
+`session/update` notifications.
 
 See protocol docs: [Prompt Turn](https://agentclientprotocol.com/protocol/v2/draft/prompt-turn)
 
@@ -1371,9 +1370,12 @@ pieces of context from sources the agent may not have access to.
 
 #### <span class="font-mono">PromptResponse</span>
 
-Response from processing a user prompt.
+Response acknowledging that a user prompt was accepted.
 
-See protocol docs: [Check for Completion](https://agentclientprotocol.com/protocol/v2/draft/prompt-turn#4-check-for-completion)
+This response does not indicate that the agent's turn has completed.
+Agents report turn state through `state_update` session updates.
+
+See protocol docs: [Prompt Accepted](https://agentclientprotocol.com/protocol/v2/draft/prompt-turn#2-prompt-accepted)
 
 **Type:** Object
 
@@ -1385,17 +1387,6 @@ metadata to their interactions. Implementations MUST NOT make assumptions about 
 these keys.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="stopReason" type={<a href="#stopreason">StopReason</a>} required>
-  Indicates why the agent stopped processing the turn.
-</ResponseField>
-<ResponseField name="usage" type={<><span><a href="#usage">Usage</a></span><span> | null</span></>} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Token usage for this turn (optional).
 
 </ResponseField>
 
@@ -2011,7 +2002,8 @@ message chunks, tool calls, and execution plans.
 
 Note: Clients SHOULD continue accepting tool call updates even after
 sending a `session/cancel` notification, as the agent may send final
-updates before responding with the cancelled stop reason.
+updates before reporting an idle `state_update` with the cancelled
+stop reason.
 
 See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/v2/draft/prompt-turn#3-agent-reports-output)
 
@@ -4027,6 +4019,41 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="value" type={"string"} required>
   The value to set for the HTTP header.
+</ResponseField>
+
+## <span class="font-mono">IdleStateUpdate</span>
+
+The agent is not currently processing work in the session.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="stopReason" type={<><span><a href="#stopreason">StopReason</a></span><span> | null</span></>} >
+  Indicates why the agent stopped processing the turn.
+
+Optional. Omitted or `null` both mean the agent is not reporting a stop reason.
+Agents SHOULD include this when the idle transition ends a running turn.
+
+</ResponseField>
+<ResponseField name="usage" type={<><span><a href="#usage">Usage</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Token usage for the completed turn.
+
+Optional. Omitted or `null` both mean the agent is not reporting token
+usage for this state update.
+
 </ResponseField>
 
 ## <span class="font-mono">ImageContent</span>
@@ -6449,6 +6476,23 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </Expandable>
 </ResponseField>
 
+## <span class="font-mono">RequiresActionStateUpdate</span>
+
+The agent is waiting on user action before it can continue.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+
 ## <span class="font-mono">ResourceLink</span>
 
 A resource that the server is capable of reading, included in a prompt or tool call result.
@@ -6496,6 +6540,23 @@ Custom or future role.
 Values beginning with `_` are reserved for implementation-specific
 extensions. Unknown values that do not begin with `_` are reserved for
 future ACP variants.
+
+</ResponseField>
+
+## <span class="font-mono">RunningStateUpdate</span>
+
+The agent is actively processing work in the session.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
 
@@ -7262,6 +7323,22 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </Expandable>
 </ResponseField>
 
+<ResponseField name="state_update" type="object">
+The agent's session state has changed.
+
+Agents send this to report when work starts, completes, or pauses while
+waiting for user action. Turn completion is reported here instead
+of in the `session/prompt` response.
+
+<Expandable title="Properties">
+
+<ResponseField name="sessionUpdate" type={"string"} required>
+  The discriminator value. Must be `"state_update"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 <ResponseField name="tool_call_content_chunk" type="object">
 A chunk of tool-call content being streamed.
 
@@ -7518,9 +7595,119 @@ future ACP variants.
 </Expandable>
 </ResponseField>
 
+## <span class="font-mono">StateUpdate</span>
+
+The agent's session state has changed.
+
+This update is the mechanism for reporting turn lifecycle transitions.
+A `session/prompt` response only acknowledges that the prompt was accepted;
+agents use `state_update` notifications to report that processing has started,
+that the session is idle, or that progress is blocked on user action.
+
+**Type:** Union
+
+<ResponseField name="running" type="object">
+The agent is actively processing work in the session.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="state" type={"string"} required>
+  The discriminator value. Must be `"running"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="idle" type="object">
+The agent is not currently processing work in the session.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="state" type={"string"} required>
+  The discriminator value. Must be `"idle"`.
+</ResponseField>
+<ResponseField name="stopReason" type={<><span><a href="#stopreason">StopReason</a></span><span> | null</span></>} >
+  Indicates why the agent stopped processing the turn.
+
+Optional. Omitted or `null` both mean the agent is not reporting a stop reason.
+Agents SHOULD include this when the idle transition ends a running turn.
+
+</ResponseField>
+<ResponseField name="usage" type={<><span><a href="#usage">Usage</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Token usage for the completed turn.
+
+Optional. Omitted or `null` both mean the agent is not reporting token
+usage for this state update.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="requires_action" type="object">
+The agent is waiting on user action before it can continue.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="state" type={"string"} required>
+  The discriminator value. Must be `"requires_action"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="other" type="object">
+Custom or future session state.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+<Expandable title="Properties">
+
+<ResponseField name="state" type={"string"} required>
+  Custom or future session state.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 ## <span class="font-mono">StopReason</span>
 
-Reasons why an agent stops processing a prompt turn.
+Reasons why an agent stops a running turn.
 
 See protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/v2/draft/prompt-turn#stop-reasons)
 
@@ -7548,10 +7735,9 @@ See protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/v2/dr
 <ResponseField name="cancelled" type="string">
 The turn was cancelled by the client via `session/cancel`.
 
-This stop reason MUST be returned when the client sends a `session/cancel`
-notification, even if the cancellation causes exceptions in underlying operations.
-Agents should catch these exceptions and return this semantically meaningful
-response to confirm successful cancellation.
+Agents should report this stop reason on an idle `state_update` session update
+when cancellation succeeds, even if cancellation causes exceptions in
+underlying operations.
 
 </ResponseField>
 
@@ -8128,7 +8314,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 This capability is not part of the spec yet, and may be removed or changed at any point.
 
-Token usage information for a prompt turn.
+Token usage information for a completed turn.
 
 **Type:** Object
 

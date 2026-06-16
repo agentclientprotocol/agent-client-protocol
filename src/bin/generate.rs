@@ -470,7 +470,7 @@ mod markdown_generator {
             if schema_file.starts_with("v2/") {
                 writeln!(
                     &mut self.output,
-                    "<Note>This v2 schema file is generated in this repository at [`schema/{schema_file}`](https://github.com/agentclientprotocol/agent-client-protocol/blob/main/schema/{schema_file}). ACP v2 remains hidden while it is being drafted, and v2 schema GitHub releases are not published yet.</Note>"
+                    "<Note>This schema file is generated in this repository at [`schema/{schema_file}`](https://github.com/agentclientprotocol/agent-client-protocol/blob/main/schema/{schema_file}). GitHub releases for this schema are not published yet.</Note>"
                 )
                 .unwrap();
             } else {

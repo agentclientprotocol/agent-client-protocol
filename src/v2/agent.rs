@@ -3024,28 +3024,18 @@ impl PromptRequest {
     }
 }
 
-/// Response from processing a user prompt.
+/// Response acknowledging that a user prompt was accepted.
 ///
-/// See protocol docs: [Check for Completion](https://agentclientprotocol.com/protocol/prompt-turn#4-check-for-completion)
-#[serde_as]
+/// This response does not indicate that the agent's turn has completed.
+/// Agents report turn state through `state_update` session updates.
+///
+/// See protocol docs: [Prompt Accepted](https://agentclientprotocol.com/protocol/prompt-turn#2-prompt-accepted)
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_PROMPT_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct PromptResponse {
-    /// Indicates why the agent stopped processing the turn.
-    pub stop_reason: StopReason,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// Token usage for this turn (optional).
-    #[cfg(feature = "unstable_end_turn_token_usage")]
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
-    #[serde(default)]
-    pub usage: Option<Usage>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -3057,25 +3047,8 @@ pub struct PromptResponse {
 
 impl PromptResponse {
     #[must_use]
-    pub fn new(stop_reason: StopReason) -> Self {
-        Self {
-            stop_reason,
-            #[cfg(feature = "unstable_end_turn_token_usage")]
-            usage: None,
-            meta: None,
-        }
-    }
-
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// Token usage for this turn.
-    #[cfg(feature = "unstable_end_turn_token_usage")]
-    #[must_use]
-    pub fn usage(mut self, usage: impl IntoOption<Usage>) -> Self {
-        self.usage = usage.into_option();
-        self
+    pub fn new() -> Self {
+        Self::default()
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -3090,7 +3063,7 @@ impl PromptResponse {
     }
 }
 
-/// Reasons why an agent stops processing a prompt turn.
+/// Reasons why an agent stops a running turn.
 ///
 /// See protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/prompt-turn#stop-reasons)
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -3110,10 +3083,9 @@ pub enum StopReason {
     Refusal,
     /// The turn was cancelled by the client via `session/cancel`.
     ///
-    /// This stop reason MUST be returned when the client sends a `session/cancel`
-    /// notification, even if the cancellation causes exceptions in underlying operations.
-    /// Agents should catch these exceptions and return this semantically meaningful
-    /// response to confirm successful cancellation.
+    /// Agents should report this stop reason on an idle `state_update` session update
+    /// when cancellation succeeds, even if cancellation causes exceptions in
+    /// underlying operations.
     Cancelled,
     /// Custom or future stop reason.
     ///
@@ -3128,7 +3100,7 @@ pub enum StopReason {
 ///
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
-/// Token usage information for a prompt turn.
+/// Token usage information for a completed turn.
 #[cfg(feature = "unstable_end_turn_token_usage")]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -4955,13 +4927,13 @@ pub enum ClientRequest {
     SetSessionConfigOptionRequest(SetSessionConfigOptionRequest),
     /// Processes a user prompt within a session.
     ///
-    /// This method handles the whole lifecycle of a prompt:
+    /// This request accepts the prompt:
     /// - Receives user messages with optional context (files, images, etc.)
-    /// - Processes the prompt using language models
-    /// - Reports language model content and tool calls to the Clients
-    /// - Requests permission to run tools
-    /// - Executes any requested tool calls
-    /// - Returns when the turn is complete with a stop reason
+    /// - Returns once the prompt is accepted
+    ///
+    /// After acceptance, the Agent reports the accepted user message,
+    /// processing state, output, tool calls, and completion through
+    /// `session/update` notifications.
     ///
     /// See protocol docs: [Prompt Turn](https://agentclientprotocol.com/protocol/prompt-turn)
     PromptRequest(PromptRequest),
