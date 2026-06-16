@@ -4788,6 +4788,7 @@ pub enum AgentResponse {
 #[serde(untagged)]
 #[schemars(inline)]
 #[non_exhaustive]
+#[allow(clippy::large_enum_variant)]
 pub enum ClientNotification {
     /// Cancels ongoing operations for a session.
     ///

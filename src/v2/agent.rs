@@ -4916,7 +4916,7 @@ pub enum ClientRequest {
     ///
     /// Replaces the configuration for a provider.
     #[cfg(feature = "unstable_llm_providers")]
-    SetProviderRequest(SetProviderRequest),
+    SetProviderRequest(Box<SetProviderRequest>),
     /// **UNSTABLE**
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -5010,14 +5010,14 @@ pub enum ClientRequest {
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
     /// Starts an NES session.
-    StartNesRequest(StartNesRequest),
+    StartNesRequest(Box<StartNesRequest>),
     #[cfg(feature = "unstable_nes")]
     /// **UNSTABLE**
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
     /// Requests a code suggestion.
-    SuggestNesRequest(SuggestNesRequest),
+    SuggestNesRequest(Box<SuggestNesRequest>),
     #[cfg(feature = "unstable_nes")]
     /// **UNSTABLE**
     ///
@@ -5169,7 +5169,7 @@ pub enum ClientNotification {
     /// **UNSTABLE**
     ///
     /// Notification sent when a file becomes the active editor tab.
-    DidFocusDocumentNotification(DidFocusDocumentNotification),
+    DidFocusDocumentNotification(Box<DidFocusDocumentNotification>),
     #[cfg(feature = "unstable_nes")]
     /// **UNSTABLE**
     ///

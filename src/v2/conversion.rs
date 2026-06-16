@@ -2214,13 +2214,11 @@ impl IntoV1 for super::Error {
             code,
             message,
             data,
-            meta,
         } = self;
         Ok(crate::v1::Error {
             code: code.into_v1()?,
             message: message.into_v1()?,
             data: data.into_v1()?,
-            meta: meta.into_v1()?,
         })
     }
 }
@@ -2233,13 +2231,11 @@ impl IntoV2 for crate::v1::Error {
             code,
             message,
             data,
-            meta,
         } = self;
         Ok(super::Error {
             code: code.into_v2()?,
             message: message.into_v2()?,
             data: data.into_v2()?,
-            meta: meta.into_v2()?,
         })
     }
 }
@@ -5239,7 +5235,7 @@ impl IntoV2 for crate::v1::ClientRequest {
             }
             #[cfg(feature = "unstable_llm_providers")]
             Self::SetProviderRequest(value) => {
-                super::ClientRequest::SetProviderRequest(value.into_v2()?)
+                super::ClientRequest::SetProviderRequest(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_llm_providers")]
             Self::DisableProviderRequest(value) => {
@@ -5276,10 +5272,12 @@ impl IntoV2 for crate::v1::ClientRequest {
             }
             Self::PromptRequest(value) => super::ClientRequest::PromptRequest(value.into_v2()?),
             #[cfg(feature = "unstable_nes")]
-            Self::StartNesRequest(value) => super::ClientRequest::StartNesRequest(value.into_v2()?),
+            Self::StartNesRequest(value) => {
+                super::ClientRequest::StartNesRequest(Box::new(value.into_v2()?))
+            }
             #[cfg(feature = "unstable_nes")]
             Self::SuggestNesRequest(value) => {
-                super::ClientRequest::SuggestNesRequest(value.into_v2()?)
+                super::ClientRequest::SuggestNesRequest(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_nes")]
             Self::CloseNesRequest(value) => super::ClientRequest::CloseNesRequest(value.into_v2()?),
@@ -5520,7 +5518,7 @@ impl IntoV2 for crate::v1::ClientNotification {
             }
             #[cfg(feature = "unstable_nes")]
             Self::DidFocusDocumentNotification(value) => {
-                super::ClientNotification::DidFocusDocumentNotification(value.into_v2()?)
+                super::ClientNotification::DidFocusDocumentNotification(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_nes")]
             Self::AcceptNesNotification(value) => {
