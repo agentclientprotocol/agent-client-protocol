@@ -1,27 +1,26 @@
 [workspace]
-git_only = true
-git_release_latest = false
-git_release_name = "Schema v{{ version }}"
 git_release_type = "auto"
+
+[[package]]
+name = "agent-client-protocol-schema"
+git_release_latest = false
+git_release_name = "Rust Crate v{{ version }}"
+git_tag_name = "v{{ version }}"
+
+[[package]]
+name = "agent-client-protocol-json-schema-v1"
+git_only = true
+git_release_name = "Schema v{{ version }}"
 git_tag_name = "schema-v{{ version }}"
 publish = false
 semver_check = false
 
 [[package]]
-name = "agent-client-protocol-schema"
-git_only = false
-git_tag_name = "v{{ version }}"
-git_release_name = "v{{ version }}"
-publish = true
-semver_check = true
-
-[[package]]
-name = "agent-client-protocol-json-schema-v1"
-changelog_path = "schema/v1/CHANGELOG.md"
-git_release_latest = true
-
-[[package]]
 name = "agent-client-protocol-json-schema-v2"
-changelog_path = "schema/v2/CHANGELOG.md"
-git_release_type = "pre"
+git_only = true
+git_release_latest = false
+git_release_name = "Schema v{{ version }}"
+git_tag_name = "schema-v{{ version }}"
+publish = false
 release = false
+semver_check = false
