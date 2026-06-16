@@ -3153,13 +3153,21 @@ Schema for boolean properties in an elicitation form.
 
 **Properties:**
 
-<ResponseField name="default" type={"boolean | null"}>
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="default" type={"boolean | null"} >
   Default value.
 </ResponseField>
-<ResponseField name="description" type={"string | null"}>
+<ResponseField name="description" type={"string | null"} >
   Human-readable description.
 </ResponseField>
-<ResponseField name="title" type={"string | null"}>
+<ResponseField name="title" type={"string | null"} >
   Optional title for the property.
 </ResponseField>
 
@@ -3516,6 +3524,14 @@ Cost information for a session.
 
 **Properties:**
 
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
 <ResponseField name="amount" type={"number"} required>
   Total cumulative cost for session.
 </ResponseField>
@@ -3756,6 +3772,14 @@ String property (or single-select enum when `enum`/`oneOf` is set).
 
 <Expandable title="Properties">
 
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
 <ResponseField name="default" type={"string | null"} >
   Default value.
 </ResponseField>
@@ -3801,19 +3825,27 @@ Number (floating-point) property.
 
 <Expandable title="Properties">
 
-<ResponseField name="default" type={"number | null"}>
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="default" type={"number | null"} >
   Default value.
 </ResponseField>
-<ResponseField name="description" type={"string | null"}>
+<ResponseField name="description" type={"string | null"} >
   Human-readable description.
 </ResponseField>
-<ResponseField name="maximum" type={"number | null"}>
+<ResponseField name="maximum" type={"number | null"} >
   Maximum value (inclusive).
 </ResponseField>
-<ResponseField name="minimum" type={"number | null"}>
+<ResponseField name="minimum" type={"number | null"} >
   Minimum value (inclusive).
 </ResponseField>
-<ResponseField name="title" type={"string | null"}>
+<ResponseField name="title" type={"string | null"} >
   Optional title for the property.
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
@@ -3828,19 +3860,27 @@ Integer property.
 
 <Expandable title="Properties">
 
-<ResponseField name="default" type={"integer | null"}>
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="default" type={"integer | null"} >
   Default value.
 </ResponseField>
-<ResponseField name="description" type={"string | null"}>
+<ResponseField name="description" type={"string | null"} >
   Human-readable description.
 </ResponseField>
-<ResponseField name="maximum" type={"integer | null"}>
+<ResponseField name="maximum" type={"integer | null"} >
   Maximum value (inclusive).
 </ResponseField>
-<ResponseField name="minimum" type={"integer | null"}>
+<ResponseField name="minimum" type={"integer | null"} >
   Minimum value (inclusive).
 </ResponseField>
-<ResponseField name="title" type={"string | null"}>
+<ResponseField name="title" type={"string | null"} >
   Optional title for the property.
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
@@ -3855,13 +3895,21 @@ Boolean property.
 
 <Expandable title="Properties">
 
-<ResponseField name="default" type={"boolean | null"}>
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="default" type={"boolean | null"} >
   Default value.
 </ResponseField>
-<ResponseField name="description" type={"string | null"}>
+<ResponseField name="description" type={"string | null"} >
   Human-readable description.
 </ResponseField>
-<ResponseField name="title" type={"string | null"}>
+<ResponseField name="title" type={"string | null"} >
   Optional title for the property.
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
@@ -3876,6 +3924,14 @@ Multi-select array property.
 
 <Expandable title="Properties">
 
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
 <ResponseField name="default" type={<><span><><span>"string"</span><span>[]</span></></span><span> | null</span></>} >
   Default selected values.
 </ResponseField>
@@ -3939,6 +3995,14 @@ as required by the elicitation specification.
 
 **Properties:**
 
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
 <ResponseField name="description" type={"string | null"} >
   Optional description of what this schema represents.
 </ResponseField>
@@ -4191,6 +4255,14 @@ A titled enum option with a const value and human-readable title.
 
 **Properties:**
 
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
 <ResponseField name="const" type={"string"} required>
   The constant value for this option.
 </ResponseField>
@@ -4234,18 +4306,25 @@ See protocol docs: [JSON-RPC Error Object](https://www.jsonrpc.org/specification
 
 **Properties:**
 
-<ResponseField name="code" type={<a href="#errorcode">ErrorCode</a>} required>
-  A number indicating the error type that occurred. This must be an integer as
-  defined in the JSON-RPC specification.
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
 </ResponseField>
-<ResponseField name="data" type={"object"}>
-  Optional primitive or structured value that contains additional information
-  about the error. This may include debugging information or context-specific
-  details.
+<ResponseField name="code" type={<a href="#errorcode">ErrorCode</a>} required>
+  A number indicating the error type that occurred.
+This must be an integer as defined in the JSON-RPC specification.
+</ResponseField>
+<ResponseField name="data" type={"object"} >
+  Optional primitive or structured value that contains additional information about the error.
+This may include debugging information or context-specific details.
 </ResponseField>
 <ResponseField name="message" type={"string"} required>
-  A string providing a short description of the error. The message should be
-  limited to a concise single sentence.
+  A string providing a short description of the error.
+The message should be limited to a concise single sentence.
 </ResponseField>
 
 ## <span class="font-mono">ErrorCode</span>
@@ -4456,19 +4535,27 @@ Schema for integer properties in an elicitation form.
 
 **Properties:**
 
-<ResponseField name="default" type={"integer | null"}>
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="default" type={"integer | null"} >
   Default value.
 </ResponseField>
-<ResponseField name="description" type={"string | null"}>
+<ResponseField name="description" type={"string | null"} >
   Human-readable description.
 </ResponseField>
-<ResponseField name="maximum" type={"integer | null"}>
+<ResponseField name="maximum" type={"integer | null"} >
   Maximum value (inclusive).
 </ResponseField>
-<ResponseField name="minimum" type={"integer | null"}>
+<ResponseField name="minimum" type={"integer | null"} >
   Minimum value (inclusive).
 </ResponseField>
-<ResponseField name="title" type={"string | null"}>
+<ResponseField name="title" type={"string | null"} >
   Optional title for the property.
 </ResponseField>
 
@@ -4866,23 +4953,18 @@ Untitled multi-select items with plain string values.
 
 <Expandable title="Properties">
 
-<ResponseField
-  name="enum"
-  type={
-    <>
-      <span>"string"</span>
-      <span>[]</span>
-    </>
-  }
-  required
->
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="enum" type={<><span>"string"</span><span>[]</span></>} required>
   Allowed enum values.
 </ResponseField>
-<ResponseField
-  name="type"
-  type={<a href="#elicitationstringtype">ElicitationStringType</a>}
-  required
->
+<ResponseField name="type" type={<a href="#elicitationstringtype">ElicitationStringType</a>} required>
   Item type discriminator. Must be `"string"`.
 </ResponseField>
 
@@ -4894,11 +4976,15 @@ Titled multi-select items with human-readable labels.
 
 <Expandable title="Properties">
 
-<ResponseField
-  name="anyOf"
-  type={<a href="#enumoption">EnumOption[]</a>}
-  required
->
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="anyOf" type={<a href="#enumoption">EnumOption[]</a>} required>
   Titled enum options.
 </ResponseField>
 
@@ -4913,6 +4999,14 @@ Schema for multi-select (array) properties in an elicitation form.
 
 **Properties:**
 
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
 <ResponseField name="default" type={<><span><><span>"string"</span><span>[]</span></></span><span> | null</span></>} >
   Default selected values.
 </ResponseField>
@@ -5004,17 +5098,21 @@ A diagnostic (error, warning, etc.).
 
 **Properties:**
 
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
 <ResponseField name="message" type={"string"} required>
   The diagnostic message.
 </ResponseField>
 <ResponseField name="range" type={<a href="#range">Range</a>} required>
   The range of the diagnostic.
 </ResponseField>
-<ResponseField
-  name="severity"
-  type={<a href="#nesdiagnosticseverity">NesDiagnosticSeverity</a>}
-  required
->
+<ResponseField name="severity" type={<a href="#nesdiagnosticseverity">NesDiagnosticSeverity</a>} required>
   The severity of the diagnostic.
 </ResponseField>
 <ResponseField name="uri" type={"string"} required>
@@ -5211,6 +5309,14 @@ An entry in the edit history.
 
 **Properties:**
 
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
 <ResponseField name="diff" type={"string"} required>
   A diff representing the edit.
 </ResponseField>
@@ -5226,24 +5332,18 @@ A text edit suggestion.
 
 **Properties:**
 
-<ResponseField
-  name="cursorPosition"
-  type={
-    <>
-      <span>
-        <a href="#position">Position</a>
-      </span>
-      <span> | null</span>
-    </>
-  }
->
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="cursorPosition" type={<><span><a href="#position">Position</a></span><span> | null</span></>} >
   Optional suggested cursor position after applying edits.
 </ResponseField>
-<ResponseField
-  name="edits"
-  type={<a href="#nestextedit">NesTextEdit[]</a>}
-  required
->
+<ResponseField name="edits" type={<a href="#nestextedit">NesTextEdit[]</a>} required>
   The text edits to apply.
 </ResponseField>
 <ResponseField name="id" type={"string"} required>
@@ -5281,6 +5381,14 @@ A code excerpt from a file.
 
 **Properties:**
 
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
 <ResponseField name="endLine" type={"uint32"} required>
   The end line of the excerpt (zero-based).
 
@@ -5322,6 +5430,14 @@ A jump-to-location suggestion.
 
 **Properties:**
 
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
 <ResponseField name="id" type={"string"} required>
   Unique identifier for accept/reject tracking.
 </ResponseField>
@@ -5340,6 +5456,14 @@ An open file in the editor.
 
 **Properties:**
 
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
 <ResponseField name="languageId" type={"string"} required>
   The language identifier.
 </ResponseField>
@@ -5381,6 +5505,14 @@ A recently accessed file.
 
 **Properties:**
 
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
 <ResponseField name="languageId" type={"string"} required>
   The language identifier.
 </ResponseField>
@@ -5444,11 +5576,15 @@ A related code snippet from a file.
 
 **Properties:**
 
-<ResponseField
-  name="excerpts"
-  type={<a href="#nesexcerpt">NesExcerpt[]</a>}
-  required
->
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="excerpts" type={<a href="#nesexcerpt">NesExcerpt[]</a>} required>
   The code excerpts.
 </ResponseField>
 <ResponseField name="uri" type={"string"} required>
@@ -5497,6 +5633,14 @@ A rename symbol suggestion.
 
 **Properties:**
 
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
 <ResponseField name="id" type={"string"} required>
   Unique identifier for accept/reject tracking.
 </ResponseField>
@@ -5518,6 +5662,14 @@ Repository metadata for an NES session.
 
 **Properties:**
 
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
 <ResponseField name="name" type={"string"} required>
   The repository name.
 </ResponseField>
@@ -5553,10 +5705,18 @@ A search-and-replace suggestion.
 
 **Properties:**
 
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
 <ResponseField name="id" type={"string"} required>
   Unique identifier for accept/reject tracking.
 </ResponseField>
-<ResponseField name="isRegex" type={"boolean | null"}>
+<ResponseField name="isRegex" type={"boolean | null"} >
   Whether `search` is a regular expression. Defaults to `false`.
 </ResponseField>
 <ResponseField name="replace" type={"string"} required>
@@ -5615,24 +5775,18 @@ A text edit suggestion.
 
 <Expandable title="Properties">
 
-<ResponseField
-  name="cursorPosition"
-  type={
-    <>
-      <span>
-        <a href="#position">Position</a>
-      </span>
-      <span> | null</span>
-    </>
-  }
->
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="cursorPosition" type={<><span><a href="#position">Position</a></span><span> | null</span></>} >
   Optional suggested cursor position after applying edits.
 </ResponseField>
-<ResponseField
-  name="edits"
-  type={<a href="#nestextedit">NesTextEdit[]</a>}
-  required
->
+<ResponseField name="edits" type={<a href="#nestextedit">NesTextEdit[]</a>} required>
   The text edits to apply.
 </ResponseField>
 <ResponseField name="id" type={"string"} required>
@@ -5653,6 +5807,14 @@ A jump-to-location suggestion.
 
 <Expandable title="Properties">
 
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
 <ResponseField name="id" type={"string"} required>
   Unique identifier for accept/reject tracking.
 </ResponseField>
@@ -5674,6 +5836,14 @@ A rename symbol suggestion.
 
 <Expandable title="Properties">
 
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
 <ResponseField name="id" type={"string"} required>
   Unique identifier for accept/reject tracking.
 </ResponseField>
@@ -5698,10 +5868,18 @@ A search-and-replace suggestion.
 
 <Expandable title="Properties">
 
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
 <ResponseField name="id" type={"string"} required>
   Unique identifier for accept/reject tracking.
 </ResponseField>
-<ResponseField name="isRegex" type={"boolean | null"}>
+<ResponseField name="isRegex" type={"boolean | null"} >
   Whether `search` is a regular expression. Defaults to `false`.
 </ResponseField>
 <ResponseField name="kind" type={"string"} required>
@@ -5728,6 +5906,14 @@ A text edit within a suggestion.
 
 **Properties:**
 
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
 <ResponseField name="newText" type={"string"} required>
   The replacement text.
 </ResponseField>
@@ -5761,6 +5947,14 @@ A user action (typing, cursor movement, etc.).
 
 **Properties:**
 
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
 <ResponseField name="action" type={"string"} required>
   The kind of action (e.g., "insertChar", "cursorMovement").
 </ResponseField>
@@ -5808,19 +6002,27 @@ Schema for number (floating-point) properties in an elicitation form.
 
 **Properties:**
 
-<ResponseField name="default" type={"number | null"}>
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="default" type={"number | null"} >
   Default value.
 </ResponseField>
-<ResponseField name="description" type={"string | null"}>
+<ResponseField name="description" type={"string | null"} >
   Human-readable description.
 </ResponseField>
-<ResponseField name="maximum" type={"number | null"}>
+<ResponseField name="maximum" type={"number | null"} >
   Maximum value (inclusive).
 </ResponseField>
-<ResponseField name="minimum" type={"number | null"}>
+<ResponseField name="minimum" type={"number | null"} >
   Minimum value (inclusive).
 </ResponseField>
-<ResponseField name="title" type={"string | null"}>
+<ResponseField name="title" type={"string | null"} >
   Optional title for the property.
 </ResponseField>
 
@@ -6250,6 +6452,14 @@ The meaning of `character` depends on the negotiated position encoding.
 
 **Properties:**
 
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
 <ResponseField name="character" type={"uint32"} required>
   Zero-based character offset (encoding-dependent).
 
@@ -6358,11 +6568,15 @@ Current effective non-secret routing configuration for a provider.
 
 **Properties:**
 
-<ResponseField
-  name="apiType"
-  type={<a href="#llmprotocol">LlmProtocol</a>}
-  required
->
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="apiType" type={<a href="#llmprotocol">LlmProtocol</a>} required>
   Protocol currently used by this provider.
 </ResponseField>
 <ResponseField name="baseUrl" type={"string"} required>
@@ -6435,6 +6649,14 @@ A range in a text document, expressed as start and end positions.
 
 **Properties:**
 
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
 <ResponseField name="end" type={<a href="#position">Position</a>} required>
   The end position (exclusive).
 </ResponseField>
@@ -6687,6 +6909,14 @@ A boolean on/off toggle session configuration option payload.
 
 **Properties:**
 
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
 <ResponseField name="currentValue" type={"boolean"} required>
   The current value of the boolean option.
 </ResponseField>
@@ -6739,18 +6969,18 @@ Single-value selector (dropdown).
 
 <Expandable title="Properties">
 
-<ResponseField
-  name="currentValue"
-  type={<a href="#sessionconfigvalueid">SessionConfigValueId</a>}
-  required
->
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="currentValue" type={<a href="#sessionconfigvalueid">SessionConfigValueId</a>} required>
   The currently selected value.
 </ResponseField>
-<ResponseField
-  name="options"
-  type={<a href="#sessionconfigselectoptions">SessionConfigSelectOptions</a>}
-  required
->
+<ResponseField name="options" type={<a href="#sessionconfigselectoptions">SessionConfigSelectOptions</a>} required>
   The set of selectable options.
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
@@ -6769,6 +6999,14 @@ Boolean on/off toggle.
 
 <Expandable title="Properties">
 
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
 <ResponseField name="currentValue" type={"boolean"} required>
   The current value of the boolean option.
 </ResponseField>
@@ -6817,18 +7055,18 @@ A single-value selector (dropdown) session configuration option payload.
 
 **Properties:**
 
-<ResponseField
-  name="currentValue"
-  type={<a href="#sessionconfigvalueid">SessionConfigValueId</a>}
-  required
->
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="currentValue" type={<a href="#sessionconfigvalueid">SessionConfigValueId</a>} required>
   The currently selected value.
 </ResponseField>
-<ResponseField
-  name="options"
-  type={<a href="#sessionconfigselectoptions">SessionConfigSelectOptions</a>}
-  required
->
+<ResponseField name="options" type={<a href="#sessionconfigselectoptions">SessionConfigSelectOptions</a>} required>
   The set of selectable options.
 </ResponseField>
 
@@ -7586,6 +7824,14 @@ with `"type": "string"`.
 
 **Properties:**
 
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
 <ResponseField name="default" type={"string | null"} >
   Default value.
 </ResponseField>
@@ -7701,19 +7947,16 @@ When `range` is `Some`, `text` replaces the given range.
 
 **Properties:**
 
-<ResponseField
-  name="range"
-  type={
-    <>
-      <span>
-        <a href="#range">Range</a>
-      </span>
-      <span> | null</span>
-    </>
-  }
->
-  The range of the document that changed. If `None`, the entire content is
-  replaced.
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="range" type={<><span><a href="#range">Range</a></span><span> | null</span></>} >
+  The range of the document that changed. If `None`, the entire content is replaced.
 </ResponseField>
 <ResponseField name="text" type={"string"} required>
   The new text for the range, or the full document content if `range` is `None`.
@@ -7764,11 +8007,15 @@ Items definition for titled multi-select enum properties.
 
 **Properties:**
 
-<ResponseField
-  name="anyOf"
-  type={<a href="#enumoption">EnumOption[]</a>}
-  required
->
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="anyOf" type={<a href="#enumoption">EnumOption[]</a>} required>
   Titled enum options.
 </ResponseField>
 
@@ -8098,23 +8345,18 @@ Items definition for untitled multi-select enum properties.
 
 **Properties:**
 
-<ResponseField
-  name="enum"
-  type={
-    <>
-      <span>"string"</span>
-      <span>[]</span>
-    </>
-  }
-  required
->
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="enum" type={<><span>"string"</span><span>[]</span></>} required>
   Allowed enum values.
 </ResponseField>
-<ResponseField
-  name="type"
-  type={<a href="#elicitationstringtype">ElicitationStringType</a>}
-  required
->
+<ResponseField name="type" type={<a href="#elicitationstringtype">ElicitationStringType</a>} required>
   Item type discriminator. Must be `"string"`.
 </ResponseField>
 
@@ -8130,6 +8372,14 @@ Token usage information for a prompt turn.
 
 **Properties:**
 
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
 <ResponseField name="cachedReadTokens" type={"integer | null"} >
   Total cache read tokens.
 
@@ -8207,6 +8457,14 @@ A workspace folder.
 
 **Properties:**
 
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
 <ResponseField name="name" type={"string"} required>
   The display name of the folder.
 </ResponseField>

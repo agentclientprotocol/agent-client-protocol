@@ -16,6 +16,7 @@ use schemars::{JsonSchema, Schema};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
+use super::Meta;
 use crate::IntoOption;
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
@@ -39,6 +40,13 @@ pub struct Error {
     /// Optional primitive or structured value that contains additional information about the error.
     /// This may include debugging information or context-specific details.
     pub data: Option<serde_json::Value>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
 }
 
 impl Error {
@@ -51,6 +59,7 @@ impl Error {
             code: code.into(),
             message: message.into(),
             data: None,
+            meta: None,
         }
     }
 
@@ -61,6 +70,17 @@ impl Error {
     #[must_use]
     pub fn data(mut self, data: impl IntoOption<serde_json::Value>) -> Self {
         self.data = data.into_option();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 

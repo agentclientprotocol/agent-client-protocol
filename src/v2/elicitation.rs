@@ -68,6 +68,7 @@ pub enum ElicitationSchemaType {
 }
 
 /// A titled enum option with a const value and human-readable title.
+#[skip_serializing_none]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[non_exhaustive]
 pub struct EnumOption {
@@ -76,6 +77,13 @@ pub struct EnumOption {
     pub value: String,
     /// Human-readable title for this option.
     pub title: String,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
 }
 
 impl EnumOption {
@@ -85,7 +93,19 @@ impl EnumOption {
         Self {
             value: value.into(),
             title: title.into(),
+            meta: None,
         }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
     }
 }
 
@@ -118,6 +138,13 @@ pub struct StringPropertySchema {
     /// Titled enum options for titled single-select enums.
     #[serde(rename = "oneOf")]
     pub one_of: Option<Vec<EnumOption>>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
 }
 
 impl StringPropertySchema {
@@ -225,6 +252,17 @@ impl StringPropertySchema {
         self.one_of = one_of.into_option();
         self
     }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
 }
 
 /// Schema for number (floating-point) properties in an elicitation form.
@@ -243,6 +281,13 @@ pub struct NumberPropertySchema {
     pub maximum: Option<f64>,
     /// Default value.
     pub default: Option<f64>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
 }
 
 impl NumberPropertySchema {
@@ -286,6 +331,17 @@ impl NumberPropertySchema {
         self.default = default.into_option();
         self
     }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
 }
 
 /// Schema for integer properties in an elicitation form.
@@ -304,6 +360,13 @@ pub struct IntegerPropertySchema {
     pub maximum: Option<i64>,
     /// Default value.
     pub default: Option<i64>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
 }
 
 impl IntegerPropertySchema {
@@ -347,6 +410,17 @@ impl IntegerPropertySchema {
         self.default = default.into_option();
         self
     }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
 }
 
 /// Schema for boolean properties in an elicitation form.
@@ -361,6 +435,13 @@ pub struct BooleanPropertySchema {
     pub description: Option<String>,
     /// Default value.
     pub default: Option<bool>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
 }
 
 impl BooleanPropertySchema {
@@ -390,6 +471,17 @@ impl BooleanPropertySchema {
         self.default = default.into_option();
         self
     }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
 }
 
 /// Items definition for untitled multi-select enum properties.
@@ -403,6 +495,7 @@ pub enum ElicitationStringType {
 }
 
 /// Items definition for untitled multi-select enum properties.
+#[skip_serializing_none]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[non_exhaustive]
 pub struct UntitledMultiSelectItems {
@@ -412,22 +505,64 @@ pub struct UntitledMultiSelectItems {
     /// Allowed enum values.
     #[serde(rename = "enum")]
     pub values: Vec<String>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl UntitledMultiSelectItems {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
 }
 
 /// Items definition for titled multi-select enum properties.
+#[skip_serializing_none]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[non_exhaustive]
 pub struct TitledMultiSelectItems {
     /// Titled enum options.
     #[serde(rename = "anyOf")]
     pub options: Vec<EnumOption>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
 }
 
 impl TitledMultiSelectItems {
     /// Create new titled multi-select items.
     #[must_use]
     pub fn new(options: Vec<EnumOption>) -> Self {
-        Self { options }
+        Self {
+            options,
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
     }
 }
 
@@ -460,6 +595,13 @@ pub struct MultiSelectPropertySchema {
     pub items: MultiSelectItems,
     /// Default selected values.
     pub default: Option<Vec<String>>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
 }
 
 impl MultiSelectPropertySchema {
@@ -474,8 +616,10 @@ impl MultiSelectPropertySchema {
             items: MultiSelectItems::Untitled(UntitledMultiSelectItems {
                 type_: ElicitationStringType::String,
                 values,
+                meta: None,
             }),
             default: None,
+            meta: None,
         }
     }
 
@@ -487,8 +631,12 @@ impl MultiSelectPropertySchema {
             description: None,
             min_items: None,
             max_items: None,
-            items: MultiSelectItems::Titled(TitledMultiSelectItems { options }),
+            items: MultiSelectItems::Titled(TitledMultiSelectItems {
+                options,
+                meta: None,
+            }),
             default: None,
+            meta: None,
         }
     }
 
@@ -524,6 +672,17 @@ impl MultiSelectPropertySchema {
     #[must_use]
     pub fn default_value(mut self, default: impl IntoOption<Vec<String>>) -> Self {
         self.default = default.into_option();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -605,6 +764,13 @@ pub struct ElicitationSchema {
     pub required: Option<Vec<String>>,
     /// Optional description of what this schema represents.
     pub description: Option<String>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
 }
 
 impl Default for ElicitationSchema {
@@ -615,6 +781,7 @@ impl Default for ElicitationSchema {
             properties: BTreeMap::new(),
             required: None,
             description: None,
+            meta: None,
         }
     }
 }
@@ -637,6 +804,17 @@ impl ElicitationSchema {
     #[must_use]
     pub fn description(mut self, description: impl IntoOption<String>) -> Self {
         self.description = description.into_option();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 

@@ -2186,6 +2186,7 @@ impl From<Vec<SessionConfigSelectGroup>> for SessionConfigSelectOptions {
 }
 
 /// A single-value selector (dropdown) session configuration option payload.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -2194,6 +2195,13 @@ pub struct SessionConfigSelect {
     pub current_value: SessionConfigValueId,
     /// The set of selectable options.
     pub options: SessionConfigSelectOptions,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
 }
 
 impl SessionConfigSelect {
@@ -2205,7 +2213,19 @@ impl SessionConfigSelect {
         Self {
             current_value: current_value.into(),
             options: options.into(),
+            meta: None,
         }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
     }
 }
 
@@ -2215,19 +2235,41 @@ impl SessionConfigSelect {
 ///
 /// A boolean on/off toggle session configuration option payload.
 #[cfg(feature = "unstable_boolean_config")]
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SessionConfigBoolean {
     /// The current value of the boolean option.
     pub current_value: bool,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
 }
 
 #[cfg(feature = "unstable_boolean_config")]
 impl SessionConfigBoolean {
     #[must_use]
     pub fn new(current_value: bool) -> Self {
-        Self { current_value }
+        Self {
+            current_value,
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
     }
 }
 
@@ -3118,6 +3160,13 @@ pub struct Usage {
     pub cached_read_tokens: Option<u64>,
     /// Total cache write tokens.
     pub cached_write_tokens: Option<u64>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
 }
 
 #[cfg(feature = "unstable_end_turn_token_usage")]
@@ -3131,6 +3180,7 @@ impl Usage {
             thought_tokens: None,
             cached_read_tokens: None,
             cached_write_tokens: None,
+            meta: None,
         }
     }
 
@@ -3152,6 +3202,17 @@ impl Usage {
     #[must_use]
     pub fn cached_write_tokens(mut self, cached_write_tokens: impl IntoOption<u64>) -> Self {
         self.cached_write_tokens = cached_write_tokens.into_option();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -3196,6 +3257,7 @@ pub enum LlmProtocol {
 ///
 /// Current effective non-secret routing configuration for a provider.
 #[cfg(feature = "unstable_llm_providers")]
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -3204,6 +3266,13 @@ pub struct ProviderCurrentConfig {
     pub api_type: LlmProtocol,
     /// Base URL currently used by this provider.
     pub base_url: String,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
 }
 
 #[cfg(feature = "unstable_llm_providers")]
@@ -3213,7 +3282,19 @@ impl ProviderCurrentConfig {
         Self {
             api_type,
             base_url: base_url.into(),
+            meta: None,
         }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
     }
 }
 
