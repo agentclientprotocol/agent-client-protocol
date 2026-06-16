@@ -1,5 +1,75 @@
 # Changelog
 
+## [0.13.7](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.13.6...v0.13.7) - 2026-06-16
+
+### Added
+
+- *(unstable-v2)* Add streaming tool-call content in v2 ([#1407](https://github.com/agentclientprotocol/agent-client-protocol/pull/1407))
+- *(unstable-v2)* Add v2 whole-message session updates ([#1396](https://github.com/agentclientprotocol/agent-client-protocol/pull/1396))
+- *(unstable-v2)* Unify v2 tool call updates ([#1390](https://github.com/agentclientprotocol/agent-client-protocol/pull/1390))
+- *(unstable-v2)* Require auth method type discriminator in v2 ([#1387](https://github.com/agentclientprotocol/agent-client-protocol/pull/1387))
+- *(unstable-v2)* Nest session-scoped capabilities under session ([#1373](https://github.com/agentclientprotocol/agent-client-protocol/pull/1373))
+
+### Fixed
+
+- *(schema)* Add missing _meta fields to protocol schemas ([#1440](https://github.com/agentclientprotocol/agent-client-protocol/pull/1440))
+- *(unstable-v2)* Tolerate errors in v1/v2 conversions ([#1420](https://github.com/agentclientprotocol/agent-client-protocol/pull/1420))
+- *(rust)* Preserve JSON object key order ([#1393](https://github.com/agentclientprotocol/agent-client-protocol/pull/1393))
+- *(unstable-v2)* Clean up old agent auth deserialization ([#1388](https://github.com/agentclientprotocol/agent-client-protocol/pull/1388))
+
+### Other
+
+- clients: add pomerium agentops ([#1437](https://github.com/agentclientprotocol/agent-client-protocol/pull/1437))
+- update registry agents ([#1439](https://github.com/agentclientprotocol/agent-client-protocol/pull/1439))
+- update registry agents ([#1438](https://github.com/agentclientprotocol/agent-client-protocol/pull/1438))
+- update registry agents ([#1436](https://github.com/agentclientprotocol/agent-client-protocol/pull/1436))
+- *(deps)* bump taiki-e/install-action from 2.81.8 to 2.81.10 ([#1431](https://github.com/agentclientprotocol/agent-client-protocol/pull/1431))
+- *(deps)* bump release-plz/action from 0.5.129 to 0.5.130 ([#1432](https://github.com/agentclientprotocol/agent-client-protocol/pull/1432))
+- *(deps)* bump the minor group with 9 updates ([#1433](https://github.com/agentclientprotocol/agent-client-protocol/pull/1433))
+- *(deps)* bump the minor group with 21 updates ([#1434](https://github.com/agentclientprotocol/agent-client-protocol/pull/1434))
+- update registry agents ([#1435](https://github.com/agentclientprotocol/agent-client-protocol/pull/1435))
+- add Hash to CLI and TUI clients ([#1413](https://github.com/agentclientprotocol/agent-client-protocol/pull/1413))
+- add ACP Inspector to Desktop and Web clients ([#1417](https://github.com/agentclientprotocol/agent-client-protocol/pull/1417))
+- *(libraries)* add Acp.Net to the .NET community libraries ([#1428](https://github.com/agentclientprotocol/agent-client-protocol/pull/1428))
+- update registry agents ([#1430](https://github.com/agentclientprotocol/agent-client-protocol/pull/1430))
+- update registry agents ([#1429](https://github.com/agentclientprotocol/agent-client-protocol/pull/1429))
+- update registry agents ([#1427](https://github.com/agentclientprotocol/agent-client-protocol/pull/1427))
+- update registry agents ([#1425](https://github.com/agentclientprotocol/agent-client-protocol/pull/1425))
+- update registry agents ([#1424](https://github.com/agentclientprotocol/agent-client-protocol/pull/1424))
+- update registry agents ([#1423](https://github.com/agentclientprotocol/agent-client-protocol/pull/1423))
+- update registry agents ([#1422](https://github.com/agentclientprotocol/agent-client-protocol/pull/1422))
+- update registry agents ([#1421](https://github.com/agentclientprotocol/agent-client-protocol/pull/1421))
+- update registry agents ([#1419](https://github.com/agentclientprotocol/agent-client-protocol/pull/1419))
+- update registry agents ([#1418](https://github.com/agentclientprotocol/agent-client-protocol/pull/1418))
+- update registry agents ([#1416](https://github.com/agentclientprotocol/agent-client-protocol/pull/1416))
+- update registry agents ([#1415](https://github.com/agentclientprotocol/agent-client-protocol/pull/1415))
+- update registry agents ([#1414](https://github.com/agentclientprotocol/agent-client-protocol/pull/1414))
+- update registry agents ([#1411](https://github.com/agentclientprotocol/agent-client-protocol/pull/1411))
+- update registry agents ([#1410](https://github.com/agentclientprotocol/agent-client-protocol/pull/1410))
+- update registry agents ([#1409](https://github.com/agentclientprotocol/agent-client-protocol/pull/1409))
+- update registry agents ([#1408](https://github.com/agentclientprotocol/agent-client-protocol/pull/1408))
+- update registry agents ([#1406](https://github.com/agentclientprotocol/agent-client-protocol/pull/1406))
+- update registry agents ([#1405](https://github.com/agentclientprotocol/agent-client-protocol/pull/1405))
+- update registry agents ([#1404](https://github.com/agentclientprotocol/agent-client-protocol/pull/1404))
+- update registry agents ([#1403](https://github.com/agentclientprotocol/agent-client-protocol/pull/1403))
+- update registry agents ([#1402](https://github.com/agentclientprotocol/agent-client-protocol/pull/1402))
+- update registry agents ([#1401](https://github.com/agentclientprotocol/agent-client-protocol/pull/1401))
+- update registry agents ([#1400](https://github.com/agentclientprotocol/agent-client-protocol/pull/1400))
+- update registry agents ([#1399](https://github.com/agentclientprotocol/agent-client-protocol/pull/1399))
+- update registry agents ([#1398](https://github.com/agentclientprotocol/agent-client-protocol/pull/1398))
+- update registry agents ([#1395](https://github.com/agentclientprotocol/agent-client-protocol/pull/1395))
+- update registry agents ([#1394](https://github.com/agentclientprotocol/agent-client-protocol/pull/1394))
+- update registry agents ([#1392](https://github.com/agentclientprotocol/agent-client-protocol/pull/1392))
+- update registry agents ([#1391](https://github.com/agentclientprotocol/agent-client-protocol/pull/1391))
+- update registry agents ([#1389](https://github.com/agentclientprotocol/agent-client-protocol/pull/1389))
+- *(deps)* bump the minor group with 41 updates ([#1386](https://github.com/agentclientprotocol/agent-client-protocol/pull/1386))
+- *(deps)* bump crate-ci/typos from 1.47.0 to 1.47.2 ([#1383](https://github.com/agentclientprotocol/agent-client-protocol/pull/1383))
+- *(deps)* bump taiki-e/install-action from 2.81.2 to 2.81.8 ([#1384](https://github.com/agentclientprotocol/agent-client-protocol/pull/1384))
+- Fix versioning for new schema git releases ([#1382](https://github.com/agentclientprotocol/agent-client-protocol/pull/1382))
+- add acp.cr Crystal community library ([#1381](https://github.com/agentclientprotocol/agent-client-protocol/pull/1381))
+- *(rfd)* add v1/v2 durability and reliability expectations to remote transport RFD ([#1376](https://github.com/agentclientprotocol/agent-client-protocol/pull/1376))
+- Setup separate publishes for JSON Schemas ([#1377](https://github.com/agentclientprotocol/agent-client-protocol/pull/1377))
+
 ## [0.13.6](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.13.5...v0.13.6) - 2026-06-05
 
 ### Added
