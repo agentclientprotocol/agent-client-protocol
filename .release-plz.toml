@@ -1,5 +1,6 @@
 [workspace]
 git_release_type = "auto"
+release_always = false
 
 [[package]]
 name = "agent-client-protocol-schema"
