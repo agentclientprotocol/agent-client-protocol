@@ -18,4 +18,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fix versioning for new schema git releases ([#1382](https://github.com/agentclientprotocol/agent-client-protocol/pull/1382))
 - Setup separate publishes for JSON Schemas ([#1377](https://github.com/agentclientprotocol/agent-client-protocol/pull/1377))
-# Changelog
