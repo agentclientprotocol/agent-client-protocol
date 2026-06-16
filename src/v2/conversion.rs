@@ -3816,12 +3816,10 @@ impl IntoV1 for super::SessionConfigSelect {
         let Self {
             current_value,
             options,
-            meta,
         } = self;
         Ok(crate::v1::SessionConfigSelect {
             current_value: current_value.into_v1()?,
             options: options.into_v1()?,
-            meta: meta.into_v1()?,
         })
     }
 }
@@ -3833,12 +3831,10 @@ impl IntoV2 for crate::v1::SessionConfigSelect {
         let Self {
             current_value,
             options,
-            meta,
         } = self;
         Ok(super::SessionConfigSelect {
             current_value: current_value.into_v2()?,
             options: options.into_v2()?,
-            meta: meta.into_v2()?,
         })
     }
 }
@@ -3848,13 +3844,9 @@ impl IntoV1 for super::SessionConfigBoolean {
     type Output = crate::v1::SessionConfigBoolean;
 
     fn into_v1(self) -> Result<Self::Output> {
-        let Self {
-            current_value,
-            meta,
-        } = self;
+        let Self { current_value } = self;
         Ok(crate::v1::SessionConfigBoolean {
             current_value: current_value.into_v1()?,
-            meta: meta.into_v1()?,
         })
     }
 }
@@ -3864,13 +3856,9 @@ impl IntoV2 for crate::v1::SessionConfigBoolean {
     type Output = super::SessionConfigBoolean;
 
     fn into_v2(self) -> Result<Self::Output> {
-        let Self {
-            current_value,
-            meta,
-        } = self;
+        let Self { current_value } = self;
         Ok(super::SessionConfigBoolean {
             current_value: current_value.into_v2()?,
-            meta: meta.into_v2()?,
         })
     }
 }

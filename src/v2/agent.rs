@@ -2094,13 +2094,6 @@ pub struct SessionConfigSelect {
     pub current_value: SessionConfigValueId,
     /// The set of selectable options.
     pub options: SessionConfigSelectOptions,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
 }
 
 impl SessionConfigSelect {
@@ -2112,19 +2105,7 @@ impl SessionConfigSelect {
         Self {
             current_value: current_value.into(),
             options: options.into(),
-            meta: None,
         }
-    }
-
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[must_use]
-    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
-        self.meta = meta.into_option();
-        self
     }
 }
 
@@ -2141,34 +2122,13 @@ impl SessionConfigSelect {
 pub struct SessionConfigBoolean {
     /// The current value of the boolean option.
     pub current_value: bool,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
 }
 
 #[cfg(feature = "unstable_boolean_config")]
 impl SessionConfigBoolean {
     #[must_use]
     pub fn new(current_value: bool) -> Self {
-        Self {
-            current_value,
-            meta: None,
-        }
-    }
-
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[must_use]
-    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
-        self.meta = meta.into_option();
-        self
+        Self { current_value }
     }
 }
 
@@ -2251,6 +2211,7 @@ impl OtherSessionConfigKind {
     #[must_use]
     pub fn new(type_: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
         fields.remove("type");
+        fields.remove("_meta");
         Self {
             type_: type_.into(),
             fields,
@@ -5269,6 +5230,17 @@ mod test_serialization {
     use super::*;
     use serde_json::json;
 
+    fn test_meta() -> Meta {
+        json!({ "source": "test" }).as_object().unwrap().clone()
+    }
+
+    fn serialized_meta_key_count(value: &impl serde::Serialize) -> usize {
+        serde_json::to_string(value)
+            .unwrap()
+            .matches("\"_meta\"")
+            .count()
+    }
+
     #[test]
     fn test_mcp_server_stdio_serialization() {
         let server = McpServer::Stdio(
@@ -6119,7 +6091,10 @@ mod test_serialization {
     #[test]
     fn test_session_config_option_boolean_variant() {
         let opt = SessionConfigOption::boolean("brave_mode", "Brave Mode", false)
-            .description("Skip confirmation prompts");
+            .description("Skip confirmation prompts")
+            .meta(test_meta());
+        assert_eq!(serialized_meta_key_count(&opt), 1);
+
         let json = serde_json::to_value(&opt).unwrap();
         assert_eq!(
             json,
@@ -6128,7 +6103,10 @@ mod test_serialization {
                 "name": "Brave Mode",
                 "description": "Skip confirmation prompts",
                 "type": "boolean",
-                "currentValue": false
+                "currentValue": false,
+                "_meta": {
+                    "source": "test"
+                }
             })
         );
 
@@ -6153,11 +6131,15 @@ mod test_serialization {
                 SessionConfigSelectOption::new("model-1", "Model 1"),
                 SessionConfigSelectOption::new("model-2", "Model 2"),
             ],
-        );
+        )
+        .meta(test_meta());
+        assert_eq!(serialized_meta_key_count(&opt), 1);
+
         let json = serde_json::to_value(&opt).unwrap();
         assert_eq!(json["type"], "select");
         assert_eq!(json["currentValue"], "model-1");
         assert_eq!(json["options"].as_array().unwrap().len(), 2);
+        assert_eq!(json["_meta"]["source"], "test");
 
         let deserialized: SessionConfigOption = serde_json::from_value(json).unwrap();
         match deserialized.kind {
@@ -6176,22 +6158,54 @@ mod test_serialization {
             "type": "_slider",
             "currentValue": 3,
             "min": 0,
-            "max": 5
+            "max": 5,
+            "_meta": {
+                "source": "test"
+            }
         }))
         .unwrap();
 
         assert_eq!(option.id.to_string(), "verbosity");
+        assert_eq!(option.meta.as_ref().unwrap()["source"], "test");
         let SessionConfigKind::Other(unknown) = &option.kind else {
             panic!("expected unknown config kind");
         };
         assert_eq!(unknown.type_, "_slider");
         assert_eq!(unknown.fields.get("currentValue"), Some(&json!(3)));
+        assert!(!unknown.fields.contains_key("_meta"));
+        assert_eq!(serialized_meta_key_count(&option), 1);
 
         let json = serde_json::to_value(&option).unwrap();
         assert_eq!(json["type"], "_slider");
         assert_eq!(json["currentValue"], 3);
         assert_eq!(json["min"], 0);
         assert_eq!(json["max"], 5);
+        assert_eq!(json["_meta"]["source"], "test");
+    }
+
+    #[test]
+    fn test_session_config_option_unknown_kind_does_not_duplicate_flattened_meta() {
+        let mut fields = std::collections::BTreeMap::new();
+        fields.insert("currentValue".to_string(), json!(3));
+        fields.insert("_meta".to_string(), json!({ "inner": "ignored" }));
+
+        let option = SessionConfigOption::new(
+            "verbosity",
+            "Verbosity",
+            SessionConfigKind::Other(OtherSessionConfigKind::new("_slider", fields)),
+        )
+        .meta(test_meta());
+
+        let SessionConfigKind::Other(unknown) = &option.kind else {
+            panic!("expected unknown config kind");
+        };
+        assert!(!unknown.fields.contains_key("_meta"));
+        assert_eq!(serialized_meta_key_count(&option), 1);
+
+        let json = serde_json::to_value(&option).unwrap();
+        assert_eq!(json["type"], "_slider");
+        assert_eq!(json["currentValue"], 3);
+        assert_eq!(json["_meta"]["source"], "test");
     }
 
     #[test]

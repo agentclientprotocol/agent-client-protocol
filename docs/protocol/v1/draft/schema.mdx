@@ -4306,25 +4306,18 @@ See protocol docs: [JSON-RPC Error Object](https://www.jsonrpc.org/specification
 
 **Properties:**
 
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
 <ResponseField name="code" type={<a href="#errorcode">ErrorCode</a>} required>
-  A number indicating the error type that occurred.
-This must be an integer as defined in the JSON-RPC specification.
+  A number indicating the error type that occurred. This must be an integer as
+  defined in the JSON-RPC specification.
 </ResponseField>
-<ResponseField name="data" type={"object"} >
-  Optional primitive or structured value that contains additional information about the error.
-This may include debugging information or context-specific details.
+<ResponseField name="data" type={"object"}>
+  Optional primitive or structured value that contains additional information
+  about the error. This may include debugging information or context-specific
+  details.
 </ResponseField>
 <ResponseField name="message" type={"string"} required>
-  A string providing a short description of the error.
-The message should be limited to a concise single sentence.
+  A string providing a short description of the error. The message should be
+  limited to a concise single sentence.
 </ResponseField>
 
 ## <span class="font-mono">ErrorCode</span>
@@ -6909,14 +6902,6 @@ A boolean on/off toggle session configuration option payload.
 
 **Properties:**
 
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
 <ResponseField name="currentValue" type={"boolean"} required>
   The current value of the boolean option.
 </ResponseField>
@@ -6969,18 +6954,18 @@ Single-value selector (dropdown).
 
 <Expandable title="Properties">
 
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="currentValue" type={<a href="#sessionconfigvalueid">SessionConfigValueId</a>} required>
+<ResponseField
+  name="currentValue"
+  type={<a href="#sessionconfigvalueid">SessionConfigValueId</a>}
+  required
+>
   The currently selected value.
 </ResponseField>
-<ResponseField name="options" type={<a href="#sessionconfigselectoptions">SessionConfigSelectOptions</a>} required>
+<ResponseField
+  name="options"
+  type={<a href="#sessionconfigselectoptions">SessionConfigSelectOptions</a>}
+  required
+>
   The set of selectable options.
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
@@ -6999,14 +6984,6 @@ Boolean on/off toggle.
 
 <Expandable title="Properties">
 
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
 <ResponseField name="currentValue" type={"boolean"} required>
   The current value of the boolean option.
 </ResponseField>
@@ -7055,18 +7032,18 @@ A single-value selector (dropdown) session configuration option payload.
 
 **Properties:**
 
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="currentValue" type={<a href="#sessionconfigvalueid">SessionConfigValueId</a>} required>
+<ResponseField
+  name="currentValue"
+  type={<a href="#sessionconfigvalueid">SessionConfigValueId</a>}
+  required
+>
   The currently selected value.
 </ResponseField>
-<ResponseField name="options" type={<a href="#sessionconfigselectoptions">SessionConfigSelectOptions</a>} required>
+<ResponseField
+  name="options"
+  type={<a href="#sessionconfigselectoptions">SessionConfigSelectOptions</a>}
+  required
+>
   The set of selectable options.
 </ResponseField>
 

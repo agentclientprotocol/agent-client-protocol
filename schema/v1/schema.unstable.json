@@ -3671,11 +3671,6 @@
               "$ref": "#/$defs/SessionConfigSelectOptions"
             }
           ]
-        },
-        "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"],
-          "additionalProperties": true
         }
       },
       "required": ["currentValue", "options"]
@@ -3687,11 +3682,6 @@
         "currentValue": {
           "description": "The current value of the boolean option.",
           "type": "boolean"
-        },
-        "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"],
-          "additionalProperties": true
         }
       },
       "required": ["currentValue"]
@@ -4412,11 +4402,6 @@
         },
         "data": {
           "description": "Optional primitive or structured value that contains additional information about the error.\nThis may include debugging information or context-specific details."
-        },
-        "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"],
-          "additionalProperties": true
         }
       },
       "required": ["code", "message"]
