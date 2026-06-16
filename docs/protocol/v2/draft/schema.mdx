@@ -885,22 +885,24 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 Cancels ongoing operations for a session.
 
-This is a notification sent by the client to cancel an ongoing prompt turn.
+This is a notification sent by the client to cancel active work in a
+session.
 
 Upon receiving this notification, the Agent SHOULD:
 
 - Stop all language model requests as soon as possible
 - Abort all tool call invocations in progress
 - Send any pending `session/update` notifications
-- Respond to the original `session/prompt` request with `StopReason::Cancelled`
+- Report an idle `state_update` with `StopReason::Cancelled` after
+  cancellation succeeds
 
-See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/draft/prompt-turn#cancellation)
+See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#cancellation)
 
 #### <span class="font-mono">CancelNotification</span>
 
 Notification to cancel ongoing operations for a session.
 
-See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/draft/prompt-turn#cancellation)
+See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#cancellation)
 
 **Type:** Object
 
@@ -1326,7 +1328,7 @@ After acceptance, the Agent reports the accepted user message,
 processing state, output, tool calls, and completion through
 `session/update` notifications.
 
-See protocol docs: [Prompt Turn](https://agentclientprotocol.com/protocol/v2/draft/prompt-turn)
+See protocol docs: [Prompt Lifecycle](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle)
 
 #### <span class="font-mono">PromptRequest</span>
 
@@ -1334,7 +1336,7 @@ Request parameters for sending a user prompt to the agent.
 
 Contains the user's message and any additional context.
 
-See protocol docs: [User Message](https://agentclientprotocol.com/protocol/v2/draft/prompt-turn#1-user-message)
+See protocol docs: [User Message](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#1-user-message)
 
 **Type:** Object
 
@@ -1372,10 +1374,10 @@ pieces of context from sources the agent may not have access to.
 
 Response acknowledging that a user prompt was accepted.
 
-This response does not indicate that the agent's turn has completed.
-Agents report turn state through `state_update` session updates.
+This response does not indicate that the agent has finished processing.
+Agents report session state through `state_update` session updates.
 
-See protocol docs: [Prompt Accepted](https://agentclientprotocol.com/protocol/v2/draft/prompt-turn#2-prompt-accepted)
+See protocol docs: [Prompt Accepted](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#2-prompt-accepted)
 
 **Type:** Object
 
@@ -1936,7 +1938,7 @@ Called by the agent when it needs user authorization before executing
 a potentially sensitive operation. The client should present the options
 to the user and return their decision.
 
-If the client cancels the prompt turn via `session/cancel`, it MUST
+If the client cancels active session work via `session/cancel`, it MUST
 respond to this request with `RequestPermissionOutcome::Cancelled`.
 
 See protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/v2/draft/tool-calls#requesting-permission)
@@ -2005,7 +2007,7 @@ sending a `session/cancel` notification, as the agent may send final
 updates before reporting an idle `state_update` with the cancelled
 stop reason.
 
-See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/v2/draft/prompt-turn#3-agent-reports-output)
+See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#3-agent-reports-output)
 
 #### <span class="font-mono">SessionNotification</span>
 
@@ -2013,7 +2015,7 @@ Notification containing a session update from the agent.
 
 Used to stream real-time progress and results during prompt processing.
 
-See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/v2/draft/prompt-turn#3-agent-reports-output)
+See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#3-agent-reports-output)
 
 **Type:** Object
 
@@ -4038,10 +4040,10 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 </ResponseField>
 <ResponseField name="stopReason" type={<><span><a href="#stopreason">StopReason</a></span><span> | null</span></>} >
-  Indicates why the agent stopped processing the turn.
+  Indicates why the agent stopped processing active session work.
 
 Optional. Omitted or `null` both mean the agent is not reporting a stop reason.
-Agents SHOULD include this when the idle transition ends a running turn.
+Agents SHOULD include this when the idle transition ends active work.
 
 </ResponseField>
 <ResponseField name="usage" type={<><span><a href="#usage">Usage</a></span><span> | null</span></>} >
@@ -4049,7 +4051,7 @@ Agents SHOULD include this when the idle transition ends a running turn.
 
 This capability is not part of the spec yet, and may be removed or changed at any point.
 
-Token usage for the completed turn.
+Token usage for completed session work.
 
 Optional. Omitted or `null` both mean the agent is not reporting token
 usage for this state update.
@@ -6436,13 +6438,13 @@ The outcome of a permission request.
 **Type:** Union
 
 <ResponseField name="cancelled" type="object">
-The prompt turn was cancelled before the user responded.
+Active session work was cancelled before the user responded.
 
-When a client sends a `session/cancel` notification to cancel an ongoing
-prompt turn, it MUST respond to all pending `session/request_permission`
+When a client sends a `session/cancel` notification to cancel active
+session work, it MUST respond to all pending `session/request_permission`
 requests with this `Cancelled` outcome.
 
-See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/draft/prompt-turn#cancellation)
+See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#cancellation)
 
 <Expandable title="Properties">
 
@@ -7139,7 +7141,7 @@ Different types of updates that can be sent during session processing.
 
 These updates provide real-time feedback about the agent's progress.
 
-See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/v2/draft/prompt-turn#3-agent-reports-output)
+See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#3-agent-reports-output)
 
 **Type:** Union
 
@@ -7327,7 +7329,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 The agent's session state has changed.
 
 Agents send this to report when work starts, completes, or pauses while
-waiting for user action. Turn completion is reported here instead
+waiting for user action. Completion of active work is reported here instead
 of in the `session/prompt` response.
 
 <Expandable title="Properties">
@@ -7599,7 +7601,7 @@ future ACP variants.
 
 The agent's session state has changed.
 
-This update is the mechanism for reporting turn lifecycle transitions.
+This update is the mechanism for reporting session activity transitions.
 A `session/prompt` response only acknowledges that the prompt was accepted;
 agents use `state_update` notifications to report that processing has started,
 that the session is idle, or that progress is blocked on user action.
@@ -7643,10 +7645,10 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
   The discriminator value. Must be `"idle"`.
 </ResponseField>
 <ResponseField name="stopReason" type={<><span><a href="#stopreason">StopReason</a></span><span> | null</span></>} >
-  Indicates why the agent stopped processing the turn.
+  Indicates why the agent stopped processing active session work.
 
 Optional. Omitted or `null` both mean the agent is not reporting a stop reason.
-Agents SHOULD include this when the idle transition ends a running turn.
+Agents SHOULD include this when the idle transition ends active work.
 
 </ResponseField>
 <ResponseField name="usage" type={<><span><a href="#usage">Usage</a></span><span> | null</span></>} >
@@ -7654,7 +7656,7 @@ Agents SHOULD include this when the idle transition ends a running turn.
 
 This capability is not part of the spec yet, and may be removed or changed at any point.
 
-Token usage for the completed turn.
+Token usage for completed session work.
 
 Optional. Omitted or `null` both mean the agent is not reporting token
 usage for this state update.
@@ -7707,33 +7709,33 @@ future ACP variants.
 
 ## <span class="font-mono">StopReason</span>
 
-Reasons why an agent stops a running turn.
+Reasons why an agent stops active session work.
 
-See protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/v2/draft/prompt-turn#stop-reasons)
+See protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#stop-reasons)
 
 **Type:** Union
 
 <ResponseField name="end_turn" type="string">
-  The turn ended successfully.
+  The active work ended successfully.
 </ResponseField>
 
 <ResponseField name="max_tokens" type="string">
-  The turn ended because the agent reached the maximum number of tokens.
+  The active work ended because the agent reached the maximum number of tokens.
 </ResponseField>
 
 <ResponseField name="max_turn_requests" type="string">
-  The turn ended because the agent reached the maximum number of allowed agent
-  requests between user turns.
+  The active work ended because the agent reached the maximum number of allowed
+  agent requests before returning idle.
 </ResponseField>
 
 <ResponseField name="refusal" type="string">
-  The turn ended because the agent refused to continue. The user prompt and
-  everything that comes after it won't be included in the next prompt, so this
-  should be reflected in the UI.
+  The active work ended because the agent refused to continue. The user prompt
+  and everything that comes after it won't be included in the next prompt, so
+  this should be reflected in the UI.
 </ResponseField>
 
 <ResponseField name="cancelled" type="string">
-The turn was cancelled by the client via `session/cancel`.
+Active session work was cancelled by the client via `session/cancel`.
 
 Agents should report this stop reason on an idle `state_update` session update
 when cancellation succeeds, even if cancellation causes exceptions in
@@ -8314,7 +8316,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 This capability is not part of the spec yet, and may be removed or changed at any point.
 
-Token usage information for a completed turn.
+Token usage information for completed session work.
 
 **Type:** Object
 
@@ -8341,13 +8343,13 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 </ResponseField>
 <ResponseField name="inputTokens" type={"uint64"} required>
-  Total input tokens across all turns.
+  Total input tokens.
 
     - Minimum: `0`
 
 </ResponseField>
 <ResponseField name="outputTokens" type={"uint64"} required>
-  Total output tokens across all turns.
+  Total output tokens.
 
     - Minimum: `0`
 

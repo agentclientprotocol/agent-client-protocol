@@ -1,17 +1,17 @@
 ---
-title: "Prompt Turn"
-description: "Understanding the core conversation flow"
+title: "Prompt Lifecycle"
+description: "How prompts, state updates, and completion fit together"
 ---
 
-A prompt turn represents a period of work in a session, often starting with a user message and continuing until the [Agent](/protocol/v2/draft/overview#agent) reports that the session is idle again. This may involve multiple exchanges with the language model and tool invocations.
+A prompt starts or contributes to active work in a session. The [Agent](/protocol/v2/overview#agent) may continue processing until it reports that the session is idle again, and it may emit `session/update` notifications before or after an individual prompt request has completed. Active work can involve multiple exchanges with the language model and tool invocations.
 
 `session/prompt` only lasts until the Agent accepts the prompt. The Agent reports the accepted user message, running state, output, and completion through `session/update` notifications.
 
-Before sending prompts, Clients **MUST** first complete the [initialization](/protocol/v2/draft/initialization) phase and [session setup](/protocol/v2/draft/session-setup).
+Before sending prompts, Clients **MUST** first complete the [initialization](/protocol/v2/initialization) phase and [session setup](/protocol/v2/session-setup).
 
-## The Prompt Turn Lifecycle
+## Prompt Lifecycle
 
-A prompt turn follows a structured flow that enables rich interactions between the user, Agent, and any connected tools.
+A typical prompt-driven flow enables rich interactions between the user, Agent, and any connected tools.
 
 <br />
 
@@ -50,7 +50,7 @@ sequenceDiagram
         end
 
       opt User cancelled during execution
-          Note left of Client: User cancels prompt
+          Note left of Client: User cancels work
           Client->>Agent: session/cancel
           Note right of Agent: Abort operations
           Agent->>Client: session/update (state_update: idle, stopReason: cancelled)
@@ -63,7 +63,7 @@ sequenceDiagram
 
 ### 1. User Message
 
-The turn begins when the Client sends a `session/prompt`:
+The Client sends a user message with `session/prompt`:
 
 ```json
 {
@@ -91,14 +91,14 @@ The turn begins when the Client sends a `session/prompt`:
 ```
 
 <ParamField path="sessionId" type="SessionId">
-    The [ID](/protocol/v2/draft/session-setup#session-id) of the session to send this message to.
+    The [ID](/protocol/v2/session-setup#session-id) of the session to send this message to.
 </ParamField>
 <ParamField path="prompt" type="ContentBlock[]">
     The contents of the user message, e.g. text, images, files, etc.
 
-    Clients **MUST** restrict types of content according to the [Prompt Capabilities](/protocol/v2/draft/initialization#prompt-capabilities) established during [initialization](/protocol/v2/draft/initialization).
+    Clients **MUST** restrict types of content according to the [Prompt Capabilities](/protocol/v2/initialization#prompt-capabilities) established during [initialization](/protocol/v2/initialization).
 
-    <Card icon="comments" horizontal href="/protocol/v2/draft/content">
+    <Card icon="comments" horizontal href="/protocol/v2/content">
       Learn more about Content
     </Card>
 
@@ -106,7 +106,7 @@ The turn begins when the Client sends a `session/prompt`:
 
 ### 2. Prompt Accepted
 
-Upon receiving a prompt request, the Agent **MUST** respond once it has accepted the prompt. The response body is empty because turn completion is reported through `state_update` notifications, not through the `session/prompt` response:
+Upon receiving a prompt request, the Agent **MUST** respond once it has accepted the prompt. The response body is empty because completion is reported through `state_update` notifications, not through the `session/prompt` response:
 
 ```json
 {
@@ -199,7 +199,7 @@ The Agent reports the model's output to the Client via `session/update` notifica
 }
 ```
 
-<Card icon="lightbulb" horizontal href="/protocol/v2/draft/agent-plan">
+<Card icon="lightbulb" horizontal href="/protocol/v2/agent-plan">
   Learn more about Agent Plans
 </Card>
 
@@ -224,6 +224,8 @@ The Agent can report the model's text response as an `agent_message` update with
   }
 }
 ```
+
+#### Message IDs
 
 The Agent **MUST** include an opaque `messageId` on message updates and message chunks.
 
@@ -326,7 +328,7 @@ The Agent **MAY** also report current session context and cumulative cost state 
 
 ### 4. Report Completion
 
-If there is no pending work, the Agent **MUST** report that the session is idle with a `state_update` notification. When the idle transition ends a turn, the Agent **MUST** include the corresponding [`StopReason`](#stop-reasons):
+If there is no pending work, the Agent **MUST** report that the session is idle with a `state_update` notification. When the idle transition completes active work, the Agent **MUST** include the corresponding [`StopReason`](#stop-reasons):
 
 ```json
 {
@@ -343,7 +345,7 @@ If there is no pending work, the Agent **MUST** report that the session is idle 
 }
 ```
 
-Agents **MAY** stop the turn at any point by sending an idle `state_update` session update with the corresponding [`StopReason`](#stop-reasons).
+Agents **MAY** stop active work at any point by sending an idle `state_update` session update with the corresponding [`StopReason`](#stop-reasons).
 
 ### 5. Tool Invocation and Status Reporting
 
@@ -421,7 +423,7 @@ When the tool completes, the Agent sends another update with the final status an
 }
 ```
 
-<Card icon="hammer" horizontal href="/protocol/v2/draft/tool-calls">
+<Card icon="hammer" horizontal href="/protocol/v2/tool-calls">
   Learn more about Tool Calls
 </Card>
 
@@ -429,14 +431,15 @@ When the tool completes, the Agent sends another update with the final status an
 
 The Agent sends the tool results back to the language model as another request.
 
-The cycle returns to [step 3](#3-agent-reports-output), continuing until the language model completes its response without requesting additional tool calls or the turn gets stopped by the Agent or cancelled by the Client.
+The cycle returns to [step 3](#3-agent-reports-output), continuing until the language model completes its response without requesting additional tool calls or active work is stopped by the Agent or cancelled by the Client.
 
 ## Stop Reasons
 
-When an Agent stops a turn, it must specify the corresponding `StopReason` on an idle `state_update` session update:
+When an Agent stops active work, it must specify the corresponding `StopReason` on an idle `state_update` session update:
 
 <ResponseField name="end_turn">
-  The language model finishes responding without requesting more tools
+  The Agent has no more work to perform after the language model finishes
+  responding without requesting more tools
 </ResponseField>
 
 <ResponseField name="max_tokens">
@@ -444,12 +447,12 @@ When an Agent stops a turn, it must specify the corresponding `StopReason` on an
 </ResponseField>
 
 <ResponseField name="max_turn_requests">
-  The maximum number of model requests in a single turn is exceeded
+  The maximum number of model requests for the active work is exceeded
 </ResponseField>
 
 <ResponseField name="refusal">The Agent refuses to continue</ResponseField>
 
-<ResponseField name="cancelled">The Client cancels the turn</ResponseField>
+<ResponseField name="cancelled">The Client cancels active work</ResponseField>
 
 Custom or future stop reasons can be used when Clients can display a generic stopped state. Custom stop reasons **MUST** begin with `_`; unknown non-underscore stop reasons are reserved for future ACP variants.
 
@@ -469,7 +472,7 @@ Custom or future stop reasons can be used when Clients can display a generic sto
 
 ## Cancellation
 
-Clients **MAY** cancel an ongoing prompt turn at any time by sending a `session/cancel` notification:
+Clients **MAY** cancel active session work at any time by sending a `session/cancel` notification:
 
 ```json
 {
@@ -481,7 +484,7 @@ Clients **MAY** cancel an ongoing prompt turn at any time by sending a `session/
 }
 ```
 
-The Client **SHOULD** preemptively mark all non-finished tool calls pertaining to the current turn as `cancelled` as soon as it sends the `session/cancel` notification.
+The Client **SHOULD** preemptively mark all non-finished tool calls pertaining to the current active work as `cancelled` as soon as it sends the `session/cancel` notification.
 
 The Client **MUST** respond to all pending `session/request_permission` requests with the `cancelled` outcome.
 
@@ -504,4 +507,4 @@ The Client **SHOULD** still accept tool call updates received after sending `ses
 
 ---
 
-Once a prompt turn completes, the Client may send another `session/prompt` to continue the conversation, building on the context established in previous turns.
+After the Agent reports the session is idle, the Client may send another `session/prompt` to continue the conversation, building on the established session context.

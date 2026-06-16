@@ -41,7 +41,7 @@ use super::{ClientNesCapabilities, PositionEncodingKind};
 ///
 /// Used to stream real-time progress and results during prompt processing.
 ///
-/// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-turn#3-agent-reports-output)
+/// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-lifecycle#3-agent-reports-output)
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[schemars(extend("x-side" = "client", "x-method" = SESSION_UPDATE_NOTIFICATION))]
@@ -87,7 +87,7 @@ impl SessionNotification {
 ///
 /// These updates provide real-time feedback about the agent's progress.
 ///
-/// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-turn#3-agent-reports-output)
+/// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-lifecycle#3-agent-reports-output)
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[serde(tag = "sessionUpdate", rename_all = "snake_case")]
 #[schemars(extend("discriminator" = {"propertyName": "sessionUpdate"}))]
@@ -120,7 +120,7 @@ pub enum SessionUpdate {
     /// The agent's session state has changed.
     ///
     /// Agents send this to report when work starts, completes, or pauses while
-    /// waiting for user action. Turn completion is reported here instead
+    /// waiting for user action. Completion of active work is reported here instead
     /// of in the `session/prompt` response.
     StateUpdate(StateUpdate),
     /// A chunk of tool-call content being streamed.
@@ -420,7 +420,7 @@ impl UsageUpdate {
 
 /// The agent's session state has changed.
 ///
-/// This update is the mechanism for reporting turn lifecycle transitions.
+/// This update is the mechanism for reporting session activity transitions.
 /// A `session/prompt` response only acknowledges that the prompt was accepted;
 /// agents use `state_update` notifications to report that processing has started,
 /// that the session is idle, or that progress is blocked on user action.
@@ -484,10 +484,10 @@ impl RunningStateUpdate {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct IdleStateUpdate {
-    /// Indicates why the agent stopped processing the turn.
+    /// Indicates why the agent stopped processing active session work.
     ///
     /// Optional. Omitted or `null` both mean the agent is not reporting a stop reason.
-    /// Agents SHOULD include this when the idle transition ends a running turn.
+    /// Agents SHOULD include this when the idle transition ends active work.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
@@ -496,7 +496,7 @@ pub struct IdleStateUpdate {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
-    /// Token usage for the completed turn.
+    /// Token usage for completed session work.
     ///
     /// Optional. Omitted or `null` both mean the agent is not reporting token
     /// usage for this state update.
@@ -520,7 +520,7 @@ impl IdleStateUpdate {
         Self::default()
     }
 
-    /// Indicates why the agent stopped processing the turn.
+    /// Indicates why the agent stopped processing active session work.
     #[must_use]
     pub fn stop_reason(mut self, stop_reason: impl IntoOption<StopReason>) -> Self {
         self.stop_reason = stop_reason.into_option();
@@ -531,7 +531,7 @@ impl IdleStateUpdate {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
-    /// Token usage for the completed turn.
+    /// Token usage for completed session work.
     #[cfg(feature = "unstable_end_turn_token_usage")]
     #[must_use]
     pub fn usage(mut self, usage: impl IntoOption<Usage>) -> Self {
@@ -1376,13 +1376,13 @@ impl RequestPermissionResponse {
 #[schemars(extend("discriminator" = {"propertyName": "outcome"}))]
 #[non_exhaustive]
 pub enum RequestPermissionOutcome {
-    /// The prompt turn was cancelled before the user responded.
+    /// Active session work was cancelled before the user responded.
     ///
-    /// When a client sends a `session/cancel` notification to cancel an ongoing
-    /// prompt turn, it MUST respond to all pending `session/request_permission`
+    /// When a client sends a `session/cancel` notification to cancel active
+    /// session work, it MUST respond to all pending `session/request_permission`
     /// requests with this `Cancelled` outcome.
     ///
-    /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-turn#cancellation)
+    /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-lifecycle#cancellation)
     Cancelled,
     /// The user selected one of the provided options.
     #[serde(rename_all = "camelCase")]
@@ -1732,7 +1732,7 @@ pub enum AgentRequest {
     /// a potentially sensitive operation. The client should present the options
     /// to the user and return their decision.
     ///
-    /// If the client cancels the prompt turn via `session/cancel`, it MUST
+    /// If the client cancels active session work via `session/cancel`, it MUST
     /// respond to this request with `RequestPermissionOutcome::Cancelled`.
     ///
     /// See protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/tool-calls#requesting-permission)
@@ -1839,7 +1839,7 @@ pub enum AgentNotification {
     /// updates before reporting an idle `state_update` with the cancelled
     /// stop reason.
     ///
-    /// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-turn#3-agent-reports-output)
+    /// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-lifecycle#3-agent-reports-output)
     SessionNotification(Box<SessionNotification>),
     /// **UNSTABLE**
     ///

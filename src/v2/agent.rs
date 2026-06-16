@@ -2970,7 +2970,7 @@ impl HttpHeader {
 ///
 /// Contains the user's message and any additional context.
 ///
-/// See protocol docs: [User Message](https://agentclientprotocol.com/protocol/prompt-turn#1-user-message)
+/// See protocol docs: [User Message](https://agentclientprotocol.com/protocol/prompt-lifecycle#1-user-message)
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_PROMPT_METHOD_NAME))]
@@ -3026,10 +3026,10 @@ impl PromptRequest {
 
 /// Response acknowledging that a user prompt was accepted.
 ///
-/// This response does not indicate that the agent's turn has completed.
-/// Agents report turn state through `state_update` session updates.
+/// This response does not indicate that the agent has finished processing.
+/// Agents report session state through `state_update` session updates.
 ///
-/// See protocol docs: [Prompt Accepted](https://agentclientprotocol.com/protocol/prompt-turn#2-prompt-accepted)
+/// See protocol docs: [Prompt Accepted](https://agentclientprotocol.com/protocol/prompt-lifecycle#2-prompt-accepted)
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_PROMPT_METHOD_NAME))]
@@ -3063,25 +3063,25 @@ impl PromptResponse {
     }
 }
 
-/// Reasons why an agent stops a running turn.
+/// Reasons why an agent stops active session work.
 ///
-/// See protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/prompt-turn#stop-reasons)
+/// See protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/prompt-lifecycle#stop-reasons)
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum StopReason {
-    /// The turn ended successfully.
+    /// The active work ended successfully.
     EndTurn,
-    /// The turn ended because the agent reached the maximum number of tokens.
+    /// The active work ended because the agent reached the maximum number of tokens.
     MaxTokens,
-    /// The turn ended because the agent reached the maximum number of allowed
-    /// agent requests between user turns.
+    /// The active work ended because the agent reached the maximum number of
+    /// allowed agent requests before returning idle.
     MaxTurnRequests,
-    /// The turn ended because the agent refused to continue. The user prompt
-    /// and everything that comes after it won't be included in the next
+    /// The active work ended because the agent refused to continue. The user
+    /// prompt and everything that comes after it won't be included in the next
     /// prompt, so this should be reflected in the UI.
     Refusal,
-    /// The turn was cancelled by the client via `session/cancel`.
+    /// Active session work was cancelled by the client via `session/cancel`.
     ///
     /// Agents should report this stop reason on an idle `state_update` session update
     /// when cancellation succeeds, even if cancellation causes exceptions in
@@ -3100,7 +3100,7 @@ pub enum StopReason {
 ///
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
-/// Token usage information for a completed turn.
+/// Token usage information for completed session work.
 #[cfg(feature = "unstable_end_turn_token_usage")]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -3109,9 +3109,9 @@ pub enum StopReason {
 pub struct Usage {
     /// Sum of all token types across session.
     pub total_tokens: u64,
-    /// Total input tokens across all turns.
+    /// Total input tokens.
     pub input_tokens: u64,
-    /// Total output tokens across all turns.
+    /// Total output tokens.
     pub output_tokens: u64,
     /// Total thought/reasoning tokens
     pub thought_tokens: Option<u64>,
@@ -4935,7 +4935,7 @@ pub enum ClientRequest {
     /// processing state, output, tool calls, and completion through
     /// `session/update` notifications.
     ///
-    /// See protocol docs: [Prompt Turn](https://agentclientprotocol.com/protocol/prompt-turn)
+    /// See protocol docs: [Prompt Lifecycle](https://agentclientprotocol.com/protocol/prompt-lifecycle)
     PromptRequest(PromptRequest),
     #[cfg(feature = "unstable_nes")]
     /// **UNSTABLE**
@@ -5068,15 +5068,17 @@ pub enum AgentResponse {
 pub enum ClientNotification {
     /// Cancels ongoing operations for a session.
     ///
-    /// This is a notification sent by the client to cancel an ongoing prompt turn.
+    /// This is a notification sent by the client to cancel active work in a
+    /// session.
     ///
     /// Upon receiving this notification, the Agent SHOULD:
     /// - Stop all language model requests as soon as possible
     /// - Abort all tool call invocations in progress
     /// - Send any pending `session/update` notifications
-    /// - Respond to the original `session/prompt` request with `StopReason::Cancelled`
+    /// - Report an idle `state_update` with `StopReason::Cancelled` after
+    ///   cancellation succeeds
     ///
-    /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-turn#cancellation)
+    /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-lifecycle#cancellation)
     CancelNotification(CancelNotification),
     #[cfg(feature = "unstable_nes")]
     /// **UNSTABLE**
@@ -5158,7 +5160,7 @@ impl ClientNotification {
 
 /// Notification to cancel ongoing operations for a session.
 ///
-/// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-turn#cancellation)
+/// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-lifecycle#cancellation)
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_CANCEL_METHOD_NAME))]

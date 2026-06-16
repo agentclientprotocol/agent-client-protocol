@@ -1032,7 +1032,7 @@ impl IntoV1Many for super::SessionUpdate {
             )?,
             Self::StateUpdate(_) => {
                 return Err(ProtocolConversionError::new(
-                    "v2 SessionUpdate variant `state_update` cannot be represented in v1 because v1 reports turn completion in the session/prompt response",
+                    "v2 SessionUpdate variant `state_update` cannot be represented in v1 because v1 reports completion in the session/prompt response",
                 ));
             }
             Self::ToolCallContentChunk(_) => {
@@ -4330,7 +4330,7 @@ impl IntoV1 for super::PromptResponse {
 
     fn into_v1(self) -> Result<Self::Output> {
         Err(ProtocolConversionError::new(
-            "v2 PromptResponse cannot be represented in v1 because v2 reports turn completion with state_update session updates",
+            "v2 PromptResponse cannot be represented in v1 because v2 reports completion with state_update session updates",
         ))
     }
 }
@@ -4340,7 +4340,7 @@ impl IntoV2 for crate::v1::PromptResponse {
 
     fn into_v2(self) -> Result<Self::Output> {
         Err(ProtocolConversionError::new(
-            "v1 PromptResponse cannot be represented in v2 by itself because v2 reports turn completion with state_update session updates",
+            "v1 PromptResponse cannot be represented in v2 by itself because v2 reports completion with state_update session updates",
         ))
     }
 }
@@ -9351,11 +9351,11 @@ mod tests {
     fn prompt_responses_do_not_convert_across_v1_v2_lifecycle_boundary() {
         assert_v2_to_v1_error(
             v2::PromptResponse::new(),
-            "v2 PromptResponse cannot be represented in v1 because v2 reports turn completion with state_update session updates",
+            "v2 PromptResponse cannot be represented in v1 because v2 reports completion with state_update session updates",
         );
         assert_v1_to_v2_error(
             v1::PromptResponse::new(v1::StopReason::EndTurn),
-            "v1 PromptResponse cannot be represented in v2 by itself because v2 reports turn completion with state_update session updates",
+            "v1 PromptResponse cannot be represented in v2 by itself because v2 reports completion with state_update session updates",
         );
     }
 
@@ -9781,7 +9781,7 @@ mod tests {
             v2::SessionUpdate::StateUpdate(v2::StateUpdate::Idle(
                 v2::IdleStateUpdate::new().stop_reason(v2::StopReason::EndTurn),
             )),
-            "v2 SessionUpdate variant `state_update` cannot be represented in v1 because v1 reports turn completion in the session/prompt response",
+            "v2 SessionUpdate variant `state_update` cannot be represented in v1 because v1 reports completion in the session/prompt response",
         );
     }
 

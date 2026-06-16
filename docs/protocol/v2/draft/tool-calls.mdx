@@ -3,9 +3,9 @@ title: "Tool Calls"
 description: "How Agents report tool call execution"
 ---
 
-Tool calls represent actions that language models request Agents to perform during a [prompt turn](/protocol/v2/draft/prompt-turn). When an LLM determines it needs to interact with external systems—like reading files, running code, or fetching data—it generates tool calls that the Agent executes on its behalf.
+Tool calls represent actions that language models request Agents to perform during [active session work](/protocol/v2/draft/prompt-lifecycle). When an LLM determines it needs to interact with external systems—like reading files, running code, or fetching data—it generates tool calls that the Agent executes on its behalf.
 
-Agents report tool calls through [`session/update`](/protocol/v2/draft/prompt-turn#3-agent-reports-output) notifications, allowing Clients to display real-time progress and results to users.
+Agents report tool calls through [`session/update`](/protocol/v2/draft/prompt-lifecycle#3-agent-reports-output) notifications, allowing Clients to display real-time progress and results to users.
 
 While Agents handle the actual execution, they may use Client-mediated
 interactions like [permission requests](#requesting-permission) to provide a
@@ -219,7 +219,7 @@ The Client responds with the user's decision:
 
 Clients **MAY** automatically allow or reject permission requests according to the user settings.
 
-If the current prompt turn gets [cancelled](/protocol/v2/draft/prompt-turn#cancellation), the Client **MUST** respond with the `"cancelled"` outcome:
+If the current active work gets [cancelled](/protocol/v2/draft/prompt-lifecycle#cancellation), the Client **MUST** respond with the `"cancelled"` outcome:
 
 ```json
 {
@@ -234,9 +234,9 @@ If the current prompt turn gets [cancelled](/protocol/v2/draft/prompt-turn#cance
 ```
 
 <ResponseField name="outcome" type="RequestPermissionOutcome" required>
-  The user's decision, either: - `cancelled` - The [prompt turn was
-  cancelled](/protocol/v2/draft/prompt-turn#cancellation) - `selected` with an
-  `optionId` - The ID of the selected permission option
+  The user's decision, either: - `cancelled` - The [active work was
+  cancelled](/protocol/v2/draft/prompt-lifecycle#cancellation) - `selected` with
+  an `optionId` - The ID of the selected permission option
 </ResponseField>
 
 ### Permission Options
