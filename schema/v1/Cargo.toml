@@ -9,3 +9,6 @@ readme = "../../README.md"
 keywords = ["agent", "client", "protocol", "ai", "editor"]
 categories = ["development-tools", "api-bindings"]
 include = ["/Cargo.toml", "/CHANGELOG.md", "/src/lib.rs", "/*.json"]
+
+[lints]
+workspace = true

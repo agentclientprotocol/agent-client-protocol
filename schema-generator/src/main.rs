@@ -24,7 +24,10 @@ use schemars::{
     transform::{RemoveRefSiblings, ReplaceBoolSchemas},
 };
 use serde::{Deserialize, Serialize};
-use std::{env, fs, path::Path};
+use std::{
+    env, fs,
+    path::{Path, PathBuf},
+};
 
 use markdown_generator::MarkdownGenerator;
 
@@ -99,9 +102,9 @@ enum AcpTypes {
 fn main() {
     let schema_value = root_schema_value();
 
-    let root = env!("CARGO_MANIFEST_DIR");
-    let schema_dir = Path::new(root).join("schema");
-    let docs_protocol_dir = Path::new(root).join("docs").join("protocol");
+    let root = repo_root();
+    let schema_dir = root.join("schema");
+    let docs_protocol_dir = root.join("docs").join("protocol");
 
     fs::create_dir_all(schema_dir.clone()).unwrap();
     fs::create_dir_all(docs_protocol_dir.clone()).unwrap();
@@ -111,6 +114,13 @@ fn main() {
         schema_dir.as_path(),
         docs_protocol_dir.as_path(),
     );
+}
+
+fn repo_root() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("schema-generator manifest directory should have a repository root parent")
+        .to_path_buf()
 }
 
 fn root_schema_value() -> serde_json::Value {
@@ -287,11 +297,11 @@ fn replace_string_values(value: &mut serde_json::Value, from: &str, to: &str) {
 
 #[cfg(test)]
 mod schema_annotation_tests {
-    use super::root_schema_value;
     #[cfg(feature = "unstable_protocol_v2")]
     use super::schema_value_for_publication;
+    use super::{repo_root, root_schema_value};
     use serde_json::Value;
-    use std::{fs, path::Path};
+    use std::fs;
 
     const DEFAULT_ON_ERROR_EXTENSION: &str = "x-deserialize-default-on-error";
     const SKIP_INVALID_ITEMS_EXTENSION: &str = "x-deserialize-skip-invalid-items";
@@ -389,7 +399,7 @@ mod schema_annotation_tests {
 
     #[test]
     fn source_default_on_error_fields_are_schema_annotated() {
-        let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let root = repo_root();
         for module_dir in ["src/v1", "src/v2"] {
             for entry in fs::read_dir(root.join(module_dir)).unwrap() {
                 let path = entry.unwrap().path();
@@ -1603,7 +1613,9 @@ starting with '$/' it is free to ignore the notification."
 
     #[expect(clippy::too_many_lines)]
     fn extract_side_docs() -> SideDocs {
+        let root = super::repo_root();
         let output = Command::new("cargo")
+            .current_dir(&root)
             .args([
                 "+nightly",
                 "rustdoc",
@@ -1625,8 +1637,7 @@ starting with '$/' it is free to ignore the notification."
         );
 
         // Parse the JSON output
-        let json_path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("target/doc/agent_client_protocol_schema.json");
+        let json_path = root.join("target/doc/agent_client_protocol_schema.json");
         let json_content = fs::read_to_string(json_path).unwrap();
         let doc: Value = serde_json::from_str(&json_content).unwrap();
 

@@ -1,0 +1,22 @@
+[package]
+name = "schema-generator"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[lints]
+workspace = true
+
+[features]
+unstable = [
+    "agent-client-protocol-schema/unstable",
+    "unstable_cancel_request",
+]
+unstable_protocol_v2 = ["agent-client-protocol-schema/unstable_protocol_v2"]
+unstable_cancel_request = ["agent-client-protocol-schema/unstable_cancel_request"]
+
+[dependencies]
+agent-client-protocol-schema = { path = ".." }
+schemars = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }

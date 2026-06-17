@@ -15,13 +15,16 @@ include = ["/src/**/*.rs", "/README.md", "/LICENSE", "/Cargo.toml"]
 rust-version = "1.88.0"
 
 [workspace]
-default-members = [".", "schema/v1", "schema/v2"]
-members = ["schema/v1", "schema/v2"]
+default-members = [".", "schema/v1", "schema/v2", "schema-generator"]
+members = ["schema/v1", "schema/v2", "schema-generator"]
 resolver = "3"
 
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
+
+[lints]
+workspace = true
 
 [features]
 unstable = [
@@ -57,10 +60,6 @@ unstable_boolean_config = []
 # hook compiles down to serde_with's built-in no-op and has zero runtime cost.
 tracing = ["dep:tracing"]
 
-[[bin]]
-name = "generate"
-path = "src/bin/generate.rs"
-
 [dependencies]
 anyhow = "1"
 derive_more = { version = "2", features = ["from", "display"] }
@@ -74,7 +73,7 @@ serde_with = { version = "3.20.0", features = ["json", "schemars_1"] }
 strum = { version = "0.28", features = ["derive"] }
 tracing = { version = "0.1", default-features = false, optional = true }
 
-[lints.rust]
+[workspace.lints.rust]
 future_incompatible = { level = "warn", priority = -1 }
 let-underscore = "warn"
 missing_debug_implementations = "warn"
@@ -83,7 +82,7 @@ nonstandard_style = { level = "warn", priority = -1 }
 rust_2018_idioms = { level = "warn", priority = -1 }
 unused = { level = "warn", priority = -1 }
 
-[lints.clippy]
+[workspace.lints.clippy]
 cargo = "warn"
 exhaustive_enums = "warn"
 exhaustive_structs = "warn"
