@@ -37,6 +37,12 @@ impl ProtocolVersion {
     /// value of `LATEST` — v2 will only become the latest once it stabilizes.
     pub const LATEST: Self = Self::V1;
 
+    /// Returns the numeric protocol version.
+    #[must_use]
+    pub const fn as_u16(self) -> u16 {
+        self.0
+    }
+
     #[cfg(test)]
     #[must_use]
     pub const fn new(version: u16) -> Self {
@@ -131,5 +137,17 @@ mod tests {
         let json = "65535";
         let version: ProtocolVersion = serde_json::from_str(json).unwrap();
         assert_eq!(version, ProtocolVersion::new(65535));
+    }
+
+    #[test]
+    fn test_as_u16() {
+        assert_eq!(ProtocolVersion::V0.as_u16(), 0);
+        assert_eq!(ProtocolVersion::V1.as_u16(), 1);
+        assert_eq!(ProtocolVersion::LATEST.as_u16(), 1);
+
+        #[cfg(feature = "unstable_protocol_v2")]
+        assert_eq!(ProtocolVersion::V2.as_u16(), 2);
+
+        assert_eq!(ProtocolVersion::new(65535).as_u16(), 65535);
     }
 }
