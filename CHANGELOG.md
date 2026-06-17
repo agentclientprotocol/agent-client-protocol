@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.13.7](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.13.6...v0.13.7) - 2026-06-16
+
+### Added
+
+- *(unstable-v2)* Add streaming tool-call content in v2 ([#1407](https://github.com/agentclientprotocol/agent-client-protocol/pull/1407))
+- *(unstable-v2)* Add v2 whole-message session updates ([#1396](https://github.com/agentclientprotocol/agent-client-protocol/pull/1396))
+- *(unstable-v2)* Unify v2 tool call updates ([#1390](https://github.com/agentclientprotocol/agent-client-protocol/pull/1390))
+- *(unstable-v2)* Require auth method type discriminator in v2 ([#1387](https://github.com/agentclientprotocol/agent-client-protocol/pull/1387))
+- *(unstable-v2)* Nest session-scoped capabilities under session ([#1373](https://github.com/agentclientprotocol/agent-client-protocol/pull/1373))
+
+### Fixed
+
+- *(rust)* Preserve JSON object key order ([#1393](https://github.com/agentclientprotocol/agent-client-protocol/pull/1393))
+- *(schema)* Add missing _meta fields to protocol schemas ([#1440](https://github.com/agentclientprotocol/agent-client-protocol/pull/1440))
+- *(unstable-v2)* Tolerate errors in v1/v2 conversions ([#1420](https://github.com/agentclientprotocol/agent-client-protocol/pull/1420))
+- *(unstable-v2)* Clean up old agent auth deserialization ([#1388](https://github.com/agentclientprotocol/agent-client-protocol/pull/1388))
+
+### Other
+
+- Setup separate publishes for JSON Schemas ([#1377](https://github.com/agentclientprotocol/agent-client-protocol/pull/1377))
+
 ## [0.13.6](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.13.5...v0.13.6) - 2026-06-05
 
 ### Added

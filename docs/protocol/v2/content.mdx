@@ -7,9 +7,9 @@ Content blocks represent displayable information that flows through the Agent Cl
 
 Content blocks appear in:
 
-- User prompts sent via [`session/prompt`](/protocol/v2/prompt-turn#1-user-message)
-- Language model output reported through [`session/update`](/protocol/v2/prompt-turn#3-agent-reports-output) notifications as message updates or streamed chunks
-- Progress updates and results from [tool calls](/protocol/v2/tool-calls)
+- User prompts sent via [`session/prompt`](/protocol/v2/prompt-lifecycle#1-user-message)
+- Language model output reported through [`session/update`](/protocol/v2/prompt-lifecycle#3-agent-reports-output) notifications as message updates or streamed chunks
+- Progress updates and results from [tool calls](/protocol/v2/tool-calls), including streamed tool-call content chunks
 
 ## Content Types
 
@@ -17,7 +17,7 @@ The Agent Client Protocol uses the same `ContentBlock` structure as the [Model C
 
 This design choice enables Agents to seamlessly forward content from MCP tool outputs without transformation.
 
-In v2, content block `type` values can be custom or future variants when the receiver can preserve or display them generically. Custom content block types **MUST** begin with `_`. Unknown non-underscore content block types are reserved for future ACP variants.
+Content block `type` values can be custom or future variants when the receiver can preserve or display them generically. Custom content block types **MUST** begin with `_`. Unknown non-underscore content block types are reserved for future ACP variants.
 
 ### Text Content
 

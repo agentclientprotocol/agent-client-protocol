@@ -123,7 +123,7 @@ The client can then make sure the prompt sits nicely in the feed at the right pl
 
 This is a new message type as well. Not a `user_message_chunk` but just a `user_message` that allows for sending the entire message at once. The [Message Updates and Chunks](./message-updates.mdx) RFD defines the corresponding whole-message update and streamed-chunk patterns for user messages, agent messages, and agent thoughts.
 
-#### `state_change` notification
+#### `state_update` notification
 
 This would be a notification from the agent to indicate that it's current status has changed, such as the "turn" has ended, carrying information like `stopReason` and `usage` data for that turn.
 
@@ -136,7 +136,7 @@ This would be a notification from the agent to indicate that it's current status
   "params": {
     "sessionId": "sess_789xyz",
     "update": {
-      "sessionUpdate": "state_change",
+      "sessionUpdate": "state_update",
       "state": "running"
     }
   }
@@ -152,10 +152,9 @@ This would be a notification from the agent to indicate that it's current status
   "params": {
     "sessionId": "sess_789xyz",
     "update": {
-      "sessionUpdate": "state_change",
+      "sessionUpdate": "state_update",
       "state": "idle",
-      "stop_reason": "end_turn",
-      "usage": {...},
+      "stopReason": "end_turn"
     }
   }
 }
@@ -170,7 +169,7 @@ This would be a notification from the agent to indicate that it's current status
   "params": {
     "sessionId": "sess_789xyz",
     "update": {
-      "sessionUpdate": "state_change",
+      "sessionUpdate": "state_update",
       "state": "requires_action"
     }
   }

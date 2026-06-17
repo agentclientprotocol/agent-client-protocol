@@ -23,7 +23,7 @@ When a `$/cancel_request` notification is received by a supporting implementatio
 
 The calling side **MAY** implement graceful cancellation processing by waiting for the response from the remote side.
 
-Cancellation **MAY** also be done explicitly on a per-feature basis within the protocol to cover specific scenarios (e.g., cancellation of a [prompt turn](/protocol/v2/draft/prompt-turn#cancellation))
+Cancellation **MAY** also be done explicitly on a per-feature basis within the protocol to cover specific scenarios (e.g., cancellation of [active session work](/protocol/v2/draft/prompt-lifecycle#cancellation)).
 
 ## Internal Cancellation
 
@@ -46,13 +46,14 @@ sequenceDiagram
 
     Note over Client,Agent: 1. Session prompt in progress
     Client->>Agent: session/prompt (id=1, "Analyze file X")
-    Agent-->>Client: session/update (agent started processing)
+    Agent-->>Client: response to id=1 ({})
+    Agent->>Client: session/update (state_update: running)
 
     Note over Client,Agent: 2. Agent makes concurrent permission requests
     Agent->>Client: session/request_permission (id=2, "read sensitive file")
     Agent->>Client: session/request_permission (id=3, "apply workspace changes")
 
-    Note over Client,Agent: 3. Client cancels the prompt turn
+    Note over Client,Agent: 3. Client cancels active session work
     Client->>Agent: session/cancel (sessionId)
 
     Note over Client,Agent: 4. Agent cascades cancellation internally
@@ -63,6 +64,6 @@ sequenceDiagram
     Client->>Agent: response to id=2 (error -32800 "Cancelled")
     Client->>Agent: response to id=3 (error -32800 "Cancelled")
 
-    Note over Client,Agent: 6. Agent completes prompt cancellation
-    Agent->>Client: response to id=1 (stopReason: "cancelled")
+    Note over Client,Agent: 6. Agent reports cancellation completion
+    Agent->>Client: session/update (state_update: idle, stopReason: "cancelled")
 ```

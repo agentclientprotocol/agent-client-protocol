@@ -254,6 +254,56 @@ where
     }
 }
 
+fn into_v1_default_on_error<T>(value: T) -> T::Output
+where
+    T: IntoV1,
+    T::Output: Default,
+{
+    value.into_v1().unwrap_or_default()
+}
+
+fn into_v2_default_on_error<T>(value: T) -> T::Output
+where
+    T: IntoV2,
+    T::Output: Default,
+{
+    value.into_v2().unwrap_or_default()
+}
+
+fn into_v1_vec_skip_errors<T>(values: Vec<T>) -> Vec<T::Output>
+where
+    T: IntoV1,
+{
+    values
+        .into_iter()
+        .filter_map(|value| value.into_v1().ok())
+        .collect()
+}
+
+fn into_v2_vec_skip_errors<T>(values: Vec<T>) -> Vec<T::Output>
+where
+    T: IntoV2,
+{
+    values
+        .into_iter()
+        .filter_map(|value| value.into_v2().ok())
+        .collect()
+}
+
+fn option_vec_into_v1_skip_errors<T>(value: Option<Vec<T>>) -> Option<Vec<T::Output>>
+where
+    T: IntoV1,
+{
+    value.map(into_v1_vec_skip_errors)
+}
+
+fn option_vec_into_v2_skip_errors<T>(value: Option<Vec<T>>) -> Option<Vec<T::Output>>
+where
+    T: IntoV2,
+{
+    value.map(into_v2_vec_skip_errors)
+}
+
 impl<T> IntoV2 for Vec<T>
 where
     T: IntoV2,
@@ -563,7 +613,7 @@ impl IntoV1 for super::PlanUpdate {
                     meta: items_meta,
                 } = items;
                 crate::v1::Plan {
-                    entries: entries.into_v1()?,
+                    entries: into_v1_vec_skip_errors(entries),
                     meta: meta.or(items_meta).into_v1()?,
                 }
             }
@@ -655,7 +705,7 @@ impl IntoV1 for super::PlanItems {
         let Self { id, entries, meta } = self;
         Ok(crate::v1::PlanItems {
             id: id.into_v1()?,
-            entries: entries.into_v1()?,
+            entries: into_v1_vec_skip_errors(entries),
             meta: meta.into_v1()?,
         })
     }
@@ -669,7 +719,7 @@ impl IntoV2 for crate::v1::PlanItems {
         let Self { id, entries, meta } = self;
         Ok(super::PlanItems {
             id: id.into_v2()?,
-            entries: entries.into_v2()?,
+            entries: into_v2_vec_skip_errors(entries),
             meta: meta.into_v2()?,
         })
     }
@@ -980,6 +1030,16 @@ impl IntoV1Many for super::SessionUpdate {
                 value.meta,
                 crate::v1::SessionUpdate::AgentThoughtChunk,
             )?,
+            Self::StateUpdate(_) => {
+                return Err(ProtocolConversionError::new(
+                    "v2 SessionUpdate variant `state_update` cannot be represented in v1 because v1 reports completion in the session/prompt response",
+                ));
+            }
+            Self::ToolCallContentChunk(_) => {
+                return Err(ProtocolConversionError::new(
+                    "v2 SessionUpdate variant `tool_call_content_chunk` cannot be represented in v1 because v1 tool-call content updates replace content instead of appending",
+                ));
+            }
             Self::ToolCallUpdate(value) => {
                 vec![crate::v1::SessionUpdate::ToolCallUpdate(value.into_v1()?)]
             }
@@ -1123,7 +1183,7 @@ impl IntoV1 for super::ConfigOptionUpdate {
             meta,
         } = self;
         Ok(crate::v1::ConfigOptionUpdate {
-            config_options: config_options.into_v1()?,
+            config_options: into_v1_vec_skip_errors(config_options),
             meta: meta.into_v1()?,
         })
     }
@@ -1138,7 +1198,7 @@ impl IntoV2 for crate::v1::ConfigOptionUpdate {
             meta,
         } = self;
         Ok(super::ConfigOptionUpdate {
-            config_options: config_options.into_v2()?,
+            config_options: into_v2_vec_skip_errors(config_options),
             meta: meta.into_v2()?,
         })
     }
@@ -1191,7 +1251,7 @@ impl IntoV1 for super::UsageUpdate {
         Ok(crate::v1::UsageUpdate {
             used: used.into_v1()?,
             size: size.into_v1()?,
-            cost: cost.into_v1()?,
+            cost: into_v1_default_on_error(cost),
             meta: meta.into_v1()?,
         })
     }
@@ -1210,7 +1270,7 @@ impl IntoV2 for crate::v1::UsageUpdate {
         Ok(super::UsageUpdate {
             used: used.into_v2()?,
             size: size.into_v2()?,
-            cost: cost.into_v2()?,
+            cost: into_v2_default_on_error(cost),
             meta: meta.into_v2()?,
         })
     }
@@ -1220,10 +1280,15 @@ impl IntoV1 for super::Cost {
     type Output = crate::v1::Cost;
 
     fn into_v1(self) -> Result<Self::Output> {
-        let Self { amount, currency } = self;
+        let Self {
+            amount,
+            currency,
+            meta,
+        } = self;
         Ok(crate::v1::Cost {
             amount: amount.into_v1()?,
             currency: currency.into_v1()?,
+            meta: meta.into_v1()?,
         })
     }
 }
@@ -1232,10 +1297,15 @@ impl IntoV2 for crate::v1::Cost {
     type Output = super::Cost;
 
     fn into_v2(self) -> Result<Self::Output> {
-        let Self { amount, currency } = self;
+        let Self {
+            amount,
+            currency,
+            meta,
+        } = self;
         Ok(super::Cost {
             amount: amount.into_v2()?,
             currency: currency.into_v2()?,
+            meta: meta.into_v2()?,
         })
     }
 }
@@ -1289,7 +1359,7 @@ impl IntoV1 for super::AvailableCommandsUpdate {
             meta,
         } = self;
         Ok(crate::v1::AvailableCommandsUpdate {
-            available_commands: available_commands.into_v1()?,
+            available_commands: into_v1_vec_skip_errors(available_commands),
             meta: meta.into_v1()?,
         })
     }
@@ -1304,7 +1374,7 @@ impl IntoV2 for crate::v1::AvailableCommandsUpdate {
             meta,
         } = self;
         Ok(super::AvailableCommandsUpdate {
-            available_commands: available_commands.into_v2()?,
+            available_commands: into_v2_vec_skip_errors(available_commands),
             meta: meta.into_v2()?,
         })
     }
@@ -1323,7 +1393,7 @@ impl IntoV1 for super::AvailableCommand {
         Ok(crate::v1::AvailableCommand {
             name: name.into_v1()?,
             description: description.into_v1()?,
-            input: input.into_v1()?,
+            input: into_v1_default_on_error(input),
             meta: meta.into_v1()?,
         })
     }
@@ -1342,7 +1412,7 @@ impl IntoV2 for crate::v1::AvailableCommand {
         Ok(super::AvailableCommand {
             name: name.into_v2()?,
             description: description.into_v2()?,
-            input: input.into_v2()?,
+            input: into_v2_default_on_error(input),
             meta: meta.into_v2()?,
         })
     }
@@ -1832,11 +1902,11 @@ impl IntoV1 for super::ClientCapabilities {
             #[cfg(feature = "unstable_auth_methods")]
             auth: auth.into_v1()?,
             #[cfg(feature = "unstable_elicitation")]
-            elicitation: elicitation.into_v1()?,
+            elicitation: into_v1_default_on_error(elicitation),
             #[cfg(feature = "unstable_nes")]
-            nes: nes.into_v1()?,
+            nes: into_v1_default_on_error(nes),
             #[cfg(feature = "unstable_nes")]
-            position_encodings: position_encodings.into_v1()?,
+            position_encodings: into_v1_vec_skip_errors(position_encodings),
             meta: meta.into_v1()?,
         })
     }
@@ -1865,11 +1935,11 @@ impl IntoV2 for crate::v1::ClientCapabilities {
             #[cfg(feature = "unstable_auth_methods")]
             auth: auth.into_v2()?,
             #[cfg(feature = "unstable_elicitation")]
-            elicitation: elicitation.into_v2()?,
+            elicitation: into_v2_default_on_error(elicitation),
             #[cfg(feature = "unstable_nes")]
-            nes: nes.into_v2()?,
+            nes: into_v2_default_on_error(nes),
             #[cfg(feature = "unstable_nes")]
-            position_encodings: position_encodings.into_v2()?,
+            position_encodings: into_v2_vec_skip_errors(position_encodings),
             meta: meta.into_v2()?,
         })
     }
@@ -2255,28 +2325,26 @@ impl IntoV2 for crate::v1::ExtNotification {
     }
 }
 
-fn maybe_undefined_value_into_v1_option<T>(
-    value: crate::MaybeUndefined<T>,
-) -> Result<Option<T::Output>>
+fn maybe_undefined_value_into_v1_option<T>(value: crate::MaybeUndefined<T>) -> Option<T::Output>
 where
     T: IntoV1,
 {
     match value {
-        crate::MaybeUndefined::Value(value) => Ok(Some(value.into_v1()?)),
-        crate::MaybeUndefined::Null | crate::MaybeUndefined::Undefined => Ok(None),
+        crate::MaybeUndefined::Value(value) => value.into_v1().ok(),
+        crate::MaybeUndefined::Null | crate::MaybeUndefined::Undefined => None,
     }
 }
 
 fn maybe_undefined_vec_into_v1_option<T>(
     value: crate::MaybeUndefined<Vec<T>>,
-) -> Result<Option<Vec<T::Output>>>
+) -> Option<Vec<T::Output>>
 where
     T: IntoV1,
 {
     match value {
-        crate::MaybeUndefined::Value(value) => Ok(Some(value.into_v1()?)),
-        crate::MaybeUndefined::Null => Ok(Some(Vec::new())),
-        crate::MaybeUndefined::Undefined => Ok(None),
+        crate::MaybeUndefined::Value(value) => Some(into_v1_vec_skip_errors(value)),
+        crate::MaybeUndefined::Null => Some(Vec::new()),
+        crate::MaybeUndefined::Undefined => None,
     }
 }
 
@@ -2287,6 +2355,31 @@ where
     match value {
         Some(value) => Ok(crate::MaybeUndefined::Value(value.into_v2()?)),
         None => Ok(crate::MaybeUndefined::Undefined),
+    }
+}
+
+fn option_vec_into_v2_maybe_undefined_skip_errors<T>(
+    value: Option<Vec<T>>,
+) -> crate::MaybeUndefined<Vec<T::Output>>
+where
+    T: IntoV2,
+{
+    match value {
+        Some(value) => crate::MaybeUndefined::Value(into_v2_vec_skip_errors(value)),
+        None => crate::MaybeUndefined::Undefined,
+    }
+}
+
+fn vec_into_v2_maybe_undefined_skip_errors<T>(
+    value: Vec<T>,
+) -> crate::MaybeUndefined<Vec<T::Output>>
+where
+    T: IntoV2,
+{
+    if value.is_empty() {
+        crate::MaybeUndefined::Undefined
+    } else {
+        crate::MaybeUndefined::Value(into_v2_vec_skip_errors(value))
     }
 }
 
@@ -2308,13 +2401,13 @@ impl IntoV1 for super::ToolCallUpdate {
         Ok(crate::v1::ToolCallUpdate {
             tool_call_id: tool_call_id.into_v1()?,
             fields: crate::v1::ToolCallUpdateFields {
-                kind: maybe_undefined_value_into_v1_option(kind)?,
-                status: maybe_undefined_value_into_v1_option(status)?,
-                title: maybe_undefined_value_into_v1_option(title)?,
-                content: maybe_undefined_vec_into_v1_option(content)?,
-                locations: maybe_undefined_vec_into_v1_option(locations)?,
-                raw_input: maybe_undefined_value_into_v1_option(raw_input)?,
-                raw_output: maybe_undefined_value_into_v1_option(raw_output)?,
+                kind: maybe_undefined_value_into_v1_option(kind),
+                status: maybe_undefined_value_into_v1_option(status),
+                title: maybe_undefined_value_into_v1_option(title),
+                content: maybe_undefined_vec_into_v1_option(content),
+                locations: maybe_undefined_vec_into_v1_option(locations),
+                raw_input: maybe_undefined_value_into_v1_option(raw_input),
+                raw_output: maybe_undefined_value_into_v1_option(raw_output),
             },
             meta: meta.into_v1()?,
         })
@@ -2349,16 +2442,8 @@ impl IntoV2 for crate::v1::ToolCall {
             } else {
                 crate::MaybeUndefined::Value(status.into_v2()?)
             },
-            content: if content.is_empty() {
-                crate::MaybeUndefined::Undefined
-            } else {
-                crate::MaybeUndefined::Value(content.into_v2()?)
-            },
-            locations: if locations.is_empty() {
-                crate::MaybeUndefined::Undefined
-            } else {
-                crate::MaybeUndefined::Value(locations.into_v2()?)
-            },
+            content: vec_into_v2_maybe_undefined_skip_errors(content),
+            locations: vec_into_v2_maybe_undefined_skip_errors(locations),
             raw_input: option_into_v2_maybe_undefined(raw_input)?,
             raw_output: option_into_v2_maybe_undefined(raw_output)?,
             meta: meta.into_v2()?,
@@ -2389,8 +2474,8 @@ impl IntoV2 for crate::v1::ToolCallUpdate {
             kind: option_into_v2_maybe_undefined(kind)?,
             status: option_into_v2_maybe_undefined(status)?,
             title: option_into_v2_maybe_undefined(title)?,
-            content: option_into_v2_maybe_undefined(content)?,
-            locations: option_into_v2_maybe_undefined(locations)?,
+            content: option_vec_into_v2_maybe_undefined_skip_errors(content),
+            locations: option_vec_into_v2_maybe_undefined_skip_errors(locations),
             raw_input: option_into_v2_maybe_undefined(raw_input)?,
             raw_output: option_into_v2_maybe_undefined(raw_output)?,
             meta: meta.into_v2()?,
@@ -2609,7 +2694,7 @@ impl IntoV1 for super::InitializeRequest {
         Ok(crate::v1::InitializeRequest {
             protocol_version: protocol_version.into_v1()?,
             client_capabilities: capabilities.into_v1()?,
-            client_info: client_info.into_v1()?,
+            client_info: into_v1_default_on_error(client_info),
             meta: meta.into_v1()?,
         })
     }
@@ -2628,7 +2713,7 @@ impl IntoV2 for crate::v1::InitializeRequest {
         Ok(super::InitializeRequest {
             protocol_version: protocol_version.into_v2()?,
             capabilities: client_capabilities.into_v2()?,
-            client_info: client_info.into_v2()?,
+            client_info: into_v2_default_on_error(client_info),
             meta: meta.into_v2()?,
         })
     }
@@ -2648,8 +2733,8 @@ impl IntoV1 for super::InitializeResponse {
         Ok(crate::v1::InitializeResponse {
             protocol_version: protocol_version.into_v1()?,
             agent_capabilities: agent_capabilities.into_v1()?,
-            auth_methods: auth_methods.into_v1()?,
-            agent_info: agent_info.into_v1()?,
+            auth_methods: into_v1_vec_skip_errors(auth_methods),
+            agent_info: into_v1_default_on_error(agent_info),
             meta: meta.into_v1()?,
         })
     }
@@ -2669,8 +2754,8 @@ impl IntoV2 for crate::v1::InitializeResponse {
         Ok(super::InitializeResponse {
             protocol_version: protocol_version.into_v2()?,
             capabilities: agent_capabilities.into_v2()?,
-            auth_methods: auth_methods.into_v2()?,
-            agent_info: agent_info.into_v2()?,
+            auth_methods: into_v2_vec_skip_errors(auth_methods),
+            agent_info: into_v2_default_on_error(agent_info),
             meta: meta.into_v2()?,
         })
     }
@@ -2810,7 +2895,7 @@ impl IntoV1 for super::AgentAuthCapabilities {
     fn into_v1(self) -> Result<Self::Output> {
         let Self { logout, meta } = self;
         Ok(crate::v1::AgentAuthCapabilities {
-            logout: logout.into_v1()?,
+            logout: into_v1_default_on_error(logout),
             meta: meta.into_v1()?,
         })
     }
@@ -2822,7 +2907,7 @@ impl IntoV2 for crate::v1::AgentAuthCapabilities {
     fn into_v2(self) -> Result<Self::Output> {
         let Self { logout, meta } = self;
         Ok(super::AgentAuthCapabilities {
-            logout: logout.into_v2()?,
+            logout: into_v2_default_on_error(logout),
             meta: meta.into_v2()?,
         })
     }
@@ -3125,7 +3210,7 @@ impl IntoV1 for super::NewSessionResponse {
         Ok(crate::v1::NewSessionResponse {
             session_id: session_id.into_v1()?,
             modes: None,
-            config_options: config_options.into_v1()?,
+            config_options: option_vec_into_v1_skip_errors(config_options),
             meta: meta.into_v1()?,
         })
     }
@@ -3143,7 +3228,7 @@ impl IntoV2 for crate::v1::NewSessionResponse {
         } = self;
         Ok(super::NewSessionResponse {
             session_id: session_id.into_v2()?,
-            config_options: config_options.into_v2()?,
+            config_options: option_vec_into_v2_skip_errors(config_options),
             meta: meta.into_v2()?,
         })
     }
@@ -3201,7 +3286,7 @@ impl IntoV1 for super::LoadSessionResponse {
         } = self;
         Ok(crate::v1::LoadSessionResponse {
             modes: None,
-            config_options: config_options.into_v1()?,
+            config_options: option_vec_into_v1_skip_errors(config_options),
             meta: meta.into_v1()?,
         })
     }
@@ -3217,7 +3302,7 @@ impl IntoV2 for crate::v1::LoadSessionResponse {
             meta,
         } = self;
         Ok(super::LoadSessionResponse {
-            config_options: config_options.into_v2()?,
+            config_options: option_vec_into_v2_skip_errors(config_options),
             meta: meta.into_v2()?,
         })
     }
@@ -3280,7 +3365,7 @@ impl IntoV1 for super::ForkSessionResponse {
         Ok(crate::v1::ForkSessionResponse {
             session_id: session_id.into_v1()?,
             modes: None,
-            config_options: config_options.into_v1()?,
+            config_options: option_vec_into_v1_skip_errors(config_options),
             meta: meta.into_v1()?,
         })
     }
@@ -3299,7 +3384,7 @@ impl IntoV2 for crate::v1::ForkSessionResponse {
         } = self;
         Ok(super::ForkSessionResponse {
             session_id: session_id.into_v2()?,
-            config_options: config_options.into_v2()?,
+            config_options: option_vec_into_v2_skip_errors(config_options),
             meta: meta.into_v2()?,
         })
     }
@@ -3357,7 +3442,7 @@ impl IntoV1 for super::ResumeSessionResponse {
         } = self;
         Ok(crate::v1::ResumeSessionResponse {
             modes: None,
-            config_options: config_options.into_v1()?,
+            config_options: option_vec_into_v1_skip_errors(config_options),
             meta: meta.into_v1()?,
         })
     }
@@ -3373,7 +3458,7 @@ impl IntoV2 for crate::v1::ResumeSessionResponse {
             meta,
         } = self;
         Ok(super::ResumeSessionResponse {
-            config_options: config_options.into_v2()?,
+            config_options: option_vec_into_v2_skip_errors(config_options),
             meta: meta.into_v2()?,
         })
     }
@@ -3507,7 +3592,7 @@ impl IntoV1 for super::ListSessionsResponse {
             meta,
         } = self;
         Ok(crate::v1::ListSessionsResponse {
-            sessions: sessions.into_v1()?,
+            sessions: into_v1_vec_skip_errors(sessions),
             next_cursor: next_cursor.into_v1()?,
             meta: meta.into_v1()?,
         })
@@ -3524,7 +3609,7 @@ impl IntoV2 for crate::v1::ListSessionsResponse {
             meta,
         } = self;
         Ok(super::ListSessionsResponse {
-            sessions: sessions.into_v2()?,
+            sessions: into_v2_vec_skip_errors(sessions),
             next_cursor: next_cursor.into_v2()?,
             meta: meta.into_v2()?,
         })
@@ -3547,8 +3632,8 @@ impl IntoV1 for super::SessionInfo {
             session_id: session_id.into_v1()?,
             cwd: cwd.into_v1()?,
             additional_directories: additional_directories.into_v1()?,
-            title: title.into_v1()?,
-            updated_at: updated_at.into_v1()?,
+            title: into_v1_default_on_error(title),
+            updated_at: into_v1_default_on_error(updated_at),
             meta: meta.into_v1()?,
         })
     }
@@ -3570,8 +3655,8 @@ impl IntoV2 for crate::v1::SessionInfo {
             session_id: session_id.into_v2()?,
             cwd: cwd.into_v2()?,
             additional_directories: additional_directories.into_v2()?,
-            title: title.into_v2()?,
-            updated_at: updated_at.into_v2()?,
+            title: into_v2_default_on_error(title),
+            updated_at: into_v2_default_on_error(updated_at),
             meta: meta.into_v2()?,
         })
     }
@@ -3852,7 +3937,7 @@ impl IntoV1 for super::SessionConfigOption {
             id: id.into_v1()?,
             name: name.into_v1()?,
             description: description.into_v1()?,
-            category: category.into_v1()?,
+            category: into_v1_default_on_error(category),
             kind: kind.into_v1()?,
             meta: meta.into_v1()?,
         })
@@ -3875,7 +3960,7 @@ impl IntoV2 for crate::v1::SessionConfigOption {
             id: id.into_v2()?,
             name: name.into_v2()?,
             description: description.into_v2()?,
-            category: category.into_v2()?,
+            category: into_v2_default_on_error(category),
             kind: kind.into_v2()?,
             meta: meta.into_v2()?,
         })
@@ -3961,7 +4046,7 @@ impl IntoV1 for super::SetSessionConfigOptionResponse {
             meta,
         } = self;
         Ok(crate::v1::SetSessionConfigOptionResponse {
-            config_options: config_options.into_v1()?,
+            config_options: into_v1_vec_skip_errors(config_options),
             meta: meta.into_v1()?,
         })
     }
@@ -3976,7 +4061,7 @@ impl IntoV2 for crate::v1::SetSessionConfigOptionResponse {
             meta,
         } = self;
         Ok(super::SetSessionConfigOptionResponse {
-            config_options: config_options.into_v2()?,
+            config_options: into_v2_vec_skip_errors(config_options),
             meta: meta.into_v2()?,
         })
     }
@@ -4244,18 +4329,9 @@ impl IntoV1 for super::PromptResponse {
     type Output = crate::v1::PromptResponse;
 
     fn into_v1(self) -> Result<Self::Output> {
-        let Self {
-            stop_reason,
-            #[cfg(feature = "unstable_end_turn_token_usage")]
-            usage,
-            meta,
-        } = self;
-        Ok(crate::v1::PromptResponse {
-            stop_reason: stop_reason.into_v1()?,
-            #[cfg(feature = "unstable_end_turn_token_usage")]
-            usage: usage.into_v1()?,
-            meta: meta.into_v1()?,
-        })
+        Err(ProtocolConversionError::new(
+            "v2 PromptResponse cannot be represented in v1 because v2 reports completion with state_update session updates",
+        ))
     }
 }
 
@@ -4263,18 +4339,9 @@ impl IntoV2 for crate::v1::PromptResponse {
     type Output = super::PromptResponse;
 
     fn into_v2(self) -> Result<Self::Output> {
-        let Self {
-            stop_reason,
-            #[cfg(feature = "unstable_end_turn_token_usage")]
-            usage,
-            meta,
-        } = self;
-        Ok(super::PromptResponse {
-            stop_reason: stop_reason.into_v2()?,
-            #[cfg(feature = "unstable_end_turn_token_usage")]
-            usage: usage.into_v2()?,
-            meta: meta.into_v2()?,
-        })
+        Err(ProtocolConversionError::new(
+            "v1 PromptResponse cannot be represented in v2 by itself because v2 reports completion with state_update session updates",
+        ))
     }
 }
 
@@ -4319,6 +4386,7 @@ impl IntoV1 for super::Usage {
             thought_tokens,
             cached_read_tokens,
             cached_write_tokens,
+            meta,
         } = self;
         Ok(crate::v1::Usage {
             total_tokens: total_tokens.into_v1()?,
@@ -4327,6 +4395,7 @@ impl IntoV1 for super::Usage {
             thought_tokens: thought_tokens.into_v1()?,
             cached_read_tokens: cached_read_tokens.into_v1()?,
             cached_write_tokens: cached_write_tokens.into_v1()?,
+            meta: meta.into_v1()?,
         })
     }
 }
@@ -4343,6 +4412,7 @@ impl IntoV2 for crate::v1::Usage {
             thought_tokens,
             cached_read_tokens,
             cached_write_tokens,
+            meta,
         } = self;
         Ok(super::Usage {
             total_tokens: total_tokens.into_v2()?,
@@ -4351,6 +4421,7 @@ impl IntoV2 for crate::v1::Usage {
             thought_tokens: thought_tokens.into_v2()?,
             cached_read_tokens: cached_read_tokens.into_v2()?,
             cached_write_tokens: cached_write_tokens.into_v2()?,
+            meta: meta.into_v2()?,
         })
     }
 }
@@ -4392,10 +4463,15 @@ impl IntoV1 for super::ProviderCurrentConfig {
     type Output = crate::v1::ProviderCurrentConfig;
 
     fn into_v1(self) -> Result<Self::Output> {
-        let Self { api_type, base_url } = self;
+        let Self {
+            api_type,
+            base_url,
+            meta,
+        } = self;
         Ok(crate::v1::ProviderCurrentConfig {
             api_type: api_type.into_v1()?,
             base_url: base_url.into_v1()?,
+            meta: meta.into_v1()?,
         })
     }
 }
@@ -4405,10 +4481,15 @@ impl IntoV2 for crate::v1::ProviderCurrentConfig {
     type Output = super::ProviderCurrentConfig;
 
     fn into_v2(self) -> Result<Self::Output> {
-        let Self { api_type, base_url } = self;
+        let Self {
+            api_type,
+            base_url,
+            meta,
+        } = self;
         Ok(super::ProviderCurrentConfig {
             api_type: api_type.into_v2()?,
             base_url: base_url.into_v2()?,
+            meta: meta.into_v2()?,
         })
     }
 }
@@ -4427,7 +4508,7 @@ impl IntoV1 for super::ProviderInfo {
         } = self;
         Ok(crate::v1::ProviderInfo {
             id: id.into_v1()?,
-            supported: supported.into_v1()?,
+            supported: into_v1_vec_skip_errors(supported),
             required: required.into_v1()?,
             current: current.into_v1()?,
             meta: meta.into_v1()?,
@@ -4449,7 +4530,7 @@ impl IntoV2 for crate::v1::ProviderInfo {
         } = self;
         Ok(super::ProviderInfo {
             id: id.into_v2()?,
-            supported: supported.into_v2()?,
+            supported: into_v2_vec_skip_errors(supported),
             required: required.into_v2()?,
             current: current.into_v2()?,
             meta: meta.into_v2()?,
@@ -4488,7 +4569,7 @@ impl IntoV1 for super::ListProvidersResponse {
     fn into_v1(self) -> Result<Self::Output> {
         let Self { providers, meta } = self;
         Ok(crate::v1::ListProvidersResponse {
-            providers: providers.into_v1()?,
+            providers: into_v1_vec_skip_errors(providers),
             meta: meta.into_v1()?,
         })
     }
@@ -4501,7 +4582,7 @@ impl IntoV2 for crate::v1::ListProvidersResponse {
     fn into_v2(self) -> Result<Self::Output> {
         let Self { providers, meta } = self;
         Ok(super::ListProvidersResponse {
-            providers: providers.into_v2()?,
+            providers: into_v2_vec_skip_errors(providers),
             meta: meta.into_v2()?,
         })
     }
@@ -4659,11 +4740,11 @@ impl IntoV1 for super::AgentCapabilities {
             session_capabilities,
             auth: auth.into_v1()?,
             #[cfg(feature = "unstable_llm_providers")]
-            providers: providers.into_v1()?,
+            providers: into_v1_default_on_error(providers),
             #[cfg(feature = "unstable_nes")]
-            nes: nes.into_v1()?,
+            nes: into_v1_default_on_error(nes),
             #[cfg(feature = "unstable_nes")]
-            position_encoding: position_encoding.into_v1()?,
+            position_encoding: into_v1_default_on_error(position_encoding),
             meta: meta.into_v1()?,
         })
     }
@@ -4698,11 +4779,11 @@ impl IntoV2 for crate::v1::AgentCapabilities {
             session: Some(session),
             auth: auth.into_v2()?,
             #[cfg(feature = "unstable_llm_providers")]
-            providers: providers.into_v2()?,
+            providers: into_v2_default_on_error(providers),
             #[cfg(feature = "unstable_nes")]
-            nes: nes.into_v2()?,
+            nes: into_v2_default_on_error(nes),
             #[cfg(feature = "unstable_nes")]
-            position_encoding: position_encoding.into_v2()?,
+            position_encoding: into_v2_default_on_error(position_encoding),
             meta: meta.into_v2()?,
         })
     }
@@ -4771,13 +4852,13 @@ impl super::SessionCapabilities {
 
         Ok(V1SessionCapabilityParts {
             session_capabilities: crate::v1::SessionCapabilities {
-                list: list.into_v1()?,
-                delete: delete.into_v1()?,
-                additional_directories: additional_directories.into_v1()?,
+                list: into_v1_default_on_error(list),
+                delete: into_v1_default_on_error(delete),
+                additional_directories: into_v1_default_on_error(additional_directories),
                 #[cfg(feature = "unstable_session_fork")]
-                fork: fork.into_v1()?,
-                resume: resume.into_v1()?,
-                close: close.into_v1()?,
+                fork: into_v1_default_on_error(fork),
+                resume: into_v1_default_on_error(resume),
+                close: into_v1_default_on_error(close),
                 meta: meta.into_v1()?,
             },
             prompt_capabilities: prompt.unwrap_or_default().into_v1()?,
@@ -4814,13 +4895,13 @@ impl super::SessionCapabilities {
             prompt: Some(prompt_capabilities.into_v2()?),
             mcp: Some(mcp_capabilities.into_v2()?),
             load: load_session.then(super::SessionLoadCapabilities::new),
-            list: list.into_v2()?,
-            delete: delete.into_v2()?,
-            additional_directories: additional_directories.into_v2()?,
+            list: into_v2_default_on_error(list),
+            delete: into_v2_default_on_error(delete),
+            additional_directories: into_v2_default_on_error(additional_directories),
             #[cfg(feature = "unstable_session_fork")]
-            fork: fork.into_v2()?,
-            resume: resume.into_v2()?,
-            close: close.into_v2()?,
+            fork: into_v2_default_on_error(fork),
+            resume: into_v2_default_on_error(resume),
+            close: into_v2_default_on_error(close),
             meta: meta.into_v2()?,
         })
     }
@@ -5129,7 +5210,7 @@ impl IntoV2 for crate::v1::ClientRequest {
             }
             #[cfg(feature = "unstable_llm_providers")]
             Self::SetProviderRequest(value) => {
-                super::ClientRequest::SetProviderRequest(value.into_v2()?)
+                super::ClientRequest::SetProviderRequest(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_llm_providers")]
             Self::DisableProviderRequest(value) => {
@@ -5166,10 +5247,12 @@ impl IntoV2 for crate::v1::ClientRequest {
             }
             Self::PromptRequest(value) => super::ClientRequest::PromptRequest(value.into_v2()?),
             #[cfg(feature = "unstable_nes")]
-            Self::StartNesRequest(value) => super::ClientRequest::StartNesRequest(value.into_v2()?),
+            Self::StartNesRequest(value) => {
+                super::ClientRequest::StartNesRequest(Box::new(value.into_v2()?))
+            }
             #[cfg(feature = "unstable_nes")]
             Self::SuggestNesRequest(value) => {
-                super::ClientRequest::SuggestNesRequest(value.into_v2()?)
+                super::ClientRequest::SuggestNesRequest(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_nes")]
             Self::CloseNesRequest(value) => super::ClientRequest::CloseNesRequest(value.into_v2()?),
@@ -5410,7 +5493,7 @@ impl IntoV2 for crate::v1::ClientNotification {
             }
             #[cfg(feature = "unstable_nes")]
             Self::DidFocusDocumentNotification(value) => {
-                super::ClientNotification::DidFocusDocumentNotification(value.into_v2()?)
+                super::ClientNotification::DidFocusDocumentNotification(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_nes")]
             Self::AcceptNesNotification(value) => {
@@ -5486,10 +5569,15 @@ impl IntoV1 for super::Position {
     type Output = crate::v1::Position;
 
     fn into_v1(self) -> Result<Self::Output> {
-        let Self { line, character } = self;
+        let Self {
+            line,
+            character,
+            meta,
+        } = self;
         Ok(crate::v1::Position {
             line: line.into_v1()?,
             character: character.into_v1()?,
+            meta: meta.into_v1()?,
         })
     }
 }
@@ -5499,10 +5587,15 @@ impl IntoV2 for crate::v1::Position {
     type Output = super::Position;
 
     fn into_v2(self) -> Result<Self::Output> {
-        let Self { line, character } = self;
+        let Self {
+            line,
+            character,
+            meta,
+        } = self;
         Ok(super::Position {
             line: line.into_v2()?,
             character: character.into_v2()?,
+            meta: meta.into_v2()?,
         })
     }
 }
@@ -5512,10 +5605,11 @@ impl IntoV1 for super::Range {
     type Output = crate::v1::Range;
 
     fn into_v1(self) -> Result<Self::Output> {
-        let Self { start, end } = self;
+        let Self { start, end, meta } = self;
         Ok(crate::v1::Range {
             start: start.into_v1()?,
             end: end.into_v1()?,
+            meta: meta.into_v1()?,
         })
     }
 }
@@ -5525,10 +5619,11 @@ impl IntoV2 for crate::v1::Range {
     type Output = super::Range;
 
     fn into_v2(self) -> Result<Self::Output> {
-        let Self { start, end } = self;
+        let Self { start, end, meta } = self;
         Ok(super::Range {
             start: start.into_v2()?,
             end: end.into_v2()?,
+            meta: meta.into_v2()?,
         })
     }
 }
@@ -5544,8 +5639,8 @@ impl IntoV1 for super::NesCapabilities {
             meta,
         } = self;
         Ok(crate::v1::NesCapabilities {
-            events: events.into_v1()?,
-            context: context.into_v1()?,
+            events: into_v1_default_on_error(events),
+            context: into_v1_default_on_error(context),
             meta: meta.into_v1()?,
         })
     }
@@ -5562,8 +5657,8 @@ impl IntoV2 for crate::v1::NesCapabilities {
             meta,
         } = self;
         Ok(super::NesCapabilities {
-            events: events.into_v2()?,
-            context: context.into_v2()?,
+            events: into_v2_default_on_error(events),
+            context: into_v2_default_on_error(context),
             meta: meta.into_v2()?,
         })
     }
@@ -5576,7 +5671,7 @@ impl IntoV1 for super::NesEventCapabilities {
     fn into_v1(self) -> Result<Self::Output> {
         let Self { document, meta } = self;
         Ok(crate::v1::NesEventCapabilities {
-            document: document.into_v1()?,
+            document: into_v1_default_on_error(document),
             meta: meta.into_v1()?,
         })
     }
@@ -5589,7 +5684,7 @@ impl IntoV2 for crate::v1::NesEventCapabilities {
     fn into_v2(self) -> Result<Self::Output> {
         let Self { document, meta } = self;
         Ok(super::NesEventCapabilities {
-            document: document.into_v2()?,
+            document: into_v2_default_on_error(document),
             meta: meta.into_v2()?,
         })
     }
@@ -5609,11 +5704,11 @@ impl IntoV1 for super::NesDocumentEventCapabilities {
             meta,
         } = self;
         Ok(crate::v1::NesDocumentEventCapabilities {
-            did_open: did_open.into_v1()?,
-            did_change: did_change.into_v1()?,
-            did_close: did_close.into_v1()?,
-            did_save: did_save.into_v1()?,
-            did_focus: did_focus.into_v1()?,
+            did_open: into_v1_default_on_error(did_open),
+            did_change: into_v1_default_on_error(did_change),
+            did_close: into_v1_default_on_error(did_close),
+            did_save: into_v1_default_on_error(did_save),
+            did_focus: into_v1_default_on_error(did_focus),
             meta: meta.into_v1()?,
         })
     }
@@ -5633,11 +5728,11 @@ impl IntoV2 for crate::v1::NesDocumentEventCapabilities {
             meta,
         } = self;
         Ok(super::NesDocumentEventCapabilities {
-            did_open: did_open.into_v2()?,
-            did_change: did_change.into_v2()?,
-            did_close: did_close.into_v2()?,
-            did_save: did_save.into_v2()?,
-            did_focus: did_focus.into_v2()?,
+            did_open: into_v2_default_on_error(did_open),
+            did_change: into_v2_default_on_error(did_change),
+            did_close: into_v2_default_on_error(did_close),
+            did_save: into_v2_default_on_error(did_save),
+            did_focus: into_v2_default_on_error(did_focus),
             meta: meta.into_v2()?,
         })
     }
@@ -5804,12 +5899,12 @@ impl IntoV1 for super::NesContextCapabilities {
             meta,
         } = self;
         Ok(crate::v1::NesContextCapabilities {
-            recent_files: recent_files.into_v1()?,
-            related_snippets: related_snippets.into_v1()?,
-            edit_history: edit_history.into_v1()?,
-            user_actions: user_actions.into_v1()?,
-            open_files: open_files.into_v1()?,
-            diagnostics: diagnostics.into_v1()?,
+            recent_files: into_v1_default_on_error(recent_files),
+            related_snippets: into_v1_default_on_error(related_snippets),
+            edit_history: into_v1_default_on_error(edit_history),
+            user_actions: into_v1_default_on_error(user_actions),
+            open_files: into_v1_default_on_error(open_files),
+            diagnostics: into_v1_default_on_error(diagnostics),
             meta: meta.into_v1()?,
         })
     }
@@ -5830,12 +5925,12 @@ impl IntoV2 for crate::v1::NesContextCapabilities {
             meta,
         } = self;
         Ok(super::NesContextCapabilities {
-            recent_files: recent_files.into_v2()?,
-            related_snippets: related_snippets.into_v2()?,
-            edit_history: edit_history.into_v2()?,
-            user_actions: user_actions.into_v2()?,
-            open_files: open_files.into_v2()?,
-            diagnostics: diagnostics.into_v2()?,
+            recent_files: into_v2_default_on_error(recent_files),
+            related_snippets: into_v2_default_on_error(related_snippets),
+            edit_history: into_v2_default_on_error(edit_history),
+            user_actions: into_v2_default_on_error(user_actions),
+            open_files: into_v2_default_on_error(open_files),
+            diagnostics: into_v2_default_on_error(diagnostics),
             meta: meta.into_v2()?,
         })
     }
@@ -6003,9 +6098,9 @@ impl IntoV1 for super::ClientNesCapabilities {
             meta,
         } = self;
         Ok(crate::v1::ClientNesCapabilities {
-            jump: jump.into_v1()?,
-            rename: rename.into_v1()?,
-            search_and_replace: search_and_replace.into_v1()?,
+            jump: into_v1_default_on_error(jump),
+            rename: into_v1_default_on_error(rename),
+            search_and_replace: into_v1_default_on_error(search_and_replace),
             meta: meta.into_v1()?,
         })
     }
@@ -6023,9 +6118,9 @@ impl IntoV2 for crate::v1::ClientNesCapabilities {
             meta,
         } = self;
         Ok(super::ClientNesCapabilities {
-            jump: jump.into_v2()?,
-            rename: rename.into_v2()?,
-            search_and_replace: search_and_replace.into_v2()?,
+            jump: into_v2_default_on_error(jump),
+            rename: into_v2_default_on_error(rename),
+            search_and_replace: into_v2_default_on_error(search_and_replace),
             meta: meta.into_v2()?,
         })
     }
@@ -6200,10 +6295,11 @@ impl IntoV1 for super::TextDocumentContentChangeEvent {
     type Output = crate::v1::TextDocumentContentChangeEvent;
 
     fn into_v1(self) -> Result<Self::Output> {
-        let Self { range, text } = self;
+        let Self { range, text, meta } = self;
         Ok(crate::v1::TextDocumentContentChangeEvent {
             range: range.into_v1()?,
             text: text.into_v1()?,
+            meta: meta.into_v1()?,
         })
     }
 }
@@ -6213,10 +6309,11 @@ impl IntoV2 for crate::v1::TextDocumentContentChangeEvent {
     type Output = super::TextDocumentContentChangeEvent;
 
     fn into_v2(self) -> Result<Self::Output> {
-        let Self { range, text } = self;
+        let Self { range, text, meta } = self;
         Ok(super::TextDocumentContentChangeEvent {
             range: range.into_v2()?,
             text: text.into_v2()?,
+            meta: meta.into_v2()?,
         })
     }
 }
@@ -6354,8 +6451,8 @@ impl IntoV1 for super::StartNesRequest {
         } = self;
         Ok(crate::v1::StartNesRequest {
             workspace_uri: workspace_uri.into_v1()?,
-            workspace_folders: workspace_folders.into_v1()?,
-            repository: repository.into_v1()?,
+            workspace_folders: option_vec_into_v1_skip_errors(workspace_folders),
+            repository: into_v1_default_on_error(repository),
             meta: meta.into_v1()?,
         })
     }
@@ -6374,8 +6471,8 @@ impl IntoV2 for crate::v1::StartNesRequest {
         } = self;
         Ok(super::StartNesRequest {
             workspace_uri: workspace_uri.into_v2()?,
-            workspace_folders: workspace_folders.into_v2()?,
-            repository: repository.into_v2()?,
+            workspace_folders: option_vec_into_v2_skip_errors(workspace_folders),
+            repository: into_v2_default_on_error(repository),
             meta: meta.into_v2()?,
         })
     }
@@ -6386,10 +6483,11 @@ impl IntoV1 for super::WorkspaceFolder {
     type Output = crate::v1::WorkspaceFolder;
 
     fn into_v1(self) -> Result<Self::Output> {
-        let Self { uri, name } = self;
+        let Self { uri, name, meta } = self;
         Ok(crate::v1::WorkspaceFolder {
             uri: uri.into_v1()?,
             name: name.into_v1()?,
+            meta: meta.into_v1()?,
         })
     }
 }
@@ -6399,10 +6497,11 @@ impl IntoV2 for crate::v1::WorkspaceFolder {
     type Output = super::WorkspaceFolder;
 
     fn into_v2(self) -> Result<Self::Output> {
-        let Self { uri, name } = self;
+        let Self { uri, name, meta } = self;
         Ok(super::WorkspaceFolder {
             uri: uri.into_v2()?,
             name: name.into_v2()?,
+            meta: meta.into_v2()?,
         })
     }
 }
@@ -6416,11 +6515,13 @@ impl IntoV1 for super::NesRepository {
             name,
             owner,
             remote_url,
+            meta,
         } = self;
         Ok(crate::v1::NesRepository {
             name: name.into_v1()?,
             owner: owner.into_v1()?,
             remote_url: remote_url.into_v1()?,
+            meta: meta.into_v1()?,
         })
     }
 }
@@ -6434,11 +6535,13 @@ impl IntoV2 for crate::v1::NesRepository {
             name,
             owner,
             remote_url,
+            meta,
         } = self;
         Ok(super::NesRepository {
             name: name.into_v2()?,
             owner: owner.into_v2()?,
             remote_url: remote_url.into_v2()?,
+            meta: meta.into_v2()?,
         })
     }
 }
@@ -6566,9 +6669,9 @@ impl IntoV1 for super::SuggestNesRequest {
             uri: uri.into_v1()?,
             version: version.into_v1()?,
             position: position.into_v1()?,
-            selection: selection.into_v1()?,
+            selection: into_v1_default_on_error(selection),
             trigger_kind: trigger_kind.into_v1()?,
-            context: context.into_v1()?,
+            context: into_v1_default_on_error(context),
             meta: meta.into_v1()?,
         })
     }
@@ -6594,9 +6697,9 @@ impl IntoV2 for crate::v1::SuggestNesRequest {
             uri: uri.into_v2()?,
             version: version.into_v2()?,
             position: position.into_v2()?,
-            selection: selection.into_v2()?,
+            selection: into_v2_default_on_error(selection),
             trigger_kind: trigger_kind.into_v2()?,
-            context: context.into_v2()?,
+            context: into_v2_default_on_error(context),
             meta: meta.into_v2()?,
         })
     }
@@ -6617,12 +6720,12 @@ impl IntoV1 for super::NesSuggestContext {
             meta,
         } = self;
         Ok(crate::v1::NesSuggestContext {
-            recent_files: recent_files.into_v1()?,
-            related_snippets: related_snippets.into_v1()?,
-            edit_history: edit_history.into_v1()?,
-            user_actions: user_actions.into_v1()?,
-            open_files: open_files.into_v1()?,
-            diagnostics: diagnostics.into_v1()?,
+            recent_files: option_vec_into_v1_skip_errors(recent_files),
+            related_snippets: option_vec_into_v1_skip_errors(related_snippets),
+            edit_history: option_vec_into_v1_skip_errors(edit_history),
+            user_actions: option_vec_into_v1_skip_errors(user_actions),
+            open_files: option_vec_into_v1_skip_errors(open_files),
+            diagnostics: option_vec_into_v1_skip_errors(diagnostics),
             meta: meta.into_v1()?,
         })
     }
@@ -6643,12 +6746,12 @@ impl IntoV2 for crate::v1::NesSuggestContext {
             meta,
         } = self;
         Ok(super::NesSuggestContext {
-            recent_files: recent_files.into_v2()?,
-            related_snippets: related_snippets.into_v2()?,
-            edit_history: edit_history.into_v2()?,
-            user_actions: user_actions.into_v2()?,
-            open_files: open_files.into_v2()?,
-            diagnostics: diagnostics.into_v2()?,
+            recent_files: option_vec_into_v2_skip_errors(recent_files),
+            related_snippets: option_vec_into_v2_skip_errors(related_snippets),
+            edit_history: option_vec_into_v2_skip_errors(edit_history),
+            user_actions: option_vec_into_v2_skip_errors(user_actions),
+            open_files: option_vec_into_v2_skip_errors(open_files),
+            diagnostics: option_vec_into_v2_skip_errors(diagnostics),
             meta: meta.into_v2()?,
         })
     }
@@ -6663,11 +6766,13 @@ impl IntoV1 for super::NesRecentFile {
             uri,
             language_id,
             text,
+            meta,
         } = self;
         Ok(crate::v1::NesRecentFile {
             uri: uri.into_v1()?,
             language_id: language_id.into_v1()?,
             text: text.into_v1()?,
+            meta: meta.into_v1()?,
         })
     }
 }
@@ -6681,11 +6786,13 @@ impl IntoV2 for crate::v1::NesRecentFile {
             uri,
             language_id,
             text,
+            meta,
         } = self;
         Ok(super::NesRecentFile {
             uri: uri.into_v2()?,
             language_id: language_id.into_v2()?,
             text: text.into_v2()?,
+            meta: meta.into_v2()?,
         })
     }
 }
@@ -6695,10 +6802,15 @@ impl IntoV1 for super::NesRelatedSnippet {
     type Output = crate::v1::NesRelatedSnippet;
 
     fn into_v1(self) -> Result<Self::Output> {
-        let Self { uri, excerpts } = self;
+        let Self {
+            uri,
+            excerpts,
+            meta,
+        } = self;
         Ok(crate::v1::NesRelatedSnippet {
             uri: uri.into_v1()?,
             excerpts: excerpts.into_v1()?,
+            meta: meta.into_v1()?,
         })
     }
 }
@@ -6708,10 +6820,15 @@ impl IntoV2 for crate::v1::NesRelatedSnippet {
     type Output = super::NesRelatedSnippet;
 
     fn into_v2(self) -> Result<Self::Output> {
-        let Self { uri, excerpts } = self;
+        let Self {
+            uri,
+            excerpts,
+            meta,
+        } = self;
         Ok(super::NesRelatedSnippet {
             uri: uri.into_v2()?,
             excerpts: excerpts.into_v2()?,
+            meta: meta.into_v2()?,
         })
     }
 }
@@ -6725,11 +6842,13 @@ impl IntoV1 for super::NesExcerpt {
             start_line,
             end_line,
             text,
+            meta,
         } = self;
         Ok(crate::v1::NesExcerpt {
             start_line: start_line.into_v1()?,
             end_line: end_line.into_v1()?,
             text: text.into_v1()?,
+            meta: meta.into_v1()?,
         })
     }
 }
@@ -6743,11 +6862,13 @@ impl IntoV2 for crate::v1::NesExcerpt {
             start_line,
             end_line,
             text,
+            meta,
         } = self;
         Ok(super::NesExcerpt {
             start_line: start_line.into_v2()?,
             end_line: end_line.into_v2()?,
             text: text.into_v2()?,
+            meta: meta.into_v2()?,
         })
     }
 }
@@ -6757,10 +6878,11 @@ impl IntoV1 for super::NesEditHistoryEntry {
     type Output = crate::v1::NesEditHistoryEntry;
 
     fn into_v1(self) -> Result<Self::Output> {
-        let Self { uri, diff } = self;
+        let Self { uri, diff, meta } = self;
         Ok(crate::v1::NesEditHistoryEntry {
             uri: uri.into_v1()?,
             diff: diff.into_v1()?,
+            meta: meta.into_v1()?,
         })
     }
 }
@@ -6770,10 +6892,11 @@ impl IntoV2 for crate::v1::NesEditHistoryEntry {
     type Output = super::NesEditHistoryEntry;
 
     fn into_v2(self) -> Result<Self::Output> {
-        let Self { uri, diff } = self;
+        let Self { uri, diff, meta } = self;
         Ok(super::NesEditHistoryEntry {
             uri: uri.into_v2()?,
             diff: diff.into_v2()?,
+            meta: meta.into_v2()?,
         })
     }
 }
@@ -6788,12 +6911,14 @@ impl IntoV1 for super::NesUserAction {
             uri,
             position,
             timestamp_ms,
+            meta,
         } = self;
         Ok(crate::v1::NesUserAction {
             action: action.into_v1()?,
             uri: uri.into_v1()?,
             position: position.into_v1()?,
             timestamp_ms: timestamp_ms.into_v1()?,
+            meta: meta.into_v1()?,
         })
     }
 }
@@ -6808,12 +6933,14 @@ impl IntoV2 for crate::v1::NesUserAction {
             uri,
             position,
             timestamp_ms,
+            meta,
         } = self;
         Ok(super::NesUserAction {
             action: action.into_v2()?,
             uri: uri.into_v2()?,
             position: position.into_v2()?,
             timestamp_ms: timestamp_ms.into_v2()?,
+            meta: meta.into_v2()?,
         })
     }
 }
@@ -6828,12 +6955,14 @@ impl IntoV1 for super::NesOpenFile {
             language_id,
             visible_range,
             last_focused_ms,
+            meta,
         } = self;
         Ok(crate::v1::NesOpenFile {
             uri: uri.into_v1()?,
             language_id: language_id.into_v1()?,
-            visible_range: visible_range.into_v1()?,
-            last_focused_ms: last_focused_ms.into_v1()?,
+            visible_range: into_v1_default_on_error(visible_range),
+            last_focused_ms: into_v1_default_on_error(last_focused_ms),
+            meta: meta.into_v1()?,
         })
     }
 }
@@ -6848,12 +6977,14 @@ impl IntoV2 for crate::v1::NesOpenFile {
             language_id,
             visible_range,
             last_focused_ms,
+            meta,
         } = self;
         Ok(super::NesOpenFile {
             uri: uri.into_v2()?,
             language_id: language_id.into_v2()?,
-            visible_range: visible_range.into_v2()?,
-            last_focused_ms: last_focused_ms.into_v2()?,
+            visible_range: into_v2_default_on_error(visible_range),
+            last_focused_ms: into_v2_default_on_error(last_focused_ms),
+            meta: meta.into_v2()?,
         })
     }
 }
@@ -6868,12 +6999,14 @@ impl IntoV1 for super::NesDiagnostic {
             range,
             severity,
             message,
+            meta,
         } = self;
         Ok(crate::v1::NesDiagnostic {
             uri: uri.into_v1()?,
             range: range.into_v1()?,
             severity: severity.into_v1()?,
             message: message.into_v1()?,
+            meta: meta.into_v1()?,
         })
     }
 }
@@ -6888,12 +7021,14 @@ impl IntoV2 for crate::v1::NesDiagnostic {
             range,
             severity,
             message,
+            meta,
         } = self;
         Ok(super::NesDiagnostic {
             uri: uri.into_v2()?,
             range: range.into_v2()?,
             severity: severity.into_v2()?,
             message: message.into_v2()?,
+            meta: meta.into_v2()?,
         })
     }
 }
@@ -6936,7 +7071,7 @@ impl IntoV1 for super::SuggestNesResponse {
     fn into_v1(self) -> Result<Self::Output> {
         let Self { suggestions, meta } = self;
         Ok(crate::v1::SuggestNesResponse {
-            suggestions: suggestions.into_v1()?,
+            suggestions: into_v1_vec_skip_errors(suggestions),
             meta: meta.into_v1()?,
         })
     }
@@ -6949,7 +7084,7 @@ impl IntoV2 for crate::v1::SuggestNesResponse {
     fn into_v2(self) -> Result<Self::Output> {
         let Self { suggestions, meta } = self;
         Ok(super::SuggestNesResponse {
-            suggestions: suggestions.into_v2()?,
+            suggestions: into_v2_vec_skip_errors(suggestions),
             meta: meta.into_v2()?,
         })
     }
@@ -7000,12 +7135,14 @@ impl IntoV1 for super::NesEditSuggestion {
             uri,
             edits,
             cursor_position,
+            meta,
         } = self;
         Ok(crate::v1::NesEditSuggestion {
             id: id.into_v1()?,
             uri: uri.into_v1()?,
             edits: edits.into_v1()?,
-            cursor_position: cursor_position.into_v1()?,
+            cursor_position: into_v1_default_on_error(cursor_position),
+            meta: meta.into_v1()?,
         })
     }
 }
@@ -7020,12 +7157,14 @@ impl IntoV2 for crate::v1::NesEditSuggestion {
             uri,
             edits,
             cursor_position,
+            meta,
         } = self;
         Ok(super::NesEditSuggestion {
             id: id.into_v2()?,
             uri: uri.into_v2()?,
             edits: edits.into_v2()?,
-            cursor_position: cursor_position.into_v2()?,
+            cursor_position: into_v2_default_on_error(cursor_position),
+            meta: meta.into_v2()?,
         })
     }
 }
@@ -7035,10 +7174,15 @@ impl IntoV1 for super::NesTextEdit {
     type Output = crate::v1::NesTextEdit;
 
     fn into_v1(self) -> Result<Self::Output> {
-        let Self { range, new_text } = self;
+        let Self {
+            range,
+            new_text,
+            meta,
+        } = self;
         Ok(crate::v1::NesTextEdit {
             range: range.into_v1()?,
             new_text: new_text.into_v1()?,
+            meta: meta.into_v1()?,
         })
     }
 }
@@ -7048,10 +7192,15 @@ impl IntoV2 for crate::v1::NesTextEdit {
     type Output = super::NesTextEdit;
 
     fn into_v2(self) -> Result<Self::Output> {
-        let Self { range, new_text } = self;
+        let Self {
+            range,
+            new_text,
+            meta,
+        } = self;
         Ok(super::NesTextEdit {
             range: range.into_v2()?,
             new_text: new_text.into_v2()?,
+            meta: meta.into_v2()?,
         })
     }
 }
@@ -7061,11 +7210,17 @@ impl IntoV1 for super::NesJumpSuggestion {
     type Output = crate::v1::NesJumpSuggestion;
 
     fn into_v1(self) -> Result<Self::Output> {
-        let Self { id, uri, position } = self;
+        let Self {
+            id,
+            uri,
+            position,
+            meta,
+        } = self;
         Ok(crate::v1::NesJumpSuggestion {
             id: id.into_v1()?,
             uri: uri.into_v1()?,
             position: position.into_v1()?,
+            meta: meta.into_v1()?,
         })
     }
 }
@@ -7075,11 +7230,17 @@ impl IntoV2 for crate::v1::NesJumpSuggestion {
     type Output = super::NesJumpSuggestion;
 
     fn into_v2(self) -> Result<Self::Output> {
-        let Self { id, uri, position } = self;
+        let Self {
+            id,
+            uri,
+            position,
+            meta,
+        } = self;
         Ok(super::NesJumpSuggestion {
             id: id.into_v2()?,
             uri: uri.into_v2()?,
             position: position.into_v2()?,
+            meta: meta.into_v2()?,
         })
     }
 }
@@ -7094,12 +7255,14 @@ impl IntoV1 for super::NesRenameSuggestion {
             uri,
             position,
             new_name,
+            meta,
         } = self;
         Ok(crate::v1::NesRenameSuggestion {
             id: id.into_v1()?,
             uri: uri.into_v1()?,
             position: position.into_v1()?,
             new_name: new_name.into_v1()?,
+            meta: meta.into_v1()?,
         })
     }
 }
@@ -7114,12 +7277,14 @@ impl IntoV2 for crate::v1::NesRenameSuggestion {
             uri,
             position,
             new_name,
+            meta,
         } = self;
         Ok(super::NesRenameSuggestion {
             id: id.into_v2()?,
             uri: uri.into_v2()?,
             position: position.into_v2()?,
             new_name: new_name.into_v2()?,
+            meta: meta.into_v2()?,
         })
     }
 }
@@ -7135,6 +7300,7 @@ impl IntoV1 for super::NesSearchAndReplaceSuggestion {
             search,
             replace,
             is_regex,
+            meta,
         } = self;
         Ok(crate::v1::NesSearchAndReplaceSuggestion {
             id: id.into_v1()?,
@@ -7142,6 +7308,7 @@ impl IntoV1 for super::NesSearchAndReplaceSuggestion {
             search: search.into_v1()?,
             replace: replace.into_v1()?,
             is_regex: is_regex.into_v1()?,
+            meta: meta.into_v1()?,
         })
     }
 }
@@ -7157,6 +7324,7 @@ impl IntoV2 for crate::v1::NesSearchAndReplaceSuggestion {
             search,
             replace,
             is_regex,
+            meta,
         } = self;
         Ok(super::NesSearchAndReplaceSuggestion {
             id: id.into_v2()?,
@@ -7164,6 +7332,7 @@ impl IntoV2 for crate::v1::NesSearchAndReplaceSuggestion {
             search: search.into_v2()?,
             replace: replace.into_v2()?,
             is_regex: is_regex.into_v2()?,
+            meta: meta.into_v2()?,
         })
     }
 }
@@ -7218,7 +7387,7 @@ impl IntoV1 for super::RejectNesNotification {
         Ok(crate::v1::RejectNesNotification {
             session_id: session_id.into_v1()?,
             id: id.into_v1()?,
-            reason: reason.into_v1()?,
+            reason: into_v1_default_on_error(reason),
             meta: meta.into_v1()?,
         })
     }
@@ -7238,7 +7407,7 @@ impl IntoV2 for crate::v1::RejectNesNotification {
         Ok(super::RejectNesNotification {
             session_id: session_id.into_v2()?,
             id: id.into_v2()?,
-            reason: reason.into_v2()?,
+            reason: into_v2_default_on_error(reason),
             meta: meta.into_v2()?,
         })
     }
@@ -7351,11 +7520,13 @@ impl IntoV1 for super::EnumOption {
             value,
             title,
             description,
+            meta,
         } = self;
         Ok(crate::v1::EnumOption {
             value: value.into_v1()?,
             title: title.into_v1()?,
             description: description.into_v1()?,
+            meta: meta.into_v1()?,
         })
     }
 }
@@ -7369,11 +7540,13 @@ impl IntoV2 for crate::v1::EnumOption {
             value,
             title,
             description,
+            meta,
         } = self;
         Ok(super::EnumOption {
             value: value.into_v2()?,
             title: title.into_v2()?,
             description: description.into_v2()?,
+            meta: meta.into_v2()?,
         })
     }
 }
@@ -7393,6 +7566,7 @@ impl IntoV1 for super::StringPropertySchema {
             default,
             enum_values,
             one_of,
+            meta,
         } = self;
         Ok(crate::v1::StringPropertySchema {
             title: title.into_v1()?,
@@ -7404,6 +7578,7 @@ impl IntoV1 for super::StringPropertySchema {
             default: default.into_v1()?,
             enum_values: enum_values.into_v1()?,
             one_of: one_of.into_v1()?,
+            meta: meta.into_v1()?,
         })
     }
 }
@@ -7423,6 +7598,7 @@ impl IntoV2 for crate::v1::StringPropertySchema {
             default,
             enum_values,
             one_of,
+            meta,
         } = self;
         Ok(super::StringPropertySchema {
             title: title.into_v2()?,
@@ -7434,6 +7610,7 @@ impl IntoV2 for crate::v1::StringPropertySchema {
             default: default.into_v2()?,
             enum_values: enum_values.into_v2()?,
             one_of: one_of.into_v2()?,
+            meta: meta.into_v2()?,
         })
     }
 }
@@ -7449,6 +7626,7 @@ impl IntoV1 for super::NumberPropertySchema {
             minimum,
             maximum,
             default,
+            meta,
         } = self;
         Ok(crate::v1::NumberPropertySchema {
             title: title.into_v1()?,
@@ -7456,6 +7634,7 @@ impl IntoV1 for super::NumberPropertySchema {
             minimum: minimum.into_v1()?,
             maximum: maximum.into_v1()?,
             default: default.into_v1()?,
+            meta: meta.into_v1()?,
         })
     }
 }
@@ -7471,6 +7650,7 @@ impl IntoV2 for crate::v1::NumberPropertySchema {
             minimum,
             maximum,
             default,
+            meta,
         } = self;
         Ok(super::NumberPropertySchema {
             title: title.into_v2()?,
@@ -7478,6 +7658,7 @@ impl IntoV2 for crate::v1::NumberPropertySchema {
             minimum: minimum.into_v2()?,
             maximum: maximum.into_v2()?,
             default: default.into_v2()?,
+            meta: meta.into_v2()?,
         })
     }
 }
@@ -7493,6 +7674,7 @@ impl IntoV1 for super::IntegerPropertySchema {
             minimum,
             maximum,
             default,
+            meta,
         } = self;
         Ok(crate::v1::IntegerPropertySchema {
             title: title.into_v1()?,
@@ -7500,6 +7682,7 @@ impl IntoV1 for super::IntegerPropertySchema {
             minimum: minimum.into_v1()?,
             maximum: maximum.into_v1()?,
             default: default.into_v1()?,
+            meta: meta.into_v1()?,
         })
     }
 }
@@ -7515,6 +7698,7 @@ impl IntoV2 for crate::v1::IntegerPropertySchema {
             minimum,
             maximum,
             default,
+            meta,
         } = self;
         Ok(super::IntegerPropertySchema {
             title: title.into_v2()?,
@@ -7522,6 +7706,7 @@ impl IntoV2 for crate::v1::IntegerPropertySchema {
             minimum: minimum.into_v2()?,
             maximum: maximum.into_v2()?,
             default: default.into_v2()?,
+            meta: meta.into_v2()?,
         })
     }
 }
@@ -7535,11 +7720,13 @@ impl IntoV1 for super::BooleanPropertySchema {
             title,
             description,
             default,
+            meta,
         } = self;
         Ok(crate::v1::BooleanPropertySchema {
             title: title.into_v1()?,
             description: description.into_v1()?,
             default: default.into_v1()?,
+            meta: meta.into_v1()?,
         })
     }
 }
@@ -7553,11 +7740,13 @@ impl IntoV2 for crate::v1::BooleanPropertySchema {
             title,
             description,
             default,
+            meta,
         } = self;
         Ok(super::BooleanPropertySchema {
             title: title.into_v2()?,
             description: description.into_v2()?,
             default: default.into_v2()?,
+            meta: meta.into_v2()?,
         })
     }
 }
@@ -7589,10 +7778,15 @@ impl IntoV1 for super::UntitledMultiSelectItems {
     type Output = crate::v1::UntitledMultiSelectItems;
 
     fn into_v1(self) -> Result<Self::Output> {
-        let Self { type_, values } = self;
+        let Self {
+            type_,
+            values,
+            meta,
+        } = self;
         Ok(crate::v1::UntitledMultiSelectItems {
             type_: type_.into_v1()?,
             values: values.into_v1()?,
+            meta: meta.into_v1()?,
         })
     }
 }
@@ -7602,10 +7796,15 @@ impl IntoV2 for crate::v1::UntitledMultiSelectItems {
     type Output = super::UntitledMultiSelectItems;
 
     fn into_v2(self) -> Result<Self::Output> {
-        let Self { type_, values } = self;
+        let Self {
+            type_,
+            values,
+            meta,
+        } = self;
         Ok(super::UntitledMultiSelectItems {
             type_: type_.into_v2()?,
             values: values.into_v2()?,
+            meta: meta.into_v2()?,
         })
     }
 }
@@ -7615,9 +7814,10 @@ impl IntoV1 for super::TitledMultiSelectItems {
     type Output = crate::v1::TitledMultiSelectItems;
 
     fn into_v1(self) -> Result<Self::Output> {
-        let Self { options } = self;
+        let Self { options, meta } = self;
         Ok(crate::v1::TitledMultiSelectItems {
             options: options.into_v1()?,
+            meta: meta.into_v1()?,
         })
     }
 }
@@ -7627,9 +7827,10 @@ impl IntoV2 for crate::v1::TitledMultiSelectItems {
     type Output = super::TitledMultiSelectItems;
 
     fn into_v2(self) -> Result<Self::Output> {
-        let Self { options } = self;
+        let Self { options, meta } = self;
         Ok(super::TitledMultiSelectItems {
             options: options.into_v2()?,
+            meta: meta.into_v2()?,
         })
     }
 }
@@ -7670,6 +7871,7 @@ impl IntoV1 for super::MultiSelectPropertySchema {
             max_items,
             items,
             default,
+            meta,
         } = self;
         Ok(crate::v1::MultiSelectPropertySchema {
             title: title.into_v1()?,
@@ -7678,6 +7880,7 @@ impl IntoV1 for super::MultiSelectPropertySchema {
             max_items: max_items.into_v1()?,
             items: items.into_v1()?,
             default: default.into_v1()?,
+            meta: meta.into_v1()?,
         })
     }
 }
@@ -7694,6 +7897,7 @@ impl IntoV2 for crate::v1::MultiSelectPropertySchema {
             max_items,
             items,
             default,
+            meta,
         } = self;
         Ok(super::MultiSelectPropertySchema {
             title: title.into_v2()?,
@@ -7702,6 +7906,7 @@ impl IntoV2 for crate::v1::MultiSelectPropertySchema {
             max_items: max_items.into_v2()?,
             items: items.into_v2()?,
             default: default.into_v2()?,
+            meta: meta.into_v2()?,
         })
     }
 }
@@ -7747,6 +7952,7 @@ impl IntoV1 for super::ElicitationSchema {
             properties,
             required,
             description,
+            meta,
         } = self;
         Ok(crate::v1::ElicitationSchema {
             type_: type_.into_v1()?,
@@ -7754,6 +7960,7 @@ impl IntoV1 for super::ElicitationSchema {
             properties: properties.into_v1()?,
             required: required.into_v1()?,
             description: description.into_v1()?,
+            meta: meta.into_v1()?,
         })
     }
 }
@@ -7769,6 +7976,7 @@ impl IntoV2 for crate::v1::ElicitationSchema {
             properties,
             required,
             description,
+            meta,
         } = self;
         Ok(super::ElicitationSchema {
             type_: type_.into_v2()?,
@@ -7776,6 +7984,7 @@ impl IntoV2 for crate::v1::ElicitationSchema {
             properties: properties.into_v2()?,
             required: required.into_v2()?,
             description: description.into_v2()?,
+            meta: meta.into_v2()?,
         })
     }
 }
@@ -7787,8 +7996,8 @@ impl IntoV1 for super::ElicitationCapabilities {
     fn into_v1(self) -> Result<Self::Output> {
         let Self { form, url, meta } = self;
         Ok(crate::v1::ElicitationCapabilities {
-            form: form.into_v1()?,
-            url: url.into_v1()?,
+            form: into_v1_default_on_error(form),
+            url: into_v1_default_on_error(url),
             meta: meta.into_v1()?,
         })
     }
@@ -7801,8 +8010,8 @@ impl IntoV2 for crate::v1::ElicitationCapabilities {
     fn into_v2(self) -> Result<Self::Output> {
         let Self { form, url, meta } = self;
         Ok(super::ElicitationCapabilities {
-            form: form.into_v2()?,
-            url: url.into_v2()?,
+            form: into_v2_default_on_error(form),
+            url: into_v2_default_on_error(url),
             meta: meta.into_v2()?,
         })
     }
@@ -8333,7 +8542,7 @@ impl IntoV1 for super::TextContent {
             meta,
         } = self;
         Ok(crate::v1::TextContent {
-            annotations: annotations.into_v1()?,
+            annotations: into_v1_default_on_error(annotations),
             text: text.into_v1()?,
             meta: meta.into_v1()?,
         })
@@ -8350,7 +8559,7 @@ impl IntoV2 for crate::v1::TextContent {
             meta,
         } = self;
         Ok(super::TextContent {
-            annotations: annotations.into_v2()?,
+            annotations: into_v2_default_on_error(annotations),
             text: text.into_v2()?,
             meta: meta.into_v2()?,
         })
@@ -8369,7 +8578,7 @@ impl IntoV1 for super::ImageContent {
             meta,
         } = self;
         Ok(crate::v1::ImageContent {
-            annotations: annotations.into_v1()?,
+            annotations: into_v1_default_on_error(annotations),
             data: data.into_v1()?,
             mime_type: mime_type.into_v1()?,
             uri: uri.into_v1()?,
@@ -8390,7 +8599,7 @@ impl IntoV2 for crate::v1::ImageContent {
             meta,
         } = self;
         Ok(super::ImageContent {
-            annotations: annotations.into_v2()?,
+            annotations: into_v2_default_on_error(annotations),
             data: data.into_v2()?,
             mime_type: mime_type.into_v2()?,
             uri: uri.into_v2()?,
@@ -8410,7 +8619,7 @@ impl IntoV1 for super::AudioContent {
             meta,
         } = self;
         Ok(crate::v1::AudioContent {
-            annotations: annotations.into_v1()?,
+            annotations: into_v1_default_on_error(annotations),
             data: data.into_v1()?,
             mime_type: mime_type.into_v1()?,
             meta: meta.into_v1()?,
@@ -8429,7 +8638,7 @@ impl IntoV2 for crate::v1::AudioContent {
             meta,
         } = self;
         Ok(super::AudioContent {
-            annotations: annotations.into_v2()?,
+            annotations: into_v2_default_on_error(annotations),
             data: data.into_v2()?,
             mime_type: mime_type.into_v2()?,
             meta: meta.into_v2()?,
@@ -8447,7 +8656,7 @@ impl IntoV1 for super::EmbeddedResource {
             meta,
         } = self;
         Ok(crate::v1::EmbeddedResource {
-            annotations: annotations.into_v1()?,
+            annotations: into_v1_default_on_error(annotations),
             resource: resource.into_v1()?,
             meta: meta.into_v1()?,
         })
@@ -8464,7 +8673,7 @@ impl IntoV2 for crate::v1::EmbeddedResource {
             meta,
         } = self;
         Ok(super::EmbeddedResource {
-            annotations: annotations.into_v2()?,
+            annotations: into_v2_default_on_error(annotations),
             resource: resource.into_v2()?,
             meta: meta.into_v2()?,
         })
@@ -8592,7 +8801,7 @@ impl IntoV1 for super::ResourceLink {
             meta,
         } = self;
         Ok(crate::v1::ResourceLink {
-            annotations: annotations.into_v1()?,
+            annotations: into_v1_default_on_error(annotations),
             description: description.into_v1()?,
             mime_type: mime_type.into_v1()?,
             name: name.into_v1()?,
@@ -8619,7 +8828,7 @@ impl IntoV2 for crate::v1::ResourceLink {
             meta,
         } = self;
         Ok(super::ResourceLink {
-            annotations: annotations.into_v2()?,
+            annotations: into_v2_default_on_error(annotations),
             description: description.into_v2()?,
             mime_type: mime_type.into_v2()?,
             name: name.into_v2()?,
@@ -8642,7 +8851,7 @@ impl IntoV1 for super::Annotations {
             meta,
         } = self;
         Ok(crate::v1::Annotations {
-            audience: audience.into_v1()?,
+            audience: option_vec_into_v1_skip_errors(audience),
             last_modified: last_modified.into_v1()?,
             priority: priority.into_v1()?,
             meta: meta.into_v1()?,
@@ -8661,7 +8870,7 @@ impl IntoV2 for crate::v1::Annotations {
             meta,
         } = self;
         Ok(super::Annotations {
-            audience: audience.into_v2()?,
+            audience: option_vec_into_v2_skip_errors(audience),
             last_modified: last_modified.into_v2()?,
             priority: priority.into_v2()?,
             meta: meta.into_v2()?,
@@ -9151,6 +9360,18 @@ mod tests {
     }
 
     #[test]
+    fn prompt_responses_do_not_convert_across_v1_v2_lifecycle_boundary() {
+        assert_v2_to_v1_error(
+            v2::PromptResponse::new(),
+            "v2 PromptResponse cannot be represented in v1 because v2 reports completion with state_update session updates",
+        );
+        assert_v1_to_v2_error(
+            v1::PromptResponse::new(v1::StopReason::EndTurn),
+            "v1 PromptResponse cannot be represented in v2 by itself because v2 reports completion with state_update session updates",
+        );
+    }
+
+    #[test]
     fn v1_tool_call_converts_to_v2_upsert_with_diff_and_locations() {
         let tool_call = v1::ToolCall::new("tc_1", "editing files")
             .kind(v1::ToolKind::Edit)
@@ -9498,6 +9719,17 @@ mod tests {
     }
 
     #[test]
+    fn v2_tool_call_content_chunk_does_not_convert_to_v1_replacement_update() {
+        assert_v2_to_v1_many_error(
+            v2::SessionUpdate::ToolCallContentChunk(v2::ToolCallContentChunk::new(
+                "tc_1",
+                v2::ContentBlock::Text(v2::TextContent::new("partial output")),
+            )),
+            "v2 SessionUpdate variant `tool_call_content_chunk` cannot be represented in v1 because v1 tool-call content updates replace content instead of appending",
+        );
+    }
+
+    #[test]
     fn v1_content_chunk_without_message_id_does_not_convert_to_v2() {
         assert_v1_to_v2_error(
             v1::ContentChunk::new(v1::ContentBlock::Text(v1::TextContent::new("missing"))),
@@ -9556,6 +9788,16 @@ mod tests {
     }
 
     #[test]
+    fn v2_state_update_does_not_convert_to_v1() {
+        assert_v2_to_v1_many_error(
+            v2::SessionUpdate::StateUpdate(v2::StateUpdate::Idle(
+                v2::IdleStateUpdate::new().stop_reason(v2::StopReason::EndTurn),
+            )),
+            "v2 SessionUpdate variant `state_update` cannot be represented in v1 because v1 reports completion in the session/prompt response",
+        );
+    }
+
+    #[test]
     fn v1_current_mode_update_does_not_convert_to_v2() {
         assert_v1_to_v2_error(
             v1::SessionUpdate::CurrentModeUpdate(v1::CurrentModeUpdate::new("ask")),
@@ -9594,6 +9836,157 @@ mod tests {
             v2_to_v1(v2::NewSessionResponse::new("sess")).unwrap();
 
         assert!(response.modes.is_none());
+    }
+
+    #[test]
+    fn v2_tool_call_update_conversion_matches_v1_default_on_error_fields() {
+        let update = v2::ToolCallUpdate::new("tc")
+            .kind(v2::ToolKind::Unknown("_future_kind".to_string()))
+            .status(v2::ToolCallStatus::Other("_paused".to_string()))
+            .content(vec![
+                v2::ToolCallContent::Other(v2::OtherToolCallContent::new(
+                    "_chart",
+                    BTreeMap::default(),
+                )),
+                v2::ToolCallContent::Diff(v2::Diff::new("/tmp/file.txt", "new")),
+            ]);
+
+        let converted: v1::ToolCallUpdate = v2_to_v1(update).unwrap();
+
+        assert_eq!(converted.fields.kind, None);
+        assert_eq!(converted.fields.status, None);
+        assert_eq!(
+            converted.fields.content,
+            Some(vec![v1::ToolCallContent::Diff(v1::Diff::new(
+                "/tmp/file.txt",
+                "new"
+            ))])
+        );
+    }
+
+    #[test]
+    fn v2_collection_conversion_skips_items_like_v1_vec_skip_error() {
+        let response = v2::InitializeResponse::new(ProtocolVersion::V2)
+            .capabilities(v2::AgentCapabilities::new().session(v2::SessionCapabilities::new()))
+            .auth_methods(vec![
+                v2::AuthMethod::Other(v2::OtherAuthMethod::new(
+                    "_oauth",
+                    "oauth",
+                    "OAuth",
+                    BTreeMap::default(),
+                )),
+                v2::AuthMethod::Agent(v2::AuthMethodAgent::new("agent", "Agent")),
+            ]);
+        let converted: v1::InitializeResponse = v2_to_v1(response).unwrap();
+        assert_eq!(converted.auth_methods.len(), 1);
+        assert!(matches!(
+            converted.auth_methods[0],
+            v1::AuthMethod::Agent(_)
+        ));
+
+        let config_update = v2::ConfigOptionUpdate::new(vec![
+            v2::SessionConfigOption::select(
+                "mode",
+                "Mode",
+                "ask",
+                vec![v2::SessionConfigSelectOption::new("ask", "Ask")],
+            ),
+            v2::SessionConfigOption::new(
+                "future",
+                "Future",
+                v2::SessionConfigKind::Other(v2::OtherSessionConfigKind::new(
+                    "_slider",
+                    BTreeMap::default(),
+                )),
+            ),
+        ]);
+        let converted: v1::ConfigOptionUpdate = v2_to_v1(config_update).unwrap();
+        assert_eq!(converted.config_options.len(), 1);
+        assert_eq!(converted.config_options[0].id.0.as_ref(), "mode");
+    }
+
+    #[test]
+    fn v2_default_on_error_fields_drop_unrepresentable_nested_values() {
+        let command = v2::AvailableCommand::new("review", "Review changes").input(
+            v2::AvailableCommandInput::Other(v2::OtherAvailableCommandInput::new(
+                "_choices",
+                BTreeMap::default(),
+            )),
+        );
+        let converted: v1::AvailableCommandsUpdate =
+            v2_to_v1(v2::AvailableCommandsUpdate::new(vec![command])).unwrap();
+
+        assert_eq!(converted.available_commands.len(), 1);
+        assert_eq!(converted.available_commands[0].input, None);
+
+        let content = v2::TextContent::new("hello").annotations(
+            v2::Annotations::new()
+                .audience(vec![v2::Role::Other("_critic".to_string()), v2::Role::User]),
+        );
+        let converted: v1::TextContent = v2_to_v1(content).unwrap();
+
+        assert_eq!(
+            converted
+                .annotations
+                .and_then(|annotations| annotations.audience),
+            Some(vec![v1::Role::User])
+        );
+    }
+
+    #[test]
+    fn v2_plan_entries_skip_unrepresentable_items_inside_tolerant_vectors() {
+        let update = v2::PlanUpdate::new(v2::PlanUpdateContent::items(
+            "main",
+            vec![
+                v2::PlanEntry::new(
+                    "keep",
+                    v2::PlanEntryPriority::High,
+                    v2::PlanEntryStatus::Pending,
+                ),
+                v2::PlanEntry::new(
+                    "drop",
+                    v2::PlanEntryPriority::Other("_critical".to_string()),
+                    v2::PlanEntryStatus::Pending,
+                ),
+            ],
+        ));
+
+        #[cfg(not(feature = "unstable_plan_operations"))]
+        {
+            let converted: v1::Plan = v2_to_v1(update).unwrap();
+            assert_eq!(converted.entries.len(), 1);
+            assert_eq!(converted.entries[0].content, "keep");
+        }
+
+        #[cfg(feature = "unstable_plan_operations")]
+        {
+            let converted: v1::PlanUpdate = v2_to_v1(update).unwrap();
+            let v1::PlanUpdateContent::Items(items) = converted.plan else {
+                panic!("expected item plan update");
+            };
+            assert_eq!(items.entries.len(), 1);
+            assert_eq!(items.entries[0].content, "keep");
+        }
+    }
+
+    #[test]
+    fn v1_tool_call_update_conversion_skips_items_for_v2_vec_skip_error_fields() {
+        let update = v1::ToolCallUpdate::new(
+            "tc",
+            v1::ToolCallUpdateFields::new().content(vec![
+                v1::ToolCallContent::Terminal(v1::Terminal::new("term")),
+                v1::ToolCallContent::Diff(v1::Diff::new("/tmp/file.txt", "new")),
+            ]),
+        );
+
+        let converted: v2::ToolCallUpdate = v1_to_v2(update).unwrap();
+        assert_eq!(
+            converted.content,
+            crate::MaybeUndefined::Value(vec![v2::ToolCallContent::Diff(v2::Diff::new(
+                "/tmp/file.txt",
+                "new"
+            ))])
+        );
     }
 
     #[test]

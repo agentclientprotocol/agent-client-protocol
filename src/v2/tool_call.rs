@@ -179,6 +179,53 @@ impl ToolCallUpdate {
     }
 }
 
+/// A streamed item of tool-call content.
+///
+/// Tool-call content chunks append one [`ToolCallContent`] item to the current
+/// content for the matching [`ToolCallId`]. Agents can use
+/// [`ToolCallUpdate::content`] when they need to replace the whole content
+/// collection instead.
+#[skip_serializing_none]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct ToolCallContentChunk {
+    /// The ID of the tool call this content belongs to.
+    pub tool_call_id: ToolCallId,
+    /// A single item of content produced by the tool call.
+    pub content: ToolCallContent,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys. This field is optional; omitted or `null` means there is no
+    /// chunk-level metadata.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl ToolCallContentChunk {
+    #[must_use]
+    pub fn new(tool_call_id: impl Into<ToolCallId>, content: impl Into<ToolCallContent>) -> Self {
+        Self {
+            tool_call_id: tool_call_id.into(),
+            content: content.into(),
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
 /// Unique identifier for a tool call within a session.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
@@ -604,6 +651,28 @@ mod tests {
             panic!("locations should deserialize to a value");
         };
         assert_eq!(locations.len(), 1);
+    }
+
+    #[test]
+    fn tool_call_content_chunk_serializes_single_content_item() {
+        let chunk = ToolCallContentChunk::new(
+            "tc_1",
+            ContentBlock::Text(crate::v2::TextContent::new("partial output")),
+        );
+
+        assert_eq!(
+            serde_json::to_value(chunk).unwrap(),
+            serde_json::json!({
+                "toolCallId": "tc_1",
+                "content": {
+                    "type": "content",
+                    "content": {
+                        "type": "text",
+                        "text": "partial output"
+                    }
+                }
+            })
+        );
     }
 
     #[test]

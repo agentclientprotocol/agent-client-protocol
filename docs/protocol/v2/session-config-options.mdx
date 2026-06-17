@@ -148,7 +148,7 @@ Agents **MUST** always provide a default value for every configuration option. T
 - The Client chooses not to display certain options
 - The Client receives an option type it doesn't recognize
 
-In v2, option `type` values can be custom or future variants. Custom option types **MUST** begin with `_`; unknown non-underscore option types are reserved for future ACP variants. If a Client receives an option with an unrecognized `type`, it **SHOULD** preserve the raw option when storing, replaying, proxying, or forwarding session state, and otherwise ignore that option. The Agent will continue using its default value.
+Option `type` values can be custom or future variants. Custom option types **MUST** begin with `_`; unknown non-underscore option types are reserved for future ACP variants. If a Client receives an option with an unrecognized `type`, it **SHOULD** preserve the raw option when storing, replaying, proxying, or forwarding session state, and otherwise ignore that option. The Agent will continue using its default value.
 
 ## Setting a Config Option
 

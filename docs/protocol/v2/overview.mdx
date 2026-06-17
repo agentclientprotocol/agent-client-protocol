@@ -12,7 +12,7 @@ The protocol follows the [JSON-RPC 2.0](https://www.jsonrpc.org/specification) s
 - **Methods**: Request-response pairs that expect a result or error
 - **Notifications**: One-way messages that don't expect a response
 
-ACP v2 follows JSON-RPC 2.0 batch behavior. See
+ACP follows JSON-RPC 2.0 batch behavior. See
 [Transports](/protocol/v2/transports#json-rpc-batch-messages) for batch
 handling requirements.
 
@@ -35,12 +35,13 @@ A typical flow follows this pattern:
 
 </Step>
 
-<Step title="Prompt Turn">
+<Step title="Prompt Lifecycle">
    - Client → Agent: `session/prompt` to send user message
-   - Agent → Client: `session/update` notifications for progress updates
-   - Agent → Client: File operations or permission requests as needed
+   - Agent → Client: `session/prompt` response once the prompt is accepted
+   - Agent → Client: `session/update` notifications for accepted messages, state updates, and progress updates
+   - Agent → Client: Permission requests as needed
    - Client → Agent: `session/cancel` to interrupt processing if needed
-   - Turn ends and the Agent sends the `session/prompt` response with a stop reason
+   - Active work completes when the Agent sends an idle `state_update` session update with a stop reason
 </Step>
 </Steps>
 
@@ -76,7 +77,8 @@ Agents are programs that use generative AI to autonomously modify code. They typ
   name="session/prompt"
   post={[<a href="/protocol/v2/schema#session%2Fprompt">Schema</a>]}
 >
-  [Send user prompts](/protocol/v2/prompt-turn#1-user-message) to the Agent.
+  [Send user prompts](/protocol/v2/prompt-lifecycle#1-user-message) to the
+  Agent.
 </ResponseField>
 
 ### Optional Methods
@@ -103,7 +105,7 @@ Agents are programs that use generative AI to autonomously modify code. They typ
   name="session/cancel"
   post={[<a href="/protocol/v2/schema#session%2Fcancel">Schema</a>]}
 >
-  [Cancel ongoing operations](/protocol/v2/prompt-turn#cancellation) (no
+  [Cancel ongoing operations](/protocol/v2/prompt-lifecycle#cancellation) (no
   response expected).
 </ResponseField>
 
@@ -127,13 +129,12 @@ Clients provide the interface between users and agents. They are typically code 
   name="session/update"
   post={[<a href="/protocol/v2/schema#session%2Fupdate">Schema</a>]}
 >
-  [Send session updates](/protocol/v2/prompt-turn#3-agent-reports-output) to
-  inform the Client of changes (no response expected). This includes [message
-  updates and chunks](/protocol/v2/content), [tool calls and
-  updates](/protocol/v2/tool-calls), [plans](/protocol/v2/agent-plan),
-  [available commands
-  updates](/protocol/v2/slash-commands#advertising-commands), and [config option
-  updates](/protocol/v2/session-config-options#from-the-agent).
+  [Send session updates](/protocol/v2/prompt-lifecycle#3-agent-reports-output)
+  to inform the Client of changes (no response expected). This includes [message
+  updates and chunks](/protocol/v2/content), [tool calls, updates, and content
+  chunks](/protocol/v2/tool-calls), [plans](/protocol/v2/agent-plan), [available
+  commands updates](/protocol/v2/slash-commands#advertising-commands), and
+  [config option updates](/protocol/v2/session-config-options#from-the-agent).
 </ResponseField>
 
 ## Argument requirements
@@ -153,7 +154,7 @@ All methods follow standard JSON-RPC 2.0 [error handling](https://www.jsonrpc.or
 
 Unless explicitly defined otherwise in the schema, ACP-defined JSON object property keys use `camelCase`. String values carried by discriminator fields use `snake_case`. The JSON-RPC envelope fields (`jsonrpc`, `id`, `method`, `params`, `result`, and `error`) follow the JSON-RPC 2.0 specification.
 
-In v2, selected enum-like fields and tagged unions can define custom or future fallbacks. For those fields, `_`-prefixed values are reserved for implementation-specific extensions, while unknown non-underscore values are reserved for future ACP variants.
+Selected enum-like fields and tagged unions can define custom or future fallbacks. For those fields, `_`-prefixed values are reserved for implementation-specific extensions, while unknown non-underscore values are reserved for future ACP variants.
 
 ## Extensibility
 
@@ -169,5 +170,5 @@ Learn about [protocol extensibility](/protocol/v2/extensibility) to understand h
 
 - Learn about [Initialization](/protocol/v2/initialization) to understand version and capability negotiation
 - Understand [Session Setup](/protocol/v2/session-setup) for creating and loading sessions
-- Review the [Prompt Turn](/protocol/v2/prompt-turn) lifecycle
+- Review the [Prompt Lifecycle](/protocol/v2/prompt-lifecycle)
 - Explore [Extensibility](/protocol/v2/extensibility) to add custom features

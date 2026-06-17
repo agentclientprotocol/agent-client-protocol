@@ -147,7 +147,8 @@ fn write_schema(schema_value: &serde_json::Value, schema_dir: &Path, docs_protoc
         (false, true) => "v1/schema.unstable.json",
         (false, false) => "v1/schema.json",
     };
-    let schema_json = serde_json::to_string_pretty(&schema_value).unwrap();
+    let published_schema_value = schema_value_for_publication(schema_value);
+    let schema_json = serde_json::to_string_pretty(&published_schema_value).unwrap();
     let schema_path = schema_dir.join(schema_file);
     if let Some(parent) = schema_path.parent() {
         fs::create_dir_all(parent)
@@ -246,9 +247,49 @@ fn write_schema(schema_value: &serde_json::Value, schema_dir: &Path, docs_protoc
     println!("✓ Generated {doc_file}");
 }
 
+fn schema_value_for_publication(schema_value: &serde_json::Value) -> serde_json::Value {
+    #[cfg(feature = "unstable_protocol_v2")]
+    {
+        let mut schema_value = schema_value.clone();
+        replace_string_values(
+            &mut schema_value,
+            "https://agentclientprotocol.com/protocol/prompt-lifecycle",
+            "https://agentclientprotocol.com/protocol/v2/prompt-lifecycle",
+        );
+        schema_value
+    }
+
+    #[cfg(not(feature = "unstable_protocol_v2"))]
+    {
+        schema_value.clone()
+    }
+}
+
+#[cfg(feature = "unstable_protocol_v2")]
+fn replace_string_values(value: &mut serde_json::Value, from: &str, to: &str) {
+    match value {
+        serde_json::Value::String(string) => {
+            *string = string.replace(from, to);
+        }
+        serde_json::Value::Array(array) => {
+            for value in array {
+                replace_string_values(value, from, to);
+            }
+        }
+        serde_json::Value::Object(object) => {
+            for value in object.values_mut() {
+                replace_string_values(value, from, to);
+            }
+        }
+        serde_json::Value::Null | serde_json::Value::Bool(_) | serde_json::Value::Number(_) => {}
+    }
+}
+
 #[cfg(test)]
 mod schema_annotation_tests {
     use super::root_schema_value;
+    #[cfg(feature = "unstable_protocol_v2")]
+    use super::schema_value_for_publication;
     use serde_json::Value;
     use std::{fs, path::Path};
 
@@ -332,6 +373,18 @@ mod schema_annotation_tests {
                 "missing CancelRequestNotification in ProtocolLevelNotification"
             );
         }
+    }
+
+    #[cfg(feature = "unstable_protocol_v2")]
+    #[test]
+    fn published_v2_schema_links_to_v2_prompt_lifecycle_docs() {
+        let schema = schema_value_for_publication(&root_schema_value());
+        let schema_json = serde_json::to_string(&schema).unwrap();
+
+        assert!(
+            schema_json.contains("https://agentclientprotocol.com/protocol/v2/prompt-lifecycle")
+        );
+        assert!(!schema_json.contains("https://agentclientprotocol.com/protocol/prompt-lifecycle"));
     }
 
     #[test]
@@ -470,7 +523,7 @@ mod markdown_generator {
             if schema_file.starts_with("v2/") {
                 writeln!(
                     &mut self.output,
-                    "<Note>This v2 schema file is generated in this repository at [`schema/{schema_file}`](https://github.com/agentclientprotocol/agent-client-protocol/blob/main/schema/{schema_file}). ACP v2 remains hidden while it is being drafted, and v2 schema GitHub releases are not published yet.</Note>"
+                    "<Note>This schema file is generated in this repository at [`schema/{schema_file}`](https://github.com/agentclientprotocol/agent-client-protocol/blob/main/schema/{schema_file}). GitHub releases for this schema are not published yet.</Note>"
                 )
                 .unwrap();
             } else {

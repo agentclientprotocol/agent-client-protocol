@@ -3,7 +3,7 @@ title: "Slash Commands"
 description: "Advertise available slash commands to clients"
 ---
 
-Agents can advertise a set of slash commands that users can invoke. These commands provide quick access to specific agent capabilities and workflows. Commands are run as part of regular [prompt](/protocol/v2/prompt-turn) requests where the Client includes the command text in the prompt.
+Agents can advertise a set of slash commands that users can invoke. These commands provide quick access to specific agent capabilities and workflows. Commands are run as part of regular [prompt](/protocol/v2/prompt-lifecycle) requests where the Client includes the command text in the prompt.
 
 ## Advertising commands
 
@@ -68,7 +68,7 @@ Currently supports unstructured text input:
   A hint to display when the input hasn't been provided yet
 </ResponseField>
 
-In v2, command input specifications can add custom or future `type` values. Custom input types **MUST** begin with `_`; unknown non-underscore input types are reserved for future ACP variants. Clients that cannot render an input specification should preserve it when storing, replaying, proxying, or forwarding command metadata, and otherwise display the command without structured input.
+Command input specifications can add custom or future `type` values. Custom input types **MUST** begin with `_`; unknown non-underscore input types are reserved for future ACP variants. Clients that cannot render an input specification should preserve it when storing, replaying, proxying, or forwarding command metadata, and otherwise display the command without structured input.
 
 ## Dynamic updates
 

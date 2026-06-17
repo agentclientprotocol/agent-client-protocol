@@ -5,11 +5,11 @@ description: "How Agents communicate their execution plans"
 
 Plans are execution strategies for complex tasks that require multiple steps.
 
-Agents may share plans with Clients through [`session/update`](/protocol/v2/prompt-turn#3-agent-reports-output) notifications, providing real-time visibility into their thinking and progress.
+Agents may share plans with Clients through [`session/update`](/protocol/v2/prompt-lifecycle#3-agent-reports-output) notifications, providing real-time visibility into their thinking and progress.
 
-`plan_update` is the v2 plan format. It carries a `plan` object with a `type` discriminator and a required `id` so Clients can track multiple plans independently.
+`plan_update` carries a `plan` object with a `type` discriminator and a required `id` so Clients can track multiple plans independently.
 
-The stable v2 plan content type is `items`. Additional plan operations remain unstable while the Plan Operations RFD is in progress.
+The plan content type is `items`. Additional plan operations remain unstable while the Plan Operations RFD is in progress.
 
 ## Creating Plans
 
@@ -85,7 +85,7 @@ Each plan entry represents a specific task or goal within the overall execution 
 - `medium`
 - `low`
 
-In v2, custom or future priority values can be used for display hints. Custom priorities **MUST** begin with `_`; unknown non-underscore priorities are reserved for future ACP variants.
+Custom or future priority values can be used for display hints. Custom priorities **MUST** begin with `_`; unknown non-underscore priorities are reserved for future ACP variants.
 
 </ParamField>
 
@@ -96,7 +96,7 @@ In v2, custom or future priority values can be used for display hints. Custom pr
 - `in_progress`
 - `completed`
 
-In v2, custom or future status values can be used when Clients can preserve or display a generic plan-entry state. Custom statuses **MUST** begin with `_`; unknown non-underscore statuses are reserved for future ACP variants.
+Custom or future status values can be used when Clients can preserve or display a generic plan-entry state. Custom statuses **MUST** begin with `_`; unknown non-underscore statuses are reserved for future ACP variants.
 
 </ParamField>
 

@@ -110,14 +110,14 @@ Unlike with custom requests, implementations **SHOULD** ignore unrecognized noti
 
 ## Enum and Tagged-Union Variants
 
-ACP v2 also reserves `_`-prefixed values for implementation-specific extensions in enum-like fields and tagged unions that define a custom or future fallback.
+ACP also reserves `_`-prefixed values for implementation-specific extensions in enum-like fields and tagged unions that define a custom or future fallback.
 
 - Values beginning with `_` are reserved for implementation-specific extensions.
 - Unknown values that do not begin with `_` are reserved for future ACP variants.
 - Extensions **MUST NOT** define custom non-underscore values.
 - Implementations **MUST NOT** treat unknown non-underscore values as custom extensions.
 
-This rule applies only where the v2 draft schema defines a fallback path. Closed discriminators can still reject unknown values when the receiver cannot safely continue without understanding the variant.
+This rule applies only where the schema defines a fallback path. Closed discriminators can still reject unknown values when the receiver cannot safely continue without understanding the variant.
 
 When storing, replaying, proxying, or forwarding data, implementations **SHOULD** preserve unknown values and any raw tagged-union payloads. When displaying an unknown value, implementations **SHOULD** fall back to generic UI behavior that matches the field's purpose.
 

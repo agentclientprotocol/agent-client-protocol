@@ -2186,6 +2186,7 @@ impl From<Vec<SessionConfigSelectGroup>> for SessionConfigSelectOptions {
 }
 
 /// A single-value selector (dropdown) session configuration option payload.
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -2215,6 +2216,7 @@ impl SessionConfigSelect {
 ///
 /// A boolean on/off toggle session configuration option payload.
 #[cfg(feature = "unstable_boolean_config")]
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -3118,6 +3120,13 @@ pub struct Usage {
     pub cached_read_tokens: Option<u64>,
     /// Total cache write tokens.
     pub cached_write_tokens: Option<u64>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
 }
 
 #[cfg(feature = "unstable_end_turn_token_usage")]
@@ -3131,6 +3140,7 @@ impl Usage {
             thought_tokens: None,
             cached_read_tokens: None,
             cached_write_tokens: None,
+            meta: None,
         }
     }
 
@@ -3152,6 +3162,17 @@ impl Usage {
     #[must_use]
     pub fn cached_write_tokens(mut self, cached_write_tokens: impl IntoOption<u64>) -> Self {
         self.cached_write_tokens = cached_write_tokens.into_option();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -3196,6 +3217,7 @@ pub enum LlmProtocol {
 ///
 /// Current effective non-secret routing configuration for a provider.
 #[cfg(feature = "unstable_llm_providers")]
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -3204,6 +3226,13 @@ pub struct ProviderCurrentConfig {
     pub api_type: LlmProtocol,
     /// Base URL currently used by this provider.
     pub base_url: String,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
 }
 
 #[cfg(feature = "unstable_llm_providers")]
@@ -3213,7 +3242,19 @@ impl ProviderCurrentConfig {
         Self {
             api_type,
             base_url: base_url.into(),
+            meta: None,
         }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
     }
 }
 
@@ -4707,6 +4748,7 @@ pub enum AgentResponse {
 #[serde(untagged)]
 #[schemars(inline)]
 #[non_exhaustive]
+#[allow(clippy::large_enum_variant)]
 pub enum ClientNotification {
     /// Cancels ongoing operations for a session.
     ///
@@ -4843,6 +4885,17 @@ impl CancelNotification {
 mod test_serialization {
     use super::*;
     use serde_json::json;
+
+    fn test_meta() -> Meta {
+        json!({ "source": "test" }).as_object().unwrap().clone()
+    }
+
+    fn serialized_meta_key_count(value: &impl serde::Serialize) -> usize {
+        serde_json::to_string(value)
+            .unwrap()
+            .matches("\"_meta\"")
+            .count()
+    }
 
     #[test]
     fn test_mcp_server_stdio_serialization() {
@@ -5680,7 +5733,10 @@ mod test_serialization {
     #[test]
     fn test_session_config_option_boolean_variant() {
         let opt = SessionConfigOption::boolean("brave_mode", "Brave Mode", false)
-            .description("Skip confirmation prompts");
+            .description("Skip confirmation prompts")
+            .meta(test_meta());
+        assert_eq!(serialized_meta_key_count(&opt), 1);
+
         let json = serde_json::to_value(&opt).unwrap();
         assert_eq!(
             json,
@@ -5689,7 +5745,10 @@ mod test_serialization {
                 "name": "Brave Mode",
                 "description": "Skip confirmation prompts",
                 "type": "boolean",
-                "currentValue": false
+                "currentValue": false,
+                "_meta": {
+                    "source": "test"
+                }
             })
         );
 
@@ -5714,11 +5773,15 @@ mod test_serialization {
                 SessionConfigSelectOption::new("model-1", "Model 1"),
                 SessionConfigSelectOption::new("model-2", "Model 2"),
             ],
-        );
+        )
+        .meta(test_meta());
+        assert_eq!(serialized_meta_key_count(&opt), 1);
+
         let json = serde_json::to_value(&opt).unwrap();
         assert_eq!(json["type"], "select");
         assert_eq!(json["currentValue"], "model-1");
         assert_eq!(json["options"].as_array().unwrap().len(), 2);
+        assert_eq!(json["_meta"]["source"], "test");
 
         let deserialized: SessionConfigOption = serde_json::from_value(json).unwrap();
         match deserialized.kind {

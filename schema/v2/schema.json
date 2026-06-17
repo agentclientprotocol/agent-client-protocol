@@ -374,7 +374,7 @@
               "anyOf": [
                 {
                   "title": "RequestPermissionRequest",
-                  "description": "Requests permission from the user for a tool call operation.\n\nCalled by the agent when it needs user authorization before executing\na potentially sensitive operation. The client should present the options\nto the user and return their decision.\n\nIf the client cancels the prompt turn via `session/cancel`, it MUST\nrespond to this request with `RequestPermissionOutcome::Cancelled`.\n\nSee protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/tool-calls#requesting-permission)",
+                  "description": "Requests permission from the user for a tool call operation.\n\nCalled by the agent when it needs user authorization before executing\na potentially sensitive operation. The client should present the options\nto the user and return their decision.\n\nIf the client cancels active session work via `session/cancel`, it MUST\nrespond to this request with `RequestPermissionOutcome::Cancelled`.\n\nSee protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/tool-calls#requesting-permission)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/RequestPermissionRequest"
@@ -2376,61 +2376,17 @@
       "x-method": "session/set_config_option"
     },
     "PromptResponse": {
-      "description": "Response from processing a user prompt.\n\nSee protocol docs: [Check for Completion](https://agentclientprotocol.com/protocol/prompt-turn#4-check-for-completion)",
+      "description": "Response acknowledging that a user prompt was accepted.\n\nThis response does not indicate that the agent has finished processing.\nAgents report session state through `state_update` session updates.\n\nSee protocol docs: [Prompt Accepted](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#2-prompt-accepted)",
       "type": "object",
       "properties": {
-        "stopReason": {
-          "description": "Indicates why the agent stopped processing the turn.",
-          "allOf": [
-            {
-              "$ref": "#/$defs/StopReason"
-            }
-          ]
-        },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"],
           "additionalProperties": true
         }
       },
-      "required": ["stopReason"],
       "x-side": "agent",
       "x-method": "session/prompt"
-    },
-    "StopReason": {
-      "description": "Reasons why an agent stops processing a prompt turn.\n\nSee protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/prompt-turn#stop-reasons)",
-      "anyOf": [
-        {
-          "description": "The turn ended successfully.",
-          "type": "string",
-          "const": "end_turn"
-        },
-        {
-          "description": "The turn ended because the agent reached the maximum number of tokens.",
-          "type": "string",
-          "const": "max_tokens"
-        },
-        {
-          "description": "The turn ended because the agent reached the maximum number of allowed\nagent requests between user turns.",
-          "type": "string",
-          "const": "max_turn_requests"
-        },
-        {
-          "description": "The turn ended because the agent refused to continue. The user prompt\nand everything that comes after it won't be included in the next\nprompt, so this should be reflected in the UI.",
-          "type": "string",
-          "const": "refusal"
-        },
-        {
-          "description": "The turn was cancelled by the client via `session/cancel`.\n\nThis stop reason MUST be returned when the client sends a `session/cancel`\nnotification, even if the cancellation causes exceptions in underlying operations.\nAgents should catch these exceptions and return this semantically meaningful\nresponse to confirm successful cancellation.",
-          "type": "string",
-          "const": "cancelled"
-        },
-        {
-          "title": "other",
-          "description": "Custom or future stop reason.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
-          "type": "string"
-        }
-      ]
     },
     "ExtResponse": {
       "description": "Allows for sending an arbitrary response to an [`ExtRequest`] that is not part of the ACP spec.\nExtension methods provide a way to add custom functionality while maintaining\nprotocol compatibility.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)"
@@ -2530,7 +2486,7 @@
               "anyOf": [
                 {
                   "title": "SessionNotification",
-                  "description": "Handles session update notifications from the agent.\n\nThis is a notification endpoint (no response expected) that receives\nreal-time updates about session progress, including message updates,\nmessage chunks, tool calls, and execution plans.\n\nNote: Clients SHOULD continue accepting tool call updates even after\nsending a `session/cancel` notification, as the agent may send final\nupdates before responding with the cancelled stop reason.\n\nSee protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-turn#3-agent-reports-output)",
+                  "description": "Handles session update notifications from the agent.\n\nThis is a notification endpoint (no response expected) that receives\nreal-time updates about session progress, including message updates,\nmessage chunks, tool calls, and execution plans.\n\nNote: Clients SHOULD continue accepting tool call updates even after\nsending a `session/cancel` notification, as the agent may send final\nupdates before reporting an idle `state_update` with the cancelled\nstop reason.\n\nSee protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#3-agent-reports-output)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/SessionNotification"
@@ -2558,7 +2514,7 @@
       "x-docs-ignore": true
     },
     "SessionNotification": {
-      "description": "Notification containing a session update from the agent.\n\nUsed to stream real-time progress and results during prompt processing.\n\nSee protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-turn#3-agent-reports-output)",
+      "description": "Notification containing a session update from the agent.\n\nUsed to stream real-time progress and results during prompt processing.\n\nSee protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#3-agent-reports-output)",
       "type": "object",
       "properties": {
         "sessionId": {
@@ -2588,7 +2544,7 @@
       "x-method": "session/update"
     },
     "SessionUpdate": {
-      "description": "Different types of updates that can be sent during session processing.\n\nThese updates provide real-time feedback about the agent's progress.\n\nSee protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-turn#3-agent-reports-output)",
+      "description": "Different types of updates that can be sent during session processing.\n\nThese updates provide real-time feedback about the agent's progress.\n\nSee protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#3-agent-reports-output)",
       "anyOf": [
         {
           "description": "A chunk of the user's message being streamed.",
@@ -2683,6 +2639,38 @@
           "allOf": [
             {
               "$ref": "#/$defs/AgentThought"
+            }
+          ]
+        },
+        {
+          "description": "The agent's session state has changed.\n\nAgents send this to report when work starts, completes, or pauses while\nwaiting for user action. Completion of active work is reported here instead\nof in the `session/prompt` response.",
+          "type": "object",
+          "properties": {
+            "sessionUpdate": {
+              "type": "string",
+              "const": "state_update"
+            }
+          },
+          "required": ["sessionUpdate"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/StateUpdate"
+            }
+          ]
+        },
+        {
+          "description": "A chunk of tool-call content being streamed.",
+          "type": "object",
+          "properties": {
+            "sessionUpdate": {
+              "type": "string",
+              "const": "tool_call_content_chunk"
+            }
+          },
+          "required": ["sessionUpdate"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/ToolCallContentChunk"
             }
           ]
         },
@@ -2851,6 +2839,26 @@
                   "sessionUpdate": {
                     "type": "string",
                     "const": "agent_thought"
+                  }
+                },
+                "required": ["sessionUpdate"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "sessionUpdate": {
+                    "type": "string",
+                    "const": "state_update"
+                  }
+                },
+                "required": ["sessionUpdate"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "sessionUpdate": {
+                    "type": "string",
+                    "const": "tool_call_content_chunk"
                   }
                 },
                 "required": ["sessionUpdate"]
@@ -3042,6 +3050,217 @@
         }
       },
       "required": ["messageId"]
+    },
+    "RunningStateUpdate": {
+      "description": "The agent is actively processing work in the session.",
+      "type": "object",
+      "properties": {
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"],
+          "additionalProperties": true
+        }
+      }
+    },
+    "StopReason": {
+      "description": "Reasons why an agent stops active session work.\n\nSee protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#stop-reasons)",
+      "anyOf": [
+        {
+          "description": "The active work ended successfully.",
+          "type": "string",
+          "const": "end_turn"
+        },
+        {
+          "description": "The active work ended because the agent reached the maximum number of tokens.",
+          "type": "string",
+          "const": "max_tokens"
+        },
+        {
+          "description": "The active work ended because the agent reached the maximum number of\nallowed agent requests before returning idle.",
+          "type": "string",
+          "const": "max_turn_requests"
+        },
+        {
+          "description": "The active work ended because the agent refused to continue. The user\nprompt and everything that comes after it won't be included in the next\nprompt, so this should be reflected in the UI.",
+          "type": "string",
+          "const": "refusal"
+        },
+        {
+          "description": "Active session work was cancelled by the client via `session/cancel`.\n\nAgents should report this stop reason on an idle `state_update` session update\nwhen cancellation succeeds, even if cancellation causes exceptions in\nunderlying operations.",
+          "type": "string",
+          "const": "cancelled"
+        },
+        {
+          "title": "other",
+          "description": "Custom or future stop reason.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+          "type": "string"
+        }
+      ]
+    },
+    "IdleStateUpdate": {
+      "description": "The agent is not currently processing work in the session.",
+      "type": "object",
+      "properties": {
+        "stopReason": {
+          "description": "Indicates why the agent stopped processing active session work.\n\nOptional. Omitted or `null` both mean the agent is not reporting a stop reason.\nAgents SHOULD include this when the idle transition ends active work.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StopReason"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"],
+          "additionalProperties": true
+        }
+      }
+    },
+    "RequiresActionStateUpdate": {
+      "description": "The agent is waiting on user action before it can continue.",
+      "type": "object",
+      "properties": {
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"],
+          "additionalProperties": true
+        }
+      }
+    },
+    "StateUpdate": {
+      "description": "The agent's session state has changed.\n\nThis update is the mechanism for reporting session activity transitions.\nA `session/prompt` response only acknowledges that the prompt was accepted;\nagents use `state_update` notifications to report that processing has started,\nthat the session is idle, or that progress is blocked on user action.",
+      "anyOf": [
+        {
+          "description": "The agent is actively processing work in the session.",
+          "type": "object",
+          "properties": {
+            "state": {
+              "type": "string",
+              "const": "running"
+            }
+          },
+          "required": ["state"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/RunningStateUpdate"
+            }
+          ]
+        },
+        {
+          "description": "The agent is not currently processing work in the session.",
+          "type": "object",
+          "properties": {
+            "state": {
+              "type": "string",
+              "const": "idle"
+            }
+          },
+          "required": ["state"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/IdleStateUpdate"
+            }
+          ]
+        },
+        {
+          "description": "The agent is waiting on user action before it can continue.",
+          "type": "object",
+          "properties": {
+            "state": {
+              "type": "string",
+              "const": "requires_action"
+            }
+          },
+          "required": ["state"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/RequiresActionStateUpdate"
+            }
+          ]
+        },
+        {
+          "title": "other",
+          "description": "Custom or future session state.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+          "type": "object",
+          "properties": {
+            "state": {
+              "description": "Custom or future session state.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+              "type": "string"
+            }
+          },
+          "required": ["state"],
+          "not": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "const": "running"
+                  }
+                },
+                "required": ["state"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "const": "idle"
+                  }
+                },
+                "required": ["state"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "const": "requires_action"
+                  }
+                },
+                "required": ["state"]
+              }
+            ]
+          },
+          "additionalProperties": true
+        }
+      ],
+      "discriminator": {
+        "propertyName": "state"
+      }
+    },
+    "ToolCallContentChunk": {
+      "description": "A streamed item of tool-call content.\n\nTool-call content chunks append one [`ToolCallContent`] item to the current\ncontent for the matching [`ToolCallId`]. Agents can use\n[`ToolCallUpdate::content`] when they need to replace the whole content\ncollection instead.",
+      "type": "object",
+      "properties": {
+        "toolCallId": {
+          "description": "The ID of the tool call this content belongs to.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/ToolCallId"
+            }
+          ]
+        },
+        "content": {
+          "description": "A single item of content produced by the tool call.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/ToolCallContent"
+            }
+          ]
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys. This field is optional; omitted or `null` means there is no\nchunk-level metadata.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"],
+          "additionalProperties": true
+        }
+      },
+      "required": ["toolCallId", "content"]
     },
     "PlanUpdateContent": {
       "description": "Updated content for a plan.",
@@ -3409,6 +3628,11 @@
         "currency": {
           "description": "ISO 4217 currency code (e.g., \"USD\", \"EUR\").",
           "type": "string"
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"],
+          "additionalProperties": true
         }
       },
       "required": ["amount", "currency"]
@@ -3558,7 +3782,7 @@
                 },
                 {
                   "title": "PromptRequest",
-                  "description": "Processes a user prompt within a session.\n\nThis method handles the whole lifecycle of a prompt:\n- Receives user messages with optional context (files, images, etc.)\n- Processes the prompt using language models\n- Reports language model content and tool calls to the Clients\n- Requests permission to run tools\n- Executes any requested tool calls\n- Returns when the turn is complete with a stop reason\n\nSee protocol docs: [Prompt Turn](https://agentclientprotocol.com/protocol/prompt-turn)",
+                  "description": "Processes a user prompt within a session.\n\nThis request accepts the prompt:\n- Receives user messages with optional context (files, images, etc.)\n- Returns once the prompt is accepted\n\nAfter acceptance, the Agent reports the accepted user message,\nprocessing state, output, tool calls, and completion through\n`session/update` notifications.\n\nSee protocol docs: [Prompt Lifecycle](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/PromptRequest"
@@ -4064,7 +4288,7 @@
       "x-method": "session/set_config_option"
     },
     "PromptRequest": {
-      "description": "Request parameters for sending a user prompt to the agent.\n\nContains the user's message and any additional context.\n\nSee protocol docs: [User Message](https://agentclientprotocol.com/protocol/prompt-turn#1-user-message)",
+      "description": "Request parameters for sending a user prompt to the agent.\n\nContains the user's message and any additional context.\n\nSee protocol docs: [User Message](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#1-user-message)",
       "type": "object",
       "properties": {
         "sessionId": {
@@ -4167,7 +4391,7 @@
       "description": "The outcome of a permission request.",
       "oneOf": [
         {
-          "description": "The prompt turn was cancelled before the user responded.\n\nWhen a client sends a `session/cancel` notification to cancel an ongoing\nprompt turn, it MUST respond to all pending `session/request_permission`\nrequests with this `Cancelled` outcome.\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-turn#cancellation)",
+          "description": "Active session work was cancelled before the user responded.\n\nWhen a client sends a `session/cancel` notification to cancel active\nsession work, it MUST respond to all pending `session/request_permission`\nrequests with this `Cancelled` outcome.\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#cancellation)",
           "type": "object",
           "properties": {
             "outcome": {
@@ -4231,7 +4455,7 @@
               "anyOf": [
                 {
                   "title": "CancelNotification",
-                  "description": "Cancels ongoing operations for a session.\n\nThis is a notification sent by the client to cancel an ongoing prompt turn.\n\nUpon receiving this notification, the Agent SHOULD:\n- Stop all language model requests as soon as possible\n- Abort all tool call invocations in progress\n- Send any pending `session/update` notifications\n- Respond to the original `session/prompt` request with `StopReason::Cancelled`\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-turn#cancellation)",
+                  "description": "Cancels ongoing operations for a session.\n\nThis is a notification sent by the client to cancel active work in a\nsession.\n\nUpon receiving this notification, the Agent SHOULD:\n- Stop all language model requests as soon as possible\n- Abort all tool call invocations in progress\n- Send any pending `session/update` notifications\n- Report an idle `state_update` with `StopReason::Cancelled` after\n  cancellation succeeds\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#cancellation)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/CancelNotification"
@@ -4259,7 +4483,7 @@
       "x-docs-ignore": true
     },
     "CancelNotification": {
-      "description": "Notification to cancel ongoing operations for a session.\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-turn#cancellation)",
+      "description": "Notification to cancel ongoing operations for a session.\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#cancellation)",
       "type": "object",
       "properties": {
         "sessionId": {

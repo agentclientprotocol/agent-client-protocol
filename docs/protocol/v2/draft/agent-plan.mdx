@@ -5,11 +5,11 @@ description: "How Agents communicate their execution plans"
 
 Plans are execution strategies for complex tasks that require multiple steps.
 
-Agents may share plans with Clients through [`session/update`](/protocol/v2/draft/prompt-turn#3-agent-reports-output) notifications, providing real-time visibility into their thinking and progress.
+Agents may share plans with Clients through [`session/update`](/protocol/v2/draft/prompt-lifecycle#3-agent-reports-output) notifications, providing real-time visibility into their thinking and progress.
 
-`plan_update` is the v2 plan format. It carries a `plan` object with a `type` discriminator, and every plan format includes a required `id` so Clients can track multiple plans independently.
+`plan_update` carries a `plan` object with a `type` discriminator, and every plan format includes a required `id` so Clients can track multiple plans independently.
 
-The stable v2 plan content type is `items`. The draft unstable schema also includes additional plan operations while the Plan Operations RFD is in progress.
+The stable plan content type is `items`. The draft unstable schema also includes additional plan operations while the Plan Operations RFD is in progress.
 
 ## Creating Plans
 
@@ -66,7 +66,7 @@ When the language model creates an execution plan, the Agent **SHOULD** report i
 
 ## Unstable Plan Operations
 
-The draft unstable schema includes markdown plans, file-backed plans, and explicit plan removal. These operations are not part of the stable v2 schema yet.
+The draft unstable schema includes markdown plans, file-backed plans, and explicit plan removal. These operations are not part of the stable schema yet.
 
 Clients using the draft unstable schema **MUST** tolerate these variants. Tolerating a variant means the Client can deserialize and validate it, then render it, preserve it for replay or proxying, or ignore it.
 
@@ -151,7 +151,7 @@ Each plan entry represents a specific task or goal within the overall execution 
 - `medium`
 - `low`
 
-In v2, custom or future priority values can be used for display hints. Custom priorities **MUST** begin with `_`; unknown non-underscore priorities are reserved for future ACP variants.
+Custom or future priority values can be used for display hints. Custom priorities **MUST** begin with `_`; unknown non-underscore priorities are reserved for future ACP variants.
 
 </ParamField>
 
@@ -162,7 +162,7 @@ In v2, custom or future priority values can be used for display hints. Custom pr
 - `in_progress`
 - `completed`
 
-In v2, custom or future status values can be used when Clients can preserve or display a generic plan-entry state. Custom statuses **MUST** begin with `_`; unknown non-underscore statuses are reserved for future ACP variants.
+Custom or future status values can be used when Clients can preserve or display a generic plan-entry state. Custom statuses **MUST** begin with `_`; unknown non-underscore statuses are reserved for future ACP variants.
 
 </ParamField>
 
