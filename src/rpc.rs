@@ -123,6 +123,12 @@ impl<M> JsonRpcMessage<M> {
         }
     }
 
+    /// Returns the contained message.
+    #[must_use]
+    pub fn inner(&self) -> &M {
+        &self.message
+    }
+
     /// Unwraps the contained message.
     #[must_use]
     pub fn into_inner(self) -> M {
@@ -291,6 +297,7 @@ mod tests {
             serde_json::from_value::<JsonRpcBatch<Notification<ClientNotification>>>(serialized)
                 .unwrap();
         assert_eq!(deserialized.as_slice().len(), 1);
+        assert_eq!(deserialized.as_slice()[0].inner().method.as_ref(), "cancel");
     }
 
     #[test]
