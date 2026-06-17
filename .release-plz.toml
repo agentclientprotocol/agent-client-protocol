@@ -25,3 +25,8 @@ git_tag_name = "schema-v{{ version }}"
 publish = false
 release = false
 semver_check = false
+
+[[package]]
+name = "schema-generator"
+publish = false
+release = false
