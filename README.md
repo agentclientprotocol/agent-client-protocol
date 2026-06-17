@@ -8,6 +8,14 @@ The Agent Client Protocol (ACP) standardizes communication between _code editors
 
 Learn more at [agentclientprotocol.com](https://agentclientprotocol.com/).
 
+## Rust Crate and Schema Artifacts
+
+This repository's root Rust crate is [`agent-client-protocol-schema`](https://crates.io/crates/agent-client-protocol-schema). It provides the Rust data model for ACP wire messages, including request, response, notification, JSON-RPC envelope, and protocol-version types. Use this crate when you need direct access to ACP protocol types, schema-oriented tooling, or code generation inputs.
+
+If you are implementing a Rust ACP agent or client, start with the higher-level [`agent-client-protocol`](https://crates.io/crates/agent-client-protocol) runtime crate instead. That crate provides the client and agent runtime APIs for ACP integrations; this schema crate is the lower-level protocol type surface.
+
+Generated JSON Schema artifacts live in [`schema/v1`](./schema/v1/) and [`schema/v2`](./schema/v2/). When a schema release is published, the versioned `.json` files are also attached to the corresponding [`schema-v*` GitHub release](https://github.com/agentclientprotocol/agent-client-protocol/releases), which is the recommended download surface for SDK generators and other release automation.
+
 ## Versioning
 
 The Rust crate version and JSON Schema release versions describe the Rust crate and JSON Schema artifacts themselves. The Rust crate is published to crates.io, while the versioned JSON Schema files are attached to GitHub releases rather than published as crates. These versions follow the compatibility expectations of those artifacts: Rust APIs, generated schema structure, artifact layout, and other details that downstream SDKs or code generators may consume.
