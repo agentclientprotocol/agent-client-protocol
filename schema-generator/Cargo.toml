@@ -3,6 +3,9 @@ name = "schema-generator"
 version = "0.0.0"
 edition = "2024"
 publish = false
+license = "Apache-2.0"
+description = "Internal generator for Agent Client Protocol JSON Schema artifacts"
+repository = "https://github.com/agentclientprotocol/agent-client-protocol"
 
 [lints]
 workspace = true
@@ -16,7 +19,7 @@ unstable_protocol_v2 = ["agent-client-protocol-schema/unstable_protocol_v2"]
 unstable_cancel_request = ["agent-client-protocol-schema/unstable_cancel_request"]
 
 [dependencies]
-agent-client-protocol-schema = { path = "../agent-client-protocol-schema" }
+agent-client-protocol-schema = { workspace = true }
 schemars = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }

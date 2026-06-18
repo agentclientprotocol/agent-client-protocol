@@ -13,6 +13,9 @@ members = [
 ]
 resolver = "3"
 
+[workspace.dependencies]
+agent-client-protocol-schema = { path = "agent-client-protocol-schema", version = "0.13.8" }
+
 [workspace.lints.rust]
 future_incompatible = { level = "warn", priority = -1 }
 let-underscore = "warn"
