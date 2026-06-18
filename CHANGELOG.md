@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.14.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.13.8...v0.14.0) - 2026-06-18
+
+### Added
+
+- *(rust)* Expose v1 schema types only under v1 module ([#1457](https://github.com/agentclientprotocol/agent-client-protocol/pull/1457))
+
 ## [0.13.8](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.13.7...v0.13.8) - 2026-06-18
 
 ### Other
