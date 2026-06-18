@@ -1,3 +1,5 @@
+//! Generates ACP JSON Schema and schema documentation artifacts.
+
 use agent_client_protocol_schema::ProtocolVersion;
 #[cfg(feature = "unstable_protocol_v2")]
 use agent_client_protocol_schema::v2::{

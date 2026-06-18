@@ -1,3 +1,8 @@
+//! JSON-RPC envelope types shared by ACP clients and agents.
+//!
+//! These types model the JSON-RPC 2.0 request, response, notification, and
+//! batch envelopes that wrap ACP method-specific payloads.
+
 use std::sync::Arc;
 
 use derive_more::{Display, From};
@@ -35,12 +40,16 @@ use serde_with::skip_serializing_none;
 )]
 #[from(String, i64)]
 pub enum RequestId {
+    /// The JSON-RPC `null` request id.
     #[display("null")]
     Null,
+    /// A numeric JSON-RPC request id.
     Number(i64),
+    /// A string JSON-RPC request id.
     Str(String),
 }
 
+/// A JSON-RPC request object.
 #[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
 #[allow(
     clippy::exhaustive_structs,
@@ -49,11 +58,15 @@ pub enum RequestId {
 #[schemars(rename = "{Params}", extend("x-docs-ignore" = true))]
 #[skip_serializing_none]
 pub struct Request<Params> {
+    /// The request id used to correlate the matching response.
     pub id: RequestId,
+    /// The method name to invoke.
     pub method: Arc<str>,
+    /// Method-specific request parameters.
     pub params: Option<Params>,
 }
 
+/// A JSON-RPC response object.
 #[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
 #[allow(
     clippy::exhaustive_enums,
@@ -62,11 +75,24 @@ pub struct Request<Params> {
 #[serde(untagged)]
 #[schemars(rename = "{Result}", extend("x-docs-ignore" = true))]
 pub enum Response<Result, Error> {
-    Result { id: RequestId, result: Result },
-    Error { id: RequestId, error: Error },
+    /// A successful JSON-RPC response.
+    Result {
+        /// The id of the request this response answers.
+        id: RequestId,
+        /// Method-specific response data.
+        result: Result,
+    },
+    /// A failed JSON-RPC response.
+    Error {
+        /// The id of the request this response answers.
+        id: RequestId,
+        /// Method-specific error data.
+        error: Error,
+    },
 }
 
 impl<R, E> Response<R, E> {
+    /// Creates a JSON-RPC response from a Rust [`Result`].
     #[must_use]
     pub fn new(id: impl Into<RequestId>, result: std::result::Result<R, E>) -> Self {
         match result {
@@ -82,6 +108,7 @@ impl<R, E> Response<R, E> {
     }
 }
 
+/// A JSON-RPC notification object.
 #[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
 #[allow(
     clippy::exhaustive_structs,
@@ -90,7 +117,9 @@ impl<R, E> Response<R, E> {
 #[schemars(rename = "{Params}", extend("x-docs-ignore" = true))]
 #[skip_serializing_none]
 pub struct Notification<Params> {
+    /// The notification method name.
     pub method: Arc<str>,
+    /// Method-specific notification parameters.
     pub params: Option<Params>,
 }
 
@@ -136,6 +165,7 @@ impl<M> JsonRpcMessage<M> {
     }
 }
 
+/// Error returned when constructing an empty JSON-RPC batch.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Display)]
 #[display("JSON-RPC batch must contain at least one message")]
 #[non_exhaustive]

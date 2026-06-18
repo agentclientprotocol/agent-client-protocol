@@ -45,7 +45,7 @@ impl ProtocolVersion {
 
     #[cfg(test)]
     #[must_use]
-    pub const fn new(version: u16) -> Self {
+    const fn new(version: u16) -> Self {
         Self(version)
     }
 }

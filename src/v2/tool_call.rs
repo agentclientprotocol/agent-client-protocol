@@ -72,6 +72,7 @@ pub struct ToolCallUpdate {
 }
 
 impl ToolCallUpdate {
+    /// Builds [`ToolCallUpdate`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(tool_call_id: impl Into<ToolCallId>) -> Self {
         Self {
@@ -205,6 +206,7 @@ pub struct ToolCallContentChunk {
 }
 
 impl ToolCallContentChunk {
+    /// Builds [`ToolCallContentChunk`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(tool_call_id: impl Into<ToolCallId>, content: impl Into<ToolCallContent>) -> Self {
         Self {
@@ -234,6 +236,7 @@ impl ToolCallContentChunk {
 pub struct ToolCallId(pub Arc<str>);
 
 impl ToolCallId {
+    /// Wraps a protocol string as a typed [`ToolCallId`].
     #[must_use]
     pub fn new(id: impl Into<Arc<str>>) -> Self {
         Self(id.into())
@@ -362,6 +365,7 @@ pub struct OtherToolCallContent {
 }
 
 impl OtherToolCallContent {
+    /// Builds [`OtherToolCallContent`] from an unknown discriminator and preserves the remaining extension fields.
     #[must_use]
     pub fn new(type_: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
         fields.remove("type");
@@ -433,6 +437,7 @@ pub struct Content {
 }
 
 impl Content {
+    /// Builds [`Content`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(content: impl Into<ContentBlock>) -> Self {
         Self {
@@ -479,6 +484,7 @@ pub struct Diff {
 }
 
 impl Diff {
+    /// Builds [`Diff`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(path: impl Into<PathBuf>, new_text: impl Into<String>) -> Self {
         Self {
@@ -534,6 +540,7 @@ pub struct ToolCallLocation {
 }
 
 impl ToolCallLocation {
+    /// Builds [`ToolCallLocation`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(path: impl Into<PathBuf>) -> Self {
         Self {

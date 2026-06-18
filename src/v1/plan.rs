@@ -46,6 +46,7 @@ pub struct Plan {
 }
 
 impl Plan {
+    /// Builds [`Plan`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(entries: Vec<PlanEntry>) -> Self {
         Self {
@@ -80,6 +81,7 @@ pub struct PlanId(pub Arc<str>);
 
 #[cfg(feature = "unstable_plan_operations")]
 impl PlanId {
+    /// Wraps a protocol string as a typed [`PlanId`].
     #[must_use]
     pub fn new(id: impl Into<Arc<str>>) -> Self {
         Self(id.into())
@@ -110,6 +112,7 @@ pub struct PlanUpdate {
 
 #[cfg(feature = "unstable_plan_operations")]
 impl PlanUpdate {
+    /// Builds [`PlanUpdate`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(plan: PlanUpdateContent) -> Self {
         Self { plan, meta: None }
@@ -148,16 +151,19 @@ pub enum PlanUpdateContent {
 
 #[cfg(feature = "unstable_plan_operations")]
 impl PlanUpdateContent {
+    /// Builds a plan update that replaces the itemized entries for a plan.
     #[must_use]
     pub fn items(id: impl Into<PlanId>, entries: Vec<PlanEntry>) -> Self {
         Self::Items(PlanItems::new(id, entries))
     }
 
+    /// Builds a plan update that points clients at an external plan file URI.
     #[must_use]
     pub fn file(id: impl Into<PlanId>, uri: impl Into<String>) -> Self {
         Self::File(PlanFile::new(id, uri))
     }
 
+    /// Builds a plan update whose plan content is inline Markdown.
     #[must_use]
     pub fn markdown(id: impl Into<PlanId>, content: impl Into<String>) -> Self {
         Self::Markdown(PlanMarkdown::new(id, content))
@@ -196,6 +202,7 @@ pub struct PlanItems {
 
 #[cfg(feature = "unstable_plan_operations")]
 impl PlanItems {
+    /// Builds [`PlanItems`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(id: impl Into<PlanId>, entries: Vec<PlanEntry>) -> Self {
         Self {
@@ -243,6 +250,7 @@ pub struct PlanFile {
 
 #[cfg(feature = "unstable_plan_operations")]
 impl PlanFile {
+    /// Builds [`PlanFile`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(id: impl Into<PlanId>, uri: impl Into<String>) -> Self {
         Self {
@@ -290,6 +298,7 @@ pub struct PlanMarkdown {
 
 #[cfg(feature = "unstable_plan_operations")]
 impl PlanMarkdown {
+    /// Builds [`PlanMarkdown`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(id: impl Into<PlanId>, content: impl Into<String>) -> Self {
         Self {
@@ -335,6 +344,7 @@ pub struct PlanRemoved {
 
 #[cfg(feature = "unstable_plan_operations")]
 impl PlanRemoved {
+    /// Builds [`PlanRemoved`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(id: impl Into<PlanId>) -> Self {
         Self {
@@ -377,6 +387,7 @@ pub struct PlanCapabilities {
 
 #[cfg(feature = "unstable_plan_operations")]
 impl PlanCapabilities {
+    /// Builds an empty [`PlanCapabilities`]; use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -421,6 +432,7 @@ pub struct PlanEntry {
 }
 
 impl PlanEntry {
+    /// Builds [`PlanEntry`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(
         content: impl Into<String>,

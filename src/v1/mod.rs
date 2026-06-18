@@ -35,6 +35,7 @@ pub use protocol_level::*;
 pub use serde_json::value::RawValue;
 pub use tool_call::*;
 
+/// JSON-RPC response envelope using this protocol version's error type.
 pub type Response<Result> = crate::rpc::Response<Result, Error>;
 
 use schemars::JsonSchema;
@@ -54,6 +55,7 @@ use std::sync::Arc;
 pub struct SessionId(pub Arc<str>);
 
 impl SessionId {
+    /// Wraps a protocol string as a typed [`SessionId`].
     #[must_use]
     pub fn new(id: impl Into<Arc<str>>) -> Self {
         Self(id.into())

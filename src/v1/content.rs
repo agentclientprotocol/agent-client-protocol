@@ -65,10 +65,12 @@ pub enum ContentBlock {
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
 #[non_exhaustive]
 pub struct TextContent {
+    /// Optional annotations that help clients decide how to display or route this content.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub annotations: Option<Annotations>,
+    /// Text payload carried by this content block.
     pub text: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -80,6 +82,7 @@ pub struct TextContent {
 }
 
 impl TextContent {
+    /// Builds [`TextContent`] with its required content payload; optional annotations and metadata start unset.
     #[must_use]
     pub fn new(text: impl Into<String>) -> Self {
         Self {
@@ -89,6 +92,7 @@ impl TextContent {
         }
     }
 
+    /// Sets or clears the optional `annotations` field.
     #[must_use]
     pub fn annotations(mut self, annotations: impl IntoOption<Annotations>) -> Self {
         self.annotations = annotations.into_option();
@@ -120,12 +124,16 @@ impl<T: Into<String>> From<T> for ContentBlock {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ImageContent {
+    /// Optional annotations that help clients decide how to display or route this content.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub annotations: Option<Annotations>,
+    /// Base64-encoded media payload.
     pub data: String,
+    /// MIME type describing the encoded media payload.
     pub mime_type: String,
+    /// URI associated with this resource or media payload.
     pub uri: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -137,6 +145,7 @@ pub struct ImageContent {
 }
 
 impl ImageContent {
+    /// Builds [`ImageContent`] with its required content payload; optional annotations and metadata start unset.
     #[must_use]
     pub fn new(data: impl Into<String>, mime_type: impl Into<String>) -> Self {
         Self {
@@ -148,12 +157,14 @@ impl ImageContent {
         }
     }
 
+    /// Sets or clears the optional `annotations` field.
     #[must_use]
     pub fn annotations(mut self, annotations: impl IntoOption<Annotations>) -> Self {
         self.annotations = annotations.into_option();
         self
     }
 
+    /// Sets or clears the optional `uri` field.
     #[must_use]
     pub fn uri(mut self, uri: impl IntoOption<String>) -> Self {
         self.uri = uri.into_option();
@@ -179,11 +190,14 @@ impl ImageContent {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct AudioContent {
+    /// Optional annotations that help clients decide how to display or route this content.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub annotations: Option<Annotations>,
+    /// Base64-encoded media payload.
     pub data: String,
+    /// MIME type describing the encoded media payload.
     pub mime_type: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -195,6 +209,7 @@ pub struct AudioContent {
 }
 
 impl AudioContent {
+    /// Builds [`AudioContent`] with its required content payload; optional annotations and metadata start unset.
     #[must_use]
     pub fn new(data: impl Into<String>, mime_type: impl Into<String>) -> Self {
         Self {
@@ -205,6 +220,7 @@ impl AudioContent {
         }
     }
 
+    /// Sets or clears the optional `annotations` field.
     #[must_use]
     pub fn annotations(mut self, annotations: impl IntoOption<Annotations>) -> Self {
         self.annotations = annotations.into_option();
@@ -229,10 +245,12 @@ impl AudioContent {
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
 #[non_exhaustive]
 pub struct EmbeddedResource {
+    /// Optional annotations that help clients decide how to display or route this content.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub annotations: Option<Annotations>,
+    /// Embedded resource payload, either text or binary data.
     pub resource: EmbeddedResourceResource,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -244,6 +262,7 @@ pub struct EmbeddedResource {
 }
 
 impl EmbeddedResource {
+    /// Builds [`EmbeddedResource`] with its required content payload; optional annotations and metadata start unset.
     #[must_use]
     pub fn new(resource: EmbeddedResourceResource) -> Self {
         Self {
@@ -253,6 +272,7 @@ impl EmbeddedResource {
         }
     }
 
+    /// Sets or clears the optional `annotations` field.
     #[must_use]
     pub fn annotations(mut self, annotations: impl IntoOption<Annotations>) -> Self {
         self.annotations = annotations.into_option();
@@ -276,7 +296,9 @@ impl EmbeddedResource {
 #[serde(untagged)]
 #[non_exhaustive]
 pub enum EmbeddedResourceResource {
+    /// Text resource contents embedded directly in the message.
     TextResourceContents(TextResourceContents),
+    /// Binary resource contents embedded directly in the message.
     BlobResourceContents(BlobResourceContents),
 }
 
@@ -286,8 +308,11 @@ pub enum EmbeddedResourceResource {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct TextResourceContents {
+    /// MIME type describing the encoded media payload.
     pub mime_type: Option<String>,
+    /// Text payload carried by this content block.
     pub text: String,
+    /// URI associated with this resource or media payload.
     pub uri: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -299,6 +324,7 @@ pub struct TextResourceContents {
 }
 
 impl TextResourceContents {
+    /// Builds [`TextResourceContents`] with its required content payload; optional annotations and metadata start unset.
     #[must_use]
     pub fn new(text: impl Into<String>, uri: impl Into<String>) -> Self {
         Self {
@@ -309,6 +335,7 @@ impl TextResourceContents {
         }
     }
 
+    /// Sets or clears the optional `mimeType` field.
     #[must_use]
     pub fn mime_type(mut self, mime_type: impl IntoOption<String>) -> Self {
         self.mime_type = mime_type.into_option();
@@ -333,8 +360,11 @@ impl TextResourceContents {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct BlobResourceContents {
+    /// Base64-encoded bytes for a binary resource payload.
     pub blob: String,
+    /// MIME type describing the encoded media payload.
     pub mime_type: Option<String>,
+    /// URI associated with this resource or media payload.
     pub uri: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -346,6 +376,7 @@ pub struct BlobResourceContents {
 }
 
 impl BlobResourceContents {
+    /// Builds [`BlobResourceContents`] with its required content payload; optional annotations and metadata start unset.
     #[must_use]
     pub fn new(blob: impl Into<String>, uri: impl Into<String>) -> Self {
         Self {
@@ -356,6 +387,7 @@ impl BlobResourceContents {
         }
     }
 
+    /// Sets or clears the optional `mimeType` field.
     #[must_use]
     pub fn mime_type(mut self, mime_type: impl IntoOption<String>) -> Self {
         self.mime_type = mime_type.into_option();
@@ -381,15 +413,22 @@ impl BlobResourceContents {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ResourceLink {
+    /// Optional annotations that help clients decide how to display or route this content.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub annotations: Option<Annotations>,
+    /// Optional human-readable details shown with this protocol object.
     pub description: Option<String>,
+    /// MIME type describing the encoded media payload.
     pub mime_type: Option<String>,
+    /// Human-readable name shown for this protocol object.
     pub name: String,
+    /// Optional size of the linked resource in bytes, if known.
     pub size: Option<i64>,
+    /// Optional display title for end-user UI.
     pub title: Option<String>,
+    /// URI associated with this resource or media payload.
     pub uri: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -401,6 +440,7 @@ pub struct ResourceLink {
 }
 
 impl ResourceLink {
+    /// Builds [`ResourceLink`] with its required content payload; optional annotations and metadata start unset.
     #[must_use]
     pub fn new(name: impl Into<String>, uri: impl Into<String>) -> Self {
         Self {
@@ -415,30 +455,35 @@ impl ResourceLink {
         }
     }
 
+    /// Sets or clears the optional `annotations` field.
     #[must_use]
     pub fn annotations(mut self, annotations: impl IntoOption<Annotations>) -> Self {
         self.annotations = annotations.into_option();
         self
     }
 
+    /// Sets or clears the optional `description` field.
     #[must_use]
     pub fn description(mut self, description: impl IntoOption<String>) -> Self {
         self.description = description.into_option();
         self
     }
 
+    /// Sets or clears the optional `mimeType` field.
     #[must_use]
     pub fn mime_type(mut self, mime_type: impl IntoOption<String>) -> Self {
         self.mime_type = mime_type.into_option();
         self
     }
 
+    /// Sets or clears the optional `size` field.
     #[must_use]
     pub fn size(mut self, size: impl IntoOption<i64>) -> Self {
         self.size = size.into_option();
         self
     }
 
+    /// Sets or clears the optional `title` field.
     #[must_use]
     pub fn title(mut self, title: impl IntoOption<String>) -> Self {
         self.title = title.into_option();
@@ -464,11 +509,14 @@ impl ResourceLink {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct Annotations {
+    /// Intended recipients for this content, such as the user or assistant.
     #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
     #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default)]
     pub audience: Option<Vec<Role>>,
+    /// Timestamp indicating when the underlying resource was last modified.
     pub last_modified: Option<String>,
+    /// Relative importance of this content when clients choose what to surface.
     pub priority: Option<f64>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -480,23 +528,27 @@ pub struct Annotations {
 }
 
 impl Annotations {
+    /// Creates annotations with no audience, priority, or timestamp hints set.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Sets or clears the optional `audience` field.
     #[must_use]
     pub fn audience(mut self, audience: impl IntoOption<Vec<Role>>) -> Self {
         self.audience = audience.into_option();
         self
     }
 
+    /// Sets or clears the optional `lastModified` field.
     #[must_use]
     pub fn last_modified(mut self, last_modified: impl IntoOption<String>) -> Self {
         self.last_modified = last_modified.into_option();
         self
     }
 
+    /// Sets or clears the optional `priority` field.
     #[must_use]
     pub fn priority(mut self, priority: impl IntoOption<f64>) -> Self {
         self.priority = priority.into_option();
@@ -520,7 +572,9 @@ impl Annotations {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub enum Role {
+    /// The assistant side of a conversation.
     Assistant,
+    /// The user side of a conversation.
     User,
 }
 

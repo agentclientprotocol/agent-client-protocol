@@ -32,6 +32,7 @@ pub struct CancelRequestNotification {
 
 #[cfg(feature = "unstable_cancel_request")]
 impl CancelRequestNotification {
+    /// Builds [`CancelRequestNotification`] with the required notification fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(request_id: impl Into<RequestId>) -> Self {
         Self {
@@ -60,6 +61,7 @@ impl CancelRequestNotification {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct GeneralMethodNames {
+    /// Method name for protocol-level request cancellation notifications.
     #[cfg(feature = "unstable_cancel_request")]
     pub cancel_request: &'static str,
 }

@@ -62,6 +62,7 @@ pub struct SessionNotification {
 }
 
 impl SessionNotification {
+    /// Builds [`SessionNotification`] with the required notification fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>, update: SessionUpdate) -> Self {
         Self {
@@ -182,6 +183,7 @@ pub struct OtherSessionUpdate {
 }
 
 impl OtherSessionUpdate {
+    /// Builds [`OtherSessionUpdate`] from an unknown discriminator and preserves the remaining extension fields.
     #[must_use]
     pub fn new(
         session_update: impl Into<String>,
@@ -287,6 +289,7 @@ pub struct ConfigOptionUpdate {
 }
 
 impl ConfigOptionUpdate {
+    /// Builds [`ConfigOptionUpdate`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(config_options: Vec<SessionConfigOption>) -> Self {
         Self {
@@ -332,6 +335,7 @@ pub struct SessionInfoUpdate {
 }
 
 impl SessionInfoUpdate {
+    /// Builds [`SessionInfoUpdate`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -389,6 +393,7 @@ pub struct UsageUpdate {
 }
 
 impl UsageUpdate {
+    /// Builds [`UsageUpdate`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(used: u64, size: u64) -> Self {
         Self {
@@ -460,6 +465,7 @@ pub struct RunningStateUpdate {
 }
 
 impl RunningStateUpdate {
+    /// Builds [`RunningStateUpdate`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -515,6 +521,7 @@ pub struct IdleStateUpdate {
 }
 
 impl IdleStateUpdate {
+    /// Builds [`IdleStateUpdate`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -567,6 +574,7 @@ pub struct RequiresActionStateUpdate {
 }
 
 impl RequiresActionStateUpdate {
+    /// Builds [`RequiresActionStateUpdate`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -607,6 +615,7 @@ pub struct OtherStateUpdate {
 }
 
 impl OtherStateUpdate {
+    /// Builds [`OtherStateUpdate`] from an unknown discriminator and preserves the remaining extension fields.
     #[must_use]
     pub fn new(state: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
         fields.remove("state");
@@ -672,6 +681,7 @@ pub struct Cost {
 }
 
 impl Cost {
+    /// Builds [`Cost`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(amount: f64, currency: impl Into<String>) -> Self {
         Self {
@@ -716,6 +726,7 @@ pub struct ContentChunk {
 }
 
 impl ContentChunk {
+    /// Builds [`ContentChunk`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(content: ContentBlock, message_id: impl Into<MessageId>) -> Self {
         Self {
@@ -777,6 +788,7 @@ pub struct UserMessage {
 }
 
 impl UserMessage {
+    /// Builds [`UserMessage`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(message_id: impl Into<MessageId>) -> Self {
         Self {
@@ -845,6 +857,7 @@ pub struct AgentMessage {
 }
 
 impl AgentMessage {
+    /// Builds [`AgentMessage`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(message_id: impl Into<MessageId>) -> Self {
         Self {
@@ -913,6 +926,7 @@ pub struct AgentThought {
 }
 
 impl AgentThought {
+    /// Builds [`AgentThought`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(message_id: impl Into<MessageId>) -> Self {
         Self {
@@ -949,6 +963,7 @@ impl AgentThought {
 pub struct MessageId(pub Arc<str>);
 
 impl MessageId {
+    /// Wraps a protocol string as a typed [`MessageId`].
     #[must_use]
     pub fn new(id: impl Into<Arc<str>>) -> Self {
         Self(id.into())
@@ -976,6 +991,7 @@ pub struct AvailableCommandsUpdate {
 }
 
 impl AvailableCommandsUpdate {
+    /// Builds [`AvailableCommandsUpdate`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(available_commands: Vec<AvailableCommand>) -> Self {
         Self {
@@ -1022,6 +1038,7 @@ pub struct AvailableCommand {
 }
 
 impl AvailableCommand {
+    /// Builds [`AvailableCommand`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(name: impl Into<String>, description: impl Into<String>) -> Self {
         Self {
@@ -1090,6 +1107,7 @@ pub struct OtherAvailableCommandInput {
 }
 
 impl OtherAvailableCommandInput {
+    /// Builds [`OtherAvailableCommandInput`] from an unknown discriminator and preserves the remaining extension fields.
     #[must_use]
     pub fn new(type_: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
         fields.remove("type");
@@ -1136,6 +1154,7 @@ pub struct UnstructuredCommandInput {
 }
 
 impl UnstructuredCommandInput {
+    /// Builds [`UnstructuredCommandInput`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(hint: impl Into<String>) -> Self {
         Self {
@@ -1218,6 +1237,7 @@ pub struct RequestPermissionRequest {
 }
 
 impl RequestPermissionRequest {
+    /// Builds [`RequestPermissionRequest`] with the required request fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(
         session_id: impl Into<SessionId>,
@@ -1266,6 +1286,7 @@ pub struct PermissionOption {
 }
 
 impl PermissionOption {
+    /// Builds [`PermissionOption`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(
         option_id: impl Into<PermissionOptionId>,
@@ -1300,6 +1321,7 @@ impl PermissionOption {
 pub struct PermissionOptionId(pub Arc<str>);
 
 impl PermissionOptionId {
+    /// Wraps a protocol string as a typed [`PermissionOptionId`].
     #[must_use]
     pub fn new(id: impl Into<Arc<str>>) -> Self {
         Self(id.into())
@@ -1350,6 +1372,7 @@ pub struct RequestPermissionResponse {
 }
 
 impl RequestPermissionResponse {
+    /// Builds [`RequestPermissionResponse`] with the required response fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(outcome: RequestPermissionOutcome) -> Self {
         Self {
@@ -1407,6 +1430,7 @@ pub struct SelectedPermissionOutcome {
 }
 
 impl SelectedPermissionOutcome {
+    /// Builds [`SelectedPermissionOutcome`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(option_id: impl Into<PermissionOptionId>) -> Self {
         Self {
@@ -1493,6 +1517,7 @@ pub struct ClientCapabilities {
 }
 
 impl ClientCapabilities {
+    /// Builds an empty [`ClientCapabilities`]; use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -1592,6 +1617,7 @@ pub struct AuthCapabilities {
 
 #[cfg(feature = "unstable_auth_methods")]
 impl AuthCapabilities {
+    /// Builds an empty [`AuthCapabilities`]; use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -1642,6 +1668,7 @@ pub struct TerminalAuthCapabilities {
 
 #[cfg(feature = "unstable_auth_methods")]
 impl TerminalAuthCapabilities {
+    /// Builds an empty [`TerminalAuthCapabilities`]; use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -1805,14 +1832,20 @@ impl AgentRequest {
 #[schemars(inline)]
 #[non_exhaustive]
 pub enum ClientResponse {
+    /// Successful result returned for a `session/request_permission` request.
     RequestPermissionResponse(RequestPermissionResponse),
+    /// Successful result returned for a `elicitation/create` request.
     #[cfg(feature = "unstable_elicitation")]
     CreateElicitationResponse(CreateElicitationResponse),
+    /// Successful result returned for a `mcp/connect` request.
     #[cfg(feature = "unstable_mcp_over_acp")]
     ConnectMcpResponse(ConnectMcpResponse),
+    /// Successful result returned for a `mcp/disconnect` request.
     #[cfg(feature = "unstable_mcp_over_acp")]
     DisconnectMcpResponse(#[serde(default)] DisconnectMcpResponse),
+    /// Successful result returned by an extension method outside the core ACP method set.
     ExtMethodResponse(ExtResponse),
+    /// Successful result returned by an MCP-over-ACP `mcp/message` request.
     #[cfg(feature = "unstable_mcp_over_acp")]
     MessageMcpResponse(MessageMcpResponse),
 }

@@ -24,6 +24,7 @@ use crate::{IntoOption, SkipListener};
 pub struct PlanId(pub Arc<str>);
 
 impl PlanId {
+    /// Wraps a protocol string as a typed [`PlanId`].
     #[must_use]
     pub fn new(id: impl Into<Arc<str>>) -> Self {
         Self(id.into())
@@ -48,6 +49,7 @@ pub struct PlanUpdate {
 }
 
 impl PlanUpdate {
+    /// Builds [`PlanUpdate`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(plan: PlanUpdateContent) -> Self {
         Self { plan, meta: None }
@@ -122,6 +124,7 @@ pub struct OtherPlanUpdateContent {
 }
 
 impl OtherPlanUpdateContent {
+    /// Builds [`OtherPlanUpdateContent`] from an unknown discriminator and preserves the remaining extension fields.
     #[must_use]
     pub fn new(
         type_: impl Into<String>,
@@ -186,17 +189,20 @@ fn other_plan_update_content_schema(schema: &mut Schema) {
 const KNOWN_PLAN_UPDATE_CONTENT_TYPES: &[&str] = &["items", "file", "markdown"];
 
 impl PlanUpdateContent {
+    /// Builds a plan update that replaces the itemized entries for a plan.
     #[must_use]
     pub fn items(id: impl Into<PlanId>, entries: Vec<PlanEntry>) -> Self {
         Self::Items(PlanItems::new(id, entries))
     }
 
+    /// Builds a plan update that points clients at an external plan file URI.
     #[cfg(feature = "unstable_plan_operations")]
     #[must_use]
     pub fn file(id: impl Into<PlanId>, uri: impl Into<String>) -> Self {
         Self::File(PlanFile::new(id, uri))
     }
 
+    /// Builds a plan update whose plan content is inline Markdown.
     #[cfg(feature = "unstable_plan_operations")]
     #[must_use]
     pub fn markdown(id: impl Into<PlanId>, content: impl Into<String>) -> Self {
@@ -230,6 +236,7 @@ pub struct PlanItems {
 }
 
 impl PlanItems {
+    /// Builds [`PlanItems`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(id: impl Into<PlanId>, entries: Vec<PlanEntry>) -> Self {
         Self {
@@ -277,6 +284,7 @@ pub struct PlanFile {
 
 #[cfg(feature = "unstable_plan_operations")]
 impl PlanFile {
+    /// Builds [`PlanFile`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(id: impl Into<PlanId>, uri: impl Into<String>) -> Self {
         Self {
@@ -324,6 +332,7 @@ pub struct PlanMarkdown {
 
 #[cfg(feature = "unstable_plan_operations")]
 impl PlanMarkdown {
+    /// Builds [`PlanMarkdown`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(id: impl Into<PlanId>, content: impl Into<String>) -> Self {
         Self {
@@ -369,6 +378,7 @@ pub struct PlanRemoved {
 
 #[cfg(feature = "unstable_plan_operations")]
 impl PlanRemoved {
+    /// Builds [`PlanRemoved`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(id: impl Into<PlanId>) -> Self {
         Self {
@@ -416,6 +426,7 @@ pub struct PlanEntry {
 }
 
 impl PlanEntry {
+    /// Builds [`PlanEntry`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(
         content: impl Into<String>,

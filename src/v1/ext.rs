@@ -28,11 +28,13 @@ pub struct ExtRequest {
     /// Extension method names must start with `_`.
     #[serde(skip)] // this is used for routing, but when serializing we only want the params
     pub method: Arc<str>,
+    /// Raw JSON parameters for this extension message.
     #[schemars(with = "serde_json::Value")]
     pub params: Arc<RawValue>,
 }
 
 impl ExtRequest {
+    /// Builds [`ExtRequest`] with the required request fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(method: impl Into<Arc<str>>, params: Arc<RawValue>) -> Self {
         Self {
@@ -53,6 +55,7 @@ impl ExtRequest {
 pub struct ExtResponse(#[schemars(with = "serde_json::Value")] pub Arc<RawValue>);
 
 impl ExtResponse {
+    /// Builds [`ExtResponse`] with the required response fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(params: Arc<RawValue>) -> Self {
         Self(params)
@@ -73,11 +76,13 @@ pub struct ExtNotification {
     /// Extension method names must start with `_`.
     #[serde(skip)] // this is used for routing, but when serializing we only want the params
     pub method: Arc<str>,
+    /// Raw JSON parameters for this extension message.
     #[schemars(with = "serde_json::Value")]
     pub params: Arc<RawValue>,
 }
 
 impl ExtNotification {
+    /// Builds [`ExtNotification`] with the required notification fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(method: impl Into<Arc<str>>, params: Arc<RawValue>) -> Self {
         Self {

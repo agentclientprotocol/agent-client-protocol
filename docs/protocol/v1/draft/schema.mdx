@@ -45,7 +45,7 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
 
 </ResponseField>
-<ResponseField name="methodId" type={"string"} required>
+<ResponseField name="methodId" type={<a href="#authmethodid">AuthMethodId</a>} required>
   The ID of the authentication method to use.
 Must be one of the methods advertised in the initialize response.
 </ResponseField>
@@ -1880,6 +1880,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </ResponseField>
 <ResponseField name="content" type={"string"} required>
+  Content payload returned by this response.
 </ResponseField>
 
 <a id="fs-write_text_file"></a>
@@ -2321,7 +2322,7 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
 
 </ResponseField>
-<ResponseField name="terminalId" type={"string"} required>
+<ResponseField name="terminalId" type={<a href="#terminalid">TerminalId</a>} required>
   The unique identifier for the created terminal.
 </ResponseField>
 
@@ -2360,7 +2361,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 <ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
   The session ID for this request.
 </ResponseField>
-<ResponseField name="terminalId" type={"string"} required>
+<ResponseField name="terminalId" type={<a href="#terminalid">TerminalId</a>} required>
   The ID of the terminal to kill.
 </ResponseField>
 
@@ -2410,7 +2411,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 <ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
   The session ID for this request.
 </ResponseField>
-<ResponseField name="terminalId" type={"string"} required>
+<ResponseField name="terminalId" type={<a href="#terminalid">TerminalId</a>} required>
   The ID of the terminal to get output from.
 </ResponseField>
 
@@ -2475,7 +2476,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 <ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
   The session ID for this request.
 </ResponseField>
-<ResponseField name="terminalId" type={"string"} required>
+<ResponseField name="terminalId" type={<a href="#terminalid">TerminalId</a>} required>
   The ID of the terminal to release.
 </ResponseField>
 
@@ -2522,7 +2523,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 <ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
   The session ID for this request.
 </ResponseField>
-<ResponseField name="terminalId" type={"string"} required>
+<ResponseField name="terminalId" type={<a href="#terminalid">TerminalId</a>} required>
   The ID of the terminal to wait for.
 </ResponseField>
 
@@ -2707,6 +2708,7 @@ By supplying `\{\}` it means that the agent supports provider configuration meth
 
 </ResponseField>
 <ResponseField name="sessionCapabilities" type={<a href="#sessioncapabilities">SessionCapabilities</a>} >
+  Session lifecycle and prompt capabilities advertised by the agent.
 
     - Default: `{}`
 
@@ -2729,10 +2731,13 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </ResponseField>
 <ResponseField name="audience" type={<><span><a href="#role">Role[]</a></span><span> | null</span></>} >
+  Intended recipients for this content, such as the user or assistant.
 </ResponseField>
 <ResponseField name="lastModified" type={"string | null"} >
+  Timestamp indicating when the underlying resource was last modified.
 </ResponseField>
 <ResponseField name="priority" type={"number | null"} >
+  Relative importance of this content when clients choose what to surface.
 </ResponseField>
 
 ## <span class="font-mono">AudioContent</span>
@@ -2752,10 +2757,13 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </ResponseField>
 <ResponseField name="annotations" type={<><span><a href="#annotations">Annotations</a></span><span> | null</span></>} >
+  Optional annotations that help clients decide how to display or route this content.
 </ResponseField>
 <ResponseField name="data" type={"string"} required>
+  Base64-encoded media payload.
 </ResponseField>
 <ResponseField name="mimeType" type={"string"} required>
+  MIME type describing the encoded media payload.
 </ResponseField>
 
 ## <span class="font-mono">AuthCapabilities</span>
@@ -2864,7 +2872,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 <ResponseField name="description" type={"string | null"} >
   Optional description providing more details about this authentication method.
 </ResponseField>
-<ResponseField name="id" type={"string"} required>
+<ResponseField name="id" type={<a href="#authmethodid">AuthMethodId</a>} required>
   Unique identifier for this authentication method.
 </ResponseField>
 <ResponseField name="link" type={"string | null"} >
@@ -2909,7 +2917,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 <ResponseField name="env" type={"object"} >
   Additional environment variables to set when running the agent binary for terminal auth.
 </ResponseField>
-<ResponseField name="id" type={"string"} required>
+<ResponseField name="id" type={<a href="#authmethodid">AuthMethodId</a>} required>
   Unique identifier for this authentication method.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
@@ -2940,7 +2948,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 <ResponseField name="description" type={"string | null"} >
   Optional description providing more details about this authentication method.
 </ResponseField>
-<ResponseField name="id" type={"string"} required>
+<ResponseField name="id" type={<a href="#authmethodid">AuthMethodId</a>} required>
   Unique identifier for this authentication method.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
@@ -2971,7 +2979,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 <ResponseField name="description" type={"string | null"} >
   Optional description providing more details about this authentication method.
 </ResponseField>
-<ResponseField name="id" type={"string"} required>
+<ResponseField name="id" type={<a href="#authmethodid">AuthMethodId</a>} required>
   Unique identifier for this authentication method.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
@@ -3003,7 +3011,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 <ResponseField name="description" type={"string | null"} >
   Optional description providing more details about this authentication method.
 </ResponseField>
-<ResponseField name="id" type={"string"} required>
+<ResponseField name="id" type={<a href="#authmethodid">AuthMethodId</a>} required>
   Unique identifier for this authentication method.
 </ResponseField>
 <ResponseField name="link" type={"string | null"} >
@@ -3015,6 +3023,12 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 <ResponseField name="vars" type={<a href="#authenvvar">AuthEnvVar[]</a>} required>
   The environment variables the client should set.
 </ResponseField>
+
+## <span class="font-mono">AuthMethodId</span>
+
+Typed identifier used for auth method values on the wire.
+
+**Type:** `string`
 
 ## <span class="font-mono">AuthMethodTerminal</span>
 
@@ -3047,7 +3061,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 <ResponseField name="env" type={"object"} >
   Additional environment variables to set when running the agent binary for terminal auth.
 </ResponseField>
-<ResponseField name="id" type={"string"} required>
+<ResponseField name="id" type={<a href="#authmethodid">AuthMethodId</a>} required>
   Unique identifier for this authentication method.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
@@ -3139,10 +3153,13 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </ResponseField>
 <ResponseField name="blob" type={"string"} required>
+  Base64-encoded bytes for a binary resource payload.
 </ResponseField>
 <ResponseField name="mimeType" type={"string | null"} >
+  MIME type describing the encoded media payload.
 </ResponseField>
 <ResponseField name="uri" type={"string"} required>
+  URI associated with this resource or media payload.
 </ResponseField>
 
 ## <span class="font-mono">BooleanPropertySchema</span>
@@ -3357,8 +3374,10 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </ResponseField>
 <ResponseField name="annotations" type={<><span><a href="#annotations">Annotations</a></span><span> | null</span></>} >
+  Optional annotations that help clients decide how to display or route this content.
 </ResponseField>
 <ResponseField name="text" type={"string"} required>
+  Text payload carried by this content block.
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
   The discriminator value. Must be `"text"`.
@@ -3383,15 +3402,19 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </ResponseField>
 <ResponseField name="annotations" type={<><span><a href="#annotations">Annotations</a></span><span> | null</span></>} >
+  Optional annotations that help clients decide how to display or route this content.
 </ResponseField>
 <ResponseField name="data" type={"string"} required>
+  Base64-encoded media payload.
 </ResponseField>
 <ResponseField name="mimeType" type={"string"} required>
+  MIME type describing the encoded media payload.
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
   The discriminator value. Must be `"image"`.
 </ResponseField>
 <ResponseField name="uri" type={"string | null"} >
+  URI associated with this resource or media payload.
 </ResponseField>
 
 </Expandable>
@@ -3413,10 +3436,13 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </ResponseField>
 <ResponseField name="annotations" type={<><span><a href="#annotations">Annotations</a></span><span> | null</span></>} >
+  Optional annotations that help clients decide how to display or route this content.
 </ResponseField>
 <ResponseField name="data" type={"string"} required>
+  Base64-encoded media payload.
 </ResponseField>
 <ResponseField name="mimeType" type={"string"} required>
+  MIME type describing the encoded media payload.
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
   The discriminator value. Must be `"audio"`.
@@ -3441,21 +3467,28 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </ResponseField>
 <ResponseField name="annotations" type={<><span><a href="#annotations">Annotations</a></span><span> | null</span></>} >
+  Optional annotations that help clients decide how to display or route this content.
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
+  Optional human-readable details shown with this protocol object.
 </ResponseField>
 <ResponseField name="mimeType" type={"string | null"} >
+  MIME type describing the encoded media payload.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
+  Human-readable name shown for this protocol object.
 </ResponseField>
 <ResponseField name="size" type={"integer | null"} >
+  Optional size of the linked resource in bytes, if known.
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
+  Optional display title for end-user UI.
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
   The discriminator value. Must be `"resource_link"`.
 </ResponseField>
 <ResponseField name="uri" type={"string"} required>
+  URI associated with this resource or media payload.
 </ResponseField>
 
 </Expandable>
@@ -3479,8 +3512,10 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </ResponseField>
 <ResponseField name="annotations" type={<><span><a href="#annotations">Annotations</a></span><span> | null</span></>} >
+  Optional annotations that help clients decide how to display or route this content.
 </ResponseField>
 <ResponseField name="resource" type={<a href="#embeddedresourceresource">EmbeddedResourceResource</a>} required>
+  Embedded resource payload, either text or binary data.
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
   The discriminator value. Must be `"resource"`.
@@ -3636,26 +3671,28 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 ## <span class="font-mono">ElicitationContentValue</span>
 
+Allowed wire representations for `ElicitationContentValue`.
+
 **Type:** Union
 
 <ResponseField name="String" type="string">
-  {""}
+  String value accepted in elicitation response content.
 </ResponseField>
 
 <ResponseField name="Integer" type="int64">
-  {""}
+  Integer value accepted in elicitation response content.
 </ResponseField>
 
 <ResponseField name="Number" type="double">
-  {""}
+  Number value accepted in elicitation response content.
 </ResponseField>
 
 <ResponseField name="Boolean" type="boolean">
-  {""}
+  Boolean value accepted in elicitation response content.
 </ResponseField>
 
 <ResponseField name="StringArray" type="array">
-  {""}
+  String array value accepted in elicitation response content.
 </ResponseField>
 
 ## <span class="font-mono">ElicitationFormCapabilities</span>
@@ -4191,8 +4228,10 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </ResponseField>
 <ResponseField name="annotations" type={<><span><a href="#annotations">Annotations</a></span><span> | null</span></>} >
+  Optional annotations that help clients decide how to display or route this content.
 </ResponseField>
 <ResponseField name="resource" type={<a href="#embeddedresourceresource">EmbeddedResourceResource</a>} required>
+  Embedded resource payload, either text or binary data.
 </ResponseField>
 
 ## <span class="font-mono">EmbeddedResourceResource</span>
@@ -4202,7 +4241,7 @@ Resource content that can be embedded in a message.
 **Type:** Union
 
 <ResponseField name="TextResourceContents">
-{""}
+Text resource contents embedded directly in the message.
 
 <Expandable title="Properties">
 
@@ -4215,17 +4254,20 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </ResponseField>
 <ResponseField name="mimeType" type={"string | null"} >
+  MIME type describing the encoded media payload.
 </ResponseField>
 <ResponseField name="text" type={"string"} required>
+  Text payload carried by this content block.
 </ResponseField>
 <ResponseField name="uri" type={"string"} required>
+  URI associated with this resource or media payload.
 </ResponseField>
 
 </Expandable>
 </ResponseField>
 
 <ResponseField name="BlobResourceContents">
-{""}
+Binary resource contents embedded directly in the message.
 
 <Expandable title="Properties">
 
@@ -4238,10 +4280,13 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </ResponseField>
 <ResponseField name="blob" type={"string"} required>
+  Base64-encoded bytes for a binary resource payload.
 </ResponseField>
 <ResponseField name="mimeType" type={"string | null"} >
+  MIME type describing the encoded media payload.
 </ResponseField>
 <ResponseField name="uri" type={"string"} required>
+  URI associated with this resource or media payload.
 </ResponseField>
 
 </Expandable>
@@ -4478,12 +4523,16 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </ResponseField>
 <ResponseField name="annotations" type={<><span><a href="#annotations">Annotations</a></span><span> | null</span></>} >
+  Optional annotations that help clients decide how to display or route this content.
 </ResponseField>
 <ResponseField name="data" type={"string"} required>
+  Base64-encoded media payload.
 </ResponseField>
 <ResponseField name="mimeType" type={"string"} required>
+  MIME type describing the encoded media payload.
 </ResponseField>
 <ResponseField name="uri" type={"string | null"} >
+  URI associated with this resource or media payload.
 </ResponseField>
 
 ## <span class="font-mono">Implementation</span>
@@ -6672,15 +6721,15 @@ The Server MUST reply with the same value in the Response object if included. Th
 **Type:** Union
 
 <ResponseField name="null" type="null">
-  {""}
+  The JSON-RPC `null` request id.
 </ResponseField>
 
 <ResponseField name="Number" type="int64">
-  {""}
+  A numeric JSON-RPC request id.
 </ResponseField>
 
 <ResponseField name="Str" type="string">
-  {""}
+  A string JSON-RPC request id.
 </ResponseField>
 
 ## <span class="font-mono">RequestPermissionOutcome</span>
@@ -6747,30 +6796,40 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </ResponseField>
 <ResponseField name="annotations" type={<><span><a href="#annotations">Annotations</a></span><span> | null</span></>} >
+  Optional annotations that help clients decide how to display or route this content.
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
+  Optional human-readable details shown with this protocol object.
 </ResponseField>
 <ResponseField name="mimeType" type={"string | null"} >
+  MIME type describing the encoded media payload.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
+  Human-readable name shown for this protocol object.
 </ResponseField>
 <ResponseField name="size" type={"integer | null"} >
+  Optional size of the linked resource in bytes, if known.
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
+  Optional display title for end-user UI.
 </ResponseField>
 <ResponseField name="uri" type={"string"} required>
+  URI associated with this resource or media payload.
 </ResponseField>
 
 ## <span class="font-mono">Role</span>
 
 The sender or recipient of messages and data in a conversation.
 
-**Type:** Enumeration
+**Type:** Union
 
-| Value         |
-| ------------- |
-| `"assistant"` |
-| `"user"`      |
+<ResponseField name="assistant" type="string">
+  The assistant side of a conversation.
+</ResponseField>
+
+<ResponseField name="user" type="string">
+  The user side of a conversation.
+</ResponseField>
 
 ## <span class="font-mono">SelectedPermissionOutcome</span>
 
@@ -7273,10 +7332,13 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
+  Optional human-readable details shown with this protocol object.
 </ResponseField>
 <ResponseField name="id" type={<a href="#sessionmodeid">SessionModeId</a>} required>
+  Stable identifier used to refer to this protocol object in later messages.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
+  Human-readable name shown for this protocol object.
 </ResponseField>
 
 ## <span class="font-mono">SessionModeId</span>
@@ -7863,7 +7925,8 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
 
 </ResponseField>
-<ResponseField name="terminalId" type={"string"} required>
+<ResponseField name="terminalId" type={<a href="#terminalid">TerminalId</a>} required>
+  Identifier of the terminal instance to embed in the content stream.
 </ResponseField>
 
 ## <span class="font-mono">TerminalExitStatus</span>
@@ -7892,6 +7955,12 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
   The signal that terminated the process (may be null if exited normally).
 </ResponseField>
 
+## <span class="font-mono">TerminalId</span>
+
+Typed identifier used for terminal values on the wire.
+
+**Type:** `string`
+
 ## <span class="font-mono">TextContent</span>
 
 Text provided to or from an LLM.
@@ -7909,8 +7978,10 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </ResponseField>
 <ResponseField name="annotations" type={<><span><a href="#annotations">Annotations</a></span><span> | null</span></>} >
+  Optional annotations that help clients decide how to display or route this content.
 </ResponseField>
 <ResponseField name="text" type={"string"} required>
+  Text payload carried by this content block.
 </ResponseField>
 
 ## <span class="font-mono">TextDocumentContentChangeEvent</span>
@@ -7970,10 +8041,13 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </ResponseField>
 <ResponseField name="mimeType" type={"string | null"} >
+  MIME type describing the encoded media payload.
 </ResponseField>
 <ResponseField name="text" type={"string"} required>
+  Text payload carried by this content block.
 </ResponseField>
 <ResponseField name="uri" type={"string"} required>
+  URI associated with this resource or media payload.
 </ResponseField>
 
 ## <span class="font-mono">TitledMultiSelectItems</span>
@@ -8124,7 +8198,8 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
 
 </ResponseField>
-<ResponseField name="terminalId" type={"string"} required>
+<ResponseField name="terminalId" type={<a href="#terminalid">TerminalId</a>} required>
+  Identifier of the terminal instance to embed in the content stream.
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
   The discriminator value. Must be `"terminal"`.

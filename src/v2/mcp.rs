@@ -23,6 +23,7 @@ use crate::IntoOption;
 pub struct McpConnectionId(pub Arc<str>);
 
 impl McpConnectionId {
+    /// Wraps a protocol string as a typed [`McpConnectionId`].
     #[must_use]
     pub fn new(id: impl Into<Arc<str>>) -> Self {
         Self(id.into())
@@ -52,6 +53,7 @@ pub struct ConnectMcpRequest {
 }
 
 impl ConnectMcpRequest {
+    /// Builds [`ConnectMcpRequest`] with the required request fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(acp_id: impl Into<McpServerAcpId>) -> Self {
         Self {
@@ -95,6 +97,7 @@ pub struct ConnectMcpResponse {
 }
 
 impl ConnectMcpResponse {
+    /// Builds [`ConnectMcpResponse`] with the required response fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(connection_id: impl Into<McpConnectionId>) -> Self {
         Self {
@@ -145,6 +148,7 @@ pub struct MessageMcpRequest {
 }
 
 impl MessageMcpRequest {
+    /// Builds [`MessageMcpRequest`] with the required request fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(connection_id: impl Into<McpConnectionId>, method: impl Into<String>) -> Self {
         Self {
@@ -212,6 +216,7 @@ pub struct MessageMcpNotification {
 }
 
 impl MessageMcpNotification {
+    /// Builds [`MessageMcpNotification`] with the required notification fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(connection_id: impl Into<McpConnectionId>, method: impl Into<String>) -> Self {
         Self {
@@ -260,6 +265,7 @@ impl MessageMcpNotification {
 pub struct MessageMcpResponse(#[schemars(with = "serde_json::Value")] pub Arc<RawValue>);
 
 impl MessageMcpResponse {
+    /// Builds [`MessageMcpResponse`] with the required response fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(result: Arc<RawValue>) -> Self {
         Self(result)
@@ -289,6 +295,7 @@ pub struct DisconnectMcpRequest {
 }
 
 impl DisconnectMcpRequest {
+    /// Builds [`DisconnectMcpRequest`] with the required request fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(connection_id: impl Into<McpConnectionId>) -> Self {
         Self {
@@ -330,6 +337,7 @@ pub struct DisconnectMcpResponse {
 }
 
 impl DisconnectMcpResponse {
+    /// Builds [`DisconnectMcpResponse`] with the required response fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()

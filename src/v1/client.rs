@@ -60,6 +60,7 @@ pub struct SessionNotification {
 }
 
 impl SessionNotification {
+    /// Builds [`SessionNotification`] with the required notification fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>, update: SessionUpdate) -> Self {
         Self {
@@ -152,6 +153,7 @@ pub struct CurrentModeUpdate {
 }
 
 impl CurrentModeUpdate {
+    /// Builds [`CurrentModeUpdate`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(current_mode_id: impl Into<SessionModeId>) -> Self {
         Self {
@@ -193,6 +195,7 @@ pub struct ConfigOptionUpdate {
 }
 
 impl ConfigOptionUpdate {
+    /// Builds [`ConfigOptionUpdate`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(config_options: Vec<SessionConfigOption>) -> Self {
         Self {
@@ -238,6 +241,7 @@ pub struct SessionInfoUpdate {
 }
 
 impl SessionInfoUpdate {
+    /// Builds [`SessionInfoUpdate`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -295,6 +299,7 @@ pub struct UsageUpdate {
 }
 
 impl UsageUpdate {
+    /// Builds [`UsageUpdate`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(used: u64, size: u64) -> Self {
         Self {
@@ -344,6 +349,7 @@ pub struct Cost {
 }
 
 impl Cost {
+    /// Builds [`Cost`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(amount: f64, currency: impl Into<String>) -> Self {
         Self {
@@ -388,6 +394,7 @@ pub struct ContentChunk {
 }
 
 impl ContentChunk {
+    /// Builds [`ContentChunk`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(content: ContentBlock) -> Self {
         Self {
@@ -427,6 +434,7 @@ impl ContentChunk {
 pub struct MessageId(pub Arc<str>);
 
 impl MessageId {
+    /// Wraps a protocol string as a typed [`MessageId`].
     #[must_use]
     pub fn new(id: impl Into<Arc<str>>) -> Self {
         Self(id.into())
@@ -460,6 +468,7 @@ pub struct AvailableCommandsUpdate {
 }
 
 impl AvailableCommandsUpdate {
+    /// Builds [`AvailableCommandsUpdate`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(available_commands: Vec<AvailableCommand>) -> Self {
         Self {
@@ -506,6 +515,7 @@ pub struct AvailableCommand {
 }
 
 impl AvailableCommand {
+    /// Builds [`AvailableCommand`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(name: impl Into<String>, description: impl Into<String>) -> Self {
         Self {
@@ -562,6 +572,7 @@ pub struct UnstructuredCommandInput {
 }
 
 impl UnstructuredCommandInput {
+    /// Builds [`UnstructuredCommandInput`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(hint: impl Into<String>) -> Self {
         Self {
@@ -611,6 +622,7 @@ pub struct RequestPermissionRequest {
 }
 
 impl RequestPermissionRequest {
+    /// Builds [`RequestPermissionRequest`] with the required request fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(
         session_id: impl Into<SessionId>,
@@ -659,6 +671,7 @@ pub struct PermissionOption {
 }
 
 impl PermissionOption {
+    /// Builds [`PermissionOption`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(
         option_id: impl Into<PermissionOptionId>,
@@ -693,6 +706,7 @@ impl PermissionOption {
 pub struct PermissionOptionId(pub Arc<str>);
 
 impl PermissionOptionId {
+    /// Wraps a protocol string as a typed [`PermissionOptionId`].
     #[must_use]
     pub fn new(id: impl Into<Arc<str>>) -> Self {
         Self(id.into())
@@ -736,6 +750,7 @@ pub struct RequestPermissionResponse {
 }
 
 impl RequestPermissionResponse {
+    /// Builds [`RequestPermissionResponse`] with the required response fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(outcome: RequestPermissionOutcome) -> Self {
         Self {
@@ -793,6 +808,7 @@ pub struct SelectedPermissionOutcome {
 }
 
 impl SelectedPermissionOutcome {
+    /// Builds [`SelectedPermissionOutcome`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(option_id: impl Into<PermissionOptionId>) -> Self {
         Self {
@@ -840,6 +856,7 @@ pub struct WriteTextFileRequest {
 }
 
 impl WriteTextFileRequest {
+    /// Builds [`WriteTextFileRequest`] with the required request fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(
         session_id: impl Into<SessionId>,
@@ -883,6 +900,7 @@ pub struct WriteTextFileResponse {
 }
 
 impl WriteTextFileResponse {
+    /// Builds [`WriteTextFileResponse`] with the required response fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -929,6 +947,7 @@ pub struct ReadTextFileRequest {
 }
 
 impl ReadTextFileRequest {
+    /// Builds [`ReadTextFileRequest`] with the required request fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>, path: impl Into<PathBuf>) -> Self {
         Self {
@@ -973,6 +992,7 @@ impl ReadTextFileRequest {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ReadTextFileResponse {
+    /// Content payload returned by this response.
     pub content: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -984,6 +1004,7 @@ pub struct ReadTextFileResponse {
 }
 
 impl ReadTextFileResponse {
+    /// Builds [`ReadTextFileResponse`] with the required response fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(content: impl Into<String>) -> Self {
         Self {
@@ -1006,6 +1027,7 @@ impl ReadTextFileResponse {
 
 // Terminals
 
+/// Typed identifier used for terminal values on the wire.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
 #[from(Arc<str>, String, &'static str)]
@@ -1013,6 +1035,7 @@ impl ReadTextFileResponse {
 pub struct TerminalId(pub Arc<str>);
 
 impl TerminalId {
+    /// Wraps a protocol string as a typed [`TerminalId`].
     #[must_use]
     pub fn new(id: impl Into<Arc<str>>) -> Self {
         Self(id.into())
@@ -1057,6 +1080,7 @@ pub struct CreateTerminalRequest {
 }
 
 impl CreateTerminalRequest {
+    /// Builds [`CreateTerminalRequest`] with the required request fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>, command: impl Into<String>) -> Self {
         Self {
@@ -1136,6 +1160,7 @@ pub struct CreateTerminalResponse {
 }
 
 impl CreateTerminalResponse {
+    /// Builds [`CreateTerminalResponse`] with the required response fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(terminal_id: impl Into<TerminalId>) -> Self {
         Self {
@@ -1177,6 +1202,7 @@ pub struct TerminalOutputRequest {
 }
 
 impl TerminalOutputRequest {
+    /// Builds [`TerminalOutputRequest`] with the required request fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>, terminal_id: impl Into<TerminalId>) -> Self {
         Self {
@@ -1221,6 +1247,7 @@ pub struct TerminalOutputResponse {
 }
 
 impl TerminalOutputResponse {
+    /// Builds [`TerminalOutputResponse`] with the required response fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(output: impl Into<String>, truncated: bool) -> Self {
         Self {
@@ -1271,6 +1298,7 @@ pub struct ReleaseTerminalRequest {
 }
 
 impl ReleaseTerminalRequest {
+    /// Builds [`ReleaseTerminalRequest`] with the required request fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>, terminal_id: impl Into<TerminalId>) -> Self {
         Self {
@@ -1309,6 +1337,7 @@ pub struct ReleaseTerminalResponse {
 }
 
 impl ReleaseTerminalResponse {
+    /// Builds [`ReleaseTerminalResponse`] with the required response fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -1347,6 +1376,7 @@ pub struct KillTerminalRequest {
 }
 
 impl KillTerminalRequest {
+    /// Builds [`KillTerminalRequest`] with the required request fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>, terminal_id: impl Into<TerminalId>) -> Self {
         Self {
@@ -1385,6 +1415,7 @@ pub struct KillTerminalResponse {
 }
 
 impl KillTerminalResponse {
+    /// Builds [`KillTerminalResponse`] with the required response fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -1423,6 +1454,7 @@ pub struct WaitForTerminalExitRequest {
 }
 
 impl WaitForTerminalExitRequest {
+    /// Builds [`WaitForTerminalExitRequest`] with the required request fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>, terminal_id: impl Into<TerminalId>) -> Self {
         Self {
@@ -1464,6 +1496,7 @@ pub struct WaitForTerminalExitResponse {
 }
 
 impl WaitForTerminalExitResponse {
+    /// Builds [`WaitForTerminalExitResponse`] with the required response fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(exit_status: TerminalExitStatus) -> Self {
         Self {
@@ -1504,6 +1537,7 @@ pub struct TerminalExitStatus {
 }
 
 impl TerminalExitStatus {
+    /// Builds [`TerminalExitStatus`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -1621,6 +1655,7 @@ pub struct ClientCapabilities {
 }
 
 impl ClientCapabilities {
+    /// Builds an empty [`ClientCapabilities`]; use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -1746,6 +1781,7 @@ pub struct AuthCapabilities {
 
 #[cfg(feature = "unstable_auth_methods")]
 impl AuthCapabilities {
+    /// Builds an empty [`AuthCapabilities`]; use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -1797,6 +1833,7 @@ pub struct FileSystemCapabilities {
 }
 
 impl FileSystemCapabilities {
+    /// Builds an empty [`FileSystemCapabilities`]; use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -2083,21 +2120,34 @@ impl AgentRequest {
 #[schemars(inline)]
 #[non_exhaustive]
 pub enum ClientResponse {
+    /// Successful result returned for a `fs/write_text_file` request.
     WriteTextFileResponse(#[serde(default)] WriteTextFileResponse),
+    /// Successful result returned for a `fs/read_text_file` request.
     ReadTextFileResponse(ReadTextFileResponse),
+    /// Successful result returned for a `session/request_permission` request.
     RequestPermissionResponse(RequestPermissionResponse),
+    /// Successful result returned for a `terminal/create` request.
     CreateTerminalResponse(CreateTerminalResponse),
+    /// Successful result returned for a `terminal/output` request.
     TerminalOutputResponse(TerminalOutputResponse),
+    /// Successful result returned for a `terminal/release` request.
     ReleaseTerminalResponse(#[serde(default)] ReleaseTerminalResponse),
+    /// Successful result returned for a `terminal/wait_for_exit` request.
     WaitForTerminalExitResponse(WaitForTerminalExitResponse),
+    /// Successful result returned for a `terminal/kill` request.
     KillTerminalResponse(#[serde(default)] KillTerminalResponse),
+    /// Successful result returned for a `elicitation/create` request.
     #[cfg(feature = "unstable_elicitation")]
     CreateElicitationResponse(CreateElicitationResponse),
+    /// Successful result returned for a `mcp/connect` request.
     #[cfg(feature = "unstable_mcp_over_acp")]
     ConnectMcpResponse(ConnectMcpResponse),
+    /// Successful result returned for a `mcp/disconnect` request.
     #[cfg(feature = "unstable_mcp_over_acp")]
     DisconnectMcpResponse(#[serde(default)] DisconnectMcpResponse),
+    /// Successful result returned by an extension method outside the core ACP method set.
     ExtMethodResponse(ExtResponse),
+    /// Successful result returned by an MCP-over-ACP `mcp/message` request.
     #[cfg(feature = "unstable_mcp_over_acp")]
     MessageMcpResponse(MessageMcpResponse),
 }

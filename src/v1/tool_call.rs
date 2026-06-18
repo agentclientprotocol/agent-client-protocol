@@ -61,6 +61,7 @@ pub struct ToolCall {
 }
 
 impl ToolCall {
+    /// Builds [`ToolCall`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(tool_call_id: impl Into<ToolCallId>, title: impl Into<String>) -> Self {
         Self {
@@ -184,6 +185,7 @@ pub struct ToolCallUpdate {
 }
 
 impl ToolCallUpdate {
+    /// Builds [`ToolCallUpdate`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(tool_call_id: impl Into<ToolCallId>, fields: ToolCallUpdateFields) -> Self {
         Self {
@@ -246,6 +248,7 @@ pub struct ToolCallUpdateFields {
 }
 
 impl ToolCallUpdateFields {
+    /// Builds [`ToolCallUpdateFields`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -375,6 +378,7 @@ impl From<ToolCall> for ToolCallUpdate {
 pub struct ToolCallId(pub Arc<str>);
 
 impl ToolCallId {
+    /// Wraps a protocol string as a typed [`ToolCallId`].
     #[must_use]
     pub fn new(id: impl Into<Arc<str>>) -> Self {
         Self(id.into())
@@ -510,6 +514,7 @@ pub struct Content {
 }
 
 impl Content {
+    /// Builds [`Content`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(content: impl Into<ContentBlock>) -> Self {
         Self {
@@ -540,6 +545,7 @@ impl Content {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct Terminal {
+    /// Identifier of the terminal instance to embed in the content stream.
     pub terminal_id: TerminalId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -551,6 +557,7 @@ pub struct Terminal {
 }
 
 impl Terminal {
+    /// Builds [`Terminal`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(terminal_id: impl Into<TerminalId>) -> Self {
         Self {
@@ -597,6 +604,7 @@ pub struct Diff {
 }
 
 impl Diff {
+    /// Builds [`Diff`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(path: impl Into<PathBuf>, new_text: impl Into<String>) -> Self {
         Self {
@@ -652,6 +660,7 @@ pub struct ToolCallLocation {
 }
 
 impl ToolCallLocation {
+    /// Builds [`ToolCallLocation`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(path: impl Into<PathBuf>) -> Self {
         Self {

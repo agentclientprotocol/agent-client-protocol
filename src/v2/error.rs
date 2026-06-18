@@ -18,6 +18,7 @@ use serde_with::skip_serializing_none;
 
 use crate::IntoOption;
 
+/// Convenience result type using this protocol version's error type.
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 
 /// JSON-RPC error object.

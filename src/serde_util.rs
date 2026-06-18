@@ -200,6 +200,7 @@ mod skip_listener_tests {
 /// This allows the caller to either pass in the value itself without wrapping it in `Some`,
 /// or to just pass in an Option if that is what they have.
 pub trait IntoOption<T> {
+    /// Converts this value into an optional builder argument.
     fn into_option(self) -> Option<T>;
 }
 
@@ -310,9 +311,12 @@ impl IntoOption<serde_json::Value> for Cow<'_, str> {
 #[schemars(with = "Option<Option<T>>", inline)]
 #[expect(clippy::exhaustive_enums)]
 pub enum MaybeUndefined<T> {
+    /// The field was not present.
     #[default]
     Undefined,
+    /// The field was present with a JSON `null` value.
     Null,
+    /// The field was present with a non-null value.
     Value(T),
 }
 
@@ -548,6 +552,7 @@ where
 /// This allows the caller to either pass in the value itself without wrapping it in `Some`,
 /// or to just pass in an Option if that is what they have, or set it back to undefined.
 pub trait IntoMaybeUndefined<T> {
+    /// Converts this value into a three-state builder argument.
     fn into_maybe_undefined(self) -> MaybeUndefined<T>;
 }
 

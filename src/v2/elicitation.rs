@@ -30,6 +30,7 @@ use crate::IntoOption;
 pub struct ElicitationId(pub Arc<str>);
 
 impl ElicitationId {
+    /// Wraps a protocol string as a typed [`ElicitationId`].
     #[must_use]
     pub fn new(id: impl Into<Arc<str>>) -> Self {
         Self(id.into())
@@ -931,6 +932,7 @@ pub struct ElicitationCapabilities {
 }
 
 impl ElicitationCapabilities {
+    /// Builds an empty [`ElicitationCapabilities`]; use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -982,6 +984,7 @@ pub struct ElicitationFormCapabilities {
 }
 
 impl ElicitationFormCapabilities {
+    /// Builds an empty [`ElicitationFormCapabilities`]; use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -1019,6 +1022,7 @@ pub struct ElicitationUrlCapabilities {
 }
 
 impl ElicitationUrlCapabilities {
+    /// Builds an empty [`ElicitationUrlCapabilities`]; use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -1073,6 +1077,7 @@ pub struct ElicitationSessionScope {
 }
 
 impl ElicitationSessionScope {
+    /// Builds [`ElicitationSessionScope`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>) -> Self {
         Self {
@@ -1081,6 +1086,7 @@ impl ElicitationSessionScope {
         }
     }
 
+    /// Sets or clears the optional `toolCallId` field.
     #[must_use]
     pub fn tool_call_id(mut self, tool_call_id: impl IntoOption<ToolCallId>) -> Self {
         self.tool_call_id = tool_call_id.into_option();
@@ -1103,6 +1109,7 @@ pub struct ElicitationRequestScope {
 }
 
 impl ElicitationRequestScope {
+    /// Builds [`ElicitationRequestScope`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(request_id: impl Into<RequestId>) -> Self {
         Self {
@@ -1153,6 +1160,7 @@ pub struct CreateElicitationRequest {
 }
 
 impl CreateElicitationRequest {
+    /// Builds [`CreateElicitationRequest`] with the required request fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(mode: impl Into<ElicitationMode>, message: impl Into<String>) -> Self {
         Self {
@@ -1236,6 +1244,7 @@ pub struct ElicitationFormMode {
 }
 
 impl ElicitationFormMode {
+    /// Builds [`ElicitationFormMode`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(scope: impl Into<ElicitationScope>, requested_schema: ElicitationSchema) -> Self {
         Self {
@@ -1265,6 +1274,7 @@ pub struct ElicitationUrlMode {
 }
 
 impl ElicitationUrlMode {
+    /// Builds [`ElicitationUrlMode`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(
         scope: impl Into<ElicitationScope>,
@@ -1303,6 +1313,7 @@ pub struct CreateElicitationResponse {
 }
 
 impl CreateElicitationResponse {
+    /// Builds [`CreateElicitationResponse`] with the required response fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(action: ElicitationAction) -> Self {
         Self { action, meta: None }
@@ -1354,6 +1365,7 @@ pub struct ElicitationAcceptAction {
 }
 
 impl ElicitationAcceptAction {
+    /// Builds [`ElicitationAcceptAction`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self { content: None }
@@ -1370,14 +1382,20 @@ impl ElicitationAcceptAction {
     }
 }
 
+/// Allowed wire representations for [`ElicitationContentValue`].
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[serde(untagged)]
 #[non_exhaustive]
 pub enum ElicitationContentValue {
+    /// String value accepted in elicitation response content.
     String(String),
+    /// Integer value accepted in elicitation response content.
     Integer(i64),
+    /// Number value accepted in elicitation response content.
     Number(f64),
+    /// Boolean value accepted in elicitation response content.
     Boolean(bool),
+    /// String array value accepted in elicitation response content.
     StringArray(Vec<String>),
 }
 
@@ -1458,6 +1476,7 @@ pub struct CompleteElicitationNotification {
 }
 
 impl CompleteElicitationNotification {
+    /// Builds [`CompleteElicitationNotification`] with the required notification fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(elicitation_id: impl Into<ElicitationId>) -> Self {
         Self {
@@ -1493,6 +1512,7 @@ pub struct UrlElicitationRequiredData {
 }
 
 impl UrlElicitationRequiredData {
+    /// Builds [`UrlElicitationRequiredData`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(elicitations: Vec<UrlElicitationRequiredItem>) -> Self {
         Self { elicitations }
@@ -1530,6 +1550,7 @@ pub enum ElicitationUrlOnlyMode {
 }
 
 impl UrlElicitationRequiredItem {
+    /// Builds [`UrlElicitationRequiredItem`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(
         elicitation_id: impl Into<ElicitationId>,

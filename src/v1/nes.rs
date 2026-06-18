@@ -74,6 +74,7 @@ pub struct Position {
 }
 
 impl Position {
+    /// Builds a [`Position`] from protocol coordinate values.
     #[must_use]
     pub fn new(line: u32, character: u32) -> Self {
         Self {
@@ -115,6 +116,7 @@ pub struct Range {
 }
 
 impl Range {
+    /// Builds a [`Range`] from protocol coordinate values.
     #[must_use]
     pub fn new(start: Position, end: Position) -> Self {
         Self {
@@ -165,17 +167,20 @@ pub struct NesCapabilities {
 }
 
 impl NesCapabilities {
+    /// Builds an empty [`NesCapabilities`]; use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Sets or clears the optional `events` field.
     #[must_use]
     pub fn events(mut self, events: impl IntoOption<NesEventCapabilities>) -> Self {
         self.events = events.into_option();
         self
     }
 
+    /// Sets or clears the optional `context` field.
     #[must_use]
     pub fn context(mut self, context: impl IntoOption<NesContextCapabilities>) -> Self {
         self.context = context.into_option();
@@ -216,11 +221,13 @@ pub struct NesEventCapabilities {
 }
 
 impl NesEventCapabilities {
+    /// Builds an empty [`NesEventCapabilities`]; use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Sets or clears the optional `document` field.
     #[must_use]
     pub fn document(mut self, document: impl IntoOption<NesDocumentEventCapabilities>) -> Self {
         self.document = document.into_option();
@@ -281,17 +288,20 @@ pub struct NesDocumentEventCapabilities {
 }
 
 impl NesDocumentEventCapabilities {
+    /// Builds an empty [`NesDocumentEventCapabilities`]; use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Sets or clears the optional `didOpen` field.
     #[must_use]
     pub fn did_open(mut self, did_open: impl IntoOption<NesDocumentDidOpenCapabilities>) -> Self {
         self.did_open = did_open.into_option();
         self
     }
 
+    /// Sets or clears the optional `didChange` field.
     #[must_use]
     pub fn did_change(
         mut self,
@@ -301,6 +311,7 @@ impl NesDocumentEventCapabilities {
         self
     }
 
+    /// Sets or clears the optional `didClose` field.
     #[must_use]
     pub fn did_close(
         mut self,
@@ -310,12 +321,14 @@ impl NesDocumentEventCapabilities {
         self
     }
 
+    /// Sets or clears the optional `didSave` field.
     #[must_use]
     pub fn did_save(mut self, did_save: impl IntoOption<NesDocumentDidSaveCapabilities>) -> Self {
         self.did_save = did_save.into_option();
         self
     }
 
+    /// Sets or clears the optional `didFocus` field.
     #[must_use]
     pub fn did_focus(
         mut self,
@@ -353,6 +366,7 @@ pub struct NesDocumentDidOpenCapabilities {
 }
 
 impl NesDocumentDidOpenCapabilities {
+    /// Builds an empty [`NesDocumentDidOpenCapabilities`]; use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -377,6 +391,7 @@ pub struct NesDocumentDidChangeCapabilities {
 }
 
 impl NesDocumentDidChangeCapabilities {
+    /// Builds an empty [`NesDocumentDidChangeCapabilities`]; use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new(sync_kind: TextDocumentSyncKind) -> Self {
         Self {
@@ -425,6 +440,7 @@ pub struct NesDocumentDidCloseCapabilities {
 }
 
 impl NesDocumentDidCloseCapabilities {
+    /// Builds an empty [`NesDocumentDidCloseCapabilities`]; use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -447,6 +463,7 @@ pub struct NesDocumentDidSaveCapabilities {
 }
 
 impl NesDocumentDidSaveCapabilities {
+    /// Builds an empty [`NesDocumentDidSaveCapabilities`]; use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -469,6 +486,7 @@ pub struct NesDocumentDidFocusCapabilities {
 }
 
 impl NesDocumentDidFocusCapabilities {
+    /// Builds an empty [`NesDocumentDidFocusCapabilities`]; use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -522,11 +540,13 @@ pub struct NesContextCapabilities {
 }
 
 impl NesContextCapabilities {
+    /// Builds an empty [`NesContextCapabilities`]; use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Sets or clears the optional `recentFiles` field.
     #[must_use]
     pub fn recent_files(
         mut self,
@@ -536,6 +556,7 @@ impl NesContextCapabilities {
         self
     }
 
+    /// Sets or clears the optional `relatedSnippets` field.
     #[must_use]
     pub fn related_snippets(
         mut self,
@@ -545,6 +566,7 @@ impl NesContextCapabilities {
         self
     }
 
+    /// Sets or clears the optional `editHistory` field.
     #[must_use]
     pub fn edit_history(
         mut self,
@@ -554,6 +576,7 @@ impl NesContextCapabilities {
         self
     }
 
+    /// Sets or clears the optional `userActions` field.
     #[must_use]
     pub fn user_actions(
         mut self,
@@ -563,12 +586,14 @@ impl NesContextCapabilities {
         self
     }
 
+    /// Sets or clears the optional `openFiles` field.
     #[must_use]
     pub fn open_files(mut self, open_files: impl IntoOption<NesOpenFilesCapabilities>) -> Self {
         self.open_files = open_files.into_option();
         self
     }
 
+    /// Sets or clears the optional `diagnostics` field.
     #[must_use]
     pub fn diagnostics(mut self, diagnostics: impl IntoOption<NesDiagnosticsCapabilities>) -> Self {
         self.diagnostics = diagnostics.into_option();
@@ -605,6 +630,7 @@ pub struct NesRecentFilesCapabilities {
 }
 
 impl NesRecentFilesCapabilities {
+    /// Builds an empty [`NesRecentFilesCapabilities`]; use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -627,6 +653,7 @@ pub struct NesRelatedSnippetsCapabilities {
 }
 
 impl NesRelatedSnippetsCapabilities {
+    /// Builds an empty [`NesRelatedSnippetsCapabilities`]; use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -651,6 +678,7 @@ pub struct NesEditHistoryCapabilities {
 }
 
 impl NesEditHistoryCapabilities {
+    /// Builds an empty [`NesEditHistoryCapabilities`]; use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -675,6 +703,7 @@ pub struct NesUserActionsCapabilities {
 }
 
 impl NesUserActionsCapabilities {
+    /// Builds an empty [`NesUserActionsCapabilities`]; use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -697,6 +726,7 @@ pub struct NesOpenFilesCapabilities {
 }
 
 impl NesOpenFilesCapabilities {
+    /// Builds an empty [`NesOpenFilesCapabilities`]; use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -719,6 +749,7 @@ pub struct NesDiagnosticsCapabilities {
 }
 
 impl NesDiagnosticsCapabilities {
+    /// Builds an empty [`NesDiagnosticsCapabilities`]; use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -759,23 +790,27 @@ pub struct ClientNesCapabilities {
 }
 
 impl ClientNesCapabilities {
+    /// Builds an empty [`ClientNesCapabilities`]; use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Sets or clears the optional `jump` field.
     #[must_use]
     pub fn jump(mut self, jump: impl IntoOption<NesJumpCapabilities>) -> Self {
         self.jump = jump.into_option();
         self
     }
 
+    /// Sets or clears the optional `rename` field.
     #[must_use]
     pub fn rename(mut self, rename: impl IntoOption<NesRenameCapabilities>) -> Self {
         self.rename = rename.into_option();
         self
     }
 
+    /// Sets or clears the optional `searchAndReplace` field.
     #[must_use]
     pub fn search_and_replace(
         mut self,
@@ -813,6 +848,7 @@ pub struct NesJumpCapabilities {
 }
 
 impl NesJumpCapabilities {
+    /// Builds an empty [`NesJumpCapabilities`]; use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -835,6 +871,7 @@ pub struct NesRenameCapabilities {
 }
 
 impl NesRenameCapabilities {
+    /// Builds an empty [`NesRenameCapabilities`]; use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -857,6 +894,7 @@ pub struct NesSearchAndReplaceCapabilities {
 }
 
 impl NesSearchAndReplaceCapabilities {
+    /// Builds an empty [`NesSearchAndReplaceCapabilities`]; use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -892,6 +930,7 @@ pub struct DidOpenDocumentNotification {
 }
 
 impl DidOpenDocumentNotification {
+    /// Builds [`DidOpenDocumentNotification`] with the required notification fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(
         session_id: impl Into<SessionId>,
@@ -947,6 +986,7 @@ pub struct DidChangeDocumentNotification {
 }
 
 impl DidChangeDocumentNotification {
+    /// Builds [`DidChangeDocumentNotification`] with the required notification fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(
         session_id: impl Into<SessionId>,
@@ -998,6 +1038,7 @@ pub struct TextDocumentContentChangeEvent {
 }
 
 impl TextDocumentContentChangeEvent {
+    /// Builds a full-document change event that replaces the entire document text.
     #[must_use]
     pub fn full(text: impl Into<String>) -> Self {
         Self {
@@ -1007,6 +1048,7 @@ impl TextDocumentContentChangeEvent {
         }
     }
 
+    /// Builds an incremental document change event for a specific text range.
     #[must_use]
     pub fn incremental(range: Range, text: impl Into<String>) -> Self {
         Self {
@@ -1049,6 +1091,7 @@ pub struct DidCloseDocumentNotification {
 }
 
 impl DidCloseDocumentNotification {
+    /// Builds [`DidCloseDocumentNotification`] with the required notification fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>, uri: impl Into<String>) -> Self {
         Self {
@@ -1091,6 +1134,7 @@ pub struct DidSaveDocumentNotification {
 }
 
 impl DidSaveDocumentNotification {
+    /// Builds [`DidSaveDocumentNotification`] with the required notification fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>, uri: impl Into<String>) -> Self {
         Self {
@@ -1139,6 +1183,7 @@ pub struct DidFocusDocumentNotification {
 }
 
 impl DidFocusDocumentNotification {
+    /// Builds [`DidFocusDocumentNotification`] with the required notification fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(
         session_id: impl Into<SessionId>,
@@ -1201,6 +1246,7 @@ pub struct StartNesRequest {
 }
 
 impl StartNesRequest {
+    /// Builds [`StartNesRequest`] with the required request fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -1211,12 +1257,14 @@ impl StartNesRequest {
         }
     }
 
+    /// Sets or clears the optional `workspaceUri` field.
     #[must_use]
     pub fn workspace_uri(mut self, workspace_uri: impl IntoOption<String>) -> Self {
         self.workspace_uri = workspace_uri.into_option();
         self
     }
 
+    /// Sets or clears the optional `workspaceFolders` field.
     #[must_use]
     pub fn workspace_folders(
         mut self,
@@ -1226,6 +1274,7 @@ impl StartNesRequest {
         self
     }
 
+    /// Sets or clears the optional `repository` field.
     #[must_use]
     pub fn repository(mut self, repository: impl IntoOption<NesRepository>) -> Self {
         self.repository = repository.into_option();
@@ -1270,6 +1319,7 @@ pub struct WorkspaceFolder {
 }
 
 impl WorkspaceFolder {
+    /// Builds [`WorkspaceFolder`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(uri: impl Into<String>, name: impl Into<String>) -> Self {
         Self {
@@ -1313,6 +1363,7 @@ pub struct NesRepository {
 }
 
 impl NesRepository {
+    /// Builds [`NesRepository`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(
         name: impl Into<String>,
@@ -1358,6 +1409,7 @@ pub struct StartNesResponse {
 }
 
 impl StartNesResponse {
+    /// Builds [`StartNesResponse`] with the required response fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>) -> Self {
         Self {
@@ -1402,6 +1454,7 @@ pub struct CloseNesRequest {
 }
 
 impl CloseNesRequest {
+    /// Builds [`CloseNesRequest`] with the required request fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>) -> Self {
         Self {
@@ -1439,6 +1492,7 @@ pub struct CloseNesResponse {
 }
 
 impl CloseNesResponse {
+    /// Builds [`CloseNesResponse`] with the required response fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -1511,6 +1565,7 @@ pub struct SuggestNesRequest {
 }
 
 impl SuggestNesRequest {
+    /// Builds [`SuggestNesRequest`] with the required request fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(
         session_id: impl Into<SessionId>,
@@ -1531,12 +1586,14 @@ impl SuggestNesRequest {
         }
     }
 
+    /// Sets or clears the optional `selection` field.
     #[must_use]
     pub fn selection(mut self, selection: impl IntoOption<Range>) -> Self {
         self.selection = selection.into_option();
         self
     }
 
+    /// Sets or clears the optional `context` field.
     #[must_use]
     pub fn context(mut self, context: impl IntoOption<NesSuggestContext>) -> Self {
         self.context = context.into_option();
@@ -1602,17 +1659,20 @@ pub struct NesSuggestContext {
 }
 
 impl NesSuggestContext {
+    /// Builds [`NesSuggestContext`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Sets or clears the optional `recentFiles` field.
     #[must_use]
     pub fn recent_files(mut self, recent_files: impl IntoOption<Vec<NesRecentFile>>) -> Self {
         self.recent_files = recent_files.into_option();
         self
     }
 
+    /// Sets or clears the optional `relatedSnippets` field.
     #[must_use]
     pub fn related_snippets(
         mut self,
@@ -1622,24 +1682,28 @@ impl NesSuggestContext {
         self
     }
 
+    /// Sets or clears the optional `editHistory` field.
     #[must_use]
     pub fn edit_history(mut self, edit_history: impl IntoOption<Vec<NesEditHistoryEntry>>) -> Self {
         self.edit_history = edit_history.into_option();
         self
     }
 
+    /// Sets or clears the optional `userActions` field.
     #[must_use]
     pub fn user_actions(mut self, user_actions: impl IntoOption<Vec<NesUserAction>>) -> Self {
         self.user_actions = user_actions.into_option();
         self
     }
 
+    /// Sets or clears the optional `openFiles` field.
     #[must_use]
     pub fn open_files(mut self, open_files: impl IntoOption<Vec<NesOpenFile>>) -> Self {
         self.open_files = open_files.into_option();
         self
     }
 
+    /// Sets or clears the optional `diagnostics` field.
     #[must_use]
     pub fn diagnostics(mut self, diagnostics: impl IntoOption<Vec<NesDiagnostic>>) -> Self {
         self.diagnostics = diagnostics.into_option();
@@ -1680,6 +1744,7 @@ pub struct NesRecentFile {
 }
 
 impl NesRecentFile {
+    /// Builds [`NesRecentFile`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(
         uri: impl Into<String>,
@@ -1726,6 +1791,7 @@ pub struct NesRelatedSnippet {
 }
 
 impl NesRelatedSnippet {
+    /// Builds [`NesRelatedSnippet`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(uri: impl Into<String>, excerpts: Vec<NesExcerpt>) -> Self {
         Self {
@@ -1769,6 +1835,7 @@ pub struct NesExcerpt {
 }
 
 impl NesExcerpt {
+    /// Builds [`NesExcerpt`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(start_line: u32, end_line: u32, text: impl Into<String>) -> Self {
         Self {
@@ -1811,6 +1878,7 @@ pub struct NesEditHistoryEntry {
 }
 
 impl NesEditHistoryEntry {
+    /// Builds [`NesEditHistoryEntry`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(uri: impl Into<String>, diff: impl Into<String>) -> Self {
         Self {
@@ -1856,6 +1924,7 @@ pub struct NesUserAction {
 }
 
 impl NesUserAction {
+    /// Builds [`NesUserAction`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(
         action: impl Into<String>,
@@ -1915,6 +1984,7 @@ pub struct NesOpenFile {
 }
 
 impl NesOpenFile {
+    /// Builds [`NesOpenFile`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(uri: impl Into<String>, language_id: impl Into<String>) -> Self {
         Self {
@@ -1926,12 +1996,14 @@ impl NesOpenFile {
         }
     }
 
+    /// Sets or clears the optional `visibleRange` field.
     #[must_use]
     pub fn visible_range(mut self, visible_range: impl IntoOption<Range>) -> Self {
         self.visible_range = visible_range.into_option();
         self
     }
 
+    /// Sets or clears the optional `lastFocusedMs` field.
     #[must_use]
     pub fn last_focused_ms(mut self, last_focused_ms: impl IntoOption<u64>) -> Self {
         self.last_focused_ms = last_focused_ms.into_option();
@@ -1974,6 +2046,7 @@ pub struct NesDiagnostic {
 }
 
 impl NesDiagnostic {
+    /// Builds [`NesDiagnostic`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(
         uri: impl Into<String>,
@@ -2044,6 +2117,7 @@ pub struct SuggestNesResponse {
 }
 
 impl SuggestNesResponse {
+    /// Builds [`SuggestNesResponse`] with the required response fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(suggestions: Vec<NesSuggestion>) -> Self {
         Self {
@@ -2108,6 +2182,7 @@ pub struct NesEditSuggestion {
 }
 
 impl NesEditSuggestion {
+    /// Builds [`NesEditSuggestion`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(id: impl Into<String>, uri: impl Into<String>, edits: Vec<NesTextEdit>) -> Self {
         Self {
@@ -2119,6 +2194,7 @@ impl NesEditSuggestion {
         }
     }
 
+    /// Sets or clears the optional `cursorPosition` field.
     #[must_use]
     pub fn cursor_position(mut self, cursor_position: impl IntoOption<Position>) -> Self {
         self.cursor_position = cursor_position.into_option();
@@ -2157,6 +2233,7 @@ pub struct NesTextEdit {
 }
 
 impl NesTextEdit {
+    /// Builds [`NesTextEdit`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(range: Range, new_text: impl Into<String>) -> Self {
         Self {
@@ -2200,6 +2277,7 @@ pub struct NesJumpSuggestion {
 }
 
 impl NesJumpSuggestion {
+    /// Builds [`NesJumpSuggestion`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(id: impl Into<String>, uri: impl Into<String>, position: Position) -> Self {
         Self {
@@ -2246,6 +2324,7 @@ pub struct NesRenameSuggestion {
 }
 
 impl NesRenameSuggestion {
+    /// Builds [`NesRenameSuggestion`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(
         id: impl Into<String>,
@@ -2300,6 +2379,7 @@ pub struct NesSearchAndReplaceSuggestion {
 }
 
 impl NesSearchAndReplaceSuggestion {
+    /// Builds [`NesSearchAndReplaceSuggestion`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(
         id: impl Into<String>,
@@ -2317,6 +2397,7 @@ impl NesSearchAndReplaceSuggestion {
         }
     }
 
+    /// Sets or clears the optional `isRegex` field.
     #[must_use]
     pub fn is_regex(mut self, is_regex: impl IntoOption<bool>) -> Self {
         self.is_regex = is_regex.into_option();
@@ -2358,6 +2439,7 @@ pub struct AcceptNesNotification {
 }
 
 impl AcceptNesNotification {
+    /// Builds [`AcceptNesNotification`] with the required notification fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>, id: impl Into<String>) -> Self {
         Self {
@@ -2406,6 +2488,7 @@ pub struct RejectNesNotification {
 }
 
 impl RejectNesNotification {
+    /// Builds [`RejectNesNotification`] with the required notification fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>, id: impl Into<String>) -> Self {
         Self {
@@ -2416,6 +2499,7 @@ impl RejectNesNotification {
         }
     }
 
+    /// Sets or clears the optional `reason` field.
     #[must_use]
     pub fn reason(mut self, reason: impl IntoOption<NesRejectReason>) -> Self {
         self.reason = reason.into_option();
