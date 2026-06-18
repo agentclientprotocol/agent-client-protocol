@@ -1,16 +1,8 @@
 //! Generates ACP JSON Schema and schema documentation artifacts.
 
 use agent_client_protocol_schema::ProtocolVersion;
-#[cfg(feature = "unstable_protocol_v2")]
-use agent_client_protocol_schema::v2::{
-    AGENT_METHOD_NAMES, AgentNotification, AgentRequest, AgentResponse, CLIENT_METHOD_NAMES,
-    ClientNotification, ClientRequest, ClientResponse, JsonRpcBatch, JsonRpcMessage, Notification,
-    Request, Response,
-};
-#[cfg(all(feature = "unstable_cancel_request", feature = "unstable_protocol_v2"))]
-use agent_client_protocol_schema::v2::{PROTOCOL_LEVEL_METHOD_NAMES, ProtocolLevelNotification};
 #[cfg(not(feature = "unstable_protocol_v2"))]
-use agent_client_protocol_schema::{
+use agent_client_protocol_schema::v1::{
     AGENT_METHOD_NAMES, AgentNotification, AgentRequest, AgentResponse, CLIENT_METHOD_NAMES,
     ClientNotification, ClientRequest, ClientResponse, JsonRpcMessage, Notification, Request,
     Response,
@@ -19,7 +11,15 @@ use agent_client_protocol_schema::{
     feature = "unstable_cancel_request",
     not(feature = "unstable_protocol_v2")
 ))]
-use agent_client_protocol_schema::{PROTOCOL_LEVEL_METHOD_NAMES, ProtocolLevelNotification};
+use agent_client_protocol_schema::v1::{PROTOCOL_LEVEL_METHOD_NAMES, ProtocolLevelNotification};
+#[cfg(feature = "unstable_protocol_v2")]
+use agent_client_protocol_schema::v2::{
+    AGENT_METHOD_NAMES, AgentNotification, AgentRequest, AgentResponse, CLIENT_METHOD_NAMES,
+    ClientNotification, ClientRequest, ClientResponse, JsonRpcBatch, JsonRpcMessage, Notification,
+    Request, Response,
+};
+#[cfg(all(feature = "unstable_cancel_request", feature = "unstable_protocol_v2"))]
+use agent_client_protocol_schema::v2::{PROTOCOL_LEVEL_METHOD_NAMES, ProtocolLevelNotification};
 use schemars::{
     JsonSchema,
     generate::SchemaSettings,

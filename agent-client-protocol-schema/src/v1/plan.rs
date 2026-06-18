@@ -14,7 +14,9 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
-use crate::{IntoOption, Meta, SkipListener};
+use crate::{IntoOption, SkipListener};
+
+use super::Meta;
 
 /// An execution plan for accomplishing complex tasks.
 ///

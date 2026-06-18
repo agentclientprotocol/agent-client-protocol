@@ -8,7 +8,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::value::RawValue;
 use serde_with::skip_serializing_none;
 
-use crate::{IntoOption, McpServerAcpId, Meta};
+use crate::IntoOption;
+
+use super::{McpServerAcpId, Meta};
 
 /// **UNSTABLE**
 ///

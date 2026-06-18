@@ -11,17 +11,18 @@ use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
 #[cfg(feature = "unstable_elicitation")]
-use crate::{
+use super::{
     CompleteElicitationNotification, CreateElicitationRequest, CreateElicitationResponse,
     ElicitationCapabilities,
 };
-use crate::{
-    ContentBlock, EnvVariable, ExtNotification, ExtRequest, ExtResponse, IntoMaybeUndefined,
-    IntoOption, MaybeUndefined, Meta, Plan, SessionConfigOption, SessionId, SessionModeId,
-    SkipListener, ToolCall, ToolCallUpdate,
+use crate::{IntoMaybeUndefined, IntoOption, MaybeUndefined, SkipListener};
+
+use super::{
+    ContentBlock, EnvVariable, ExtNotification, ExtRequest, ExtResponse, Meta, Plan,
+    SessionConfigOption, SessionId, SessionModeId, ToolCall, ToolCallUpdate,
 };
 #[cfg(feature = "unstable_plan_operations")]
-use crate::{PlanCapabilities, PlanRemoved, PlanUpdate};
+use super::{PlanCapabilities, PlanRemoved, PlanUpdate};
 
 #[cfg(feature = "unstable_mcp_over_acp")]
 use super::mcp::{
@@ -31,7 +32,7 @@ use super::mcp::{
 };
 
 #[cfg(feature = "unstable_nes")]
-use crate::{ClientNesCapabilities, PositionEncodingKind};
+use super::{ClientNesCapabilities, PositionEncodingKind};
 
 // Session updates
 
@@ -2281,7 +2282,7 @@ mod tests {
 
         assert_eq!(
             serde_json::to_value(SessionUpdate::AgentMessageChunk(ContentChunk::new(
-                ContentBlock::Text(crate::TextContent::new("Hello"))
+                ContentBlock::Text(crate::v1::TextContent::new("Hello"))
             )))
             .unwrap(),
             json!({
@@ -2295,7 +2296,7 @@ mod tests {
 
         assert_eq!(
             serde_json::to_value(SessionUpdate::AgentMessageChunk(
-                ContentChunk::new(ContentBlock::Text(crate::TextContent::new("Hello")))
+                ContentChunk::new(ContentBlock::Text(crate::v1::TextContent::new("Hello")))
                     .message_id("msg_agent_c42b9")
             ))
             .unwrap(),
@@ -2388,15 +2389,16 @@ mod tests {
     fn test_plan_operations_serialization() {
         use serde_json::json;
 
-        let plan_update =
-            SessionUpdate::PlanUpdate(PlanUpdate::new(crate::PlanUpdateContent::items(
-                "plan-1",
-                vec![crate::PlanEntry::new(
-                    "Step 1",
-                    crate::PlanEntryPriority::High,
-                    crate::PlanEntryStatus::Pending,
-                )],
-            )));
+        use crate::v1::{PlanEntry, PlanEntryPriority, PlanEntryStatus, PlanUpdateContent};
+
+        let plan_update = SessionUpdate::PlanUpdate(PlanUpdate::new(PlanUpdateContent::items(
+            "plan-1",
+            vec![PlanEntry::new(
+                "Step 1",
+                PlanEntryPriority::High,
+                PlanEntryStatus::Pending,
+            )],
+        )));
 
         assert_eq!(
             serde_json::to_value(plan_update).unwrap(),

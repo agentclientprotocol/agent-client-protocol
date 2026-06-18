@@ -238,7 +238,7 @@ where
 mod tests {
     use super::*;
 
-    use crate::{
+    use crate::v1::{
         AgentNotification, CancelNotification, ClientNotification, ContentBlock, ContentChunk,
         SessionId, SessionNotification, SessionUpdate, TextContent,
     };

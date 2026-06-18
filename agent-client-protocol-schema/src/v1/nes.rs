@@ -8,7 +8,9 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
-use crate::{IntoOption, Meta, SessionId, SkipListener};
+use crate::{IntoOption, SkipListener};
+
+use super::{Meta, SessionId};
 
 // Method name constants
 

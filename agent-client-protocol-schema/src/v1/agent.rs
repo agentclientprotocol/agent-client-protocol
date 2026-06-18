@@ -13,9 +13,10 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
-use crate::{
-    ClientCapabilities, ContentBlock, ExtNotification, ExtRequest, ExtResponse, IntoOption, Meta,
-    ProtocolVersion, SessionId, SkipListener,
+use crate::{IntoOption, ProtocolVersion, SkipListener};
+
+use super::{
+    ClientCapabilities, ContentBlock, ExtNotification, ExtRequest, ExtResponse, Meta, SessionId,
 };
 
 #[cfg(feature = "unstable_mcp_over_acp")]
@@ -24,7 +25,7 @@ use super::mcp::{
 };
 
 #[cfg(feature = "unstable_nes")]
-use crate::{
+use super::{
     AcceptNesNotification, CloseNesRequest, CloseNesResponse, DidChangeDocumentNotification,
     DidCloseDocumentNotification, DidFocusDocumentNotification, DidOpenDocumentNotification,
     DidSaveDocumentNotification, NesCapabilities, PositionEncodingKind, RejectNesNotification,
@@ -32,7 +33,7 @@ use crate::{
 };
 
 #[cfg(feature = "unstable_nes")]
-use crate::{
+use super::{
     DOCUMENT_DID_CHANGE_METHOD_NAME, DOCUMENT_DID_CLOSE_METHOD_NAME,
     DOCUMENT_DID_FOCUS_METHOD_NAME, DOCUMENT_DID_OPEN_METHOD_NAME, DOCUMENT_DID_SAVE_METHOD_NAME,
     NES_ACCEPT_METHOD_NAME, NES_CLOSE_METHOD_NAME, NES_REJECT_METHOD_NAME, NES_START_METHOD_NAME,

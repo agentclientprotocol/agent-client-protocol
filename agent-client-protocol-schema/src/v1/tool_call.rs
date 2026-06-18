@@ -11,7 +11,9 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
-use crate::{ContentBlock, Error, IntoOption, Meta, SkipListener, TerminalId};
+use crate::{IntoOption, SkipListener};
+
+use super::{ContentBlock, Error, Meta, TerminalId};
 
 /// Represents a tool call that the language model has requested.
 ///

@@ -12,9 +12,11 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, serde_as, skip_serializing_none};
 
-use crate::{
-    ELICITATION_COMPLETE_NOTIFICATION, ELICITATION_CREATE_METHOD_NAME, IntoOption, Meta, RequestId,
-    SessionId, ToolCallId,
+use crate::IntoOption;
+
+use super::{
+    ELICITATION_COMPLETE_NOTIFICATION, ELICITATION_CREATE_METHOD_NAME, Meta, RequestId, SessionId,
+    ToolCallId,
 };
 
 /// **UNSTABLE**
@@ -1729,7 +1731,7 @@ mod tests {
     /// concrete `CreateElicitationResponse` type.
     #[test]
     fn client_response_serialization_accept() {
-        use crate::ClientResponse;
+        use crate::v1::ClientResponse;
 
         let resp = ClientResponse::CreateElicitationResponse(CreateElicitationResponse::new(
             ElicitationAction::Accept(ElicitationAcceptAction::new().content(BTreeMap::from([(
@@ -1748,7 +1750,7 @@ mod tests {
 
     #[test]
     fn client_response_serialization_decline() {
-        use crate::ClientResponse;
+        use crate::v1::ClientResponse;
 
         let resp = ClientResponse::CreateElicitationResponse(CreateElicitationResponse::new(
             ElicitationAction::Decline,
@@ -1762,7 +1764,7 @@ mod tests {
 
     #[test]
     fn client_response_serialization_cancel() {
-        use crate::ClientResponse;
+        use crate::v1::ClientResponse;
 
         let resp = ClientResponse::CreateElicitationResponse(CreateElicitationResponse::new(
             ElicitationAction::Cancel,

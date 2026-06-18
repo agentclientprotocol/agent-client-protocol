@@ -19,35 +19,34 @@
 //!
 //! ## What's in this crate
 //!
-//! - Wire-format types for every ACP method: request, response, and
-//!   notification structs grouped by which side handles them.
-//! - JSON-RPC envelope and routing types: [`JsonRpcMessage`],
-//!   [`rpc::JsonRpcBatch`], [`Request`], [`Response`], [`Notification`],
-//!   [`RequestId`], [`Error`].
-//! - Aggregated routing enums: [`AgentRequest`], [`AgentResponse`],
-//!   [`AgentNotification`], and the matching client-side trio used by SDK
+//! - Versioned wire-format types for every ACP method: request, response, and
+//!   notification structs grouped by which side handles them, currently under
+//!   the [`v1`] module.
+//! - JSON-RPC envelope and routing types: [`v1::JsonRpcMessage`],
+//!   [`rpc::JsonRpcBatch`], [`v1::Request`], [`v1::Response`],
+//!   [`v1::Notification`], [`v1::RequestId`], [`v1::Error`].
+//! - Aggregated routing enums: [`v1::AgentRequest`], [`v1::AgentResponse`],
+//!   [`v1::AgentNotification`], and the matching client-side trio used by SDK
 //!   crates to dispatch incoming JSON-RPC messages.
 //!
 //! ## Versioning
 //!
-//! The default surface re-exports the v1 (current stable) protocol types
-//! directly at the crate root, so most consumers can write
-//! `agent_client_protocol_schema::SessionId` (and so on) without thinking
-//! about versions.
+//! Stable protocol types are exposed through explicit version modules. For
+//! example, use `agent_client_protocol_schema::v1::SessionId` for ACP protocol
+//! version 1 types.
 //!
 //! For the complete protocol specification and documentation, visit
 //! <https://agentclientprotocol.com>.
 
 pub mod rpc;
 mod serde_util;
-mod v1;
+pub mod v1;
 #[cfg(feature = "unstable_protocol_v2")]
 pub mod v2;
 mod version;
 
 pub(crate) use serde_util::SkipListener;
 pub use serde_util::{IntoMaybeUndefined, IntoOption, MaybeUndefined};
-pub use v1::*;
 pub use version::*;
 
 #[cfg(test)]
