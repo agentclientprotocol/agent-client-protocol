@@ -50,7 +50,7 @@ pub enum RequestId {
 }
 
 /// A JSON-RPC request object.
-#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[allow(
     clippy::exhaustive_structs,
     reason = "This comes from the JSON-RPC specification itself"
@@ -67,7 +67,7 @@ pub struct Request<Params> {
 }
 
 /// A JSON-RPC response object.
-#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[allow(
     clippy::exhaustive_enums,
     reason = "This comes from the JSON-RPC specification itself"
@@ -109,7 +109,7 @@ impl<R, E> Response<R, E> {
 }
 
 /// A JSON-RPC notification object.
-#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[allow(
     clippy::exhaustive_structs,
     reason = "This comes from the JSON-RPC specification itself"
@@ -123,7 +123,7 @@ pub struct Notification<Params> {
     pub params: Option<Params>,
 }
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[schemars(inline)]
 enum JsonRpcVersion {
     #[serde(rename = "2.0")]
@@ -134,7 +134,7 @@ enum JsonRpcVersion {
 /// [required by JSON-RPC 2.0 Specification][1].
 ///
 /// [1]: https://www.jsonrpc.org/specification#compatibility
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[schemars(inline)]
 pub struct JsonRpcMessage<M> {
     jsonrpc: JsonRpcVersion,
@@ -174,7 +174,7 @@ pub struct EmptyJsonRpcBatch;
 impl std::error::Error for EmptyJsonRpcBatch {}
 
 /// A non-empty JSON-RPC 2.0 batch message.
-#[derive(Debug, Serialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonSchema)]
 #[schemars(inline)]
 #[serde(transparent)]
 #[allow(

@@ -39,7 +39,7 @@ use serde_with::{DeserializeAs, de::DeserializeAsWrap};
 #[cfg(feature = "tracing")]
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
 #[non_exhaustive]
-pub struct SkipListener;
+pub(crate) struct SkipListener;
 
 #[cfg(feature = "tracing")]
 impl serde_with::InspectError for SkipListener {
@@ -55,7 +55,7 @@ impl serde_with::InspectError for SkipListener {
 /// disabled. Resolves to `()`, which `serde_with` already ships with a no-op
 /// `InspectError` implementation.
 #[cfg(not(feature = "tracing"))]
-pub type SkipListener = ();
+pub(crate) type SkipListener = ();
 
 #[cfg(test)]
 mod skip_listener_tests {

@@ -16,7 +16,7 @@ mod plan;
 mod protocol_level;
 mod tool_call;
 
-pub use crate::rpc::{JsonRpcMessage, Notification, Request, RequestId};
+pub use crate::rpc::{JsonRpcBatch, JsonRpcMessage, Notification, Request, RequestId};
 pub use agent::*;
 pub use client::*;
 pub use content::*;
