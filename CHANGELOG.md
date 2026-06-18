@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.13.8](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.13.7...v0.13.8) - 2026-06-18
+
+### Other
+
+- *(rust)* Move schema crate into workspace subdirectory ([#1456](https://github.com/agentclientprotocol/agent-client-protocol/pull/1456))
+- various cleanups ([#1453](https://github.com/agentclientprotocol/agent-client-protocol/pull/1453))
+- Clarify schema release versioning docs ([#1443](https://github.com/agentclientprotocol/agent-client-protocol/pull/1443))
+
 ## [0.13.7](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.13.6...v0.13.7) - 2026-06-16
 
 ### Added
