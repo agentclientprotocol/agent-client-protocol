@@ -3875,6 +3875,8 @@ impl IntoV1 for super::SessionConfigOptionCategory {
         Ok(match self {
             Self::Mode => crate::v1::SessionConfigOptionCategory::Mode,
             Self::Model => crate::v1::SessionConfigOptionCategory::Model,
+            #[cfg(feature = "unstable_model_config_category")]
+            Self::ModelConfig => crate::v1::SessionConfigOptionCategory::ModelConfig,
             Self::ThoughtLevel => crate::v1::SessionConfigOptionCategory::ThoughtLevel,
             Self::Other(value) => crate::v1::SessionConfigOptionCategory::Other(value.into_v1()?),
         })
@@ -3888,6 +3890,8 @@ impl IntoV2 for crate::v1::SessionConfigOptionCategory {
         Ok(match self {
             Self::Mode => super::SessionConfigOptionCategory::Mode,
             Self::Model => super::SessionConfigOptionCategory::Model,
+            #[cfg(feature = "unstable_model_config_category")]
+            Self::ModelConfig => super::SessionConfigOptionCategory::ModelConfig,
             Self::ThoughtLevel => super::SessionConfigOptionCategory::ThoughtLevel,
             Self::Other(value) => super::SessionConfigOptionCategory::Other(value.into_v2()?),
         })
@@ -9007,6 +9011,35 @@ mod tests {
     {
         let error = v1_to_v2(value).unwrap_err();
         assert_eq!(error.message(), expected);
+    }
+
+    #[test]
+    fn round_trips_session_config_option_categories() {
+        for category in [
+            v1::SessionConfigOptionCategory::Mode,
+            v1::SessionConfigOptionCategory::Model,
+            #[cfg(feature = "unstable_model_config_category")]
+            v1::SessionConfigOptionCategory::ModelConfig,
+            v1::SessionConfigOptionCategory::ThoughtLevel,
+            v1::SessionConfigOptionCategory::Other("_custom_category".to_string()),
+        ] {
+            assert_v1_round_trip::<v1::SessionConfigOptionCategory, v2::SessionConfigOptionCategory>(
+                category,
+            );
+        }
+
+        for category in [
+            v2::SessionConfigOptionCategory::Mode,
+            v2::SessionConfigOptionCategory::Model,
+            #[cfg(feature = "unstable_model_config_category")]
+            v2::SessionConfigOptionCategory::ModelConfig,
+            v2::SessionConfigOptionCategory::ThoughtLevel,
+            v2::SessionConfigOptionCategory::Other("_custom_category".to_string()),
+        ] {
+            assert_v2_round_trip::<v2::SessionConfigOptionCategory, v1::SessionConfigOptionCategory>(
+                category,
+            );
+        }
     }
 
     #[test]

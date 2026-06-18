@@ -3697,6 +3697,11 @@
           "const": "model"
         },
         {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nModel-related configuration parameter.",
+          "type": "string",
+          "const": "model_config"
+        },
+        {
           "description": "Thought/reasoning level selector.",
           "type": "string",
           "const": "thought_level"

@@ -2298,6 +2298,13 @@ pub enum SessionConfigOptionCategory {
     Mode,
     /// Model selector.
     Model,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Model-related configuration parameter.
+    #[cfg(feature = "unstable_model_config_category")]
+    ModelConfig,
     /// Thought/reasoning level selector.
     ThoughtLevel,
     /// Unknown / uncategorized selector.
@@ -5248,6 +5255,11 @@ mod test_serialization {
             serde_json::to_value(&SessionConfigOptionCategory::Model).unwrap(),
             json!("model")
         );
+        #[cfg(feature = "unstable_model_config_category")]
+        assert_eq!(
+            serde_json::to_value(&SessionConfigOptionCategory::ModelConfig).unwrap(),
+            json!("model_config")
+        );
         assert_eq!(
             serde_json::to_value(&SessionConfigOptionCategory::ThoughtLevel).unwrap(),
             json!("thought_level")
@@ -5261,6 +5273,11 @@ mod test_serialization {
         assert_eq!(
             serde_json::from_str::<SessionConfigOptionCategory>("\"model\"").unwrap(),
             SessionConfigOptionCategory::Model
+        );
+        #[cfg(feature = "unstable_model_config_category")]
+        assert_eq!(
+            serde_json::from_str::<SessionConfigOptionCategory>("\"model_config\"").unwrap(),
+            SessionConfigOptionCategory::ModelConfig
         );
         assert_eq!(
             serde_json::from_str::<SessionConfigOptionCategory>("\"thought_level\"").unwrap(),
@@ -5281,6 +5298,17 @@ mod test_serialization {
         // Test round-trip of unknown category
         let json = serde_json::to_value(&unknown).unwrap();
         assert_eq!(json, json!("some_future_category"));
+    }
+
+    #[cfg(not(feature = "unstable_model_config_category"))]
+    #[test]
+    fn test_session_config_option_model_config_is_unknown_without_feature() {
+        let unknown: SessionConfigOptionCategory =
+            serde_json::from_str("\"model_config\"").unwrap();
+        assert_eq!(
+            unknown,
+            SessionConfigOptionCategory::Other("model_config".to_string())
+        );
     }
 
     #[test]
