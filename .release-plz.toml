@@ -4,6 +4,7 @@ release_always = false
 
 [[package]]
 name = "agent-client-protocol-schema"
+changelog_path = "CHANGELOG.md"
 git_release_latest = false
 git_release_name = "Rust Crate v{{ version }}"
 git_tag_name = "v{{ version }}"

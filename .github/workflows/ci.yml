@@ -28,7 +28,7 @@ jobs:
       - name: Read MSRV from Cargo.toml
         id: msrv
         run: |
-          msrv="$(sed -n 's/^rust-version[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' Cargo.toml)"
+          msrv="$(sed -n 's/^rust-version[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' agent-client-protocol-schema/Cargo.toml)"
           test -n "$msrv"
           echo "version=$msrv" >> "$GITHUB_OUTPUT"
 

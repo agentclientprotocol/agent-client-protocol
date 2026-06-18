@@ -5001,10 +5001,12 @@ mod test_serialization {
     use super::*;
     use serde_json::json;
 
+    #[cfg(feature = "unstable_boolean_config")]
     fn test_meta() -> Meta {
         json!({ "source": "test" }).as_object().unwrap().clone()
     }
 
+    #[cfg(feature = "unstable_boolean_config")]
     fn serialized_meta_key_count(value: &impl serde::Serialize) -> usize {
         serde_json::to_string(value)
             .unwrap()
