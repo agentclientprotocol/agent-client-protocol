@@ -1595,6 +1595,16 @@ pub struct ClientCapabilities {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
+    /// Session-related capabilities supported by the client.
+    #[cfg(feature = "unstable_boolean_config")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
+    pub session: Option<ClientSessionCapabilities>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
     /// Whether the client supports `plan_update` and `plan_removed` session updates.
     ///
     /// Optional. Omitted means the client does not advertise support.
@@ -1681,6 +1691,18 @@ impl ClientCapabilities {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
+    /// Session-related capabilities supported by the client.
+    #[cfg(feature = "unstable_boolean_config")]
+    #[must_use]
+    pub fn session(mut self, session: impl IntoOption<ClientSessionCapabilities>) -> Self {
+        self.session = session.into_option();
+        self
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
     /// Whether the client supports `plan_update` and `plan_removed` session updates.
     ///
     /// Omitted means the client does not advertise support.
@@ -1737,6 +1759,172 @@ impl ClientCapabilities {
     pub fn position_encodings(mut self, position_encodings: Vec<PositionEncodingKind>) -> Self {
         self.position_encodings = position_encodings;
         self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Session-related capabilities supported by the client.
+#[cfg(feature = "unstable_boolean_config")]
+#[serde_as]
+#[skip_serializing_none]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct ClientSessionCapabilities {
+    /// Config option capabilities supported by the client.
+    ///
+    /// Omitted or `null` means the client does not advertise support for any
+    /// config option extensions.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
+    pub config_options: Option<SessionConfigOptionsCapabilities>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_boolean_config")]
+impl ClientSessionCapabilities {
+    /// Builds an empty [`ClientSessionCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Config option capabilities supported by the client.
+    ///
+    /// Omitted or `null` means the client does not advertise support for any
+    /// config option extensions.
+    #[must_use]
+    pub fn config_options(
+        mut self,
+        config_options: impl IntoOption<SessionConfigOptionsCapabilities>,
+    ) -> Self {
+        self.config_options = config_options.into_option();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Session configuration option capabilities supported by the client.
+#[cfg(feature = "unstable_boolean_config")]
+#[serde_as]
+#[skip_serializing_none]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct SessionConfigOptionsCapabilities {
+    /// Whether the client supports boolean session configuration options.
+    ///
+    /// Omitted or `null` means the client does not advertise support.
+    /// Supplying `{}` means agents may include `type: "boolean"` entries in
+    /// `configOptions`, and the client may send `session/set_config_option`
+    /// requests with `type: "boolean"` and a boolean `value`.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
+    pub boolean: Option<BooleanConfigOptionCapabilities>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_boolean_config")]
+impl SessionConfigOptionsCapabilities {
+    /// Builds an empty [`SessionConfigOptionsCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Whether the client supports boolean session configuration options.
+    ///
+    /// Omitted or `null` means the client does not advertise support.
+    /// Supplying `{}` means agents may include `type: "boolean"` entries in
+    /// `configOptions`, and the client may send `session/set_config_option`
+    /// requests with `type: "boolean"` and a boolean `value`.
+    #[must_use]
+    pub fn boolean(mut self, boolean: impl IntoOption<BooleanConfigOptionCapabilities>) -> Self {
+        self.boolean = boolean.into_option();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Capabilities for boolean session configuration options.
+///
+/// Supplying `{}` means the client supports boolean session configuration options.
+#[cfg(feature = "unstable_boolean_config")]
+#[skip_serializing_none]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct BooleanConfigOptionCapabilities {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_boolean_config")]
+impl BooleanConfigOptionCapabilities {
+    /// Builds an empty [`BooleanConfigOptionCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -2382,6 +2570,60 @@ mod tests {
         let json = serde_json::to_value(&capabilities).unwrap();
 
         assert_eq!(json["positionEncodings"], json!(["utf-32", "utf-16"]));
+    }
+
+    #[cfg(feature = "unstable_boolean_config")]
+    #[test]
+    fn test_client_capabilities_boolean_config_options_serialization() {
+        use serde_json::json;
+
+        let capabilities = ClientCapabilities::new().session(
+            ClientSessionCapabilities::new().config_options(
+                SessionConfigOptionsCapabilities::new()
+                    .boolean(BooleanConfigOptionCapabilities::new()),
+            ),
+        );
+        let json = serde_json::to_value(&capabilities).unwrap();
+
+        assert_eq!(json["session"]["configOptions"]["boolean"], json!({}));
+
+        let omitted: ClientCapabilities = serde_json::from_value(json!({})).unwrap();
+        assert!(omitted.session.is_none());
+
+        let null_session: ClientCapabilities = serde_json::from_value(json!({
+            "session": null
+        }))
+        .unwrap();
+        assert!(null_session.session.is_none());
+
+        let null_config_options: ClientCapabilities = serde_json::from_value(json!({
+            "session": {
+                "configOptions": null
+            }
+        }))
+        .unwrap();
+        assert!(
+            null_config_options
+                .session
+                .and_then(|session| session.config_options)
+                .is_none()
+        );
+
+        let null_boolean: ClientCapabilities = serde_json::from_value(json!({
+            "session": {
+                "configOptions": {
+                    "boolean": null
+                }
+            }
+        }))
+        .unwrap();
+        assert!(
+            null_boolean
+                .session
+                .and_then(|session| session.config_options)
+                .and_then(|config_options| config_options.boolean)
+                .is_none()
+        );
     }
 
     #[cfg(feature = "unstable_plan_operations")]

@@ -20,6 +20,7 @@ However, there is no native way to represent a simple boolean on/off toggle. To 
 - Add a `SessionConfigBoolean` struct with a `current_value: bool` field
 - Add a `Boolean(SessionConfigBoolean)` variant to the `SessionConfigKind` enum, discriminated by `"type": "boolean"`
 - Add a `SessionConfigOptionValue` internally-tagged enum so that `SetSessionConfigOptionRequest` can carry both string values (for `select`) and boolean values (for `boolean`) with an explicit `type` discriminator
+- Add a v1 `session.configOptions.boolean` client capability so Agents only send boolean config options to Clients that explicitly opt in
 - Provide convenience constructors and `From` impls for ergonomic usage
 - Update documentation and regenerate schema files
 
@@ -28,6 +29,34 @@ However, there is no native way to represent a simple boolean on/off toggle. To 
 Clients can natively render boolean config options as toggle switches or checkboxes, without any custom logic. Agents can expose options like "Brave Mode", "Produce Report", or "Read Only" in a standardized way that any ACP-compliant client understands out of the box.
 
 ## Implementation details and plan
+
+### Client capability
+
+In v1, Clients opt in by setting `session.configOptions.boolean` in `initialize`:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 0,
+  "method": "initialize",
+  "params": {
+    "protocolVersion": 1,
+    "clientCapabilities": {
+      "session": {
+        "configOptions": {
+          "boolean": {}
+        }
+      }
+    }
+  }
+}
+```
+
+Omitting `session`, `configOptions`, or `boolean` means the Client does not advertise support. `null` at any of those levels is equivalent to omission.
+
+Agents **MUST NOT** include `type: "boolean"` config options in v1 `configOptions` payloads unless the Client advertised `session.configOptions.boolean: {}`. This applies to `session/new`, `session/load`, `session/update`, and `session/set_config_option` responses. Agents that need to support older Clients should omit the boolean option or provide a `select` fallback.
+
+Protocol v2 does not add an equivalent capability field for this extension. When the unstable boolean config option extension is enabled, v2 peers are boolean-aware by construction; compatibility layers that down-convert v2 client capabilities to v1 advertise `session.configOptions.boolean: {}` by default.
 
 ### Wire format: declaring a boolean option
 
@@ -135,12 +164,12 @@ Key changes:
    - `ValueId { value: SessionConfigValueId }` — untagged fallback when `type` is absent or unrecognised
 4. `SessionConfigOptionValue` is flattened (`#[serde(flatten)]`) onto `SetSessionConfigOptionRequest`, producing top-level `type` and `value` fields on the wire
 5. The `value` field type change in `SetSessionConfigOptionRequest` is gated behind `#[cfg(feature = "unstable_boolean_config")]` — without the feature the field remains `SessionConfigValueId`
-6. `From` impls (`&str`, `SessionConfigValueId`, `bool`) ensure ergonomic construction
-7. Wire-level backward compatible: existing JSON payloads without a `type` field remain valid via the untagged fallback
+6. The v1 `ClientCapabilities.session.config_options.boolean` field path serializes as `session.configOptions.boolean`
+7. Existing JSON payloads without a `type` field remain valid via the untagged fallback
 
 ### Client capabilities
 
-Per the existing protocol design, clients that receive a config option with an unrecognized `type` should ignore it. Since the agent is required to have a default value for every option, the agent can function correctly even if the client doesn't render or interact with the boolean option. No new client capability negotiation is needed.
+Clients that receive a config option with an unrecognized `type` should still ignore it. However, boolean config options also change the `session/set_config_option` request shape from the v1 string-only `value` convention to a boolean-valued payload. To avoid breaking Clients or SDKs that do not tolerate that shape, v1 Agents must treat boolean config options as capability-gated and only send them after the Client advertises `session.configOptions.boolean: {}`.
 
 ## Frequently asked questions
 
@@ -150,9 +179,14 @@ We considered reusing the existing `select` type with a convention (e.g., option
 
 ### Is this a breaking change?
 
-On the wire/JSON level: no. When `type` is absent the value is treated as a `SessionConfigValueId`, so existing payloads deserialize correctly. On the Rust API level: the type of `SetSessionConfigOptionRequest.value` changes, but this is gated behind `unstable_boolean_config`. Without the feature flag the stable API is unchanged. With the feature flag, `From` impls ensure source compatibility for users of the `new()` constructor.
+For v1 peers that do not advertise support, Agents must not send boolean config options, so the existing string-only config option behavior is preserved. When `type` is absent, `session/set_config_option.value` is still treated as a `SessionConfigValueId`, so existing select payloads deserialize correctly.
+
+For peers that opt in with `session.configOptions.boolean: {}`, boolean options introduce a new `type: "boolean"` setter shape with a boolean `value`.
+
+While no one would set a value of type boolean that doesn't support it, there is an issue with possible string deserialization causing the entire session/new or other response to fail deserialization. Most SDKs would process this gracefully, but if popular agents start using it, they could break existing clients.
 
 ## Revision history
 
 - 2026-02-24: Initial proposal
 - 2026-03-05: Updated to reflect final implementation — `flag` renamed to `boolean`, value type changed from untagged `String | Bool` enum to internally-tagged enum with `type` discriminator and untagged `ValueId` fallback, feature-gated behind `unstable_boolean_config`
+- 2026-06-22: Added the v1 `session.configOptions.boolean` client capability gate so boolean config options are only sent to Clients that explicitly opt in, and made v2-to-v1 compatibility conversion advertise the capability by default

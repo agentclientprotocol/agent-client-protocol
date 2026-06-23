@@ -1897,6 +1897,13 @@ impl IntoV1 for super::ClientCapabilities {
         Ok(crate::v1::ClientCapabilities {
             fs: crate::v1::FileSystemCapabilities::default(),
             terminal: false,
+            #[cfg(feature = "unstable_boolean_config")]
+            session: Some(
+                crate::v1::ClientSessionCapabilities::new().config_options(
+                    crate::v1::SessionConfigOptionsCapabilities::new()
+                        .boolean(crate::v1::BooleanConfigOptionCapabilities::new()),
+                ),
+            ),
             #[cfg(feature = "unstable_plan_operations")]
             plan: None,
             #[cfg(feature = "unstable_auth_methods")]
@@ -1919,6 +1926,8 @@ impl IntoV2 for crate::v1::ClientCapabilities {
         let Self {
             fs: _,
             terminal: _,
+            #[cfg(feature = "unstable_boolean_config")]
+                session: _,
             #[cfg(feature = "unstable_plan_operations")]
                 plan: _,
             #[cfg(feature = "unstable_auth_methods")]
@@ -9062,7 +9071,16 @@ mod tests {
 
     #[test]
     fn round_trips_initialize_request() {
-        let client_capabilities = v1::ClientCapabilities::new();
+        let mut client_capabilities = v1::ClientCapabilities::new();
+        #[cfg(feature = "unstable_boolean_config")]
+        {
+            client_capabilities = client_capabilities.session(
+                v1::ClientSessionCapabilities::new().config_options(
+                    v1::SessionConfigOptionsCapabilities::new()
+                        .boolean(v1::BooleanConfigOptionCapabilities::new()),
+                ),
+            );
+        }
 
         let request = v1::InitializeRequest::new(ProtocolVersion::V1)
             .client_capabilities(client_capabilities)
@@ -9235,6 +9253,23 @@ mod tests {
         assert!(!v1_after.fs.read_text_file);
         assert!(!v1_after.fs.write_text_file);
         assert!(!v1_after.terminal);
+    }
+
+    #[cfg(feature = "unstable_boolean_config")]
+    #[test]
+    fn v2_client_capabilities_default_to_v1_boolean_config_option_support() {
+        let v2_capabilities = v2::ClientCapabilities::new();
+
+        let v1_capabilities: v1::ClientCapabilities =
+            v2_to_v1(v2_capabilities).expect("v2 -> v1 conversion");
+
+        assert!(
+            v1_capabilities
+                .session
+                .and_then(|session| session.config_options)
+                .and_then(|config_options| config_options.boolean)
+                .is_some()
+        );
     }
 
     #[test]

@@ -3162,6 +3162,29 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
   URI associated with this resource or media payload.
 </ResponseField>
 
+## <span class="font-mono">BooleanConfigOptionCapabilities</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Capabilities for boolean session configuration options.
+
+Supplying `\{\}` means the client supports boolean session configuration options.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
+
 ## <span class="font-mono">BooleanPropertySchema</span>
 
 Schema for boolean properties in an elicitation form.
@@ -3264,6 +3287,14 @@ This capability is not part of the spec yet, and may be removed or changed at an
 The position encodings supported by the client, in order of preference.
 
 </ResponseField>
+<ResponseField name="session" type={<><span><a href="#clientsessioncapabilities">ClientSessionCapabilities</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Session-related capabilities supported by the client.
+
+</ResponseField>
 <ResponseField name="terminal" type={"boolean"} >
   Whether the Client support all `terminal/*` methods.
 
@@ -3295,6 +3326,34 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 </ResponseField>
 <ResponseField name="searchAndReplace" type={<><span><a href="#nessearchandreplacecapabilities">NesSearchAndReplaceCapabilities</a></span><span> | null</span></>} >
   Whether the client supports the `searchAndReplace` suggestion kind.
+</ResponseField>
+
+## <span class="font-mono">ClientSessionCapabilities</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Session-related capabilities supported by the client.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="configOptions" type={<><span><a href="#sessionconfigoptionscapabilities">SessionConfigOptionsCapabilities</a></span><span> | null</span></>} >
+  Config option capabilities supported by the client.
+
+Omitted or `null` means the client does not advertise support for any
+config option extensions.
+
 </ResponseField>
 
 ## <span class="font-mono">ConfigOptionUpdate</span>
@@ -7090,6 +7149,36 @@ Model-related configuration parameter.
 
 <ResponseField name="other" type="string">
   Unknown / uncategorized selector.
+</ResponseField>
+
+## <span class="font-mono">SessionConfigOptionsCapabilities</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Session configuration option capabilities supported by the client.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="boolean" type={<><span><a href="#booleanconfigoptioncapabilities">BooleanConfigOptionCapabilities</a></span><span> | null</span></>} >
+  Whether the client supports boolean session configuration options.
+
+Omitted or `null` means the client does not advertise support.
+Supplying `\{\}` means agents may include `type: "boolean"` entries in
+`configOptions`, and the client may send `session/set_config_option`
+requests with `type: "boolean"` and a boolean `value`.
+
 </ResponseField>
 
 ## <span class="font-mono">SessionConfigSelect</span>

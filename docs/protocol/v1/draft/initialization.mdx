@@ -142,6 +142,25 @@ The Client **SHOULD** specify whether it supports the following capabilities:
   Learn more about Terminals
 </Card>
 
+#### Boolean Config Options
+
+<ParamField
+  path="session.configOptions.boolean"
+  type="BooleanConfigOptionCapabilities Object"
+>
+  The Client supports `boolean` session configuration options. Omitted or `null`
+  at any level means the Client does not advertise support. Supplying `{}` means
+  Agents may include `type: "boolean"` options in v1 `configOptions` payloads.
+</ParamField>
+
+<Card
+  icon="sliders-horizontal"
+  horizontal
+  href="/protocol/v1/draft/session-config-options"
+>
+  Learn more about Session Config Options
+</Card>
+
 ### Agent Capabilities
 
 The Agent **SHOULD** specify whether it supports the following capabilities:
