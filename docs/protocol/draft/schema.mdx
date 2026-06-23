@@ -1217,6 +1217,20 @@ additional roots are activated for the new session.
 <ResponseField name="mcpServers" type={<a href="#mcpserver">McpServer[]</a>} required>
   List of MCP (Model Context Protocol) servers the agent should connect to.
 </ResponseField>
+<ResponseField name="systemPrompt" type={"string | null"} >
+  Optional system-level instructions the client provides for this session.
+
+When present, the agent MUST incorporate this content into its system prompt
+construction alongside its own built-in instructions. It MUST NOT discard its own
+safety guardrails, identity, or internal configuration in favor of client-provided
+content — the semantics are additive, not a replacement. Agents MUST have their own
+default behavior and MUST NOT require a client system prompt to function. If the agent
+cannot incorporate the system prompt, it MUST return a JSON-RPC error and MUST NOT
+create the session.
+
+When omitted, the agent uses its own default system prompt unchanged.
+
+</ResponseField>
 
 #### <span class="font-mono">NewSessionResponse</span>
 

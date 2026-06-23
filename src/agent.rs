@@ -942,6 +942,18 @@ pub struct NewSessionRequest {
     pub additional_directories: Vec<PathBuf>,
     /// List of MCP (Model Context Protocol) servers the agent should connect to.
     pub mcp_servers: Vec<McpServer>,
+    /// Optional system-level instructions the client provides for this session.
+    ///
+    /// When present, the agent MUST incorporate this content into its system prompt
+    /// construction alongside its own built-in instructions. It MUST NOT discard its own
+    /// safety guardrails, identity, or internal configuration in favor of client-provided
+    /// content — the semantics are additive, not a replacement. Agents MUST have their own
+    /// default behavior and MUST NOT require a client system prompt to function. If the agent
+    /// cannot incorporate the system prompt, it MUST return a JSON-RPC error and MUST NOT
+    /// create the session.
+    ///
+    /// When omitted, the agent uses its own default system prompt unchanged.
+    pub system_prompt: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -959,6 +971,7 @@ impl NewSessionRequest {
             #[cfg(feature = "unstable_session_additional_directories")]
             additional_directories: vec![],
             mcp_servers: vec![],
+            system_prompt: None,
             meta: None,
         }
     }
@@ -979,6 +992,16 @@ impl NewSessionRequest {
     #[must_use]
     pub fn mcp_servers(mut self, mcp_servers: Vec<McpServer>) -> Self {
         self.mcp_servers = mcp_servers;
+        self
+    }
+
+    /// Optional system-level instructions the client provides for this session.
+    ///
+    /// When present, the agent incorporates this content into its system prompt alongside
+    /// its own built-in instructions (additive, not a replacement).
+    #[must_use]
+    pub fn system_prompt(mut self, system_prompt: impl Into<String>) -> Self {
+        self.system_prompt = Some(system_prompt.into());
         self
     }
 
@@ -6155,5 +6178,37 @@ mod test_serialization {
 
         let deserialized: AgentCapabilities = serde_json::from_value(json).unwrap();
         assert!(deserialized.providers.is_some());
+    }
+
+    #[test]
+    fn test_new_session_request_system_prompt_round_trip() {
+        let request = NewSessionRequest::new("/home/user/project")
+            .system_prompt("You are a code review specialist.");
+
+        let json = serde_json::to_value(&request).unwrap();
+        assert_eq!(
+            json["systemPrompt"],
+            json!("You are a code review specialist.")
+        );
+
+        let deserialized: NewSessionRequest = serde_json::from_value(json).unwrap();
+        assert_eq!(
+            deserialized.system_prompt.as_deref(),
+            Some("You are a code review specialist.")
+        );
+    }
+
+    #[test]
+    fn test_new_session_request_system_prompt_absent_is_omitted() {
+        let request = NewSessionRequest::new("/home/user/project");
+
+        let json = serde_json::to_value(&request).unwrap();
+        assert!(
+            json.get("systemPrompt").is_none(),
+            "skip_serializing_none should omit systemPrompt when absent"
+        );
+
+        let deserialized: NewSessionRequest = serde_json::from_value(json).unwrap();
+        assert!(deserialized.system_prompt.is_none());
     }
 }

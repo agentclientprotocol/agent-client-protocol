@@ -4462,6 +4462,10 @@
             "$ref": "#/$defs/McpServer"
           },
           "type": "array"
+        },
+        "systemPrompt": {
+          "description": "Optional system-level instructions the client provides for this session.\n\nWhen present, the agent MUST incorporate this content into its system prompt\nconstruction alongside its own built-in instructions. It MUST NOT discard its own\nsafety guardrails, identity, or internal configuration in favor of client-provided\ncontent — the semantics are additive, not a replacement. Agents MUST have their own\ndefault behavior and MUST NOT require a client system prompt to function. If the agent\ncannot incorporate the system prompt, it MUST return a JSON-RPC error and MUST NOT\ncreate the session.\n\nWhen omitted, the agent uses its own default system prompt unchanged.",
+          "type": ["string", "null"]
         }
       },
       "required": ["cwd", "mcpServers"],
