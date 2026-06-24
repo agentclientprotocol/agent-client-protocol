@@ -23,12 +23,12 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
 
       - name: Read MSRV from Cargo.toml
         id: msrv
         run: |
-          msrv="$(sed -n 's/^rust-version[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' Cargo.toml)"
+          msrv="$(sed -n 's/^rust-version[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' agent-client-protocol-schema/Cargo.toml)"
           test -n "$msrv"
           echo "version=$msrv" >> "$GITHUB_OUTPUT"
 
@@ -46,7 +46,7 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
 
       - name: Use Node.js
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
@@ -96,7 +96,7 @@ jobs:
     outputs:
       changed: ${{ steps.rust-changes.outputs.changed }}
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -136,7 +136,7 @@ jobs:
         partition: ["1/4", "2/4", "3/4", "4/4"]
 
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           persist-credentials: false
 
@@ -146,7 +146,7 @@ jobs:
           toolchain: stable
 
       - name: Install cargo-hack
-        uses: taiki-e/install-action@7a79fe8c3a13344501c80d99cae481c1c9085912
+        uses: taiki-e/install-action@9e1e5806d4a4822de933115878265be9aaa786d9
         with:
           tool: cargo-hack
 

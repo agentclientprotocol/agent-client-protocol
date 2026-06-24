@@ -88,9 +88,11 @@
           "enum": ["2.0"]
         },
         "method": {
+          "description": "The notification method name.",
           "type": "string"
         },
         "params": {
+          "description": "Method-specific notification parameters.",
           "anyOf": [
             {
               "description": "General protocol-level notifications that all sides are expected to\nimplement.\n\nNotifications whose methods start with '$/' are messages which\nare protocol implementation dependent and might not be implementable in all\nclients or agents. For example if the implementation uses a single threaded\nsynchronous programming language then there is little it can do to react to\na `$/cancel_request` notification. If an agent or client receives\nnotifications starting with '$/' it is free to ignore the notification.\n\nNotifications do not expect a response.",
@@ -118,15 +120,23 @@
   ],
   "$defs": {
     "AgentRequest": {
+      "description": "A JSON-RPC request object.",
       "type": "object",
       "properties": {
         "id": {
-          "$ref": "#/$defs/RequestId"
+          "description": "The request id used to correlate the matching response.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/RequestId"
+            }
+          ]
         },
         "method": {
+          "description": "The method name to invoke.",
           "type": "string"
         },
         "params": {
+          "description": "Method-specific request parameters.",
           "anyOf": [
             {
               "description": "All possible requests that an agent can send to a client.\n\nThis enum is used internally for routing RPC requests. You typically won't need\nto use this directly.\n\nThis enum encompasses all method calls from agent to client.",
@@ -264,15 +274,18 @@
       "anyOf": [
         {
           "title": "Null",
+          "description": "The JSON-RPC `null` request id.",
           "type": "null"
         },
         {
           "title": "Number",
+          "description": "A numeric JSON-RPC request id.",
           "type": "integer",
           "format": "int64"
         },
         {
           "title": "Str",
+          "description": "A string JSON-RPC request id.",
           "type": "string"
         }
       ]
@@ -691,6 +704,7 @@
       "type": "object",
       "properties": {
         "audience": {
+          "description": "Intended recipients for this content, such as the user or assistant.",
           "type": ["array", "null"],
           "items": {
             "$ref": "#/$defs/Role"
@@ -699,9 +713,11 @@
           "x-deserialize-skip-invalid-items": true
         },
         "lastModified": {
+          "description": "Timestamp indicating when the underlying resource was last modified.",
           "type": ["string", "null"]
         },
         "priority": {
+          "description": "Relative importance of this content when clients choose what to surface.",
           "type": ["number", "null"],
           "format": "double"
         },
@@ -714,14 +730,25 @@
     },
     "Role": {
       "description": "The sender or recipient of messages and data in a conversation.",
-      "type": "string",
-      "enum": ["assistant", "user"]
+      "oneOf": [
+        {
+          "description": "The assistant side of a conversation.",
+          "type": "string",
+          "const": "assistant"
+        },
+        {
+          "description": "The user side of a conversation.",
+          "type": "string",
+          "const": "user"
+        }
+      ]
     },
     "TextContent": {
       "description": "Text provided to or from an LLM.",
       "type": "object",
       "properties": {
         "annotations": {
+          "description": "Optional annotations that help clients decide how to display or route this content.",
           "anyOf": [
             {
               "$ref": "#/$defs/Annotations"
@@ -733,6 +760,7 @@
           "x-deserialize-default-on-error": true
         },
         "text": {
+          "description": "Text payload carried by this content block.",
           "type": "string"
         },
         "_meta": {
@@ -748,6 +776,7 @@
       "type": "object",
       "properties": {
         "annotations": {
+          "description": "Optional annotations that help clients decide how to display or route this content.",
           "anyOf": [
             {
               "$ref": "#/$defs/Annotations"
@@ -759,12 +788,15 @@
           "x-deserialize-default-on-error": true
         },
         "data": {
+          "description": "Base64-encoded media payload.",
           "type": "string"
         },
         "mimeType": {
+          "description": "MIME type describing the encoded media payload.",
           "type": "string"
         },
         "uri": {
+          "description": "URI associated with this resource or media payload.",
           "type": ["string", "null"]
         },
         "_meta": {
@@ -780,6 +812,7 @@
       "type": "object",
       "properties": {
         "annotations": {
+          "description": "Optional annotations that help clients decide how to display or route this content.",
           "anyOf": [
             {
               "$ref": "#/$defs/Annotations"
@@ -791,9 +824,11 @@
           "x-deserialize-default-on-error": true
         },
         "data": {
+          "description": "Base64-encoded media payload.",
           "type": "string"
         },
         "mimeType": {
+          "description": "MIME type describing the encoded media payload.",
           "type": "string"
         },
         "_meta": {
@@ -809,6 +844,7 @@
       "type": "object",
       "properties": {
         "annotations": {
+          "description": "Optional annotations that help clients decide how to display or route this content.",
           "anyOf": [
             {
               "$ref": "#/$defs/Annotations"
@@ -820,22 +856,28 @@
           "x-deserialize-default-on-error": true
         },
         "description": {
+          "description": "Optional human-readable details shown with this protocol object.",
           "type": ["string", "null"]
         },
         "mimeType": {
+          "description": "MIME type describing the encoded media payload.",
           "type": ["string", "null"]
         },
         "name": {
+          "description": "Human-readable name shown for this protocol object.",
           "type": "string"
         },
         "size": {
+          "description": "Optional size of the linked resource in bytes, if known.",
           "type": ["integer", "null"],
           "format": "int64"
         },
         "title": {
+          "description": "Optional display title for end-user UI.",
           "type": ["string", "null"]
         },
         "uri": {
+          "description": "URI associated with this resource or media payload.",
           "type": "string"
         },
         "_meta": {
@@ -851,6 +893,7 @@
       "anyOf": [
         {
           "title": "TextResourceContents",
+          "description": "Text resource contents embedded directly in the message.",
           "allOf": [
             {
               "$ref": "#/$defs/TextResourceContents"
@@ -859,6 +902,7 @@
         },
         {
           "title": "BlobResourceContents",
+          "description": "Binary resource contents embedded directly in the message.",
           "allOf": [
             {
               "$ref": "#/$defs/BlobResourceContents"
@@ -872,12 +916,15 @@
       "type": "object",
       "properties": {
         "mimeType": {
+          "description": "MIME type describing the encoded media payload.",
           "type": ["string", "null"]
         },
         "text": {
+          "description": "Text payload carried by this content block.",
           "type": "string"
         },
         "uri": {
+          "description": "URI associated with this resource or media payload.",
           "type": "string"
         },
         "_meta": {
@@ -893,12 +940,15 @@
       "type": "object",
       "properties": {
         "blob": {
+          "description": "Base64-encoded bytes for a binary resource payload.",
           "type": "string"
         },
         "mimeType": {
+          "description": "MIME type describing the encoded media payload.",
           "type": ["string", "null"]
         },
         "uri": {
+          "description": "URI associated with this resource or media payload.",
           "type": "string"
         },
         "_meta": {
@@ -914,6 +964,7 @@
       "type": "object",
       "properties": {
         "annotations": {
+          "description": "Optional annotations that help clients decide how to display or route this content.",
           "anyOf": [
             {
               "$ref": "#/$defs/Annotations"
@@ -925,7 +976,12 @@
           "x-deserialize-default-on-error": true
         },
         "resource": {
-          "$ref": "#/$defs/EmbeddedResourceResource"
+          "description": "Embedded resource payload, either text or binary data.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/EmbeddedResourceResource"
+            }
+          ]
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -979,12 +1035,21 @@
       },
       "required": ["path", "newText"]
     },
+    "TerminalId": {
+      "description": "Typed identifier used for terminal values on the wire.",
+      "type": "string"
+    },
     "Terminal": {
       "description": "Embed a terminal created with `terminal/create` by its id.\n\nThe terminal must be added before calling `terminal/release`.\n\nSee protocol docs: [Terminal](https://agentclientprotocol.com/protocol/terminals)",
       "type": "object",
       "properties": {
         "terminalId": {
-          "type": "string"
+          "description": "Identifier of the terminal instance to embed in the content stream.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/TerminalId"
+            }
+          ]
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -1161,7 +1226,11 @@
         },
         "terminalId": {
           "description": "The ID of the terminal to get output from.",
-          "type": "string"
+          "allOf": [
+            {
+              "$ref": "#/$defs/TerminalId"
+            }
+          ]
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -1187,7 +1256,11 @@
         },
         "terminalId": {
           "description": "The ID of the terminal to release.",
-          "type": "string"
+          "allOf": [
+            {
+              "$ref": "#/$defs/TerminalId"
+            }
+          ]
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -1213,7 +1286,11 @@
         },
         "terminalId": {
           "description": "The ID of the terminal to wait for.",
-          "type": "string"
+          "allOf": [
+            {
+              "$ref": "#/$defs/TerminalId"
+            }
+          ]
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -1239,7 +1316,11 @@
         },
         "terminalId": {
           "description": "The ID of the terminal to kill.",
-          "type": "string"
+          "allOf": [
+            {
+              "$ref": "#/$defs/TerminalId"
+            }
+          ]
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -1984,19 +2065,27 @@
       "description": "Allows for sending an arbitrary request that is not part of the ACP spec.\nExtension methods provide a way to add custom functionality while maintaining\nprotocol compatibility.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)"
     },
     "AgentResponse": {
+      "description": "A JSON-RPC response object.",
       "anyOf": [
         {
           "title": "Result",
+          "description": "A successful JSON-RPC response.",
           "type": "object",
           "properties": {
             "id": {
-              "$ref": "#/$defs/RequestId"
+              "description": "The id of the request this response answers.",
+              "allOf": [
+                {
+                  "$ref": "#/$defs/RequestId"
+                }
+              ]
             },
             "result": {
-              "description": "All possible responses that an agent can send to a client.\n\nThis enum is used internally for routing RPC responses. You typically won't need\nto use this directly - the responses are handled automatically by the connection.\n\nThese are responses to the corresponding `ClientRequest` variants.",
+              "description": "Method-specific response data.",
               "anyOf": [
                 {
                   "title": "InitializeResponse",
+                  "description": "Successful result returned for a `initialize` request.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/InitializeResponse"
@@ -2005,6 +2094,7 @@
                 },
                 {
                   "title": "AuthenticateResponse",
+                  "description": "Successful result returned for a `authenticate` request.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/AuthenticateResponse"
@@ -2013,6 +2103,7 @@
                 },
                 {
                   "title": "ListProvidersResponse",
+                  "description": "Successful result returned for a `providers/list` request.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/ListProvidersResponse"
@@ -2021,6 +2112,7 @@
                 },
                 {
                   "title": "SetProviderResponse",
+                  "description": "Successful result returned for a `providers/set` request.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/SetProviderResponse"
@@ -2029,6 +2121,7 @@
                 },
                 {
                   "title": "DisableProviderResponse",
+                  "description": "Successful result returned for a `providers/disable` request.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/DisableProviderResponse"
@@ -2037,6 +2130,7 @@
                 },
                 {
                   "title": "LogoutResponse",
+                  "description": "Successful result returned for a `logout` request.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/LogoutResponse"
@@ -2045,6 +2139,7 @@
                 },
                 {
                   "title": "NewSessionResponse",
+                  "description": "Successful result returned for a `session/new` request.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/NewSessionResponse"
@@ -2053,6 +2148,7 @@
                 },
                 {
                   "title": "LoadSessionResponse",
+                  "description": "Successful result returned for a `session/load` request.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/LoadSessionResponse"
@@ -2061,6 +2157,7 @@
                 },
                 {
                   "title": "ListSessionsResponse",
+                  "description": "Successful result returned for a `session/list` request.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/ListSessionsResponse"
@@ -2069,6 +2166,7 @@
                 },
                 {
                   "title": "DeleteSessionResponse",
+                  "description": "Successful result returned for a `session/delete` request.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/DeleteSessionResponse"
@@ -2077,6 +2175,7 @@
                 },
                 {
                   "title": "ForkSessionResponse",
+                  "description": "Successful result returned for a `session/fork` request.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/ForkSessionResponse"
@@ -2085,6 +2184,7 @@
                 },
                 {
                   "title": "ResumeSessionResponse",
+                  "description": "Successful result returned for a `session/resume` request.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/ResumeSessionResponse"
@@ -2093,6 +2193,7 @@
                 },
                 {
                   "title": "CloseSessionResponse",
+                  "description": "Successful result returned for a `session/close` request.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/CloseSessionResponse"
@@ -2101,6 +2202,7 @@
                 },
                 {
                   "title": "SetSessionModeResponse",
+                  "description": "Successful result returned for a `session/set_mode` request.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/SetSessionModeResponse"
@@ -2109,6 +2211,7 @@
                 },
                 {
                   "title": "SetSessionConfigOptionResponse",
+                  "description": "Successful result returned for a `session/set_config_option` request.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/SetSessionConfigOptionResponse"
@@ -2117,6 +2220,7 @@
                 },
                 {
                   "title": "PromptResponse",
+                  "description": "Successful result returned for a `session/prompt` request.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/PromptResponse"
@@ -2125,6 +2229,7 @@
                 },
                 {
                   "title": "StartNesResponse",
+                  "description": "Successful result returned for a `nes/start` request.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/StartNesResponse"
@@ -2133,6 +2238,7 @@
                 },
                 {
                   "title": "SuggestNesResponse",
+                  "description": "Successful result returned for a `nes/suggest` request.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/SuggestNesResponse"
@@ -2141,6 +2247,7 @@
                 },
                 {
                   "title": "CloseNesResponse",
+                  "description": "Successful result returned for a `nes/close` request.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/CloseNesResponse"
@@ -2149,6 +2256,7 @@
                 },
                 {
                   "title": "ExtMethodResponse",
+                  "description": "Successful result returned by an extension method outside the core ACP method set.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/ExtResponse"
@@ -2157,6 +2265,7 @@
                 },
                 {
                   "title": "MessageMcpResponse",
+                  "description": "Successful result returned by an MCP-over-ACP `mcp/message` request.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/MessageMcpResponse"
@@ -2170,13 +2279,24 @@
         },
         {
           "title": "Error",
+          "description": "A failed JSON-RPC response.",
           "type": "object",
           "properties": {
             "id": {
-              "$ref": "#/$defs/RequestId"
+              "description": "The id of the request this response answers.",
+              "allOf": [
+                {
+                  "$ref": "#/$defs/RequestId"
+                }
+              ]
             },
             "error": {
-              "$ref": "#/$defs/Error"
+              "description": "Method-specific error data.",
+              "allOf": [
+                {
+                  "$ref": "#/$defs/Error"
+                }
+              ]
             }
           },
           "required": ["id", "error"]
@@ -2294,6 +2414,7 @@
           ]
         },
         "sessionCapabilities": {
+          "description": "Session lifecycle and prompt capabilities advertised by the agent.",
           "default": {},
           "allOf": [
             {
@@ -3040,6 +3161,10 @@
         }
       ]
     },
+    "AuthMethodId": {
+      "description": "Typed identifier used for auth method values on the wire.",
+      "type": "string"
+    },
     "AuthEnvVar": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nDescribes a single environment variable for an [`AuthMethodEnvVar`] authentication method.",
       "type": "object",
@@ -3076,7 +3201,11 @@
       "properties": {
         "id": {
           "description": "Unique identifier for this authentication method.",
-          "type": "string"
+          "allOf": [
+            {
+              "$ref": "#/$defs/AuthMethodId"
+            }
+          ]
         },
         "name": {
           "description": "Human-readable name of the authentication method.",
@@ -3111,7 +3240,11 @@
       "properties": {
         "id": {
           "description": "Unique identifier for this authentication method.",
-          "type": "string"
+          "allOf": [
+            {
+              "$ref": "#/$defs/AuthMethodId"
+            }
+          ]
         },
         "name": {
           "description": "Human-readable name of the authentication method.",
@@ -3149,7 +3282,11 @@
       "properties": {
         "id": {
           "description": "Unique identifier for this authentication method.",
-          "type": "string"
+          "allOf": [
+            {
+              "$ref": "#/$defs/AuthMethodId"
+            }
+          ]
         },
         "name": {
           "description": "Human-readable name of the authentication method.",
@@ -3446,12 +3583,19 @@
       "type": "object",
       "properties": {
         "id": {
-          "$ref": "#/$defs/SessionModeId"
+          "description": "Stable identifier used to refer to this protocol object in later messages.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionModeId"
+            }
+          ]
         },
         "name": {
+          "description": "Human-readable name shown for this protocol object.",
           "type": "string"
         },
         "description": {
+          "description": "Optional human-readable details shown with this protocol object.",
           "type": ["string", "null"]
         },
         "_meta": {
@@ -3555,6 +3699,11 @@
           "description": "Model selector.",
           "type": "string",
           "const": "model"
+        },
+        {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nModel-related configuration parameter.",
+          "type": "string",
+          "const": "model_config"
         },
         {
           "description": "Thought/reasoning level selector.",
@@ -4485,12 +4634,15 @@
       ]
     },
     "AgentNotification": {
+      "description": "A JSON-RPC notification object.",
       "type": "object",
       "properties": {
         "method": {
+          "description": "The notification method name.",
           "type": "string"
         },
         "params": {
+          "description": "Method-specific notification parameters.",
           "anyOf": [
             {
               "description": "All possible notifications that an agent can send to a client.\n\nThis enum is used internally for routing RPC notifications. You typically won't need\nto use this directly.\n\nNotifications do not expect a response.",
@@ -5414,15 +5566,23 @@
       "description": "Allows the Agent to send an arbitrary notification that is not part of the ACP spec.\nExtension notifications provide a way to send one-way messages for custom functionality\nwhile maintaining protocol compatibility.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)"
     },
     "ClientRequest": {
+      "description": "A JSON-RPC request object.",
       "type": "object",
       "properties": {
         "id": {
-          "$ref": "#/$defs/RequestId"
+          "description": "The request id used to correlate the matching response.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/RequestId"
+            }
+          ]
         },
         "method": {
+          "description": "The method name to invoke.",
           "type": "string"
         },
         "params": {
+          "description": "Method-specific request parameters.",
           "anyOf": [
             {
               "description": "All possible requests that a client can send to an agent.\n\nThis enum is used internally for routing RPC requests. You typically won't need\nto use this directly.\n\nThis enum encompasses all method calls from client to agent.",
@@ -5954,7 +6114,11 @@
       "properties": {
         "methodId": {
           "description": "The ID of the authentication method to use.\nMust be one of the methods advertised in the initialize response.",
-          "type": "string"
+          "allOf": [
+            {
+              "$ref": "#/$defs/AuthMethodId"
+            }
+          ]
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -7070,19 +7234,27 @@
       "x-method": "nes/close"
     },
     "ClientResponse": {
+      "description": "A JSON-RPC response object.",
       "anyOf": [
         {
           "title": "Result",
+          "description": "A successful JSON-RPC response.",
           "type": "object",
           "properties": {
             "id": {
-              "$ref": "#/$defs/RequestId"
+              "description": "The id of the request this response answers.",
+              "allOf": [
+                {
+                  "$ref": "#/$defs/RequestId"
+                }
+              ]
             },
             "result": {
-              "description": "All possible responses that a client can send to an agent.\n\nThis enum is used internally for routing RPC responses. You typically won't need\nto use this directly - the responses are handled automatically by the connection.\n\nThese are responses to the corresponding `AgentRequest` variants.",
+              "description": "Method-specific response data.",
               "anyOf": [
                 {
                   "title": "WriteTextFileResponse",
+                  "description": "Successful result returned for a `fs/write_text_file` request.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/WriteTextFileResponse"
@@ -7091,6 +7263,7 @@
                 },
                 {
                   "title": "ReadTextFileResponse",
+                  "description": "Successful result returned for a `fs/read_text_file` request.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/ReadTextFileResponse"
@@ -7099,6 +7272,7 @@
                 },
                 {
                   "title": "RequestPermissionResponse",
+                  "description": "Successful result returned for a `session/request_permission` request.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/RequestPermissionResponse"
@@ -7107,6 +7281,7 @@
                 },
                 {
                   "title": "CreateTerminalResponse",
+                  "description": "Successful result returned for a `terminal/create` request.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/CreateTerminalResponse"
@@ -7115,6 +7290,7 @@
                 },
                 {
                   "title": "TerminalOutputResponse",
+                  "description": "Successful result returned for a `terminal/output` request.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/TerminalOutputResponse"
@@ -7123,6 +7299,7 @@
                 },
                 {
                   "title": "ReleaseTerminalResponse",
+                  "description": "Successful result returned for a `terminal/release` request.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/ReleaseTerminalResponse"
@@ -7131,6 +7308,7 @@
                 },
                 {
                   "title": "WaitForTerminalExitResponse",
+                  "description": "Successful result returned for a `terminal/wait_for_exit` request.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/WaitForTerminalExitResponse"
@@ -7139,6 +7317,7 @@
                 },
                 {
                   "title": "KillTerminalResponse",
+                  "description": "Successful result returned for a `terminal/kill` request.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/KillTerminalResponse"
@@ -7147,6 +7326,7 @@
                 },
                 {
                   "title": "CreateElicitationResponse",
+                  "description": "Successful result returned for a `elicitation/create` request.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/CreateElicitationResponse"
@@ -7155,6 +7335,7 @@
                 },
                 {
                   "title": "ConnectMcpResponse",
+                  "description": "Successful result returned for a `mcp/connect` request.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/ConnectMcpResponse"
@@ -7163,6 +7344,7 @@
                 },
                 {
                   "title": "DisconnectMcpResponse",
+                  "description": "Successful result returned for a `mcp/disconnect` request.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/DisconnectMcpResponse"
@@ -7171,6 +7353,7 @@
                 },
                 {
                   "title": "ExtMethodResponse",
+                  "description": "Successful result returned by an extension method outside the core ACP method set.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/ExtResponse"
@@ -7179,6 +7362,7 @@
                 },
                 {
                   "title": "MessageMcpResponse",
+                  "description": "Successful result returned by an MCP-over-ACP `mcp/message` request.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/MessageMcpResponse"
@@ -7192,13 +7376,24 @@
         },
         {
           "title": "Error",
+          "description": "A failed JSON-RPC response.",
           "type": "object",
           "properties": {
             "id": {
-              "$ref": "#/$defs/RequestId"
+              "description": "The id of the request this response answers.",
+              "allOf": [
+                {
+                  "$ref": "#/$defs/RequestId"
+                }
+              ]
             },
             "error": {
-              "$ref": "#/$defs/Error"
+              "description": "Method-specific error data.",
+              "allOf": [
+                {
+                  "$ref": "#/$defs/Error"
+                }
+              ]
             }
           },
           "required": ["id", "error"]
@@ -7224,6 +7419,7 @@
       "type": "object",
       "properties": {
         "content": {
+          "description": "Content payload returned by this response.",
           "type": "string"
         },
         "_meta": {
@@ -7319,7 +7515,11 @@
       "properties": {
         "terminalId": {
           "description": "The unique identifier for the created terminal.",
-          "type": "string"
+          "allOf": [
+            {
+              "$ref": "#/$defs/TerminalId"
+            }
+          ]
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -7491,27 +7691,33 @@
       "x-method": "elicitation/create"
     },
     "ElicitationContentValue": {
+      "description": "Allowed wire representations for [`ElicitationContentValue`].",
       "anyOf": [
         {
           "title": "String",
+          "description": "String value accepted in elicitation response content.",
           "type": "string"
         },
         {
           "title": "Integer",
+          "description": "Integer value accepted in elicitation response content.",
           "type": "integer",
           "format": "int64"
         },
         {
           "title": "Number",
+          "description": "Number value accepted in elicitation response content.",
           "type": "number",
           "format": "double"
         },
         {
           "title": "Boolean",
+          "description": "Boolean value accepted in elicitation response content.",
           "type": "boolean"
         },
         {
           "title": "StringArray",
+          "description": "String array value accepted in elicitation response content.",
           "type": "array",
           "items": {
             "type": "string"
@@ -7568,12 +7774,15 @@
       "x-method": "mcp/disconnect"
     },
     "ClientNotification": {
+      "description": "A JSON-RPC notification object.",
       "type": "object",
       "properties": {
         "method": {
+          "description": "The notification method name.",
           "type": "string"
         },
         "params": {
+          "description": "Method-specific notification parameters.",
           "anyOf": [
             {
               "description": "All possible notifications that a client can send to an agent.\n\nThis enum is used internally for routing RPC notifications. You typically won't need\nto use this directly.\n\nNotifications do not expect a response.",

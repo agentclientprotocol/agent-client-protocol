@@ -3,7 +3,7 @@ title: "Session Config Options"
 description: "Flexible configuration selectors for agent sessions"
 ---
 
-Agents can provide an arbitrary list of configuration options for a session, allowing Clients to offer users customizable selectors for things like modes, models, reasoning levels, and more.
+Agents can provide an arbitrary list of configuration options for a session, allowing Clients to offer users customizable selectors for things like modes, models, model parameters, reasoning levels, and more.
 
 ## Initial State
 
@@ -52,6 +52,23 @@ During [Session Setup](/protocol/v2/draft/session-setup) the Agent **MAY** retur
             "value": "model-2",
             "name": "Model 2",
             "description": "The most powerful model"
+          }
+        ]
+      },
+      {
+        "id": "context_size",
+        "name": "Context Size",
+        "category": "model_config",
+        "type": "select",
+        "currentValue": "200k",
+        "options": [
+          {
+            "value": "200k",
+            "name": "200K"
+          },
+          {
+            "value": "1m",
+            "name": "1M"
           }
         ]
       }
@@ -122,11 +139,14 @@ Each config option **MAY** include a `category` field. Categories are semantic m
 
 Category names beginning with `_` are free for custom use (e.g., `_my_custom_category`). Category names that do not begin with `_` are reserved for the ACP spec.
 
-| Category        | Description                      |
-| --------------- | -------------------------------- |
-| `mode`          | Session mode selector            |
-| `model`         | Model selector                   |
-| `thought_level` | Thought/reasoning level selector |
+| Category        | Description                                                              |
+| --------------- | ------------------------------------------------------------------------ |
+| `mode`          | Session mode selector                                                    |
+| `model`         | Model selector                                                           |
+| `model_config`  | Model-related parameter, such as context size or speed/quality trade-off |
+| `thought_level` | Thought/reasoning level selector                                         |
+
+Clients **SHOULD** render `model_config` options near the `model` selector, such as in the same popover or panel. No capability negotiation is required for category values.
 
 When multiple options share the same category, Clients **SHOULD** use the array ordering to resolve ties, preferring earlier options in the list for prominent placement or keyboard shortcuts.
 

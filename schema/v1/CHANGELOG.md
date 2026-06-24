@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.14.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.13.7...schema-v1.14.0) - 2026-06-18
+
+### Added
+
+- Add unstable model config category ([#1455](https://github.com/agentclientprotocol/agent-client-protocol/pull/1455))
+
+### Other
+
+- Clean up missing documentation on various schemas and builder ([#1454](https://github.com/agentclientprotocol/agent-client-protocol/pull/1454))
+- various cleanups ([#1453](https://github.com/agentclientprotocol/agent-client-protocol/pull/1453))
+- Clarify schema release versioning docs ([#1443](https://github.com/agentclientprotocol/agent-client-protocol/pull/1443))
+
 ## [1.13.7](https://github.com/agentclientprotocol/agent-client-protocol/releases/tag/schema-v1.13.7) - 2026-06-16
 
 ### Fixed
