@@ -209,11 +209,7 @@
           },
           {
             "group": "Preview",
-            "pages": [
-              "rfds/rust-sdk-v1",
-              "rfds/model-config-category",
-              "rfds/request-cancellation"
-            ]
+            "pages": ["rfds/rust-sdk-v1", "rfds/request-cancellation"]
           },
           {
             "group": "Completed",
@@ -230,7 +226,8 @@
               "rfds/session-resume",
               "rfds/session-close",
               "rfds/logout-method",
-              "rfds/additional-directories"
+              "rfds/additional-directories",
+              "rfds/model-config-category"
             ]
           }
         ]

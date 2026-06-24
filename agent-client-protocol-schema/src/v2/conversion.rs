@@ -3884,7 +3884,6 @@ impl IntoV1 for super::SessionConfigOptionCategory {
         Ok(match self {
             Self::Mode => crate::v1::SessionConfigOptionCategory::Mode,
             Self::Model => crate::v1::SessionConfigOptionCategory::Model,
-            #[cfg(feature = "unstable_model_config_category")]
             Self::ModelConfig => crate::v1::SessionConfigOptionCategory::ModelConfig,
             Self::ThoughtLevel => crate::v1::SessionConfigOptionCategory::ThoughtLevel,
             Self::Other(value) => crate::v1::SessionConfigOptionCategory::Other(value.into_v1()?),
@@ -3899,7 +3898,6 @@ impl IntoV2 for crate::v1::SessionConfigOptionCategory {
         Ok(match self {
             Self::Mode => super::SessionConfigOptionCategory::Mode,
             Self::Model => super::SessionConfigOptionCategory::Model,
-            #[cfg(feature = "unstable_model_config_category")]
             Self::ModelConfig => super::SessionConfigOptionCategory::ModelConfig,
             Self::ThoughtLevel => super::SessionConfigOptionCategory::ThoughtLevel,
             Self::Other(value) => super::SessionConfigOptionCategory::Other(value.into_v2()?),
@@ -9027,7 +9025,6 @@ mod tests {
         for category in [
             v1::SessionConfigOptionCategory::Mode,
             v1::SessionConfigOptionCategory::Model,
-            #[cfg(feature = "unstable_model_config_category")]
             v1::SessionConfigOptionCategory::ModelConfig,
             v1::SessionConfigOptionCategory::ThoughtLevel,
             v1::SessionConfigOptionCategory::Other("_custom_category".to_string()),
@@ -9040,7 +9037,6 @@ mod tests {
         for category in [
             v2::SessionConfigOptionCategory::Mode,
             v2::SessionConfigOptionCategory::Model,
-            #[cfg(feature = "unstable_model_config_category")]
             v2::SessionConfigOptionCategory::ModelConfig,
             v2::SessionConfigOptionCategory::ThoughtLevel,
             v2::SessionConfigOptionCategory::Other("_custom_category".to_string()),

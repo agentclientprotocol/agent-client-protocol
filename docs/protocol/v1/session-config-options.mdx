@@ -129,11 +129,14 @@ Each config option **MAY** include a `category` field. Categories are semantic m
 
 Category names beginning with `_` are free for custom use (e.g., `_my_custom_category`). Category names that do not begin with `_` are reserved for the ACP spec.
 
-| Category        | Description                      |
-| --------------- | -------------------------------- |
-| `mode`          | Session mode selector            |
-| `model`         | Model selector                   |
-| `thought_level` | Thought/reasoning level selector |
+| Category        | Description                                                              |
+| --------------- | ------------------------------------------------------------------------ |
+| `mode`          | Session mode selector                                                    |
+| `model`         | Model selector                                                           |
+| `model_config`  | Model-related parameter, such as context size or speed/quality trade-off |
+| `thought_level` | Thought/reasoning level selector                                         |
+
+Clients **SHOULD** render `model_config` options near the `model` selector, such as in the same popover or panel. No capability negotiation is required for category values.
 
 When multiple options share the same category, Clients **SHOULD** use the array ordering to resolve ties, preferring earlier options in the list for prominent placement or keyboard shortcuts.
 

@@ -2232,6 +2232,11 @@
           "const": "model"
         },
         {
+          "description": "Model-related configuration parameter.",
+          "type": "string",
+          "const": "model_config"
+        },
+        {
           "description": "Thought/reasoning level selector.",
           "type": "string",
           "const": "thought_level"
