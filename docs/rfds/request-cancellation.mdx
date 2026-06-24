@@ -99,6 +99,17 @@ Add standard JSON-RPC error code `-32800` for cancelled requests:
 - Message: "Request cancelled"
 - Meaning: Execution of the method was aborted either due to a cancellation request from the caller or because of resource constraints or shutdown.
 
+## Implementations
+
+| Repository                             | Pull request / commit                                                                                                                       | Status                   |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| `zed-industries/zed`                   | [zed-industries/zed#59593](https://github.com/zed-industries/zed/pull/59593)                                                                | Merged                   |
+| `agentclientprotocol/rust-sdk`         | [agentclientprotocol/rust-sdk#179](https://github.com/agentclientprotocol/rust-sdk/pull/179)                                                | Merged                   |
+| `agentclientprotocol/typescript-sdk`   | [agentclientprotocol/typescript-sdk#195](https://github.com/agentclientprotocol/typescript-sdk/pull/195)                                    | Merged                   |
+| `agentclientprotocol/claude-agent-acp` | [agentclientprotocol/claude-agent-acp#801](https://github.com/agentclientprotocol/claude-agent-acp/pull/801)                                | Merged                   |
+| `agentclientprotocol/codex-acp`        | [agentclientprotocol/codex-acp#221](https://github.com/agentclientprotocol/codex-acp/pull/221)                                              | Open                     |
+| `agentclientprotocol/kotlin-sdk`       | [agentclientprotocol/kotlin-sdk@f345883](https://github.com/agentclientprotocol/kotlin-sdk/commit/f3458831da628e26ee29c4a5834d55b443bf5a31) | Needs method name update |
+
 ## Frequently asked questions
 
 ### What alternative approaches did you consider, and why did you settle on this one?
@@ -194,3 +205,4 @@ This ensures complete cleanup and prevents resource leaks.
 - 2025-11-13: Initial version converted from PR #183
 - 2025-12-05: Updated with current implementation.
 - 2025-12-09: Mirror LSP behavior.
+- 2026-06-24: Move to Preview stage

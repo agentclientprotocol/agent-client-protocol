@@ -180,7 +180,6 @@
             "group": "Draft",
             "pages": [
               "rfds/session-fork",
-              "rfds/request-cancellation",
               "rfds/agent-telemetry-export",
               "rfds/proxy-chains",
               "rfds/mcp-over-acp",
@@ -210,7 +209,11 @@
           },
           {
             "group": "Preview",
-            "pages": ["rfds/model-config-category", "rfds/rust-sdk-v1"]
+            "pages": [
+              "rfds/rust-sdk-v1",
+              "rfds/model-config-category",
+              "rfds/request-cancellation"
+            ]
           },
           {
             "group": "Completed",
