@@ -48,6 +48,7 @@ Clients create a new session by calling the `session/new` method with:
 
 - The [working directory](#working-directory) for the session
 - A list of [MCP servers](#mcp-servers) the Agent should connect to
+- An optional **system prompt** providing client-supplied instructions for the session
 
 ```json
 {
@@ -56,6 +57,7 @@ Clients create a new session by calling the `session/new` method with:
   "method": "session/new",
   "params": {
     "cwd": "/home/user/project",
+    "systemPrompt": "You are a concise code-review assistant.",
     "mcpServers": [
       {
         "name": "filesystem",
