@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.14.1](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.14.0...v0.14.1) - 2026-06-24
+## [1.0.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.14.0...v1.0.0) - 2026-06-24
 
 ### Added
 
