@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.1.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.0.0...v1.1.0) - 2026-06-24
+
+### Added
+
+- *(schema)* Stabilize model_config option category ([#1502](https://github.com/agentclientprotocol/agent-client-protocol/pull/1502))
+
 ## [1.0.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v0.14.0...v1.0.0) - 2026-06-24
 
 ### Added
