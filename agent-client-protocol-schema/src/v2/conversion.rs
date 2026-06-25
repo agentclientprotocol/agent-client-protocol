@@ -2697,13 +2697,13 @@ impl IntoV1 for super::InitializeRequest {
         let Self {
             protocol_version,
             capabilities,
-            client_info,
+            info,
             meta,
         } = self;
         Ok(crate::v1::InitializeRequest {
             protocol_version: protocol_version.into_v1()?,
             client_capabilities: capabilities.into_v1()?,
-            client_info: into_v1_default_on_error(client_info),
+            client_info: Some(info.into_v1()?),
             meta: meta.into_v1()?,
         })
     }
@@ -2719,10 +2719,18 @@ impl IntoV2 for crate::v1::InitializeRequest {
             client_info,
             meta,
         } = self;
+        let info = match client_info {
+            Some(client_info) => client_info.into_v2()?,
+            None => {
+                return Err(ProtocolConversionError::new(
+                    "v1 InitializeRequest without `clientInfo` cannot be represented in v2",
+                ));
+            }
+        };
         Ok(super::InitializeRequest {
             protocol_version: protocol_version.into_v2()?,
             capabilities: client_capabilities.into_v2()?,
-            client_info: into_v2_default_on_error(client_info),
+            info,
             meta: meta.into_v2()?,
         })
     }
@@ -2736,14 +2744,14 @@ impl IntoV1 for super::InitializeResponse {
             protocol_version,
             capabilities: agent_capabilities,
             auth_methods,
-            agent_info,
+            info,
             meta,
         } = self;
         Ok(crate::v1::InitializeResponse {
             protocol_version: protocol_version.into_v1()?,
             agent_capabilities: agent_capabilities.into_v1()?,
             auth_methods: into_v1_vec_skip_errors(auth_methods),
-            agent_info: into_v1_default_on_error(agent_info),
+            agent_info: Some(info.into_v1()?),
             meta: meta.into_v1()?,
         })
     }
@@ -2760,11 +2768,19 @@ impl IntoV2 for crate::v1::InitializeResponse {
             agent_info,
             meta,
         } = self;
+        let info = match agent_info {
+            Some(agent_info) => agent_info.into_v2()?,
+            None => {
+                return Err(ProtocolConversionError::new(
+                    "v1 InitializeResponse without `agentInfo` cannot be represented in v2",
+                ));
+            }
+        };
         Ok(super::InitializeResponse {
             protocol_version: protocol_version.into_v2()?,
             capabilities: agent_capabilities.into_v2()?,
             auth_methods: into_v2_vec_skip_errors(auth_methods),
-            agent_info: into_v2_default_on_error(agent_info),
+            info,
             meta: meta.into_v2()?,
         })
     }
@@ -9049,20 +9065,41 @@ mod tests {
 
     #[test]
     fn converts_v2_initialize_request_to_v1_without_serde() {
-        let request = v2::InitializeRequest::new(ProtocolVersion::V2);
+        let request = v2::InitializeRequest::new(
+            ProtocolVersion::V2,
+            v2::Implementation::new("test-client", "1.0.0"),
+        );
 
         let converted: v1::InitializeRequest = v2_to_v1(request).unwrap();
 
         assert_eq!(converted.protocol_version, ProtocolVersion::V2);
+        assert_eq!(
+            converted
+                .client_info
+                .as_ref()
+                .map(|info| info.name.as_str()),
+            Some("test-client")
+        );
     }
 
     #[test]
-    fn converts_v1_initialize_request_to_v2_without_serde() {
+    fn v1_initialize_request_without_client_info_does_not_convert_to_v2() {
         let request = v1::InitializeRequest::new(ProtocolVersion::V1);
 
-        let converted: v2::InitializeRequest = v1_to_v2(request).unwrap();
+        assert_v1_to_v2_error(
+            request,
+            "v1 InitializeRequest without `clientInfo` cannot be represented in v2",
+        );
+    }
 
-        assert_eq!(converted.protocol_version, ProtocolVersion::V1);
+    #[test]
+    fn v1_initialize_response_without_agent_info_does_not_convert_to_v2() {
+        let response = v1::InitializeResponse::new(ProtocolVersion::V1);
+
+        assert_v1_to_v2_error(
+            response,
+            "v1 InitializeResponse without `agentInfo` cannot be represented in v2",
+        );
     }
 
     #[test]
@@ -9086,9 +9123,13 @@ mod tests {
         let converted: v2::InitializeRequest =
             v1_to_v2(request).expect("v1 -> v2 conversion failed");
         let converted_capabilities =
-            serde_json::to_value(converted.capabilities).expect("v2 serialize");
+            serde_json::to_value(&converted.capabilities).expect("v2 serialize");
         assert_eq!(converted_capabilities.get("fs"), None);
         assert_eq!(converted_capabilities.get("terminal"), None);
+        let converted_json = serde_json::to_value(&converted).expect("v2 serialize");
+        assert_eq!(converted_json.get("clientInfo"), None);
+        assert_eq!(converted_json.get("implementation"), None);
+        assert!(converted_json.get("info").is_some());
     }
 
     #[test]
@@ -9101,6 +9142,9 @@ mod tests {
         let converted_json = serde_json::to_value(&converted).expect("v2 serialize");
         assert_eq!(converted_json.get("agentCapabilities"), None);
         assert!(converted_json.get("capabilities").is_some());
+        assert_eq!(converted_json.get("agentInfo"), None);
+        assert_eq!(converted_json.get("implementation"), None);
+        assert!(converted_json.get("info").is_some());
         assert_eq!(converted_json.pointer("/capabilities/loadSession"), None);
     }
 
@@ -9918,17 +9962,20 @@ mod tests {
 
     #[test]
     fn v2_collection_conversion_skips_items_like_v1_vec_skip_error() {
-        let response = v2::InitializeResponse::new(ProtocolVersion::V2)
-            .capabilities(v2::AgentCapabilities::new().session(v2::SessionCapabilities::new()))
-            .auth_methods(vec![
-                v2::AuthMethod::Other(v2::OtherAuthMethod::new(
-                    "_oauth",
-                    "oauth",
-                    "OAuth",
-                    BTreeMap::default(),
-                )),
-                v2::AuthMethod::Agent(v2::AuthMethodAgent::new("agent", "Agent")),
-            ]);
+        let response = v2::InitializeResponse::new(
+            ProtocolVersion::V2,
+            v2::Implementation::new("test-agent", "2.0.0"),
+        )
+        .capabilities(v2::AgentCapabilities::new().session(v2::SessionCapabilities::new()))
+        .auth_methods(vec![
+            v2::AuthMethod::Other(v2::OtherAuthMethod::new(
+                "_oauth",
+                "oauth",
+                "OAuth",
+                BTreeMap::default(),
+            )),
+            v2::AuthMethod::Agent(v2::AuthMethodAgent::new("agent", "Agent")),
+        ]);
         let converted: v1::InitializeResponse = v2_to_v1(response).unwrap();
         assert_eq!(converted.auth_methods.len(), 1);
         assert!(matches!(

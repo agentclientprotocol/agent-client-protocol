@@ -58,13 +58,8 @@ pub struct InitializeRequest {
     /// Capabilities supported by the client.
     #[serde(default)]
     pub capabilities: ClientCapabilities,
-    /// Information about the Client name and version sent to the Agent.
-    ///
-    /// Note: in future versions of the protocol, this will be required.
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
-    #[serde(default)]
-    pub client_info: Option<Implementation>,
+    /// Information about the implementation sending this initialize request.
+    pub info: Implementation,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -77,11 +72,11 @@ pub struct InitializeRequest {
 impl InitializeRequest {
     /// Builds [`InitializeRequest`] with the required request fields set; optional fields start unset or empty.
     #[must_use]
-    pub fn new(protocol_version: ProtocolVersion) -> Self {
+    pub fn new(protocol_version: ProtocolVersion, info: Implementation) -> Self {
         Self {
             protocol_version,
             capabilities: ClientCapabilities::default(),
-            client_info: None,
+            info,
             meta: None,
         }
     }
@@ -90,13 +85,6 @@ impl InitializeRequest {
     #[must_use]
     pub fn capabilities(mut self, capabilities: ClientCapabilities) -> Self {
         self.capabilities = capabilities;
-        self
-    }
-
-    /// Information about the Client name and version sent to the Agent.
-    #[must_use]
-    pub fn client_info(mut self, client_info: impl IntoOption<Implementation>) -> Self {
-        self.client_info = client_info.into_option();
         self
     }
 
@@ -137,13 +125,8 @@ pub struct InitializeResponse {
     #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default)]
     pub auth_methods: Vec<AuthMethod>,
-    /// Information about the Agent name and version sent to the Client.
-    ///
-    /// Note: in future versions of the protocol, this will be required.
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
-    #[serde(default)]
-    pub agent_info: Option<Implementation>,
+    /// Information about the implementation sending this initialize response.
+    pub info: Implementation,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -156,12 +139,12 @@ pub struct InitializeResponse {
 impl InitializeResponse {
     /// Builds [`InitializeResponse`] with the required response fields set; optional fields start unset or empty.
     #[must_use]
-    pub fn new(protocol_version: ProtocolVersion) -> Self {
+    pub fn new(protocol_version: ProtocolVersion, info: Implementation) -> Self {
         Self {
             protocol_version,
             capabilities: AgentCapabilities::default(),
             auth_methods: vec![],
-            agent_info: None,
+            info,
             meta: None,
         }
     }
@@ -177,13 +160,6 @@ impl InitializeResponse {
     #[must_use]
     pub fn auth_methods(mut self, auth_methods: Vec<AuthMethod>) -> Self {
         self.auth_methods = auth_methods;
-        self
-    }
-
-    /// Information about the Agent name and version sent to the Client.
-    #[must_use]
-    pub fn agent_info(mut self, agent_info: impl IntoOption<Implementation>) -> Self {
-        self.agent_info = agent_info.into_option();
         self
     }
 

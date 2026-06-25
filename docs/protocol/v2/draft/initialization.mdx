@@ -27,8 +27,7 @@ Before a Session can be created, Clients **MUST** initialize the connection by c
 
 - The latest [protocol version](#protocol-version) supported
 - The [capabilities](#client-capabilities) supported
-
-They **SHOULD** also provide a name and version to the Agent.
+- The [implementation information](#implementation-information) for the Client
 
 ```json
 {
@@ -38,7 +37,7 @@ They **SHOULD** also provide a name and version to the Agent.
   "params": {
     "protocolVersion": 2,
     "capabilities": {},
-    "clientInfo": {
+    "info": {
       "name": "my-client",
       "title": "My Client",
       "version": "1.0.0"
@@ -47,7 +46,7 @@ They **SHOULD** also provide a name and version to the Agent.
 }
 ```
 
-The Agent **MUST** respond with the chosen [protocol version](#protocol-version) and the [capabilities](#agent-capabilities) it supports. It **SHOULD** also provide a name and version to the Client as well:
+The Agent **MUST** respond with the chosen [protocol version](#protocol-version), the [capabilities](#agent-capabilities) it supports, and its [implementation information](#implementation-information):
 
 ```json
 {
@@ -69,7 +68,7 @@ The Agent **MUST** respond with the chosen [protocol version](#protocol-version)
         "load": {}
       }
     },
-    "agentInfo": {
+    "info": {
       "name": "my-agent",
       "title": "My Agent",
       "version": "1.0.0"
@@ -230,7 +229,7 @@ Optionally, they **MAY** support richer types of [content](/protocol/v2/draft/co
 
 ## Implementation Information
 
-Both Clients and Agents **SHOULD** provide information about their implementation in the `clientInfo` and `agentInfo` fields respectively. Both take the following three fields:
+Both Clients and Agents **MUST** provide information about their implementation in the `info` field. It takes the following three fields:
 
 <ParamField path="name" type="string">
   Intended for programmatic or logical use, but can be used as a display name
@@ -246,10 +245,6 @@ Both Clients and Agents **SHOULD** provide information about their implementatio
   Version of the implementation. Can be displayed to the user or used for
   debugging or metrics purposes.
 </ParamField>
-
-<Info>
-  Note: in future versions of the protocol, this information will be required.
-</Info>
 
 ---
 

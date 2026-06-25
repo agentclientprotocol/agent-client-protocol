@@ -108,11 +108,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
     - Default: `{}`
 
 </ResponseField>
-<ResponseField name="clientInfo" type={<><span><a href="#implementation">Implementation</a></span><span> | null</span></>} >
-  Information about the Client name and version sent to the Agent.
-
-Note: in future versions of the protocol, this will be required.
-
+<ResponseField name="info" type={<a href="#implementation">Implementation</a>} required>
+  Information about the implementation sending this initialize request.
 </ResponseField>
 <ResponseField name="protocolVersion" type={<a href="#protocolversion">ProtocolVersion</a>} required>
   The latest protocol version supported by the client.
@@ -138,12 +135,6 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
 
 </ResponseField>
-<ResponseField name="agentInfo" type={<><span><a href="#implementation">Implementation</a></span><span> | null</span></>} >
-  Information about the Agent name and version sent to the Client.
-
-Note: in future versions of the protocol, this will be required.
-
-</ResponseField>
 <ResponseField name="authMethods" type={<a href="#authmethod">AuthMethod[]</a>} >
   Authentication methods supported by the agent.
 
@@ -155,6 +146,9 @@ Note: in future versions of the protocol, this will be required.
 
     - Default: `{"auth":{}}`
 
+</ResponseField>
+<ResponseField name="info" type={<a href="#implementation">Implementation</a>} required>
+  Information about the implementation sending this initialize response.
 </ResponseField>
 <ResponseField name="protocolVersion" type={<a href="#protocolversion">ProtocolVersion</a>} required>
   The protocol version the client specified if supported by the agent,

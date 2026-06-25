@@ -316,9 +316,34 @@ mod schema_annotation_tests {
     fn generated_schema_includes_tolerant_deserialization_extensions() {
         let schema = root_schema_value();
 
-        let client_info = property_schema(&schema, "InitializeRequest", "clientInfo");
-        assert_bool_extension(client_info, DEFAULT_ON_ERROR_EXTENSION);
-        assert_no_extension(client_info, SKIP_INVALID_ITEMS_EXTENSION);
+        #[cfg(not(feature = "unstable_protocol_v2"))]
+        {
+            let client_info = property_schema(&schema, "InitializeRequest", "clientInfo");
+            assert_bool_extension(client_info, DEFAULT_ON_ERROR_EXTENSION);
+            assert_no_extension(client_info, SKIP_INVALID_ITEMS_EXTENSION);
+        }
+
+        #[cfg(feature = "unstable_protocol_v2")]
+        {
+            let request = def_schema(&schema, "InitializeRequest");
+            assert!(
+                request
+                    .pointer("/required")
+                    .and_then(Value::as_array)
+                    .is_some_and(|required| required.iter().any(|field| field == "info"))
+            );
+            let info = property_schema(&schema, "InitializeRequest", "info");
+            assert_no_extension(info, DEFAULT_ON_ERROR_EXTENSION);
+            assert_no_extension(info, SKIP_INVALID_ITEMS_EXTENSION);
+
+            let response = def_schema(&schema, "InitializeResponse");
+            assert!(
+                response
+                    .pointer("/required")
+                    .and_then(Value::as_array)
+                    .is_some_and(|required| required.iter().any(|field| field == "info"))
+            );
+        }
 
         let auth_methods = property_schema(&schema, "InitializeResponse", "authMethods");
         assert_bool_extension(auth_methods, DEFAULT_ON_ERROR_EXTENSION);
