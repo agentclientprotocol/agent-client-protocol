@@ -99,12 +99,18 @@ Agents send elicitation requests when they need information from the user. This 
         "oneOf": [
           {
             "const": "conservative",
-            "title": "Conservative - Minimal changes"
+            "title": "Conservative - Minimal changes",
+            "description": "Make minimal changes and avoid broad cleanup."
           },
-          { "const": "balanced", "title": "Balanced (Recommended)" },
+          {
+            "const": "balanced",
+            "title": "Balanced (Recommended)",
+            "description": "Fix the issue and clean nearby code when it lowers risk."
+          },
           {
             "const": "aggressive",
-            "title": "Aggressive - Maximum optimization"
+            "title": "Aggressive - Maximum optimization",
+            "description": "Refactor more broadly to optimize the affected area."
           }
         ],
         "default": "balanced"
@@ -269,9 +275,21 @@ Single-select enum (with titles):
   "title": "Color Selection",
   "description": "Choose your favorite color",
   "oneOf": [
-    { "const": "#FF0000", "title": "Red" },
-    { "const": "#00FF00", "title": "Green" },
-    { "const": "#0000FF", "title": "Blue" }
+    {
+      "const": "#FF0000",
+      "title": "Red",
+      "description": "High emphasis and warning-oriented."
+    },
+    {
+      "const": "#00FF00",
+      "title": "Green",
+      "description": "Positive status and success-oriented."
+    },
+    {
+      "const": "#0000FF",
+      "title": "Blue",
+      "description": "Neutral and informational."
+    }
   ],
   "default": "#FF0000"
 }
@@ -305,9 +323,21 @@ Multi-select enum (with titles):
   "maxItems": 2,
   "items": {
     "anyOf": [
-      { "const": "#FF0000", "title": "Red" },
-      { "const": "#00FF00", "title": "Green" },
-      { "const": "#0000FF", "title": "Blue" }
+      {
+        "const": "#FF0000",
+        "title": "Red",
+        "description": "High emphasis and warning-oriented."
+      },
+      {
+        "const": "#00FF00",
+        "title": "Green",
+        "description": "Positive status and success-oriented."
+      },
+      {
+        "const": "#0000FF",
+        "title": "Blue",
+        "description": "Neutral and informational."
+      }
     ]
   },
   "default": ["#FF0000", "#00FF00"]
@@ -368,9 +398,21 @@ The agent sends an `elicitation/create` request when it needs information from t
           "type": "string",
           "title": "Refactoring Strategy",
           "oneOf": [
-            { "const": "conservative", "title": "Conservative" },
-            { "const": "balanced", "title": "Balanced (Recommended)" },
-            { "const": "aggressive", "title": "Aggressive" }
+            {
+              "const": "conservative",
+              "title": "Conservative",
+              "description": "Make minimal changes and avoid broad cleanup."
+            },
+            {
+              "const": "balanced",
+              "title": "Balanced (Recommended)",
+              "description": "Fix the issue and clean nearby code when it lowers risk."
+            },
+            {
+              "const": "aggressive",
+              "title": "Aggressive",
+              "description": "Refactor more broadly to optimize the affected area."
+            }
           ],
           "default": "balanced"
         }

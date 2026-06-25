@@ -7524,10 +7524,16 @@ impl IntoV1 for super::EnumOption {
     type Output = crate::v1::EnumOption;
 
     fn into_v1(self) -> Result<Self::Output> {
-        let Self { value, title, meta } = self;
+        let Self {
+            value,
+            title,
+            description,
+            meta,
+        } = self;
         Ok(crate::v1::EnumOption {
             value: value.into_v1()?,
             title: title.into_v1()?,
+            description: description.into_v1()?,
             meta: meta.into_v1()?,
         })
     }
@@ -7538,10 +7544,16 @@ impl IntoV2 for crate::v1::EnumOption {
     type Output = super::EnumOption;
 
     fn into_v2(self) -> Result<Self::Output> {
-        let Self { value, title, meta } = self;
+        let Self {
+            value,
+            title,
+            description,
+            meta,
+        } = self;
         Ok(super::EnumOption {
             value: value.into_v2()?,
             title: title.into_v2()?,
+            description: description.into_v2()?,
             meta: meta.into_v2()?,
         })
     }

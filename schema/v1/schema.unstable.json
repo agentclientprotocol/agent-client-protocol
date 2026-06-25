@@ -1595,7 +1595,7 @@
       ]
     },
     "EnumOption": {
-      "description": "A titled enum option with a const value and human-readable title.",
+      "description": "A titled enum option with a const value, human-readable title, and optional description.",
       "type": "object",
       "properties": {
         "const": {
@@ -1605,6 +1605,10 @@
         "title": {
           "description": "Human-readable title for this option.",
           "type": "string"
+        },
+        "description": {
+          "description": "Optional description for this option value.",
+          "type": ["string", "null"]
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",

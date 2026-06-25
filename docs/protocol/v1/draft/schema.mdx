@@ -4353,7 +4353,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 ## <span class="font-mono">EnumOption</span>
 
-A titled enum option with a const value and human-readable title.
+A titled enum option with a const value, human-readable title, and optional description.
 
 **Type:** Object
 
@@ -4369,6 +4369,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 </ResponseField>
 <ResponseField name="const" type={"string"} required>
   The constant value for this option.
+</ResponseField>
+<ResponseField name="description" type={"string | null"}>
+  Optional description for this option value.
 </ResponseField>
 <ResponseField name="title" type={"string"} required>
   Human-readable title for this option.
