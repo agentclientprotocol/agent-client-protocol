@@ -52,7 +52,7 @@ Other RFDs will progress separately and are not dependent on breaking changes (s
 - Clean up capability naming and organization:
   - Use a single `capabilities` field in both `initialize` params and results, replacing the v1-style `clientCapabilities` and `agentCapabilities` fields.
   - Require implementation metadata in both `initialize` params and results with a single role-agnostic `info` field, replacing the v1-style `clientInfo` and `agentInfo` fields so agent-to-agent and other symmetric ACP connections do not need role-specific field names.
-  - Group authentication methods under `auth/*`: v2 uses `auth/login` and `auth/logout` instead of v1's top-level `authenticate` and `logout` method names. The generated request and response type names follow the grouped method naming as `LoginAuthRequest` / `LoginAuthResponse` and `LogoutAuthRequest` / `LogoutAuthResponse`.
+  - Group authentication methods under `auth/*`: v2 uses `auth/login` and `auth/logout` instead of v1's top-level `authenticate` and `logout` method names. `auth/logout` is required for v2 Agents and no longer uses a `capabilities.auth.logout` support marker. The generated request and response type names follow the grouped method naming as `LoginAuthRequest` / `LoginAuthResponse` and `LogoutAuthRequest` / `LogoutAuthResponse`.
   - Use concise capability group names such as `session` and `auth`, replacing names like `sessionCapabilities`.
   - Make `session` optional so non-session agents, such as NES-only agents, can omit it.
   - Move session-scoped capability groups under `session`, including `prompt`, `mcp`, and `loadSession` as `session.prompt`, `session.mcp`, and `session.load`.
@@ -109,7 +109,7 @@ With the needed breaking changes, as much as possible I am targeting having a co
 ## Revision history
 
 - 2026-06-25: Recorded the v2 initialize information cleanup: required role-agnostic `info` in both params and results, replacing `clientInfo` and `agentInfo`.
-- 2026-06-25: Recorded the v2 authentication method cleanup: grouped `auth/login` and `auth/logout` method names replace v1's top-level `authenticate` and `logout`, with matching generated type names for login and logout auth requests and responses.
+- 2026-06-25: Recorded the v2 authentication method cleanup: grouped `auth/login` and required `auth/logout` method names replace v1's top-level `authenticate` and capability-gated `logout`, with matching generated type names for login and logout auth requests and responses.
 - 2026-06-09: Added tool-call content chunks for streaming individual `ToolCallContent` items.
 - 2026-06-09: Added the v2 Message Updates and Chunks RFD to define whole-message upserts alongside streamed message chunks.
 - 2026-06-08: Added the v2 Tool Call Updates RFD to make `tool_call_update` the single upsert-style tool-call session update.

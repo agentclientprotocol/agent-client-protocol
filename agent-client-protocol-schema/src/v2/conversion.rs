@@ -2918,9 +2918,9 @@ impl IntoV1 for super::AgentAuthCapabilities {
     type Output = crate::v1::AgentAuthCapabilities;
 
     fn into_v1(self) -> Result<Self::Output> {
-        let Self { logout, meta } = self;
+        let Self { meta } = self;
         Ok(crate::v1::AgentAuthCapabilities {
-            logout: into_v1_default_on_error(logout),
+            logout: Some(crate::v1::LogoutCapabilities::new()),
             meta: meta.into_v1()?,
         })
     }
@@ -2930,31 +2930,8 @@ impl IntoV2 for crate::v1::AgentAuthCapabilities {
     type Output = super::AgentAuthCapabilities;
 
     fn into_v2(self) -> Result<Self::Output> {
-        let Self { logout, meta } = self;
+        let Self { logout: _, meta } = self;
         Ok(super::AgentAuthCapabilities {
-            logout: into_v2_default_on_error(logout),
-            meta: meta.into_v2()?,
-        })
-    }
-}
-
-impl IntoV1 for super::LogoutCapabilities {
-    type Output = crate::v1::LogoutCapabilities;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self { meta } = self;
-        Ok(crate::v1::LogoutCapabilities {
-            meta: meta.into_v1()?,
-        })
-    }
-}
-
-impl IntoV2 for crate::v1::LogoutCapabilities {
-    type Output = super::LogoutCapabilities;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        let Self { meta } = self;
-        Ok(super::LogoutCapabilities {
             meta: meta.into_v2()?,
         })
     }
@@ -9139,6 +9116,10 @@ mod tests {
     #[test]
     fn round_trips_initialize_response() {
         let response = v1::InitializeResponse::new(ProtocolVersion::V1)
+            .agent_capabilities(
+                v1::AgentCapabilities::new()
+                    .auth(v1::AgentAuthCapabilities::new().logout(v1::LogoutCapabilities::new())),
+            )
             .agent_info(v1::Implementation::new("test-agent", "2.0.0").title("Test Agent"));
         assert_v1_round_trip::<v1::InitializeResponse, v2::InitializeResponse>(response.clone());
         let converted: v2::InitializeResponse =
@@ -9182,6 +9163,22 @@ mod tests {
             error.message(),
             "v2 AgentCapabilities without `session` cannot be represented in v1"
         );
+    }
+
+    #[test]
+    fn v2_auth_logout_is_baseline_not_capability_marker() {
+        let v2_auth = v2::AgentAuthCapabilities::new();
+        let v2_json = serde_json::to_value(&v2_auth).expect("v2 serialize");
+        assert_eq!(v2_json.get("logout"), None);
+
+        let v1_auth: v1::AgentAuthCapabilities = v2_to_v1(v2_auth).expect("v2 -> v1 conversion");
+        assert!(v1_auth.logout.is_some());
+
+        let v1_auth_without_logout = v1::AgentAuthCapabilities::new();
+        let v2_auth: v2::AgentAuthCapabilities =
+            v1_to_v2(v1_auth_without_logout).expect("v1 -> v2 conversion");
+        let v2_json = serde_json::to_value(&v2_auth).expect("v2 serialize");
+        assert_eq!(v2_json.get("logout"), None);
     }
 
     #[test]

@@ -882,12 +882,6 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
 
 </ResponseField>
-<ResponseField name="logout" type={<><span><a href="#logoutcapabilities">LogoutCapabilities</a></span><span> | null</span></>} >
-  Whether the agent supports the logout method.
-
-By supplying `\{\}` it means that the agent supports the logout method.
-
-</ResponseField>
 
 ## <span class="font-mono">AgentCapabilities</span>
 
@@ -1949,25 +1943,6 @@ If not provided, the name should be used for display.
 <ResponseField name="version" type={"string"} required>
   Version of the implementation. Can be displayed to the user or used
 for debugging or metrics purposes. (e.g. "1.0.0").
-</ResponseField>
-
-## <span class="font-mono">LogoutCapabilities</span>
-
-Logout capabilities supported by the agent.
-
-By supplying `\{\}` it means that the agent supports the logout method.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
-
 </ResponseField>
 
 ## <span class="font-mono">McpCapabilities</span>

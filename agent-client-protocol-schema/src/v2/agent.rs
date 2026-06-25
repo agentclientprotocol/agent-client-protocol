@@ -398,13 +398,6 @@ impl LogoutAuthResponse {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct AgentAuthCapabilities {
-    /// Whether the agent supports the logout method.
-    ///
-    /// By supplying `{}` it means that the agent supports the logout method.
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
-    #[serde(default)]
-    pub logout: Option<LogoutCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -415,49 +408,7 @@ pub struct AgentAuthCapabilities {
 }
 
 impl AgentAuthCapabilities {
-    /// Builds an empty [`AgentAuthCapabilities`]; use builder methods to advertise supported sub-capabilities.
-    #[must_use]
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Whether the agent supports the logout method.
-    #[must_use]
-    pub fn logout(mut self, logout: impl IntoOption<LogoutCapabilities>) -> Self {
-        self.logout = logout.into_option();
-        self
-    }
-
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[must_use]
-    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
-        self.meta = meta.into_option();
-        self
-    }
-}
-
-/// Logout capabilities supported by the agent.
-///
-/// By supplying `{}` it means that the agent supports the logout method.
-#[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[non_exhaustive]
-pub struct LogoutCapabilities {
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
-}
-
-impl LogoutCapabilities {
-    /// Builds an empty [`LogoutCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`AgentAuthCapabilities`].
     #[must_use]
     pub fn new() -> Self {
         Self::default()

@@ -3,7 +3,7 @@ title: "Authentication"
 description: "Authenticating with agents and logging out"
 ---
 
-ACP authentication is negotiated during [initialization](/protocol/v2/initialization). Agents advertise available authentication methods in `authMethods`, Clients choose one by calling `auth/login`, and Agents that support ending an authenticated state advertise the `logout` auth capability.
+ACP authentication is negotiated during [initialization](/protocol/v2/initialization). Agents advertise available authentication methods in `authMethods`. Clients authenticate by calling `auth/login` and end the current authenticated state by calling `auth/logout`.
 
 <br />
 
@@ -13,7 +13,7 @@ sequenceDiagram
     participant Agent
 
     Client->>Agent: initialize
-    Agent-->>Client: initialize response (authMethods, auth.logout)
+    Agent-->>Client: initialize response (authMethods)
 
     alt Agent requires authentication
         Client->>Agent: auth/login (methodId)
@@ -36,19 +36,13 @@ sequenceDiagram
 
 Agents advertise authentication options in the `authMethods` field of the `initialize` response. Each method has an `id` that the Client passes back to the Agent in a later `auth/login` request.
 
-Agents that support `auth/logout` also advertise `capabilities.auth.logout`:
-
-```json highlight={7-11,12-19}
+```json highlight={8-15}
 {
   "jsonrpc": "2.0",
   "id": 0,
   "result": {
     "protocolVersion": 2,
-    "capabilities": {
-      "auth": {
-        "logout": {}
-      }
-    },
+    "capabilities": {},
     "authMethods": [
       {
         "id": "agent-login",
@@ -60,8 +54,6 @@ Agents that support `auth/logout` also advertise `capabilities.auth.logout`:
   }
 }
 ```
-
-If `capabilities.auth.logout` is omitted or `null`, the Agent does not support `auth/logout` and Clients **MUST NOT** call it. Supplying `{}` means the Agent supports the method.
 
 ### Authentication Method Types
 
@@ -114,7 +106,7 @@ After successful authentication, the Client can create new sessions without rece
 
 ## Logging Out
 
-The `auth/logout` method allows Clients to end the current authenticated state. Clients should only call it after verifying the Agent advertised `capabilities.auth.logout` during initialization.
+The `auth/logout` method allows Clients to end the current authenticated state.
 
 ```json
 {
