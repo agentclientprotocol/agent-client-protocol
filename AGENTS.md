@@ -60,22 +60,6 @@ This repository uses **Conventional Commits** for automated releases via release
 - **ci:** CI/CD configuration changes
 - **build:** Build system or external dependency changes
 
-### Breaking Changes
-
-Add `!` after the type to indicate breaking changes (triggers major version bump):
-
-```
-feat!: change API to use async traits
-```
-
-Or include `BREAKING CHANGE:` in the footer:
-
-```
-feat: redesign conductor protocol
-
-BREAKING CHANGE: conductor now requires explicit capability registration
-```
-
 ### Examples
 
 ```

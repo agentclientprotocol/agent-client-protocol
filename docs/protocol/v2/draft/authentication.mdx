@@ -3,7 +3,7 @@ title: "Authentication"
 description: "Authenticating with agents and logging out"
 ---
 
-ACP authentication is negotiated during [initialization](/protocol/v2/draft/initialization). Agents advertise available authentication methods in `authMethods`, Clients choose one by calling `authenticate`, and Agents that support ending an authenticated state advertise the `logout` capability.
+ACP authentication is negotiated during [initialization](/protocol/v2/draft/initialization). Agents advertise available authentication methods in `authMethods`, Clients choose one by calling `auth/login`, and Agents that support ending an authenticated state advertise the `logout` auth capability.
 
 <br />
 
@@ -16,15 +16,15 @@ sequenceDiagram
     Agent-->>Client: initialize response (authMethods, auth.logout)
 
     alt Agent requires authentication
-        Client->>Agent: authenticate (methodId)
-        Agent-->>Client: authenticate response
+        Client->>Agent: auth/login (methodId)
+        Agent-->>Client: auth/login response
     end
 
     Note over Client,Agent: Authenticated requests may proceed
 
     alt User logs out
-        Client->>Agent: logout
-        Agent-->>Client: logout response
+        Client->>Agent: auth/logout
+        Agent-->>Client: auth/logout response
     end
 
     Note over Client,Agent: New sessions require authentication again
@@ -34,9 +34,9 @@ sequenceDiagram
 
 ## Advertising Authentication
 
-Agents advertise authentication options in the `authMethods` field of the `initialize` response. Each method has an `id` that the Client passes back to the Agent in a later `authenticate` request.
+Agents advertise authentication options in the `authMethods` field of the `initialize` response. Each method has an `id` that the Client passes back to the Agent in a later `auth/login` request.
 
-Agents that support `logout` also advertise `capabilities.auth.logout`:
+Agents that support `auth/logout` also advertise `capabilities.auth.logout`:
 
 ```json highlight={7-11,12-19}
 {
@@ -61,7 +61,7 @@ Agents that support `logout` also advertise `capabilities.auth.logout`:
 }
 ```
 
-If `capabilities.auth.logout` is omitted or `null`, the Agent does not support `logout` and Clients **MUST NOT** call it. Supplying `{}` means the Agent supports the method.
+If `capabilities.auth.logout` is omitted or `null`, the Agent does not support `auth/logout` and Clients **MUST NOT** call it. Supplying `{}` means the Agent supports the method.
 
 ### Authentication method types
 
@@ -109,13 +109,13 @@ See the [draft schema](/protocol/v2/draft/schema#authmethod) for the full `AuthM
 
 ## Authenticating
 
-When an Agent requires authentication before allowing session creation, the Client calls `authenticate` with one of the advertised authentication method IDs:
+When an Agent requires authentication before allowing session creation, the Client calls `auth/login` with one of the advertised authentication method IDs:
 
 ```json
 {
   "jsonrpc": "2.0",
   "id": 1,
-  "method": "authenticate",
+  "method": "auth/login",
   "params": {
     "methodId": "agent-login"
   }
@@ -141,13 +141,13 @@ After successful authentication, the Client can create new sessions without rece
 
 ## Logging Out
 
-The `logout` method allows Clients to end the current authenticated state. Clients should only call it after verifying the Agent advertised `capabilities.auth.logout` during initialization.
+The `auth/logout` method allows Clients to end the current authenticated state. Clients should only call it after verifying the Agent advertised `capabilities.auth.logout` during initialization.
 
 ```json
 {
   "jsonrpc": "2.0",
   "id": 2,
-  "method": "logout",
+  "method": "auth/logout",
   "params": {}
 }
 ```
@@ -162,10 +162,10 @@ On success, the Agent returns an empty result:
 }
 ```
 
-After a successful `logout`, new sessions that require authentication will require the Client to call `authenticate` again.
+After a successful `auth/logout`, new sessions that require authentication will require the Client to call `auth/login` again.
 
 ## Active Sessions
 
-The protocol does not guarantee what happens to already-running sessions after `logout`. Agents may terminate them, keep them running, or return `auth_required` errors for future session activity.
+The protocol does not guarantee what happens to already-running sessions after `auth/logout`. Agents may terminate them, keep them running, or return `auth_required` errors for future session activity.
 
 Clients **SHOULD** be prepared for active session operations to fail with authentication-related errors after logout and should prompt the user to authenticate again when appropriate.

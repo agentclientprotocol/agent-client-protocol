@@ -24,7 +24,7 @@ A typical flow follows this pattern:
 <Step title="Initialization Phase">
 
 - Client → Agent: `initialize` to establish connection
-- Client → Agent: `authenticate` if required by the Agent
+- Client → Agent: `auth/login` if required by the Agent
 
 </Step>
 
@@ -59,8 +59,8 @@ Agents are programs that use generative AI to autonomously modify code. They typ
 </ResponseField>
 
 <ResponseField
-  name="authenticate"
-  post={[<a href="/protocol/v2/schema#authenticate">Schema</a>]}
+  name="auth/login"
+  post={[<a href="/protocol/v2/schema#auth%2Flogin">Schema</a>]}
 >
   Authenticate with the Agent (if required).
 </ResponseField>
@@ -92,8 +92,8 @@ Agents are programs that use generative AI to autonomously modify code. They typ
 </ResponseField>
 
 <ResponseField
-  name="logout"
-  post={[<a href="/protocol/v2/schema#logout">Schema</a>]}
+  name="auth/logout"
+  post={[<a href="/protocol/v2/schema#auth%2Flogout">Schema</a>]}
 >
   [End the current authenticated state](/protocol/v2/authentication#logging-out)
   (requires `capabilities.auth.logout` capability).

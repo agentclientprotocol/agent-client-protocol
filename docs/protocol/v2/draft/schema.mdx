@@ -16,7 +16,8 @@ Defines the interface that all ACP-compliant agents must implement.
 Agents are programs that use generative AI to autonomously modify code. They handle
 requests from clients and execute tasks using language models and tools.
 
-### <span class="font-mono">authenticate</span>
+<a id="auth-login"></a>
+### <span class="font-mono">auth/login</span>
 
 Authenticates the client using the specified authentication method.
 
@@ -28,9 +29,9 @@ After successful authentication, the client can proceed to create sessions with
 
 See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/v2/draft/initialization)
 
-#### <span class="font-mono">AuthenticateRequest</span>
+#### <span class="font-mono">LoginAuthRequest</span>
 
-Request parameters for the authenticate method.
+Request parameters for the `auth/login` method.
 
 Specifies which authentication method to use.
 
@@ -51,9 +52,53 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 Must be one of the methods advertised in the initialize response.
 </ResponseField>
 
-#### <span class="font-mono">AuthenticateResponse</span>
+#### <span class="font-mono">LoginAuthResponse</span>
 
-Response to the `authenticate` method.
+Response to the `auth/login` method.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+
+<a id="auth-logout"></a>
+### <span class="font-mono">auth/logout</span>
+
+Logs out of the current authenticated state.
+
+After a successful logout, all new sessions will require authentication.
+There is no guarantee about the behavior of already running sessions.
+
+#### <span class="font-mono">LogoutAuthRequest</span>
+
+Request parameters for the `auth/logout` method.
+
+Terminates the current authenticated session.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+
+#### <span class="font-mono">LogoutAuthResponse</span>
+
+Response to the `auth/logout` method.
 
 **Type:** Object
 
@@ -329,49 +374,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 or the latest protocol version supported by the agent.
 
 The client should disconnect, if it doesn't support this version.
-
-</ResponseField>
-
-### <span class="font-mono">logout</span>
-
-Logs out of the current authenticated state.
-
-After a successful logout, all new sessions will require authentication.
-There is no guarantee about the behavior of already running sessions.
-
-#### <span class="font-mono">LogoutRequest</span>
-
-Request parameters for the logout method.
-
-Terminates the current authenticated session.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
-
-</ResponseField>
-
-#### <span class="font-mono">LogoutResponse</span>
-
-Response to the `logout` method.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
 

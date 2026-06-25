@@ -239,15 +239,15 @@ impl Implementation {
 
 // Authentication
 
-/// Request parameters for the authenticate method.
+/// Request parameters for the `auth/login` method.
 ///
 /// Specifies which authentication method to use.
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = AUTHENTICATE_METHOD_NAME))]
+#[schemars(extend("x-side" = "agent", "x-method" = AUTH_LOGIN_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct AuthenticateRequest {
+pub struct LoginAuthRequest {
     /// The ID of the authentication method to use.
     /// Must be one of the methods advertised in the initialize response.
     pub method_id: AuthMethodId,
@@ -260,8 +260,8 @@ pub struct AuthenticateRequest {
     pub meta: Option<Meta>,
 }
 
-impl AuthenticateRequest {
-    /// Builds [`AuthenticateRequest`] with the required request fields set; optional fields start unset or empty.
+impl LoginAuthRequest {
+    /// Builds [`LoginAuthRequest`] with the required request fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(method_id: impl Into<AuthMethodId>) -> Self {
         Self {
@@ -282,13 +282,13 @@ impl AuthenticateRequest {
     }
 }
 
-/// Response to the `authenticate` method.
+/// Response to the `auth/login` method.
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = AUTHENTICATE_METHOD_NAME))]
+#[schemars(extend("x-side" = "agent", "x-method" = AUTH_LOGIN_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct AuthenticateResponse {
+pub struct LoginAuthResponse {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -298,8 +298,8 @@ pub struct AuthenticateResponse {
     pub meta: Option<Meta>,
 }
 
-impl AuthenticateResponse {
-    /// Builds [`AuthenticateResponse`] with the required response fields set; optional fields start unset or empty.
+impl LoginAuthResponse {
+    /// Builds [`LoginAuthResponse`] with the required response fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -319,15 +319,15 @@ impl AuthenticateResponse {
 
 // Logout
 
-/// Request parameters for the logout method.
+/// Request parameters for the `auth/logout` method.
 ///
 /// Terminates the current authenticated session.
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = LOGOUT_METHOD_NAME))]
+#[schemars(extend("x-side" = "agent", "x-method" = AUTH_LOGOUT_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct LogoutRequest {
+pub struct LogoutAuthRequest {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -337,8 +337,8 @@ pub struct LogoutRequest {
     pub meta: Option<Meta>,
 }
 
-impl LogoutRequest {
-    /// Builds [`LogoutRequest`] with the required request fields set; optional fields start unset or empty.
+impl LogoutAuthRequest {
+    /// Builds [`LogoutAuthRequest`] with the required request fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -356,13 +356,13 @@ impl LogoutRequest {
     }
 }
 
-/// Response to the `logout` method.
+/// Response to the `auth/logout` method.
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = LOGOUT_METHOD_NAME))]
+#[schemars(extend("x-side" = "agent", "x-method" = AUTH_LOGOUT_METHOD_NAME))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct LogoutResponse {
+pub struct LogoutAuthResponse {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -372,8 +372,8 @@ pub struct LogoutResponse {
     pub meta: Option<Meta>,
 }
 
-impl LogoutResponse {
-    /// Builds [`LogoutResponse`] with the required response fields set; optional fields start unset or empty.
+impl LogoutAuthResponse {
+    /// Builds [`LogoutAuthResponse`] with the required response fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -4715,7 +4715,7 @@ pub struct AgentMethodNames {
     /// Method for initializing the connection.
     pub initialize: &'static str,
     /// Method for authenticating with the agent.
-    pub authenticate: &'static str,
+    pub auth_login: &'static str,
     /// Method for listing configurable providers.
     #[cfg(feature = "unstable_llm_providers")]
     pub providers_list: &'static str,
@@ -4750,7 +4750,7 @@ pub struct AgentMethodNames {
     /// Method for closing an active session.
     pub session_close: &'static str,
     /// Method for logging out of an authenticated session.
-    pub logout: &'static str,
+    pub auth_logout: &'static str,
     /// Method for starting an NES session.
     #[cfg(feature = "unstable_nes")]
     pub nes_start: &'static str,
@@ -4786,7 +4786,7 @@ pub struct AgentMethodNames {
 /// Constant containing all agent method names.
 pub const AGENT_METHOD_NAMES: AgentMethodNames = AgentMethodNames {
     initialize: INITIALIZE_METHOD_NAME,
-    authenticate: AUTHENTICATE_METHOD_NAME,
+    auth_login: AUTH_LOGIN_METHOD_NAME,
     #[cfg(feature = "unstable_llm_providers")]
     providers_list: PROVIDERS_LIST_METHOD_NAME,
     #[cfg(feature = "unstable_llm_providers")]
@@ -4806,7 +4806,7 @@ pub const AGENT_METHOD_NAMES: AgentMethodNames = AgentMethodNames {
     session_fork: SESSION_FORK_METHOD_NAME,
     session_resume: SESSION_RESUME_METHOD_NAME,
     session_close: SESSION_CLOSE_METHOD_NAME,
-    logout: LOGOUT_METHOD_NAME,
+    auth_logout: AUTH_LOGOUT_METHOD_NAME,
     #[cfg(feature = "unstable_nes")]
     nes_start: NES_START_METHOD_NAME,
     #[cfg(feature = "unstable_nes")]
@@ -4831,8 +4831,8 @@ pub const AGENT_METHOD_NAMES: AgentMethodNames = AgentMethodNames {
 
 /// Method name for the initialize request.
 pub(crate) const INITIALIZE_METHOD_NAME: &str = "initialize";
-/// Method name for the authenticate request.
-pub(crate) const AUTHENTICATE_METHOD_NAME: &str = "authenticate";
+/// Method name for the `auth/login` request.
+pub(crate) const AUTH_LOGIN_METHOD_NAME: &str = "auth/login";
 /// Method name for listing configurable providers.
 #[cfg(feature = "unstable_llm_providers")]
 pub(crate) const PROVIDERS_LIST_METHOD_NAME: &str = "providers/list";
@@ -4863,8 +4863,8 @@ pub(crate) const SESSION_FORK_METHOD_NAME: &str = "session/fork";
 pub(crate) const SESSION_RESUME_METHOD_NAME: &str = "session/resume";
 /// Method name for closing an active session.
 pub(crate) const SESSION_CLOSE_METHOD_NAME: &str = "session/close";
-/// Method name for logging out of an authenticated session.
-pub(crate) const LOGOUT_METHOD_NAME: &str = "logout";
+/// Method name for the `auth/logout` request.
+pub(crate) const AUTH_LOGOUT_METHOD_NAME: &str = "auth/logout";
 
 /// All possible requests that a client can send to an agent.
 ///
@@ -4897,7 +4897,7 @@ pub enum ClientRequest {
     /// `new_session` without receiving an `auth_required` error.
     ///
     /// See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)
-    AuthenticateRequest(AuthenticateRequest),
+    LoginAuthRequest(LoginAuthRequest),
     /// **UNSTABLE**
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -4923,7 +4923,7 @@ pub enum ClientRequest {
     ///
     /// After a successful logout, all new sessions will require authentication.
     /// There is no guarantee about the behavior of already running sessions.
-    LogoutRequest(LogoutRequest),
+    LogoutAuthRequest(LogoutAuthRequest),
     /// Creates a new conversation session with the agent.
     ///
     /// Sessions represent independent conversation contexts with their own history and state.
@@ -5045,14 +5045,14 @@ impl ClientRequest {
     pub fn method(&self) -> &str {
         match self {
             Self::InitializeRequest(_) => AGENT_METHOD_NAMES.initialize,
-            Self::AuthenticateRequest(_) => AGENT_METHOD_NAMES.authenticate,
+            Self::LoginAuthRequest(_) => AGENT_METHOD_NAMES.auth_login,
             #[cfg(feature = "unstable_llm_providers")]
             Self::ListProvidersRequest(_) => AGENT_METHOD_NAMES.providers_list,
             #[cfg(feature = "unstable_llm_providers")]
             Self::SetProviderRequest(_) => AGENT_METHOD_NAMES.providers_set,
             #[cfg(feature = "unstable_llm_providers")]
             Self::DisableProviderRequest(_) => AGENT_METHOD_NAMES.providers_disable,
-            Self::LogoutRequest(_) => AGENT_METHOD_NAMES.logout,
+            Self::LogoutAuthRequest(_) => AGENT_METHOD_NAMES.auth_logout,
             Self::NewSessionRequest(_) => AGENT_METHOD_NAMES.session_new,
             Self::LoadSessionRequest(_) => AGENT_METHOD_NAMES.session_load,
             Self::ListSessionsRequest(_) => AGENT_METHOD_NAMES.session_list,
@@ -5089,8 +5089,8 @@ impl ClientRequest {
 pub enum AgentResponse {
     /// Successful result returned for a `initialize` request.
     InitializeResponse(Box<InitializeResponse>),
-    /// Successful result returned for a `authenticate` request.
-    AuthenticateResponse(#[serde(default)] AuthenticateResponse),
+    /// Successful result returned for an `auth/login` request.
+    LoginAuthResponse(#[serde(default)] LoginAuthResponse),
     /// Successful result returned for a `providers/list` request.
     #[cfg(feature = "unstable_llm_providers")]
     ListProvidersResponse(ListProvidersResponse),
@@ -5100,8 +5100,8 @@ pub enum AgentResponse {
     /// Successful result returned for a `providers/disable` request.
     #[cfg(feature = "unstable_llm_providers")]
     DisableProviderResponse(#[serde(default)] DisableProviderResponse),
-    /// Successful result returned for a `logout` request.
-    LogoutResponse(#[serde(default)] LogoutResponse),
+    /// Successful result returned for an `auth/logout` request.
+    LogoutAuthResponse(#[serde(default)] LogoutAuthResponse),
     /// Successful result returned for a `session/new` request.
     NewSessionResponse(NewSessionResponse),
     /// Successful result returned for a `session/load` request.
@@ -5454,6 +5454,21 @@ mod test_serialization {
             ))
             .method(),
             "mcp/message"
+        );
+    }
+
+    #[test]
+    fn test_auth_method_names() {
+        assert_eq!(AGENT_METHOD_NAMES.auth_login, "auth/login");
+        assert_eq!(AGENT_METHOD_NAMES.auth_logout, "auth/logout");
+
+        assert_eq!(
+            ClientRequest::LoginAuthRequest(LoginAuthRequest::new("agent-login")).method(),
+            "auth/login"
+        );
+        assert_eq!(
+            ClientRequest::LogoutAuthRequest(LogoutAuthRequest::new()).method(),
+            "auth/logout"
         );
     }
 

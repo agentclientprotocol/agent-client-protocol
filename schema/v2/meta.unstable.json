@@ -2,7 +2,7 @@
   "version": 2,
   "agentMethods": {
     "initialize": "initialize",
-    "authenticate": "authenticate",
+    "auth_login": "auth/login",
     "providers_list": "providers/list",
     "providers_set": "providers/set",
     "providers_disable": "providers/disable",
@@ -17,7 +17,7 @@
     "session_fork": "session/fork",
     "session_resume": "session/resume",
     "session_close": "session/close",
-    "logout": "logout",
+    "auth_logout": "auth/logout",
     "nes_start": "nes/start",
     "nes_suggest": "nes/suggest",
     "nes_accept": "nes/accept",

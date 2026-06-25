@@ -162,11 +162,11 @@
                     ]
                   },
                   {
-                    "title": "AuthenticateResponse",
-                    "description": "Successful result returned for a `authenticate` request.",
+                    "title": "LoginAuthResponse",
+                    "description": "Successful result returned for an `auth/login` request.",
                     "allOf": [
                       {
-                        "$ref": "#/$defs/AuthenticateResponse"
+                        "$ref": "#/$defs/LoginAuthResponse"
                       }
                     ]
                   },
@@ -198,11 +198,11 @@
                     ]
                   },
                   {
-                    "title": "LogoutResponse",
-                    "description": "Successful result returned for a `logout` request.",
+                    "title": "LogoutAuthResponse",
+                    "description": "Successful result returned for an `auth/logout` request.",
                     "allOf": [
                       {
-                        "$ref": "#/$defs/LogoutResponse"
+                        "$ref": "#/$defs/LogoutAuthResponse"
                       }
                     ]
                   },
@@ -2305,11 +2305,11 @@
                   ]
                 },
                 {
-                  "title": "AuthenticateResponse",
-                  "description": "Successful result returned for a `authenticate` request.",
+                  "title": "LoginAuthResponse",
+                  "description": "Successful result returned for an `auth/login` request.",
                   "allOf": [
                     {
-                      "$ref": "#/$defs/AuthenticateResponse"
+                      "$ref": "#/$defs/LoginAuthResponse"
                     }
                   ]
                 },
@@ -2341,11 +2341,11 @@
                   ]
                 },
                 {
-                  "title": "LogoutResponse",
-                  "description": "Successful result returned for a `logout` request.",
+                  "title": "LogoutAuthResponse",
+                  "description": "Successful result returned for an `auth/logout` request.",
                   "allOf": [
                     {
-                      "$ref": "#/$defs/LogoutResponse"
+                      "$ref": "#/$defs/LogoutAuthResponse"
                     }
                   ]
                 },
@@ -3717,8 +3717,8 @@
       },
       "required": ["name", "version"]
     },
-    "AuthenticateResponse": {
-      "description": "Response to the `authenticate` method.",
+    "LoginAuthResponse": {
+      "description": "Response to the `auth/login` method.",
       "type": "object",
       "properties": {
         "_meta": {
@@ -3728,7 +3728,7 @@
         }
       },
       "x-side": "agent",
-      "x-method": "authenticate"
+      "x-method": "auth/login"
     },
     "ListProvidersResponse": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nResponse to `providers/list`.",
@@ -3878,8 +3878,8 @@
       "x-side": "agent",
       "x-method": "providers/disable"
     },
-    "LogoutResponse": {
-      "description": "Response to the `logout` method.",
+    "LogoutAuthResponse": {
+      "description": "Response to the `auth/logout` method.",
       "type": "object",
       "properties": {
         "_meta": {
@@ -3889,7 +3889,7 @@
         }
       },
       "x-side": "agent",
-      "x-method": "logout"
+      "x-method": "auth/logout"
     },
     "NewSessionResponse": {
       "description": "Response from creating a new session.\n\nSee protocol docs: [Creating a Session](https://agentclientprotocol.com/protocol/session-setup#creating-a-session)",
@@ -6390,11 +6390,11 @@
                   ]
                 },
                 {
-                  "title": "AuthenticateRequest",
+                  "title": "LoginAuthRequest",
                   "description": "Authenticates the client using the specified authentication method.\n\nCalled when the agent requires authentication before allowing session creation.\nThe client provides the authentication method ID that was advertised during initialization.\n\nAfter successful authentication, the client can proceed to create sessions with\n`new_session` without receiving an `auth_required` error.\n\nSee protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)",
                   "allOf": [
                     {
-                      "$ref": "#/$defs/AuthenticateRequest"
+                      "$ref": "#/$defs/LoginAuthRequest"
                     }
                   ]
                 },
@@ -6426,11 +6426,11 @@
                   ]
                 },
                 {
-                  "title": "LogoutRequest",
+                  "title": "LogoutAuthRequest",
                   "description": "Logs out of the current authenticated state.\n\nAfter a successful logout, all new sessions will require authentication.\nThere is no guarantee about the behavior of already running sessions.",
                   "allOf": [
                     {
-                      "$ref": "#/$defs/LogoutRequest"
+                      "$ref": "#/$defs/LogoutAuthRequest"
                     }
                   ]
                 },
@@ -6836,8 +6836,8 @@
         }
       }
     },
-    "AuthenticateRequest": {
-      "description": "Request parameters for the authenticate method.\n\nSpecifies which authentication method to use.",
+    "LoginAuthRequest": {
+      "description": "Request parameters for the `auth/login` method.\n\nSpecifies which authentication method to use.",
       "type": "object",
       "properties": {
         "methodId": {
@@ -6856,7 +6856,7 @@
       },
       "required": ["methodId"],
       "x-side": "agent",
-      "x-method": "authenticate"
+      "x-method": "auth/login"
     },
     "ListProvidersRequest": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for `providers/list`.",
@@ -6926,8 +6926,8 @@
       "x-side": "agent",
       "x-method": "providers/disable"
     },
-    "LogoutRequest": {
-      "description": "Request parameters for the logout method.\n\nTerminates the current authenticated session.",
+    "LogoutAuthRequest": {
+      "description": "Request parameters for the `auth/logout` method.\n\nTerminates the current authenticated session.",
       "type": "object",
       "properties": {
         "_meta": {
@@ -6937,7 +6937,7 @@
         }
       },
       "x-side": "agent",
-      "x-method": "logout"
+      "x-method": "auth/logout"
     },
     "NewSessionRequest": {
       "description": "Request parameters for creating a new session.\n\nSee protocol docs: [Creating a Session](https://agentclientprotocol.com/protocol/session-setup#creating-a-session)",

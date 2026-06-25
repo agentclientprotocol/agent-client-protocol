@@ -1577,6 +1577,7 @@ starting with '$/' it is free to ignore the notification."
             match method_name {
                 "initialize" => self.agent.get("InitializeRequest").unwrap(),
                 "authenticate" => self.agent.get("AuthenticateRequest").unwrap(),
+                "auth/login" => self.agent.get("LoginAuthRequest").unwrap(),
                 "providers/list" => self.agent.get("ListProvidersRequest").unwrap(),
                 "providers/set" => self.agent.get("SetProviderRequest").unwrap(),
                 "providers/disable" => self.agent.get("DisableProviderRequest").unwrap(),
@@ -1594,6 +1595,7 @@ starting with '$/' it is free to ignore the notification."
                 "session/cancel" => self.agent.get("CancelNotification").unwrap(),
                 "session/close" => self.agent.get("CloseSessionRequest").unwrap(),
                 "logout" => self.agent.get("LogoutRequest").unwrap(),
+                "auth/logout" => self.agent.get("LogoutAuthRequest").unwrap(),
                 "nes/start" => self.agent.get("StartNesRequest").unwrap(),
                 "nes/suggest" => self.agent.get("SuggestNesRequest").unwrap(),
                 "nes/close" => self.agent.get("CloseNesRequest").unwrap(),

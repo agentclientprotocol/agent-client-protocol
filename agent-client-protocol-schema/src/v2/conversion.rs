@@ -2824,7 +2824,7 @@ impl IntoV2 for crate::v1::Implementation {
     }
 }
 
-impl IntoV1 for super::AuthenticateRequest {
+impl IntoV1 for super::LoginAuthRequest {
     type Output = crate::v1::AuthenticateRequest;
 
     fn into_v1(self) -> Result<Self::Output> {
@@ -2837,18 +2837,18 @@ impl IntoV1 for super::AuthenticateRequest {
 }
 
 impl IntoV2 for crate::v1::AuthenticateRequest {
-    type Output = super::AuthenticateRequest;
+    type Output = super::LoginAuthRequest;
 
     fn into_v2(self) -> Result<Self::Output> {
         let Self { method_id, meta } = self;
-        Ok(super::AuthenticateRequest {
+        Ok(super::LoginAuthRequest {
             method_id: method_id.into_v2()?,
             meta: meta.into_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::AuthenticateResponse {
+impl IntoV1 for super::LoginAuthResponse {
     type Output = crate::v1::AuthenticateResponse;
 
     fn into_v1(self) -> Result<Self::Output> {
@@ -2860,17 +2860,17 @@ impl IntoV1 for super::AuthenticateResponse {
 }
 
 impl IntoV2 for crate::v1::AuthenticateResponse {
-    type Output = super::AuthenticateResponse;
+    type Output = super::LoginAuthResponse;
 
     fn into_v2(self) -> Result<Self::Output> {
         let Self { meta } = self;
-        Ok(super::AuthenticateResponse {
+        Ok(super::LoginAuthResponse {
             meta: meta.into_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::LogoutRequest {
+impl IntoV1 for super::LogoutAuthRequest {
     type Output = crate::v1::LogoutRequest;
 
     fn into_v1(self) -> Result<Self::Output> {
@@ -2882,17 +2882,17 @@ impl IntoV1 for super::LogoutRequest {
 }
 
 impl IntoV2 for crate::v1::LogoutRequest {
-    type Output = super::LogoutRequest;
+    type Output = super::LogoutAuthRequest;
 
     fn into_v2(self) -> Result<Self::Output> {
         let Self { meta } = self;
-        Ok(super::LogoutRequest {
+        Ok(super::LogoutAuthRequest {
             meta: meta.into_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::LogoutResponse {
+impl IntoV1 for super::LogoutAuthResponse {
     type Output = crate::v1::LogoutResponse;
 
     fn into_v1(self) -> Result<Self::Output> {
@@ -2904,11 +2904,11 @@ impl IntoV1 for super::LogoutResponse {
 }
 
 impl IntoV2 for crate::v1::LogoutResponse {
-    type Output = super::LogoutResponse;
+    type Output = super::LogoutAuthResponse;
 
     fn into_v2(self) -> Result<Self::Output> {
         let Self { meta } = self;
-        Ok(super::LogoutResponse {
+        Ok(super::LogoutAuthResponse {
             meta: meta.into_v2()?,
         })
     }
@@ -5155,7 +5155,7 @@ impl IntoV1 for super::ClientRequest {
             Self::InitializeRequest(value) => {
                 crate::v1::ClientRequest::InitializeRequest(value.into_v1()?)
             }
-            Self::AuthenticateRequest(value) => {
+            Self::LoginAuthRequest(value) => {
                 crate::v1::ClientRequest::AuthenticateRequest(value.into_v1()?)
             }
             #[cfg(feature = "unstable_llm_providers")]
@@ -5170,7 +5170,9 @@ impl IntoV1 for super::ClientRequest {
             Self::DisableProviderRequest(value) => {
                 crate::v1::ClientRequest::DisableProviderRequest(value.into_v1()?)
             }
-            Self::LogoutRequest(value) => crate::v1::ClientRequest::LogoutRequest(value.into_v1()?),
+            Self::LogoutAuthRequest(value) => {
+                crate::v1::ClientRequest::LogoutRequest(value.into_v1()?)
+            }
             Self::NewSessionRequest(value) => {
                 crate::v1::ClientRequest::NewSessionRequest(value.into_v1()?)
             }
@@ -5229,7 +5231,7 @@ impl IntoV2 for crate::v1::ClientRequest {
                 super::ClientRequest::InitializeRequest(Box::new(value.into_v2()?))
             }
             Self::AuthenticateRequest(value) => {
-                super::ClientRequest::AuthenticateRequest(value.into_v2()?)
+                super::ClientRequest::LoginAuthRequest(value.into_v2()?)
             }
             #[cfg(feature = "unstable_llm_providers")]
             Self::ListProvidersRequest(value) => {
@@ -5243,7 +5245,7 @@ impl IntoV2 for crate::v1::ClientRequest {
             Self::DisableProviderRequest(value) => {
                 super::ClientRequest::DisableProviderRequest(value.into_v2()?)
             }
-            Self::LogoutRequest(value) => super::ClientRequest::LogoutRequest(value.into_v2()?),
+            Self::LogoutRequest(value) => super::ClientRequest::LogoutAuthRequest(value.into_v2()?),
             Self::NewSessionRequest(value) => {
                 super::ClientRequest::NewSessionRequest(value.into_v2()?)
             }
@@ -5302,7 +5304,7 @@ impl IntoV1 for super::AgentResponse {
             Self::InitializeResponse(value) => {
                 crate::v1::AgentResponse::InitializeResponse(value.into_v1()?)
             }
-            Self::AuthenticateResponse(value) => {
+            Self::LoginAuthResponse(value) => {
                 crate::v1::AgentResponse::AuthenticateResponse(value.into_v1()?)
             }
             #[cfg(feature = "unstable_llm_providers")]
@@ -5317,7 +5319,7 @@ impl IntoV1 for super::AgentResponse {
             Self::DisableProviderResponse(value) => {
                 crate::v1::AgentResponse::DisableProviderResponse(value.into_v1()?)
             }
-            Self::LogoutResponse(value) => {
+            Self::LogoutAuthResponse(value) => {
                 crate::v1::AgentResponse::LogoutResponse(value.into_v1()?)
             }
             Self::NewSessionResponse(value) => {
@@ -5380,7 +5382,7 @@ impl IntoV2 for crate::v1::AgentResponse {
                 super::AgentResponse::InitializeResponse(Box::new(value.into_v2()?))
             }
             Self::AuthenticateResponse(value) => {
-                super::AgentResponse::AuthenticateResponse(value.into_v2()?)
+                super::AgentResponse::LoginAuthResponse(value.into_v2()?)
             }
             #[cfg(feature = "unstable_llm_providers")]
             Self::ListProvidersResponse(value) => {
@@ -5394,7 +5396,9 @@ impl IntoV2 for crate::v1::AgentResponse {
             Self::DisableProviderResponse(value) => {
                 super::AgentResponse::DisableProviderResponse(value.into_v2()?)
             }
-            Self::LogoutResponse(value) => super::AgentResponse::LogoutResponse(value.into_v2()?),
+            Self::LogoutResponse(value) => {
+                super::AgentResponse::LogoutAuthResponse(value.into_v2()?)
+            }
             Self::NewSessionResponse(value) => {
                 super::AgentResponse::NewSessionResponse(value.into_v2()?)
             }
