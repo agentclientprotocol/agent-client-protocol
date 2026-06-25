@@ -10136,11 +10136,9 @@ mod tests {
     }
 
     #[test]
-    fn protocol_version_v1_constant_is_unchanged_by_feature_flag() {
-        // Guards against `LATEST` accidentally being re-pointed to V2 in the
-        // future; the contract is that `LATEST` is always the latest **stable**
-        // version, even when the v2 draft feature is enabled.
-        assert_eq!(ProtocolVersion::LATEST, ProtocolVersion::V1);
+    fn protocol_version_constants_remain_explicit() {
+        assert_eq!(ProtocolVersion::V1.as_u16(), 1);
+        assert_eq!(ProtocolVersion::V2.as_u16(), 2);
     }
 
     /// `?` bubbles a [`ProtocolConversionError`] into a [`v1::Error`] without

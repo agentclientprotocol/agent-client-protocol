@@ -175,10 +175,9 @@ fn write_schema(schema_value: &serde_json::Value, schema_dir: &Path, docs_protoc
         .unwrap_or_else(|e| panic!("Failed to write {schema_file}: {e}"));
 
     // The version embedded in `meta*.json` reflects the protocol version the
-    // *schema itself describes*, not `ProtocolVersion::LATEST` (which always
-    // tracks the latest **stable** version). Generating with the
-    // `unstable_protocol_v2` feature emits v2-shaped types, so the metadata
-    // file must advertise version 2 to stay consistent with its contents.
+    // *schema itself describes*. Generating with the `unstable_protocol_v2`
+    // feature emits v2-shaped types, so the metadata file must advertise
+    // version 2 to stay consistent with its contents.
     #[cfg(feature = "unstable_protocol_v2")]
     let schema_protocol_version = ProtocolVersion::V2;
     #[cfg(not(feature = "unstable_protocol_v2"))]

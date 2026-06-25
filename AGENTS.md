@@ -34,3 +34,63 @@ All paths in the protocol should be absolute
 - Run `npm run check` to make sure the json and zod schemas gets generated properly
 
 Never write readme files related to the conversation unless explicitly asked to.
+
+## Conventional Commits
+
+This repository uses **Conventional Commits** for automated releases via release-plz. All commit messages should follow this format:
+
+```
+<type>[optional scope]: <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+### Commit Types
+
+- **feat:** A new feature (triggers minor version bump)
+- **fix:** A bug fix (triggers patch version bump)
+- **docs:** Documentation only changes
+- **style:** Code style changes (formatting, missing semicolons, etc.)
+- **refactor:** Code changes that neither fix bugs nor add features
+- **perf:** Performance improvements
+- **test:** Adding or updating tests
+- **chore:** Maintenance tasks, dependency updates, etc.
+- **ci:** CI/CD configuration changes
+- **build:** Build system or external dependency changes
+
+### Breaking Changes
+
+Add `!` after the type to indicate breaking changes (triggers major version bump):
+
+```
+feat!: change API to use async traits
+```
+
+Or include `BREAKING CHANGE:` in the footer:
+
+```
+feat: redesign conductor protocol
+
+BREAKING CHANGE: conductor now requires explicit capability registration
+```
+
+### Examples
+
+```
+feat(schema): add support for dynamic proxy chains
+fix(unstable): resolve deadlock in message routing
+docs(rfd): update README with installation instructions
+chore: bump tokio to 1.40
+```
+
+### Scope Guidelines
+
+Common scopes for this repository:
+
+- `schema` - Anything that touches the actual generated schema
+- `unstable` - Any changes that would only touch unstable features
+- `unstable-v2` - Any changes that would only touch v2
+- `rust` - Any changes that only touch Rust code and how Rust handles the data with no changes to the schema
+- `rfd` - Any changes that only touch RFD documentation
