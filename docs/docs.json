@@ -209,25 +209,26 @@
           },
           {
             "group": "Preview",
-            "pages": ["rfds/rust-sdk-v1", "rfds/request-cancellation"]
+            "pages": ["rfds/request-cancellation"]
           },
           {
             "group": "Completed",
             "pages": [
               "rfds/introduce-rfd-process",
               "rfds/session-config-options",
-              "rfds/session-list",
-              "rfds/session-usage",
-              "rfds/message-id",
-              "rfds/session-delete",
-              "rfds/session-info-update",
-              "rfds/meta-propagation",
               "rfds/acp-agent-registry",
+              "rfds/session-info-update",
+              "rfds/session-list",
               "rfds/session-resume",
               "rfds/session-close",
               "rfds/logout-method",
               "rfds/additional-directories",
-              "rfds/model-config-category"
+              "rfds/meta-propagation",
+              "rfds/message-id",
+              "rfds/session-usage",
+              "rfds/session-delete",
+              "rfds/model-config-category",
+              "rfds/rust-sdk-v1"
             ]
           }
         ]
