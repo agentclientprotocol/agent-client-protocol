@@ -176,7 +176,7 @@ impl InitializeResponse {
 }
 
 /// Metadata about the implementation of the client or agent.
-/// Describes the name and version of an MCP implementation, with an optional
+/// Describes the name and version of an ACP implementation, with an optional
 /// title for UI representation.
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]

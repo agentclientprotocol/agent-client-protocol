@@ -3301,7 +3301,7 @@
       "required": ["id", "name"]
     },
     "Implementation": {
-      "description": "Metadata about the implementation of the client or agent.\nDescribes the name and version of an MCP implementation, with an optional\ntitle for UI representation.",
+      "description": "Metadata about the implementation of the client or agent.\nDescribes the name and version of an ACP implementation, with an optional\ntitle for UI representation.",
       "type": "object",
       "properties": {
         "name": {
