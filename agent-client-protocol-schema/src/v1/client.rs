@@ -239,9 +239,13 @@ impl ConfigOptionUpdate {
 #[non_exhaustive]
 pub struct SessionInfoUpdate {
     /// Human-readable title for the session. Set to null to clear.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub title: MaybeUndefined<String>,
     /// ISO 8601 timestamp of last activity. Set to null to clear.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub updated_at: MaybeUndefined<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -407,6 +411,9 @@ pub struct ContentChunk {
     ///
     /// All chunks belonging to the same message share the same `messageId`.
     /// A change in `messageId` indicates a new message has started.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub message_id: Option<MessageId>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -649,6 +656,8 @@ pub struct RequestPermissionRequest {
     /// Details about the tool call requiring permission.
     pub tool_call: ToolCallUpdate,
     /// Available permission options for the user to choose from.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     pub options: Vec<PermissionOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -996,8 +1005,14 @@ pub struct ReadTextFileRequest {
     /// Absolute path to the file to read.
     pub path: PathBuf,
     /// Line number to start reading from (1-based).
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub line: Option<u32>,
     /// Maximum number of lines to read.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub limit: Option<u32>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -1124,12 +1139,19 @@ pub struct CreateTerminalRequest {
     /// The command to execute.
     pub command: String,
     /// Array of command arguments.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub args: Vec<String>,
     /// Environment variables for the command.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub env: Vec<EnvVariable>,
     /// Working directory for the command (absolute path).
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub cwd: Option<PathBuf>,
     /// Maximum number of output bytes to retain.
     ///
@@ -1139,6 +1161,9 @@ pub struct CreateTerminalRequest {
     /// The Client MUST ensure truncation happens at a character boundary to maintain valid
     /// string output, even if this means the retained output is slightly less than the
     /// specified limit.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub output_byte_limit: Option<u64>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -1318,6 +1343,9 @@ pub struct TerminalOutputResponse {
     /// Whether the output was truncated due to byte limits.
     pub truncated: bool,
     /// Exit status if the command has completed.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub exit_status: Option<TerminalExitStatus>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -1634,8 +1662,14 @@ impl WaitForTerminalExitResponse {
 #[non_exhaustive]
 pub struct TerminalExitStatus {
     /// The process exit code (may be null if terminated by signal).
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub exit_code: Option<u32>,
     /// The signal that terminated the process (may be null if exited normally).
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub signal: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at

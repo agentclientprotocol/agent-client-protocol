@@ -10,13 +10,14 @@ use std::{collections::BTreeMap, sync::Arc};
 use derive_more::{Display, From};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use serde_with::{DefaultOnError, serde_as, skip_serializing_none};
+use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
 use super::{
     ELICITATION_COMPLETE_NOTIFICATION, ELICITATION_CREATE_METHOD_NAME, Meta, RequestId, SessionId,
     ToolCallId,
 };
 use crate::IntoOption;
+use crate::SkipListener;
 
 /// **UNSTABLE**
 ///
@@ -125,23 +126,50 @@ impl EnumOption {
 #[non_exhaustive]
 pub struct StringPropertySchema {
     /// Optional title for the property.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub title: Option<String>,
     /// Human-readable description.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub description: Option<String>,
     /// Minimum string length.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub min_length: Option<u32>,
     /// Maximum string length.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub max_length: Option<u32>,
     /// Pattern the string must match.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub pattern: Option<String>,
     /// String format.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub format: Option<StringFormat>,
     /// Default value.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub default: Option<String>,
     /// Enum values for untitled single-select enums.
+    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
+    #[serde(default)]
     #[serde(rename = "enum")]
     pub enum_values: Option<Vec<String>>,
     /// Titled enum options for titled single-select enums.
+    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
+    #[serde(default)]
     #[serde(rename = "oneOf")]
     pub one_of: Option<Vec<EnumOption>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -282,14 +310,29 @@ impl StringPropertySchema {
 #[non_exhaustive]
 pub struct NumberPropertySchema {
     /// Optional title for the property.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub title: Option<String>,
     /// Human-readable description.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub description: Option<String>,
     /// Minimum value (inclusive).
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub minimum: Option<f64>,
     /// Maximum value (inclusive).
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub maximum: Option<f64>,
     /// Default value.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub default: Option<f64>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -365,14 +408,29 @@ impl NumberPropertySchema {
 #[non_exhaustive]
 pub struct IntegerPropertySchema {
     /// Optional title for the property.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub title: Option<String>,
     /// Human-readable description.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub description: Option<String>,
     /// Minimum value (inclusive).
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub minimum: Option<i64>,
     /// Maximum value (inclusive).
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub maximum: Option<i64>,
     /// Default value.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub default: Option<i64>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -448,10 +506,19 @@ impl IntegerPropertySchema {
 #[non_exhaustive]
 pub struct BooleanPropertySchema {
     /// Optional title for the property.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub title: Option<String>,
     /// Human-readable description.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub description: Option<String>,
     /// Default value.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub default: Option<bool>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -525,6 +592,8 @@ pub struct UntitledMultiSelectItems {
     #[serde(rename = "type")]
     pub type_: ElicitationStringType,
     /// Allowed enum values.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(rename = "enum")]
     pub values: Vec<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -559,6 +628,8 @@ impl UntitledMultiSelectItems {
 #[non_exhaustive]
 pub struct TitledMultiSelectItems {
     /// Titled enum options.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(rename = "anyOf")]
     pub options: Vec<EnumOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -614,16 +685,31 @@ pub enum MultiSelectItems {
 #[non_exhaustive]
 pub struct MultiSelectPropertySchema {
     /// Optional title for the property.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub title: Option<String>,
     /// Human-readable description.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub description: Option<String>,
     /// Minimum number of items to select.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub min_items: Option<u64>,
     /// Maximum number of items to select.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub max_items: Option<u64>,
     /// The items definition describing allowed values.
     pub items: MultiSelectItems,
     /// Default selected values.
+    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
+    #[serde(default)]
     pub default: Option<Vec<String>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -787,16 +873,29 @@ fn default_object_type() -> ElicitationSchemaType {
 #[non_exhaustive]
 pub struct ElicitationSchema {
     /// Type discriminator. Always `"object"`.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(rename = "type", default = "default_object_type")]
     pub type_: ElicitationSchemaType,
     /// Optional title for the schema.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub title: Option<String>,
     /// Property definitions (must be primitive types).
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub properties: BTreeMap<String, ElicitationPropertySchema>,
     /// List of required property names.
+    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
+    #[serde(default)]
     pub required: Option<Vec<String>>,
     /// Optional description of what this schema represents.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub description: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -1112,6 +1211,7 @@ pub enum ElicitationScope {
 /// When `tool_call_id` is set, the elicitation is tied to a specific tool call.
 /// This is useful when an agent receives an elicitation from an MCP server
 /// during a tool call and needs to redirect it to the user.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -1120,6 +1220,9 @@ pub struct ElicitationSessionScope {
     /// The session this elicitation is tied to.
     pub session_id: SessionId,
     /// Optional tool call within the session.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub tool_call_id: Option<ToolCallId>,
 }
 
@@ -1409,12 +1512,15 @@ pub enum ElicitationAction {
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
 /// The user accepted the elicitation and provided content.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ElicitationAcceptAction {
     /// The user-provided content, if any, as an object matching the requested schema.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub content: Option<BTreeMap<String, ElicitationContentValue>>,
 }
@@ -1562,11 +1668,14 @@ impl CompleteElicitationNotification {
 ///
 /// Data payload for the `UrlElicitationRequired` error, describing the URL elicitations
 /// the user must complete.
+#[serde_as]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct UrlElicitationRequiredData {
     /// The URL elicitations the user must complete.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     pub elicitations: Vec<UrlElicitationRequiredItem>,
 }
 
@@ -2126,8 +2235,8 @@ mod tests {
     }
 
     #[test]
-    fn schema_rejects_invalid_object_type() {
-        let err = serde_json::from_value::<ElicitationSchema>(json!({
+    fn schema_defaults_invalid_object_type() {
+        let schema = serde_json::from_value::<ElicitationSchema>(json!({
             "type": "array",
             "properties": {
                 "name": {
@@ -2135,9 +2244,10 @@ mod tests {
                 }
             }
         }))
-        .unwrap_err();
+        .unwrap();
 
-        assert!(err.to_string().contains("unknown variant"));
+        assert_eq!(schema.type_, ElicitationSchemaType::Object);
+        assert!(schema.properties.contains_key("name"));
     }
 
     #[test]
@@ -2156,19 +2266,22 @@ mod tests {
     }
 
     #[test]
-    fn response_accept_rejects_non_object_content() {
-        let err = serde_json::from_value::<CreateElicitationResponse>(json!({
+    fn response_accept_defaults_non_object_content() {
+        let response = serde_json::from_value::<CreateElicitationResponse>(json!({
             "action": "accept",
             "content": "Alice"
         }))
-        .unwrap_err();
+        .unwrap();
 
-        assert!(err.to_string().contains("invalid type"));
+        assert_eq!(
+            response.action,
+            ElicitationAction::Accept(ElicitationAcceptAction::new())
+        );
     }
 
     #[test]
-    fn response_accept_rejects_nested_object_content() {
-        let err = serde_json::from_value::<CreateElicitationResponse>(json!({
+    fn response_accept_defaults_nested_object_content() {
+        let response = serde_json::from_value::<CreateElicitationResponse>(json!({
             "action": "accept",
             "content": {
                 "profile": {
@@ -2176,9 +2289,12 @@ mod tests {
                 }
             }
         }))
-        .unwrap_err();
+        .unwrap();
 
-        assert!(err.to_string().contains("data did not match any variant"));
+        assert_eq!(
+            response.action,
+            ElicitationAction::Accept(ElicitationAcceptAction::new())
+        );
     }
 
     #[test]

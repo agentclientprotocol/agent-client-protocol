@@ -666,6 +666,9 @@ impl NesContextCapabilities {
 #[non_exhaustive]
 pub struct NesRecentFilesCapabilities {
     /// Maximum number of recent files the agent can use.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub max_count: Option<u32>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -722,6 +725,9 @@ impl NesRelatedSnippetsCapabilities {
 #[non_exhaustive]
 pub struct NesEditHistoryCapabilities {
     /// Maximum number of edit history entries the agent can use.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub max_count: Option<u32>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -751,6 +757,9 @@ impl NesEditHistoryCapabilities {
 #[non_exhaustive]
 pub struct NesUserActionsCapabilities {
     /// Maximum number of user actions the agent can use.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub max_count: Option<u32>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -1065,6 +1074,8 @@ pub struct DidChangeDocumentNotification {
     /// The new version number of the document.
     pub version: i64,
     /// The content changes.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     pub content_changes: Vec<TextDocumentContentChangeEvent>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -1119,6 +1130,9 @@ impl DidChangeDocumentNotification {
 #[non_exhaustive]
 pub struct TextDocumentContentChangeEvent {
     /// The range of the document that changed. If `None`, the entire content is replaced.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub range: Option<Range>,
     /// The new text for the range, or the full document content if `range` is `None`.
     pub text: String,
@@ -1334,6 +1348,9 @@ impl DidFocusDocumentNotification {
 #[non_exhaustive]
 pub struct StartNesRequest {
     /// The root URI of the workspace.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub workspace_uri: Option<String>,
     /// The workspace folders.
     #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
@@ -1930,6 +1947,8 @@ pub struct NesRelatedSnippet {
     /// The URI of the file containing the snippets.
     pub uri: String,
     /// The code excerpts.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     pub excerpts: Vec<NesExcerpt>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -2424,6 +2443,8 @@ pub struct NesEditSuggestion {
     /// The URI of the file to edit.
     pub uri: String,
     /// The text edits to apply.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     pub edits: Vec<NesTextEdit>,
     /// Optional suggested cursor position after applying edits.
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -2642,6 +2663,9 @@ pub struct NesSearchAndReplaceSuggestion {
     /// The replacement text.
     pub replace: String,
     /// Whether `search` is a regular expression. Defaults to `false`.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub is_regex: Option<bool>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at

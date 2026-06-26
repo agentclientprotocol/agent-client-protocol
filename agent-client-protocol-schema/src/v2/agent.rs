@@ -16,6 +16,8 @@ use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 use super::{
     ClientCapabilities, ContentBlock, ExtNotification, ExtRequest, ExtResponse, Meta, SessionId,
 };
+#[cfg(feature = "unstable_auth_methods")]
+use crate::DefaultTrueOnError;
 use crate::{IntoOption, ProtocolVersion, SkipListener};
 
 #[cfg(feature = "unstable_mcp_over_acp")]
@@ -201,6 +203,9 @@ pub struct Implementation {
     /// and easily understood.
     ///
     /// If not provided, the name should be used for display.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub title: Option<String>,
     /// Version of the implementation. Can be displayed to the user or used
     /// for debugging or metrics purposes. (e.g. "1.0.0").
@@ -591,6 +596,9 @@ pub struct OtherAuthMethod {
     /// Human-readable name of the authentication method.
     pub name: String,
     /// Optional description providing more details about this authentication method.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub description: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -725,6 +733,9 @@ pub struct AuthMethodAgent {
     /// Human-readable name of the authentication method.
     pub name: String,
     /// Optional description providing more details about this authentication method.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub description: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -788,10 +799,18 @@ pub struct AuthMethodEnvVar {
     /// Human-readable name of the authentication method.
     pub name: String,
     /// Optional description providing more details about this authentication method.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub description: Option<String>,
     /// The environment variables the client should set.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     pub vars: Vec<AuthEnvVar>,
     /// Optional link to a page where the user can obtain their credentials.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub link: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -865,17 +884,24 @@ pub struct AuthEnvVar {
     /// The environment variable name (e.g. `"OPENAI_API_KEY"`).
     pub name: String,
     /// Human-readable label for this variable, displayed in client UI.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub label: Option<String>,
     /// Whether this value is a secret (e.g. API key, token).
     /// Clients should use a password-style input for secret vars.
     ///
     /// Defaults to `true`.
+    #[serde_as(deserialize_as = "DefaultTrueOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default = "default_true", skip_serializing_if = "is_true")]
     #[schemars(extend("default" = true))]
     pub secret: bool,
     /// Whether this variable is optional.
     ///
     /// Defaults to `false`.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default, skip_serializing_if = "is_false")]
     #[schemars(extend("default" = false))]
     pub optional: bool,
@@ -975,11 +1001,18 @@ pub struct AuthMethodTerminal {
     /// Human-readable name of the authentication method.
     pub name: String,
     /// Optional description providing more details about this authentication method.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub description: Option<String>,
     /// Additional arguments to pass when running the agent binary for terminal auth.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub args: Vec<String>,
     /// Additional environment variables to set when running the agent binary for terminal auth.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub env: Vec<EnvVariable>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1199,6 +1232,8 @@ impl NewSessionResponse {
 #[non_exhaustive]
 pub struct LoadSessionRequest {
     /// List of MCP servers to connect to for this session.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     pub mcp_servers: Vec<McpServer>,
     /// The working directory for this session.
     pub cwd: PathBuf,
@@ -1208,6 +1243,8 @@ pub struct LoadSessionRequest {
     /// this is the complete resulting additional-root list for the loaded
     /// session. It may differ from any previously used or reported list as long as
     /// the request `cwd` matches the session's `cwd`.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<PathBuf>,
     /// The ID of the session to load.
@@ -1346,9 +1383,13 @@ pub struct ForkSessionRequest {
     /// When omitted or empty, no additional roots are activated. When non-empty,
     /// this is the complete resulting additional-root list for the forked
     /// session.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<PathBuf>,
     /// List of MCP servers to connect to for this session.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mcp_servers: Vec<McpServer>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1494,9 +1535,13 @@ pub struct ResumeSessionRequest {
     /// this is the complete resulting additional-root list for the resumed
     /// session. It may differ from any previously used or reported list as long as
     /// the request `cwd` matches the session's `cwd`.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<PathBuf>,
     /// List of MCP servers to connect to for this session.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mcp_servers: Vec<McpServer>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1708,8 +1753,14 @@ impl CloseSessionResponse {
 #[non_exhaustive]
 pub struct ListSessionsRequest {
     /// Filter sessions by working directory. Must be an absolute path.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub cwd: Option<PathBuf>,
     /// Opaque cursor token from a previous response's nextCursor field for cursor-based pagination
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub cursor: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -1770,6 +1821,9 @@ pub struct ListSessionsResponse {
     pub sessions: Vec<SessionInfo>,
     /// Opaque cursor token. If present, pass this in the next request's cursor parameter
     /// to fetch the next page. If absent, there are no more results.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub next_cursor: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -1916,6 +1970,8 @@ pub struct SessionInfo {
     /// When present, this is the complete ordered additional-root list reported
     /// by the Agent. Omitted and empty values are equivalent: the response
     /// reports no additional roots.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<PathBuf>,
 
@@ -2047,6 +2103,8 @@ pub struct SessionConfigSelectOption {
     /// Human-readable label for this option value.
     pub name: String,
     /// Optional description for this option value.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub description: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -2104,6 +2162,8 @@ pub struct SessionConfigSelectGroup {
     /// Human-readable label for this group.
     pub name: String,
     /// The set of option values in this group.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     pub options: Vec<SessionConfigSelectOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -2364,6 +2424,8 @@ pub struct SessionConfigOption {
     /// Human-readable label for the option.
     pub name: String,
     /// Optional description for the Client to display to the user.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub description: Option<String>,
     /// Optional semantic category for this option (UX only).
@@ -2813,6 +2875,8 @@ pub struct McpServerHttp {
     /// URL to the MCP server.
     pub url: String,
     /// HTTP headers to set when making requests to the MCP server.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     pub headers: Vec<HttpHeader>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -2952,8 +3016,12 @@ pub struct McpServerStdio {
     /// Path to the MCP server executable.
     pub command: PathBuf,
     /// Command-line arguments to pass to the MCP server.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     pub args: Vec<String>,
     /// Environment variables to set when launching the MCP server.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     pub env: Vec<EnvVariable>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -3127,6 +3195,8 @@ pub struct PromptRequest {
     /// When available, [`ContentBlock::Resource`] is preferred
     /// as it avoids extra round-trips and allows the message to include
     /// pieces of context from sources the agent may not have access to.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     pub prompt: Vec<ContentBlock>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -3259,10 +3329,19 @@ pub struct Usage {
     /// Total output tokens.
     pub output_tokens: u64,
     /// Total thought/reasoning tokens
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub thought_tokens: Option<u64>,
     /// Total cache read tokens.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub cached_read_tokens: Option<u64>,
     /// Total cache write tokens.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub cached_write_tokens: Option<u64>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -3438,6 +3517,9 @@ pub struct ProviderInfo {
     pub required: bool,
     /// Current effective non-secret routing config.
     /// Null or omitted means provider is disabled.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub current: Option<ProviderCurrentConfig>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -3602,6 +3684,8 @@ pub struct SetProviderRequest {
     pub base_url: String,
     /// Full headers map for this provider.
     /// May include authorization, routing, or other integration-specific headers.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub headers: HashMap<String, String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional

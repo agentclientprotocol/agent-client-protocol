@@ -33,9 +33,13 @@ pub struct ToolCall {
     pub title: String,
     /// The category of tool being invoked.
     /// Helps clients choose appropriate icons and UI treatment.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default, skip_serializing_if = "ToolKind::is_default")]
     pub kind: ToolKind,
     /// Current execution status of the tool call.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default, skip_serializing_if = "ToolCallStatus::is_default")]
     pub status: ToolCallStatus,
     /// Content produced by the tool call.
@@ -50,8 +54,14 @@ pub struct ToolCall {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub locations: Vec<ToolCallLocation>,
     /// Raw input parameters sent to the tool.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub raw_input: Option<serde_json::Value>,
     /// Raw output returned by the tool.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub raw_output: Option<serde_json::Value>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -239,6 +249,9 @@ pub struct ToolCallUpdateFields {
     #[serde(default)]
     pub status: Option<ToolCallStatus>,
     /// Update the human-readable title.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub title: Option<String>,
     /// Replace the content collection.
     #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
@@ -251,8 +264,14 @@ pub struct ToolCallUpdateFields {
     #[serde(default)]
     pub locations: Option<Vec<ToolCallLocation>>,
     /// Update the raw input.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub raw_input: Option<serde_json::Value>,
     /// Update the raw output.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub raw_output: Option<serde_json::Value>,
 }
 
@@ -609,6 +628,9 @@ pub struct Diff {
     /// The file path being modified.
     pub path: PathBuf,
     /// The original content (None for new files).
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub old_text: Option<String>,
     /// The new content after modification.
     pub new_text: String,
@@ -670,6 +692,8 @@ pub struct ToolCallLocation {
     /// The file path being accessed or modified.
     pub path: PathBuf,
     /// Optional line number within the file.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub line: Option<u32>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional

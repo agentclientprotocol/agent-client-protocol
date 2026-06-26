@@ -328,9 +328,13 @@ impl ConfigOptionUpdate {
 #[non_exhaustive]
 pub struct SessionInfoUpdate {
     /// Human-readable title for the session. Set to null to clear.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub title: MaybeUndefined<String>,
     /// ISO 8601 timestamp of last activity. Set to null to clear.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub updated_at: MaybeUndefined<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1276,6 +1280,8 @@ pub struct RequestPermissionRequest {
     /// Details about the tool call requiring permission.
     pub tool_call: ToolCallUpdate,
     /// Available permission options for the user to choose from.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     pub options: Vec<PermissionOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at

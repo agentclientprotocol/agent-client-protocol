@@ -270,13 +270,15 @@
           "description": "Line number to start reading from (1-based).",
           "type": ["integer", "null"],
           "format": "uint32",
-          "minimum": 0
+          "minimum": 0,
+          "x-deserialize-default-on-error": true
         },
         "limit": {
           "description": "Maximum number of lines to read.",
           "type": ["integer", "null"],
           "format": "uint32",
-          "minimum": 0
+          "minimum": 0,
+          "x-deserialize-default-on-error": true
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -314,7 +316,9 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/PermissionOption"
-          }
+          },
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -365,7 +369,8 @@
         },
         "title": {
           "description": "Update the human-readable title.",
-          "type": ["string", "null"]
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
         },
         "content": {
           "description": "Replace the content collection.",
@@ -386,10 +391,12 @@
           "x-deserialize-skip-invalid-items": true
         },
         "rawInput": {
-          "description": "Update the raw input."
+          "description": "Update the raw input.",
+          "x-deserialize-default-on-error": true
         },
         "rawOutput": {
-          "description": "Update the raw output."
+          "description": "Update the raw output.",
+          "x-deserialize-default-on-error": true
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -643,12 +650,14 @@
         },
         "lastModified": {
           "description": "Timestamp indicating when the underlying resource was last modified.",
-          "type": ["string", "null"]
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
         },
         "priority": {
           "description": "Relative importance of this content when clients choose what to surface.",
           "type": ["number", "null"],
-          "format": "double"
+          "format": "double",
+          "x-deserialize-default-on-error": true
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -728,7 +737,8 @@
         },
         "uri": {
           "description": "URI associated with this resource or media payload.",
-          "type": ["string", "null"]
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -790,11 +800,13 @@
         },
         "description": {
           "description": "Optional human-readable details shown with this protocol object.",
-          "type": ["string", "null"]
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
         },
         "mimeType": {
           "description": "MIME type describing the encoded media payload.",
-          "type": ["string", "null"]
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
         },
         "name": {
           "description": "Human-readable name shown for this protocol object.",
@@ -803,11 +815,13 @@
         "size": {
           "description": "Optional size of the linked resource in bytes, if known.",
           "type": ["integer", "null"],
-          "format": "int64"
+          "format": "int64",
+          "x-deserialize-default-on-error": true
         },
         "title": {
           "description": "Optional display title for end-user UI.",
-          "type": ["string", "null"]
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
         },
         "uri": {
           "description": "URI associated with this resource or media payload.",
@@ -851,7 +865,8 @@
       "properties": {
         "mimeType": {
           "description": "MIME type describing the encoded media payload.",
-          "type": ["string", "null"]
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
         },
         "text": {
           "description": "Text payload carried by this content block.",
@@ -880,7 +895,8 @@
         },
         "mimeType": {
           "description": "MIME type describing the encoded media payload.",
-          "type": ["string", "null"]
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
         },
         "uri": {
           "description": "URI associated with this resource or media payload.",
@@ -959,7 +975,8 @@
         },
         "oldText": {
           "description": "The original content (None for new files).",
-          "type": ["string", "null"]
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
         },
         "newText": {
           "description": "The new content after modification.",
@@ -1011,7 +1028,8 @@
           "description": "Optional line number within the file.",
           "type": ["integer", "null"],
           "format": "uint32",
-          "minimum": 0
+          "minimum": 0,
+          "x-deserialize-default-on-error": true
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -1105,24 +1123,30 @@
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "env": {
           "description": "Environment variables for the command.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/EnvVariable"
-          }
+          },
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "cwd": {
           "description": "Working directory for the command (absolute path).",
-          "type": ["string", "null"]
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
         },
         "outputByteLimit": {
           "description": "Maximum number of output bytes to retain.\n\nWhen the limit is exceeded, the Client truncates from the beginning of the output\nto stay within the limit.\n\nThe Client MUST ensure truncation happens at a character boundary to maintain valid\nstring output, even if this means the retained output is slightly less than the\nspecified limit.",
           "type": ["integer", "null"],
           "format": "uint64",
-          "minimum": 0
+          "minimum": 0,
+          "x-deserialize-default-on-error": true
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -1845,7 +1869,8 @@
         },
         "description": {
           "description": "Optional description providing more details about this authentication method.",
-          "type": ["string", "null"]
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -1870,7 +1895,8 @@
         },
         "title": {
           "description": "Intended for UI and end-user contexts — optimized to be human-readable\nand easily understood.\n\nIf not provided, the name should be used for display.",
-          "type": ["string", "null"]
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
         },
         "version": {
           "description": "Version of the implementation. Can be displayed to the user or used\nfor debugging or metrics purposes. (e.g. \"1.0.0\").",
@@ -2009,7 +2035,8 @@
         },
         "description": {
           "description": "Optional human-readable details shown with this protocol object.",
-          "type": ["string", "null"]
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -2038,7 +2065,8 @@
         },
         "description": {
           "description": "Optional description for the Client to display to the user.",
-          "type": ["string", "null"]
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
         },
         "category": {
           "description": "Optional semantic category for this option (UX only).",
@@ -2159,7 +2187,8 @@
         },
         "description": {
           "description": "Optional description for this option value.",
-          "type": ["string", "null"]
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -2191,7 +2220,9 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/SessionConfigSelectOption"
-          }
+          },
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -2279,7 +2310,8 @@
         },
         "nextCursor": {
           "description": "Opaque cursor token. If present, pass this in the next request's cursor parameter\nto fetch the next page. If absent, there are no more results.",
-          "type": ["string", "null"]
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -2313,7 +2345,9 @@
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "title": {
           "description": "Human-readable title for the session",
@@ -2508,7 +2542,8 @@
           "type": "string"
         },
         "data": {
-          "description": "Optional primitive or structured value that contains additional information about the error.\nThis may include debugging information or context-specific details."
+          "description": "Optional primitive or structured value that contains additional information about the error.\nThis may include debugging information or context-specific details.",
+          "x-deserialize-default-on-error": true
         }
       },
       "required": ["code", "message"]
@@ -2856,7 +2891,8 @@
             {
               "type": "null"
             }
-          ]
+          ],
+          "x-deserialize-default-on-error": true
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -2885,6 +2921,7 @@
         },
         "kind": {
           "description": "The category of tool being invoked.\nHelps clients choose appropriate icons and UI treatment.",
+          "x-deserialize-default-on-error": true,
           "allOf": [
             {
               "$ref": "#/$defs/ToolKind"
@@ -2893,6 +2930,7 @@
         },
         "status": {
           "description": "Current execution status of the tool call.",
+          "x-deserialize-default-on-error": true,
           "allOf": [
             {
               "$ref": "#/$defs/ToolCallStatus"
@@ -2918,10 +2956,12 @@
           "x-deserialize-skip-invalid-items": true
         },
         "rawInput": {
-          "description": "Raw input parameters sent to the tool."
+          "description": "Raw input parameters sent to the tool.",
+          "x-deserialize-default-on-error": true
         },
         "rawOutput": {
-          "description": "Raw output returned by the tool."
+          "description": "Raw output returned by the tool.",
+          "x-deserialize-default-on-error": true
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -3162,11 +3202,13 @@
       "properties": {
         "title": {
           "description": "Human-readable title for the session. Set to null to clear.",
-          "type": ["string", "null"]
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
         },
         "updatedAt": {
           "description": "ISO 8601 timestamp of last activity. Set to null to clear.",
-          "type": ["string", "null"]
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -3652,7 +3694,9 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/HttpHeader"
-          }
+          },
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -3680,7 +3724,9 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/HttpHeader"
-          }
+          },
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -3708,14 +3754,18 @@
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "env": {
           "description": "Environment variables to set when launching the MCP server.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/EnvVariable"
-          }
+          },
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -3735,7 +3785,9 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/McpServer"
-          }
+          },
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "cwd": {
           "description": "The working directory for this session.",
@@ -3746,7 +3798,9 @@
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "sessionId": {
           "description": "The ID of the session to load.",
@@ -3773,11 +3827,13 @@
       "properties": {
         "cwd": {
           "description": "Filter sessions by working directory. Must be an absolute path.",
-          "type": ["string", "null"]
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
         },
         "cursor": {
           "description": "Opaque cursor token from a previous response's nextCursor field for cursor-based pagination",
-          "type": ["string", "null"]
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -3833,14 +3889,18 @@
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "mcpServers": {
           "description": "List of MCP servers to connect to for this session.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/McpServer"
-          }
+          },
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -3963,7 +4023,9 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/ContentBlock"
-          }
+          },
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -4264,7 +4326,8 @@
             {
               "type": "null"
             }
-          ]
+          ],
+          "x-deserialize-default-on-error": true
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -4285,11 +4348,13 @@
           "description": "The process exit code (may be null if terminated by signal).",
           "type": ["integer", "null"],
           "format": "uint32",
-          "minimum": 0
+          "minimum": 0,
+          "x-deserialize-default-on-error": true
         },
         "signal": {
           "description": "The signal that terminated the process (may be null if exited normally).",
-          "type": ["string", "null"]
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -4321,11 +4386,13 @@
           "description": "The process exit code (may be null if terminated by signal).",
           "type": ["integer", "null"],
           "format": "uint32",
-          "minimum": 0
+          "minimum": 0,
+          "x-deserialize-default-on-error": true
         },
         "signal": {
           "description": "The signal that terminated the process (may be null if exited normally).",
-          "type": ["string", "null"]
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",

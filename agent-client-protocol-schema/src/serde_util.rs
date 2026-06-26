@@ -57,6 +57,37 @@ impl serde_with::InspectError for SkipListener {
 #[cfg(not(feature = "tracing"))]
 pub(crate) type SkipListener = ();
 
+// ---- DefaultTrueOnError ----
+
+#[cfg(any(feature = "unstable_auth_methods", test))]
+#[derive(Deserialize)]
+#[serde(transparent)]
+struct BoolDefaultTrue(bool);
+
+#[cfg(any(feature = "unstable_auth_methods", test))]
+impl Default for BoolDefaultTrue {
+    fn default() -> Self {
+        Self(true)
+    }
+}
+
+/// Deserializes a boolean, falling back to `true` when the input is malformed.
+#[cfg(any(feature = "unstable_auth_methods", test))]
+pub(crate) struct DefaultTrueOnError;
+
+#[cfg(any(feature = "unstable_auth_methods", test))]
+impl<'de> DeserializeAs<'de, bool> for DefaultTrueOnError {
+    fn deserialize_as<D>(deserializer: D) -> Result<bool, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        <serde_with::DefaultOnError as DeserializeAs<'de, BoolDefaultTrue>>::deserialize_as(
+            deserializer,
+        )
+        .map(|value| value.0)
+    }
+}
+
 #[cfg(test)]
 mod skip_listener_tests {
     use std::cell::Cell;
@@ -191,6 +222,30 @@ mod skip_listener_tests {
             serde_json::from_value(json!({"values": [1, "oops", 2, {}, 3]})).unwrap();
         assert_eq!(r.values, Some(vec![1, 2, 3]));
         assert_eq!(SKIP_COUNT.with(Cell::get), 2);
+    }
+
+    fn default_true() -> bool {
+        true
+    }
+
+    #[serde_as]
+    #[derive(Deserialize, Debug, PartialEq)]
+    struct DefaultTrueWrapper {
+        #[serde_as(deserialize_as = "super::DefaultTrueOnError")]
+        #[serde(default = "default_true")]
+        value: bool,
+    }
+
+    #[test]
+    fn default_true_on_error_uses_true_for_missing_and_malformed_values() {
+        let wrapper: DefaultTrueWrapper = serde_json::from_value(json!({})).unwrap();
+        assert!(wrapper.value);
+
+        let wrapper: DefaultTrueWrapper = serde_json::from_value(json!({"value": false})).unwrap();
+        assert!(!wrapper.value);
+
+        let wrapper: DefaultTrueWrapper = serde_json::from_value(json!({"value": "oops"})).unwrap();
+        assert!(wrapper.value);
     }
 }
 
