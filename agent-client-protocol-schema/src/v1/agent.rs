@@ -918,6 +918,7 @@ impl AuthMethodTerminal {
 /// Request parameters for creating a new session.
 ///
 /// See protocol docs: [Creating a Session](https://agentclientprotocol.com/protocol/session-setup#creating-a-session)
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "agent", "x-method" = SESSION_NEW_METHOD_NAME))]
@@ -931,9 +932,13 @@ pub struct NewSessionRequest {
     /// These expand the session's filesystem scope without changing `cwd`, which
     /// remains the base for relative paths. When omitted or empty, no
     /// additional roots are activated for the new session.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<PathBuf>,
     /// List of MCP (Model Context Protocol) servers the agent should connect to.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     pub mcp_servers: Vec<McpServer>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at

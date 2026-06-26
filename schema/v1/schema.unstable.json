@@ -6289,14 +6289,18 @@
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "mcpServers": {
           "description": "List of MCP (Model Context Protocol) servers the agent should connect to.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/McpServer"
-          }
+          },
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
