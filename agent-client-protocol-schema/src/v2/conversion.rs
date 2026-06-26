@@ -3127,12 +3127,32 @@ impl IntoV1 for super::AuthMethodTerminal {
             env,
             meta,
         } = self;
+        let env = env
+            .into_iter()
+            .map(|env_var| {
+                let super::EnvVariable { name, value, meta } = env_var;
+                if meta.is_some() {
+                    return Err(ProtocolConversionError::new(
+                        "v2 AuthMethodTerminal env variable `_meta` cannot be represented in v1",
+                    ));
+                }
+                Ok((name.into_v1()?, value.into_v1()?))
+            })
+            .try_fold(HashMap::new(), |mut env, item| {
+                let (name, value) = item?;
+                if env.insert(name.clone(), value).is_some() {
+                    return Err(ProtocolConversionError::new(format!(
+                        "v2 AuthMethodTerminal env variable `{name}` is duplicated and cannot be represented in v1",
+                    )));
+                }
+                Ok(env)
+            })?;
         Ok(crate::v1::AuthMethodTerminal {
             id: id.into_v1()?,
             name: name.into_v1()?,
             description: description.into_v1()?,
             args: args.into_v1()?,
-            env: env.into_v1()?,
+            env,
             meta: meta.into_v1()?,
         })
     }
@@ -3151,12 +3171,17 @@ impl IntoV2 for crate::v1::AuthMethodTerminal {
             env,
             meta,
         } = self;
+        let mut env = env
+            .into_iter()
+            .map(|(name, value)| Ok(super::EnvVariable::new(name.into_v2()?, value.into_v2()?)))
+            .collect::<Result<Vec<_>>>()?;
+        env.sort_by(|left, right| left.name.cmp(&right.name));
         Ok(super::AuthMethodTerminal {
             id: id.into_v2()?,
             name: name.into_v2()?,
             description: description.into_v2()?,
             args: args.into_v2()?,
-            env: env.into_v2()?,
+            env,
             meta: meta.into_v2()?,
         })
     }
@@ -9264,6 +9289,55 @@ mod tests {
         let v1_after: v1::AuthCapabilities =
             v2_to_v1(v2_capabilities).expect("v2 -> v1 conversion");
         assert!(v1_after.terminal);
+    }
+
+    #[cfg(feature = "unstable_auth_methods")]
+    #[test]
+    fn auth_method_terminal_env_converts_between_map_and_variable_array() {
+        let mut env = HashMap::new();
+        env.insert("TERM".to_string(), "xterm-256color".to_string());
+        env.insert("API_KEY".to_string(), "secret".to_string());
+
+        let v1_method = v1::AuthMethodTerminal::new("tui-auth", "Terminal Auth").env(env);
+        let v2_method: v2::AuthMethodTerminal = v1_to_v2(v1_method).expect("v1 -> v2 conversion");
+        let v2_json = serde_json::to_value(&v2_method).expect("v2 serialize");
+        assert_eq!(
+            v2_json.pointer("/env"),
+            Some(&serde_json::json!([
+                {
+                    "name": "API_KEY",
+                    "value": "secret"
+                },
+                {
+                    "name": "TERM",
+                    "value": "xterm-256color"
+                }
+            ]))
+        );
+
+        let v1_after: v1::AuthMethodTerminal = v2_to_v1(v2_method).expect("v2 -> v1 conversion");
+        assert_eq!(
+            v1_after.env.get("TERM").map(String::as_str),
+            Some("xterm-256color")
+        );
+        assert_eq!(
+            v1_after.env.get("API_KEY").map(String::as_str),
+            Some("secret")
+        );
+    }
+
+    #[cfg(feature = "unstable_auth_methods")]
+    #[test]
+    fn auth_method_terminal_duplicate_env_names_do_not_convert_to_v1() {
+        let v2_method = v2::AuthMethodTerminal::new("tui-auth", "Terminal Auth").env(vec![
+            v2::EnvVariable::new("TERM", "xterm"),
+            v2::EnvVariable::new("TERM", "xterm-256color"),
+        ]);
+
+        assert_v2_to_v1_error(
+            v2_method,
+            "v2 AuthMethodTerminal env variable `TERM` is duplicated and cannot be represented in v1",
+        );
     }
 
     #[test]

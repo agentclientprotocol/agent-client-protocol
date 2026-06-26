@@ -3600,6 +3600,26 @@
       },
       "required": ["id", "name", "vars"]
     },
+    "EnvVariable": {
+      "description": "An environment variable to set when launching an MCP server.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "The name of the environment variable.",
+          "type": "string"
+        },
+        "value": {
+          "description": "The value to set for the environment variable.",
+          "type": "string"
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"],
+          "additionalProperties": true
+        }
+      },
+      "required": ["name", "value"]
+    },
     "AuthMethodTerminal": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nTerminal-based authentication method.\n\nThe client runs an interactive terminal for the user to authenticate via a TUI.",
       "type": "object",
@@ -3629,9 +3649,9 @@
         },
         "env": {
           "description": "Additional environment variables to set when running the agent binary for terminal auth.",
-          "type": "object",
-          "additionalProperties": {
-            "type": "string"
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EnvVariable"
           }
         },
         "_meta": {
@@ -7121,26 +7141,6 @@
         }
       },
       "required": ["name", "id"]
-    },
-    "EnvVariable": {
-      "description": "An environment variable to set when launching an MCP server.",
-      "type": "object",
-      "properties": {
-        "name": {
-          "description": "The name of the environment variable.",
-          "type": "string"
-        },
-        "value": {
-          "description": "The value to set for the environment variable.",
-          "type": "string"
-        },
-        "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"],
-          "additionalProperties": true
-        }
-      },
-      "required": ["name", "value"]
     },
     "McpServerStdio": {
       "description": "Stdio transport configuration for MCP.",
