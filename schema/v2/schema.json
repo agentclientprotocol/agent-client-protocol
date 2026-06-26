@@ -4055,7 +4055,7 @@
           "additionalProperties": true
         }
       },
-      "required": ["cwd", "mcpServers"],
+      "required": ["cwd"],
       "x-side": "agent",
       "x-method": "session/new"
     },
