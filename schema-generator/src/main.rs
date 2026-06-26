@@ -466,6 +466,55 @@ mod schema_annotation_tests {
         }
     }
 
+    #[test]
+    fn source_meta_fields_are_default_on_error_annotated() {
+        let root = schema_crate_dir();
+        for module_dir in ["src/v1", "src/v2"] {
+            for entry in fs::read_dir(root.join(module_dir)).unwrap() {
+                let path = entry.unwrap().path();
+                if path.extension().and_then(|ext| ext.to_str()) != Some("rs") {
+                    continue;
+                }
+
+                let source = fs::read_to_string(&path).unwrap();
+                let lines: Vec<_> = source.lines().collect();
+                for (line_index, line) in lines.iter().enumerate() {
+                    if !line.trim_start().starts_with("pub meta:") || !line.contains("Meta") {
+                        continue;
+                    }
+
+                    let annotations = lines
+                        .get(line_index.saturating_sub(8)..line_index)
+                        .unwrap_or_default()
+                        .join("\n");
+
+                    assert!(
+                        annotations.contains(r#"#[serde_as(deserialize_as = "DefaultOnError"#),
+                        "{}:{} missing DefaultOnError on meta field",
+                        path.display(),
+                        line_index + 1
+                    );
+                    assert!(
+                        annotations.contains(r#""x-deserialize-default-on-error" = true"#),
+                        "{}:{} missing {DEFAULT_ON_ERROR_EXTENSION} on meta field",
+                        path.display(),
+                        line_index + 1
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn generated_schema_meta_fields_are_default_on_error_annotated() {
+        let schema = root_schema_value();
+        let mut checked = 0;
+
+        assert_meta_properties_are_annotated(&schema, &mut checked);
+
+        assert!(checked > 0, "expected at least one _meta schema property");
+    }
+
     fn property_schema<'a>(schema: &'a Value, def_name: &str, prop_name: &str) -> &'a Value {
         def_schema(schema, def_name)
             .pointer(&format!("/properties/{prop_name}"))
@@ -497,6 +546,29 @@ mod schema_annotation_tests {
             Some(true),
             "missing extension {extension} on {schema}"
         );
+    }
+
+    fn assert_meta_properties_are_annotated(schema: &Value, checked: &mut usize) {
+        match schema {
+            Value::Object(object) => {
+                if let Some(properties) = object.get("properties").and_then(Value::as_object)
+                    && let Some(meta) = properties.get("_meta")
+                {
+                    *checked += 1;
+                    assert_bool_extension(meta, DEFAULT_ON_ERROR_EXTENSION);
+                }
+
+                for value in object.values() {
+                    assert_meta_properties_are_annotated(value, checked);
+                }
+            }
+            Value::Array(values) => {
+                for value in values {
+                    assert_meta_properties_are_annotated(value, checked);
+                }
+            }
+            Value::Null | Value::Bool(_) | Value::Number(_) | Value::String(_) => {}
+        }
     }
 
     fn assert_no_extension(schema: &Value, extension: &str) {

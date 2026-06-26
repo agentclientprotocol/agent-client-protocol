@@ -1,6 +1,6 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use serde_with::skip_serializing_none;
+use serde_with::{DefaultOnError, serde_as, skip_serializing_none};
 
 use crate::IntoOption;
 
@@ -14,6 +14,7 @@ use super::{Meta, RequestId};
 ///
 /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/cancellation)
 #[cfg(feature = "unstable_cancel_request")]
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "protocol", "x-method" = CANCEL_REQUEST_METHOD_NAME))]
@@ -27,6 +28,9 @@ pub struct CancelRequestNotification {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }

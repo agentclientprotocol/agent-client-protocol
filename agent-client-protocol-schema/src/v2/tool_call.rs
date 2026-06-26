@@ -67,6 +67,9 @@ pub struct ToolCallUpdate {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -186,6 +189,7 @@ impl ToolCallUpdate {
 /// content for the matching [`ToolCallId`]. Agents can use
 /// [`ToolCallUpdate::content`] when they need to replace the whole content
 /// collection instead.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
@@ -201,6 +205,9 @@ pub struct ToolCallContentChunk {
     /// chunk-level metadata.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -420,6 +427,7 @@ impl From<Diff> for ToolCallContent {
 }
 
 /// Standard content block (text, images, resources).
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
@@ -432,6 +440,9 @@ pub struct Content {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -463,6 +474,7 @@ impl Content {
 /// Shows changes to files in a format suitable for display in the client UI.
 ///
 /// See protocol docs: [Content](https://agentclientprotocol.com/protocol/tool-calls#content)
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
@@ -479,6 +491,9 @@ pub struct Diff {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -520,6 +535,7 @@ impl Diff {
 /// which files the agent is working with in real-time.
 ///
 /// See protocol docs: [Following the Agent](https://agentclientprotocol.com/protocol/tool-calls#following-the-agent)
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
@@ -535,6 +551,9 @@ pub struct ToolCallLocation {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }

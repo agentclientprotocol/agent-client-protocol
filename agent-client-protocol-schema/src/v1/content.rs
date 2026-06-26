@@ -79,6 +79,9 @@ pub struct TextContent {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -142,6 +145,9 @@ pub struct ImageContent {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -206,6 +212,9 @@ pub struct AudioContent {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -259,6 +268,9 @@ pub struct EmbeddedResource {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -305,6 +317,7 @@ pub enum EmbeddedResourceResource {
 }
 
 /// Text-based resource contents.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
@@ -321,6 +334,9 @@ pub struct TextResourceContents {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -357,6 +373,7 @@ impl TextResourceContents {
 }
 
 /// Binary resource contents.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
@@ -373,6 +390,9 @@ pub struct BlobResourceContents {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -437,6 +457,9 @@ pub struct ResourceLink {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -525,6 +548,9 @@ pub struct Annotations {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -598,6 +624,22 @@ mod tests {
         let json = serde_json::to_value(&content).unwrap();
         assert!(!json.as_object().unwrap().contains_key("annotations"));
         assert!(!json.as_object().unwrap().contains_key("meta"));
+    }
+
+    #[test]
+    fn test_text_content_meta_defaults_on_missing_or_malformed_value() {
+        let missing: TextContent = serde_json::from_value(serde_json::json!({
+            "text": "hello"
+        }))
+        .unwrap();
+        assert_eq!(missing.meta, None);
+
+        let malformed: TextContent = serde_json::from_value(serde_json::json!({
+            "text": "hello",
+            "_meta": false
+        }))
+        .unwrap();
+        assert_eq!(malformed.meta, None);
     }
 
     #[test]
