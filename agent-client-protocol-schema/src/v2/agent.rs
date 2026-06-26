@@ -5655,7 +5655,6 @@ mod test_serialization {
             serde_json::to_value(NewSessionRequest::new("/home/user/project")).unwrap(),
             json!({
                 "cwd": "/home/user/project",
-                "mcpServers": []
             })
         );
         assert_eq!(
@@ -5672,7 +5671,6 @@ mod test_serialization {
                     "/home/user/shared-lib",
                     "/home/user/product-docs"
                 ],
-                "mcpServers": []
             })
         );
         assert_eq!(
