@@ -2521,6 +2521,7 @@
         },
         "capabilities": {
           "description": "Capabilities supported by the agent.",
+          "x-deserialize-default-on-error": true,
           "default": {
             "auth": {}
           },
@@ -2583,6 +2584,7 @@
         },
         "auth": {
           "description": "Authentication-related capabilities supported by the agent.",
+          "x-deserialize-default-on-error": true,
           "default": {},
           "allOf": [
             {
@@ -6582,6 +6584,7 @@
         },
         "capabilities": {
           "description": "Capabilities supported by the client.",
+          "x-deserialize-default-on-error": true,
           "default": {
             "auth": {}
           },
@@ -6615,6 +6618,7 @@
       "properties": {
         "auth": {
           "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAuthentication capabilities supported by the client.\nDetermines which authentication method types the agent may include\nin its `InitializeResponse`.",
+          "x-deserialize-default-on-error": true,
           "default": {},
           "allOf": [
             {

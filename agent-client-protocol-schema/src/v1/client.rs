@@ -1586,9 +1586,13 @@ impl TerminalExitStatus {
 pub struct ClientCapabilities {
     /// File system capabilities supported by the client.
     /// Determines which file operations the agent can request.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub fs: FileSystemCapabilities,
     /// Whether the Client support all `terminal/*` methods.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub terminal: bool,
     /// **UNSTABLE**
@@ -1622,6 +1626,8 @@ pub struct ClientCapabilities {
     /// Determines which authentication method types the agent may include
     /// in its `InitializeResponse`.
     #[cfg(feature = "unstable_auth_methods")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub auth: AuthCapabilities,
     /// **UNSTABLE**
@@ -1949,6 +1955,7 @@ impl BooleanConfigOptionCapabilities {
 /// method types the client can handle. This governs opt-in types that require
 /// additional client-side support.
 #[cfg(feature = "unstable_auth_methods")]
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -1957,6 +1964,8 @@ pub struct AuthCapabilities {
     /// Whether the client supports `terminal` authentication methods.
     ///
     /// When `true`, the agent may include `terminal` entries in its authentication methods.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub terminal: bool,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -2001,15 +2010,20 @@ impl AuthCapabilities {
 /// File system capabilities that a client may support.
 ///
 /// See protocol docs: [FileSystem](https://agentclientprotocol.com/protocol/initialization#filesystem)
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct FileSystemCapabilities {
     /// Whether the Client supports `fs/read_text_file` requests.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub read_text_file: bool,
     /// Whether the Client supports `fs/write_text_file` requests.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub write_text_file: bool,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -2407,6 +2421,45 @@ impl AgentNotification {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_client_capabilities_default_on_malformed_values() {
+        use serde_json::json;
+
+        let capabilities: ClientCapabilities = serde_json::from_value(json!({
+            "fs": {
+                "readTextFile": "yes",
+                "writeTextFile": true
+            },
+            "terminal": {}
+        }))
+        .unwrap();
+
+        assert!(!capabilities.fs.read_text_file);
+        assert!(capabilities.fs.write_text_file);
+        assert!(!capabilities.terminal);
+
+        let capabilities: ClientCapabilities = serde_json::from_value(json!({
+            "fs": false
+        }))
+        .unwrap();
+        assert_eq!(capabilities.fs, FileSystemCapabilities::default());
+
+        #[cfg(feature = "unstable_auth_methods")]
+        {
+            let capabilities: ClientCapabilities = serde_json::from_value(json!({
+                "auth": false
+            }))
+            .unwrap();
+            assert_eq!(capabilities.auth, AuthCapabilities::default());
+
+            let capabilities: AuthCapabilities = serde_json::from_value(json!({
+                "terminal": {}
+            }))
+            .unwrap();
+            assert!(!capabilities.terminal);
+        }
+    }
 
     #[test]
     fn test_serialization_behavior() {

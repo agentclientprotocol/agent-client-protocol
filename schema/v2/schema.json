@@ -1520,6 +1520,7 @@
         },
         "capabilities": {
           "description": "Capabilities supported by the agent.",
+          "x-deserialize-default-on-error": true,
           "default": {
             "auth": {}
           },
@@ -1582,6 +1583,7 @@
         },
         "auth": {
           "description": "Authentication-related capabilities supported by the agent.",
+          "x-deserialize-default-on-error": true,
           "default": {},
           "allOf": [
             {
@@ -3952,6 +3954,7 @@
         },
         "capabilities": {
           "description": "Capabilities supported by the client.",
+          "x-deserialize-default-on-error": true,
           "default": {},
           "allOf": [
             {

@@ -1473,6 +1473,8 @@ pub struct ClientCapabilities {
     /// Determines which authentication method types the agent may include
     /// in its `InitializeResponse`.
     #[cfg(feature = "unstable_auth_methods")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub auth: AuthCapabilities,
     /// **UNSTABLE**
@@ -1916,6 +1918,19 @@ impl AgentNotification {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(feature = "unstable_auth_methods")]
+    #[test]
+    fn test_client_capabilities_auth_defaults_on_malformed_value() {
+        use serde_json::json;
+
+        let capabilities: ClientCapabilities = serde_json::from_value(json!({
+            "auth": false
+        }))
+        .unwrap();
+
+        assert_eq!(capabilities.auth, AuthCapabilities::default());
+    }
 
     #[test]
     fn test_serialization_behavior() {

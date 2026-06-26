@@ -56,6 +56,8 @@ pub struct InitializeRequest {
     /// The latest protocol version supported by the client.
     pub protocol_version: ProtocolVersion,
     /// Capabilities supported by the client.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub capabilities: ClientCapabilities,
     /// Information about the implementation sending this initialize request.
@@ -118,6 +120,8 @@ pub struct InitializeResponse {
     /// The client should disconnect, if it doesn't support this version.
     pub protocol_version: ProtocolVersion,
     /// Capabilities supported by the agent.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub capabilities: AgentCapabilities,
     /// Authentication methods supported by the agent.
@@ -3629,6 +3633,8 @@ pub struct AgentCapabilities {
     #[serde(default)]
     pub session: Option<SessionCapabilities>,
     /// Authentication-related capabilities supported by the agent.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub auth: AgentAuthCapabilities,
     /// **UNSTABLE**
@@ -5253,6 +5259,43 @@ mod test_serialization {
             .unwrap()
             .matches("\"_meta\"")
             .count()
+    }
+
+    #[test]
+    fn test_initialize_capabilities_default_on_malformed_values() {
+        let request: InitializeRequest = serde_json::from_value(json!({
+            "protocolVersion": 2,
+            "capabilities": false,
+            "info": {
+                "name": "client",
+                "version": "1.0.0"
+            }
+        }))
+        .unwrap();
+        assert_eq!(request.capabilities, ClientCapabilities::default());
+
+        let response: InitializeResponse = serde_json::from_value(json!({
+            "protocolVersion": 2,
+            "capabilities": false,
+            "info": {
+                "name": "agent",
+                "version": "1.0.0"
+            }
+        }))
+        .unwrap();
+        assert_eq!(response.capabilities, AgentCapabilities::default());
+    }
+
+    #[test]
+    fn test_agent_capabilities_default_on_malformed_values() {
+        let capabilities: AgentCapabilities = serde_json::from_value(json!({
+            "session": false,
+            "auth": false
+        }))
+        .unwrap();
+
+        assert!(capabilities.session.is_none());
+        assert_eq!(capabilities.auth, AgentAuthCapabilities::default());
     }
 
     #[test]

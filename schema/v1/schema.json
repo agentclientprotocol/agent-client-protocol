@@ -1442,6 +1442,7 @@
         },
         "agentCapabilities": {
           "description": "Capabilities supported by the agent.",
+          "x-deserialize-default-on-error": true,
           "default": {
             "loadSession": false,
             "promptCapabilities": {
@@ -1508,10 +1509,12 @@
         "loadSession": {
           "description": "Whether the agent supports `session/load`.",
           "type": "boolean",
-          "default": false
+          "default": false,
+          "x-deserialize-default-on-error": true
         },
         "promptCapabilities": {
           "description": "Prompt capabilities supported by the agent.",
+          "x-deserialize-default-on-error": true,
           "default": {
             "image": false,
             "audio": false,
@@ -1525,6 +1528,7 @@
         },
         "mcpCapabilities": {
           "description": "MCP capabilities supported by the agent.",
+          "x-deserialize-default-on-error": true,
           "default": {
             "http": false,
             "sse": false
@@ -1537,6 +1541,7 @@
         },
         "sessionCapabilities": {
           "description": "Session lifecycle and prompt capabilities advertised by the agent.",
+          "x-deserialize-default-on-error": true,
           "default": {},
           "allOf": [
             {
@@ -1546,6 +1551,7 @@
         },
         "auth": {
           "description": "Authentication-related capabilities supported by the agent.",
+          "x-deserialize-default-on-error": true,
           "default": {},
           "allOf": [
             {
@@ -1567,17 +1573,20 @@
         "image": {
           "description": "Agent supports [`ContentBlock::Image`].",
           "type": "boolean",
-          "default": false
+          "default": false,
+          "x-deserialize-default-on-error": true
         },
         "audio": {
           "description": "Agent supports [`ContentBlock::Audio`].",
           "type": "boolean",
-          "default": false
+          "default": false,
+          "x-deserialize-default-on-error": true
         },
         "embeddedContext": {
           "description": "Agent supports embedded context in `session/prompt` requests.\n\nWhen enabled, the Client is allowed to include [`ContentBlock::Resource`]\nin prompt requests for pieces of context that are referenced in the message.",
           "type": "boolean",
-          "default": false
+          "default": false,
+          "x-deserialize-default-on-error": true
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -1593,12 +1602,14 @@
         "http": {
           "description": "Agent supports [`McpServer::Http`].",
           "type": "boolean",
-          "default": false
+          "default": false,
+          "x-deserialize-default-on-error": true
         },
         "sse": {
           "description": "Agent supports [`McpServer::Sse`].",
           "type": "boolean",
-          "default": false
+          "default": false,
+          "x-deserialize-default-on-error": true
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -3324,6 +3335,7 @@
         },
         "clientCapabilities": {
           "description": "Capabilities supported by the client.",
+          "x-deserialize-default-on-error": true,
           "default": {
             "fs": {
               "readTextFile": false,
@@ -3365,6 +3377,7 @@
       "properties": {
         "fs": {
           "description": "File system capabilities supported by the client.\nDetermines which file operations the agent can request.",
+          "x-deserialize-default-on-error": true,
           "default": {
             "readTextFile": false,
             "writeTextFile": false
@@ -3378,7 +3391,8 @@
         "terminal": {
           "description": "Whether the Client support all `terminal/*` methods.",
           "type": "boolean",
-          "default": false
+          "default": false,
+          "x-deserialize-default-on-error": true
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -3394,12 +3408,14 @@
         "readTextFile": {
           "description": "Whether the Client supports `fs/read_text_file` requests.",
           "type": "boolean",
-          "default": false
+          "default": false,
+          "x-deserialize-default-on-error": true
         },
         "writeTextFile": {
           "description": "Whether the Client supports `fs/write_text_file` requests.",
           "type": "boolean",
-          "default": false
+          "default": false,
+          "x-deserialize-default-on-error": true
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",

@@ -57,6 +57,8 @@ pub struct InitializeRequest {
     /// The latest protocol version supported by the client.
     pub protocol_version: ProtocolVersion,
     /// Capabilities supported by the client.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub client_capabilities: ClientCapabilities,
     /// Information about the Client name and version sent to the Agent.
@@ -131,6 +133,8 @@ pub struct InitializeResponse {
     /// The client should disconnect, if it doesn't support this version.
     pub protocol_version: ProtocolVersion,
     /// Capabilities supported by the agent.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub agent_capabilities: AgentCapabilities,
     /// Authentication methods supported by the agent.
@@ -3697,18 +3701,28 @@ impl DisableProviderResponse {
 #[non_exhaustive]
 pub struct AgentCapabilities {
     /// Whether the agent supports `session/load`.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub load_session: bool,
     /// Prompt capabilities supported by the agent.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub prompt_capabilities: PromptCapabilities,
     /// MCP capabilities supported by the agent.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub mcp_capabilities: McpCapabilities,
     /// Session lifecycle and prompt capabilities advertised by the agent.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub session_capabilities: SessionCapabilities,
     /// Authentication-related capabilities supported by the agent.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub auth: AgentAuthCapabilities,
     /// **UNSTABLE**
@@ -4253,21 +4267,28 @@ impl SessionCloseCapabilities {
 /// the agent can process.
 ///
 /// See protocol docs: [Prompt Capabilities](https://agentclientprotocol.com/protocol/initialization#prompt-capabilities)
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct PromptCapabilities {
     /// Agent supports [`ContentBlock::Image`].
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub image: bool,
     /// Agent supports [`ContentBlock::Audio`].
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub audio: bool,
     /// Agent supports embedded context in `session/prompt` requests.
     ///
     /// When enabled, the Client is allowed to include [`ContentBlock::Resource`]
     /// in prompt requests for pieces of context that are referenced in the message.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub embedded_context: bool,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -4323,15 +4344,20 @@ impl PromptCapabilities {
 }
 
 /// MCP capabilities supported by the agent
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct McpCapabilities {
     /// Agent supports [`McpServer::Http`].
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub http: bool,
     /// Agent supports [`McpServer::Sse`].
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub sse: bool,
     /// **UNSTABLE**
@@ -4340,6 +4366,8 @@ pub struct McpCapabilities {
     ///
     /// Agent supports [`McpServer::Acp`].
     #[cfg(feature = "unstable_mcp_over_acp")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub acp: bool,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -5013,6 +5041,54 @@ mod test_serialization {
             .unwrap()
             .matches("\"_meta\"")
             .count()
+    }
+
+    #[test]
+    fn test_initialize_capabilities_default_on_malformed_values() {
+        let request: InitializeRequest = serde_json::from_value(json!({
+            "protocolVersion": 1,
+            "clientCapabilities": false
+        }))
+        .unwrap();
+        assert_eq!(request.client_capabilities, ClientCapabilities::default());
+
+        let response: InitializeResponse = serde_json::from_value(json!({
+            "protocolVersion": 1,
+            "agentCapabilities": false
+        }))
+        .unwrap();
+        assert_eq!(response.agent_capabilities, AgentCapabilities::default());
+    }
+
+    #[test]
+    fn test_agent_capabilities_default_on_malformed_values() {
+        let capabilities: AgentCapabilities = serde_json::from_value(json!({
+            "loadSession": "yes",
+            "promptCapabilities": {
+                "image": "yes",
+                "audio": true,
+                "embeddedContext": {}
+            },
+            "mcpCapabilities": {
+                "http": "yes",
+                "sse": true
+            },
+            "sessionCapabilities": false,
+            "auth": false
+        }))
+        .unwrap();
+
+        assert!(!capabilities.load_session);
+        assert!(!capabilities.prompt_capabilities.image);
+        assert!(capabilities.prompt_capabilities.audio);
+        assert!(!capabilities.prompt_capabilities.embedded_context);
+        assert!(!capabilities.mcp_capabilities.http);
+        assert!(capabilities.mcp_capabilities.sse);
+        assert_eq!(
+            capabilities.session_capabilities,
+            SessionCapabilities::default()
+        );
+        assert_eq!(capabilities.auth, AgentAuthCapabilities::default());
     }
 
     #[test]
