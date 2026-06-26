@@ -20,7 +20,7 @@ Currently, the protocol kind of assumes that all turns will be initiated by a cl
 
 It is not clear how to model queued messages for instance: would these create a new turn request lifecycle? Or fit into the existing one?
 
-What if the agent wants to submit some text at the start of a session _before_ the user prompts? Or a status update? Also, if an agent finishes it's turn, wants to wait for the next user action, but had a background subagent or task running, can it only submit updates about that status after the user prompts again? When replaying a session, the prompt request can be turned into a user message notification, but what about the end of turn response? If you call load during a currently running session, how do you know that the turn is done?
+What if the agent wants to submit some text at the start of a session _before_ the user prompts? Or a status update? Also, if an agent finishes its turn, wants to wait for the next user action, but has a background subagent or task running, can it only submit updates about that status after the user prompts again? When replaying a session, the prompt request can be turned into a user message notification, but what about the end of turn response? If you call load during a currently running session, how do you know that the turn is done?
 
 Some clients handle these out-of-turn updates more gracefully than others. But it is a constant point of confusion in discussions and issues.
 
@@ -180,12 +180,12 @@ We could explore adding which permission or elicitation it is waiting on if we w
 
 ## Shiny future
 
-> How will things will play out once this feature exists?
+> How will things play out once this feature exists?
 
 This isn't a huge schema change, but it is a fundamental behavior change in the protocol that I believe:
 
 - Provides agents with much more flexibility in how they want to update a client about a given session
-- Solves some concrete pain points we have the the current model (i.e. how to integrate prompts into session/load and multi-client replays, message ids, etc)
+- Solves some concrete pain points in the current model (i.e. how to integrate prompts into session/load and multi-client replays, message IDs, etc)
 
 Ultimately, after months of using the current model, I am quite excited for what these small tweaks can unlock, and also how we can build on top of this in the future!
 

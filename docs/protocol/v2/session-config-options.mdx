@@ -200,14 +200,32 @@ The Agent **MUST** respond with the complete list of all configuration options a
         "name": "Session Mode",
         "type": "select",
         "currentValue": "code",
-        "options": [...]
+        "options": [
+          {
+            "value": "ask",
+            "name": "Ask"
+          },
+          {
+            "value": "code",
+            "name": "Code"
+          }
+        ]
       },
       {
         "id": "model",
         "name": "Model",
         "type": "select",
         "currentValue": "model-1",
-        "options": [...]
+        "options": [
+          {
+            "value": "model-1",
+            "name": "Model 1"
+          },
+          {
+            "value": "model-2",
+            "name": "Model 2"
+          }
+        ]
       }
     ]
   }
@@ -239,14 +257,32 @@ The Agent can also change configuration options and notify the Client by sending
           "name": "Session Mode",
           "type": "select",
           "currentValue": "code",
-          "options": [...]
+          "options": [
+            {
+              "value": "ask",
+              "name": "Ask"
+            },
+            {
+              "value": "code",
+              "name": "Code"
+            }
+          ]
         },
         {
           "id": "model",
           "name": "Model",
           "type": "select",
           "currentValue": "model-2",
-          "options": [...]
+          "options": [
+            {
+              "value": "model-1",
+              "name": "Model 1"
+            },
+            {
+              "value": "model-2",
+              "name": "Model 2"
+            }
+          ]
         }
       ]
     }

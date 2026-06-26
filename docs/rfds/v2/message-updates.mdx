@@ -27,7 +27,7 @@ ACP v1 primarily reports user, agent, and thought messages as chunks:
 }
 ```
 
-Chunks are a natural fit for streaming model output, but they are awkward for session replay, accepted user-message acknowledgments, and cases where the Agent already has the whole message available. Also, there is no way for an agent to _redact_ content from a message if needed due to guardrail apis.
+Chunks are a natural fit for streaming model output, but they are awkward for session replay, accepted user-message acknowledgments, and cases where the Agent already has the whole message available. Also, there is no way for an agent to _redact_ content from a message if needed due to guardrail APIs.
 
 The v2 prompt lifecycle also needs a clear way for Agents to acknowledge or replay accepted user messages. The [Message ID RFD](../message-id.mdx) keeps message IDs agent-owned, so the Agent needs a session update that can provide both the accepted user-message content and its `messageId`.
 

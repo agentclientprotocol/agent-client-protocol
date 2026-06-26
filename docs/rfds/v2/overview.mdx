@@ -12,7 +12,7 @@ This is a tracking RFD for the collection of RFDs that require breaking changes 
 
 With ACP, we aim to move fast while keeping breaking changes to a minimum. However, we've gotten to a point where there are enough changes we would like to do that would benefit from some core redesigns that will allow for extending the protocol with new features more easily.
 
-We've also managed to add new features that has led to learnings that would benefit from consolidation and alignment in other areas of the protocol to smooth things out and make things more consistent.
+We've also managed to add new features that have led to learnings that would benefit from consolidation and alignment in other areas of the protocol to smooth things out and make things more consistent.
 
 ## Status quo
 
@@ -28,7 +28,7 @@ We have had a fairly successful time adding new features via new capabilities an
 
 Current RFDs accepted as Drafts that are targeting v2 release
 
-- [New Prompt Lifecycle](./prompt.md)
+- [New Prompt Lifecycle](./prompt.mdx)
 - [Enum Variant Extension](./enum-variant-extension.mdx)
 - [Client Filesystem and Terminal Surface](./client-filesystem-terminal-capabilities.mdx)
 - [Plan Variants](./plan-variants.mdx)
@@ -80,9 +80,9 @@ Changes under consideration that still need to be drafted or moved to draft:
 
 ## Shiny future
 
-> How will things will play out once this feature exists?
+> How will things play out once this feature exists?
 
-There is a lof of work to do, especially on the SDK side, to support both versions, but it is likely that we should be able to allow Agents specifically to target v2 apis and gracefully fallback to v1 messages for v1 clients, to avoid huge support issues.
+There is a lot of work to do, especially on the SDK side, to support both versions, but it is likely that we should be able to allow Agents specifically to target v2 APIs and gracefully fall back to v1 messages for v1 clients, to avoid huge support issues.
 
 However, once all of this work is in place, it should be much easier to make additional breaking changes in the future when necessary, we've been kind of letting this build up given the effort required for the entire ecosystem, but the ACP maintainers will be charting a course forward to make this as smooth as possible!
 
@@ -100,7 +100,7 @@ Once we have more pieces in place, we can start publishing both schemas to assis
 
 ### SDK Support
 
-With the needed breaking changes, as much as possible I am targeting having a consistent API surface for Agents, since they will want to target v2 apis but still support v1 clients. Because of how the version negotiation works, if we can achieve the same thing for clients that will be great, but if not, they will at least be provided clear version entrypoints.
+With the needed breaking changes, as much as possible I am targeting having a consistent API surface for Agents, since they will want to target v2 APIs but still support v1 clients. Because of how the version negotiation works, if we can achieve the same thing for clients that will be great, but if not, they will at least be provided clear version entry points.
 
 ## Frequently asked questions
 

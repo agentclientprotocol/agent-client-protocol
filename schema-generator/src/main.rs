@@ -33,6 +33,28 @@ use std::{
 
 use markdown_generator::MarkdownGenerator;
 
+#[cfg(feature = "unstable_protocol_v2")]
+const PROTOCOL_DOC_BASE: &str = "https://agentclientprotocol.com/protocol";
+
+#[cfg(feature = "unstable_protocol_v2")]
+const VERSIONED_PROTOCOL_DOC_PATHS: &[&str] = &[
+    "agent-plan",
+    "authentication",
+    "cancellation",
+    "content",
+    "error",
+    "extensibility",
+    "initialization",
+    "prompt-lifecycle",
+    "session-config-options",
+    "session-delete",
+    "session-list",
+    "session-setup",
+    "slash-commands",
+    "tool-calls",
+    "transports",
+];
+
 /// All messages that an agent can send to a client.
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(untagged)]
@@ -267,11 +289,19 @@ fn schema_value_for_publication(schema_value: &serde_json::Value) -> serde_json:
     #[cfg(feature = "unstable_protocol_v2")]
     {
         let mut schema_value = schema_value.clone();
-        replace_string_values(
-            &mut schema_value,
-            "https://agentclientprotocol.com/protocol/prompt-lifecycle",
-            "https://agentclientprotocol.com/protocol/v2/prompt-lifecycle",
-        );
+        let protocol_doc_base = if cfg!(feature = "unstable") {
+            format!("{PROTOCOL_DOC_BASE}/v2/draft")
+        } else {
+            format!("{PROTOCOL_DOC_BASE}/v2")
+        };
+
+        for path in VERSIONED_PROTOCOL_DOC_PATHS {
+            replace_string_values(
+                &mut schema_value,
+                &format!("{PROTOCOL_DOC_BASE}/{path}"),
+                &format!("{protocol_doc_base}/{path}"),
+            );
+        }
         schema_value
     }
 
@@ -305,7 +335,9 @@ fn replace_string_values(value: &mut serde_json::Value, from: &str, to: &str) {
 mod schema_annotation_tests {
     #[cfg(feature = "unstable_protocol_v2")]
     use super::schema_value_for_publication;
-    use super::{root_schema_value, schema_crate_dir};
+    use super::{
+        PROTOCOL_DOC_BASE, VERSIONED_PROTOCOL_DOC_PATHS, root_schema_value, schema_crate_dir,
+    };
     use serde_json::Value;
     use std::fs;
 
@@ -418,14 +450,31 @@ mod schema_annotation_tests {
 
     #[cfg(feature = "unstable_protocol_v2")]
     #[test]
-    fn published_v2_schema_links_to_v2_prompt_lifecycle_docs() {
+    fn published_v2_schema_links_to_versioned_v2_protocol_docs() {
         let schema = schema_value_for_publication(&root_schema_value());
         let schema_json = serde_json::to_string(&schema).unwrap();
 
+        let protocol_doc_base = if cfg!(feature = "unstable") {
+            format!("{PROTOCOL_DOC_BASE}/v2/draft")
+        } else {
+            format!("{PROTOCOL_DOC_BASE}/v2")
+        };
+
+        assert!(schema_json.contains(&format!("{protocol_doc_base}/prompt-lifecycle")));
+        assert!(schema_json.contains(&format!("{protocol_doc_base}/tool-calls")));
+        assert!(schema_json.contains(&format!("{protocol_doc_base}/initialization")));
+
+        for path in VERSIONED_PROTOCOL_DOC_PATHS {
+            assert!(
+                !schema_json.contains(&format!("{PROTOCOL_DOC_BASE}/{path}")),
+                "found unversioned v2 schema docs link for {path}"
+            );
+        }
+
         assert!(
-            schema_json.contains("https://agentclientprotocol.com/protocol/v2/prompt-lifecycle")
+            !schema_json.contains(&format!("{PROTOCOL_DOC_BASE}/v2/v2/")),
+            "v2 docs links should not be double-versioned"
         );
-        assert!(!schema_json.contains("https://agentclientprotocol.com/protocol/prompt-lifecycle"));
     }
 
     #[test]
