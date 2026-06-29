@@ -949,7 +949,7 @@ impl IntoV2 for crate::v1::ProtocolLevelNotification {
     }
 }
 
-impl IntoV1Many for super::SessionNotification {
+impl IntoV1Many for super::UpdateSessionNotification {
     type Output = crate::v1::SessionNotification;
 
     fn into_v1_many(self) -> Result<Vec<Self::Output>> {
@@ -975,7 +975,7 @@ impl IntoV1Many for super::SessionNotification {
 }
 
 impl IntoV2 for crate::v1::SessionNotification {
-    type Output = super::SessionNotification;
+    type Output = super::UpdateSessionNotification;
 
     fn into_v2(self) -> Result<Self::Output> {
         let Self {
@@ -983,7 +983,7 @@ impl IntoV2 for crate::v1::SessionNotification {
             update,
             meta,
         } = self;
-        Ok(super::SessionNotification {
+        Ok(super::UpdateSessionNotification {
             session_id: session_id.into_v2()?,
             update: update.into_v2()?,
             meta: meta.into_v2()?,
@@ -2169,7 +2169,7 @@ impl IntoV1Many for super::AgentNotification {
 
     fn into_v1_many(self) -> Result<Vec<Self::Output>> {
         Ok(match self {
-            Self::SessionNotification(value) => {
+            Self::UpdateSessionNotification(value) => {
                 return value
                     .into_v1_many()?
                     .into_iter()
@@ -2203,7 +2203,7 @@ impl IntoV2 for crate::v1::AgentNotification {
     fn into_v2(self) -> Result<Self::Output> {
         Ok(match self {
             Self::SessionNotification(value) => {
-                super::AgentNotification::SessionNotification(Box::new(value.into_v2()?))
+                super::AgentNotification::UpdateSessionNotification(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_elicitation")]
             Self::CompleteElicitationNotification(value) => {
@@ -9641,7 +9641,7 @@ mod tests {
         for update in cases {
             let notification = v1::SessionNotification::new("sess", update);
             let original_json = serde_json::to_value(&notification).expect("v1 serialize");
-            let as_v2: v2::SessionNotification =
+            let as_v2: v2::UpdateSessionNotification =
                 v1_to_v2(notification.clone()).expect("v1 -> v2 conversion");
             let v2_json = serde_json::to_value(&as_v2).expect("v2 serialize");
             assert_eq!(
@@ -9665,7 +9665,8 @@ mod tests {
             "sess",
             v1::SessionUpdate::ToolCall(v1::ToolCall::new("tc", "title")),
         );
-        let create_v2: v2::SessionNotification = v1_to_v2(create).expect("v1 -> v2 conversion");
+        let create_v2: v2::UpdateSessionNotification =
+            v1_to_v2(create).expect("v1 -> v2 conversion");
         assert!(matches!(
             create_v2.update,
             v2::SessionUpdate::ToolCallUpdate(_)
@@ -9689,7 +9690,8 @@ mod tests {
                 v1::ToolCallUpdateFields::new().status(v1::ToolCallStatus::Completed),
             )),
         );
-        let update_v2: v2::SessionNotification = v1_to_v2(update).expect("v1 -> v2 conversion");
+        let update_v2: v2::UpdateSessionNotification =
+            v1_to_v2(update).expect("v1 -> v2 conversion");
         assert!(matches!(
             update_v2.update,
             v2::SessionUpdate::ToolCallUpdate(_)
@@ -9765,7 +9767,7 @@ mod tests {
 
     #[test]
     fn v2_full_message_session_notification_fans_out_to_v1_chunk_notifications() {
-        let notification = v2::SessionNotification::new(
+        let notification = v2::UpdateSessionNotification::new(
             "sess",
             v2::SessionUpdate::AgentMessage(v2::AgentMessage::new("msg_agent").content(vec![
                 v2::ContentBlock::Text(v2::TextContent::new("hello")),
@@ -9803,8 +9805,8 @@ mod tests {
     fn v2_json_rpc_agent_notification_fans_out_to_v1_chunk_notifications() {
         let message = v2::JsonRpcMessage::wrap(v2::Notification {
             method: "session/update".into(),
-            params: Some(v2::AgentNotification::SessionNotification(Box::new(
-                v2::SessionNotification::new(
+            params: Some(v2::AgentNotification::UpdateSessionNotification(Box::new(
+                v2::UpdateSessionNotification::new(
                     "sess",
                     v2::SessionUpdate::AgentMessage(v2::AgentMessage::new("msg_agent").content(
                         vec![

@@ -48,7 +48,7 @@ use super::{ClientNesCapabilities, PositionEncodingKind};
 #[schemars(extend("x-side" = "client", "x-method" = SESSION_UPDATE_NOTIFICATION))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct SessionNotification {
+pub struct UpdateSessionNotification {
     /// The ID of the session this update pertains to.
     pub session_id: SessionId,
     /// The actual update content.
@@ -65,7 +65,7 @@ pub struct SessionNotification {
     pub meta: Option<Meta>,
 }
 
-impl SessionNotification {
+impl UpdateSessionNotification {
     /// Builds [`SessionNotification`] with the required notification fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>, update: SessionUpdate) -> Self {
@@ -743,13 +743,13 @@ impl Cost {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ContentChunk {
-    /// A single item of content
-    pub content: ContentBlock,
     /// A unique identifier for the message this chunk belongs to.
     ///
     /// All chunks belonging to the same message share the same `messageId`.
     /// A change in `messageId` indicates a new message has started.
     pub message_id: MessageId,
+    /// A single item of content
+    pub content: ContentBlock,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -1424,7 +1424,6 @@ pub enum PermissionOptionKind {
 #[non_exhaustive]
 pub struct RequestPermissionResponse {
     /// The user's decision on the permission request.
-    // This extra-level is unfortunately needed because the output must be an object
     pub outcome: RequestPermissionOutcome,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -1956,7 +1955,7 @@ pub enum AgentNotification {
     /// stop reason.
     ///
     /// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-lifecycle#3-agent-reports-output)
-    SessionNotification(Box<SessionNotification>),
+    UpdateSessionNotification(Box<UpdateSessionNotification>),
     /// **UNSTABLE**
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -1986,7 +1985,7 @@ impl AgentNotification {
     #[must_use]
     pub fn method(&self) -> &str {
         match self {
-            Self::SessionNotification(_) => CLIENT_METHOD_NAMES.session_update,
+            Self::UpdateSessionNotification(_) => CLIENT_METHOD_NAMES.session_update,
             #[cfg(feature = "unstable_elicitation")]
             Self::CompleteElicitationNotification(_) => CLIENT_METHOD_NAMES.elicitation_complete,
             #[cfg(feature = "unstable_mcp_over_acp")]
