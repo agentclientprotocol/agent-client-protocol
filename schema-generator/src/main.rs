@@ -1917,7 +1917,7 @@ starting with '$/' it is free to ignore the notification."
                 "fs/read_text_file" => self.client.get("ReadTextFileRequest").unwrap(),
                 "session/update" => self
                     .client
-                    .get("SessionUpdateNotification")
+                    .get("UpdateSessionNotification")
                     .or_else(|| self.client.get("SessionNotification"))
                     .unwrap(),
                 "terminal/create" => self.client.get("CreateTerminalRequest").unwrap(),

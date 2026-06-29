@@ -5098,11 +5098,11 @@
               "description": "All possible notifications that an agent can send to a client.\n\nThis enum is used internally for routing RPC notifications. You typically won't need\nto use this directly.\n\nNotifications do not expect a response.",
               "anyOf": [
                 {
-                  "title": "SessionUpdateNotification",
+                  "title": "UpdateSessionNotification",
                   "description": "Handles session update notifications from the agent.\n\nThis is a notification endpoint (no response expected) that receives\nreal-time updates about session progress, including message updates,\nmessage chunks, tool calls, and execution plans.\n\nNote: Clients SHOULD continue accepting tool call updates even after\nsending a `session/cancel` notification, as the agent may send final\nupdates before reporting an idle `state_update` with the cancelled\nstop reason.\n\nSee protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#3-agent-reports-output)",
                   "allOf": [
                     {
-                      "$ref": "#/$defs/SessionUpdateNotification"
+                      "$ref": "#/$defs/UpdateSessionNotification"
                     }
                   ]
                 },
@@ -5144,7 +5144,7 @@
       "required": ["method"],
       "x-docs-ignore": true
     },
-    "SessionUpdateNotification": {
+    "UpdateSessionNotification": {
       "description": "Notification containing a session update from the agent.\n\nUsed to stream real-time progress and results during prompt processing.\n\nSee protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#3-agent-reports-output)",
       "type": "object",
       "properties": {
