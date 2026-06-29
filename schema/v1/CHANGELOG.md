@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.17.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.16.0...schema-v1.17.0) - 2026-06-29
+
+### Added
+
+- *(schema)* Stabilize request cancellation ([#1549](https://github.com/agentclientprotocol/agent-client-protocol/pull/1549))
+
+### Fixed
+
+- Deserialization leniency part 2 ([#1526](https://github.com/agentclientprotocol/agent-client-protocol/pull/1526))
+- *(unstable-v2)* make mcpServers optional in new sessions ([#1523](https://github.com/agentclientprotocol/agent-client-protocol/pull/1523))
+
+### Other
+
+- *(unstable-v2)* Clean up client schema types ([#1540](https://github.com/agentclientprotocol/agent-client-protocol/pull/1540))
+- *(schema)* correct Implementation description ([#1518](https://github.com/agentclientprotocol/agent-client-protocol/pull/1518))
+
 ## [1.16.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.15.0...schema-v1.16.0) - 2026-06-24
 
 ### Added

@@ -1,5 +1,28 @@
 # Changelog
 
+## [1.2.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.1.0...v1.2.0) - 2026-06-29
+
+### Added
+
+- *(schema)* Stabilize request cancellation ([#1549](https://github.com/agentclientprotocol/agent-client-protocol/pull/1549))
+- *(unstable-v2)* use EnvVariable for terminal auth env ([#1522](https://github.com/agentclientprotocol/agent-client-protocol/pull/1522))
+- *(unstable-v2)* Require auth logout support ([#1520](https://github.com/agentclientprotocol/agent-client-protocol/pull/1520))
+- *(unstable-v2)* Group v2 auth methods under auth/* ([#1519](https://github.com/agentclientprotocol/agent-client-protocol/pull/1519))
+- *(unstable-v2)* require v2 implementation info ([#1517](https://github.com/agentclientprotocol/agent-client-protocol/pull/1517))
+
+### Fixed
+
+- *(unstable-v2)* allow null auth capabilities ([#1539](https://github.com/agentclientprotocol/agent-client-protocol/pull/1539))
+- Deserialization leniency part 2 ([#1526](https://github.com/agentclientprotocol/agent-client-protocol/pull/1526))
+- *(unstable-v2)* make mcpServers optional in new sessions ([#1523](https://github.com/agentclientprotocol/agent-client-protocol/pull/1523))
+- *(rust)* Clean up Protocol version handling ([#1515](https://github.com/agentclientprotocol/agent-client-protocol/pull/1515))
+
+### Other
+
+- *(unstable-v2)* reorder v2 content fields ([#1541](https://github.com/agentclientprotocol/agent-client-protocol/pull/1541))
+- *(unstable-v2)* Clean up client schema types ([#1540](https://github.com/agentclientprotocol/agent-client-protocol/pull/1540))
+- *(schema)* correct Implementation description ([#1518](https://github.com/agentclientprotocol/agent-client-protocol/pull/1518))
+
 ## [1.1.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.0.0...v1.1.0) - 2026-06-24
 
 ### Added
