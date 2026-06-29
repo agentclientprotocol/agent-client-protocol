@@ -324,7 +324,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 <ResponseField name="capabilities" type={<a href="#clientcapabilities">ClientCapabilities</a>} >
   Capabilities supported by the client.
 
-    - Default: `{"auth":{}}`
+    - Default: `{}`
 
 </ResponseField>
 <ResponseField name="info" type={<a href="#implementation">Implementation</a>} required>
@@ -2807,7 +2807,7 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
-<ResponseField name="auth" type={<a href="#authcapabilities">AuthCapabilities</a>} >
+<ResponseField name="auth" type={<><span><a href="#authcapabilities">AuthCapabilities</a></span><span> | null</span></>} >
   **UNSTABLE**
 
 This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -2815,8 +2815,6 @@ This capability is not part of the spec yet, and may be removed or changed at an
 Authentication capabilities supported by the client.
 Determines which authentication method types the agent may include
 in its `InitializeResponse`.
-
-    - Default: `{}`
 
 </ResponseField>
 <ResponseField name="elicitation" type={<><span><a href="#elicitationcapabilities">ElicitationCapabilities</a></span><span> | null</span></>} >

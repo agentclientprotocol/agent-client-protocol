@@ -1547,7 +1547,7 @@ pub struct ClientCapabilities {
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
-    pub auth: AuthCapabilities,
+    pub auth: Option<AuthCapabilities>,
     /// **UNSTABLE**
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -1608,8 +1608,8 @@ impl ClientCapabilities {
     /// in its `InitializeResponse`.
     #[cfg(feature = "unstable_auth_methods")]
     #[must_use]
-    pub fn auth(mut self, auth: AuthCapabilities) -> Self {
-        self.auth = auth;
+    pub fn auth(mut self, auth: impl IntoOption<AuthCapabilities>) -> Self {
+        self.auth = auth.into_option();
         self
     }
 
@@ -1926,11 +1926,11 @@ pub enum ClientResponse {
     /// Successful result returned for a `mcp/disconnect` request.
     #[cfg(feature = "unstable_mcp_over_acp")]
     DisconnectMcpResponse(#[serde(default)] DisconnectMcpResponse),
-    /// Successful result returned by an extension method outside the core ACP method set.
-    ExtMethodResponse(ExtResponse),
     /// Successful result returned by an MCP-over-ACP `mcp/message` request.
     #[cfg(feature = "unstable_mcp_over_acp")]
     MessageMcpResponse(MessageMcpResponse),
+    /// Successful result returned by an extension method outside the core ACP method set.
+    ExtMethodResponse(ExtResponse),
 }
 
 /// All possible notifications that an agent can send to a client.
@@ -2010,7 +2010,7 @@ mod tests {
         }))
         .unwrap();
 
-        assert_eq!(capabilities.auth, AuthCapabilities::default());
+        assert_eq!(capabilities.auth, None);
     }
 
     #[test]

@@ -1907,7 +1907,7 @@ impl IntoV1 for super::ClientCapabilities {
             #[cfg(feature = "unstable_plan_operations")]
             plan: None,
             #[cfg(feature = "unstable_auth_methods")]
-            auth: auth.into_v1()?,
+            auth: auth.map(IntoV1::into_v1).transpose()?.unwrap_or_default(),
             #[cfg(feature = "unstable_elicitation")]
             elicitation: into_v1_default_on_error(elicitation),
             #[cfg(feature = "unstable_nes")]
@@ -1942,7 +1942,7 @@ impl IntoV2 for crate::v1::ClientCapabilities {
         } = self;
         Ok(super::ClientCapabilities {
             #[cfg(feature = "unstable_auth_methods")]
-            auth: auth.into_v2()?,
+            auth: Some(auth.into_v2()?),
             #[cfg(feature = "unstable_elicitation")]
             elicitation: into_v2_default_on_error(elicitation),
             #[cfg(feature = "unstable_nes")]

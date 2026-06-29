@@ -6813,9 +6813,7 @@
         "capabilities": {
           "description": "Capabilities supported by the client.",
           "x-deserialize-default-on-error": true,
-          "default": {
-            "auth": {}
-          },
+          "default": {},
           "allOf": [
             {
               "$ref": "#/$defs/ClientCapabilities"
@@ -6839,13 +6837,15 @@
       "properties": {
         "auth": {
           "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAuthentication capabilities supported by the client.\nDetermines which authentication method types the agent may include\nin its `InitializeResponse`.",
-          "x-deserialize-default-on-error": true,
-          "default": {},
-          "allOf": [
+          "anyOf": [
             {
               "$ref": "#/$defs/AuthCapabilities"
+            },
+            {
+              "type": "null"
             }
-          ]
+          ],
+          "x-deserialize-default-on-error": true
         },
         "elicitation": {
           "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nElicitation capabilities supported by the client.\nDetermines which elicitation modes the agent may use.",

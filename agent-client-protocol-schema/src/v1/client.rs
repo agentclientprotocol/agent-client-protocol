@@ -2513,11 +2513,11 @@ pub enum ClientResponse {
     /// Successful result returned for a `mcp/disconnect` request.
     #[cfg(feature = "unstable_mcp_over_acp")]
     DisconnectMcpResponse(#[serde(default)] DisconnectMcpResponse),
-    /// Successful result returned by an extension method outside the core ACP method set.
-    ExtMethodResponse(ExtResponse),
     /// Successful result returned by an MCP-over-ACP `mcp/message` request.
     #[cfg(feature = "unstable_mcp_over_acp")]
     MessageMcpResponse(MessageMcpResponse),
+    /// Successful result returned by an extension method outside the core ACP method set.
+    ExtMethodResponse(ExtResponse),
 }
 
 /// All possible notifications that an agent can send to a client.
