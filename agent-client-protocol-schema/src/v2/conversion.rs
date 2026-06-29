@@ -897,7 +897,6 @@ impl IntoV2 for crate::v1::PlanEntryStatus {
     }
 }
 
-#[cfg(feature = "unstable_cancel_request")]
 impl IntoV1 for super::CancelRequestNotification {
     type Output = crate::v1::CancelRequestNotification;
 
@@ -910,7 +909,6 @@ impl IntoV1 for super::CancelRequestNotification {
     }
 }
 
-#[cfg(feature = "unstable_cancel_request")]
 impl IntoV2 for crate::v1::CancelRequestNotification {
     type Output = super::CancelRequestNotification;
 
@@ -923,7 +921,6 @@ impl IntoV2 for crate::v1::CancelRequestNotification {
     }
 }
 
-#[cfg(feature = "unstable_cancel_request")]
 impl IntoV1 for super::ProtocolLevelNotification {
     type Output = crate::v1::ProtocolLevelNotification;
 
@@ -936,7 +933,6 @@ impl IntoV1 for super::ProtocolLevelNotification {
     }
 }
 
-#[cfg(feature = "unstable_cancel_request")]
 impl IntoV2 for crate::v1::ProtocolLevelNotification {
     type Output = super::ProtocolLevelNotification;
 

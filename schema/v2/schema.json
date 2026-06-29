@@ -108,6 +108,14 @@
                 "$ref": "#/$defs/AgentNotification"
               }
             ]
+          },
+          {
+            "title": "ProtocolLevelNotification",
+            "allOf": [
+              {
+                "$ref": "#/$defs/ProtocolLevelNotification"
+              }
+            ]
           }
         ]
       },
@@ -316,6 +324,14 @@
                 "$ref": "#/$defs/ClientNotification"
               }
             ]
+          },
+          {
+            "title": "ProtocolLevelNotification",
+            "allOf": [
+              {
+                "$ref": "#/$defs/ProtocolLevelNotification"
+              }
+            ]
           }
         ]
       },
@@ -403,6 +419,45 @@
         "x-docs-ignore": true
       },
       "minItems": 1
+    },
+    {
+      "title": "ProtocolLevel",
+      "description": "A message (request, response, or notification) with `\"jsonrpc\": \"2.0\"` specified as\n[required by JSON-RPC 2.0 Specification][1].\n\n[1]: https://www.jsonrpc.org/specification#compatibility",
+      "type": "object",
+      "properties": {
+        "jsonrpc": {
+          "type": "string",
+          "enum": ["2.0"]
+        },
+        "method": {
+          "description": "The notification method name.",
+          "type": "string"
+        },
+        "params": {
+          "description": "Method-specific notification parameters.",
+          "anyOf": [
+            {
+              "description": "General protocol-level notifications that all sides are expected to\nimplement.\n\nNotifications whose methods start with '$/' are messages which\nare protocol implementation dependent and might not be implementable in all\nclients or agents. For example if the implementation uses a single threaded\nsynchronous programming language then there is little it can do to react to\na `$/cancel_request` notification. If an agent or client receives\nnotifications starting with '$/' it is free to ignore the notification.\n\nNotifications do not expect a response.",
+              "anyOf": [
+                {
+                  "title": "CancelRequestNotification",
+                  "description": "Cancels an ongoing request.\n\nThis is a notification sent by the side that sent a request to cancel that request.\n\nUpon receiving this notification, the receiver:\n\n1. MUST cancel the corresponding request activity and all nested activities\n2. MAY send any pending notifications.\n3. MUST send one of these responses for the original request:\n  - Valid response with appropriate data (partial results or cancellation marker)\n  - Error response with code `-32800` (Cancelled)\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/cancellation)",
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/CancelRequestNotification"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": ["jsonrpc", "method"],
+      "x-docs-ignore": true
     }
   ],
   "$defs": {
@@ -2649,6 +2704,13 @@
           "const": -32603
         },
         {
+          "title": "Request cancelled",
+          "description": "**Request cancelled**: Execution of the method was aborted either due to a cancellation request from the caller or\nbecause of resource constraints or shutdown.",
+          "type": "integer",
+          "format": "int32",
+          "const": -32800
+        },
+        {
           "title": "Authentication required",
           "description": "**Authentication required**: Authentication is required before this operation can be performed.",
           "type": "integer",
@@ -4797,6 +4859,63 @@
       "required": ["sessionId"],
       "x-side": "agent",
       "x-method": "session/cancel"
+    },
+    "ProtocolLevelNotification": {
+      "description": "A JSON-RPC notification object.",
+      "type": "object",
+      "properties": {
+        "method": {
+          "description": "The notification method name.",
+          "type": "string"
+        },
+        "params": {
+          "description": "Method-specific notification parameters.",
+          "anyOf": [
+            {
+              "description": "General protocol-level notifications that all sides are expected to\nimplement.\n\nNotifications whose methods start with '$/' are messages which\nare protocol implementation dependent and might not be implementable in all\nclients or agents. For example if the implementation uses a single threaded\nsynchronous programming language then there is little it can do to react to\na `$/cancel_request` notification. If an agent or client receives\nnotifications starting with '$/' it is free to ignore the notification.\n\nNotifications do not expect a response.",
+              "anyOf": [
+                {
+                  "title": "CancelRequestNotification",
+                  "description": "Cancels an ongoing request.\n\nThis is a notification sent by the side that sent a request to cancel that request.\n\nUpon receiving this notification, the receiver:\n\n1. MUST cancel the corresponding request activity and all nested activities\n2. MAY send any pending notifications.\n3. MUST send one of these responses for the original request:\n  - Valid response with appropriate data (partial results or cancellation marker)\n  - Error response with code `-32800` (Cancelled)\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/cancellation)",
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/CancelRequestNotification"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": ["method"],
+      "x-docs-ignore": true
+    },
+    "CancelRequestNotification": {
+      "description": "Notification to cancel an ongoing request.\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/cancellation)",
+      "type": "object",
+      "properties": {
+        "requestId": {
+          "description": "The ID of the request to cancel.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/RequestId"
+            }
+          ]
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["requestId"],
+      "x-side": "protocol",
+      "x-method": "$/cancel_request"
     }
   }
 }

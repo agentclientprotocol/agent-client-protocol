@@ -4,22 +4,15 @@ use agent_client_protocol_schema::ProtocolVersion;
 #[cfg(not(feature = "unstable_protocol_v2"))]
 use agent_client_protocol_schema::v1::{
     AGENT_METHOD_NAMES, AgentNotification, AgentRequest, AgentResponse, CLIENT_METHOD_NAMES,
-    ClientNotification, ClientRequest, ClientResponse, JsonRpcMessage, Notification, Request,
-    Response,
+    ClientNotification, ClientRequest, ClientResponse, JsonRpcMessage, Notification,
+    PROTOCOL_LEVEL_METHOD_NAMES, ProtocolLevelNotification, Request, Response,
 };
-#[cfg(all(
-    feature = "unstable_cancel_request",
-    not(feature = "unstable_protocol_v2")
-))]
-use agent_client_protocol_schema::v1::{PROTOCOL_LEVEL_METHOD_NAMES, ProtocolLevelNotification};
 #[cfg(feature = "unstable_protocol_v2")]
 use agent_client_protocol_schema::v2::{
     AGENT_METHOD_NAMES, AgentNotification, AgentRequest, AgentResponse, CLIENT_METHOD_NAMES,
     ClientNotification, ClientRequest, ClientResponse, JsonRpcBatch, JsonRpcMessage, Notification,
-    Request, Response,
+    PROTOCOL_LEVEL_METHOD_NAMES, ProtocolLevelNotification, Request, Response,
 };
-#[cfg(all(feature = "unstable_cancel_request", feature = "unstable_protocol_v2"))]
-use agent_client_protocol_schema::v2::{PROTOCOL_LEVEL_METHOD_NAMES, ProtocolLevelNotification};
 use schemars::{
     JsonSchema,
     generate::SchemaSettings,
@@ -86,7 +79,6 @@ enum ClientOutgoingMessage {
 enum AgentBatchCallMessage {
     Request(Request<AgentRequest>),
     Notification(Notification<AgentNotification>),
-    #[cfg(feature = "unstable_cancel_request")]
     ProtocolLevelNotification(Notification<ProtocolLevelNotification>),
 }
 
@@ -99,7 +91,6 @@ enum AgentBatchCallMessage {
 enum ClientBatchCallMessage {
     Request(Request<ClientRequest>),
     Notification(Notification<ClientNotification>),
-    #[cfg(feature = "unstable_cancel_request")]
     ProtocolLevelNotification(Notification<ProtocolLevelNotification>),
 }
 
@@ -119,7 +110,6 @@ enum AcpTypes {
     ClientBatchCall(JsonRpcBatch<ClientBatchCallMessage>),
     #[cfg(feature = "unstable_protocol_v2")]
     ClientBatchResponse(JsonRpcBatch<Response<ClientResponse>>),
-    #[cfg(feature = "unstable_cancel_request")]
     ProtocolLevel(JsonRpcMessage<Notification<ProtocolLevelNotification>>),
 }
 
@@ -206,13 +196,6 @@ fn write_schema(schema_value: &serde_json::Value, schema_dir: &Path, docs_protoc
     let schema_protocol_version = ProtocolVersion::V1;
 
     // Create a combined metadata object
-    #[cfg(not(feature = "unstable_cancel_request"))]
-    let metadata = serde_json::json!({
-        "version": schema_protocol_version,
-        "agentMethods": AGENT_METHOD_NAMES,
-        "clientMethods": CLIENT_METHOD_NAMES,
-    });
-    #[cfg(feature = "unstable_cancel_request")]
     let metadata = serde_json::json!({
         "version": schema_protocol_version,
         "agentMethods": AGENT_METHOD_NAMES,
@@ -403,7 +386,6 @@ mod schema_annotation_tests {
             );
         }
 
-        #[cfg(feature = "unstable_cancel_request")]
         for title in ["AgentBatchCall", "ClientBatchCall"] {
             let batch_schema = root_variant_schema(&schema, title);
             assert!(
@@ -412,7 +394,6 @@ mod schema_annotation_tests {
             );
         }
 
-        #[cfg(feature = "unstable_cancel_request")]
         {
             let protocol_level = root_variant_schema(&schema, "ProtocolLevel");
             assert_eq!(
@@ -799,7 +780,7 @@ mod schema_annotation_tests {
         );
     }
 
-    #[cfg(all(feature = "unstable_protocol_v2", feature = "unstable_cancel_request"))]
+    #[cfg(feature = "unstable_protocol_v2")]
     fn schema_contains_ref(schema: &Value, ref_path: &str) -> bool {
         match schema {
             Value::Object(object) => object.iter().any(|(key, value)| {
@@ -971,7 +952,6 @@ and control access to resources."
                     types,
                 );
             }
-            #[cfg(feature = "unstable_cancel_request")]
             {
                 writeln!(&mut self.output, "## Protocol Level").unwrap();
                 writeln!(&mut self.output).unwrap();
@@ -1936,7 +1916,6 @@ starting with '$/' it is free to ignore the notification."
             }
         }
 
-        #[cfg(feature = "unstable_cancel_request")]
         fn protocol_method_doc(&self, method_name: &str) -> &String {
             match method_name {
                 "$/cancel_request" => self.protocol.get("CancelRequestNotification").unwrap(),

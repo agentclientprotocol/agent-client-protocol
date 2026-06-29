@@ -23,7 +23,6 @@ mod mcp;
 #[cfg(feature = "unstable_nes")]
 mod nes;
 mod plan;
-#[cfg(feature = "unstable_cancel_request")]
 mod protocol_level;
 pub(crate) mod schema_util;
 mod tool_call;
@@ -42,7 +41,6 @@ pub use mcp::*;
 #[cfg(feature = "unstable_nes")]
 pub use nes::*;
 pub use plan::*;
-#[cfg(feature = "unstable_cancel_request")]
 pub use protocol_level::*;
 pub use serde_json::value::RawValue;
 pub use tool_call::*;

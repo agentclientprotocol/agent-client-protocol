@@ -5,14 +5,9 @@ use serde_with::{DefaultOnError, serde_as, skip_serializing_none};
 use super::{Meta, RequestId};
 use crate::IntoOption;
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Notification to cancel an ongoing request.
 ///
 /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/cancellation)
-#[cfg(feature = "unstable_cancel_request")]
 #[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -34,7 +29,6 @@ pub struct CancelRequestNotification {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_cancel_request")]
 impl CancelRequestNotification {
     /// Builds [`CancelRequestNotification`] with the required notification fields set; optional fields start unset or empty.
     #[must_use]
@@ -66,13 +60,11 @@ impl CancelRequestNotification {
 #[non_exhaustive]
 pub struct GeneralMethodNames {
     /// Method name for protocol-level request cancellation notifications.
-    #[cfg(feature = "unstable_cancel_request")]
     pub cancel_request: &'static str,
 }
 
 /// Constant containing all agent method names.
 pub const PROTOCOL_LEVEL_METHOD_NAMES: GeneralMethodNames = GeneralMethodNames {
-    #[cfg(feature = "unstable_cancel_request")]
     cancel_request: CANCEL_REQUEST_METHOD_NAME,
 };
 
@@ -95,11 +87,6 @@ pub(crate) const CANCEL_REQUEST_METHOD_NAME: &str = "$/cancel_request";
 #[schemars(inline)]
 #[non_exhaustive]
 pub enum ProtocolLevelNotification {
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or
-    /// changed at any point.
-    ///
     /// Cancels an ongoing request.
     ///
     /// This is a notification sent by the side that sent a request to cancel that request.
@@ -113,7 +100,6 @@ pub enum ProtocolLevelNotification {
     ///   - Error response with code `-32800` (Cancelled)
     ///
     /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/cancellation)
-    #[cfg(feature = "unstable_cancel_request")]
     CancelRequestNotification(CancelRequestNotification),
 }
 
@@ -122,7 +108,6 @@ impl ProtocolLevelNotification {
     #[must_use]
     pub fn method(&self) -> &str {
         match self {
-            #[cfg(feature = "unstable_cancel_request")]
             Self::CancelRequestNotification(..) => PROTOCOL_LEVEL_METHOD_NAMES.cancel_request,
         }
     }

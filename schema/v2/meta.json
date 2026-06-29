@@ -17,5 +17,8 @@
   "clientMethods": {
     "session_request_permission": "session/request_permission",
     "session_update": "session/update"
+  },
+  "protocolMethods": {
+    "cancel_request": "$/cancel_request"
   }
 }

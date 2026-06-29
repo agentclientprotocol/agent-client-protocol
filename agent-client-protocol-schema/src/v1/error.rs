@@ -99,15 +99,10 @@ impl Error {
         ErrorCode::InternalError.into()
     }
 
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Request was cancelled.
     ///
     /// Execution of the method was aborted either due to a cancellation request from the caller
     /// or because of resource constraints or shutdown.
-    #[cfg(feature = "unstable_cancel_request")]
     #[must_use]
     pub fn request_cancelled() -> Self {
         ErrorCode::RequestCancelled.into()
@@ -183,11 +178,6 @@ pub enum ErrorCode {
     #[schemars(transform = error_code_transform)]
     #[strum(to_string = "Internal error")]
     InternalError, // -32603
-    #[cfg(feature = "unstable_cancel_request")]
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Execution of the method was aborted either due to a cancellation request from the caller or
     /// because of resource constraints or shutdown.
     #[schemars(transform = error_code_transform)]
@@ -227,7 +217,6 @@ impl From<i32> for ErrorCode {
             -32601 => ErrorCode::MethodNotFound,
             -32602 => ErrorCode::InvalidParams,
             -32603 => ErrorCode::InternalError,
-            #[cfg(feature = "unstable_cancel_request")]
             -32800 => ErrorCode::RequestCancelled,
             -32000 => ErrorCode::AuthRequired,
             -32002 => ErrorCode::ResourceNotFound,
@@ -246,7 +235,6 @@ impl From<ErrorCode> for i32 {
             ErrorCode::MethodNotFound => -32601,
             ErrorCode::InvalidParams => -32602,
             ErrorCode::InternalError => -32603,
-            #[cfg(feature = "unstable_cancel_request")]
             ErrorCode::RequestCancelled => -32800,
             ErrorCode::AuthRequired => -32000,
             ErrorCode::ResourceNotFound => -32002,
@@ -275,7 +263,6 @@ fn error_code_transform(schema: &mut Schema) {
         "MethodNotFound" => ErrorCode::MethodNotFound,
         "InvalidParams" => ErrorCode::InvalidParams,
         "InternalError" => ErrorCode::InternalError,
-        #[cfg(feature = "unstable_cancel_request")]
         "RequestCancelled" => ErrorCode::RequestCancelled,
         "AuthRequired" => ErrorCode::AuthRequired,
         "ResourceNotFound" => ErrorCode::ResourceNotFound,

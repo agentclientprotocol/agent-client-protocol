@@ -24,7 +24,6 @@ workspace = true
 [features]
 unstable = [
     "unstable_auth_methods",
-    "unstable_cancel_request",
     "unstable_elicitation",
     "unstable_llm_providers",
     "unstable_mcp_over_acp",
@@ -39,7 +38,6 @@ unstable = [
 # version, so it must be opted into explicitly.
 unstable_protocol_v2 = []
 unstable_auth_methods = []
-unstable_cancel_request = []
 unstable_elicitation = []
 unstable_llm_providers = []
 unstable_mcp_over_acp = []

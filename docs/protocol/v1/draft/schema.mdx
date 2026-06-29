@@ -2567,11 +2567,6 @@ starting with '$/' it is free to ignore the notification.
 <a id="$-cancel_request"></a>
 ### <span class="font-mono">$/cancel_request</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or
-changed at any point.
-
 Cancels an ongoing request.
 
 This is a notification sent by the side that sent a request to cancel that request.
@@ -2588,10 +2583,6 @@ Upon receiving this notification, the receiver:
 See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v1/draft/cancellation)
 
 #### <span class="font-mono">CancelRequestNotification</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Notification to cancel an ongoing request.
 
@@ -4456,13 +4447,9 @@ and use the reserved range (-32000 to -32099) for protocol-specific errors.
 </ResponseField>
 
 <ResponseField name="-32800" type="int32">
-**Request cancelled**: **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Execution of the method was aborted either due to a cancellation request from the caller or
-because of resource constraints or shutdown.
-
+  **Request cancelled**: Execution of the method was aborted either due to a
+  cancellation request from the caller or because of resource constraints or
+  shutdown.
 </ResponseField>
 
 <ResponseField name="-32000" type="int32">
