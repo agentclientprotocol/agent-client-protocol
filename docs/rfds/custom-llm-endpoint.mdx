@@ -113,12 +113,7 @@ If `providers` is absent, clients must treat provider methods as unsupported.
  * reserved for the ACP spec.
  */
 type LlmProtocol =
-  | "anthropic"
-  | "openai"
-  | "azure"
-  | "vertex"
-  | "bedrock"
-  | string;
+  "anthropic" | "openai" | "azure" | "vertex" | "bedrock" | string;
 
 interface ProviderCurrentConfig {
   /** Protocol currently used by this provider. */
