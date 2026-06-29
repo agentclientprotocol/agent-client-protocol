@@ -191,6 +191,7 @@
               "rfds/next-edit-suggestions",
               "rfds/custom-llm-endpoint",
               "rfds/plan-operations",
+              "rfds/streamable-http-websocket-transport",
               {
                 "group": "v2 Draft",
                 "expanded": true,
@@ -201,8 +202,7 @@
                   "rfds/v2/client-filesystem-terminal-capabilities",
                   "rfds/v2/plan-variants",
                   "rfds/v2/tool-call-updates",
-                  "rfds/v2/message-updates",
-                  "rfds/streamable-http-websocket-transport"
+                  "rfds/v2/message-updates"
                 ]
               }
             ]
