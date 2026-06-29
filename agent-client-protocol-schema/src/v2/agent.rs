@@ -6923,7 +6923,6 @@ mod test_serialization {
         assert_eq!(
             serde_json::to_value(&caps).unwrap(),
             json!({
-                "auth": {},
                 "session": {
                     "prompt": {
                         "image": {}
