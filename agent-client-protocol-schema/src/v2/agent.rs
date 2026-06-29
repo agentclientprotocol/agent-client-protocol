@@ -57,13 +57,13 @@ use super::{
 pub struct InitializeRequest {
     /// The latest protocol version supported by the client.
     pub protocol_version: ProtocolVersion,
+    /// Information about the implementation sending this initialize request.
+    pub info: Implementation,
     /// Capabilities supported by the client.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub capabilities: ClientCapabilities,
-    /// Information about the implementation sending this initialize request.
-    pub info: Implementation,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -124,6 +124,8 @@ pub struct InitializeResponse {
     ///
     /// The client should disconnect, if it doesn't support this version.
     pub protocol_version: ProtocolVersion,
+    /// Information about the implementation sending this initialize response.
+    pub info: Implementation,
     /// Capabilities supported by the agent.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
@@ -134,8 +136,6 @@ pub struct InitializeResponse {
     #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default)]
     pub auth_methods: Vec<AuthMethod>,
-    /// Information about the implementation sending this initialize response.
-    pub info: Implementation,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -1231,10 +1231,8 @@ impl NewSessionResponse {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct LoadSessionRequest {
-    /// List of MCP servers to connect to for this session.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
-    pub mcp_servers: Vec<McpServer>,
+    /// The ID of the session to load.
+    pub session_id: SessionId,
     /// The working directory for this session.
     pub cwd: PathBuf,
     /// Additional workspace roots to activate for this session. Each path must be absolute.
@@ -1247,8 +1245,10 @@ pub struct LoadSessionRequest {
     #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<PathBuf>,
-    /// The ID of the session to load.
-    pub session_id: SessionId,
+    /// List of MCP servers to connect to for this session.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
+    pub mcp_servers: Vec<McpServer>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -3902,7 +3902,7 @@ pub struct AgentCapabilities {
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
-    pub auth: AgentAuthCapabilities,
+    pub auth: Option<AgentAuthCapabilities>,
     /// **UNSTABLE**
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -3968,8 +3968,8 @@ impl AgentCapabilities {
 
     /// Authentication-related capabilities supported by the agent.
     #[must_use]
-    pub fn auth(mut self, auth: AgentAuthCapabilities) -> Self {
-        self.auth = auth;
+    pub fn auth(mut self, auth: impl IntoOption<AgentAuthCapabilities>) -> Self {
+        self.auth = auth.into_option();
         self
     }
 
@@ -4804,10 +4804,10 @@ pub struct McpCapabilities {
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
     /// Agent supports [`McpServer::Acp`].
-    #[cfg(feature = "unstable_mcp_over_acp")]
     ///
     /// Optional. Omitted or `null` both mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports ACP MCP server transports.
+    #[cfg(feature = "unstable_mcp_over_acp")]
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
@@ -4987,6 +4987,52 @@ impl McpAcpCapabilities {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// Notification to cancel ongoing operations for a session.
+///
+/// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-lifecycle#cancellation)
+#[serde_as]
+#[skip_serializing_none]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[schemars(extend("x-side" = "agent", "x-method" = SESSION_CANCEL_METHOD_NAME))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct CancelSessionNotification {
+    /// The ID of the session to cancel operations for.
+    pub session_id: SessionId,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl CancelSessionNotification {
+    /// Builds [`CancelSessionNotification`] with the required notification fields set; optional fields start unset or empty.
+    #[must_use]
+    pub fn new(session_id: impl Into<SessionId>) -> Self {
+        Self {
+            session_id: session_id.into(),
+            meta: None,
+        }
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -5458,7 +5504,7 @@ pub enum ClientNotification {
     ///   cancellation succeeds
     ///
     /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-lifecycle#cancellation)
-    CancelNotification(CancelNotification),
+    CancelSessionNotification(CancelSessionNotification),
     #[cfg(feature = "unstable_nes")]
     /// **UNSTABLE**
     ///
@@ -5515,7 +5561,7 @@ impl ClientNotification {
     #[must_use]
     pub fn method(&self) -> &str {
         match self {
-            Self::CancelNotification(_) => AGENT_METHOD_NAMES.session_cancel,
+            Self::CancelSessionNotification(_) => AGENT_METHOD_NAMES.session_cancel,
             #[cfg(feature = "unstable_nes")]
             Self::DidOpenDocumentNotification(_) => AGENT_METHOD_NAMES.document_did_open,
             #[cfg(feature = "unstable_nes")]
@@ -5534,52 +5580,6 @@ impl ClientNotification {
             Self::MessageMcpNotification(_) => AGENT_METHOD_NAMES.mcp_message,
             Self::ExtNotification(ext_notification) => &ext_notification.method,
         }
-    }
-}
-
-/// Notification to cancel ongoing operations for a session.
-///
-/// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-lifecycle#cancellation)
-#[serde_as]
-#[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = SESSION_CANCEL_METHOD_NAME))]
-#[serde(rename_all = "camelCase")]
-#[non_exhaustive]
-pub struct CancelNotification {
-    /// The ID of the session to cancel operations for.
-    pub session_id: SessionId,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
-    #[serde(default)]
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
-}
-
-impl CancelNotification {
-    /// Builds [`CancelNotification`] with the required notification fields set; optional fields start unset or empty.
-    #[must_use]
-    pub fn new(session_id: impl Into<SessionId>) -> Self {
-        Self {
-            session_id: session_id.into(),
-            meta: None,
-        }
-    }
-
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[must_use]
-    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
-        self.meta = meta.into_option();
-        self
     }
 }
 
@@ -5633,7 +5633,7 @@ mod test_serialization {
         .unwrap();
 
         assert!(capabilities.session.is_none());
-        assert_eq!(capabilities.auth, AgentAuthCapabilities::default());
+        assert_eq!(capabilities.auth, None);
     }
 
     #[test]

@@ -1550,12 +1550,18 @@
             }
           ]
         },
+        "info": {
+          "description": "Information about the implementation sending this initialize response.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/Implementation"
+            }
+          ]
+        },
         "capabilities": {
           "description": "Capabilities supported by the agent.",
           "x-deserialize-default-on-error": true,
-          "default": {
-            "auth": {}
-          },
+          "default": {},
           "allOf": [
             {
               "$ref": "#/$defs/AgentCapabilities"
@@ -1571,14 +1577,6 @@
           "default": [],
           "x-deserialize-default-on-error": true,
           "x-deserialize-skip-invalid-items": true
-        },
-        "info": {
-          "description": "Information about the implementation sending this initialize response.",
-          "allOf": [
-            {
-              "$ref": "#/$defs/Implementation"
-            }
-          ]
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
@@ -1598,6 +1596,32 @@
       "minimum": 0,
       "maximum": 65535
     },
+    "Implementation": {
+      "description": "Metadata about the implementation of the client or agent.\nDescribes the name and version of an ACP implementation, with an optional\ntitle for UI representation.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "Intended for programmatic or logical use, but can be used as a display\nname fallback if title isn’t present.",
+          "type": "string"
+        },
+        "title": {
+          "description": "Intended for UI and end-user contexts — optimized to be human-readable\nand easily understood.\n\nIf not provided, the name should be used for display.",
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
+        },
+        "version": {
+          "description": "Version of the implementation. Can be displayed to the user or used\nfor debugging or metrics purposes. (e.g. \"1.0.0\").",
+          "type": "string"
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["name", "version"]
+    },
     "AgentCapabilities": {
       "description": "Capabilities supported by the agent.\n\nAdvertised during initialization to inform the client about\navailable features and content types.\n\nSee protocol docs: [Agent Capabilities](https://agentclientprotocol.com/protocol/v2/initialization#agent-capabilities)",
       "type": "object",
@@ -1616,13 +1640,15 @@
         },
         "auth": {
           "description": "Authentication-related capabilities supported by the agent.",
-          "x-deserialize-default-on-error": true,
-          "default": {},
-          "allOf": [
+          "anyOf": [
             {
               "$ref": "#/$defs/AgentAuthCapabilities"
+            },
+            {
+              "type": "null"
             }
-          ]
+          ],
+          "x-deserialize-default-on-error": true
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
@@ -2072,32 +2098,6 @@
         }
       },
       "required": ["id", "name"]
-    },
-    "Implementation": {
-      "description": "Metadata about the implementation of the client or agent.\nDescribes the name and version of an ACP implementation, with an optional\ntitle for UI representation.",
-      "type": "object",
-      "properties": {
-        "name": {
-          "description": "Intended for programmatic or logical use, but can be used as a display\nname fallback if title isn’t present.",
-          "type": "string"
-        },
-        "title": {
-          "description": "Intended for UI and end-user contexts — optimized to be human-readable\nand easily understood.\n\nIf not provided, the name should be used for display.",
-          "type": ["string", "null"],
-          "x-deserialize-default-on-error": true
-        },
-        "version": {
-          "description": "Version of the implementation. Can be displayed to the user or used\nfor debugging or metrics purposes. (e.g. \"1.0.0\").",
-          "type": "string"
-        },
-        "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
-          "type": ["object", "null"],
-          "x-deserialize-default-on-error": true,
-          "additionalProperties": true
-        }
-      },
-      "required": ["name", "version"]
     },
     "LoginAuthResponse": {
       "description": "Response to the `auth/login` method.",
@@ -4050,6 +4050,14 @@
             }
           ]
         },
+        "info": {
+          "description": "Information about the implementation sending this initialize request.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/Implementation"
+            }
+          ]
+        },
         "capabilities": {
           "description": "Capabilities supported by the client.",
           "x-deserialize-default-on-error": true,
@@ -4057,14 +4065,6 @@
           "allOf": [
             {
               "$ref": "#/$defs/ClientCapabilities"
-            }
-          ]
-        },
-        "info": {
-          "description": "Information about the implementation sending this initialize request.",
-          "allOf": [
-            {
-              "$ref": "#/$defs/Implementation"
             }
           ]
         },
@@ -4357,14 +4357,13 @@
       "description": "Request parameters for loading an existing session.\n\nOnly available if the Agent supports the `session.load` capability.\n\nSee protocol docs: [Loading Sessions](https://agentclientprotocol.com/protocol/v2/session-setup#loading-sessions)",
       "type": "object",
       "properties": {
-        "mcpServers": {
-          "description": "List of MCP servers to connect to for this session.",
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/McpServer"
-          },
-          "x-deserialize-default-on-error": true,
-          "x-deserialize-skip-invalid-items": true
+        "sessionId": {
+          "description": "The ID of the session to load.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ]
         },
         "cwd": {
           "description": "The working directory for this session.",
@@ -4379,13 +4378,14 @@
           "x-deserialize-default-on-error": true,
           "x-deserialize-skip-invalid-items": true
         },
-        "sessionId": {
-          "description": "The ID of the session to load.",
-          "allOf": [
-            {
-              "$ref": "#/$defs/SessionId"
-            }
-          ]
+        "mcpServers": {
+          "description": "List of MCP servers to connect to for this session.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/McpServer"
+          },
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
@@ -4394,7 +4394,7 @@
           "additionalProperties": true
         }
       },
-      "required": ["mcpServers", "cwd", "sessionId"],
+      "required": ["sessionId", "cwd", "mcpServers"],
       "x-side": "agent",
       "x-method": "session/load"
     },
@@ -4747,11 +4747,11 @@
               "description": "All possible notifications that a client can send to an agent.\n\nThis enum is used internally for routing RPC notifications. You typically won't need\nto use this directly.\n\nNotifications do not expect a response.",
               "anyOf": [
                 {
-                  "title": "CancelNotification",
+                  "title": "CancelSessionNotification",
                   "description": "Cancels ongoing operations for a session.\n\nThis is a notification sent by the client to cancel active work in a\nsession.\n\nUpon receiving this notification, the Agent SHOULD:\n- Stop all language model requests as soon as possible\n- Abort all tool call invocations in progress\n- Send any pending `session/update` notifications\n- Report an idle `state_update` with `StopReason::Cancelled` after\n  cancellation succeeds\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#cancellation)",
                   "allOf": [
                     {
-                      "$ref": "#/$defs/CancelNotification"
+                      "$ref": "#/$defs/CancelSessionNotification"
                     }
                   ]
                 },
@@ -4775,7 +4775,7 @@
       "required": ["method"],
       "x-docs-ignore": true
     },
-    "CancelNotification": {
+    "CancelSessionNotification": {
       "description": "Notification to cancel ongoing operations for a session.\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#cancellation)",
       "type": "object",
       "properties": {

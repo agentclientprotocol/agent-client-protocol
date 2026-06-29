@@ -363,7 +363,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 <ResponseField name="capabilities" type={<a href="#agentcapabilities">AgentCapabilities</a>} >
   Capabilities supported by the agent.
 
-    - Default: `{"auth":{}}`
+    - Default: `{}`
 
 </ResponseField>
 <ResponseField name="info" type={<a href="#implementation">Implementation</a>} required>
@@ -894,7 +894,7 @@ Upon receiving this notification, the Agent SHOULD:
 
 See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#cancellation)
 
-#### <span class="font-mono">CancelNotification</span>
+#### <span class="font-mono">CancelSessionNotification</span>
 
 Notification to cancel ongoing operations for a session.
 
@@ -2130,11 +2130,8 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
-<ResponseField name="auth" type={<a href="#agentauthcapabilities">AgentAuthCapabilities</a>} >
+<ResponseField name="auth" type={<><span><a href="#agentauthcapabilities">AgentAuthCapabilities</a></span><span> | null</span></>} >
   Authentication-related capabilities supported by the agent.
-
-    - Default: `{}`
-
 </ResponseField>
 <ResponseField name="nes" type={<><span><a href="#nescapabilities">NesCapabilities</a></span><span> | null</span></>} >
   **UNSTABLE**

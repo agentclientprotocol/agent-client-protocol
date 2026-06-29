@@ -1885,7 +1885,11 @@ starting with '$/' it is free to ignore the notification."
                     self.agent.get("SetSessionConfigOptionRequest").unwrap()
                 }
                 "session/prompt" => self.agent.get("PromptRequest").unwrap(),
-                "session/cancel" => self.agent.get("CancelNotification").unwrap(),
+                "session/cancel" => self
+                    .agent
+                    .get("CancelSessionNotification")
+                    .or_else(|| self.agent.get("CancelNotification"))
+                    .unwrap(),
                 "session/close" => self.agent.get("CloseSessionRequest").unwrap(),
                 "logout" => self.agent.get("LogoutRequest").unwrap(),
                 "auth/logout" => self.agent.get("LogoutAuthRequest").unwrap(),

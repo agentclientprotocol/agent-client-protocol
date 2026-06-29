@@ -4767,7 +4767,7 @@ impl IntoV1 for super::AgentCapabilities {
             prompt_capabilities,
             mcp_capabilities,
             session_capabilities,
-            auth: auth.into_v1()?,
+            auth: auth.map(IntoV1::into_v1).transpose()?.unwrap_or_default(),
             #[cfg(feature = "unstable_llm_providers")]
             providers: into_v1_default_on_error(providers),
             #[cfg(feature = "unstable_nes")]
@@ -4806,7 +4806,7 @@ impl IntoV2 for crate::v1::AgentCapabilities {
 
         Ok(super::AgentCapabilities {
             session: Some(session),
-            auth: auth.into_v2()?,
+            auth: Some(auth.into_v2()?),
             #[cfg(feature = "unstable_llm_providers")]
             providers: into_v2_default_on_error(providers),
             #[cfg(feature = "unstable_nes")]
@@ -5458,7 +5458,7 @@ impl IntoV1 for super::ClientNotification {
 
     fn into_v1(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::CancelNotification(value) => {
+            Self::CancelSessionNotification(value) => {
                 crate::v1::ClientNotification::CancelNotification(value.into_v1()?)
             }
             #[cfg(feature = "unstable_nes")]
@@ -5506,7 +5506,7 @@ impl IntoV2 for crate::v1::ClientNotification {
     fn into_v2(self) -> Result<Self::Output> {
         Ok(match self {
             Self::CancelNotification(value) => {
-                super::ClientNotification::CancelNotification(value.into_v2()?)
+                super::ClientNotification::CancelSessionNotification(value.into_v2()?)
             }
             #[cfg(feature = "unstable_nes")]
             Self::DidOpenDocumentNotification(value) => {
@@ -5547,7 +5547,7 @@ impl IntoV2 for crate::v1::ClientNotification {
     }
 }
 
-impl IntoV1 for super::CancelNotification {
+impl IntoV1 for super::CancelSessionNotification {
     type Output = crate::v1::CancelNotification;
 
     fn into_v1(self) -> Result<Self::Output> {
@@ -5560,11 +5560,11 @@ impl IntoV1 for super::CancelNotification {
 }
 
 impl IntoV2 for crate::v1::CancelNotification {
-    type Output = super::CancelNotification;
+    type Output = super::CancelSessionNotification;
 
     fn into_v2(self) -> Result<Self::Output> {
         let Self { session_id, meta } = self;
-        Ok(super::CancelNotification {
+        Ok(super::CancelSessionNotification {
             session_id: session_id.into_v2()?,
             meta: meta.into_v2()?,
         })
