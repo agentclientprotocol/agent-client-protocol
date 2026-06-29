@@ -93,7 +93,7 @@ pub enum ProtocolLevelNotification {
     ///
     /// Upon receiving this notification, the receiver:
     ///
-    /// 1. MUST cancel the corresponding request activity and all nested activities
+    /// 1. MAY cancel the corresponding request activity and all nested activities
     /// 2. MAY send any pending notifications.
     /// 3. MUST send one of these responses for the original request:
     ///   - Valid response with appropriate data (partial results or cancellation marker)
