@@ -980,6 +980,10 @@
       "description": "Text provided to or from an LLM.",
       "type": "object",
       "properties": {
+        "text": {
+          "description": "Text payload carried by this content block.",
+          "type": "string"
+        },
         "annotations": {
           "description": "Optional annotations that help clients decide how to display or route this content.",
           "anyOf": [
@@ -991,10 +995,6 @@
             }
           ],
           "x-deserialize-default-on-error": true
-        },
-        "text": {
-          "description": "Text payload carried by this content block.",
-          "type": "string"
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
@@ -1009,18 +1009,6 @@
       "description": "An image provided to or from an LLM.",
       "type": "object",
       "properties": {
-        "annotations": {
-          "description": "Optional annotations that help clients decide how to display or route this content.",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/Annotations"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "x-deserialize-default-on-error": true
-        },
         "data": {
           "description": "Base64-encoded media payload.",
           "type": "string"
@@ -1032,6 +1020,18 @@
         "uri": {
           "description": "URI associated with this resource or media payload.",
           "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
+        },
+        "annotations": {
+          "description": "Optional annotations that help clients decide how to display or route this content.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Annotations"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "x-deserialize-default-on-error": true
         },
         "_meta": {
@@ -1047,6 +1047,14 @@
       "description": "Audio provided to or from an LLM.",
       "type": "object",
       "properties": {
+        "data": {
+          "description": "Base64-encoded media payload.",
+          "type": "string"
+        },
+        "mimeType": {
+          "description": "MIME type describing the encoded media payload.",
+          "type": "string"
+        },
         "annotations": {
           "description": "Optional annotations that help clients decide how to display or route this content.",
           "anyOf": [
@@ -1058,14 +1066,6 @@
             }
           ],
           "x-deserialize-default-on-error": true
-        },
-        "data": {
-          "description": "Base64-encoded media payload.",
-          "type": "string"
-        },
-        "mimeType": {
-          "description": "MIME type describing the encoded media payload.",
-          "type": "string"
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
@@ -1080,16 +1080,17 @@
       "description": "A resource that the server is capable of reading, included in a prompt or tool call result.",
       "type": "object",
       "properties": {
-        "annotations": {
-          "description": "Optional annotations that help clients decide how to display or route this content.",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/Annotations"
-            },
-            {
-              "type": "null"
-            }
-          ],
+        "name": {
+          "description": "Human-readable name shown for this protocol object.",
+          "type": "string"
+        },
+        "uri": {
+          "description": "URI associated with this resource or media payload.",
+          "type": "string"
+        },
+        "title": {
+          "description": "Optional display title for end-user UI.",
+          "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
         "description": {
@@ -1102,24 +1103,23 @@
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
-        "name": {
-          "description": "Human-readable name shown for this protocol object.",
-          "type": "string"
-        },
         "size": {
           "description": "Optional size of the linked resource in bytes, if known.",
           "type": ["integer", "null"],
           "format": "int64",
           "x-deserialize-default-on-error": true
         },
-        "title": {
-          "description": "Optional display title for end-user UI.",
-          "type": ["string", "null"],
+        "annotations": {
+          "description": "Optional annotations that help clients decide how to display or route this content.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Annotations"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "x-deserialize-default-on-error": true
-        },
-        "uri": {
-          "description": "URI associated with this resource or media payload.",
-          "type": "string"
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
@@ -1157,11 +1157,6 @@
       "description": "Text-based resource contents.",
       "type": "object",
       "properties": {
-        "mimeType": {
-          "description": "MIME type describing the encoded media payload.",
-          "type": ["string", "null"],
-          "x-deserialize-default-on-error": true
-        },
         "text": {
           "description": "Text payload carried by this content block.",
           "type": "string"
@@ -1169,6 +1164,11 @@
         "uri": {
           "description": "URI associated with this resource or media payload.",
           "type": "string"
+        },
+        "mimeType": {
+          "description": "MIME type describing the encoded media payload.",
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
@@ -1187,14 +1187,14 @@
           "description": "Base64-encoded bytes for a binary resource payload.",
           "type": "string"
         },
+        "uri": {
+          "description": "URI associated with this resource or media payload.",
+          "type": "string"
+        },
         "mimeType": {
           "description": "MIME type describing the encoded media payload.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
-        },
-        "uri": {
-          "description": "URI associated with this resource or media payload.",
-          "type": "string"
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
@@ -1209,6 +1209,14 @@
       "description": "The contents of a resource, embedded into a prompt or tool call result.",
       "type": "object",
       "properties": {
+        "resource": {
+          "description": "Embedded resource payload, either text or binary data.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/EmbeddedResourceResource"
+            }
+          ]
+        },
         "annotations": {
           "description": "Optional annotations that help clients decide how to display or route this content.",
           "anyOf": [
@@ -1220,14 +1228,6 @@
             }
           ],
           "x-deserialize-default-on-error": true
-        },
-        "resource": {
-          "description": "Embedded resource payload, either text or binary data.",
-          "allOf": [
-            {
-              "$ref": "#/$defs/EmbeddedResourceResource"
-            }
-          ]
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",

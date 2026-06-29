@@ -149,13 +149,13 @@ fn other_content_block_schema(schema: &mut Schema) {
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
 #[non_exhaustive]
 pub struct TextContent {
+    /// Text payload carried by this content block.
+    pub text: String,
     /// Optional annotations that help clients decide how to display or route this content.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub annotations: Option<Annotations>,
-    /// Text payload carried by this content block.
-    pub text: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -211,11 +211,6 @@ impl<T: Into<String>> From<T> for ContentBlock {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ImageContent {
-    /// Optional annotations that help clients decide how to display or route this content.
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
-    #[serde(default)]
-    pub annotations: Option<Annotations>,
     /// Base64-encoded media payload.
     pub data: String,
     /// MIME type describing the encoded media payload.
@@ -225,6 +220,11 @@ pub struct ImageContent {
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub uri: Option<String>,
+    /// Optional annotations that help clients decide how to display or route this content.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
+    pub annotations: Option<Annotations>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -283,15 +283,15 @@ impl ImageContent {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct AudioContent {
+    /// Base64-encoded media payload.
+    pub data: String,
+    /// MIME type describing the encoded media payload.
+    pub mime_type: String,
     /// Optional annotations that help clients decide how to display or route this content.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub annotations: Option<Annotations>,
-    /// Base64-encoded media payload.
-    pub data: String,
-    /// MIME type describing the encoded media payload.
-    pub mime_type: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -341,13 +341,13 @@ impl AudioContent {
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
 #[non_exhaustive]
 pub struct EmbeddedResource {
+    /// Embedded resource payload, either text or binary data.
+    pub resource: EmbeddedResourceResource,
     /// Optional annotations that help clients decide how to display or route this content.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub annotations: Option<Annotations>,
-    /// Embedded resource payload, either text or binary data.
-    pub resource: EmbeddedResourceResource,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -408,15 +408,15 @@ pub enum EmbeddedResourceResource {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct TextResourceContents {
+    /// Text payload carried by this content block.
+    pub text: String,
+    /// URI associated with this resource or media payload.
+    pub uri: String,
     /// MIME type describing the encoded media payload.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub mime_type: Option<String>,
-    /// Text payload carried by this content block.
-    pub text: String,
-    /// URI associated with this resource or media payload.
-    pub uri: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -469,13 +469,13 @@ impl TextResourceContents {
 pub struct BlobResourceContents {
     /// Base64-encoded bytes for a binary resource payload.
     pub blob: String,
+    /// URI associated with this resource or media payload.
+    pub uri: String,
     /// MIME type describing the encoded media payload.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub mime_type: Option<String>,
-    /// URI associated with this resource or media payload.
-    pub uri: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -526,11 +526,15 @@ impl BlobResourceContents {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ResourceLink {
-    /// Optional annotations that help clients decide how to display or route this content.
+    /// Human-readable name shown for this protocol object.
+    pub name: String,
+    /// URI associated with this resource or media payload.
+    pub uri: String,
+    /// Optional display title for end-user UI.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
-    pub annotations: Option<Annotations>,
+    pub title: Option<String>,
     /// Optional human-readable details shown with this protocol object.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
@@ -541,20 +545,16 @@ pub struct ResourceLink {
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub mime_type: Option<String>,
-    /// Human-readable name shown for this protocol object.
-    pub name: String,
     /// Optional size of the linked resource in bytes, if known.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub size: Option<i64>,
-    /// Optional display title for end-user UI.
+    /// Optional annotations that help clients decide how to display or route this content.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
-    pub title: Option<String>,
-    /// URI associated with this resource or media payload.
-    pub uri: String,
+    pub annotations: Option<Annotations>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
