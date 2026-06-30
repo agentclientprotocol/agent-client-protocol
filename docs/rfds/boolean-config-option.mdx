@@ -187,6 +187,7 @@ While no one would set a value of type boolean that doesn't support it, there is
 
 ## Revision history
 
-- 2026-02-24: Initial proposal
-- 2026-03-05: Updated to reflect final implementation — `flag` renamed to `boolean`, value type changed from untagged `String | Bool` enum to internally-tagged enum with `type` discriminator and untagged `ValueId` fallback, feature-gated behind `unstable_boolean_config`
+- 2026-06-30: Moved to Preview.
 - 2026-06-22: Added the v1 `session.configOptions.boolean` client capability gate so boolean config options are only sent to Clients that explicitly opt in, and made v2-to-v1 compatibility conversion advertise the capability by default
+- 2026-03-05: Updated to reflect final implementation — `flag` renamed to `boolean`, value type changed from untagged `String | Bool` enum to internally-tagged enum with `type` discriminator and untagged `ValueId` fallback, feature-gated behind `unstable_boolean_config`
+- 2026-02-24: Initial proposal

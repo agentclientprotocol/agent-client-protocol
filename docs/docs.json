@@ -188,7 +188,6 @@
               "rfds/end-turn-token-usage",
               "rfds/auth-methods",
               "rfds/diff-delete",
-              "rfds/boolean-config-option",
               "rfds/elicitation",
               "rfds/next-edit-suggestions",
               "rfds/custom-llm-endpoint",
@@ -211,7 +210,7 @@
           },
           {
             "group": "Preview",
-            "pages": []
+            "pages": ["rfds/boolean-config-option"]
           },
           {
             "group": "Completed",
