@@ -1245,6 +1245,7 @@ pub struct LoadSessionRequest {
     /// List of MCP servers to connect to for this session.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
     #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mcp_servers: Vec<McpServer>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -6117,6 +6118,33 @@ mod test_serialization {
                     "/home/user/product-docs"
                 ],
             })
+        );
+        assert_eq!(
+            serde_json::to_value(LoadSessionRequest::new("sess_abc123", "/home/user/project"))
+                .unwrap(),
+            json!({
+                "sessionId": "sess_abc123",
+                "cwd": "/home/user/project",
+            })
+        );
+        assert_eq!(
+            serde_json::from_value::<LoadSessionRequest>(json!({
+                "sessionId": "sess_abc123",
+                "cwd": "/home/user/project"
+            }))
+            .unwrap()
+            .mcp_servers,
+            Vec::<McpServer>::new()
+        );
+        assert_eq!(
+            serde_json::from_value::<LoadSessionRequest>(json!({
+                "sessionId": "sess_abc123",
+                "cwd": "/home/user/project",
+                "mcpServers": null
+            }))
+            .unwrap()
+            .mcp_servers,
+            Vec::<McpServer>::new()
         );
         assert_eq!(
             serde_json::to_value(SessionInfo::new("sess_abc123", "/home/user/project")).unwrap(),

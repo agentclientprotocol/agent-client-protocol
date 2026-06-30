@@ -4456,7 +4456,7 @@
           "additionalProperties": true
         }
       },
-      "required": ["sessionId", "cwd", "mcpServers"],
+      "required": ["sessionId", "cwd"],
       "x-side": "agent",
       "x-method": "session/load"
     },
