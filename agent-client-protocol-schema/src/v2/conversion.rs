@@ -304,6 +304,13 @@ where
     value.map(into_v2_vec_skip_errors)
 }
 
+fn option_vec_into_v2_default_skip_errors<T>(value: Option<Vec<T>>) -> Vec<T::Output>
+where
+    T: IntoV2,
+{
+    value.map(into_v2_vec_skip_errors).unwrap_or_default()
+}
+
 impl<T> IntoV2 for Vec<T>
 where
     T: IntoV2,
@@ -3233,7 +3240,7 @@ impl IntoV1 for super::NewSessionResponse {
         Ok(crate::v1::NewSessionResponse {
             session_id: session_id.into_v1()?,
             modes: None,
-            config_options: option_vec_into_v1_skip_errors(config_options),
+            config_options: Some(into_v1_vec_skip_errors(config_options)),
             meta: meta.into_v1()?,
         })
     }
@@ -3251,7 +3258,7 @@ impl IntoV2 for crate::v1::NewSessionResponse {
         } = self;
         Ok(super::NewSessionResponse {
             session_id: session_id.into_v2()?,
-            config_options: option_vec_into_v2_skip_errors(config_options),
+            config_options: option_vec_into_v2_default_skip_errors(config_options),
             meta: meta.into_v2()?,
         })
     }
@@ -3309,7 +3316,7 @@ impl IntoV1 for super::LoadSessionResponse {
         } = self;
         Ok(crate::v1::LoadSessionResponse {
             modes: None,
-            config_options: option_vec_into_v1_skip_errors(config_options),
+            config_options: Some(into_v1_vec_skip_errors(config_options)),
             meta: meta.into_v1()?,
         })
     }
@@ -3325,7 +3332,7 @@ impl IntoV2 for crate::v1::LoadSessionResponse {
             meta,
         } = self;
         Ok(super::LoadSessionResponse {
-            config_options: option_vec_into_v2_skip_errors(config_options),
+            config_options: option_vec_into_v2_default_skip_errors(config_options),
             meta: meta.into_v2()?,
         })
     }
@@ -3388,7 +3395,7 @@ impl IntoV1 for super::ForkSessionResponse {
         Ok(crate::v1::ForkSessionResponse {
             session_id: session_id.into_v1()?,
             modes: None,
-            config_options: option_vec_into_v1_skip_errors(config_options),
+            config_options: Some(into_v1_vec_skip_errors(config_options)),
             meta: meta.into_v1()?,
         })
     }
@@ -3407,7 +3414,7 @@ impl IntoV2 for crate::v1::ForkSessionResponse {
         } = self;
         Ok(super::ForkSessionResponse {
             session_id: session_id.into_v2()?,
-            config_options: option_vec_into_v2_skip_errors(config_options),
+            config_options: option_vec_into_v2_default_skip_errors(config_options),
             meta: meta.into_v2()?,
         })
     }
@@ -3465,7 +3472,7 @@ impl IntoV1 for super::ResumeSessionResponse {
         } = self;
         Ok(crate::v1::ResumeSessionResponse {
             modes: None,
-            config_options: option_vec_into_v1_skip_errors(config_options),
+            config_options: Some(into_v1_vec_skip_errors(config_options)),
             meta: meta.into_v1()?,
         })
     }
@@ -3481,7 +3488,7 @@ impl IntoV2 for crate::v1::ResumeSessionResponse {
             meta,
         } = self;
         Ok(super::ResumeSessionResponse {
-            config_options: option_vec_into_v2_skip_errors(config_options),
+            config_options: option_vec_into_v2_default_skip_errors(config_options),
             meta: meta.into_v2()?,
         })
     }
@@ -10000,11 +10007,37 @@ mod tests {
     }
 
     #[test]
+    fn v1_session_response_missing_config_options_becomes_empty_v2_vec() {
+        let new_response: v2::NewSessionResponse =
+            v1_to_v2(v1::NewSessionResponse::new("sess")).unwrap();
+        assert!(new_response.config_options.is_empty());
+
+        let load_response: v2::LoadSessionResponse =
+            v1_to_v2(v1::LoadSessionResponse::new()).unwrap();
+        assert!(load_response.config_options.is_empty());
+
+        let resume_response: v2::ResumeSessionResponse =
+            v1_to_v2(v1::ResumeSessionResponse::new()).unwrap();
+        assert!(resume_response.config_options.is_empty());
+
+        #[cfg(feature = "unstable_session_fork")]
+        {
+            let fork_response: v2::ForkSessionResponse =
+                v1_to_v2(v1::ForkSessionResponse::new("fork")).unwrap();
+            assert!(fork_response.config_options.is_empty());
+        }
+    }
+
+    #[test]
     fn v2_session_response_converts_to_v1_without_mode_state() {
         let response: v1::NewSessionResponse =
             v2_to_v1(v2::NewSessionResponse::new("sess")).unwrap();
 
         assert!(response.modes.is_none());
+        assert!(matches!(
+            response.config_options,
+            Some(config_options) if config_options.is_empty()
+        ));
     }
 
     #[test]

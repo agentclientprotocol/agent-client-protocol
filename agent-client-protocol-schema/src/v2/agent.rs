@@ -1167,11 +1167,11 @@ pub struct NewSessionResponse {
     ///
     /// Used in all subsequent requests for this conversation.
     pub session_id: SessionId,
-    /// Initial session configuration options if supported by the Agent.
-    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    /// Initial session configuration options.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
     #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
-    #[serde(default)]
-    pub config_options: Option<Vec<SessionConfigOption>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub config_options: Vec<SessionConfigOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -1190,18 +1190,15 @@ impl NewSessionResponse {
     pub fn new(session_id: impl Into<SessionId>) -> Self {
         Self {
             session_id: session_id.into(),
-            config_options: None,
+            config_options: Vec::new(),
             meta: None,
         }
     }
 
-    /// Initial session configuration options if supported by the Agent.
+    /// Initial session configuration options.
     #[must_use]
-    pub fn config_options(
-        mut self,
-        config_options: impl IntoOption<Vec<SessionConfigOption>>,
-    ) -> Self {
-        self.config_options = config_options.into_option();
+    pub fn config_options(mut self, config_options: Vec<SessionConfigOption>) -> Self {
+        self.config_options = config_options;
         self
     }
 
@@ -1308,11 +1305,11 @@ impl LoadSessionRequest {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct LoadSessionResponse {
-    /// Initial session configuration options if supported by the Agent.
-    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    /// Initial session configuration options.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
     #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
-    #[serde(default)]
-    pub config_options: Option<Vec<SessionConfigOption>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub config_options: Vec<SessionConfigOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -1332,13 +1329,10 @@ impl LoadSessionResponse {
         Self::default()
     }
 
-    /// Initial session configuration options if supported by the Agent.
+    /// Initial session configuration options.
     #[must_use]
-    pub fn config_options(
-        mut self,
-        config_options: impl IntoOption<Vec<SessionConfigOption>>,
-    ) -> Self {
-        self.config_options = config_options.into_option();
+    pub fn config_options(mut self, config_options: Vec<SessionConfigOption>) -> Self {
+        self.config_options = config_options;
         self
     }
 
@@ -1459,11 +1453,11 @@ impl ForkSessionRequest {
 pub struct ForkSessionResponse {
     /// Unique identifier for the newly created forked session.
     pub session_id: SessionId,
-    /// Initial session configuration options if supported by the Agent.
-    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    /// Initial session configuration options.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
     #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
-    #[serde(default)]
-    pub config_options: Option<Vec<SessionConfigOption>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub config_options: Vec<SessionConfigOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -1483,18 +1477,15 @@ impl ForkSessionResponse {
     pub fn new(session_id: impl Into<SessionId>) -> Self {
         Self {
             session_id: session_id.into(),
-            config_options: None,
+            config_options: Vec::new(),
             meta: None,
         }
     }
 
-    /// Initial session configuration options if supported by the Agent.
+    /// Initial session configuration options.
     #[must_use]
-    pub fn config_options(
-        mut self,
-        config_options: impl IntoOption<Vec<SessionConfigOption>>,
-    ) -> Self {
-        self.config_options = config_options.into_option();
+    pub fn config_options(mut self, config_options: Vec<SessionConfigOption>) -> Self {
+        self.config_options = config_options;
         self
     }
 
@@ -1603,11 +1594,11 @@ impl ResumeSessionRequest {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ResumeSessionResponse {
-    /// Initial session configuration options if supported by the Agent.
-    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    /// Initial session configuration options.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
     #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
-    #[serde(default)]
-    pub config_options: Option<Vec<SessionConfigOption>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub config_options: Vec<SessionConfigOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -1627,13 +1618,10 @@ impl ResumeSessionResponse {
         Self::default()
     }
 
-    /// Initial session configuration options if supported by the Agent.
+    /// Initial session configuration options.
     #[must_use]
-    pub fn config_options(
-        mut self,
-        config_options: impl IntoOption<Vec<SessionConfigOption>>,
-    ) -> Self {
-        self.config_options = config_options.into_option();
+    pub fn config_options(mut self, config_options: Vec<SessionConfigOption>) -> Self {
+        self.config_options = config_options;
         self
     }
 
@@ -5884,6 +5872,82 @@ mod test_serialization {
             deserialized,
             SessionConfigOptionCategory::Other("_my_custom_category".to_string()),
         );
+    }
+
+    fn test_config_option() -> SessionConfigOption {
+        SessionConfigOption::select(
+            "mode",
+            "Mode",
+            "ask",
+            vec![SessionConfigSelectOption::new("ask", "Ask")],
+        )
+    }
+
+    #[test]
+    fn test_session_response_config_options_default_empty_and_skip_serializing() {
+        assert_eq!(
+            serde_json::to_value(NewSessionResponse::new("sess")).unwrap(),
+            json!({ "sessionId": "sess" })
+        );
+        assert_eq!(
+            serde_json::to_value(LoadSessionResponse::new()).unwrap(),
+            json!({})
+        );
+        assert_eq!(
+            serde_json::to_value(ResumeSessionResponse::new()).unwrap(),
+            json!({})
+        );
+        #[cfg(feature = "unstable_session_fork")]
+        assert_eq!(
+            serde_json::to_value(ForkSessionResponse::new("fork")).unwrap(),
+            json!({ "sessionId": "fork" })
+        );
+
+        let json = serde_json::to_value(
+            NewSessionResponse::new("sess").config_options(vec![test_config_option()]),
+        )
+        .unwrap();
+        assert_eq!(json["configOptions"].as_array().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn test_session_response_config_options_deserialize_missing_null_and_invalid() {
+        let missing: NewSessionResponse =
+            serde_json::from_value(json!({ "sessionId": "sess" })).unwrap();
+        assert!(missing.config_options.is_empty());
+
+        let null: NewSessionResponse = serde_json::from_value(json!({
+            "sessionId": "sess",
+            "configOptions": null
+        }))
+        .unwrap();
+        assert!(null.config_options.is_empty());
+
+        let wrong_shape: NewSessionResponse = serde_json::from_value(json!({
+            "sessionId": "sess",
+            "configOptions": "oops"
+        }))
+        .unwrap();
+        assert!(wrong_shape.config_options.is_empty());
+
+        let valid_option = serde_json::to_value(test_config_option()).unwrap();
+        let mixed: NewSessionResponse = serde_json::from_value(json!({
+            "sessionId": "sess",
+            "configOptions": ["oops", valid_option]
+        }))
+        .unwrap();
+        assert_eq!(mixed.config_options.len(), 1);
+
+        let load: LoadSessionResponse = serde_json::from_value(json!({})).unwrap();
+        assert!(load.config_options.is_empty());
+        let resume: ResumeSessionResponse = serde_json::from_value(json!({})).unwrap();
+        assert!(resume.config_options.is_empty());
+        #[cfg(feature = "unstable_session_fork")]
+        {
+            let fork: ForkSessionResponse =
+                serde_json::from_value(json!({ "sessionId": "fork" })).unwrap();
+            assert!(fork.config_options.is_empty());
+        }
     }
 
     #[test]

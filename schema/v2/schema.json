@@ -2195,8 +2195,8 @@
           ]
         },
         "configOptions": {
-          "description": "Initial session configuration options if supported by the Agent.",
-          "type": ["array", "null"],
+          "description": "Initial session configuration options.",
+          "type": "array",
           "items": {
             "$ref": "#/$defs/SessionConfigOption"
           },
@@ -2459,8 +2459,8 @@
       "type": "object",
       "properties": {
         "configOptions": {
-          "description": "Initial session configuration options if supported by the Agent.",
-          "type": ["array", "null"],
+          "description": "Initial session configuration options.",
+          "type": "array",
           "items": {
             "$ref": "#/$defs/SessionConfigOption"
           },
@@ -2569,8 +2569,8 @@
       "type": "object",
       "properties": {
         "configOptions": {
-          "description": "Initial session configuration options if supported by the Agent.",
-          "type": ["array", "null"],
+          "description": "Initial session configuration options.",
+          "type": "array",
           "items": {
             "$ref": "#/$defs/SessionConfigOption"
           },
