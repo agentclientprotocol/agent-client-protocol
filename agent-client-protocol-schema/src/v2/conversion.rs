@@ -2051,22 +2051,22 @@ impl IntoV2 for crate::v1::AgentRequest {
             }
             #[cfg(feature = "unstable_elicitation")]
             Self::CreateElicitationRequest(value) => {
-                super::AgentRequest::CreateElicitationRequest(value.into_v2()?)
+                super::AgentRequest::CreateElicitationRequest(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_mcp_over_acp")]
             Self::ConnectMcpRequest(value) => {
-                super::AgentRequest::ConnectMcpRequest(value.into_v2()?)
+                super::AgentRequest::ConnectMcpRequest(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_mcp_over_acp")]
             Self::MessageMcpRequest(value) => {
-                super::AgentRequest::MessageMcpRequest(value.into_v2()?)
+                super::AgentRequest::MessageMcpRequest(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_mcp_over_acp")]
             Self::DisconnectMcpRequest(value) => {
-                super::AgentRequest::DisconnectMcpRequest(value.into_v2()?)
+                super::AgentRequest::DisconnectMcpRequest(Box::new(value.into_v2()?))
             }
             Self::ExtMethodRequest(value) => {
-                super::AgentRequest::ExtMethodRequest(value.into_v2()?)
+                super::AgentRequest::ExtMethodRequest(Box::new(value.into_v2()?))
             }
         })
     }
@@ -2121,7 +2121,7 @@ impl IntoV2 for crate::v1::ClientResponse {
                 ));
             }
             Self::RequestPermissionResponse(value) => {
-                super::ClientResponse::RequestPermissionResponse(value.into_v2()?)
+                super::ClientResponse::RequestPermissionResponse(Box::new(value.into_v2()?))
             }
             Self::CreateTerminalResponse(_) => {
                 return Err(removed_v1_enum_variant("ClientResponse", "terminal/create"));
@@ -2146,22 +2146,22 @@ impl IntoV2 for crate::v1::ClientResponse {
             }
             #[cfg(feature = "unstable_elicitation")]
             Self::CreateElicitationResponse(value) => {
-                super::ClientResponse::CreateElicitationResponse(value.into_v2()?)
+                super::ClientResponse::CreateElicitationResponse(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_mcp_over_acp")]
             Self::ConnectMcpResponse(value) => {
-                super::ClientResponse::ConnectMcpResponse(value.into_v2()?)
+                super::ClientResponse::ConnectMcpResponse(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_mcp_over_acp")]
             Self::MessageMcpResponse(value) => {
-                super::ClientResponse::MessageMcpResponse(value.into_v2()?)
+                super::ClientResponse::MessageMcpResponse(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_mcp_over_acp")]
             Self::DisconnectMcpResponse(value) => {
-                super::ClientResponse::DisconnectMcpResponse(value.into_v2()?)
+                super::ClientResponse::DisconnectMcpResponse(Box::new(value.into_v2()?))
             }
             Self::ExtMethodResponse(value) => {
-                super::ClientResponse::ExtMethodResponse(value.into_v2()?)
+                super::ClientResponse::ExtMethodResponse(Box::new(value.into_v2()?))
             }
         })
     }
@@ -2210,14 +2210,16 @@ impl IntoV2 for crate::v1::AgentNotification {
             }
             #[cfg(feature = "unstable_elicitation")]
             Self::CompleteElicitationNotification(value) => {
-                super::AgentNotification::CompleteElicitationNotification(value.into_v2()?)
+                super::AgentNotification::CompleteElicitationNotification(Box::new(
+                    value.into_v2()?,
+                ))
             }
             #[cfg(feature = "unstable_mcp_over_acp")]
             Self::MessageMcpNotification(value) => {
-                super::AgentNotification::MessageMcpNotification(value.into_v2()?)
+                super::AgentNotification::MessageMcpNotification(Box::new(value.into_v2()?))
             }
             Self::ExtNotification(value) => {
-                super::AgentNotification::ExtNotification(value.into_v2()?)
+                super::AgentNotification::ExtNotification(Box::new(value.into_v2()?))
             }
         })
     }
@@ -5242,11 +5244,11 @@ impl IntoV2 for crate::v1::ClientRequest {
                 super::ClientRequest::InitializeRequest(Box::new(value.into_v2()?))
             }
             Self::AuthenticateRequest(value) => {
-                super::ClientRequest::LoginAuthRequest(value.into_v2()?)
+                super::ClientRequest::LoginAuthRequest(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_llm_providers")]
             Self::ListProvidersRequest(value) => {
-                super::ClientRequest::ListProvidersRequest(value.into_v2()?)
+                super::ClientRequest::ListProvidersRequest(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_llm_providers")]
             Self::SetProviderRequest(value) => {
@@ -5254,38 +5256,42 @@ impl IntoV2 for crate::v1::ClientRequest {
             }
             #[cfg(feature = "unstable_llm_providers")]
             Self::DisableProviderRequest(value) => {
-                super::ClientRequest::DisableProviderRequest(value.into_v2()?)
+                super::ClientRequest::DisableProviderRequest(Box::new(value.into_v2()?))
             }
-            Self::LogoutRequest(value) => super::ClientRequest::LogoutAuthRequest(value.into_v2()?),
+            Self::LogoutRequest(value) => {
+                super::ClientRequest::LogoutAuthRequest(Box::new(value.into_v2()?))
+            }
             Self::NewSessionRequest(value) => {
-                super::ClientRequest::NewSessionRequest(value.into_v2()?)
+                super::ClientRequest::NewSessionRequest(Box::new(value.into_v2()?))
             }
             Self::LoadSessionRequest(value) => {
-                super::ClientRequest::LoadSessionRequest(value.into_v2()?)
+                super::ClientRequest::LoadSessionRequest(Box::new(value.into_v2()?))
             }
             Self::ListSessionsRequest(value) => {
-                super::ClientRequest::ListSessionsRequest(value.into_v2()?)
+                super::ClientRequest::ListSessionsRequest(Box::new(value.into_v2()?))
             }
             Self::DeleteSessionRequest(value) => {
-                super::ClientRequest::DeleteSessionRequest(value.into_v2()?)
+                super::ClientRequest::DeleteSessionRequest(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_session_fork")]
             Self::ForkSessionRequest(value) => {
-                super::ClientRequest::ForkSessionRequest(value.into_v2()?)
+                super::ClientRequest::ForkSessionRequest(Box::new(value.into_v2()?))
             }
             Self::ResumeSessionRequest(value) => {
-                super::ClientRequest::ResumeSessionRequest(value.into_v2()?)
+                super::ClientRequest::ResumeSessionRequest(Box::new(value.into_v2()?))
             }
             Self::CloseSessionRequest(value) => {
-                super::ClientRequest::CloseSessionRequest(value.into_v2()?)
+                super::ClientRequest::CloseSessionRequest(Box::new(value.into_v2()?))
             }
             Self::SetSessionModeRequest(_) => {
                 return Err(removed_v1_enum_variant("ClientRequest", "session/set_mode"));
             }
             Self::SetSessionConfigOptionRequest(value) => {
-                super::ClientRequest::SetSessionConfigOptionRequest(value.into_v2()?)
+                super::ClientRequest::SetSessionConfigOptionRequest(Box::new(value.into_v2()?))
             }
-            Self::PromptRequest(value) => super::ClientRequest::PromptRequest(value.into_v2()?),
+            Self::PromptRequest(value) => {
+                super::ClientRequest::PromptRequest(Box::new(value.into_v2()?))
+            }
             #[cfg(feature = "unstable_nes")]
             Self::StartNesRequest(value) => {
                 super::ClientRequest::StartNesRequest(Box::new(value.into_v2()?))
@@ -5295,13 +5301,15 @@ impl IntoV2 for crate::v1::ClientRequest {
                 super::ClientRequest::SuggestNesRequest(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_nes")]
-            Self::CloseNesRequest(value) => super::ClientRequest::CloseNesRequest(value.into_v2()?),
+            Self::CloseNesRequest(value) => {
+                super::ClientRequest::CloseNesRequest(Box::new(value.into_v2()?))
+            }
             #[cfg(feature = "unstable_mcp_over_acp")]
             Self::MessageMcpRequest(value) => {
-                super::ClientRequest::MessageMcpRequest(value.into_v2()?)
+                super::ClientRequest::MessageMcpRequest(Box::new(value.into_v2()?))
             }
             Self::ExtMethodRequest(value) => {
-                super::ClientRequest::ExtMethodRequest(value.into_v2()?)
+                super::ClientRequest::ExtMethodRequest(Box::new(value.into_v2()?))
             }
         })
     }
@@ -5393,70 +5401,72 @@ impl IntoV2 for crate::v1::AgentResponse {
                 super::AgentResponse::InitializeResponse(Box::new(value.into_v2()?))
             }
             Self::AuthenticateResponse(value) => {
-                super::AgentResponse::LoginAuthResponse(value.into_v2()?)
+                super::AgentResponse::LoginAuthResponse(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_llm_providers")]
             Self::ListProvidersResponse(value) => {
-                super::AgentResponse::ListProvidersResponse(value.into_v2()?)
+                super::AgentResponse::ListProvidersResponse(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_llm_providers")]
             Self::SetProviderResponse(value) => {
-                super::AgentResponse::SetProviderResponse(value.into_v2()?)
+                super::AgentResponse::SetProviderResponse(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_llm_providers")]
             Self::DisableProviderResponse(value) => {
-                super::AgentResponse::DisableProviderResponse(value.into_v2()?)
+                super::AgentResponse::DisableProviderResponse(Box::new(value.into_v2()?))
             }
             Self::LogoutResponse(value) => {
-                super::AgentResponse::LogoutAuthResponse(value.into_v2()?)
+                super::AgentResponse::LogoutAuthResponse(Box::new(value.into_v2()?))
             }
             Self::NewSessionResponse(value) => {
-                super::AgentResponse::NewSessionResponse(value.into_v2()?)
+                super::AgentResponse::NewSessionResponse(Box::new(value.into_v2()?))
             }
             Self::LoadSessionResponse(value) => {
-                super::AgentResponse::LoadSessionResponse(value.into_v2()?)
+                super::AgentResponse::LoadSessionResponse(Box::new(value.into_v2()?))
             }
             Self::ListSessionsResponse(value) => {
-                super::AgentResponse::ListSessionsResponse(value.into_v2()?)
+                super::AgentResponse::ListSessionsResponse(Box::new(value.into_v2()?))
             }
             Self::DeleteSessionResponse(value) => {
-                super::AgentResponse::DeleteSessionResponse(value.into_v2()?)
+                super::AgentResponse::DeleteSessionResponse(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_session_fork")]
             Self::ForkSessionResponse(value) => {
-                super::AgentResponse::ForkSessionResponse(value.into_v2()?)
+                super::AgentResponse::ForkSessionResponse(Box::new(value.into_v2()?))
             }
             Self::ResumeSessionResponse(value) => {
-                super::AgentResponse::ResumeSessionResponse(value.into_v2()?)
+                super::AgentResponse::ResumeSessionResponse(Box::new(value.into_v2()?))
             }
             Self::CloseSessionResponse(value) => {
-                super::AgentResponse::CloseSessionResponse(value.into_v2()?)
+                super::AgentResponse::CloseSessionResponse(Box::new(value.into_v2()?))
             }
             Self::SetSessionModeResponse(_) => {
                 return Err(removed_v1_enum_variant("AgentResponse", "session/set_mode"));
             }
             Self::SetSessionConfigOptionResponse(value) => {
-                super::AgentResponse::SetSessionConfigOptionResponse(value.into_v2()?)
+                super::AgentResponse::SetSessionConfigOptionResponse(Box::new(value.into_v2()?))
             }
-            Self::PromptResponse(value) => super::AgentResponse::PromptResponse(value.into_v2()?),
+            Self::PromptResponse(value) => {
+                super::AgentResponse::PromptResponse(Box::new(value.into_v2()?))
+            }
             #[cfg(feature = "unstable_nes")]
             Self::StartNesResponse(value) => {
-                super::AgentResponse::StartNesResponse(value.into_v2()?)
+                super::AgentResponse::StartNesResponse(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_nes")]
             Self::SuggestNesResponse(value) => {
-                super::AgentResponse::SuggestNesResponse(value.into_v2()?)
+                super::AgentResponse::SuggestNesResponse(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_nes")]
             Self::CloseNesResponse(value) => {
-                super::AgentResponse::CloseNesResponse(value.into_v2()?)
+                super::AgentResponse::CloseNesResponse(Box::new(value.into_v2()?))
             }
             Self::ExtMethodResponse(value) => {
-                super::AgentResponse::ExtMethodResponse(value.into_v2()?)
+                super::AgentResponse::ExtMethodResponse(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_mcp_over_acp")]
             Self::MessageMcpResponse(value) => {
-                super::AgentResponse::MessageMcpResponse(value.into_v2()?)
+                super::AgentResponse::MessageMcpResponse(Box::new(value.into_v2()?))
             }
         })
     }
@@ -5515,23 +5525,23 @@ impl IntoV2 for crate::v1::ClientNotification {
     fn into_v2(self) -> Result<Self::Output> {
         Ok(match self {
             Self::CancelNotification(value) => {
-                super::ClientNotification::CancelSessionNotification(value.into_v2()?)
+                super::ClientNotification::CancelSessionNotification(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_nes")]
             Self::DidOpenDocumentNotification(value) => {
-                super::ClientNotification::DidOpenDocumentNotification(value.into_v2()?)
+                super::ClientNotification::DidOpenDocumentNotification(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_nes")]
             Self::DidChangeDocumentNotification(value) => {
-                super::ClientNotification::DidChangeDocumentNotification(value.into_v2()?)
+                super::ClientNotification::DidChangeDocumentNotification(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_nes")]
             Self::DidCloseDocumentNotification(value) => {
-                super::ClientNotification::DidCloseDocumentNotification(value.into_v2()?)
+                super::ClientNotification::DidCloseDocumentNotification(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_nes")]
             Self::DidSaveDocumentNotification(value) => {
-                super::ClientNotification::DidSaveDocumentNotification(value.into_v2()?)
+                super::ClientNotification::DidSaveDocumentNotification(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_nes")]
             Self::DidFocusDocumentNotification(value) => {
@@ -5539,18 +5549,18 @@ impl IntoV2 for crate::v1::ClientNotification {
             }
             #[cfg(feature = "unstable_nes")]
             Self::AcceptNesNotification(value) => {
-                super::ClientNotification::AcceptNesNotification(value.into_v2()?)
+                super::ClientNotification::AcceptNesNotification(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_nes")]
             Self::RejectNesNotification(value) => {
-                super::ClientNotification::RejectNesNotification(value.into_v2()?)
+                super::ClientNotification::RejectNesNotification(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_mcp_over_acp")]
             Self::MessageMcpNotification(value) => {
-                super::ClientNotification::MessageMcpNotification(value.into_v2()?)
+                super::ClientNotification::MessageMcpNotification(Box::new(value.into_v2()?))
             }
             Self::ExtNotification(value) => {
-                super::ClientNotification::ExtNotification(value.into_v2()?)
+                super::ClientNotification::ExtNotification(Box::new(value.into_v2()?))
             }
         })
     }

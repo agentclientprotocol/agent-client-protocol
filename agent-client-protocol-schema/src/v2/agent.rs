@@ -5357,14 +5357,14 @@ pub enum ClientRequest {
     /// `new_session` without receiving an `auth_required` error.
     ///
     /// See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)
-    LoginAuthRequest(LoginAuthRequest),
+    LoginAuthRequest(Box<LoginAuthRequest>),
     /// **UNSTABLE**
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
     /// Lists providers that can be configured by the client.
     #[cfg(feature = "unstable_llm_providers")]
-    ListProvidersRequest(ListProvidersRequest),
+    ListProvidersRequest(Box<ListProvidersRequest>),
     /// **UNSTABLE**
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -5378,12 +5378,12 @@ pub enum ClientRequest {
     ///
     /// Disables a provider.
     #[cfg(feature = "unstable_llm_providers")]
-    DisableProviderRequest(DisableProviderRequest),
+    DisableProviderRequest(Box<DisableProviderRequest>),
     /// Logs out of the current authenticated state.
     ///
     /// After a successful logout, all new sessions will require authentication.
     /// There is no guarantee about the behavior of already running sessions.
-    LogoutAuthRequest(LogoutAuthRequest),
+    LogoutAuthRequest(Box<LogoutAuthRequest>),
     /// Creates a new conversation session with the agent.
     ///
     /// Sessions represent independent conversation contexts with their own history and state.
@@ -5396,7 +5396,7 @@ pub enum ClientRequest {
     /// May return an `auth_required` error if the agent requires authentication.
     ///
     /// See protocol docs: [Session Setup](https://agentclientprotocol.com/protocol/session-setup)
-    NewSessionRequest(NewSessionRequest),
+    NewSessionRequest(Box<NewSessionRequest>),
     /// Loads an existing session to resume a previous conversation.
     ///
     /// This method is only available if the agent advertises the `session.load` capability.
@@ -5407,17 +5407,17 @@ pub enum ClientRequest {
     /// - Stream the entire conversation history back to the client via notifications
     ///
     /// See protocol docs: [Loading Sessions](https://agentclientprotocol.com/protocol/session-setup#loading-sessions)
-    LoadSessionRequest(LoadSessionRequest),
+    LoadSessionRequest(Box<LoadSessionRequest>),
     /// Lists existing sessions known to the agent.
     ///
     /// This method is only available if the agent advertises the `session.list` capability.
     ///
     /// The agent should return metadata about sessions with optional filtering and pagination support.
-    ListSessionsRequest(ListSessionsRequest),
+    ListSessionsRequest(Box<ListSessionsRequest>),
     /// Deletes an existing session from `session/list`.
     ///
     /// This method is only available if the agent advertises the `session.delete` capability.
-    DeleteSessionRequest(DeleteSessionRequest),
+    DeleteSessionRequest(Box<DeleteSessionRequest>),
     #[cfg(feature = "unstable_session_fork")]
     /// **UNSTABLE**
     ///
@@ -5430,23 +5430,23 @@ pub enum ClientRequest {
     /// The agent should create a new session with the same conversation context as the
     /// original, allowing operations like generating summaries without affecting the
     /// original session's history.
-    ForkSessionRequest(ForkSessionRequest),
+    ForkSessionRequest(Box<ForkSessionRequest>),
     /// Resumes an existing session without returning previous messages.
     ///
     /// This method is only available if the agent advertises the `session.resume` capability.
     ///
     /// The agent should resume the session context, allowing the conversation to continue
     /// without replaying the message history (unlike `session/load`).
-    ResumeSessionRequest(ResumeSessionRequest),
+    ResumeSessionRequest(Box<ResumeSessionRequest>),
     /// Closes an active session and frees up any resources associated with it.
     ///
     /// This method is only available if the agent advertises the `session.close` capability.
     ///
     /// The agent must cancel any ongoing work (as if `session/cancel` was called)
     /// and then free up any resources associated with the session.
-    CloseSessionRequest(CloseSessionRequest),
+    CloseSessionRequest(Box<CloseSessionRequest>),
     /// Sets the current value for a session configuration option.
-    SetSessionConfigOptionRequest(SetSessionConfigOptionRequest),
+    SetSessionConfigOptionRequest(Box<SetSessionConfigOptionRequest>),
     /// Processes a user prompt within a session.
     ///
     /// This request accepts the prompt:
@@ -5458,7 +5458,7 @@ pub enum ClientRequest {
     /// `session/update` notifications.
     ///
     /// See protocol docs: [Prompt Lifecycle](https://agentclientprotocol.com/protocol/prompt-lifecycle)
-    PromptRequest(PromptRequest),
+    PromptRequest(Box<PromptRequest>),
     #[cfg(feature = "unstable_nes")]
     /// **UNSTABLE**
     ///
@@ -5482,21 +5482,21 @@ pub enum ClientRequest {
     ///
     /// The agent must cancel any ongoing work and then free up any resources
     /// associated with the NES session.
-    CloseNesRequest(CloseNesRequest),
+    CloseNesRequest(Box<CloseNesRequest>),
     /// **UNSTABLE**
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
     /// Exchanges an MCP-over-ACP message.
     #[cfg(feature = "unstable_mcp_over_acp")]
-    MessageMcpRequest(MessageMcpRequest),
+    MessageMcpRequest(Box<MessageMcpRequest>),
     /// Handles extension method requests from the client.
     ///
     /// Extension methods provide a way to add custom functionality while maintaining
     /// protocol compatibility.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    ExtMethodRequest(ExtRequest),
+    ExtMethodRequest(Box<ExtRequest>),
 }
 
 impl ClientRequest {
@@ -5550,51 +5550,51 @@ pub enum AgentResponse {
     /// Successful result returned for a `initialize` request.
     InitializeResponse(Box<InitializeResponse>),
     /// Successful result returned for an `auth/login` request.
-    LoginAuthResponse(#[serde(default)] LoginAuthResponse),
+    LoginAuthResponse(#[serde(default)] Box<LoginAuthResponse>),
     /// Successful result returned for a `providers/list` request.
     #[cfg(feature = "unstable_llm_providers")]
-    ListProvidersResponse(ListProvidersResponse),
+    ListProvidersResponse(Box<ListProvidersResponse>),
     /// Successful result returned for a `providers/set` request.
     #[cfg(feature = "unstable_llm_providers")]
-    SetProviderResponse(#[serde(default)] SetProviderResponse),
+    SetProviderResponse(#[serde(default)] Box<SetProviderResponse>),
     /// Successful result returned for a `providers/disable` request.
     #[cfg(feature = "unstable_llm_providers")]
-    DisableProviderResponse(#[serde(default)] DisableProviderResponse),
+    DisableProviderResponse(#[serde(default)] Box<DisableProviderResponse>),
     /// Successful result returned for an `auth/logout` request.
-    LogoutAuthResponse(#[serde(default)] LogoutAuthResponse),
+    LogoutAuthResponse(#[serde(default)] Box<LogoutAuthResponse>),
     /// Successful result returned for a `session/new` request.
-    NewSessionResponse(NewSessionResponse),
+    NewSessionResponse(Box<NewSessionResponse>),
     /// Successful result returned for a `session/load` request.
-    LoadSessionResponse(#[serde(default)] LoadSessionResponse),
+    LoadSessionResponse(#[serde(default)] Box<LoadSessionResponse>),
     /// Successful result returned for a `session/list` request.
-    ListSessionsResponse(ListSessionsResponse),
+    ListSessionsResponse(Box<ListSessionsResponse>),
     /// Successful result returned for a `session/delete` request.
-    DeleteSessionResponse(#[serde(default)] DeleteSessionResponse),
+    DeleteSessionResponse(#[serde(default)] Box<DeleteSessionResponse>),
     /// Successful result returned for a `session/fork` request.
     #[cfg(feature = "unstable_session_fork")]
-    ForkSessionResponse(ForkSessionResponse),
+    ForkSessionResponse(Box<ForkSessionResponse>),
     /// Successful result returned for a `session/resume` request.
-    ResumeSessionResponse(#[serde(default)] ResumeSessionResponse),
+    ResumeSessionResponse(#[serde(default)] Box<ResumeSessionResponse>),
     /// Successful result returned for a `session/close` request.
-    CloseSessionResponse(#[serde(default)] CloseSessionResponse),
+    CloseSessionResponse(#[serde(default)] Box<CloseSessionResponse>),
     /// Successful result returned for a `session/set_config_option` request.
-    SetSessionConfigOptionResponse(SetSessionConfigOptionResponse),
+    SetSessionConfigOptionResponse(Box<SetSessionConfigOptionResponse>),
     /// Successful result returned for a `session/prompt` request.
-    PromptResponse(PromptResponse),
+    PromptResponse(Box<PromptResponse>),
     /// Successful result returned for a `nes/start` request.
     #[cfg(feature = "unstable_nes")]
-    StartNesResponse(StartNesResponse),
+    StartNesResponse(Box<StartNesResponse>),
     /// Successful result returned for a `nes/suggest` request.
     #[cfg(feature = "unstable_nes")]
-    SuggestNesResponse(SuggestNesResponse),
+    SuggestNesResponse(Box<SuggestNesResponse>),
     /// Successful result returned for a `nes/close` request.
     #[cfg(feature = "unstable_nes")]
-    CloseNesResponse(#[serde(default)] CloseNesResponse),
+    CloseNesResponse(#[serde(default)] Box<CloseNesResponse>),
     /// Successful result returned by an extension method outside the core ACP method set.
-    ExtMethodResponse(ExtResponse),
+    ExtMethodResponse(Box<ExtResponse>),
     /// Successful result returned by an MCP-over-ACP `mcp/message` request.
     #[cfg(feature = "unstable_mcp_over_acp")]
-    MessageMcpResponse(MessageMcpResponse),
+    MessageMcpResponse(Box<MessageMcpResponse>),
 }
 
 /// All possible notifications that a client can send to an agent.
@@ -5621,27 +5621,27 @@ pub enum ClientNotification {
     ///   cancellation succeeds
     ///
     /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-lifecycle#cancellation)
-    CancelSessionNotification(CancelSessionNotification),
+    CancelSessionNotification(Box<CancelSessionNotification>),
     #[cfg(feature = "unstable_nes")]
     /// **UNSTABLE**
     ///
     /// Notification sent when a file is opened in the editor.
-    DidOpenDocumentNotification(DidOpenDocumentNotification),
+    DidOpenDocumentNotification(Box<DidOpenDocumentNotification>),
     #[cfg(feature = "unstable_nes")]
     /// **UNSTABLE**
     ///
     /// Notification sent when a file is edited.
-    DidChangeDocumentNotification(DidChangeDocumentNotification),
+    DidChangeDocumentNotification(Box<DidChangeDocumentNotification>),
     #[cfg(feature = "unstable_nes")]
     /// **UNSTABLE**
     ///
     /// Notification sent when a file is closed.
-    DidCloseDocumentNotification(DidCloseDocumentNotification),
+    DidCloseDocumentNotification(Box<DidCloseDocumentNotification>),
     #[cfg(feature = "unstable_nes")]
     /// **UNSTABLE**
     ///
     /// Notification sent when a file is saved.
-    DidSaveDocumentNotification(DidSaveDocumentNotification),
+    DidSaveDocumentNotification(Box<DidSaveDocumentNotification>),
     #[cfg(feature = "unstable_nes")]
     /// **UNSTABLE**
     ///
@@ -5651,26 +5651,26 @@ pub enum ClientNotification {
     /// **UNSTABLE**
     ///
     /// Notification sent when a suggestion is accepted.
-    AcceptNesNotification(AcceptNesNotification),
+    AcceptNesNotification(Box<AcceptNesNotification>),
     #[cfg(feature = "unstable_nes")]
     /// **UNSTABLE**
     ///
     /// Notification sent when a suggestion is rejected.
-    RejectNesNotification(RejectNesNotification),
+    RejectNesNotification(Box<RejectNesNotification>),
     /// **UNSTABLE**
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
     /// Sends an MCP-over-ACP notification.
     #[cfg(feature = "unstable_mcp_over_acp")]
-    MessageMcpNotification(MessageMcpNotification),
+    MessageMcpNotification(Box<MessageMcpNotification>),
     /// Handles extension notifications from the client.
     ///
     /// Extension notifications provide a way to send one-way messages for custom functionality
     /// while maintaining protocol compatibility.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    ExtNotification(ExtNotification),
+    ExtNotification(Box<ExtNotification>),
 }
 
 impl ClientNotification {
@@ -5898,15 +5898,18 @@ mod test_serialization {
         assert_eq!(AGENT_METHOD_NAMES.mcp_message, "mcp/message");
 
         assert_eq!(
-            ClientRequest::MessageMcpRequest(MessageMcpRequest::new("conn-1", "tools/list"))
-                .method(),
+            ClientRequest::MessageMcpRequest(Box::new(MessageMcpRequest::new(
+                "conn-1",
+                "tools/list"
+            )))
+            .method(),
             "mcp/message"
         );
         assert_eq!(
-            ClientNotification::MessageMcpNotification(MessageMcpNotification::new(
+            ClientNotification::MessageMcpNotification(Box::new(MessageMcpNotification::new(
                 "conn-1",
                 "notifications/progress"
-            ))
+            )))
             .method(),
             "mcp/message"
         );
@@ -5918,11 +5921,12 @@ mod test_serialization {
         assert_eq!(AGENT_METHOD_NAMES.auth_logout, "auth/logout");
 
         assert_eq!(
-            ClientRequest::LoginAuthRequest(LoginAuthRequest::new("agent-login")).method(),
+            ClientRequest::LoginAuthRequest(Box::new(LoginAuthRequest::new("agent-login")))
+                .method(),
             "auth/login"
         );
         assert_eq!(
-            ClientRequest::LogoutAuthRequest(LogoutAuthRequest::new()).method(),
+            ClientRequest::LogoutAuthRequest(Box::new(LogoutAuthRequest::new())).method(),
             "auth/logout"
         );
     }
@@ -6200,7 +6204,8 @@ mod test_serialization {
     fn test_session_delete_serialization() {
         assert_eq!(AGENT_METHOD_NAMES.session_delete, "session/delete");
         assert_eq!(
-            ClientRequest::DeleteSessionRequest(DeleteSessionRequest::new("sess_abc123")).method(),
+            ClientRequest::DeleteSessionRequest(Box::new(DeleteSessionRequest::new("sess_abc123")))
+                .method(),
             "session/delete"
         );
         assert_eq!(

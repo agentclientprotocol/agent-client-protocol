@@ -1897,12 +1897,12 @@ mod tests {
     fn client_response_serialization_accept() {
         use crate::v2::ClientResponse;
 
-        let resp = ClientResponse::CreateElicitationResponse(CreateElicitationResponse::new(
-            ElicitationAction::Accept(ElicitationAcceptAction::new().content(BTreeMap::from([(
-                "name".to_string(),
-                ElicitationContentValue::from("Alice"),
-            )]))),
-        ));
+        let resp =
+            ClientResponse::CreateElicitationResponse(Box::new(CreateElicitationResponse::new(
+                ElicitationAction::Accept(ElicitationAcceptAction::new().content(BTreeMap::from(
+                    [("name".to_string(), ElicitationContentValue::from("Alice"))],
+                ))),
+            )));
         let json = serde_json::to_value(&resp).unwrap();
         assert_eq!(json["action"], "accept");
         assert_eq!(json["content"]["name"], "Alice");
@@ -1916,8 +1916,8 @@ mod tests {
     fn client_response_serialization_decline() {
         use crate::v2::ClientResponse;
 
-        let resp = ClientResponse::CreateElicitationResponse(CreateElicitationResponse::new(
-            ElicitationAction::Decline,
+        let resp = ClientResponse::CreateElicitationResponse(Box::new(
+            CreateElicitationResponse::new(ElicitationAction::Decline),
         ));
         let json = serde_json::to_value(&resp).unwrap();
         assert_eq!(json["action"], "decline");
@@ -1930,8 +1930,8 @@ mod tests {
     fn client_response_serialization_cancel() {
         use crate::v2::ClientResponse;
 
-        let resp = ClientResponse::CreateElicitationResponse(CreateElicitationResponse::new(
-            ElicitationAction::Cancel,
+        let resp = ClientResponse::CreateElicitationResponse(Box::new(
+            CreateElicitationResponse::new(ElicitationAction::Cancel),
         ));
         let json = serde_json::to_value(&resp).unwrap();
         assert_eq!(json["action"], "cancel");

@@ -1852,28 +1852,28 @@ pub enum AgentRequest {
     ///
     /// Requests structured user input via a form or URL.
     #[cfg(feature = "unstable_elicitation")]
-    CreateElicitationRequest(CreateElicitationRequest),
+    CreateElicitationRequest(Box<CreateElicitationRequest>),
     /// **UNSTABLE**
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
     /// Opens an MCP-over-ACP connection.
     #[cfg(feature = "unstable_mcp_over_acp")]
-    ConnectMcpRequest(ConnectMcpRequest),
+    ConnectMcpRequest(Box<ConnectMcpRequest>),
     /// **UNSTABLE**
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
     /// Exchanges an MCP-over-ACP message.
     #[cfg(feature = "unstable_mcp_over_acp")]
-    MessageMcpRequest(MessageMcpRequest),
+    MessageMcpRequest(Box<MessageMcpRequest>),
     /// **UNSTABLE**
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
     /// Closes an MCP-over-ACP connection.
     #[cfg(feature = "unstable_mcp_over_acp")]
-    DisconnectMcpRequest(DisconnectMcpRequest),
+    DisconnectMcpRequest(Box<DisconnectMcpRequest>),
     /// Handles extension method requests from the agent.
     ///
     /// Allows the Agent to send an arbitrary request that is not part of the ACP spec.
@@ -1881,7 +1881,7 @@ pub enum AgentRequest {
     /// protocol compatibility.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    ExtMethodRequest(ExtRequest),
+    ExtMethodRequest(Box<ExtRequest>),
 }
 
 impl AgentRequest {
@@ -1915,21 +1915,21 @@ impl AgentRequest {
 #[non_exhaustive]
 pub enum ClientResponse {
     /// Successful result returned for a `session/request_permission` request.
-    RequestPermissionResponse(RequestPermissionResponse),
+    RequestPermissionResponse(Box<RequestPermissionResponse>),
     /// Successful result returned for a `elicitation/create` request.
     #[cfg(feature = "unstable_elicitation")]
-    CreateElicitationResponse(CreateElicitationResponse),
+    CreateElicitationResponse(Box<CreateElicitationResponse>),
     /// Successful result returned for a `mcp/connect` request.
     #[cfg(feature = "unstable_mcp_over_acp")]
-    ConnectMcpResponse(ConnectMcpResponse),
+    ConnectMcpResponse(Box<ConnectMcpResponse>),
     /// Successful result returned for a `mcp/disconnect` request.
     #[cfg(feature = "unstable_mcp_over_acp")]
-    DisconnectMcpResponse(#[serde(default)] DisconnectMcpResponse),
+    DisconnectMcpResponse(#[serde(default)] Box<DisconnectMcpResponse>),
     /// Successful result returned by an MCP-over-ACP `mcp/message` request.
     #[cfg(feature = "unstable_mcp_over_acp")]
-    MessageMcpResponse(MessageMcpResponse),
+    MessageMcpResponse(Box<MessageMcpResponse>),
     /// Successful result returned by an extension method outside the core ACP method set.
-    ExtMethodResponse(ExtResponse),
+    ExtMethodResponse(Box<ExtResponse>),
 }
 
 /// All possible notifications that an agent can send to a client.
@@ -1962,14 +1962,14 @@ pub enum AgentNotification {
     ///
     /// Notification that a URL-based elicitation has completed.
     #[cfg(feature = "unstable_elicitation")]
-    CompleteElicitationNotification(CompleteElicitationNotification),
+    CompleteElicitationNotification(Box<CompleteElicitationNotification>),
     /// **UNSTABLE**
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
     /// Receives an MCP-over-ACP notification.
     #[cfg(feature = "unstable_mcp_over_acp")]
-    MessageMcpNotification(MessageMcpNotification),
+    MessageMcpNotification(Box<MessageMcpNotification>),
     /// Handles extension notifications from the agent.
     ///
     /// Allows the Agent to send an arbitrary notification that is not part of the ACP spec.
@@ -1977,7 +1977,7 @@ pub enum AgentNotification {
     /// while maintaining protocol compatibility.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    ExtNotification(ExtNotification),
+    ExtNotification(Box<ExtNotification>),
 }
 
 impl AgentNotification {
@@ -2546,23 +2546,27 @@ mod tests {
         assert_eq!(CLIENT_METHOD_NAMES.mcp_disconnect, "mcp/disconnect");
 
         assert_eq!(
-            AgentRequest::ConnectMcpRequest(ConnectMcpRequest::new("server-1")).method(),
+            AgentRequest::ConnectMcpRequest(Box::new(ConnectMcpRequest::new("server-1"))).method(),
             "mcp/connect"
         );
         assert_eq!(
-            AgentRequest::MessageMcpRequest(MessageMcpRequest::new("conn-1", "tools/list"))
-                .method(),
+            AgentRequest::MessageMcpRequest(Box::new(MessageMcpRequest::new(
+                "conn-1",
+                "tools/list"
+            )))
+            .method(),
             "mcp/message"
         );
         assert_eq!(
-            AgentRequest::DisconnectMcpRequest(DisconnectMcpRequest::new("conn-1")).method(),
+            AgentRequest::DisconnectMcpRequest(Box::new(DisconnectMcpRequest::new("conn-1")))
+                .method(),
             "mcp/disconnect"
         );
         assert_eq!(
-            AgentNotification::MessageMcpNotification(MessageMcpNotification::new(
+            AgentNotification::MessageMcpNotification(Box::new(MessageMcpNotification::new(
                 "conn-1",
                 "notifications/progress"
-            ))
+            )))
             .method(),
             "mcp/message"
         );
