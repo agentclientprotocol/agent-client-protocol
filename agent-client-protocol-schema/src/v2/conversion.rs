@@ -4005,12 +4005,18 @@ impl IntoV1 for super::SessionConfigOptionValue {
 
     fn into_v1(self) -> Result<Self::Output> {
         Ok(match self {
+            Self::Id { value } => crate::v1::SessionConfigOptionValue::ValueId {
+                value: value.into_v1()?,
+            },
             Self::Boolean { value } => crate::v1::SessionConfigOptionValue::Boolean {
                 value: value.into_v1()?,
             },
-            Self::ValueId { value } => crate::v1::SessionConfigOptionValue::ValueId {
-                value: value.into_v1()?,
-            },
+            Self::Other(value) => {
+                return Err(unknown_v2_enum_variant(
+                    "SessionConfigOptionValue",
+                    &value.type_,
+                ));
+            }
         })
     }
 }
@@ -4024,7 +4030,7 @@ impl IntoV2 for crate::v1::SessionConfigOptionValue {
             Self::Boolean { value } => super::SessionConfigOptionValue::Boolean {
                 value: value.into_v2()?,
             },
-            Self::ValueId { value } => super::SessionConfigOptionValue::ValueId {
+            Self::ValueId { value } => super::SessionConfigOptionValue::Id {
                 value: value.into_v2()?,
             },
         })

@@ -211,6 +211,7 @@ Clients can change a config option value by calling the `session/set_config_opti
   "params": {
     "sessionId": "sess_abc123def456",
     "configId": "mode",
+    "type": "id",
     "value": "code"
   }
 }
@@ -222,6 +223,11 @@ Clients can change a config option value by calling the `session/set_config_opti
 
 <ParamField path="configId" type="string" required>
   The `id` of the configuration option to change
+</ParamField>
+
+<ParamField path="type" type='"id" | "boolean"' required>
+  The shape of the value. Use `id` for `select` and other id-based options. Use
+  `boolean` for boolean options.
 </ParamField>
 
 <ParamField path="value" type="string | boolean" required>

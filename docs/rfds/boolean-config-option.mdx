@@ -96,7 +96,7 @@ In a `session/new` response (or any response containing `configOptions`):
 
 The `session/set_config_option` request carries a `type` discriminator alongside the `value`. The `type` field describes the _shape_ of the value, not the option kind.
 
-When `type` is absent the value is treated as a `SessionConfigValueId` string, preserving backwards compatibility with existing clients:
+For boolean options, Clients send `type: "boolean"` with a boolean value:
 
 ```json
 {
@@ -112,7 +112,7 @@ When `type` is absent the value is treated as a `SessionConfigValueId` string, p
 }
 ```
 
-For select options the `type` field can be omitted (defaults to `value_id`):
+For select and other id-based options, Clients send `type: "id"` with a `SessionConfigValueId` string:
 
 ```json
 {
@@ -122,6 +122,7 @@ For select options the `type` field can be omitted (defaults to `value_id`):
   "params": {
     "sessionId": "sess_abc123",
     "configId": "mode",
+    "type": "id",
     "value": "code"
   }
 }
@@ -159,13 +160,14 @@ Key changes:
 
 1. `SessionConfigBoolean` struct with `current_value: bool`
 2. `Boolean(SessionConfigBoolean)` variant in `SessionConfigKind` (tagged via `"type": "boolean"`)
-3. `SessionConfigOptionValue` enum using `#[serde(tag = "type")]` with a `#[serde(untagged)]` fallback variant — the same pattern as `AuthMethod`:
+3. `SessionConfigOptionValue` enum using `#[serde(tag = "type")]` with an untagged `OtherSessionConfigOptionValue` fallback for future value shapes:
+   - `Id { value: SessionConfigValueId }` — matched when `type` is `"id"`
    - `Boolean { value: bool }` — matched when `type` is `"boolean"`
-   - `ValueId { value: SessionConfigValueId }` — untagged fallback when `type` is absent or unrecognised
+   - `Other(OtherSessionConfigOptionValue)` — preserves unrecognized typed value payloads
 4. `SessionConfigOptionValue` is flattened (`#[serde(flatten)]`) onto `SetSessionConfigOptionRequest`, producing top-level `type` and `value` fields on the wire
 5. The `value` field type change in `SetSessionConfigOptionRequest` is gated behind `#[cfg(feature = "unstable_boolean_config")]` — without the feature the field remains `SessionConfigValueId`
 6. The v1 `ClientCapabilities.session.config_options.boolean` field path serializes as `session.configOptions.boolean`
-7. Existing JSON payloads without a `type` field remain valid via the untagged fallback
+7. v2 requires a `type` field so future value shapes can be captured without ambiguity
 
 ### Client capabilities
 
@@ -179,7 +181,7 @@ We considered reusing the existing `select` type with a convention (e.g., option
 
 ### Is this a breaking change?
 
-For v1 peers that do not advertise support, Agents must not send boolean config options, so the existing string-only config option behavior is preserved. When `type` is absent, `session/set_config_option.value` is still treated as a `SessionConfigValueId`, so existing select payloads deserialize correctly.
+For v1 peers that do not advertise support, Agents must not send boolean config options, so the existing string-only config option behavior is preserved. v2 requires a `type` field on `session/set_config_option` so id values, boolean values, and future value shapes are distinguishable.
 
 For peers that opt in with `session.configOptions.boolean: {}`, boolean options introduce a new `type: "boolean"` setter shape with a boolean `value`.
 

@@ -1488,6 +1488,25 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 **Variants:**
 
+<ResponseField name="id" type="object">
+A `SessionConfigValueId` string value (`type: "id"`).
+
+<Expandable title="Properties">
+
+<ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"id"`.
+</ResponseField>
+<ResponseField
+  name="value"
+  type={<a href="#sessionconfigvalueid">SessionConfigValueId</a>}
+  required
+>
+  The value ID.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 <ResponseField name="boolean" type="object">
 A boolean value (`type: "boolean"`).
 
@@ -1503,21 +1522,25 @@ A boolean value (`type: "boolean"`).
 </Expandable>
 </ResponseField>
 
-<ResponseField name="value_id" type="object">
-A `SessionConfigValueId` string value.
+<ResponseField name="other" type="object">
+Custom or future session configuration option value payload.
 
-This is the default when `type` is absent on the wire. Unknown `type`
-values with string payloads also gracefully deserialize into this
-variant.
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
 
 <Expandable title="Properties">
 
-<ResponseField
-  name="value"
-  type={<a href="#sessionconfigvalueid">SessionConfigValueId</a>}
-  required
->
-  The value ID.
+<ResponseField name="type" type={"string"} required>
+  Custom or future session configuration option value type.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+</ResponseField>
+<ResponseField name="value" type={"object"} required>
+  Raw value payload for the custom or future value type.
 </ResponseField>
 
 </Expandable>
