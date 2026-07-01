@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.18.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.17.0...schema-v1.18.0) - 2026-07-01
+
+### Added
+
+- *(unstable-v2)* Unify the ID naming conventions across the schema ([#1567](https://github.com/agentclientprotocol/agent-client-protocol/pull/1567))
+
+### Fixed
+
+- *(unstable-v2)* Continue to make more enums future compatible ([#1571](https://github.com/agentclientprotocol/agent-client-protocol/pull/1571))
+
+### Other
+
+- *(schema)* Clean up generated documentation and make wording more consistent ([#1568](https://github.com/agentclientprotocol/agent-client-protocol/pull/1568))
+
 ## [1.17.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.16.0...schema-v1.17.0) - 2026-06-29
 
 ### Added
