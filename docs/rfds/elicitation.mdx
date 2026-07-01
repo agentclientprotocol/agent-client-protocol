@@ -316,6 +316,8 @@ Multi-select enum (with titles):
 }
 ```
 
+Unknown multi-select `items.type` values are reserved for future ACP variants or implementation-specific extensions. Implementation-specific values MUST begin with `_`. Clients that do not understand a multi-select item type should preserve the raw `items` schema when storing, replaying, proxying, or forwarding elicitation requests, but MUST NOT render it as string multi-select items.
+
 **Request schema structure:**
 
 ```json

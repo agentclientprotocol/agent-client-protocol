@@ -7858,39 +7858,12 @@ impl IntoV2 for crate::v1::BooleanPropertySchema {
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV1 for super::ElicitationStringType {
-    type Output = crate::v1::ElicitationStringType;
+impl IntoV1 for super::StringMultiSelectItems {
+    type Output = crate::v1::StringMultiSelectItems;
 
     fn into_v1(self) -> Result<Self::Output> {
-        Ok(match self {
-            Self::String => crate::v1::ElicitationStringType::String,
-        })
-    }
-}
-
-#[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::ElicitationStringType {
-    type Output = super::ElicitationStringType;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        Ok(match self {
-            Self::String => super::ElicitationStringType::String,
-        })
-    }
-}
-
-#[cfg(feature = "unstable_elicitation")]
-impl IntoV1 for super::UntitledMultiSelectItems {
-    type Output = crate::v1::UntitledMultiSelectItems;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self {
-            type_,
-            values,
-            meta,
-        } = self;
-        Ok(crate::v1::UntitledMultiSelectItems {
-            type_: type_.into_v1()?,
+        let Self { values, meta } = self;
+        Ok(crate::v1::StringMultiSelectItems {
             values: values.into_v1()?,
             meta: meta.into_v1()?,
         })
@@ -7898,19 +7871,40 @@ impl IntoV1 for super::UntitledMultiSelectItems {
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::UntitledMultiSelectItems {
-    type Output = super::UntitledMultiSelectItems;
+impl IntoV2 for crate::v1::StringMultiSelectItems {
+    type Output = super::StringMultiSelectItems;
 
     fn into_v2(self) -> Result<Self::Output> {
-        let Self {
-            type_,
-            values,
-            meta,
-        } = self;
-        Ok(super::UntitledMultiSelectItems {
-            type_: type_.into_v2()?,
+        let Self { values, meta } = self;
+        Ok(super::StringMultiSelectItems {
             values: values.into_v2()?,
             meta: meta.into_v2()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_elicitation")]
+impl IntoV1 for super::OtherMultiSelectItems {
+    type Output = crate::v1::OtherMultiSelectItems;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        let Self { type_, fields } = self;
+        Ok(crate::v1::OtherMultiSelectItems {
+            type_: type_.into_v1()?,
+            fields: fields.into_v1()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_elicitation")]
+impl IntoV2 for crate::v1::OtherMultiSelectItems {
+    type Output = super::OtherMultiSelectItems;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        let Self { type_, fields } = self;
+        Ok(super::OtherMultiSelectItems {
+            type_: type_.into_v2()?,
+            fields: fields.into_v2()?,
         })
     }
 }
@@ -7947,7 +7941,8 @@ impl IntoV1 for super::MultiSelectItems {
 
     fn into_v1(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::Untitled(value) => crate::v1::MultiSelectItems::Untitled(value.into_v1()?),
+            Self::String(value) => crate::v1::MultiSelectItems::String(value.into_v1()?),
+            Self::Other(value) => crate::v1::MultiSelectItems::Other(value.into_v1()?),
             Self::Titled(value) => crate::v1::MultiSelectItems::Titled(value.into_v1()?),
         })
     }
@@ -7959,7 +7954,8 @@ impl IntoV2 for crate::v1::MultiSelectItems {
 
     fn into_v2(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::Untitled(value) => super::MultiSelectItems::Untitled(value.into_v2()?),
+            Self::String(value) => super::MultiSelectItems::String(value.into_v2()?),
+            Self::Other(value) => super::MultiSelectItems::Other(value.into_v2()?),
             Self::Titled(value) => super::MultiSelectItems::Titled(value.into_v2()?),
         })
     }
@@ -9740,6 +9736,37 @@ mod tests {
         );
 
         assert_v2_round_trip::<v2::ElicitationSchema, v1::ElicitationSchema>(v2_schema);
+    }
+
+    #[cfg(feature = "unstable_elicitation")]
+    #[test]
+    fn round_trips_multi_select_items_unknown_type() {
+        let v1_items = v1::MultiSelectItems::Other(v1::OtherMultiSelectItems::new(
+            "_token",
+            std::collections::BTreeMap::from([
+                ("format".to_string(), serde_json::json!("workspace")),
+                (
+                    "anyOf".to_string(),
+                    serde_json::json!([{ "const": "repo", "title": "Repository" }]),
+                ),
+            ]),
+        ));
+
+        assert_v1_round_trip::<v1::MultiSelectItems, v2::MultiSelectItems>(v1_items.clone());
+        assert_json_eq_after_v1_to_v2::<v1::MultiSelectItems, v2::MultiSelectItems>(v1_items);
+
+        let v2_items = v2::MultiSelectItems::Other(v2::OtherMultiSelectItems::new(
+            "_token",
+            std::collections::BTreeMap::from([
+                ("format".to_string(), serde_json::json!("workspace")),
+                (
+                    "anyOf".to_string(),
+                    serde_json::json!([{ "const": "repo", "title": "Repository" }]),
+                ),
+            ]),
+        ));
+
+        assert_v2_round_trip::<v2::MultiSelectItems, v1::MultiSelectItems>(v2_items);
     }
 
     #[cfg(feature = "unstable_elicitation")]

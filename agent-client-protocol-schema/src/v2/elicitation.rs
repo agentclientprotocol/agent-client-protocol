@@ -572,25 +572,12 @@ impl BooleanPropertySchema {
     }
 }
 
-/// Items definition for untitled multi-select enum properties.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema, Default)]
-#[serde(rename_all = "snake_case")]
-#[non_exhaustive]
-pub enum ElicitationStringType {
-    /// String schema type.
-    #[default]
-    String,
-}
-
-/// Items definition for untitled multi-select enum properties.
+/// String item schema for multi-select enum properties.
 #[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[non_exhaustive]
-pub struct UntitledMultiSelectItems {
-    /// Item type discriminator. Must be `"string"`.
-    #[serde(rename = "type")]
-    pub type_: ElicitationStringType,
+pub struct StringMultiSelectItems {
     /// Allowed enum values.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
     #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
@@ -608,7 +595,13 @@ pub struct UntitledMultiSelectItems {
     pub meta: Option<Meta>,
 }
 
-impl UntitledMultiSelectItems {
+impl StringMultiSelectItems {
+    /// Create new string multi-select items.
+    #[must_use]
+    pub fn new(values: Vec<String>) -> Self {
+        Self { values, meta: None }
+    }
+
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -666,14 +659,91 @@ impl TitledMultiSelectItems {
     }
 }
 
+/// Custom or future typed item schema for multi-select properties.
+///
+/// This preserves unknown item `type` values and the rest of the `items`
+/// payload for clients that store, replay, proxy, or forward elicitation
+/// requests.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonSchema)]
+#[schemars(inline)]
+#[schemars(transform = other_multi_select_items_schema)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct OtherMultiSelectItems {
+    /// Custom or future multi-select item type.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(rename = "type")]
+    pub type_: String,
+    /// Additional fields from the unknown item schema payload.
+    #[serde(flatten)]
+    pub fields: BTreeMap<String, serde_json::Value>,
+}
+
+impl OtherMultiSelectItems {
+    /// Builds [`OtherMultiSelectItems`] from an unknown discriminator and preserves the remaining extension fields.
+    #[must_use]
+    pub fn new(type_: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
+        fields.remove("type");
+        Self {
+            type_: type_.into(),
+            fields,
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for OtherMultiSelectItems {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let type_ = fields
+            .remove("type")
+            .ok_or_else(|| serde::de::Error::missing_field("type"))?;
+        let serde_json::Value::String(type_) = type_ else {
+            return Err(serde::de::Error::custom("`type` must be a string"));
+        };
+
+        if is_known_multi_select_item_type(&type_) {
+            return Err(serde::de::Error::custom(format!(
+                "known multi-select item type `{type_}` did not match its schema"
+            )));
+        }
+
+        Ok(Self { type_, fields })
+    }
+}
+
+const KNOWN_MULTI_SELECT_ITEM_TYPES: &[&str] = &["string"];
+
+fn is_known_multi_select_item_type(type_: &str) -> bool {
+    KNOWN_MULTI_SELECT_ITEM_TYPES.contains(&type_)
+}
+
+fn other_multi_select_items_schema(schema: &mut Schema) {
+    super::schema_util::reject_known_string_discriminators(
+        schema,
+        "type",
+        KNOWN_MULTI_SELECT_ITEM_TYPES,
+    );
+}
+
 /// Items for a multi-select (array) property schema.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(untagged)]
+#[serde(tag = "type", rename_all = "snake_case")]
+#[schemars(extend("discriminator" = {"propertyName": "type"}))]
 #[non_exhaustive]
 pub enum MultiSelectItems {
-    /// Untitled multi-select items with plain string values.
-    Untitled(UntitledMultiSelectItems),
+    /// Multi-select string items with plain string values.
+    String(StringMultiSelectItems),
+    /// Custom or future typed multi-select items.
+    #[serde(untagged)]
+    Other(OtherMultiSelectItems),
     /// Titled multi-select items with human-readable labels.
+    #[serde(untagged)]
     Titled(TitledMultiSelectItems),
 }
 
@@ -732,11 +802,7 @@ impl MultiSelectPropertySchema {
             description: None,
             min_items: None,
             max_items: None,
-            items: MultiSelectItems::Untitled(UntitledMultiSelectItems {
-                type_: ElicitationStringType::String,
-                values,
-                meta: None,
-            }),
+            items: MultiSelectItems::String(StringMultiSelectItems::new(values)),
             default: None,
             meta: None,
         }
@@ -2486,10 +2552,68 @@ mod tests {
         assert_eq!(json["properties"]["colors"]["maxItems"], 3);
 
         let roundtripped: ElicitationSchema = serde_json::from_value(json).unwrap();
-        assert!(matches!(
-            roundtripped.properties.get("colors").unwrap(),
-            ElicitationPropertySchema::Array(_)
-        ));
+        let ElicitationPropertySchema::Array(array) =
+            roundtripped.properties.get("colors").unwrap()
+        else {
+            panic!("expected Array variant");
+        };
+        let MultiSelectItems::String(items) = &array.items else {
+            panic!("expected String multi-select items");
+        };
+        assert_eq!(items.values.len(), 3);
+    }
+
+    #[test]
+    fn multi_select_titled_items_keep_mcp_shape() {
+        let items = MultiSelectItems::Titled(TitledMultiSelectItems::new(vec![EnumOption::new(
+            "#ff0000", "Red",
+        )]));
+
+        let json = serde_json::to_value(&items).unwrap();
+        assert!(json.get("type").is_none());
+        assert_eq!(json["anyOf"][0]["const"], "#ff0000");
+        assert_eq!(json["anyOf"][0]["title"], "Red");
+
+        let roundtripped: MultiSelectItems = serde_json::from_value(json).unwrap();
+        assert!(matches!(roundtripped, MultiSelectItems::Titled(_)));
+    }
+
+    #[test]
+    fn multi_select_items_preserve_unknown_type() {
+        let json = json!({
+            "type": "_token",
+            "format": "workspace",
+            "anyOf": [
+                { "const": "repo", "title": "Repository" }
+            ]
+        });
+
+        let items: MultiSelectItems = serde_json::from_value(json.clone()).unwrap();
+        let MultiSelectItems::Other(other) = &items else {
+            panic!("expected unknown multi-select items");
+        };
+
+        assert_eq!(other.type_, "_token");
+        assert_eq!(other.fields.get("format"), Some(&json!("workspace")));
+        assert_eq!(other.fields.get("anyOf"), Some(&json["anyOf"]));
+        assert_eq!(serde_json::to_value(&items).unwrap(), json);
+    }
+
+    #[test]
+    fn multi_select_items_unknown_does_not_hide_malformed_string_type() {
+        assert!(
+            serde_json::from_value::<MultiSelectItems>(json!({
+                "type": "string"
+            }))
+            .is_err()
+        );
+        assert!(
+            serde_json::from_value::<OtherMultiSelectItems>(json!({
+                "type": "string",
+                "format": "workspace"
+            }))
+            .is_err()
+        );
     }
 
     #[test]

@@ -4234,16 +4234,6 @@ during a tool call and needs to redirect it to the user.
   Optional tool call within the session.
 </ResponseField>
 
-## <span class="font-mono">ElicitationStringType</span>
-
-Items definition for untitled multi-select enum properties.
-
-**Type:** Union
-
-<ResponseField name="string" type="string">
-  String schema type.
-</ResponseField>
-
 ## <span class="font-mono">ElicitationUrlCapabilities</span>
 
 **UNSTABLE**
@@ -5111,8 +5101,8 @@ Items for a multi-select (array) property schema.
 
 **Type:** Union
 
-<ResponseField name="Untitled">
-Untitled multi-select items with plain string values.
+<ResponseField name="string" type="object">
+Multi-select string items with plain string values.
 
 <Expandable title="Properties">
 
@@ -5127,14 +5117,31 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 <ResponseField name="enum" type={<><span>"string"</span><span>[]</span></>} required>
   Allowed enum values.
 </ResponseField>
-<ResponseField name="type" type={<a href="#elicitationstringtype">ElicitationStringType</a>} required>
-  Item type discriminator. Must be `"string"`.
+<ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"string"`.
 </ResponseField>
 
 </Expandable>
 </ResponseField>
 
-<ResponseField name="Titled">
+<ResponseField name="other" type="object">
+Custom or future typed multi-select items.
+
+<Expandable title="Properties">
+
+<ResponseField name="type" type={"string"} required>
+  Custom or future multi-select item type.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="titled">
 Titled multi-select items with human-readable labels.
 
 <Expandable title="Properties">
@@ -8023,6 +8030,26 @@ String format types for string properties in elicitation schemas.
   Date-time format (ISO 8601).
 </ResponseField>
 
+## <span class="font-mono">StringMultiSelectItems</span>
+
+String item schema for multi-select enum properties.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="enum" type={<><span>"string"</span><span>[]</span></>} required>
+  Allowed enum values.
+</ResponseField>
+
 ## <span class="font-mono">StringPropertySchema</span>
 
 Schema for string properties in an elicitation form.
@@ -8558,29 +8585,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 </ResponseField>
 <ResponseField name="hint" type={"string"} required>
   A hint to display when the input hasn't been provided yet
-</ResponseField>
-
-## <span class="font-mono">UntitledMultiSelectItems</span>
-
-Items definition for untitled multi-select enum properties.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="enum" type={<><span>"string"</span><span>[]</span></>} required>
-  Allowed enum values.
-</ResponseField>
-<ResponseField name="type" type={<a href="#elicitationstringtype">ElicitationStringType</a>} required>
-  Item type discriminator. Must be `"string"`.
 </ResponseField>
 
 ## <span class="font-mono">Usage</span>
