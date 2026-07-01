@@ -71,7 +71,6 @@ On success, returns an empty result:
 
 ### Semantics
 
-- **Capability-gated**: Agents MUST NOT accept `session/delete` calls unless they advertised `sessionCapabilities.delete` at initialization.
 - **Removes from list**: The primary effect is that deleted sessions no longer appear in `session/list` results.
 - **Implementation-defined storage behavior**: Agents may implement soft delete (mark as hidden) or hard delete (remove data). The protocol does not prescribe which.
 - **Implementation-defined load behavior**: Agents may choose what happens when a client calls `session/load` on a deleted session—return the session anyway, return an error, or any other behavior. The protocol does not prescribe which.

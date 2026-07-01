@@ -82,7 +82,6 @@ On success, the Agent returns an empty result:
 
 ## Semantics
 
-- Agents **MUST NOT** accept `session/delete` calls unless they advertised `session.delete` during initialization.
 - Deleted sessions no longer appear in future `session/list` results.
 - Deleting an already-deleted session, or a session that never existed, **SHOULD** succeed silently.
 - Agents may implement soft delete or hard delete. ACP only specifies the user-facing session-list behavior.
