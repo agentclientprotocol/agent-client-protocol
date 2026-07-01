@@ -134,7 +134,7 @@ pub struct InitializeResponse {
     /// Authentication methods supported by the agent.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
     #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub auth_methods: Vec<AuthMethod>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -1804,7 +1804,7 @@ impl ListSessionsRequest {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ListSessionsResponse {
-    /// Array of session information objects
+    /// Array of session information objects.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
     #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     pub sessions: Vec<SessionInfo>,
@@ -2994,6 +2994,7 @@ pub struct McpServerHttp {
     /// HTTP headers to set when making requests to the MCP server.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
     #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub headers: Vec<HttpHeader>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -3135,10 +3136,12 @@ pub struct McpServerStdio {
     /// Command-line arguments to pass to the MCP server.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
     #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub args: Vec<String>,
     /// Environment variables to set when launching the MCP server.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
     #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub env: Vec<EnvVariable>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -5860,6 +5863,54 @@ mod test_serialization {
             }
             _ => panic!("Expected Stdio variant"),
         }
+    }
+
+    #[test]
+    fn test_mcp_server_empty_arrays_are_optional() {
+        let stdio = McpServer::Stdio(McpServerStdio::new("test-server", "/usr/bin/server"));
+        assert_eq!(
+            serde_json::to_value(&stdio).unwrap(),
+            json!({
+                "type": "stdio",
+                "name": "test-server",
+                "command": "/usr/bin/server"
+            })
+        );
+
+        let McpServer::Stdio(McpServerStdio { args, env, .. }) =
+            serde_json::from_value::<McpServer>(json!({
+                "type": "stdio",
+                "name": "test-server",
+                "command": "/usr/bin/server"
+            }))
+            .unwrap()
+        else {
+            panic!("Expected Stdio variant");
+        };
+        assert!(args.is_empty());
+        assert!(env.is_empty());
+
+        let http = McpServer::Http(McpServerHttp::new("http-server", "https://api.example.com"));
+        assert_eq!(
+            serde_json::to_value(&http).unwrap(),
+            json!({
+                "type": "http",
+                "name": "http-server",
+                "url": "https://api.example.com"
+            })
+        );
+
+        let McpServer::Http(McpServerHttp { headers, .. }) =
+            serde_json::from_value::<McpServer>(json!({
+                "type": "http",
+                "name": "http-server",
+                "url": "https://api.example.com"
+            }))
+            .unwrap()
+        else {
+            panic!("Expected Http variant");
+        };
+        assert!(headers.is_empty());
     }
 
     #[test]

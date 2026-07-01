@@ -427,12 +427,14 @@ When the Agent supports `session.mcp.stdio`, Clients can specify MCP servers con
   The absolute path to the MCP server executable
 </ParamField>
 
-<ParamField path="args" type="array" required>
-  Command-line arguments to pass to the server
+<ParamField path="args" type="array">
+  Command-line arguments to pass to the server. Omitted and empty values are
+  equivalent.
 </ParamField>
 
 <ParamField path="env" type="EnvVariable[]">
-  Environment variables to set when launching the server
+  Environment variables to set when launching the server. Omitted and empty
+  values are equivalent.
 
   <Expandable title="EnvVariable">
       <ParamField path="name" type="string">
@@ -477,8 +479,9 @@ When the Agent supports `session.mcp.http`, Clients can specify MCP servers conf
   The URL of the MCP server
 </ParamField>
 
-<ParamField path="headers" type="HttpHeader[]" required>
-  HTTP headers to include in requests to the server
+<ParamField path="headers" type="HttpHeader[]">
+  HTTP headers to include in requests to the server. Omitted and empty values are
+  equivalent.
 
   <Expandable title="HttpHeader">
       <ParamField path="name" type="string">

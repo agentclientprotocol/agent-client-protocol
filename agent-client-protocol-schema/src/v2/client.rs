@@ -1020,7 +1020,7 @@ impl MessageId {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct AvailableCommandsUpdate {
-    /// Commands the agent can execute
+    /// Commands the agent can execute.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
     #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     pub available_commands: Vec<AvailableCommand>,

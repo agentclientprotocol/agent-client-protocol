@@ -356,9 +356,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="authMethods" type={<a href="#authmethod">AuthMethod[]</a>} >
   Authentication methods supported by the agent.
-
-    - Default: `[]`
-
 </ResponseField>
 <ResponseField name="capabilities" type={<a href="#agentcapabilities">AgentCapabilities</a>} >
   Capabilities supported by the agent.
@@ -1155,7 +1152,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 to fetch the next page. If absent, there are no more results.
 </ResponseField>
 <ResponseField name="sessions" type={<a href="#sessioninfo">SessionInfo[]</a>} required>
-  Array of session information objects
+  Array of session information objects.
 </ResponseField>
 
 <a id="session-load"></a>
@@ -2753,7 +2750,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 </ResponseField>
 <ResponseField name="availableCommands" type={<a href="#availablecommand">AvailableCommand[]</a>} required>
-  Commands the agent can execute
+  Commands the agent can execute.
 </ResponseField>
 
 ## <span class="font-mono">BlobResourceContents</span>
@@ -4384,7 +4381,7 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
-<ResponseField name="headers" type={<a href="#httpheader">HttpHeader[]</a>} required>
+<ResponseField name="headers" type={<a href="#httpheader">HttpHeader[]</a>} >
   HTTP headers to set when making requests to the MCP server.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
@@ -4452,13 +4449,13 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
-<ResponseField name="args" type={<><span>"string"</span><span>[]</span></>} required>
+<ResponseField name="args" type={<><span>"string"</span><span>[]</span></>} >
   Command-line arguments to pass to the MCP server.
 </ResponseField>
 <ResponseField name="command" type={"string"} required>
   Absolute path to the MCP server executable.
 </ResponseField>
-<ResponseField name="env" type={<a href="#envvariable">EnvVariable[]</a>} required>
+<ResponseField name="env" type={<a href="#envvariable">EnvVariable[]</a>} >
   Environment variables to set when launching the MCP server.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
@@ -4560,7 +4557,7 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
-<ResponseField name="headers" type={<a href="#httpheader">HttpHeader[]</a>} required>
+<ResponseField name="headers" type={<a href="#httpheader">HttpHeader[]</a>} >
   HTTP headers to set when making requests to the MCP server.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
@@ -4586,13 +4583,13 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
-<ResponseField name="args" type={<><span>"string"</span><span>[]</span></>} required>
+<ResponseField name="args" type={<><span>"string"</span><span>[]</span></>} >
   Command-line arguments to pass to the MCP server.
 </ResponseField>
 <ResponseField name="command" type={"string"} required>
   Absolute path to the MCP server executable.
 </ResponseField>
-<ResponseField name="env" type={<a href="#envvariable">EnvVariable[]</a>} required>
+<ResponseField name="env" type={<a href="#envvariable">EnvVariable[]</a>} >
   Environment variables to set when launching the MCP server.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
@@ -7588,7 +7585,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 </ResponseField>
 <ResponseField name="availableCommands" type={<a href="#availablecommand">AvailableCommand[]</a>} required>
-  Commands the agent can execute
+  Commands the agent can execute.
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
   The discriminator value. Must be `"available_commands_update"`.

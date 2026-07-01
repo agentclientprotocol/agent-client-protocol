@@ -9582,15 +9582,12 @@ mod tests {
                     {
                         "type": "stdio",
                         "name": "local",
-                        "command": "/usr/bin/mcp",
-                        "args": [],
-                        "env": []
+                        "command": "/usr/bin/mcp"
                     },
                     {
                         "type": "http",
                         "name": "remote",
-                        "url": "https://example.com",
-                        "headers": []
+                        "url": "https://example.com"
                     }
                 ]
             })

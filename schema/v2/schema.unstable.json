@@ -2630,7 +2630,6 @@
           "items": {
             "$ref": "#/$defs/AuthMethod"
           },
-          "default": [],
           "x-deserialize-default-on-error": true,
           "x-deserialize-skip-invalid-items": true
         },
@@ -4390,7 +4389,7 @@
       "type": "object",
       "properties": {
         "sessions": {
-          "description": "Array of session information objects",
+          "description": "Array of session information objects.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/SessionInfo"
@@ -6434,7 +6433,7 @@
       "type": "object",
       "properties": {
         "availableCommands": {
-          "description": "Commands the agent can execute",
+          "description": "Commands the agent can execute.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/AvailableCommand"
@@ -7410,7 +7409,7 @@
           "additionalProperties": true
         }
       },
-      "required": ["name", "url", "headers"]
+      "required": ["name", "url"]
     },
     "McpServerAcp": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nACP transport configuration for MCP.\n\nThe MCP server is provided by an ACP component and communicates over the ACP channel\nusing `mcp/connect`, `mcp/message`, and `mcp/disconnect`.",
@@ -7474,7 +7473,7 @@
           "additionalProperties": true
         }
       },
-      "required": ["name", "command", "args", "env"]
+      "required": ["name", "command"]
     },
     "LoadSessionRequest": {
       "description": "Request parameters for loading an existing session.\n\nOnly available if the Agent supports the `session.load` capability.\n\nSee protocol docs: [Loading Sessions](https://agentclientprotocol.com/protocol/v2/draft/session-setup#loading-sessions)",
