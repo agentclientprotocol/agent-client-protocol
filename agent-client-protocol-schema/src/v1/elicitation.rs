@@ -8,7 +8,7 @@
 use std::{collections::BTreeMap, sync::Arc};
 
 use derive_more::{Display, From};
-use schemars::JsonSchema;
+use schemars::{JsonSchema, Schema};
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
@@ -827,6 +827,107 @@ pub enum ElicitationPropertySchema {
     Boolean(BooleanPropertySchema),
     /// Multi-select array property.
     Array(MultiSelectPropertySchema),
+    /// Custom or future elicitation property schema.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    ///
+    /// Clients that do not understand this property schema type should preserve
+    /// the raw schema when storing, replaying, proxying, or forwarding
+    /// elicitation requests. They MUST NOT render it as a known input control.
+    #[serde(untagged)]
+    Other(OtherElicitationPropertySchema),
+}
+
+/// Custom or future elicitation property schema payload.
+///
+/// This preserves the unknown `type` discriminator and the rest of the property
+/// schema object for clients that store, replay, proxy, or forward elicitation
+/// requests.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonSchema)]
+#[schemars(inline)]
+#[schemars(transform = other_elicitation_property_schema_schema)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct OtherElicitationPropertySchema {
+    /// Custom or future elicitation property schema type.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(rename = "type")]
+    pub type_: String,
+    /// Additional fields from the unknown property schema payload.
+    #[serde(flatten)]
+    pub fields: BTreeMap<String, serde_json::Value>,
+}
+
+impl OtherElicitationPropertySchema {
+    /// Builds [`OtherElicitationPropertySchema`] from an unknown discriminator and preserves the remaining extension fields.
+    #[must_use]
+    pub fn new(type_: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
+        fields.remove("type");
+        Self {
+            type_: type_.into(),
+            fields,
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for OtherElicitationPropertySchema {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let type_ = fields
+            .remove("type")
+            .ok_or_else(|| serde::de::Error::missing_field("type"))?;
+        let serde_json::Value::String(type_) = type_ else {
+            return Err(serde::de::Error::custom("`type` must be a string"));
+        };
+
+        if is_known_elicitation_property_schema_type(&type_) {
+            return Err(serde::de::Error::custom(format!(
+                "known elicitation property schema type `{type_}` did not match its schema"
+            )));
+        }
+
+        Ok(Self { type_, fields })
+    }
+}
+
+const KNOWN_ELICITATION_PROPERTY_SCHEMA_TYPES: &[&str] =
+    &["string", "number", "integer", "boolean", "array"];
+
+fn is_known_elicitation_property_schema_type(type_: &str) -> bool {
+    KNOWN_ELICITATION_PROPERTY_SCHEMA_TYPES.contains(&type_)
+}
+
+fn other_elicitation_property_schema_schema(schema: &mut Schema) {
+    let known_value_schemas: Vec<_> = KNOWN_ELICITATION_PROPERTY_SCHEMA_TYPES
+        .iter()
+        .map(|value| {
+            serde_json::json!({
+                "properties": {
+                    "type": {
+                        "const": value,
+                        "type": "string"
+                    }
+                },
+                "required": ["type"],
+                "type": "object"
+            })
+        })
+        .collect();
+
+    schema.insert(
+        "not".into(),
+        serde_json::json!({
+            "anyOf": known_value_schemas
+        }),
+    );
 }
 
 impl From<StringPropertySchema> for ElicitationPropertySchema {
@@ -2131,6 +2232,49 @@ mod tests {
             roundtripped.properties.get("colors").unwrap(),
             ElicitationPropertySchema::Array(_)
         ));
+    }
+
+    #[test]
+    fn property_schema_preserves_unknown_type() {
+        let schema: ElicitationSchema = serde_json::from_value(json!({
+            "type": "object",
+            "properties": {
+                "location": {
+                    "type": "_location",
+                    "title": "Location",
+                    "precision": "city"
+                }
+            }
+        }))
+        .unwrap();
+
+        let ElicitationPropertySchema::Other(unknown) = schema.properties.get("location").unwrap()
+        else {
+            panic!("expected unknown property schema");
+        };
+
+        assert_eq!(unknown.type_, "_location");
+        assert_eq!(unknown.fields.get("title"), Some(&json!("Location")));
+        assert_eq!(unknown.fields.get("precision"), Some(&json!("city")));
+        assert_eq!(
+            serde_json::to_value(ElicitationPropertySchema::Other(unknown.clone())).unwrap(),
+            json!({
+                "type": "_location",
+                "title": "Location",
+                "precision": "city"
+            })
+        );
+    }
+
+    #[test]
+    fn property_schema_unknown_does_not_hide_malformed_known_type() {
+        assert!(
+            serde_json::from_value::<ElicitationPropertySchema>(json!({
+                "type": "array"
+            }))
+            .is_err()
+        );
+        assert!(serde_json::from_value::<ElicitationPropertySchema>(json!({})).is_err());
     }
 
     #[test]

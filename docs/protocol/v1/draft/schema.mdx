@@ -4050,6 +4050,31 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 </Expandable>
 </ResponseField>
 
+<ResponseField name="other" type="object">
+Custom or future elicitation property schema.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+Clients that do not understand this property schema type should preserve
+the raw schema when storing, replaying, proxying, or forwarding
+elicitation requests. They MUST NOT render it as a known input control.
+
+<Expandable title="Properties">
+
+<ResponseField name="type" type={"string"} required>
+  Custom or future elicitation property schema type.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 ## <span class="font-mono">ElicitationRequestScope</span>
 
 **UNSTABLE**

@@ -8028,6 +8028,7 @@ impl IntoV1 for super::ElicitationPropertySchema {
             Self::Integer(value) => crate::v1::ElicitationPropertySchema::Integer(value.into_v1()?),
             Self::Boolean(value) => crate::v1::ElicitationPropertySchema::Boolean(value.into_v1()?),
             Self::Array(value) => crate::v1::ElicitationPropertySchema::Array(value.into_v1()?),
+            Self::Other(value) => crate::v1::ElicitationPropertySchema::Other(value.into_v1()?),
         })
     }
 }
@@ -8043,6 +8044,33 @@ impl IntoV2 for crate::v1::ElicitationPropertySchema {
             Self::Integer(value) => super::ElicitationPropertySchema::Integer(value.into_v2()?),
             Self::Boolean(value) => super::ElicitationPropertySchema::Boolean(value.into_v2()?),
             Self::Array(value) => super::ElicitationPropertySchema::Array(value.into_v2()?),
+            Self::Other(value) => super::ElicitationPropertySchema::Other(value.into_v2()?),
+        })
+    }
+}
+
+#[cfg(feature = "unstable_elicitation")]
+impl IntoV1 for super::OtherElicitationPropertySchema {
+    type Output = crate::v1::OtherElicitationPropertySchema;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        let Self { type_, fields } = self;
+        Ok(crate::v1::OtherElicitationPropertySchema {
+            type_: type_.into_v1()?,
+            fields: fields.into_v1()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_elicitation")]
+impl IntoV2 for crate::v1::OtherElicitationPropertySchema {
+    type Output = super::OtherElicitationPropertySchema;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        let Self { type_, fields } = self;
+        Ok(super::OtherElicitationPropertySchema {
+            type_: type_.into_v2()?,
+            fields: fields.into_v2()?,
         })
     }
 }
@@ -9613,6 +9641,39 @@ mod tests {
         let request = v1::PromptRequest::new("sess_1", prompt);
         assert_v1_round_trip::<v1::PromptRequest, v2::PromptRequest>(request.clone());
         assert_json_eq_after_v1_to_v2::<v1::PromptRequest, v2::PromptRequest>(request);
+    }
+
+    #[cfg(feature = "unstable_elicitation")]
+    #[test]
+    fn round_trips_elicitation_property_schema_unknown_type() {
+        let v1_schema = v1::ElicitationSchema::new().property(
+            "location",
+            v1::ElicitationPropertySchema::Other(v1::OtherElicitationPropertySchema::new(
+                "_location",
+                std::collections::BTreeMap::from([(
+                    "precision".to_string(),
+                    serde_json::json!("city"),
+                )]),
+            )),
+            false,
+        );
+
+        assert_v1_round_trip::<v1::ElicitationSchema, v2::ElicitationSchema>(v1_schema.clone());
+        assert_json_eq_after_v1_to_v2::<v1::ElicitationSchema, v2::ElicitationSchema>(v1_schema);
+
+        let v2_schema = v2::ElicitationSchema::new().property(
+            "location",
+            v2::ElicitationPropertySchema::Other(v2::OtherElicitationPropertySchema::new(
+                "_location",
+                std::collections::BTreeMap::from([(
+                    "precision".to_string(),
+                    serde_json::json!("city"),
+                )]),
+            )),
+            false,
+        );
+
+        assert_v2_round_trip::<v2::ElicitationSchema, v1::ElicitationSchema>(v2_schema);
     }
 
     #[test]
