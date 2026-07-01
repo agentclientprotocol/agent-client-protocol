@@ -62,6 +62,7 @@ Other RFDs will progress separately and are not dependent on breaking changes (s
   - Make stdio an explicit `session.mcp.stdio` capability so Agents that cannot launch local subprocesses can opt out.
   - Require MCP server configurations to include a `type` discriminator, including `type: "stdio"`, so unknown future transports can be preserved as extension/future variants.
   - Keep HTTP as the remote MCP server transport capability.
+- Unify ID naming and typing across the v2 schema. Protocol fields should use domain-specific ID names such as `messageId`, `toolCallId`, `planId`, `providerId`, and `serverId` rather than a generic `id` whenever the field identifies a protocol entity or references another resource.
 
 ### RFDs to be Written
 
@@ -108,6 +109,7 @@ With the needed breaking changes, as much as possible I am targeting having a co
 
 ## Revision history
 
+- 2026-06-30: Recorded the v2 ID unification principle: prefer domain-specific ID field names.
 - 2026-06-25: Recorded the v2 initialize information cleanup: required role-agnostic `info` in both params and results, replacing `clientInfo` and `agentInfo`.
 - 2026-06-25: Recorded the v2 authentication method cleanup: grouped `auth/login` and required `auth/logout` method names replace v1's top-level `authenticate` and capability-gated `logout`, with matching generated type names for login and logout auth requests and responses.
 - 2026-06-09: Added tool-call content chunks for streaming individual `ToolCallContent` items.
