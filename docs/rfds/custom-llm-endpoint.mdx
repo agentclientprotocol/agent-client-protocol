@@ -77,7 +77,7 @@ sequenceDiagram
 
 1. Client initializes and checks `agentCapabilities.providers`.
 2. Client calls `providers/list` to discover available providers, their current routing targets (or disabled state), supported protocol types, and whether they are required.
-3. Client calls `providers/set` to apply new (required) configuration for a specific provider id.
+3. Client calls `providers/set` to apply new (required) configuration for a specific provider ID.
 4. Client may call `providers/disable` when a non-required provider should be disabled.
 5. Client creates or loads sessions.
 
@@ -123,16 +123,18 @@ interface ProviderCurrentConfig {
   baseUrl: string;
 }
 
+type ProviderId = string;
+
 interface ProviderInfo {
   /** Provider identifier, for example "main" or "openai". */
-  id: string;
+  providerId: ProviderId;
 
   /** Supported protocol types for this provider. */
   supported: LlmProtocol[];
 
   /**
    * Whether this provider is mandatory and cannot be disabled via providers/disable.
-   * If true, clients must not call providers/disable for this id.
+   * If true, clients must not call providers/disable for this provider ID.
    */
   required: boolean;
 
@@ -166,12 +168,12 @@ interface ProvidersListResponse {
 
 ### `providers/set`
 
-`providers/set` updates the full configuration for one provider id.
+`providers/set` updates the full configuration for one provider ID.
 
 ```typescript
 interface SetProviderRequest {
-  /** Provider id to configure. */
-  id: string;
+  /** Provider ID to configure. */
+  providerId: ProviderId;
 
   /** Protocol type for this provider. */
   apiType: LlmProtocol;
@@ -200,8 +202,8 @@ interface SetProviderResponse {
 
 ```typescript
 interface DisableProviderRequest {
-  /** Provider id to disable. */
-  id: string;
+  /** Provider ID to disable. */
+  providerId: ProviderId;
 
   /** Extension metadata */
   _meta?: Record<string, unknown>;
@@ -255,7 +257,7 @@ interface DisableProviderResponse {
   "result": {
     "providers": [
       {
-        "id": "main",
+        "providerId": "main",
         "supported": ["bedrock", "vertex", "azure", "anthropic"],
         "required": true,
         "current": {
@@ -264,7 +266,7 @@ interface DisableProviderResponse {
         }
       },
       {
-        "id": "openai",
+        "providerId": "openai",
         "supported": ["openai"],
         "required": false,
         "current": null
@@ -282,7 +284,7 @@ interface DisableProviderResponse {
   "id": 2,
   "method": "providers/set",
   "params": {
-    "id": "main",
+    "providerId": "main",
     "apiType": "anthropic",
     "baseUrl": "https://llm-gateway.corp.example.com/anthropic/v1",
     "headers": {
@@ -310,7 +312,7 @@ interface DisableProviderResponse {
   "id": 3,
   "method": "providers/disable",
   "params": {
-    "id": "openai"
+    "providerId": "openai"
   }
 }
 ```

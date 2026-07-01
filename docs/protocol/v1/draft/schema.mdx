@@ -491,7 +491,7 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
 
 </ResponseField>
-<ResponseField name="id" type={"string"} required>
+<ResponseField name="id" type={<a href="#nessuggestionid">NesSuggestionId</a>} required>
   The ID of the accepted suggestion.
 </ResponseField>
 <ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
@@ -573,7 +573,7 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
 
 </ResponseField>
-<ResponseField name="id" type={"string"} required>
+<ResponseField name="id" type={<a href="#nessuggestionid">NesSuggestionId</a>} required>
   The ID of the rejected suggestion.
 </ResponseField>
 <ResponseField name="reason" type={<><span><a href="#nesrejectreason">NesRejectReason</a></span><span> | null</span></>} >
@@ -734,8 +734,8 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
 
 </ResponseField>
-<ResponseField name="id" type={"string"} required>
-  Provider id to disable.
+<ResponseField name="providerId" type={<a href="#providerid">ProviderId</a>} required>
+  Provider ID to disable.
 </ResponseField>
 
 #### <span class="font-mono">DisableProviderResponse</span>
@@ -830,7 +830,7 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 Request parameters for `providers/set`.
 
-Replaces the full configuration for one provider id.
+Replaces the full configuration for one provider ID.
 
 **Type:** Object
 
@@ -854,8 +854,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
   Full headers map for this provider.
 May include authorization, routing, or other integration-specific headers.
 </ResponseField>
-<ResponseField name="id" type={"string"} required>
-  Provider id to configure.
+<ResponseField name="providerId" type={<a href="#providerid">ProviderId</a>} required>
+  Provider ID to configure.
 </ResponseField>
 
 #### <span class="font-mono">SetProviderResponse</span>
@@ -5434,7 +5434,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 <ResponseField name="edits" type={<a href="#nestextedit">NesTextEdit[]</a>} required>
   The text edits to apply.
 </ResponseField>
-<ResponseField name="id" type={"string"} required>
+<ResponseField name="id" type={<a href="#nessuggestionid">NesSuggestionId</a>} required>
   Unique identifier for accept/reject tracking.
 </ResponseField>
 <ResponseField name="uri" type={"string"} required>
@@ -5526,7 +5526,7 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
 
 </ResponseField>
-<ResponseField name="id" type={"string"} required>
+<ResponseField name="id" type={<a href="#nessuggestionid">NesSuggestionId</a>} required>
   Unique identifier for accept/reject tracking.
 </ResponseField>
 <ResponseField name="position" type={<a href="#position">Position</a>} required>
@@ -5729,7 +5729,7 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
 
 </ResponseField>
-<ResponseField name="id" type={"string"} required>
+<ResponseField name="id" type={<a href="#nessuggestionid">NesSuggestionId</a>} required>
   Unique identifier for accept/reject tracking.
 </ResponseField>
 <ResponseField name="newName" type={"string"} required>
@@ -5801,7 +5801,7 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
 
 </ResponseField>
-<ResponseField name="id" type={"string"} required>
+<ResponseField name="id" type={<a href="#nessuggestionid">NesSuggestionId</a>} required>
   Unique identifier for accept/reject tracking.
 </ResponseField>
 <ResponseField name="isRegex" type={"boolean | null"} >
@@ -5877,7 +5877,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 <ResponseField name="edits" type={<a href="#nestextedit">NesTextEdit[]</a>} required>
   The text edits to apply.
 </ResponseField>
-<ResponseField name="id" type={"string"} required>
+<ResponseField name="id" type={<a href="#nessuggestionid">NesSuggestionId</a>} required>
   Unique identifier for accept/reject tracking.
 </ResponseField>
 <ResponseField name="kind" type={"string"} required>
@@ -5903,7 +5903,7 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
 
 </ResponseField>
-<ResponseField name="id" type={"string"} required>
+<ResponseField name="id" type={<a href="#nessuggestionid">NesSuggestionId</a>} required>
   Unique identifier for accept/reject tracking.
 </ResponseField>
 <ResponseField name="kind" type={"string"} required>
@@ -5932,7 +5932,7 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
 
 </ResponseField>
-<ResponseField name="id" type={"string"} required>
+<ResponseField name="id" type={<a href="#nessuggestionid">NesSuggestionId</a>} required>
   Unique identifier for accept/reject tracking.
 </ResponseField>
 <ResponseField name="kind" type={"string"} required>
@@ -5964,7 +5964,7 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
 
 </ResponseField>
-<ResponseField name="id" type={"string"} required>
+<ResponseField name="id" type={<a href="#nessuggestionid">NesSuggestionId</a>} required>
   Unique identifier for accept/reject tracking.
 </ResponseField>
 <ResponseField name="isRegex" type={"boolean | null"} >
@@ -5985,6 +5985,12 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </Expandable>
 </ResponseField>
+
+## <span class="font-mono">NesSuggestionId</span>
+
+Unique identifier for a next edit suggestion.
+
+**Type:** `string`
 
 ## <span class="font-mono">NesTextEdit</span>
 
@@ -6315,7 +6321,7 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
 
 </ResponseField>
-<ResponseField name="id" type={<a href="#planid">PlanId</a>} required>
+<ResponseField name="planId" type={<a href="#planid">PlanId</a>} required>
   The plan ID to update.
 </ResponseField>
 <ResponseField name="uri" type={"string"} required>
@@ -6359,7 +6365,7 @@ When updating an item-based plan, the agent must send a complete list of all ent
 with their current status. The client replaces that plan with each update.
 
 </ResponseField>
-<ResponseField name="id" type={<a href="#planid">PlanId</a>} required>
+<ResponseField name="planId" type={<a href="#planid">PlanId</a>} required>
   The plan ID to update.
 </ResponseField>
 
@@ -6386,7 +6392,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 <ResponseField name="content" type={"string"} required>
   Markdown content for the plan.
 </ResponseField>
-<ResponseField name="id" type={<a href="#planid">PlanId</a>} required>
+<ResponseField name="planId" type={<a href="#planid">PlanId</a>} required>
   The plan ID to update.
 </ResponseField>
 
@@ -6410,7 +6416,7 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
 
 </ResponseField>
-<ResponseField name="id" type={<a href="#planid">PlanId</a>} required>
+<ResponseField name="planId" type={<a href="#planid">PlanId</a>} required>
   The plan ID to remove.
 </ResponseField>
 
@@ -6468,7 +6474,7 @@ When updating an item-based plan, the agent must send a complete list of all ent
 with their current status. The client replaces that plan with each update.
 
 </ResponseField>
-<ResponseField name="id" type={<a href="#planid">PlanId</a>} required>
+<ResponseField name="planId" type={<a href="#planid">PlanId</a>} required>
   The plan ID to update.
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
@@ -6491,7 +6497,7 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
 
 </ResponseField>
-<ResponseField name="id" type={<a href="#planid">PlanId</a>} required>
+<ResponseField name="planId" type={<a href="#planid">PlanId</a>} required>
   The plan ID to update.
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
@@ -6520,7 +6526,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 <ResponseField name="content" type={"string"} required>
   Markdown content for the plan.
 </ResponseField>
-<ResponseField name="id" type={<a href="#planid">PlanId</a>} required>
+<ResponseField name="planId" type={<a href="#planid">PlanId</a>} required>
   The plan ID to update.
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
@@ -6671,6 +6677,16 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
   Base URL currently used by this provider.
 </ResponseField>
 
+## <span class="font-mono">ProviderId</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Unique identifier for a configurable LLM provider.
+
+**Type:** `string`
+
 ## <span class="font-mono">ProviderInfo</span>
 
 **UNSTABLE**
@@ -6695,12 +6711,12 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
   Current effective non-secret routing config.
 Null or omitted means provider is disabled.
 </ResponseField>
-<ResponseField name="id" type={"string"} required>
+<ResponseField name="providerId" type={<a href="#providerid">ProviderId</a>} required>
   Provider identifier, for example "main" or "openai".
 </ResponseField>
 <ResponseField name="required" type={"boolean"} required>
   Whether this provider is mandatory and cannot be disabled via `providers/disable`.
-If true, clients must not call `providers/disable` for this id.
+If true, clients must not call `providers/disable` for this provider ID.
 </ResponseField>
 <ResponseField name="supported" type={<a href="#llmprotocol">LlmProtocol[]</a>} required>
   Supported protocol types for this provider.
@@ -7731,7 +7747,7 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
 
 </ResponseField>
-<ResponseField name="id" type={<a href="#planid">PlanId</a>} required>
+<ResponseField name="planId" type={<a href="#planid">PlanId</a>} required>
   The plan ID to remove.
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>

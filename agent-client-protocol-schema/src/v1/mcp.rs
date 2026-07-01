@@ -60,9 +60,9 @@ pub struct ConnectMcpRequest {
 impl ConnectMcpRequest {
     /// Builds [`ConnectMcpRequest`] with the required request fields set; optional fields start unset or empty.
     #[must_use]
-    pub fn new(acp_id: impl Into<McpServerAcpId>) -> Self {
+    pub fn new(server_id: impl Into<McpServerAcpId>) -> Self {
         Self {
-            server_id: acp_id.into(),
+            server_id: server_id.into(),
             meta: None,
         }
     }

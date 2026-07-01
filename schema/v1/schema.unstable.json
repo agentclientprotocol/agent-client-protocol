@@ -3530,9 +3530,13 @@
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nInformation about a configurable LLM provider.",
       "type": "object",
       "properties": {
-        "id": {
+        "providerId": {
           "description": "Provider identifier, for example \"main\" or \"openai\".",
-          "type": "string"
+          "allOf": [
+            {
+              "$ref": "#/$defs/ProviderId"
+            }
+          ]
         },
         "supported": {
           "description": "Supported protocol types for this provider.",
@@ -3544,7 +3548,7 @@
           "x-deserialize-skip-invalid-items": true
         },
         "required": {
-          "description": "Whether this provider is mandatory and cannot be disabled via `providers/disable`.\nIf true, clients must not call `providers/disable` for this id.",
+          "description": "Whether this provider is mandatory and cannot be disabled via `providers/disable`.\nIf true, clients must not call `providers/disable` for this provider ID.",
           "type": "boolean"
         },
         "current": {
@@ -3566,7 +3570,11 @@
           "additionalProperties": true
         }
       },
-      "required": ["id", "supported", "required"]
+      "required": ["providerId", "supported", "required"]
+    },
+    "ProviderId": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nUnique identifier for a configurable LLM provider.",
+      "type": "string"
     },
     "LlmProtocol": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nWell-known API protocol identifiers for LLM providers.\n\nAgents and clients MUST handle unknown protocol identifiers gracefully.\n\nProtocol names beginning with `_` are free for custom use, like other ACP extension methods.\nProtocol names that do not begin with `_` are reserved for the ACP spec.",
@@ -4507,6 +4515,10 @@
         "propertyName": "kind"
       }
     },
+    "NesSuggestionId": {
+      "description": "Unique identifier for a next edit suggestion.",
+      "type": "string"
+    },
     "NesTextEdit": {
       "description": "A text edit within a suggestion.",
       "type": "object",
@@ -4592,7 +4604,11 @@
       "properties": {
         "id": {
           "description": "Unique identifier for accept/reject tracking.",
-          "type": "string"
+          "allOf": [
+            {
+              "$ref": "#/$defs/NesSuggestionId"
+            }
+          ]
         },
         "uri": {
           "description": "The URI of the file to edit.",
@@ -4634,7 +4650,11 @@
       "properties": {
         "id": {
           "description": "Unique identifier for accept/reject tracking.",
-          "type": "string"
+          "allOf": [
+            {
+              "$ref": "#/$defs/NesSuggestionId"
+            }
+          ]
         },
         "uri": {
           "description": "The file to navigate to.",
@@ -4663,7 +4683,11 @@
       "properties": {
         "id": {
           "description": "Unique identifier for accept/reject tracking.",
-          "type": "string"
+          "allOf": [
+            {
+              "$ref": "#/$defs/NesSuggestionId"
+            }
+          ]
         },
         "uri": {
           "description": "The file URI containing the symbol.",
@@ -4696,7 +4720,11 @@
       "properties": {
         "id": {
           "description": "Unique identifier for accept/reject tracking.",
-          "type": "string"
+          "allOf": [
+            {
+              "$ref": "#/$defs/NesSuggestionId"
+            }
+          ]
         },
         "uri": {
           "description": "The file URI to search within.",
@@ -5416,7 +5444,7 @@
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA plan represented as structured entries.",
       "type": "object",
       "properties": {
-        "id": {
+        "planId": {
           "description": "The plan ID to update.",
           "allOf": [
             {
@@ -5440,13 +5468,13 @@
           "additionalProperties": true
         }
       },
-      "required": ["id", "entries"]
+      "required": ["planId", "entries"]
     },
     "PlanFile": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA plan represented by a file URI.",
       "type": "object",
       "properties": {
-        "id": {
+        "planId": {
           "description": "The plan ID to update.",
           "allOf": [
             {
@@ -5465,13 +5493,13 @@
           "additionalProperties": true
         }
       },
-      "required": ["id", "uri"]
+      "required": ["planId", "uri"]
     },
     "PlanMarkdown": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA plan represented as raw markdown content.",
       "type": "object",
       "properties": {
-        "id": {
+        "planId": {
           "description": "The plan ID to update.",
           "allOf": [
             {
@@ -5490,7 +5518,7 @@
           "additionalProperties": true
         }
       },
-      "required": ["id", "content"]
+      "required": ["planId", "content"]
     },
     "PlanUpdate": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA content update for a plan identified by ID.",
@@ -5517,7 +5545,7 @@
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRemoval notice for a plan identified by ID.",
       "type": "object",
       "properties": {
-        "id": {
+        "planId": {
           "description": "The plan ID to remove.",
           "allOf": [
             {
@@ -5532,7 +5560,7 @@
           "additionalProperties": true
         }
       },
-      "required": ["id"]
+      "required": ["planId"]
     },
     "AvailableCommand": {
       "description": "Information about a command.",
@@ -6475,12 +6503,16 @@
       "x-method": "providers/list"
     },
     "SetProviderRequest": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for `providers/set`.\n\nReplaces the full configuration for one provider id.",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for `providers/set`.\n\nReplaces the full configuration for one provider ID.",
       "type": "object",
       "properties": {
-        "id": {
-          "description": "Provider id to configure.",
-          "type": "string"
+        "providerId": {
+          "description": "Provider ID to configure.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/ProviderId"
+            }
+          ]
         },
         "apiType": {
           "description": "Protocol type for this provider.",
@@ -6509,7 +6541,7 @@
           "additionalProperties": true
         }
       },
-      "required": ["id", "apiType", "baseUrl"],
+      "required": ["providerId", "apiType", "baseUrl"],
       "x-side": "agent",
       "x-method": "providers/set"
     },
@@ -6517,9 +6549,13 @@
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for `providers/disable`.",
       "type": "object",
       "properties": {
-        "id": {
-          "description": "Provider id to disable.",
-          "type": "string"
+        "providerId": {
+          "description": "Provider ID to disable.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/ProviderId"
+            }
+          ]
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -6528,7 +6564,7 @@
           "additionalProperties": true
         }
       },
-      "required": ["id"],
+      "required": ["providerId"],
       "x-side": "agent",
       "x-method": "providers/disable"
     },
@@ -8550,7 +8586,11 @@
         },
         "id": {
           "description": "The ID of the accepted suggestion.",
-          "type": "string"
+          "allOf": [
+            {
+              "$ref": "#/$defs/NesSuggestionId"
+            }
+          ]
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -8577,7 +8617,11 @@
         },
         "id": {
           "description": "The ID of the rejected suggestion.",
-          "type": "string"
+          "allOf": [
+            {
+              "$ref": "#/$defs/NesSuggestionId"
+            }
+          ]
         },
         "reason": {
           "description": "The reason for rejection.",

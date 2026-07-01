@@ -4,6 +4,9 @@
 //! document events, and a suggestion request/response flow. NES sessions are
 //! independent of chat sessions and have their own lifecycle.
 
+use std::sync::Arc;
+
+use derive_more::{Display, From};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
@@ -34,6 +37,21 @@ pub(crate) const DOCUMENT_DID_CLOSE_METHOD_NAME: &str = "document/didClose";
 pub(crate) const DOCUMENT_DID_SAVE_METHOD_NAME: &str = "document/didSave";
 /// Notification name for document focus events.
 pub(crate) const DOCUMENT_DID_FOCUS_METHOD_NAME: &str = "document/didFocus";
+
+/// Unique identifier for a next edit suggestion.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
+#[serde(transparent)]
+#[from(Arc<str>, String, &'static str)]
+#[non_exhaustive]
+pub struct NesSuggestionId(pub Arc<str>);
+
+impl NesSuggestionId {
+    /// Wraps a protocol string as a typed [`NesSuggestionId`].
+    #[must_use]
+    pub fn new(id: impl Into<Arc<str>>) -> Self {
+        Self(id.into())
+    }
+}
 
 // Position primitives
 
@@ -2345,7 +2363,7 @@ pub enum NesSuggestion {
 #[non_exhaustive]
 pub struct NesEditSuggestion {
     /// Unique identifier for accept/reject tracking.
-    pub id: String,
+    pub id: NesSuggestionId,
     /// The URI of the file to edit.
     pub uri: String,
     /// The text edits to apply.
@@ -2372,7 +2390,11 @@ pub struct NesEditSuggestion {
 impl NesEditSuggestion {
     /// Builds [`NesEditSuggestion`] with the required fields set; optional fields start unset or empty.
     #[must_use]
-    pub fn new(id: impl Into<String>, uri: impl Into<String>, edits: Vec<NesTextEdit>) -> Self {
+    pub fn new(
+        id: impl Into<NesSuggestionId>,
+        uri: impl Into<String>,
+        edits: Vec<NesTextEdit>,
+    ) -> Self {
         Self {
             id: id.into(),
             uri: uri.into(),
@@ -2455,7 +2477,7 @@ impl NesTextEdit {
 #[non_exhaustive]
 pub struct NesJumpSuggestion {
     /// Unique identifier for accept/reject tracking.
-    pub id: String,
+    pub id: NesSuggestionId,
     /// The file to navigate to.
     pub uri: String,
     /// The target position within the file.
@@ -2475,7 +2497,7 @@ pub struct NesJumpSuggestion {
 impl NesJumpSuggestion {
     /// Builds [`NesJumpSuggestion`] with the required fields set; optional fields start unset or empty.
     #[must_use]
-    pub fn new(id: impl Into<String>, uri: impl Into<String>, position: Position) -> Self {
+    pub fn new(id: impl Into<NesSuggestionId>, uri: impl Into<String>, position: Position) -> Self {
         Self {
             id: id.into(),
             uri: uri.into(),
@@ -2504,7 +2526,7 @@ impl NesJumpSuggestion {
 #[non_exhaustive]
 pub struct NesRenameSuggestion {
     /// Unique identifier for accept/reject tracking.
-    pub id: String,
+    pub id: NesSuggestionId,
     /// The file URI containing the symbol.
     pub uri: String,
     /// The position of the symbol to rename.
@@ -2527,7 +2549,7 @@ impl NesRenameSuggestion {
     /// Builds [`NesRenameSuggestion`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(
-        id: impl Into<String>,
+        id: impl Into<NesSuggestionId>,
         uri: impl Into<String>,
         position: Position,
         new_name: impl Into<String>,
@@ -2561,7 +2583,7 @@ impl NesRenameSuggestion {
 #[non_exhaustive]
 pub struct NesSearchAndReplaceSuggestion {
     /// Unique identifier for accept/reject tracking.
-    pub id: String,
+    pub id: NesSuggestionId,
     /// The file URI to search within.
     pub uri: String,
     /// The text or pattern to find.
@@ -2589,7 +2611,7 @@ impl NesSearchAndReplaceSuggestion {
     /// Builds [`NesSearchAndReplaceSuggestion`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(
-        id: impl Into<String>,
+        id: impl Into<NesSuggestionId>,
         uri: impl Into<String>,
         search: impl Into<String>,
         replace: impl Into<String>,
@@ -2636,7 +2658,7 @@ pub struct AcceptNesNotification {
     /// The session ID for this notification.
     pub session_id: SessionId,
     /// The ID of the accepted suggestion.
-    pub id: String,
+    pub id: NesSuggestionId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -2652,7 +2674,7 @@ pub struct AcceptNesNotification {
 impl AcceptNesNotification {
     /// Builds [`AcceptNesNotification`] with the required notification fields set; optional fields start unset or empty.
     #[must_use]
-    pub fn new(session_id: impl Into<SessionId>, id: impl Into<String>) -> Self {
+    pub fn new(session_id: impl Into<SessionId>, id: impl Into<NesSuggestionId>) -> Self {
         Self {
             session_id: session_id.into(),
             id: id.into(),
@@ -2683,7 +2705,7 @@ pub struct RejectNesNotification {
     /// The session ID for this notification.
     pub session_id: SessionId,
     /// The ID of the rejected suggestion.
-    pub id: String,
+    pub id: NesSuggestionId,
     /// The reason for rejection.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
@@ -2704,7 +2726,7 @@ pub struct RejectNesNotification {
 impl RejectNesNotification {
     /// Builds [`RejectNesNotification`] with the required notification fields set; optional fields start unset or empty.
     #[must_use]
-    pub fn new(session_id: impl Into<SessionId>, id: impl Into<String>) -> Self {
+    pub fn new(session_id: impl Into<SessionId>, id: impl Into<NesSuggestionId>) -> Self {
         Self {
             session_id: session_id.into(),
             id: id.into(),

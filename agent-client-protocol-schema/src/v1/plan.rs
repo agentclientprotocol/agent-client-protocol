@@ -162,20 +162,20 @@ pub enum PlanUpdateContent {
 impl PlanUpdateContent {
     /// Builds a plan update that replaces the itemized entries for a plan.
     #[must_use]
-    pub fn items(id: impl Into<PlanId>, entries: Vec<PlanEntry>) -> Self {
-        Self::Items(PlanItems::new(id, entries))
+    pub fn items(plan_id: impl Into<PlanId>, entries: Vec<PlanEntry>) -> Self {
+        Self::Items(PlanItems::new(plan_id, entries))
     }
 
     /// Builds a plan update that points clients at an external plan file URI.
     #[must_use]
-    pub fn file(id: impl Into<PlanId>, uri: impl Into<String>) -> Self {
-        Self::File(PlanFile::new(id, uri))
+    pub fn file(plan_id: impl Into<PlanId>, uri: impl Into<String>) -> Self {
+        Self::File(PlanFile::new(plan_id, uri))
     }
 
     /// Builds a plan update whose plan content is inline Markdown.
     #[must_use]
-    pub fn markdown(id: impl Into<PlanId>, content: impl Into<String>) -> Self {
-        Self::Markdown(PlanMarkdown::new(id, content))
+    pub fn markdown(plan_id: impl Into<PlanId>, content: impl Into<String>) -> Self {
+        Self::Markdown(PlanMarkdown::new(plan_id, content))
     }
 }
 
@@ -192,7 +192,7 @@ impl PlanUpdateContent {
 #[non_exhaustive]
 pub struct PlanItems {
     /// The plan ID to update.
-    pub id: PlanId,
+    pub plan_id: PlanId,
     /// The list of tasks to be accomplished.
     ///
     /// When updating an item-based plan, the agent must send a complete list of all entries
@@ -216,9 +216,9 @@ pub struct PlanItems {
 impl PlanItems {
     /// Builds [`PlanItems`] with the required fields set; optional fields start unset or empty.
     #[must_use]
-    pub fn new(id: impl Into<PlanId>, entries: Vec<PlanEntry>) -> Self {
+    pub fn new(plan_id: impl Into<PlanId>, entries: Vec<PlanEntry>) -> Self {
         Self {
-            id: id.into(),
+            plan_id: plan_id.into(),
             entries,
             meta: None,
         }
@@ -249,7 +249,7 @@ impl PlanItems {
 #[non_exhaustive]
 pub struct PlanFile {
     /// The plan ID to update.
-    pub id: PlanId,
+    pub plan_id: PlanId,
     /// The URI of the file containing the plan.
     pub uri: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -268,9 +268,9 @@ pub struct PlanFile {
 impl PlanFile {
     /// Builds [`PlanFile`] with the required fields set; optional fields start unset or empty.
     #[must_use]
-    pub fn new(id: impl Into<PlanId>, uri: impl Into<String>) -> Self {
+    pub fn new(plan_id: impl Into<PlanId>, uri: impl Into<String>) -> Self {
         Self {
-            id: id.into(),
+            plan_id: plan_id.into(),
             uri: uri.into(),
             meta: None,
         }
@@ -301,7 +301,7 @@ impl PlanFile {
 #[non_exhaustive]
 pub struct PlanMarkdown {
     /// The plan ID to update.
-    pub id: PlanId,
+    pub plan_id: PlanId,
     /// Markdown content for the plan.
     pub content: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -320,9 +320,9 @@ pub struct PlanMarkdown {
 impl PlanMarkdown {
     /// Builds [`PlanMarkdown`] with the required fields set; optional fields start unset or empty.
     #[must_use]
-    pub fn new(id: impl Into<PlanId>, content: impl Into<String>) -> Self {
+    pub fn new(plan_id: impl Into<PlanId>, content: impl Into<String>) -> Self {
         Self {
-            id: id.into(),
+            plan_id: plan_id.into(),
             content: content.into(),
             meta: None,
         }
@@ -353,7 +353,7 @@ impl PlanMarkdown {
 #[non_exhaustive]
 pub struct PlanRemoved {
     /// The plan ID to remove.
-    pub id: PlanId,
+    pub plan_id: PlanId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -370,9 +370,9 @@ pub struct PlanRemoved {
 impl PlanRemoved {
     /// Builds [`PlanRemoved`] with the required fields set; optional fields start unset or empty.
     #[must_use]
-    pub fn new(id: impl Into<PlanId>) -> Self {
+    pub fn new(plan_id: impl Into<PlanId>) -> Self {
         Self {
-            id: id.into(),
+            plan_id: plan_id.into(),
             meta: None,
         }
     }

@@ -3595,6 +3595,27 @@ impl ProviderCurrentConfig {
 ///
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
+/// Unique identifier for a configurable LLM provider.
+#[cfg(feature = "unstable_llm_providers")]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
+#[serde(transparent)]
+#[from(Arc<str>, String, &'static str)]
+#[non_exhaustive]
+pub struct ProviderId(pub Arc<str>);
+
+#[cfg(feature = "unstable_llm_providers")]
+impl ProviderId {
+    /// Wraps a protocol string as a typed [`ProviderId`].
+    #[must_use]
+    pub fn new(id: impl Into<Arc<str>>) -> Self {
+        Self(id.into())
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
 /// Information about a configurable LLM provider.
 #[cfg(feature = "unstable_llm_providers")]
 #[serde_as]
@@ -3604,13 +3625,13 @@ impl ProviderCurrentConfig {
 #[non_exhaustive]
 pub struct ProviderInfo {
     /// Provider identifier, for example "main" or "openai".
-    pub id: String,
+    pub provider_id: ProviderId,
     /// Supported protocol types for this provider.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
     #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     pub supported: Vec<LlmProtocol>,
     /// Whether this provider is mandatory and cannot be disabled via `providers/disable`.
-    /// If true, clients must not call `providers/disable` for this id.
+    /// If true, clients must not call `providers/disable` for this provider ID.
     pub required: bool,
     /// Current effective non-secret routing config.
     /// Null or omitted means provider is disabled.
@@ -3635,13 +3656,13 @@ impl ProviderInfo {
     /// Builds [`ProviderInfo`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(
-        id: impl Into<String>,
+        provider_id: impl Into<ProviderId>,
         supported: Vec<LlmProtocol>,
         required: bool,
         current: impl IntoOption<ProviderCurrentConfig>,
     ) -> Self {
         Self {
-            id: id.into(),
+            provider_id: provider_id.into(),
             supported,
             required,
             current: current.into_option(),
@@ -3764,7 +3785,7 @@ impl ListProvidersResponse {
 ///
 /// Request parameters for `providers/set`.
 ///
-/// Replaces the full configuration for one provider id.
+/// Replaces the full configuration for one provider ID.
 #[cfg(feature = "unstable_llm_providers")]
 #[serde_as]
 #[skip_serializing_none]
@@ -3773,8 +3794,8 @@ impl ListProvidersResponse {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SetProviderRequest {
-    /// Provider id to configure.
-    pub id: String,
+    /// Provider ID to configure.
+    pub provider_id: ProviderId,
     /// Protocol type for this provider.
     pub api_type: LlmProtocol,
     /// Base URL for requests sent through this provider.
@@ -3801,9 +3822,13 @@ pub struct SetProviderRequest {
 impl SetProviderRequest {
     /// Builds [`SetProviderRequest`] with the required request fields set; optional fields start unset or empty.
     #[must_use]
-    pub fn new(id: impl Into<String>, api_type: LlmProtocol, base_url: impl Into<String>) -> Self {
+    pub fn new(
+        provider_id: impl Into<ProviderId>,
+        api_type: LlmProtocol,
+        base_url: impl Into<String>,
+    ) -> Self {
         Self {
-            id: id.into(),
+            provider_id: provider_id.into(),
             api_type,
             base_url: base_url.into(),
             headers: HashMap::new(),
@@ -3889,8 +3914,8 @@ impl SetProviderResponse {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct DisableProviderRequest {
-    /// Provider id to disable.
-    pub id: String,
+    /// Provider ID to disable.
+    pub provider_id: ProviderId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -3907,9 +3932,9 @@ pub struct DisableProviderRequest {
 impl DisableProviderRequest {
     /// Builds [`DisableProviderRequest`] with the required request fields set; optional fields start unset or empty.
     #[must_use]
-    pub fn new(id: impl Into<String>) -> Self {
+    pub fn new(provider_id: impl Into<ProviderId>) -> Self {
         Self {
-            id: id.into(),
+            provider_id: provider_id.into(),
             meta: None,
         }
     }
@@ -5524,7 +5549,7 @@ mod test_serialization {
             json!({
                 "type": "acp",
                 "name": "project-tools",
-                "id": "project-tools-id"
+                "serverId": "project-tools-id"
             })
         );
 
@@ -6420,7 +6445,7 @@ mod test_serialization {
         assert_eq!(
             json,
             json!({
-                "id": "main",
+                "providerId": "main",
                 "supported": ["anthropic", "openai"],
                 "required": true,
                 "current": {
@@ -6431,7 +6456,7 @@ mod test_serialization {
         );
 
         let deserialized: ProviderInfo = serde_json::from_value(json).unwrap();
-        assert_eq!(deserialized.id, "main");
+        assert_eq!(deserialized.provider_id.to_string(), "main");
         assert_eq!(deserialized.supported.len(), 2);
         assert!(deserialized.required);
         assert!(deserialized.current.is_some());
@@ -6455,14 +6480,14 @@ mod test_serialization {
         assert_eq!(
             json,
             json!({
-                "id": "secondary",
+                "providerId": "secondary",
                 "supported": ["openai"],
                 "required": false
             })
         );
 
         let deserialized: ProviderInfo = serde_json::from_value(json).unwrap();
-        assert_eq!(deserialized.id, "secondary");
+        assert_eq!(deserialized.provider_id.to_string(), "secondary");
         assert!(!deserialized.required);
         assert!(deserialized.current.is_none());
     }
@@ -6472,7 +6497,7 @@ mod test_serialization {
     fn test_provider_info_missing_current_defaults_to_none() {
         // current is optional; omitting it should decode as None
         let json = json!({
-            "id": "main",
+            "providerId": "main",
             "supported": ["anthropic"],
             "required": true
         });
@@ -6487,7 +6512,7 @@ mod test_serialization {
         // both must deserialize into None so the disabled state is preserved
         // regardless of which form the peer chose to send.
         let json = json!({
-            "id": "main",
+            "providerId": "main",
             "supported": ["anthropic"],
             "required": true,
             "current": null
@@ -6511,7 +6536,7 @@ mod test_serialization {
 
         let json = serde_json::to_value(&response).unwrap();
         assert_eq!(json["providers"].as_array().unwrap().len(), 1);
-        assert_eq!(json["providers"][0]["id"], "main");
+        assert_eq!(json["providers"][0]["providerId"], "main");
 
         let deserialized: ListProvidersResponse = serde_json::from_value(json).unwrap();
         assert_eq!(deserialized.providers.len(), 1);
@@ -6533,7 +6558,7 @@ mod test_serialization {
         assert_eq!(
             json,
             json!({
-                "id": "main",
+                "providerId": "main",
                 "apiType": "openai",
                 "baseUrl": "https://api.openai.com/v1",
                 "headers": {
@@ -6543,7 +6568,7 @@ mod test_serialization {
         );
 
         let deserialized: SetProviderRequest = serde_json::from_value(json).unwrap();
-        assert_eq!(deserialized.id, "main");
+        assert_eq!(deserialized.provider_id.to_string(), "main");
         assert_eq!(deserialized.api_type, LlmProtocol::OpenAi);
         assert_eq!(deserialized.base_url, "https://api.openai.com/v1");
         assert_eq!(deserialized.headers.len(), 1);
@@ -6570,10 +6595,10 @@ mod test_serialization {
         let request = DisableProviderRequest::new("secondary");
 
         let json = serde_json::to_value(&request).unwrap();
-        assert_eq!(json, json!({ "id": "secondary" }));
+        assert_eq!(json, json!({ "providerId": "secondary" }));
 
         let deserialized: DisableProviderRequest = serde_json::from_value(json).unwrap();
-        assert_eq!(deserialized.id, "secondary");
+        assert_eq!(deserialized.provider_id.to_string(), "secondary");
     }
 
     #[cfg(feature = "unstable_llm_providers")]

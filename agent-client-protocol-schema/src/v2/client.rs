@@ -2573,7 +2573,7 @@ mod tests {
 
         assert_eq!(
             serde_json::to_value(ConnectMcpRequest::new("server-1")).unwrap(),
-            json!({ "mcpServerId": "server-1" })
+            json!({ "serverId": "server-1" })
         );
         assert_eq!(
             serde_json::to_value(ConnectMcpResponse::new("conn-1")).unwrap(),

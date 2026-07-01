@@ -2866,7 +2866,7 @@ mod tests {
                 "sessionUpdate": "plan_update",
                 "plan": {
                     "type": "items",
-                    "id": "plan-1",
+                    "planId": "plan-1",
                     "entries": [
                         {
                             "content": "Step 1",
@@ -2882,7 +2882,7 @@ mod tests {
             serde_json::to_value(SessionUpdate::PlanRemoved(PlanRemoved::new("plan-1"))).unwrap(),
             json!({
                 "sessionUpdate": "plan_removed",
-                "id": "plan-1"
+                "planId": "plan-1"
             })
         );
 
@@ -2934,7 +2934,7 @@ mod tests {
 
         assert_eq!(
             serde_json::to_value(ConnectMcpRequest::new("server-1")).unwrap(),
-            json!({ "acpId": "server-1" })
+            json!({ "serverId": "server-1" })
         );
         assert_eq!(
             serde_json::to_value(ConnectMcpResponse::new("conn-1")).unwrap(),
