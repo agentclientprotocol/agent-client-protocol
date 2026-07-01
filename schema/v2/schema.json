@@ -1694,7 +1694,7 @@
           "x-deserialize-default-on-error": true
         },
         "auth": {
-          "description": "Authentication-related capabilities supported by the agent.",
+          "description": "Authentication-related capabilities supported by the agent.\n\nOptional. Omitted or `null` both mean the agent does not advertise any\nauthentication-related extensions.",
           "anyOf": [
             {
               "$ref": "#/$defs/AgentAuthCapabilities"
@@ -1754,7 +1754,7 @@
           "x-deserialize-default-on-error": true
         },
         "list": {
-          "description": "Whether the agent supports `session/list`.",
+          "description": "Whether the agent supports `session/list`.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports listing sessions.",
           "anyOf": [
             {
               "$ref": "#/$defs/SessionListCapabilities"
@@ -1778,7 +1778,7 @@
           "x-deserialize-default-on-error": true
         },
         "additionalDirectories": {
-          "description": "Whether the agent supports `additionalDirectories` on supported session lifecycle requests.\n\nAgents that also support `session/list` may return\n`SessionInfo.additionalDirectories` to report the complete ordered\nadditional-root list associated with a listed session.",
+          "description": "Whether the agent supports `additionalDirectories` on supported session lifecycle requests.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports `additionalDirectories` on\nsupported session lifecycle requests.\n\nAgents that also support `session/list` may return\n`SessionInfo.additionalDirectories` to report the complete ordered\nadditional-root list associated with a listed session.",
           "anyOf": [
             {
               "$ref": "#/$defs/SessionAdditionalDirectoriesCapabilities"
@@ -1790,7 +1790,7 @@
           "x-deserialize-default-on-error": true
         },
         "resume": {
-          "description": "Whether the agent supports `session/resume`.",
+          "description": "Whether the agent supports `session/resume`.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports resuming sessions.",
           "anyOf": [
             {
               "$ref": "#/$defs/SessionResumeCapabilities"
@@ -1802,7 +1802,7 @@
           "x-deserialize-default-on-error": true
         },
         "close": {
-          "description": "Whether the agent supports `session/close`.",
+          "description": "Whether the agent supports `session/close`.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports closing sessions.",
           "anyOf": [
             {
               "$ref": "#/$defs/SessionCloseCapabilities"
@@ -1978,7 +1978,7 @@
       }
     },
     "SessionListCapabilities": {
-      "description": "Capabilities for the `session/list` method.\n\nBy supplying `{}` it means that the agent supports listing of sessions.",
+      "description": "Capabilities for the `session/list` method.\n\nSupplying `{}` means the agent supports listing sessions.",
       "type": "object",
       "properties": {
         "_meta": {
@@ -2002,7 +2002,7 @@
       }
     },
     "SessionAdditionalDirectoriesCapabilities": {
-      "description": "Capabilities for additional session directories support.\n\nBy supplying `{}` it means that the agent supports the `additionalDirectories`\nfield on supported session lifecycle requests. Agents that also support\n`session/list` may return `SessionInfo.additionalDirectories` to report the\ncomplete ordered additional-root list associated with a listed session.",
+      "description": "Capabilities for additional session directories support.\n\nSupplying `{}` means the agent supports the `additionalDirectories` field on\nsupported session lifecycle requests. Agents that also support\n`session/list` may return `SessionInfo.additionalDirectories` to report the\ncomplete ordered additional-root list associated with a listed session.",
       "type": "object",
       "properties": {
         "_meta": {
@@ -2014,7 +2014,7 @@
       }
     },
     "SessionResumeCapabilities": {
-      "description": "Capabilities for the `session/resume` method.\n\nBy supplying `{}` it means that the agent supports resuming of sessions.",
+      "description": "Capabilities for the `session/resume` method.\n\nSupplying `{}` means the agent supports resuming sessions.",
       "type": "object",
       "properties": {
         "_meta": {
@@ -2026,7 +2026,7 @@
       }
     },
     "SessionCloseCapabilities": {
-      "description": "Capabilities for the `session/close` method.\n\nBy supplying `{}` it means that the agent supports closing of sessions.",
+      "description": "Capabilities for the `session/close` method.\n\nSupplying `{}` means the agent supports closing sessions.",
       "type": "object",
       "properties": {
         "_meta": {

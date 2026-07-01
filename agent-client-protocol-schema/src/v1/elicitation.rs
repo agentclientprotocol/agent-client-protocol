@@ -1049,11 +1049,17 @@ impl ElicitationSchema {
 #[non_exhaustive]
 pub struct ElicitationCapabilities {
     /// Whether the client supports form-based elicitation.
+    ///
+    /// Optional. Omitted or `null` both mean the client does not advertise support.
+    /// Supplying `{}` means the client supports form-based elicitation.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub form: Option<ElicitationFormCapabilities>,
     /// Whether the client supports URL-based elicitation.
+    ///
+    /// Optional. Omitted or `null` both mean the client does not advertise support.
+    /// Supplying `{}` means the client supports URL-based elicitation.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
@@ -1078,6 +1084,9 @@ impl ElicitationCapabilities {
     }
 
     /// Whether the client supports form-based elicitation.
+    ///
+    /// Omitted or `null` both mean the client does not advertise support.
+    /// Supplying `{}` means the client supports form-based elicitation.
     #[must_use]
     pub fn form(mut self, form: impl IntoOption<ElicitationFormCapabilities>) -> Self {
         self.form = form.into_option();
@@ -1085,6 +1094,9 @@ impl ElicitationCapabilities {
     }
 
     /// Whether the client supports URL-based elicitation.
+    ///
+    /// Omitted or `null` both mean the client does not advertise support.
+    /// Supplying `{}` means the client supports URL-based elicitation.
     #[must_use]
     pub fn url(mut self, url: impl IntoOption<ElicitationUrlCapabilities>) -> Self {
         self.url = url.into_option();
@@ -1108,6 +1120,8 @@ impl ElicitationCapabilities {
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
 /// Form-based elicitation capabilities.
+///
+/// Supplying `{}` means the client supports form-based elicitation.
 #[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -1150,6 +1164,8 @@ impl ElicitationFormCapabilities {
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
 /// URL-based elicitation capabilities.
+///
+/// Supplying `{}` means the client supports URL-based elicitation.
 #[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]

@@ -957,6 +957,10 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 </ResponseField>
 <ResponseField name="auth" type={<><span><a href="#agentauthcapabilities">AgentAuthCapabilities</a></span><span> | null</span></>} >
   Authentication-related capabilities supported by the agent.
+
+Optional. Omitted or `null` both mean the agent does not advertise any
+authentication-related extensions.
+
 </ResponseField>
 <ResponseField name="session" type={<><span><a href="#sessioncapabilities">SessionCapabilities</a></span><span> | null</span></>} >
   Session capabilities supported by the agent.
@@ -2819,8 +2823,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 Capabilities for additional session directories support.
 
-By supplying `\{\}` it means that the agent supports the `additionalDirectories`
-field on supported session lifecycle requests. Agents that also support
+Supplying `\{\}` means the agent supports the `additionalDirectories` field on
+supported session lifecycle requests. Agents that also support
 `session/list` may return `SessionInfo.additionalDirectories` to report the
 complete ordered additional-root list associated with a listed session.
 
@@ -2865,6 +2869,10 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 <ResponseField name="additionalDirectories" type={<><span><a href="#sessionadditionaldirectoriescapabilities">SessionAdditionalDirectoriesCapabilities</a></span><span> | null</span></>} >
   Whether the agent supports `additionalDirectories` on supported session lifecycle requests.
 
+Optional. Omitted or `null` both mean the agent does not advertise support.
+Supplying `\{\}` means the agent supports `additionalDirectories` on
+supported session lifecycle requests.
+
 Agents that also support `session/list` may return
 `SessionInfo.additionalDirectories` to report the complete ordered
 additional-root list associated with a listed session.
@@ -2872,6 +2880,10 @@ additional-root list associated with a listed session.
 </ResponseField>
 <ResponseField name="close" type={<><span><a href="#sessionclosecapabilities">SessionCloseCapabilities</a></span><span> | null</span></>} >
   Whether the agent supports `session/close`.
+
+Optional. Omitted or `null` both mean the agent does not advertise support.
+Supplying `\{\}` means the agent supports closing sessions.
+
 </ResponseField>
 <ResponseField name="delete" type={<><span><a href="#sessiondeletecapabilities">SessionDeleteCapabilities</a></span><span> | null</span></>} >
   Whether the agent supports `session/delete`.
@@ -2882,6 +2894,10 @@ Supplying `\{\}` means the agent supports deleting sessions from `session/list`.
 </ResponseField>
 <ResponseField name="list" type={<><span><a href="#sessionlistcapabilities">SessionListCapabilities</a></span><span> | null</span></>} >
   Whether the agent supports `session/list`.
+
+Optional. Omitted or `null` both mean the agent does not advertise support.
+Supplying `\{\}` means the agent supports listing sessions.
+
 </ResponseField>
 <ResponseField name="load" type={<><span><a href="#sessionloadcapabilities">SessionLoadCapabilities</a></span><span> | null</span></>} >
   Whether the agent supports `session/load`.
@@ -2907,13 +2923,17 @@ required by `session/prompt`.
 </ResponseField>
 <ResponseField name="resume" type={<><span><a href="#sessionresumecapabilities">SessionResumeCapabilities</a></span><span> | null</span></>} >
   Whether the agent supports `session/resume`.
+
+Optional. Omitted or `null` both mean the agent does not advertise support.
+Supplying `\{\}` means the agent supports resuming sessions.
+
 </ResponseField>
 
 ## <span class="font-mono">SessionCloseCapabilities</span>
 
 Capabilities for the `session/close` method.
 
-By supplying `\{\}` it means that the agent supports closing of sessions.
+Supplying `\{\}` means the agent supports closing sessions.
 
 **Type:** Object
 
@@ -3253,7 +3273,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 Capabilities for the `session/list` method.
 
-By supplying `\{\}` it means that the agent supports listing of sessions.
+Supplying `\{\}` means the agent supports listing sessions.
 
 **Type:** Object
 
@@ -3291,7 +3311,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 Capabilities for the `session/resume` method.
 
-By supplying `\{\}` it means that the agent supports resuming of sessions.
+Supplying `\{\}` means the agent supports resuming sessions.
 
 **Type:** Object
 

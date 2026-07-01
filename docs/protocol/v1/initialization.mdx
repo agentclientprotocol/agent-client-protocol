@@ -207,8 +207,8 @@ Optionally, they **MAY** support other session methods and notifications by spec
 
 <ResponseField name="delete" type="SessionDeleteCapabilities Object">
   The [`session/delete`](/protocol/v1/session-delete) method is available.
-  Omitted or `null` means the Agent does not advertise support. Supplying `{}`
-  means the Agent supports deleting sessions from `session/list`.
+  Omitted or `null` both mean the Agent does not advertise support. Supplying an
+  empty object means the Agent supports deleting sessions from `session/list`.
 </ResponseField>
 
 <ResponseField
@@ -216,7 +216,7 @@ Optionally, they **MAY** support other session methods and notifications by spec
   type="SessionAdditionalDirectoriesCapabilities Object"
 >
   The Agent supports `additionalDirectories` on supported session lifecycle
-  requests. Omitted or `null` means the Agent does not advertise support.
+  requests. Omitted or `null` both mean the Agent does not advertise support.
   Supplying `{}` means the Agent supports additional workspace roots.
 </ResponseField>
 

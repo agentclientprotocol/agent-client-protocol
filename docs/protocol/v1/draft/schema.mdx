@@ -2623,7 +2623,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 <ResponseField name="logout" type={<><span><a href="#logoutcapabilities">LogoutCapabilities</a></span><span> | null</span></>} >
   Whether the agent supports the logout method.
 
-By supplying `\{\}` it means that the agent supports the logout method.
+Optional. Omitted or `null` both mean the agent does not advertise support.
+Supplying `\{\}` means the agent supports the logout method.
 
 </ResponseField>
 
@@ -2673,6 +2674,9 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 NES (Next Edit Suggestions) capabilities supported by the agent.
 
+Optional. Omitted or `null` both mean the agent does not advertise support
+for NES methods.
+
 </ResponseField>
 <ResponseField name="positionEncoding" type={<><span><a href="#positionencodingkind">PositionEncodingKind</a></span><span> | null</span></>} >
   **UNSTABLE**
@@ -2695,7 +2699,8 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 Provider configuration capabilities supported by the agent.
 
-By supplying `\{\}` it means that the agent supports provider configuration methods.
+Optional. Omitted or `null` both mean the agent does not advertise support.
+Supplying `\{\}` means the agent supports provider configuration methods.
 
 </ResponseField>
 <ResponseField name="sessionCapabilities" type={<a href="#sessioncapabilities">SessionCapabilities</a>} >
@@ -3243,6 +3248,9 @@ This capability is not part of the spec yet, and may be removed or changed at an
 Elicitation capabilities supported by the client.
 Determines which elicitation modes the agent may use.
 
+Optional. Omitted or `null` both mean the client does not advertise
+elicitation support.
+
 </ResponseField>
 <ResponseField name="fs" type={<a href="#filesystemcapabilities">FileSystemCapabilities</a>} >
   File system capabilities supported by the client.
@@ -3258,6 +3266,9 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 NES (Next Edit Suggestions) capabilities supported by the client.
 
+Optional. Omitted or `null` both mean the client does not advertise any
+NES suggestion-kind extensions.
+
 </ResponseField>
 <ResponseField name="plan" type={<><span><a href="#plancapabilities">PlanCapabilities</a></span><span> | null</span></>} >
   **UNSTABLE**
@@ -3266,7 +3277,7 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 Whether the client supports `plan_update` and `plan_removed` session updates.
 
-Optional. Omitted means the client does not advertise support.
+Optional. Omitted or `null` both mean the client does not advertise support.
 Supplying `\{\}` means the client can receive both update types.
 
 </ResponseField>
@@ -3284,6 +3295,9 @@ The position encodings supported by the client, in order of preference.
 This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Session-related capabilities supported by the client.
+
+Optional. Omitted or `null` both mean the client does not advertise any
+session-related extensions.
 
 </ResponseField>
 <ResponseField name="terminal" type={"boolean"} >
@@ -3342,7 +3356,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 <ResponseField name="configOptions" type={<><span><a href="#sessionconfigoptionscapabilities">SessionConfigOptionsCapabilities</a></span><span> | null</span></>} >
   Config option capabilities supported by the client.
 
-Omitted or `null` means the client does not advertise support for any
+Omitted or `null` both mean the client does not advertise support for any
 config option extensions.
 
 </ResponseField>
@@ -3714,9 +3728,17 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 </ResponseField>
 <ResponseField name="form" type={<><span><a href="#elicitationformcapabilities">ElicitationFormCapabilities</a></span><span> | null</span></>} >
   Whether the client supports form-based elicitation.
+
+Optional. Omitted or `null` both mean the client does not advertise support.
+Supplying `\{\}` means the client supports form-based elicitation.
+
 </ResponseField>
 <ResponseField name="url" type={<><span><a href="#elicitationurlcapabilities">ElicitationUrlCapabilities</a></span><span> | null</span></>} >
   Whether the client supports URL-based elicitation.
+
+Optional. Omitted or `null` both mean the client does not advertise support.
+Supplying `\{\}` means the client supports URL-based elicitation.
+
 </ResponseField>
 
 ## <span class="font-mono">ElicitationContentValue</span>
@@ -3752,6 +3774,8 @@ Allowed wire representations for `ElicitationContentValue`.
 This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Form-based elicitation capabilities.
+
+Supplying `\{\}` means the client supports form-based elicitation.
 
 **Type:** Object
 
@@ -4176,6 +4200,8 @@ Items definition for untitled multi-select enum properties.
 This capability is not part of the spec yet, and may be removed or changed at any point.
 
 URL-based elicitation capabilities.
+
+Supplying `\{\}` means the client supports URL-based elicitation.
 
 **Type:** Object
 
@@ -4690,7 +4716,7 @@ Protocol names that do not begin with `_` are reserved for the ACP spec.
 
 Logout capabilities supported by the agent.
 
-By supplying `\{\}` it means that the agent supports the logout method.
+Supplying `\{\}` means the agent supports the logout method.
 
 **Type:** Object
 
@@ -6730,7 +6756,7 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 Provider configuration capabilities supported by the agent.
 
-By supplying `\{\}` it means that the agent supports provider configuration methods.
+Supplying `\{\}` means the agent supports provider configuration methods.
 
 **Type:** Object
 
@@ -6917,8 +6943,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 Capabilities for additional session directories support.
 
-By supplying `\{\}` it means that the agent supports the `additionalDirectories`
-field on supported session lifecycle requests. Agents that also support
+Supplying `\{\}` means the agent supports the `additionalDirectories` field on
+supported session lifecycle requests. Agents that also support
 `session/list` may return `SessionInfo.additionalDirectories` to report the
 complete ordered additional-root list associated with a listed session.
 
@@ -6962,6 +6988,10 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 <ResponseField name="additionalDirectories" type={<><span><a href="#sessionadditionaldirectoriescapabilities">SessionAdditionalDirectoriesCapabilities</a></span><span> | null</span></>} >
   Whether the agent supports `additionalDirectories` on supported session lifecycle requests.
 
+Optional. Omitted or `null` both mean the agent does not advertise support.
+Supplying `\{\}` means the agent supports `additionalDirectories` on
+supported session lifecycle requests.
+
 Agents that also support `session/list` may return
 `SessionInfo.additionalDirectories` to report the complete ordered
 additional-root list associated with a listed session.
@@ -6969,6 +6999,10 @@ additional-root list associated with a listed session.
 </ResponseField>
 <ResponseField name="close" type={<><span><a href="#sessionclosecapabilities">SessionCloseCapabilities</a></span><span> | null</span></>} >
   Whether the agent supports `session/close`.
+
+Optional. Omitted or `null` both mean the agent does not advertise support.
+Supplying `\{\}` means the agent supports closing sessions.
+
 </ResponseField>
 <ResponseField name="delete" type={<><span><a href="#sessiondeletecapabilities">SessionDeleteCapabilities</a></span><span> | null</span></>} >
   Whether the agent supports `session/delete`.
@@ -6984,19 +7018,30 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 Whether the agent supports `session/fork`.
 
+Optional. Omitted or `null` both mean the agent does not advertise support.
+Supplying `\{\}` means the agent supports forking sessions.
+
 </ResponseField>
 <ResponseField name="list" type={<><span><a href="#sessionlistcapabilities">SessionListCapabilities</a></span><span> | null</span></>} >
   Whether the agent supports `session/list`.
+
+Optional. Omitted or `null` both mean the agent does not advertise support.
+Supplying `\{\}` means the agent supports listing sessions.
+
 </ResponseField>
 <ResponseField name="resume" type={<><span><a href="#sessionresumecapabilities">SessionResumeCapabilities</a></span><span> | null</span></>} >
   Whether the agent supports `session/resume`.
+
+Optional. Omitted or `null` both mean the agent does not advertise support.
+Supplying `\{\}` means the agent supports resuming sessions.
+
 </ResponseField>
 
 ## <span class="font-mono">SessionCloseCapabilities</span>
 
 Capabilities for the `session/close` method.
 
-By supplying `\{\}` it means that the agent supports closing of sessions.
+Supplying `\{\}` means the agent supports closing sessions.
 
 **Type:** Object
 
@@ -7172,7 +7217,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 <ResponseField name="boolean" type={<><span><a href="#booleanconfigoptioncapabilities">BooleanConfigOptionCapabilities</a></span><span> | null</span></>} >
   Whether the client supports boolean session configuration options.
 
-Omitted or `null` means the client does not advertise support.
+Optional. Omitted or `null` both mean the client does not advertise support.
 Supplying `\{\}` means agents may include `type: "boolean"` entries in
 `configOptions`, and the client may send `session/set_config_option`
 requests with `type: "boolean"` and a boolean `value`.
@@ -7301,7 +7346,7 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 Capabilities for the `session/fork` method.
 
-By supplying `\{\}` it means that the agent supports forking of sessions.
+Supplying `\{\}` means the agent supports forking sessions.
 
 **Type:** Object
 
@@ -7394,7 +7439,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 Capabilities for the `session/list` method.
 
-By supplying `\{\}` it means that the agent supports listing of sessions.
+Supplying `\{\}` means the agent supports listing sessions.
 
 **Type:** Object
 
@@ -7470,7 +7515,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 Capabilities for the `session/resume` method.
 
-By supplying `\{\}` it means that the agent supports resuming of sessions.
+Supplying `\{\}` means the agent supports resuming sessions.
 
 **Type:** Object
 

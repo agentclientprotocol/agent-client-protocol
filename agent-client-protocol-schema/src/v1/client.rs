@@ -1746,6 +1746,9 @@ pub struct ClientCapabilities {
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
     /// Session-related capabilities supported by the client.
+    ///
+    /// Optional. Omitted or `null` both mean the client does not advertise any
+    /// session-related extensions.
     #[cfg(feature = "unstable_boolean_config")]
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
@@ -1757,7 +1760,7 @@ pub struct ClientCapabilities {
     ///
     /// Whether the client supports `plan_update` and `plan_removed` session updates.
     ///
-    /// Optional. Omitted means the client does not advertise support.
+    /// Optional. Omitted or `null` both mean the client does not advertise support.
     /// Supplying `{}` means the client can receive both update types.
     #[cfg(feature = "unstable_plan_operations")]
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -1782,6 +1785,9 @@ pub struct ClientCapabilities {
     ///
     /// Elicitation capabilities supported by the client.
     /// Determines which elicitation modes the agent may use.
+    ///
+    /// Optional. Omitted or `null` both mean the client does not advertise
+    /// elicitation support.
     #[cfg(feature = "unstable_elicitation")]
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
@@ -1792,6 +1798,9 @@ pub struct ClientCapabilities {
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
     /// NES (Next Edit Suggestions) capabilities supported by the client.
+    ///
+    /// Optional. Omitted or `null` both mean the client does not advertise any
+    /// NES suggestion-kind extensions.
     #[cfg(feature = "unstable_nes")]
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
@@ -1860,7 +1869,7 @@ impl ClientCapabilities {
     ///
     /// Whether the client supports `plan_update` and `plan_removed` session updates.
     ///
-    /// Omitted means the client does not advertise support.
+    /// Omitted or `null` both mean the client does not advertise support.
     /// Supplying `{}` means the client can receive both update types.
     #[cfg(feature = "unstable_plan_operations")]
     #[must_use]
@@ -1942,7 +1951,7 @@ impl ClientCapabilities {
 pub struct ClientSessionCapabilities {
     /// Config option capabilities supported by the client.
     ///
-    /// Omitted or `null` means the client does not advertise support for any
+    /// Omitted or `null` both mean the client does not advertise support for any
     /// config option extensions.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
@@ -1970,7 +1979,7 @@ impl ClientSessionCapabilities {
 
     /// Config option capabilities supported by the client.
     ///
-    /// Omitted or `null` means the client does not advertise support for any
+    /// Omitted or `null` both mean the client does not advertise support for any
     /// config option extensions.
     #[must_use]
     pub fn config_options(
@@ -2007,7 +2016,7 @@ impl ClientSessionCapabilities {
 pub struct SessionConfigOptionsCapabilities {
     /// Whether the client supports boolean session configuration options.
     ///
-    /// Omitted or `null` means the client does not advertise support.
+    /// Optional. Omitted or `null` both mean the client does not advertise support.
     /// Supplying `{}` means agents may include `type: "boolean"` entries in
     /// `configOptions`, and the client may send `session/set_config_option`
     /// requests with `type: "boolean"` and a boolean `value`.
@@ -2037,7 +2046,7 @@ impl SessionConfigOptionsCapabilities {
 
     /// Whether the client supports boolean session configuration options.
     ///
-    /// Omitted or `null` means the client does not advertise support.
+    /// Omitted or `null` both mean the client does not advertise support.
     /// Supplying `{}` means agents may include `type: "boolean"` entries in
     /// `configOptions`, and the client may send `session/set_config_option`
     /// requests with `type: "boolean"` and a boolean `value`.

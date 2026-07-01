@@ -1542,6 +1542,9 @@ pub struct ClientCapabilities {
     /// Authentication capabilities supported by the client.
     /// Determines which authentication method types the agent may include
     /// in its `InitializeResponse`.
+    ///
+    /// Optional. Omitted or `null` both mean the client does not advertise any
+    /// authentication-method extensions.
     #[cfg(feature = "unstable_auth_methods")]
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
@@ -1553,6 +1556,9 @@ pub struct ClientCapabilities {
     ///
     /// Elicitation capabilities supported by the client.
     /// Determines which elicitation modes the agent may use.
+    ///
+    /// Optional. Omitted or `null` both mean the client does not advertise
+    /// elicitation support.
     #[cfg(feature = "unstable_elicitation")]
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
@@ -1563,6 +1569,9 @@ pub struct ClientCapabilities {
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
     /// NES (Next Edit Suggestions) capabilities supported by the client.
+    ///
+    /// Optional. Omitted or `null` both mean the client does not advertise any
+    /// NES suggestion-kind extensions.
     #[cfg(feature = "unstable_nes")]
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]

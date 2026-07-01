@@ -2695,7 +2695,7 @@
           "x-deserialize-default-on-error": true
         },
         "auth": {
-          "description": "Authentication-related capabilities supported by the agent.",
+          "description": "Authentication-related capabilities supported by the agent.\n\nOptional. Omitted or `null` both mean the agent does not advertise any\nauthentication-related extensions.",
           "anyOf": [
             {
               "$ref": "#/$defs/AgentAuthCapabilities"
@@ -2707,7 +2707,7 @@
           "x-deserialize-default-on-error": true
         },
         "providers": {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nProvider configuration capabilities supported by the agent.\n\nBy supplying `{}` it means that the agent supports provider configuration methods.",
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nProvider configuration capabilities supported by the agent.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports provider configuration methods.",
           "anyOf": [
             {
               "$ref": "#/$defs/ProvidersCapabilities"
@@ -2719,7 +2719,7 @@
           "x-deserialize-default-on-error": true
         },
         "nes": {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNES (Next Edit Suggestions) capabilities supported by the agent.",
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNES (Next Edit Suggestions) capabilities supported by the agent.\n\nOptional. Omitted or `null` both mean the agent does not advertise support\nfor NES methods.",
           "anyOf": [
             {
               "$ref": "#/$defs/NesCapabilities"
@@ -2791,7 +2791,7 @@
           "x-deserialize-default-on-error": true
         },
         "list": {
-          "description": "Whether the agent supports `session/list`.",
+          "description": "Whether the agent supports `session/list`.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports listing sessions.",
           "anyOf": [
             {
               "$ref": "#/$defs/SessionListCapabilities"
@@ -2815,7 +2815,7 @@
           "x-deserialize-default-on-error": true
         },
         "additionalDirectories": {
-          "description": "Whether the agent supports `additionalDirectories` on supported session lifecycle requests.\n\nAgents that also support `session/list` may return\n`SessionInfo.additionalDirectories` to report the complete ordered\nadditional-root list associated with a listed session.",
+          "description": "Whether the agent supports `additionalDirectories` on supported session lifecycle requests.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports `additionalDirectories` on\nsupported session lifecycle requests.\n\nAgents that also support `session/list` may return\n`SessionInfo.additionalDirectories` to report the complete ordered\nadditional-root list associated with a listed session.",
           "anyOf": [
             {
               "$ref": "#/$defs/SessionAdditionalDirectoriesCapabilities"
@@ -2827,7 +2827,7 @@
           "x-deserialize-default-on-error": true
         },
         "fork": {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nWhether the agent supports `session/fork`.",
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nWhether the agent supports `session/fork`.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports forking sessions.",
           "anyOf": [
             {
               "$ref": "#/$defs/SessionForkCapabilities"
@@ -2839,7 +2839,7 @@
           "x-deserialize-default-on-error": true
         },
         "resume": {
-          "description": "Whether the agent supports `session/resume`.",
+          "description": "Whether the agent supports `session/resume`.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports resuming sessions.",
           "anyOf": [
             {
               "$ref": "#/$defs/SessionResumeCapabilities"
@@ -2851,7 +2851,7 @@
           "x-deserialize-default-on-error": true
         },
         "close": {
-          "description": "Whether the agent supports `session/close`.",
+          "description": "Whether the agent supports `session/close`.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports closing sessions.",
           "anyOf": [
             {
               "$ref": "#/$defs/SessionCloseCapabilities"
@@ -3051,7 +3051,7 @@
       }
     },
     "SessionListCapabilities": {
-      "description": "Capabilities for the `session/list` method.\n\nBy supplying `{}` it means that the agent supports listing of sessions.",
+      "description": "Capabilities for the `session/list` method.\n\nSupplying `{}` means the agent supports listing sessions.",
       "type": "object",
       "properties": {
         "_meta": {
@@ -3075,7 +3075,7 @@
       }
     },
     "SessionAdditionalDirectoriesCapabilities": {
-      "description": "Capabilities for additional session directories support.\n\nBy supplying `{}` it means that the agent supports the `additionalDirectories`\nfield on supported session lifecycle requests. Agents that also support\n`session/list` may return `SessionInfo.additionalDirectories` to report the\ncomplete ordered additional-root list associated with a listed session.",
+      "description": "Capabilities for additional session directories support.\n\nSupplying `{}` means the agent supports the `additionalDirectories` field on\nsupported session lifecycle requests. Agents that also support\n`session/list` may return `SessionInfo.additionalDirectories` to report the\ncomplete ordered additional-root list associated with a listed session.",
       "type": "object",
       "properties": {
         "_meta": {
@@ -3087,7 +3087,7 @@
       }
     },
     "SessionForkCapabilities": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapabilities for the `session/fork` method.\n\nBy supplying `{}` it means that the agent supports forking of sessions.",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapabilities for the `session/fork` method.\n\nSupplying `{}` means the agent supports forking sessions.",
       "type": "object",
       "properties": {
         "_meta": {
@@ -3099,7 +3099,7 @@
       }
     },
     "SessionResumeCapabilities": {
-      "description": "Capabilities for the `session/resume` method.\n\nBy supplying `{}` it means that the agent supports resuming of sessions.",
+      "description": "Capabilities for the `session/resume` method.\n\nSupplying `{}` means the agent supports resuming sessions.",
       "type": "object",
       "properties": {
         "_meta": {
@@ -3111,7 +3111,7 @@
       }
     },
     "SessionCloseCapabilities": {
-      "description": "Capabilities for the `session/close` method.\n\nBy supplying `{}` it means that the agent supports closing of sessions.",
+      "description": "Capabilities for the `session/close` method.\n\nSupplying `{}` means the agent supports closing sessions.",
       "type": "object",
       "properties": {
         "_meta": {
@@ -3135,7 +3135,7 @@
       }
     },
     "ProvidersCapabilities": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nProvider configuration capabilities supported by the agent.\n\nBy supplying `{}` it means that the agent supports provider configuration methods.",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nProvider configuration capabilities supported by the agent.\n\nSupplying `{}` means the agent supports provider configuration methods.",
       "type": "object",
       "properties": {
         "_meta": {
@@ -6872,7 +6872,7 @@
       "type": "object",
       "properties": {
         "auth": {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAuthentication capabilities supported by the client.\nDetermines which authentication method types the agent may include\nin its `InitializeResponse`.",
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAuthentication capabilities supported by the client.\nDetermines which authentication method types the agent may include\nin its `InitializeResponse`.\n\nOptional. Omitted or `null` both mean the client does not advertise any\nauthentication-method extensions.",
           "anyOf": [
             {
               "$ref": "#/$defs/AuthCapabilities"
@@ -6884,7 +6884,7 @@
           "x-deserialize-default-on-error": true
         },
         "elicitation": {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nElicitation capabilities supported by the client.\nDetermines which elicitation modes the agent may use.",
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nElicitation capabilities supported by the client.\nDetermines which elicitation modes the agent may use.\n\nOptional. Omitted or `null` both mean the client does not advertise\nelicitation support.",
           "anyOf": [
             {
               "$ref": "#/$defs/ElicitationCapabilities"
@@ -6896,7 +6896,7 @@
           "x-deserialize-default-on-error": true
         },
         "nes": {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNES (Next Edit Suggestions) capabilities supported by the client.",
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNES (Next Edit Suggestions) capabilities supported by the client.\n\nOptional. Omitted or `null` both mean the client does not advertise any\nNES suggestion-kind extensions.",
           "anyOf": [
             {
               "$ref": "#/$defs/ClientNesCapabilities"
@@ -6965,7 +6965,7 @@
       "type": "object",
       "properties": {
         "form": {
-          "description": "Whether the client supports form-based elicitation.",
+          "description": "Whether the client supports form-based elicitation.\n\nOptional. Omitted or `null` both mean the client does not advertise support.\nSupplying `{}` means the client supports form-based elicitation.",
           "anyOf": [
             {
               "$ref": "#/$defs/ElicitationFormCapabilities"
@@ -6977,7 +6977,7 @@
           "x-deserialize-default-on-error": true
         },
         "url": {
-          "description": "Whether the client supports URL-based elicitation.",
+          "description": "Whether the client supports URL-based elicitation.\n\nOptional. Omitted or `null` both mean the client does not advertise support.\nSupplying `{}` means the client supports URL-based elicitation.",
           "anyOf": [
             {
               "$ref": "#/$defs/ElicitationUrlCapabilities"
@@ -6997,7 +6997,7 @@
       }
     },
     "ElicitationFormCapabilities": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nForm-based elicitation capabilities.",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nForm-based elicitation capabilities.\n\nSupplying `{}` means the client supports form-based elicitation.",
       "type": "object",
       "properties": {
         "_meta": {
@@ -7009,7 +7009,7 @@
       }
     },
     "ElicitationUrlCapabilities": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nURL-based elicitation capabilities.",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nURL-based elicitation capabilities.\n\nSupplying `{}` means the client supports URL-based elicitation.",
       "type": "object",
       "properties": {
         "_meta": {

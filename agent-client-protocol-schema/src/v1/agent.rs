@@ -460,7 +460,8 @@ impl LogoutResponse {
 pub struct AgentAuthCapabilities {
     /// Whether the agent supports the logout method.
     ///
-    /// By supplying `{}` it means that the agent supports the logout method.
+    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports the logout method.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
@@ -505,7 +506,7 @@ impl AgentAuthCapabilities {
 
 /// Logout capabilities supported by the agent.
 ///
-/// By supplying `{}` it means that the agent supports the logout method.
+/// Supplying `{}` means the agent supports the logout method.
 #[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -4041,7 +4042,8 @@ pub struct AgentCapabilities {
     ///
     /// Provider configuration capabilities supported by the agent.
     ///
-    /// By supplying `{}` it means that the agent supports provider configuration methods.
+    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports provider configuration methods.
     #[cfg(feature = "unstable_llm_providers")]
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
@@ -4052,6 +4054,9 @@ pub struct AgentCapabilities {
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
     /// NES (Next Edit Suggestions) capabilities supported by the agent.
+    ///
+    /// Optional. Omitted or `null` both mean the agent does not advertise support
+    /// for NES methods.
     #[cfg(feature = "unstable_nes")]
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
@@ -4176,7 +4181,7 @@ impl AgentCapabilities {
 ///
 /// Provider configuration capabilities supported by the agent.
 ///
-/// By supplying `{}` it means that the agent supports provider configuration methods.
+/// Supplying `{}` means the agent supports provider configuration methods.
 #[cfg(feature = "unstable_llm_providers")]
 #[serde_as]
 #[skip_serializing_none]
@@ -4231,6 +4236,9 @@ impl ProvidersCapabilities {
 #[non_exhaustive]
 pub struct SessionCapabilities {
     /// Whether the agent supports `session/list`.
+    ///
+    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports listing sessions.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
@@ -4245,6 +4253,10 @@ pub struct SessionCapabilities {
     pub delete: Option<SessionDeleteCapabilities>,
     /// Whether the agent supports `additionalDirectories` on supported session lifecycle requests.
     ///
+    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports `additionalDirectories` on
+    /// supported session lifecycle requests.
+    ///
     /// Agents that also support `session/list` may return
     /// `SessionInfo.additionalDirectories` to report the complete ordered
     /// additional-root list associated with a listed session.
@@ -4257,17 +4269,26 @@ pub struct SessionCapabilities {
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
     /// Whether the agent supports `session/fork`.
+    ///
+    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports forking sessions.
     #[cfg(feature = "unstable_session_fork")]
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub fork: Option<SessionForkCapabilities>,
     /// Whether the agent supports `session/resume`.
+    ///
+    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports resuming sessions.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub resume: Option<SessionResumeCapabilities>,
     /// Whether the agent supports `session/close`.
+    ///
+    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports closing sessions.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
@@ -4292,6 +4313,9 @@ impl SessionCapabilities {
     }
 
     /// Whether the agent supports `session/list`.
+    ///
+    /// Omitted or `null` both mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports listing sessions.
     #[must_use]
     pub fn list(mut self, list: impl IntoOption<SessionListCapabilities>) -> Self {
         self.list = list.into_option();
@@ -4310,6 +4334,10 @@ impl SessionCapabilities {
 
     /// Whether the agent supports `additionalDirectories` on supported session lifecycle requests.
     ///
+    /// Omitted or `null` both mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports `additionalDirectories` on
+    /// supported session lifecycle requests.
+    ///
     /// Agents that also support `session/list` may return
     /// `SessionInfo.additionalDirectories` to report the complete ordered
     /// additional-root list associated with a listed session.
@@ -4324,6 +4352,9 @@ impl SessionCapabilities {
 
     #[cfg(feature = "unstable_session_fork")]
     /// Whether the agent supports `session/fork`.
+    ///
+    /// Omitted or `null` both mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports forking sessions.
     #[must_use]
     pub fn fork(mut self, fork: impl IntoOption<SessionForkCapabilities>) -> Self {
         self.fork = fork.into_option();
@@ -4331,6 +4362,9 @@ impl SessionCapabilities {
     }
 
     /// Whether the agent supports `session/resume`.
+    ///
+    /// Omitted or `null` both mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports resuming sessions.
     #[must_use]
     pub fn resume(mut self, resume: impl IntoOption<SessionResumeCapabilities>) -> Self {
         self.resume = resume.into_option();
@@ -4338,6 +4372,9 @@ impl SessionCapabilities {
     }
 
     /// Whether the agent supports `session/close`.
+    ///
+    /// Omitted or `null` both mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports closing sessions.
     #[must_use]
     pub fn close(mut self, close: impl IntoOption<SessionCloseCapabilities>) -> Self {
         self.close = close.into_option();
@@ -4358,7 +4395,7 @@ impl SessionCapabilities {
 
 /// Capabilities for the `session/list` method.
 ///
-/// By supplying `{}` it means that the agent supports listing of sessions.
+/// Supplying `{}` means the agent supports listing sessions.
 #[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -4436,8 +4473,8 @@ impl SessionDeleteCapabilities {
 
 /// Capabilities for additional session directories support.
 ///
-/// By supplying `{}` it means that the agent supports the `additionalDirectories`
-/// field on supported session lifecycle requests. Agents that also support
+/// Supplying `{}` means the agent supports the `additionalDirectories` field on
+/// supported session lifecycle requests. Agents that also support
 /// `session/list` may return `SessionInfo.additionalDirectories` to report the
 /// complete ordered additional-root list associated with a listed session.
 #[serde_as]
@@ -4482,7 +4519,7 @@ impl SessionAdditionalDirectoriesCapabilities {
 ///
 /// Capabilities for the `session/fork` method.
 ///
-/// By supplying `{}` it means that the agent supports forking of sessions.
+/// Supplying `{}` means the agent supports forking sessions.
 #[cfg(feature = "unstable_session_fork")]
 #[serde_as]
 #[skip_serializing_none]
@@ -4523,7 +4560,7 @@ impl SessionForkCapabilities {
 
 /// Capabilities for the `session/resume` method.
 ///
-/// By supplying `{}` it means that the agent supports resuming of sessions.
+/// Supplying `{}` means the agent supports resuming sessions.
 #[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -4562,7 +4599,7 @@ impl SessionResumeCapabilities {
 
 /// Capabilities for the `session/close` method.
 ///
-/// By supplying `{}` it means that the agent supports closing of sessions.
+/// Supplying `{}` means the agent supports closing sessions.
 #[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]

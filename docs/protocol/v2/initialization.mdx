@@ -143,20 +143,20 @@ Optionally, Agents **MAY** support prompt extensions, MCP server transports, and
 
 <ResponseField name="mcp" type="McpCapabilities Object">
   Object indicating the MCP server transports that may be included in session
-  lifecycle requests. Omitted or `null` means the Agent does not advertise MCP
-  server transport support for sessions.
+  lifecycle requests. Omitted or `null` both mean the Agent does not advertise
+  MCP server transport support for sessions.
 </ResponseField>
 
 <ResponseField name="load" type="SessionLoadCapabilities Object">
   The [`session/load`](/protocol/v2/session-setup#loading-sessions) method is
-  available. Omitted or `null` means the Agent does not advertise support.
+  available. Omitted or `null` both mean the Agent does not advertise support.
   Supplying `{}` means the Agent supports loading sessions.
 </ResponseField>
 
 <ResponseField name="delete" type="SessionDeleteCapabilities Object">
   The [`session/delete`](/protocol/v2/session-delete) method is available.
-  Omitted or `null` means the Agent does not advertise support. Supplying `{}`
-  means the Agent supports deleting sessions from `session/list`.
+  Omitted or `null` both mean the Agent does not advertise support. Supplying an
+  empty object means the Agent supports deleting sessions from `session/list`.
 </ResponseField>
 
 <ResponseField
@@ -164,7 +164,7 @@ Optionally, Agents **MAY** support prompt extensions, MCP server transports, and
   type="SessionAdditionalDirectoriesCapabilities Object"
 >
   The Agent supports `additionalDirectories` on supported session lifecycle
-  requests. Omitted or `null` means the Agent does not advertise support.
+  requests. Omitted or `null` both mean the Agent does not advertise support.
   Supplying `{}` means the Agent supports additional workspace roots.
 </ResponseField>
 
