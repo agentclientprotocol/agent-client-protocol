@@ -2277,7 +2277,7 @@
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for `mcp/connect`.",
       "type": "object",
       "properties": {
-        "acpId": {
+        "serverId": {
           "description": "The ACP MCP server ID that was provided by the component declaring the MCP server.",
           "allOf": [
             {
@@ -2292,7 +2292,7 @@
           "additionalProperties": true
         }
       },
-      "required": ["acpId"],
+      "required": ["serverId"],
       "x-side": "client",
       "x-method": "mcp/connect"
     },
@@ -3619,7 +3619,7 @@
               "description": "Custom or future authentication method type.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
               "type": "string"
             },
-            "id": {
+            "methodId": {
               "description": "Unique identifier for this authentication method.",
               "allOf": [
                 {
@@ -3643,7 +3643,7 @@
               "additionalProperties": true
             }
           },
-          "required": ["type", "id", "name"],
+          "required": ["type", "methodId", "name"],
           "not": {
             "anyOf": [
               {
@@ -3724,7 +3724,7 @@
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nEnvironment variable authentication method.\n\nThe user provides credentials that the client passes to the agent as environment variables.",
       "type": "object",
       "properties": {
-        "id": {
+        "methodId": {
           "description": "Unique identifier for this authentication method.",
           "allOf": [
             {
@@ -3762,7 +3762,7 @@
           "additionalProperties": true
         }
       },
-      "required": ["id", "name", "vars"]
+      "required": ["methodId", "name", "vars"]
     },
     "EnvVariable": {
       "description": "An environment variable to set when launching an MCP server.",
@@ -3789,7 +3789,7 @@
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nTerminal-based authentication method.\n\nThe client runs an interactive terminal for the user to authenticate via a TUI.",
       "type": "object",
       "properties": {
-        "id": {
+        "methodId": {
           "description": "Unique identifier for this authentication method.",
           "allOf": [
             {
@@ -3831,13 +3831,13 @@
           "additionalProperties": true
         }
       },
-      "required": ["id", "name"]
+      "required": ["methodId", "name"]
     },
     "AuthMethodAgent": {
       "description": "Agent handles authentication itself.\n\nThe `type` discriminator value is `agent`.",
       "type": "object",
       "properties": {
-        "id": {
+        "methodId": {
           "description": "Unique identifier for this authentication method.",
           "allOf": [
             {
@@ -3861,7 +3861,7 @@
           "additionalProperties": true
         }
       },
-      "required": ["id", "name"]
+      "required": ["methodId", "name"]
     },
     "LoginAuthResponse": {
       "description": "Response to the `auth/login` method.",
@@ -3905,9 +3905,13 @@
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nInformation about a configurable LLM provider.",
       "type": "object",
       "properties": {
-        "id": {
+        "providerId": {
           "description": "Provider identifier, for example \"main\" or \"openai\".",
-          "type": "string"
+          "allOf": [
+            {
+              "$ref": "#/$defs/ProviderId"
+            }
+          ]
         },
         "supported": {
           "description": "Supported protocol types for this provider.",
@@ -3919,7 +3923,7 @@
           "x-deserialize-skip-invalid-items": true
         },
         "required": {
-          "description": "Whether this provider is mandatory and cannot be disabled via `providers/disable`.\nIf true, clients must not call `providers/disable` for this id.",
+          "description": "Whether this provider is mandatory and cannot be disabled via `providers/disable`.\nIf true, clients must not call `providers/disable` for this provider ID.",
           "type": "boolean"
         },
         "current": {
@@ -3941,7 +3945,11 @@
           "additionalProperties": true
         }
       },
-      "required": ["id", "supported", "required"]
+      "required": ["providerId", "supported", "required"]
+    },
+    "ProviderId": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nUnique identifier for a configurable LLM provider.",
+      "type": "string"
     },
     "LlmProtocol": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nWell-known API protocol identifiers for LLM providers.\n\nAgents and clients MUST handle unknown protocol identifiers gracefully.\n\nProtocol names beginning with `_` are free for custom use, like other ACP extension methods.\nProtocol names that do not begin with `_` are reserved for the ACP spec.",
@@ -4081,7 +4089,7 @@
       "description": "A session configuration option selector and its current state.",
       "type": "object",
       "properties": {
-        "id": {
+        "configId": {
           "description": "Unique identifier for the configuration option.",
           "allOf": [
             {
@@ -4117,7 +4125,7 @@
           "additionalProperties": true
         }
       },
-      "required": ["id", "name"],
+      "required": ["configId", "name"],
       "anyOf": [
         {
           "description": "Single-value selector (dropdown).",
@@ -4286,7 +4294,7 @@
       "description": "A group of possible values for a session configuration option.",
       "type": "object",
       "properties": {
-        "group": {
+        "groupId": {
           "description": "Unique identifier for this group.",
           "allOf": [
             {
@@ -4314,7 +4322,7 @@
           "additionalProperties": true
         }
       },
-      "required": ["group", "name", "options"]
+      "required": ["groupId", "name", "options"]
     },
     "SessionConfigGroupId": {
       "description": "Unique identifier for a session configuration option value group.",
@@ -4693,9 +4701,17 @@
             "kind": {
               "description": "Custom or future NES suggestion kind.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
               "type": "string"
+            },
+            "suggestionId": {
+              "description": "Unique identifier for accept/reject tracking.",
+              "allOf": [
+                {
+                  "$ref": "#/$defs/NesSuggestionId"
+                }
+              ]
             }
           },
-          "required": ["kind"],
+          "required": ["kind", "suggestionId"],
           "not": {
             "anyOf": [
               {
@@ -4746,6 +4762,10 @@
       "discriminator": {
         "propertyName": "kind"
       }
+    },
+    "NesSuggestionId": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nUnique identifier for an NES suggestion.",
+      "type": "string"
     },
     "NesTextEdit": {
       "description": "A text edit within a suggestion.",
@@ -4830,9 +4850,13 @@
       "description": "A text edit suggestion.",
       "type": "object",
       "properties": {
-        "id": {
+        "suggestionId": {
           "description": "Unique identifier for accept/reject tracking.",
-          "type": "string"
+          "allOf": [
+            {
+              "$ref": "#/$defs/NesSuggestionId"
+            }
+          ]
         },
         "uri": {
           "description": "The URI of the file to edit.",
@@ -4866,15 +4890,19 @@
           "additionalProperties": true
         }
       },
-      "required": ["id", "uri", "edits"]
+      "required": ["suggestionId", "uri", "edits"]
     },
     "NesJumpSuggestion": {
       "description": "A jump-to-location suggestion.",
       "type": "object",
       "properties": {
-        "id": {
+        "suggestionId": {
           "description": "Unique identifier for accept/reject tracking.",
-          "type": "string"
+          "allOf": [
+            {
+              "$ref": "#/$defs/NesSuggestionId"
+            }
+          ]
         },
         "uri": {
           "description": "The file to navigate to.",
@@ -4895,15 +4923,19 @@
           "additionalProperties": true
         }
       },
-      "required": ["id", "uri", "position"]
+      "required": ["suggestionId", "uri", "position"]
     },
     "NesRenameSuggestion": {
       "description": "A rename symbol suggestion.",
       "type": "object",
       "properties": {
-        "id": {
+        "suggestionId": {
           "description": "Unique identifier for accept/reject tracking.",
-          "type": "string"
+          "allOf": [
+            {
+              "$ref": "#/$defs/NesSuggestionId"
+            }
+          ]
         },
         "uri": {
           "description": "The file URI containing the symbol.",
@@ -4928,15 +4960,19 @@
           "additionalProperties": true
         }
       },
-      "required": ["id", "uri", "position", "newName"]
+      "required": ["suggestionId", "uri", "position", "newName"]
     },
     "NesSearchAndReplaceSuggestion": {
       "description": "A search-and-replace suggestion.",
       "type": "object",
       "properties": {
-        "id": {
+        "suggestionId": {
           "description": "Unique identifier for accept/reject tracking.",
-          "type": "string"
+          "allOf": [
+            {
+              "$ref": "#/$defs/NesSuggestionId"
+            }
+          ]
         },
         "uri": {
           "description": "The file URI to search within.",
@@ -4962,7 +4998,7 @@
           "additionalProperties": true
         }
       },
-      "required": ["id", "uri", "search", "replace"]
+      "required": ["suggestionId", "uri", "search", "replace"]
     },
     "CloseNesResponse": {
       "description": "Response from closing an NES session.",
@@ -6052,7 +6088,7 @@
               "description": "Custom or future plan update content type.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
               "type": "string"
             },
-            "id": {
+            "planId": {
               "description": "The plan ID to update.",
               "allOf": [
                 {
@@ -6061,7 +6097,7 @@
               ]
             }
           },
-          "required": ["type", "id"],
+          "required": ["type", "planId"],
           "not": {
             "anyOf": [
               {
@@ -6194,7 +6230,7 @@
       "description": "A plan represented as structured entries.",
       "type": "object",
       "properties": {
-        "id": {
+        "planId": {
           "description": "The plan ID to update.",
           "allOf": [
             {
@@ -6218,13 +6254,13 @@
           "additionalProperties": true
         }
       },
-      "required": ["id", "entries"]
+      "required": ["planId", "entries"]
     },
     "PlanFile": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA plan represented by a file URI.",
       "type": "object",
       "properties": {
-        "id": {
+        "planId": {
           "description": "The plan ID to update.",
           "allOf": [
             {
@@ -6243,13 +6279,13 @@
           "additionalProperties": true
         }
       },
-      "required": ["id", "uri"]
+      "required": ["planId", "uri"]
     },
     "PlanMarkdown": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA plan represented as raw markdown content.",
       "type": "object",
       "properties": {
-        "id": {
+        "planId": {
           "description": "The plan ID to update.",
           "allOf": [
             {
@@ -6268,7 +6304,7 @@
           "additionalProperties": true
         }
       },
-      "required": ["id", "content"]
+      "required": ["planId", "content"]
     },
     "PlanUpdate": {
       "description": "A content update for a plan identified by ID.",
@@ -6295,7 +6331,7 @@
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRemoval notice for a plan identified by ID.",
       "type": "object",
       "properties": {
-        "id": {
+        "planId": {
           "description": "The plan ID to remove.",
           "allOf": [
             {
@@ -6310,7 +6346,7 @@
           "additionalProperties": true
         }
       },
-      "required": ["id"]
+      "required": ["planId"]
     },
     "AvailableCommand": {
       "description": "Information about a command.",
@@ -7106,12 +7142,16 @@
       "x-method": "providers/list"
     },
     "SetProviderRequest": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for `providers/set`.\n\nReplaces the full configuration for one provider id.",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for `providers/set`.\n\nReplaces the full configuration for one provider ID.",
       "type": "object",
       "properties": {
-        "id": {
-          "description": "Provider id to configure.",
-          "type": "string"
+        "providerId": {
+          "description": "Provider ID to configure.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/ProviderId"
+            }
+          ]
         },
         "apiType": {
           "description": "Protocol type for this provider.",
@@ -7140,7 +7180,7 @@
           "additionalProperties": true
         }
       },
-      "required": ["id", "apiType", "baseUrl"],
+      "required": ["providerId", "apiType", "baseUrl"],
       "x-side": "agent",
       "x-method": "providers/set"
     },
@@ -7148,9 +7188,13 @@
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for `providers/disable`.",
       "type": "object",
       "properties": {
-        "id": {
-          "description": "Provider id to disable.",
-          "type": "string"
+        "providerId": {
+          "description": "Provider ID to disable.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/ProviderId"
+            }
+          ]
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
@@ -7159,7 +7203,7 @@
           "additionalProperties": true
         }
       },
-      "required": ["id"],
+      "required": ["providerId"],
       "x-side": "agent",
       "x-method": "providers/disable"
     },
@@ -7376,7 +7420,7 @@
           "description": "Human-readable name identifying this MCP server.",
           "type": "string"
         },
-        "id": {
+        "serverId": {
           "description": "Unique identifier for this MCP server, generated by the component providing it.\n\nProviders MUST NOT reuse an ID for multiple ACP-transport MCP servers that are visible\non the same ACP connection.",
           "allOf": [
             {
@@ -7391,7 +7435,7 @@
           "additionalProperties": true
         }
       },
-      "required": ["name", "id"]
+      "required": ["name", "serverId"]
     },
     "McpServerStdio": {
       "description": "Stdio transport configuration for MCP.",
@@ -8983,9 +9027,13 @@
             }
           ]
         },
-        "id": {
+        "suggestionId": {
           "description": "The ID of the accepted suggestion.",
-          "type": "string"
+          "allOf": [
+            {
+              "$ref": "#/$defs/NesSuggestionId"
+            }
+          ]
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
@@ -8994,7 +9042,7 @@
           "additionalProperties": true
         }
       },
-      "required": ["sessionId", "id"],
+      "required": ["sessionId", "suggestionId"],
       "x-side": "agent",
       "x-method": "nes/accept"
     },
@@ -9010,9 +9058,13 @@
             }
           ]
         },
-        "id": {
+        "suggestionId": {
           "description": "The ID of the rejected suggestion.",
-          "type": "string"
+          "allOf": [
+            {
+              "$ref": "#/$defs/NesSuggestionId"
+            }
+          ]
         },
         "reason": {
           "description": "The reason for rejection.",
@@ -9033,7 +9085,7 @@
           "additionalProperties": true
         }
       },
-      "required": ["sessionId", "id"],
+      "required": ["sessionId", "suggestionId"],
       "x-side": "agent",
       "x-method": "nes/reject"
     },

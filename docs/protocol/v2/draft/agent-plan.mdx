@@ -7,7 +7,7 @@ Plans are execution strategies for complex tasks that require multiple steps.
 
 Agents may share plans with Clients through [`session/update`](/protocol/v2/draft/prompt-lifecycle#3-agent-reports-output) notifications, providing real-time visibility into their thinking and progress.
 
-`plan_update` carries a `plan` object with a `type` discriminator, and every plan format includes a required `id` so Clients can track multiple plans independently.
+`plan_update` carries a `plan` object with a `type` discriminator, and every plan format includes a required `planId` so Clients can track multiple plans independently.
 
 The stable plan content type is `items`. The draft unstable schema also includes additional plan operations while the Plan Operations RFD is in progress.
 
@@ -27,7 +27,7 @@ When the language model creates an execution plan, the Agent **SHOULD** report i
       "sessionUpdate": "plan_update",
       "plan": {
         "type": "items",
-        "id": "plan-1",
+        "planId": "plan-1",
         "entries": [
           {
             "content": "Analyze the existing codebase structure",
@@ -55,7 +55,7 @@ When the language model creates an execution plan, the Agent **SHOULD** report i
   The plan content type.
 </ParamField>
 
-<ParamField path="plan.id" type="PlanId" required>
+<ParamField path="plan.planId" type="PlanId" required>
   A unique identifier for this plan within the session.
 </ParamField>
 
@@ -82,7 +82,7 @@ Clients using the draft unstable schema **MUST** tolerate these variants. Tolera
       "sessionUpdate": "plan_update",
       "plan": {
         "type": "markdown",
-        "id": "implementation-plan",
+        "planId": "implementation-plan",
         "content": "## Steps\n- [ ] Refactor module\n- [ ] Add tests"
       }
     }
@@ -102,7 +102,7 @@ Clients using the draft unstable schema **MUST** tolerate these variants. Tolera
       "sessionUpdate": "plan_update",
       "plan": {
         "type": "file",
-        "id": "design-doc",
+        "planId": "design-doc",
         "uri": "file:///tmp/plan.md"
       }
     }
@@ -124,7 +124,7 @@ Agents can remove a plan by sending `plan_removed` with the plan ID:
     "sessionId": "sess_abc123def456",
     "update": {
       "sessionUpdate": "plan_removed",
-      "id": "plan-1"
+      "planId": "plan-1"
     }
   }
 }
@@ -134,7 +134,7 @@ Agents can remove a plan by sending `plan_removed` with the plan ID:
 
 `plan.type` values can be custom or future variants when Clients can preserve or display them generically. Custom plan content types **MUST** begin with `_`; unknown non-underscore plan content types are reserved for future ACP variants.
 
-Every plan content variant, including custom or future variants, **MUST** carry an `id`.
+Every plan content variant, including custom or future variants, **MUST** carry a `planId`.
 
 ## Plan Entries
 
@@ -168,7 +168,7 @@ Custom or future status values can be used when Clients can preserve or display 
 
 ## Updating Plans
 
-As the Agent progresses through the plan, it **SHOULD** report updates by sending more `session/update` notifications with the same `sessionUpdate: "plan_update"` structure and plan `id`.
+As the Agent progresses through the plan, it **SHOULD** report updates by sending more `session/update` notifications with the same `sessionUpdate: "plan_update"` structure and `planId`.
 
 For item-based plans, the Agent **MUST** send a complete list of all plan entries in each update and their current status. The Client **MUST** replace the current contents of that plan completely.
 

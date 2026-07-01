@@ -17,7 +17,7 @@ During [Session Setup](/protocol/v2/session-setup) the Agent **MAY** return a li
     "sessionId": "sess_abc123def456",
     "configOptions": [
       {
-        "id": "mode",
+        "configId": "mode",
         "name": "Session Mode",
         "description": "Controls how the agent requests permission",
         "category": "mode",
@@ -37,7 +37,7 @@ During [Session Setup](/protocol/v2/session-setup) the Agent **MAY** return a li
         ]
       },
       {
-        "id": "model",
+        "configId": "model",
         "name": "Model",
         "category": "model",
         "type": "select",
@@ -68,7 +68,7 @@ During [Session Setup](/protocol/v2/session-setup) the Agent **MAY** return a li
 
 ### ConfigOption
 
-<ResponseField name="id" type="string" required>
+<ResponseField name="configId" type="string" required>
   Unique identifier for this configuration option. Used when setting values.
 </ResponseField>
 
@@ -179,7 +179,7 @@ Clients can change a config option value by calling the `session/set_config_opti
 </ParamField>
 
 <ParamField path="configId" type="string" required>
-  The `id` of the configuration option to change
+  The `configId` of the configuration option to change
 </ParamField>
 
 <ParamField path="value" type="string" required>
@@ -196,7 +196,7 @@ The Agent **MUST** respond with the complete list of all configuration options a
   "result": {
     "configOptions": [
       {
-        "id": "mode",
+        "configId": "mode",
         "name": "Session Mode",
         "type": "select",
         "currentValue": "code",
@@ -212,7 +212,7 @@ The Agent **MUST** respond with the complete list of all configuration options a
         ]
       },
       {
-        "id": "model",
+        "configId": "model",
         "name": "Model",
         "type": "select",
         "currentValue": "model-1",
@@ -253,7 +253,7 @@ The Agent can also change configuration options and notify the Client by sending
       "sessionUpdate": "config_option_update",
       "configOptions": [
         {
-          "id": "mode",
+          "configId": "mode",
           "name": "Session Mode",
           "type": "select",
           "currentValue": "code",
@@ -269,7 +269,7 @@ The Agent can also change configuration options and notify the Client by sending
           ]
         },
         {
-          "id": "model",
+          "configId": "model",
           "name": "Model",
           "type": "select",
           "currentValue": "model-2",

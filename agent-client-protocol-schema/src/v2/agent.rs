@@ -520,14 +520,14 @@ pub enum AuthMethod {
 impl AuthMethod {
     /// The unique identifier for this authentication method.
     #[must_use]
-    pub fn id(&self) -> &AuthMethodId {
+    pub fn method_id(&self) -> &AuthMethodId {
         match self {
-            Self::Agent(a) => &a.id,
-            Self::Other(a) => &a.id,
+            Self::Agent(a) => &a.method_id,
+            Self::Other(a) => &a.method_id,
             #[cfg(feature = "unstable_auth_methods")]
-            Self::EnvVar(e) => &e.id,
+            Self::EnvVar(e) => &e.method_id,
             #[cfg(feature = "unstable_auth_methods")]
-            Self::Terminal(t) => &t.id,
+            Self::Terminal(t) => &t.method_id,
         }
     }
 
@@ -592,7 +592,7 @@ pub struct OtherAuthMethod {
     #[serde(rename = "type")]
     pub type_: String,
     /// Unique identifier for this authentication method.
-    pub id: AuthMethodId,
+    pub method_id: AuthMethodId,
     /// Human-readable name of the authentication method.
     pub name: String,
     /// Optional description providing more details about this authentication method.
@@ -620,18 +620,18 @@ impl OtherAuthMethod {
     #[must_use]
     pub fn new(
         type_: impl Into<String>,
-        id: impl Into<AuthMethodId>,
+        method_id: impl Into<AuthMethodId>,
         name: impl Into<String>,
         mut fields: BTreeMap<String, serde_json::Value>,
     ) -> Self {
         fields.remove("type");
-        fields.remove("id");
+        fields.remove("methodId");
         fields.remove("name");
         fields.remove("description");
         fields.remove("_meta");
         Self {
             type_: type_.into(),
-            id: id.into(),
+            method_id: method_id.into(),
             name: name.into(),
             description: None,
             meta: None,
@@ -668,7 +668,7 @@ impl<'de> Deserialize<'de> for OtherAuthMethod {
         struct RawOtherAuthMethod {
             #[serde(rename = "type")]
             type_: String,
-            id: AuthMethodId,
+            method_id: AuthMethodId,
             name: String,
             description: Option<String>,
             #[serde(rename = "_meta")]
@@ -687,7 +687,7 @@ impl<'de> Deserialize<'de> for OtherAuthMethod {
 
         Ok(Self {
             type_: raw.type_,
-            id: raw.id,
+            method_id: raw.method_id,
             name: raw.name,
             description: raw.description,
             meta: raw.meta,
@@ -729,7 +729,7 @@ fn other_auth_method_schema(schema: &mut Schema) {
 #[non_exhaustive]
 pub struct AuthMethodAgent {
     /// Unique identifier for this authentication method.
-    pub id: AuthMethodId,
+    pub method_id: AuthMethodId,
     /// Human-readable name of the authentication method.
     pub name: String,
     /// Optional description providing more details about this authentication method.
@@ -752,9 +752,9 @@ pub struct AuthMethodAgent {
 impl AuthMethodAgent {
     /// Builds [`AuthMethodAgent`] with the required fields set; optional fields start unset or empty.
     #[must_use]
-    pub fn new(id: impl Into<AuthMethodId>, name: impl Into<String>) -> Self {
+    pub fn new(method_id: impl Into<AuthMethodId>, name: impl Into<String>) -> Self {
         Self {
-            id: id.into(),
+            method_id: method_id.into(),
             name: name.into(),
             description: None,
             meta: None,
@@ -795,7 +795,7 @@ impl AuthMethodAgent {
 #[non_exhaustive]
 pub struct AuthMethodEnvVar {
     /// Unique identifier for this authentication method.
-    pub id: AuthMethodId,
+    pub method_id: AuthMethodId,
     /// Human-readable name of the authentication method.
     pub name: String,
     /// Optional description providing more details about this authentication method.
@@ -829,12 +829,12 @@ impl AuthMethodEnvVar {
     /// Builds [`AuthMethodEnvVar`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(
-        id: impl Into<AuthMethodId>,
+        method_id: impl Into<AuthMethodId>,
         name: impl Into<String>,
         vars: Vec<AuthEnvVar>,
     ) -> Self {
         Self {
-            id: id.into(),
+            method_id: method_id.into(),
             name: name.into(),
             description: None,
             vars,
@@ -997,7 +997,7 @@ impl AuthEnvVar {
 #[non_exhaustive]
 pub struct AuthMethodTerminal {
     /// Unique identifier for this authentication method.
-    pub id: AuthMethodId,
+    pub method_id: AuthMethodId,
     /// Human-readable name of the authentication method.
     pub name: String,
     /// Optional description providing more details about this authentication method.
@@ -1031,9 +1031,9 @@ pub struct AuthMethodTerminal {
 impl AuthMethodTerminal {
     /// Builds [`AuthMethodTerminal`] with the required fields set; optional fields start unset or empty.
     #[must_use]
-    pub fn new(id: impl Into<AuthMethodId>, name: impl Into<String>) -> Self {
+    pub fn new(method_id: impl Into<AuthMethodId>, name: impl Into<String>) -> Self {
         Self {
-            id: id.into(),
+            method_id: method_id.into(),
             name: name.into(),
             description: None,
             args: Vec::new(),
@@ -2147,7 +2147,7 @@ impl SessionConfigSelectOption {
 #[non_exhaustive]
 pub struct SessionConfigSelectGroup {
     /// Unique identifier for this group.
-    pub group: SessionConfigGroupId,
+    pub group_id: SessionConfigGroupId,
     /// Human-readable label for this group.
     pub name: String,
     /// The set of option values in this group.
@@ -2170,12 +2170,12 @@ impl SessionConfigSelectGroup {
     /// Builds [`SessionConfigSelectGroup`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(
-        group: impl Into<SessionConfigGroupId>,
+        group_id: impl Into<SessionConfigGroupId>,
         name: impl Into<String>,
         options: Vec<SessionConfigSelectOption>,
     ) -> Self {
         Self {
-            group: group.into(),
+            group_id: group_id.into(),
             name: name.into(),
             options,
             meta: None,
@@ -2409,7 +2409,7 @@ fn other_session_config_kind_schema(schema: &mut Schema) {
 #[non_exhaustive]
 pub struct SessionConfigOption {
     /// Unique identifier for the configuration option.
-    pub id: SessionConfigId,
+    pub config_id: SessionConfigId,
     /// Human-readable label for the option.
     pub name: String,
     /// Optional description for the Client to display to the user.
@@ -2441,12 +2441,12 @@ impl SessionConfigOption {
     /// Builds [`SessionConfigOption`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(
-        id: impl Into<SessionConfigId>,
+        config_id: impl Into<SessionConfigId>,
         name: impl Into<String>,
         kind: SessionConfigKind,
     ) -> Self {
         Self {
-            id: id.into(),
+            config_id: config_id.into(),
             name: name.into(),
             description: None,
             category: None,
@@ -2458,13 +2458,13 @@ impl SessionConfigOption {
     /// Builds a select-style session configuration option with its current value and choices.
     #[must_use]
     pub fn select(
-        id: impl Into<SessionConfigId>,
+        config_id: impl Into<SessionConfigId>,
         name: impl Into<String>,
         current_value: impl Into<SessionConfigValueId>,
         options: impl Into<SessionConfigSelectOptions>,
     ) -> Self {
         Self::new(
-            id,
+            config_id,
             name,
             SessionConfigKind::Select(SessionConfigSelect::new(current_value, options)),
         )
@@ -2476,12 +2476,12 @@ impl SessionConfigOption {
     #[cfg(feature = "unstable_boolean_config")]
     #[must_use]
     pub fn boolean(
-        id: impl Into<SessionConfigId>,
+        config_id: impl Into<SessionConfigId>,
         name: impl Into<String>,
         current_value: bool,
     ) -> Self {
         Self::new(
-            id,
+            config_id,
             name,
             SessionConfigKind::Boolean(SessionConfigBoolean::new(current_value)),
         )
@@ -3084,7 +3084,7 @@ pub struct McpServerAcp {
     ///
     /// Providers MUST NOT reuse an ID for multiple ACP-transport MCP servers that are visible
     /// on the same ACP connection.
-    pub id: McpServerAcpId,
+    pub server_id: McpServerAcpId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -3101,10 +3101,10 @@ pub struct McpServerAcp {
 impl McpServerAcp {
     /// Builds [`McpServerAcp`] with the required fields set; optional fields start unset or empty.
     #[must_use]
-    pub fn new(name: impl Into<String>, id: impl Into<McpServerAcpId>) -> Self {
+    pub fn new(name: impl Into<String>, server_id: impl Into<McpServerAcpId>) -> Self {
         Self {
             name: name.into(),
-            id: id.into(),
+            server_id: server_id.into(),
             meta: None,
         }
     }
@@ -3615,6 +3615,27 @@ impl ProviderCurrentConfig {
 ///
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
+/// Unique identifier for a configurable LLM provider.
+#[cfg(feature = "unstable_llm_providers")]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
+#[serde(transparent)]
+#[from(Arc<str>, String, &'static str)]
+#[non_exhaustive]
+pub struct ProviderId(pub Arc<str>);
+
+#[cfg(feature = "unstable_llm_providers")]
+impl ProviderId {
+    /// Wraps a protocol string as a typed [`ProviderId`].
+    #[must_use]
+    pub fn new(id: impl Into<Arc<str>>) -> Self {
+        Self(id.into())
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
 /// Information about a configurable LLM provider.
 #[cfg(feature = "unstable_llm_providers")]
 #[serde_as]
@@ -3624,13 +3645,13 @@ impl ProviderCurrentConfig {
 #[non_exhaustive]
 pub struct ProviderInfo {
     /// Provider identifier, for example "main" or "openai".
-    pub id: String,
+    pub provider_id: ProviderId,
     /// Supported protocol types for this provider.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
     #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     pub supported: Vec<LlmProtocol>,
     /// Whether this provider is mandatory and cannot be disabled via `providers/disable`.
-    /// If true, clients must not call `providers/disable` for this id.
+    /// If true, clients must not call `providers/disable` for this provider ID.
     pub required: bool,
     /// Current effective non-secret routing config.
     /// Null or omitted means provider is disabled.
@@ -3655,13 +3676,13 @@ impl ProviderInfo {
     /// Builds [`ProviderInfo`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(
-        id: impl Into<String>,
+        provider_id: impl Into<ProviderId>,
         supported: Vec<LlmProtocol>,
         required: bool,
         current: impl IntoOption<ProviderCurrentConfig>,
     ) -> Self {
         Self {
-            id: id.into(),
+            provider_id: provider_id.into(),
             supported,
             required,
             current: current.into_option(),
@@ -3784,7 +3805,7 @@ impl ListProvidersResponse {
 ///
 /// Request parameters for `providers/set`.
 ///
-/// Replaces the full configuration for one provider id.
+/// Replaces the full configuration for one provider ID.
 #[cfg(feature = "unstable_llm_providers")]
 #[serde_as]
 #[skip_serializing_none]
@@ -3793,8 +3814,8 @@ impl ListProvidersResponse {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SetProviderRequest {
-    /// Provider id to configure.
-    pub id: String,
+    /// Provider ID to configure.
+    pub provider_id: ProviderId,
     /// Protocol type for this provider.
     pub api_type: LlmProtocol,
     /// Base URL for requests sent through this provider.
@@ -3821,9 +3842,13 @@ pub struct SetProviderRequest {
 impl SetProviderRequest {
     /// Builds [`SetProviderRequest`] with the required request fields set; optional fields start unset or empty.
     #[must_use]
-    pub fn new(id: impl Into<String>, api_type: LlmProtocol, base_url: impl Into<String>) -> Self {
+    pub fn new(
+        provider_id: impl Into<ProviderId>,
+        api_type: LlmProtocol,
+        base_url: impl Into<String>,
+    ) -> Self {
         Self {
-            id: id.into(),
+            provider_id: provider_id.into(),
             api_type,
             base_url: base_url.into(),
             headers: HashMap::new(),
@@ -3909,8 +3934,8 @@ impl SetProviderResponse {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct DisableProviderRequest {
-    /// Provider id to disable.
-    pub id: String,
+    /// Provider ID to disable.
+    pub provider_id: ProviderId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -3927,9 +3952,9 @@ pub struct DisableProviderRequest {
 impl DisableProviderRequest {
     /// Builds [`DisableProviderRequest`] with the required request fields set; optional fields start unset or empty.
     #[must_use]
-    pub fn new(id: impl Into<String>) -> Self {
+    pub fn new(provider_id: impl Into<ProviderId>) -> Self {
         Self {
-            id: id.into(),
+            provider_id: provider_id.into(),
             meta: None,
         }
     }
@@ -6091,7 +6116,7 @@ mod test_serialization {
         assert_eq!(
             json,
             json!({
-                "id": "default-auth",
+                "methodId": "default-auth",
                 "name": "Default Auth",
                 "type": "agent"
             })
@@ -6101,8 +6126,10 @@ mod test_serialization {
 
         let deserialized: AuthMethod = serde_json::from_value(json).unwrap();
         match deserialized {
-            AuthMethod::Agent(AuthMethodAgent { id, name, .. }) => {
-                assert_eq!(id.0.as_ref(), "default-auth");
+            AuthMethod::Agent(AuthMethodAgent {
+                method_id, name, ..
+            }) => {
+                assert_eq!(method_id.0.as_ref(), "default-auth");
                 assert_eq!(name, "Default Auth");
             }
             _ => panic!("Expected Agent variant"),
@@ -6112,7 +6139,7 @@ mod test_serialization {
     #[test]
     fn test_auth_method_agent_deserialization() {
         let json = json!({
-            "id": "agent-auth",
+            "methodId": "agent-auth",
             "name": "Agent Auth",
             "type": "agent"
         });
@@ -6125,7 +6152,7 @@ mod test_serialization {
     fn test_auth_method_agent_requires_type() {
         assert!(
             serde_json::from_value::<AuthMethod>(json!({
-                "id": "agent-auth",
+                "methodId": "agent-auth",
                 "name": "Agent Auth"
             }))
             .is_err()
@@ -6136,7 +6163,7 @@ mod test_serialization {
     fn test_auth_method_agent_rejects_null_type() {
         assert!(
             serde_json::from_value::<AuthMethod>(json!({
-                "id": "agent-auth",
+                "methodId": "agent-auth",
                 "name": "Agent Auth",
                 "type": null
             }))
@@ -6148,7 +6175,7 @@ mod test_serialization {
     fn test_auth_method_unknown_does_not_hide_malformed_agent() {
         assert!(
             serde_json::from_value::<AuthMethod>(json!({
-                "id": "agent-auth",
+                "methodId": "agent-auth",
                 "type": "agent"
             }))
             .is_err()
@@ -6158,14 +6185,14 @@ mod test_serialization {
     #[test]
     fn test_auth_method_unknown_variant_roundtrip() {
         let method: AuthMethod = serde_json::from_value(json!({
-            "id": "oauth",
+            "methodId": "oauth",
             "name": "OAuth",
             "type": "_oauth",
             "authorizationUrl": "https://example.com/auth"
         }))
         .unwrap();
 
-        assert_eq!(method.id().0.as_ref(), "oauth");
+        assert_eq!(method.method_id().0.as_ref(), "oauth");
         assert_eq!(method.name(), "OAuth");
         let AuthMethod::Other(unknown) = method else {
             panic!("expected unknown auth method");
@@ -6179,7 +6206,7 @@ mod test_serialization {
         assert_eq!(
             serde_json::to_value(AuthMethod::Other(unknown)).unwrap(),
             json!({
-                "id": "oauth",
+                "methodId": "oauth",
                 "name": "OAuth",
                 "type": "_oauth",
                 "authorizationUrl": "https://example.com/auth"
@@ -6192,7 +6219,7 @@ mod test_serialization {
     fn test_auth_method_unknown_does_not_hide_malformed_known_variant() {
         assert!(
             serde_json::from_value::<AuthMethod>(json!({
-                "id": "api-key",
+                "methodId": "api-key",
                 "name": "API Key",
                 "type": "env_var"
             }))
@@ -6351,7 +6378,7 @@ mod test_serialization {
         assert_eq!(
             json,
             json!({
-                "id": "api-key",
+                "methodId": "api-key",
                 "name": "API Key",
                 "type": "env_var",
                 "vars": [{"name": "API_KEY"}]
@@ -6369,13 +6396,13 @@ mod test_serialization {
         let deserialized: AuthMethod = serde_json::from_value(json).unwrap();
         match deserialized {
             AuthMethod::EnvVar(AuthMethodEnvVar {
-                id,
+                method_id,
                 name: method_name,
                 vars,
                 link,
                 ..
             }) => {
-                assert_eq!(id.0.as_ref(), "api-key");
+                assert_eq!(method_id.0.as_ref(), "api-key");
                 assert_eq!(method_name, "API Key");
                 assert_eq!(vars.len(), 1);
                 assert_eq!(vars[0].name, "API_KEY");
@@ -6399,7 +6426,7 @@ mod test_serialization {
         assert_eq!(
             json,
             json!({
-                "id": "api-key",
+                "methodId": "api-key",
                 "name": "API Key",
                 "type": "env_var",
                 "vars": [{"name": "API_KEY"}],
@@ -6438,7 +6465,7 @@ mod test_serialization {
         assert_eq!(
             json,
             json!({
-                "id": "azure-openai",
+                "methodId": "azure-openai",
                 "name": "Azure OpenAI",
                 "type": "env_var",
                 "vars": [
@@ -6480,7 +6507,7 @@ mod test_serialization {
         assert_eq!(
             json,
             json!({
-                "id": "tui-auth",
+                "methodId": "tui-auth",
                 "name": "Terminal Auth",
                 "type": "terminal"
             })
@@ -6512,7 +6539,7 @@ mod test_serialization {
         assert_eq!(
             json,
             json!({
-                "id": "tui-auth",
+                "methodId": "tui-auth",
                 "name": "Terminal Auth",
                 "type": "terminal",
                 "args": ["--interactive", "--color"],
@@ -6772,7 +6799,7 @@ mod test_serialization {
         assert_eq!(
             json,
             json!({
-                "id": "brave_mode",
+                "configId": "brave_mode",
                 "name": "Brave Mode",
                 "description": "Skip confirmation prompts",
                 "type": "boolean",
@@ -6784,7 +6811,7 @@ mod test_serialization {
         );
 
         let deserialized: SessionConfigOption = serde_json::from_value(json).unwrap();
-        assert_eq!(deserialized.id.to_string(), "brave_mode");
+        assert_eq!(deserialized.config_id.to_string(), "brave_mode");
         assert_eq!(deserialized.name, "Brave Mode");
         match deserialized.kind {
             SessionConfigKind::Boolean(ref b) => assert!(!b.current_value),
@@ -6826,7 +6853,7 @@ mod test_serialization {
     #[test]
     fn test_session_config_option_unknown_kind_roundtrip() {
         let option: SessionConfigOption = serde_json::from_value(json!({
-            "id": "verbosity",
+            "configId": "verbosity",
             "name": "Verbosity",
             "type": "_slider",
             "currentValue": 3,
@@ -6838,7 +6865,7 @@ mod test_serialization {
         }))
         .unwrap();
 
-        assert_eq!(option.id.to_string(), "verbosity");
+        assert_eq!(option.config_id.to_string(), "verbosity");
         assert_eq!(option.meta.as_ref().unwrap()["source"], "test");
         let SessionConfigKind::Other(unknown) = &option.kind else {
             panic!("expected unknown config kind");
@@ -6885,7 +6912,7 @@ mod test_serialization {
     fn test_session_config_option_unknown_does_not_hide_malformed_known_kind() {
         assert!(
             serde_json::from_value::<SessionConfigOption>(json!({
-                "id": "model",
+                "configId": "model",
                 "name": "Model",
                 "type": "select"
             }))
@@ -6986,7 +7013,7 @@ mod test_serialization {
         assert_eq!(
             json,
             json!({
-                "id": "main",
+                "providerId": "main",
                 "supported": ["anthropic", "openai"],
                 "required": true,
                 "current": {
@@ -6997,7 +7024,7 @@ mod test_serialization {
         );
 
         let deserialized: ProviderInfo = serde_json::from_value(json).unwrap();
-        assert_eq!(deserialized.id, "main");
+        assert_eq!(deserialized.provider_id.to_string(), "main");
         assert_eq!(deserialized.supported.len(), 2);
         assert!(deserialized.required);
         assert!(deserialized.current.is_some());
@@ -7021,14 +7048,14 @@ mod test_serialization {
         assert_eq!(
             json,
             json!({
-                "id": "secondary",
+                "providerId": "secondary",
                 "supported": ["openai"],
                 "required": false
             })
         );
 
         let deserialized: ProviderInfo = serde_json::from_value(json).unwrap();
-        assert_eq!(deserialized.id, "secondary");
+        assert_eq!(deserialized.provider_id.to_string(), "secondary");
         assert!(!deserialized.required);
         assert!(deserialized.current.is_none());
     }
@@ -7038,7 +7065,7 @@ mod test_serialization {
     fn test_provider_info_missing_current_defaults_to_none() {
         // current is optional; omitting it should decode as None
         let json = json!({
-            "id": "main",
+            "providerId": "main",
             "supported": ["anthropic"],
             "required": true
         });
@@ -7053,7 +7080,7 @@ mod test_serialization {
         // both must deserialize into None so the disabled state is preserved
         // regardless of which form the peer chose to send.
         let json = json!({
-            "id": "main",
+            "providerId": "main",
             "supported": ["anthropic"],
             "required": true,
             "current": null
@@ -7077,7 +7104,7 @@ mod test_serialization {
 
         let json = serde_json::to_value(&response).unwrap();
         assert_eq!(json["providers"].as_array().unwrap().len(), 1);
-        assert_eq!(json["providers"][0]["id"], "main");
+        assert_eq!(json["providers"][0]["providerId"], "main");
 
         let deserialized: ListProvidersResponse = serde_json::from_value(json).unwrap();
         assert_eq!(deserialized.providers.len(), 1);
@@ -7099,7 +7126,7 @@ mod test_serialization {
         assert_eq!(
             json,
             json!({
-                "id": "main",
+                "providerId": "main",
                 "apiType": "openai",
                 "baseUrl": "https://api.openai.com/v1",
                 "headers": {
@@ -7109,7 +7136,7 @@ mod test_serialization {
         );
 
         let deserialized: SetProviderRequest = serde_json::from_value(json).unwrap();
-        assert_eq!(deserialized.id, "main");
+        assert_eq!(deserialized.provider_id.to_string(), "main");
         assert_eq!(deserialized.api_type, LlmProtocol::OpenAi);
         assert_eq!(deserialized.base_url, "https://api.openai.com/v1");
         assert_eq!(deserialized.headers.len(), 1);
@@ -7136,10 +7163,10 @@ mod test_serialization {
         let request = DisableProviderRequest::new("secondary");
 
         let json = serde_json::to_value(&request).unwrap();
-        assert_eq!(json, json!({ "id": "secondary" }));
+        assert_eq!(json, json!({ "providerId": "secondary" }));
 
         let deserialized: DisableProviderRequest = serde_json::from_value(json).unwrap();
-        assert_eq!(deserialized.id, "secondary");
+        assert_eq!(deserialized.provider_id.to_string(), "secondary");
     }
 
     #[cfg(feature = "unstable_llm_providers")]

@@ -44,7 +44,7 @@ impl McpConnectionId {
 #[non_exhaustive]
 pub struct ConnectMcpRequest {
     /// The ACP MCP server ID that was provided by the component declaring the MCP server.
-    pub acp_id: McpServerAcpId,
+    pub server_id: McpServerAcpId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -62,7 +62,7 @@ impl ConnectMcpRequest {
     #[must_use]
     pub fn new(acp_id: impl Into<McpServerAcpId>) -> Self {
         Self {
-            acp_id: acp_id.into(),
+            server_id: acp_id.into(),
             meta: None,
         }
     }

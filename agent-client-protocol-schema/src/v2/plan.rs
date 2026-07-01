@@ -121,7 +121,7 @@ pub struct OtherPlanUpdateContent {
     #[serde(rename = "type")]
     pub type_: String,
     /// The plan ID to update.
-    pub id: PlanId,
+    pub plan_id: PlanId,
     /// Additional fields from the unknown plan update content payload.
     #[serde(flatten)]
     pub fields: BTreeMap<String, serde_json::Value>,
@@ -132,14 +132,14 @@ impl OtherPlanUpdateContent {
     #[must_use]
     pub fn new(
         type_: impl Into<String>,
-        id: impl Into<PlanId>,
+        plan_id: impl Into<PlanId>,
         mut fields: BTreeMap<String, serde_json::Value>,
     ) -> Self {
         fields.remove("type");
-        fields.remove("id");
+        fields.remove("planId");
         Self {
             type_: type_.into(),
-            id: id.into(),
+            plan_id: plan_id.into(),
             fields,
         }
     }
@@ -157,11 +157,11 @@ impl<'de> Deserialize<'de> for OtherPlanUpdateContent {
         let serde_json::Value::String(type_) = type_ else {
             return Err(serde::de::Error::custom("`type` must be a string"));
         };
-        let id = fields
-            .remove("id")
-            .ok_or_else(|| serde::de::Error::missing_field("id"))?;
-        let serde_json::Value::String(id) = id else {
-            return Err(serde::de::Error::custom("`id` must be a string"));
+        let plan_id = fields
+            .remove("planId")
+            .ok_or_else(|| serde::de::Error::missing_field("planId"))?;
+        let serde_json::Value::String(plan_id) = plan_id else {
+            return Err(serde::de::Error::custom("`planId` must be a string"));
         };
 
         if is_known_plan_update_content_type(&type_) {
@@ -172,7 +172,7 @@ impl<'de> Deserialize<'de> for OtherPlanUpdateContent {
 
         Ok(Self {
             type_,
-            id: PlanId::new(id),
+            plan_id: PlanId::new(plan_id),
             fields,
         })
     }
@@ -195,22 +195,22 @@ const KNOWN_PLAN_UPDATE_CONTENT_TYPES: &[&str] = &["items", "file", "markdown"];
 impl PlanUpdateContent {
     /// Builds a plan update that replaces the itemized entries for a plan.
     #[must_use]
-    pub fn items(id: impl Into<PlanId>, entries: Vec<PlanEntry>) -> Self {
-        Self::Items(PlanItems::new(id, entries))
+    pub fn items(plan_id: impl Into<PlanId>, entries: Vec<PlanEntry>) -> Self {
+        Self::Items(PlanItems::new(plan_id, entries))
     }
 
     /// Builds a plan update that points clients at an external plan file URI.
     #[cfg(feature = "unstable_plan_operations")]
     #[must_use]
-    pub fn file(id: impl Into<PlanId>, uri: impl Into<String>) -> Self {
-        Self::File(PlanFile::new(id, uri))
+    pub fn file(plan_id: impl Into<PlanId>, uri: impl Into<String>) -> Self {
+        Self::File(PlanFile::new(plan_id, uri))
     }
 
     /// Builds a plan update whose plan content is inline Markdown.
     #[cfg(feature = "unstable_plan_operations")]
     #[must_use]
-    pub fn markdown(id: impl Into<PlanId>, content: impl Into<String>) -> Self {
-        Self::Markdown(PlanMarkdown::new(id, content))
+    pub fn markdown(plan_id: impl Into<PlanId>, content: impl Into<String>) -> Self {
+        Self::Markdown(PlanMarkdown::new(plan_id, content))
     }
 }
 
@@ -222,7 +222,7 @@ impl PlanUpdateContent {
 #[non_exhaustive]
 pub struct PlanItems {
     /// The plan ID to update.
-    pub id: PlanId,
+    pub plan_id: PlanId,
     /// The list of tasks to be accomplished.
     ///
     /// When updating an item-based plan, the agent must send a complete list of all entries
@@ -245,9 +245,9 @@ pub struct PlanItems {
 impl PlanItems {
     /// Builds [`PlanItems`] with the required fields set; optional fields start unset or empty.
     #[must_use]
-    pub fn new(id: impl Into<PlanId>, entries: Vec<PlanEntry>) -> Self {
+    pub fn new(plan_id: impl Into<PlanId>, entries: Vec<PlanEntry>) -> Self {
         Self {
-            id: id.into(),
+            plan_id: plan_id.into(),
             entries,
             meta: None,
         }
@@ -278,7 +278,7 @@ impl PlanItems {
 #[non_exhaustive]
 pub struct PlanFile {
     /// The plan ID to update.
-    pub id: PlanId,
+    pub plan_id: PlanId,
     /// The URI of the file containing the plan.
     pub uri: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -297,9 +297,9 @@ pub struct PlanFile {
 impl PlanFile {
     /// Builds [`PlanFile`] with the required fields set; optional fields start unset or empty.
     #[must_use]
-    pub fn new(id: impl Into<PlanId>, uri: impl Into<String>) -> Self {
+    pub fn new(plan_id: impl Into<PlanId>, uri: impl Into<String>) -> Self {
         Self {
-            id: id.into(),
+            plan_id: plan_id.into(),
             uri: uri.into(),
             meta: None,
         }
@@ -330,7 +330,7 @@ impl PlanFile {
 #[non_exhaustive]
 pub struct PlanMarkdown {
     /// The plan ID to update.
-    pub id: PlanId,
+    pub plan_id: PlanId,
     /// Markdown content for the plan.
     pub content: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -349,9 +349,9 @@ pub struct PlanMarkdown {
 impl PlanMarkdown {
     /// Builds [`PlanMarkdown`] with the required fields set; optional fields start unset or empty.
     #[must_use]
-    pub fn new(id: impl Into<PlanId>, content: impl Into<String>) -> Self {
+    pub fn new(plan_id: impl Into<PlanId>, content: impl Into<String>) -> Self {
         Self {
-            id: id.into(),
+            plan_id: plan_id.into(),
             content: content.into(),
             meta: None,
         }
@@ -382,7 +382,7 @@ impl PlanMarkdown {
 #[non_exhaustive]
 pub struct PlanRemoved {
     /// The plan ID to remove.
-    pub id: PlanId,
+    pub plan_id: PlanId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -399,9 +399,9 @@ pub struct PlanRemoved {
 impl PlanRemoved {
     /// Builds [`PlanRemoved`] with the required fields set; optional fields start unset or empty.
     #[must_use]
-    pub fn new(id: impl Into<PlanId>) -> Self {
+    pub fn new(plan_id: impl Into<PlanId>) -> Self {
         Self {
-            id: id.into(),
+            plan_id: plan_id.into(),
             meta: None,
         }
     }
@@ -545,7 +545,7 @@ mod tests {
     fn plan_update_content_preserves_unknown_variant() {
         let content: PlanUpdateContent = serde_json::from_value(serde_json::json!({
             "type": "_timeline",
-            "id": "plan-1",
+            "planId": "plan-1",
             "events": []
         }))
         .unwrap();
@@ -555,13 +555,13 @@ mod tests {
         };
 
         assert_eq!(unknown.type_, "_timeline");
-        assert_eq!(unknown.id.to_string(), "plan-1");
-        assert!(!unknown.fields.contains_key("id"));
+        assert_eq!(unknown.plan_id.to_string(), "plan-1");
+        assert!(!unknown.fields.contains_key("planId"));
         assert_eq!(
             serde_json::to_value(PlanUpdateContent::Other(unknown)).unwrap(),
             serde_json::json!({
                 "type": "_timeline",
-                "id": "plan-1",
+                "planId": "plan-1",
                 "events": []
             })
         );
@@ -578,14 +578,14 @@ mod tests {
         assert!(
             serde_json::from_value::<PlanUpdateContent>(serde_json::json!({
                 "type": "file",
-                "id": "plan-1"
+                "planId": "plan-1"
             }))
             .is_err()
         );
         assert!(
             serde_json::from_value::<PlanUpdateContent>(serde_json::json!({
                 "type": "markdown",
-                "id": "plan-1"
+                "planId": "plan-1"
             }))
             .is_err()
         );

@@ -1116,7 +1116,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 <ResponseField name="description" type={"string | null"} >
   Optional description providing more details about this authentication method.
 </ResponseField>
-<ResponseField name="id" type={<a href="#authmethodid">AuthMethodId</a>} required>
+<ResponseField name="methodId" type={<a href="#authmethodid">AuthMethodId</a>} required>
   Unique identifier for this authentication method.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
@@ -1153,7 +1153,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 <ResponseField name="description" type={"string | null"} >
   Optional description providing more details about this authentication method.
 </ResponseField>
-<ResponseField name="id" type={<a href="#authmethodid">AuthMethodId</a>} required>
+<ResponseField name="methodId" type={<a href="#authmethodid">AuthMethodId</a>} required>
   Unique identifier for this authentication method.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
@@ -1192,7 +1192,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 <ResponseField name="description" type={"string | null"} >
   Optional description providing more details about this authentication method.
 </ResponseField>
-<ResponseField name="id" type={<a href="#authmethodid">AuthMethodId</a>} required>
+<ResponseField name="methodId" type={<a href="#authmethodid">AuthMethodId</a>} required>
   Unique identifier for this authentication method.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
@@ -2416,7 +2416,7 @@ When updating an item-based plan, the agent must send a complete list of all ent
 with their current status. The client replaces that plan with each update.
 
 </ResponseField>
-<ResponseField name="id" type={<a href="#planid">PlanId</a>} required>
+<ResponseField name="planId" type={<a href="#planid">PlanId</a>} required>
   The plan ID to update.
 </ResponseField>
 
@@ -2466,7 +2466,7 @@ When updating an item-based plan, the agent must send a complete list of all ent
 with their current status. The client replaces that plan with each update.
 
 </ResponseField>
-<ResponseField name="id" type={<a href="#planid">PlanId</a>} required>
+<ResponseField name="planId" type={<a href="#planid">PlanId</a>} required>
   The plan ID to update.
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
@@ -2489,7 +2489,7 @@ otherwise ignore it or display it generically.
 
 <Expandable title="Properties">
 
-<ResponseField name="id" type={<a href="#planid">PlanId</a>} required>
+<ResponseField name="planId" type={<a href="#planid">PlanId</a>} required>
   The plan ID to update.
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
@@ -2959,11 +2959,11 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 <ResponseField name="category" type={<><span><a href="#sessionconfigoptioncategory">SessionConfigOptionCategory</a></span><span> | null</span></>} >
   Optional semantic category for this option (UX only).
 </ResponseField>
+<ResponseField name="configId" type={<a href="#sessionconfigid">SessionConfigId</a>} required>
+  Unique identifier for the configuration option.
+</ResponseField>
 <ResponseField name="description" type={"string | null"} >
   Optional description for the Client to display to the user.
-</ResponseField>
-<ResponseField name="id" type={<a href="#sessionconfigid">SessionConfigId</a>} required>
-  Unique identifier for the configuration option.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
   Human-readable label for the option.
@@ -3100,7 +3100,7 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
 
 </ResponseField>
-<ResponseField name="group" type={<a href="#sessionconfiggroupid">SessionConfigGroupId</a>} required>
+<ResponseField name="groupId" type={<a href="#sessionconfiggroupid">SessionConfigGroupId</a>} required>
   Unique identifier for this group.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>

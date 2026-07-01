@@ -4,8 +4,9 @@
 //! document events, and a suggestion request/response flow. NES sessions are
 //! independent of chat sessions and have their own lifecycle.
 
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, sync::Arc};
 
+use derive_more::{Display, From};
 use schemars::{JsonSchema, Schema};
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
@@ -23,6 +24,25 @@ pub(crate) const NES_SUGGEST_METHOD_NAME: &str = "nes/suggest";
 pub(crate) const NES_ACCEPT_METHOD_NAME: &str = "nes/accept";
 /// Method name for rejecting a suggestion.
 pub(crate) const NES_REJECT_METHOD_NAME: &str = "nes/reject";
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Unique identifier for an NES suggestion.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
+#[serde(transparent)]
+#[from(Arc<str>, String, &'static str)]
+#[non_exhaustive]
+pub struct NesSuggestionId(pub Arc<str>);
+
+impl NesSuggestionId {
+    /// Wraps a protocol string as a typed [`NesSuggestionId`].
+    #[must_use]
+    pub fn new(id: impl Into<Arc<str>>) -> Self {
+        Self(id.into())
+    }
+}
 /// Method name for closing an NES session.
 pub(crate) const NES_CLOSE_METHOD_NAME: &str = "nes/close";
 /// Notification name for document open events.
@@ -2379,6 +2399,8 @@ pub struct OtherNesSuggestion {
     /// extensions. Unknown values that do not begin with `_` are reserved for
     /// future ACP variants.
     pub kind: String,
+    /// Unique identifier for accept/reject tracking.
+    pub suggestion_id: NesSuggestionId,
     /// Additional fields from the unknown NES suggestion payload.
     #[serde(flatten)]
     pub fields: BTreeMap<String, serde_json::Value>,
@@ -2387,10 +2409,16 @@ pub struct OtherNesSuggestion {
 impl OtherNesSuggestion {
     /// Builds [`OtherNesSuggestion`] from an unknown discriminator and preserves the remaining extension fields.
     #[must_use]
-    pub fn new(kind: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
+    pub fn new(
+        kind: impl Into<String>,
+        suggestion_id: impl Into<NesSuggestionId>,
+        mut fields: BTreeMap<String, serde_json::Value>,
+    ) -> Self {
         fields.remove("kind");
+        fields.remove("suggestionId");
         Self {
             kind: kind.into(),
+            suggestion_id: suggestion_id.into(),
             fields,
         }
     }
@@ -2408,6 +2436,12 @@ impl<'de> Deserialize<'de> for OtherNesSuggestion {
         let serde_json::Value::String(kind) = kind else {
             return Err(serde::de::Error::custom("`kind` must be a string"));
         };
+        let suggestion_id = fields
+            .remove("suggestionId")
+            .ok_or_else(|| serde::de::Error::missing_field("suggestionId"))?;
+        let serde_json::Value::String(suggestion_id) = suggestion_id else {
+            return Err(serde::de::Error::custom("`suggestionId` must be a string"));
+        };
 
         if is_known_nes_suggestion_kind(&kind) {
             return Err(serde::de::Error::custom(format!(
@@ -2415,7 +2449,11 @@ impl<'de> Deserialize<'de> for OtherNesSuggestion {
             )));
         }
 
-        Ok(Self { kind, fields })
+        Ok(Self {
+            kind,
+            suggestion_id: NesSuggestionId::new(suggestion_id),
+            fields,
+        })
     }
 }
 
@@ -2439,7 +2477,7 @@ fn other_nes_suggestion_schema(schema: &mut Schema) {
 #[non_exhaustive]
 pub struct NesEditSuggestion {
     /// Unique identifier for accept/reject tracking.
-    pub id: String,
+    pub suggestion_id: NesSuggestionId,
     /// The URI of the file to edit.
     pub uri: String,
     /// The text edits to apply.
@@ -2466,9 +2504,13 @@ pub struct NesEditSuggestion {
 impl NesEditSuggestion {
     /// Builds [`NesEditSuggestion`] with the required fields set; optional fields start unset or empty.
     #[must_use]
-    pub fn new(id: impl Into<String>, uri: impl Into<String>, edits: Vec<NesTextEdit>) -> Self {
+    pub fn new(
+        suggestion_id: impl Into<NesSuggestionId>,
+        uri: impl Into<String>,
+        edits: Vec<NesTextEdit>,
+    ) -> Self {
         Self {
-            id: id.into(),
+            suggestion_id: suggestion_id.into(),
             uri: uri.into(),
             edits,
             cursor_position: None,
@@ -2549,7 +2591,7 @@ impl NesTextEdit {
 #[non_exhaustive]
 pub struct NesJumpSuggestion {
     /// Unique identifier for accept/reject tracking.
-    pub id: String,
+    pub suggestion_id: NesSuggestionId,
     /// The file to navigate to.
     pub uri: String,
     /// The target position within the file.
@@ -2569,9 +2611,13 @@ pub struct NesJumpSuggestion {
 impl NesJumpSuggestion {
     /// Builds [`NesJumpSuggestion`] with the required fields set; optional fields start unset or empty.
     #[must_use]
-    pub fn new(id: impl Into<String>, uri: impl Into<String>, position: Position) -> Self {
+    pub fn new(
+        suggestion_id: impl Into<NesSuggestionId>,
+        uri: impl Into<String>,
+        position: Position,
+    ) -> Self {
         Self {
-            id: id.into(),
+            suggestion_id: suggestion_id.into(),
             uri: uri.into(),
             position,
             meta: None,
@@ -2598,7 +2644,7 @@ impl NesJumpSuggestion {
 #[non_exhaustive]
 pub struct NesRenameSuggestion {
     /// Unique identifier for accept/reject tracking.
-    pub id: String,
+    pub suggestion_id: NesSuggestionId,
     /// The file URI containing the symbol.
     pub uri: String,
     /// The position of the symbol to rename.
@@ -2621,13 +2667,13 @@ impl NesRenameSuggestion {
     /// Builds [`NesRenameSuggestion`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(
-        id: impl Into<String>,
+        suggestion_id: impl Into<NesSuggestionId>,
         uri: impl Into<String>,
         position: Position,
         new_name: impl Into<String>,
     ) -> Self {
         Self {
-            id: id.into(),
+            suggestion_id: suggestion_id.into(),
             uri: uri.into(),
             position,
             new_name: new_name.into(),
@@ -2655,7 +2701,7 @@ impl NesRenameSuggestion {
 #[non_exhaustive]
 pub struct NesSearchAndReplaceSuggestion {
     /// Unique identifier for accept/reject tracking.
-    pub id: String,
+    pub suggestion_id: NesSuggestionId,
     /// The file URI to search within.
     pub uri: String,
     /// The text or pattern to find.
@@ -2683,13 +2729,13 @@ impl NesSearchAndReplaceSuggestion {
     /// Builds [`NesSearchAndReplaceSuggestion`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(
-        id: impl Into<String>,
+        suggestion_id: impl Into<NesSuggestionId>,
         uri: impl Into<String>,
         search: impl Into<String>,
         replace: impl Into<String>,
     ) -> Self {
         Self {
-            id: id.into(),
+            suggestion_id: suggestion_id.into(),
             uri: uri.into(),
             search: search.into(),
             replace: replace.into(),
@@ -2730,7 +2776,7 @@ pub struct AcceptNesNotification {
     /// The session ID for this notification.
     pub session_id: SessionId,
     /// The ID of the accepted suggestion.
-    pub id: String,
+    pub suggestion_id: NesSuggestionId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -2746,10 +2792,13 @@ pub struct AcceptNesNotification {
 impl AcceptNesNotification {
     /// Builds [`AcceptNesNotification`] with the required notification fields set; optional fields start unset or empty.
     #[must_use]
-    pub fn new(session_id: impl Into<SessionId>, id: impl Into<String>) -> Self {
+    pub fn new(
+        session_id: impl Into<SessionId>,
+        suggestion_id: impl Into<NesSuggestionId>,
+    ) -> Self {
         Self {
             session_id: session_id.into(),
-            id: id.into(),
+            suggestion_id: suggestion_id.into(),
             meta: None,
         }
     }
@@ -2777,7 +2826,7 @@ pub struct RejectNesNotification {
     /// The session ID for this notification.
     pub session_id: SessionId,
     /// The ID of the rejected suggestion.
-    pub id: String,
+    pub suggestion_id: NesSuggestionId,
     /// The reason for rejection.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
@@ -2798,10 +2847,13 @@ pub struct RejectNesNotification {
 impl RejectNesNotification {
     /// Builds [`RejectNesNotification`] with the required notification fields set; optional fields start unset or empty.
     #[must_use]
-    pub fn new(session_id: impl Into<SessionId>, id: impl Into<String>) -> Self {
+    pub fn new(
+        session_id: impl Into<SessionId>,
+        suggestion_id: impl Into<NesSuggestionId>,
+    ) -> Self {
         Self {
             session_id: session_id.into(),
-            id: id.into(),
+            suggestion_id: suggestion_id.into(),
             reason: None,
             meta: None,
         }
@@ -3143,7 +3195,7 @@ mod tests {
             json,
             json!({
                 "kind": "edit",
-                "id": "sugg_001",
+                "suggestionId": "sugg_001",
                 "uri": "file:///path/to/other_file.rs",
                 "edits": [
                     {
@@ -3166,7 +3218,7 @@ mod tests {
     fn test_nes_suggestion_unknown_variant() {
         let suggestion: NesSuggestion = serde_json::from_value(json!({
             "kind": "_preview",
-            "id": "sugg_001",
+            "suggestionId": "sugg_001",
             "label": "Preview generated file"
         }))
         .unwrap();
@@ -3176,12 +3228,13 @@ mod tests {
         };
 
         assert_eq!(unknown.kind, "_preview");
-        assert_eq!(unknown.fields.get("id"), Some(&json!("sugg_001")));
+        assert_eq!(unknown.suggestion_id.to_string(), "sugg_001");
+        assert!(!unknown.fields.contains_key("suggestionId"));
         assert_eq!(
             serde_json::to_value(NesSuggestion::Other(unknown)).unwrap(),
             json!({
                 "kind": "_preview",
-                "id": "sugg_001",
+                "suggestionId": "sugg_001",
                 "label": "Preview generated file"
             })
         );
@@ -3210,7 +3263,7 @@ mod tests {
             json,
             json!({
                 "kind": "jump",
-                "id": "sugg_002",
+                "suggestionId": "sugg_002",
                 "uri": "file:///path/to/other_file.rs",
                 "position": { "line": 15, "character": 4 }
             })
@@ -3234,7 +3287,7 @@ mod tests {
             json,
             json!({
                 "kind": "rename",
-                "id": "sugg_003",
+                "suggestionId": "sugg_003",
                 "uri": "file:///path/to/file.rs",
                 "position": { "line": 5, "character": 10 },
                 "newName": "calculateTotal"
@@ -3262,7 +3315,7 @@ mod tests {
             json,
             json!({
                 "kind": "searchAndReplace",
-                "id": "sugg_004",
+                "suggestionId": "sugg_004",
                 "uri": "file:///path/to/file.rs",
                 "search": "oldFunction",
                 "replace": "newFunction",
@@ -3357,7 +3410,7 @@ mod tests {
         let json = serde_json::to_value(&notification).unwrap();
         assert_eq!(
             json,
-            json!({ "sessionId": "session_123", "id": "sugg_001" })
+            json!({ "sessionId": "session_123", "suggestionId": "sugg_001" })
         );
     }
 
@@ -3368,7 +3421,7 @@ mod tests {
         let json = serde_json::to_value(&notification).unwrap();
         assert_eq!(
             json,
-            json!({ "sessionId": "session_123", "id": "sugg_001", "reason": "rejected" })
+            json!({ "sessionId": "session_123", "suggestionId": "sugg_001", "reason": "rejected" })
         );
     }
 

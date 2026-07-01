@@ -34,7 +34,7 @@ sequenceDiagram
 
 ## Advertising Authentication
 
-Agents advertise authentication options in the `authMethods` field of the `initialize` response. Each method has an `id` that the Client passes back to the Agent in a later `auth/login` request.
+Agents advertise authentication options in the `authMethods` field of the `initialize` response. Each method has a `methodId` that the Client passes back to the Agent in a later `auth/login` request.
 
 ```json highlight={8-15}
 {
@@ -45,7 +45,7 @@ Agents advertise authentication options in the `authMethods` field of the `initi
     "capabilities": {},
     "authMethods": [
       {
-        "id": "agent-login",
+        "methodId": "agent-login",
         "name": "Agent login",
         "type": "agent",
         "description": "Sign in using the agent's login flow"
@@ -61,7 +61,7 @@ The standard authentication method type is `agent`, where the Agent handles auth
 
 ```json
 {
-  "id": "agent-login",
+  "methodId": "agent-login",
   "name": "Agent login",
   "type": "agent",
   "description": "Sign in using the agent's login flow"

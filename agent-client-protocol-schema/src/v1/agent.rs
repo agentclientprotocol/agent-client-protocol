@@ -3048,7 +3048,7 @@ pub struct McpServerAcp {
     ///
     /// Providers MUST NOT reuse an ID for multiple ACP-transport MCP servers that are visible
     /// on the same ACP connection.
-    pub id: McpServerAcpId,
+    pub server_id: McpServerAcpId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -3068,7 +3068,7 @@ impl McpServerAcp {
     pub fn new(name: impl Into<String>, id: impl Into<McpServerAcpId>) -> Self {
         Self {
             name: name.into(),
-            id: id.into(),
+            server_id: id.into(),
             meta: None,
         }
     }
@@ -5530,7 +5530,11 @@ mod test_serialization {
 
         let deserialized: McpServer = serde_json::from_value(json).unwrap();
         match deserialized {
-            McpServer::Acp(McpServerAcp { name, id, meta: _ }) => {
+            McpServer::Acp(McpServerAcp {
+                name,
+                server_id: id,
+                meta: _,
+            }) => {
                 assert_eq!(name, "project-tools");
                 assert_eq!(id, McpServerAcpId::new("project-tools-id"));
             }
