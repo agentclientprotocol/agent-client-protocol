@@ -107,6 +107,7 @@
                       "protocol/v1/draft/session-config-options",
                       "protocol/v1/draft/slash-commands",
                       "protocol/v1/draft/extensibility",
+                      "protocol/v1/draft/observability",
                       "protocol/v1/draft/transports",
                       "protocol/v1/draft/schema"
                     ]
@@ -152,6 +153,7 @@
                       "protocol/v2/draft/session-config-options",
                       "protocol/v2/draft/slash-commands",
                       "protocol/v2/draft/extensibility",
+                      "protocol/v2/draft/observability",
                       "protocol/v2/draft/transports",
                       "protocol/v2/draft/schema"
                     ]
