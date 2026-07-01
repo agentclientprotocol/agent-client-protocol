@@ -478,6 +478,8 @@ Elicitation responses use a three-action model (following MCP) to clearly distin
 }
 ```
 
+Unknown elicitation `action` values are reserved for future ACP variants or implementation-specific extensions. Implementation-specific actions MUST begin with `_`. Agents that do not understand an action should preserve the raw payload when storing, replaying, proxying, or forwarding elicitation responses, but MUST NOT treat it as `accept`, `decline`, or `cancel`.
+
 For URL mode elicitation, the response with `action: "accept"` indicates that the user consented to the interaction. It does not mean the interaction is complete—the interaction occurs out-of-band and the client is not aware of the outcome until the agent sends a completion notification.
 
 Agents should handle each state appropriately:

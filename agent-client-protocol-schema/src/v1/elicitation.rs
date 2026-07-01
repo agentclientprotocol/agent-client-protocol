@@ -1706,8 +1706,11 @@ pub struct CreateElicitationResponse {
 impl CreateElicitationResponse {
     /// Builds [`CreateElicitationResponse`] with the required response fields set; optional fields start unset or empty.
     #[must_use]
-    pub fn new(action: ElicitationAction) -> Self {
-        Self { action, meta: None }
+    pub fn new(action: impl Into<ElicitationAction>) -> Self {
+        Self {
+            action: action.into(),
+            meta: None,
+        }
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1738,6 +1741,117 @@ pub enum ElicitationAction {
     Decline,
     /// The elicitation was cancelled.
     Cancel,
+    /// Custom or future elicitation action.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    ///
+    /// Agents that do not understand this action should preserve the raw
+    /// payload when storing, replaying, proxying, or forwarding elicitation
+    /// responses. They MUST NOT treat it as a known elicitation action.
+    #[serde(untagged)]
+    Other(OtherElicitationAction),
+}
+
+/// Custom or future elicitation action payload.
+///
+/// This preserves the unknown `action` discriminator and the rest of the
+/// response object for agents that store, replay, proxy, or forward elicitation
+/// responses.
+#[derive(Debug, Clone, Serialize, JsonSchema, PartialEq)]
+#[schemars(inline)]
+#[schemars(transform = other_elicitation_action_schema)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct OtherElicitationAction {
+    /// Custom or future elicitation action.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    pub action: String,
+    /// Additional fields from the unknown elicitation action payload.
+    #[serde(flatten)]
+    pub fields: BTreeMap<String, serde_json::Value>,
+}
+
+impl OtherElicitationAction {
+    /// Builds [`OtherElicitationAction`] from an unknown discriminator and preserves the remaining extension fields.
+    #[must_use]
+    pub fn new(action: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
+        fields.remove("action");
+        Self {
+            action: action.into(),
+            fields,
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for OtherElicitationAction {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let action = fields
+            .remove("action")
+            .ok_or_else(|| serde::de::Error::missing_field("action"))?;
+        let serde_json::Value::String(action) = action else {
+            return Err(serde::de::Error::custom("`action` must be a string"));
+        };
+
+        if is_known_elicitation_action(&action) {
+            return Err(serde::de::Error::custom(format!(
+                "known elicitation action `{action}` did not match its schema"
+            )));
+        }
+
+        Ok(Self { action, fields })
+    }
+}
+
+const KNOWN_ELICITATION_ACTIONS: &[&str] = &["accept", "decline", "cancel"];
+
+fn is_known_elicitation_action(action: &str) -> bool {
+    KNOWN_ELICITATION_ACTIONS.contains(&action)
+}
+
+fn other_elicitation_action_schema(schema: &mut Schema) {
+    let known_value_schemas: Vec<_> = KNOWN_ELICITATION_ACTIONS
+        .iter()
+        .map(|value| {
+            serde_json::json!({
+                "properties": {
+                    "action": {
+                        "const": value,
+                        "type": "string"
+                    }
+                },
+                "required": ["action"],
+                "type": "object"
+            })
+        })
+        .collect();
+
+    schema.insert(
+        "not".into(),
+        serde_json::json!({
+            "anyOf": known_value_schemas
+        }),
+    );
+}
+
+impl From<ElicitationAcceptAction> for ElicitationAction {
+    fn from(action: ElicitationAcceptAction) -> Self {
+        Self::Accept(action)
+    }
+}
+
+impl From<OtherElicitationAction> for ElicitationAction {
+    fn from(action: OtherElicitationAction) -> Self {
+        Self::Other(action)
+    }
 }
 
 /// **UNSTABLE**
@@ -2073,6 +2187,37 @@ mod tests {
 
         let roundtripped: CreateElicitationResponse = serde_json::from_value(json).unwrap();
         assert!(matches!(roundtripped.action, ElicitationAction::Cancel));
+    }
+
+    #[test]
+    fn unknown_action_response_serialization() {
+        let json = json!({
+            "action": "_defer",
+            "reason": "waiting",
+            "retryAfterMs": 1000
+        });
+
+        let resp: CreateElicitationResponse = serde_json::from_value(json.clone()).unwrap();
+        let ElicitationAction::Other(other) = &resp.action else {
+            panic!("expected unknown elicitation action");
+        };
+
+        assert_eq!(other.action, "_defer");
+        assert_eq!(other.fields.get("reason"), Some(&json!("waiting")));
+        assert_eq!(other.fields.get("retryAfterMs"), Some(&json!(1000)));
+        assert_eq!(serde_json::to_value(&resp).unwrap(), json);
+    }
+
+    #[test]
+    fn unknown_action_does_not_hide_known_action() {
+        assert!(
+            serde_json::from_value::<OtherElicitationAction>(json!({
+                "action": "accept",
+                "content": {}
+            }))
+            .is_err()
+        );
+        assert!(serde_json::from_value::<ElicitationAction>(json!({})).is_err());
     }
 
     #[test]

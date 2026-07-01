@@ -1841,6 +1841,31 @@ The elicitation was cancelled.
 </Expandable>
 </ResponseField>
 
+<ResponseField name="other" type="object">
+Custom or future elicitation action.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+Agents that do not understand this action should preserve the raw
+payload when storing, replaying, proxying, or forwarding elicitation
+responses. They MUST NOT treat it as a known elicitation action.
+
+<Expandable title="Properties">
+
+<ResponseField name="action" type={"string"} required>
+  Custom or future elicitation action.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 <a id="fs-read_text_file"></a>
 ### <span class="font-mono">fs/read_text_file</span>
 

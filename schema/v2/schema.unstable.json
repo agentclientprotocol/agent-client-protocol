@@ -8694,7 +8694,7 @@
           "additionalProperties": true
         }
       },
-      "oneOf": [
+      "anyOf": [
         {
           "description": "The user accepted and provided content.",
           "type": "object",
@@ -8732,6 +8732,53 @@
             }
           },
           "required": ["action"]
+        },
+        {
+          "title": "other",
+          "description": "Custom or future elicitation action.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nAgents that do not understand this action should preserve the raw\npayload when storing, replaying, proxying, or forwarding elicitation\nresponses. They MUST NOT treat it as a known elicitation action.",
+          "type": "object",
+          "properties": {
+            "action": {
+              "description": "Custom or future elicitation action.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+              "type": "string"
+            }
+          },
+          "required": ["action"],
+          "not": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "const": "accept"
+                  }
+                },
+                "required": ["action"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "const": "decline"
+                  }
+                },
+                "required": ["action"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "const": "cancel"
+                  }
+                },
+                "required": ["action"]
+              }
+            ]
+          },
+          "additionalProperties": true
         }
       ],
       "discriminator": {

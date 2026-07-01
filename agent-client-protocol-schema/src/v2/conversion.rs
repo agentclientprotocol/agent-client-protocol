@@ -8480,6 +8480,7 @@ impl IntoV1 for super::ElicitationAction {
             Self::Accept(value) => crate::v1::ElicitationAction::Accept(value.into_v1()?),
             Self::Decline => crate::v1::ElicitationAction::Decline,
             Self::Cancel => crate::v1::ElicitationAction::Cancel,
+            Self::Other(value) => crate::v1::ElicitationAction::Other(value.into_v1()?),
         })
     }
 }
@@ -8493,6 +8494,33 @@ impl IntoV2 for crate::v1::ElicitationAction {
             Self::Accept(value) => super::ElicitationAction::Accept(value.into_v2()?),
             Self::Decline => super::ElicitationAction::Decline,
             Self::Cancel => super::ElicitationAction::Cancel,
+            Self::Other(value) => super::ElicitationAction::Other(value.into_v2()?),
+        })
+    }
+}
+
+#[cfg(feature = "unstable_elicitation")]
+impl IntoV1 for super::OtherElicitationAction {
+    type Output = crate::v1::OtherElicitationAction;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        let Self { action, fields } = self;
+        Ok(crate::v1::OtherElicitationAction {
+            action: action.into_v1()?,
+            fields: fields.into_v1()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_elicitation")]
+impl IntoV2 for crate::v1::OtherElicitationAction {
+    type Output = super::OtherElicitationAction;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        let Self { action, fields } = self;
+        Ok(super::OtherElicitationAction {
+            action: action.into_v2()?,
+            fields: fields.into_v2()?,
         })
     }
 }
@@ -9750,6 +9778,37 @@ mod tests {
 
         assert_v2_round_trip::<v2::CreateElicitationRequest, v1::CreateElicitationRequest>(
             v2_request,
+        );
+    }
+
+    #[cfg(feature = "unstable_elicitation")]
+    #[test]
+    fn round_trips_elicitation_action_unknown_type() {
+        let v1_response = v1::CreateElicitationResponse::new(v1::OtherElicitationAction::new(
+            "_defer",
+            std::collections::BTreeMap::from([
+                ("reason".to_string(), serde_json::json!("waiting")),
+                ("retryAfterMs".to_string(), serde_json::json!(1000)),
+            ]),
+        ));
+
+        assert_v1_round_trip::<v1::CreateElicitationResponse, v2::CreateElicitationResponse>(
+            v1_response.clone(),
+        );
+        assert_json_eq_after_v1_to_v2::<v1::CreateElicitationResponse, v2::CreateElicitationResponse>(
+            v1_response,
+        );
+
+        let v2_response = v2::CreateElicitationResponse::new(v2::OtherElicitationAction::new(
+            "_defer",
+            std::collections::BTreeMap::from([
+                ("reason".to_string(), serde_json::json!("waiting")),
+                ("retryAfterMs".to_string(), serde_json::json!(1000)),
+            ]),
+        ));
+
+        assert_v2_round_trip::<v2::CreateElicitationResponse, v1::CreateElicitationResponse>(
+            v2_response,
         );
     }
 
