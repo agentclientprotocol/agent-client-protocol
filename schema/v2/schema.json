@@ -4740,7 +4740,7 @@
     },
     "RequestPermissionOutcome": {
       "description": "The outcome of a permission request.",
-      "oneOf": [
+      "anyOf": [
         {
           "description": "Active session work was cancelled before the user responded.\n\nWhen a client sends a `session/cancel` notification to cancel active\nsession work, it MUST respond to all pending `session/request_permission`\nrequests with this `Cancelled` outcome.\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#cancellation)",
           "type": "object",
@@ -4767,6 +4767,43 @@
               "$ref": "#/$defs/SelectedPermissionOutcome"
             }
           ]
+        },
+        {
+          "title": "other",
+          "description": "Custom or future permission outcome.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nAgents that do not understand this outcome MUST NOT treat it as approval.\nThey should preserve the raw payload when storing, replaying, proxying, or\nforwarding permission responses, and otherwise fail or decline the\npermission request according to policy.",
+          "type": "object",
+          "properties": {
+            "outcome": {
+              "description": "Custom or future permission outcome.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+              "type": "string"
+            }
+          },
+          "required": ["outcome"],
+          "not": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "outcome": {
+                    "type": "string",
+                    "const": "cancelled"
+                  }
+                },
+                "required": ["outcome"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "outcome": {
+                    "type": "string",
+                    "const": "selected"
+                  }
+                },
+                "required": ["outcome"]
+              }
+            ]
+          },
+          "additionalProperties": true
         }
       ],
       "discriminator": {

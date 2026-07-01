@@ -1476,6 +1476,90 @@ pub enum RequestPermissionOutcome {
     /// The user selected one of the provided options.
     #[serde(rename_all = "camelCase")]
     Selected(SelectedPermissionOutcome),
+    /// Custom or future permission outcome.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    ///
+    /// Agents that do not understand this outcome MUST NOT treat it as approval.
+    /// They should preserve the raw payload when storing, replaying, proxying, or
+    /// forwarding permission responses, and otherwise fail or decline the
+    /// permission request according to policy.
+    #[serde(untagged)]
+    Other(OtherRequestPermissionOutcome),
+}
+
+/// Custom or future permission outcome payload.
+///
+/// This preserves the unknown `outcome` discriminator and the rest of the
+/// outcome object for agents that store, replay, proxy, or forward permission
+/// responses.
+#[derive(Debug, Clone, Serialize, JsonSchema, PartialEq, Eq)]
+#[schemars(inline)]
+#[schemars(transform = other_request_permission_outcome_schema)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct OtherRequestPermissionOutcome {
+    /// Custom or future permission outcome.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    pub outcome: String,
+    /// Additional fields from the unknown permission outcome payload.
+    #[serde(flatten)]
+    pub fields: BTreeMap<String, serde_json::Value>,
+}
+
+impl OtherRequestPermissionOutcome {
+    /// Builds [`OtherRequestPermissionOutcome`] from an unknown discriminator and preserves the remaining extension fields.
+    #[must_use]
+    pub fn new(
+        outcome: impl Into<String>,
+        mut fields: BTreeMap<String, serde_json::Value>,
+    ) -> Self {
+        fields.remove("outcome");
+        Self {
+            outcome: outcome.into(),
+            fields,
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for OtherRequestPermissionOutcome {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let outcome = fields
+            .remove("outcome")
+            .ok_or_else(|| serde::de::Error::missing_field("outcome"))?;
+        let serde_json::Value::String(outcome) = outcome else {
+            return Err(serde::de::Error::custom("`outcome` must be a string"));
+        };
+
+        if is_known_request_permission_outcome(&outcome) {
+            return Err(serde::de::Error::custom(format!(
+                "known request permission outcome `{outcome}` did not match its schema"
+            )));
+        }
+
+        Ok(Self { outcome, fields })
+    }
+}
+
+fn is_known_request_permission_outcome(outcome: &str) -> bool {
+    matches!(outcome, "cancelled" | "selected")
+}
+
+fn other_request_permission_outcome_schema(schema: &mut Schema) {
+    super::schema_util::reject_known_string_discriminators(
+        schema,
+        "outcome",
+        &["cancelled", "selected"],
+    );
 }
 
 /// The user selected one of the provided options.
@@ -2502,6 +2586,52 @@ mod tests {
                 "hint": "Pick one",
                 "options": ["fast", "careful"]
             })
+        );
+    }
+
+    #[test]
+    fn request_permission_outcome_preserves_unknown_variant() {
+        use serde_json::json;
+
+        let outcome: RequestPermissionOutcome = serde_json::from_value(json!({
+            "outcome": "_defer",
+            "reason": "needs-review",
+            "retryAfterSeconds": 30
+        }))
+        .unwrap();
+
+        let RequestPermissionOutcome::Other(unknown) = outcome else {
+            panic!("expected unknown permission outcome");
+        };
+
+        assert_eq!(unknown.outcome, "_defer");
+        assert_eq!(unknown.fields.get("reason"), Some(&json!("needs-review")));
+        assert_eq!(unknown.fields.get("retryAfterSeconds"), Some(&json!(30)));
+        assert_eq!(
+            serde_json::to_value(RequestPermissionOutcome::Other(unknown)).unwrap(),
+            json!({
+                "outcome": "_defer",
+                "reason": "needs-review",
+                "retryAfterSeconds": 30
+            })
+        );
+    }
+
+    #[test]
+    fn request_permission_outcome_unknown_does_not_hide_malformed_known_variant() {
+        use serde_json::json;
+
+        assert!(
+            serde_json::from_value::<RequestPermissionOutcome>(json!({
+                "outcome": "selected"
+            }))
+            .is_err()
+        );
+        assert!(
+            serde_json::from_value::<RequestPermissionOutcome>(json!({
+                "outcome": 1
+            }))
+            .is_err()
         );
     }
 

@@ -1645,6 +1645,12 @@ impl IntoV1 for super::RequestPermissionOutcome {
             Self::Selected(value) => {
                 crate::v1::RequestPermissionOutcome::Selected(value.into_v1()?)
             }
+            Self::Other(value) => {
+                return Err(unknown_v2_enum_variant(
+                    "RequestPermissionOutcome",
+                    &value.outcome,
+                ));
+            }
         })
     }
 }
@@ -10285,6 +10291,13 @@ mod tests {
                 std::collections::BTreeMap::new(),
             )),
             "v2 AvailableCommandInput variant `_choices` cannot be represented in v1",
+        );
+        assert_v2_to_v1_error(
+            v2::RequestPermissionOutcome::Other(v2::OtherRequestPermissionOutcome::new(
+                "_defer",
+                std::collections::BTreeMap::new(),
+            )),
+            "v2 RequestPermissionOutcome variant `_defer` cannot be represented in v1",
         );
         assert_v2_to_v1_error(
             v2::SessionConfigKind::Other(v2::OtherSessionConfigKind::new(

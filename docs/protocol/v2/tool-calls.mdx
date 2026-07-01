@@ -234,9 +234,11 @@ If the current active work gets [cancelled](/protocol/v2/prompt-lifecycle#cancel
 ```
 
 <ResponseField name="outcome" type="RequestPermissionOutcome" required>
-  The user's decision, either: - `cancelled` - The [active work was
-  cancelled](/protocol/v2/prompt-lifecycle#cancellation) - `selected` with an
-  `optionId` - The ID of the selected permission option
+  The user's decision. Known outcomes are `cancelled` when the [active work was
+  cancelled](/protocol/v2/prompt-lifecycle#cancellation), and `selected` with an
+  `optionId` for the selected permission option. Custom or future outcomes may
+  appear; agents that do not understand the outcome MUST NOT treat it as
+  approval.
 </ResponseField>
 
 ### Permission Options

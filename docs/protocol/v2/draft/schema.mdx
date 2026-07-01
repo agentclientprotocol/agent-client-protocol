@@ -6524,6 +6524,32 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </Expandable>
 </ResponseField>
 
+<ResponseField name="other" type="object">
+Custom or future permission outcome.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+Agents that do not understand this outcome MUST NOT treat it as approval.
+They should preserve the raw payload when storing, replaying, proxying, or
+forwarding permission responses, and otherwise fail or decline the
+permission request according to policy.
+
+<Expandable title="Properties">
+
+<ResponseField name="outcome" type={"string"} required>
+  Custom or future permission outcome.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 ## <span class="font-mono">RequiresActionStateUpdate</span>
 
 The agent is waiting on user action before it can continue.
