@@ -1172,7 +1172,7 @@ pub struct LoadSessionRequest {
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
     #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     pub mcp_servers: Vec<McpServer>,
-    /// The working directory for this session.
+    /// The working directory for this session. Must be an absolute path.
     pub cwd: PathBuf,
     /// Additional workspace roots to activate for this session. Each path must be absolute.
     ///
@@ -1329,7 +1329,7 @@ impl LoadSessionResponse {
 pub struct ForkSessionRequest {
     /// The ID of the session to fork.
     pub session_id: SessionId,
-    /// The working directory for this session.
+    /// The working directory for this session. Must be an absolute path.
     pub cwd: PathBuf,
     /// Additional workspace roots to activate for this session. Each path must be absolute.
     ///
@@ -1497,7 +1497,7 @@ impl ForkSessionResponse {
 pub struct ResumeSessionRequest {
     /// The ID of the session to resume.
     pub session_id: SessionId,
-    /// The working directory for this session.
+    /// The working directory for this session. Must be an absolute path.
     pub cwd: PathBuf,
     /// Additional workspace roots to activate for this session. Each path must be absolute.
     ///
@@ -3094,7 +3094,7 @@ impl McpServerAcp {
 pub struct McpServerStdio {
     /// Human-readable name identifying this MCP server.
     pub name: String,
-    /// Path to the MCP server executable.
+    /// Absolute path to the MCP server executable.
     pub command: PathBuf,
     /// Command-line arguments to pass to the MCP server.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]

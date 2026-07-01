@@ -1148,7 +1148,7 @@ pub struct CreateTerminalRequest {
     #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub env: Vec<EnvVariable>,
-    /// Working directory for the command (absolute path).
+    /// Working directory for the command. Must be an absolute path.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
@@ -1206,7 +1206,7 @@ impl CreateTerminalRequest {
         self
     }
 
-    /// Working directory for the command (absolute path).
+    /// Working directory for the command. Must be an absolute path.
     #[must_use]
     pub fn cwd(mut self, cwd: impl IntoOption<PathBuf>) -> Self {
         self.cwd = cwd.into_option();

@@ -625,7 +625,7 @@ impl Terminal {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct Diff {
-    /// The file path being modified.
+    /// The absolute file path being modified.
     pub path: PathBuf,
     /// The original content (None for new files).
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -689,7 +689,7 @@ impl Diff {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ToolCallLocation {
-    /// The file path being accessed or modified.
+    /// The absolute file path being accessed or modified.
     pub path: PathBuf,
     /// Optional line number within the file.
     #[serde_as(deserialize_as = "DefaultOnError")]

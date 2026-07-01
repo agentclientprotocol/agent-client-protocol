@@ -445,7 +445,7 @@ the request `cwd` matches the session's `cwd`.
 
 </ResponseField>
 <ResponseField name="cwd" type={"string"} required>
-  The working directory for this session.
+  The working directory for this session. Must be an absolute path.
 </ResponseField>
 <ResponseField name="mcpServers" type={<a href="#mcpserver">McpServer[]</a>} >
   List of MCP servers to connect to for this session.
@@ -671,7 +671,7 @@ the request `cwd` matches the session's `cwd`.
 
 </ResponseField>
 <ResponseField name="cwd" type={"string"} required>
-  The working directory for this session.
+  The working directory for this session. Must be an absolute path.
 </ResponseField>
 <ResponseField name="mcpServers" type={<a href="#mcpserver">McpServer[]</a>} >
   List of MCP servers to connect to for this session.
@@ -1681,7 +1681,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
   The original content (None for new files).
 </ResponseField>
 <ResponseField name="path" type={"string"} required>
-  The file path being modified.
+  The absolute file path being modified.
 </ResponseField>
 
 ## <span class="font-mono">EmbeddedResource</span>
@@ -2110,7 +2110,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
   Command-line arguments to pass to the MCP server.
 </ResponseField>
 <ResponseField name="command" type={"string"} required>
-  Path to the MCP server executable.
+  Absolute path to the MCP server executable.
 </ResponseField>
 <ResponseField name="env" type={<a href="#envvariable">EnvVariable[]</a>} required>
   Environment variables to set when launching the MCP server.
@@ -2196,7 +2196,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
   Command-line arguments to pass to the MCP server.
 </ResponseField>
 <ResponseField name="command" type={"string"} required>
-  Path to the MCP server executable.
+  Absolute path to the MCP server executable.
 </ResponseField>
 <ResponseField name="env" type={<a href="#envvariable">EnvVariable[]</a>} required>
   Environment variables to set when launching the MCP server.
@@ -3988,7 +3988,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
   The original content (None for new files).
 </ResponseField>
 <ResponseField name="path" type={"string"} required>
-  The file path being modified.
+  The absolute file path being modified.
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
   The discriminator value. Must be `"diff"`.
@@ -4085,7 +4085,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="path" type={"string"} required>
-  The file path being accessed or modified.
+  The absolute file path being accessed or modified.
 </ResponseField>
 
 ## <span class="font-mono">ToolCallStatus</span>

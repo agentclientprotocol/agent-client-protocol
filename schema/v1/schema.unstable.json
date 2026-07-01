@@ -1045,7 +1045,7 @@
       "type": "object",
       "properties": {
         "path": {
-          "description": "The file path being modified.",
+          "description": "The absolute file path being modified.",
           "type": "string"
         },
         "oldText": {
@@ -1096,7 +1096,7 @@
       "type": "object",
       "properties": {
         "path": {
-          "description": "The file path being accessed or modified.",
+          "description": "The absolute file path being accessed or modified.",
           "type": "string"
         },
         "line": {
@@ -1212,7 +1212,7 @@
           "x-deserialize-skip-invalid-items": true
         },
         "cwd": {
-          "description": "Working directory for the command (absolute path).",
+          "description": "Working directory for the command. Must be an absolute path.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -6796,7 +6796,7 @@
           "type": "string"
         },
         "command": {
-          "description": "Path to the MCP server executable.",
+          "description": "Absolute path to the MCP server executable.",
           "type": "string"
         },
         "args": {
@@ -6840,7 +6840,7 @@
           "x-deserialize-skip-invalid-items": true
         },
         "cwd": {
-          "description": "The working directory for this session.",
+          "description": "The working directory for this session. Must be an absolute path.",
           "type": "string"
         },
         "additionalDirectories": {
@@ -6931,7 +6931,7 @@
           ]
         },
         "cwd": {
-          "description": "The working directory for this session.",
+          "description": "The working directory for this session. Must be an absolute path.",
           "type": "string"
         },
         "additionalDirectories": {
@@ -6976,7 +6976,7 @@
           ]
         },
         "cwd": {
-          "description": "The working directory for this session.",
+          "description": "The working directory for this session. Must be an absolute path.",
           "type": "string"
         },
         "additionalDirectories": {
