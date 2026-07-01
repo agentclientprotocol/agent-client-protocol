@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.3.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.2.0...v1.3.0) - 2026-07-01
+
+### Added
+
+- *(unstable-v2)* Unify the ID naming conventions across the schema ([#1567](https://github.com/agentclientprotocol/agent-client-protocol/pull/1567))
+- *(unstable-v2)* require typed config values ([#1561](https://github.com/agentclientprotocol/agent-client-protocol/pull/1561))
+
+### Fixed
+
+- *(unstable-v2)* Continue to make more enums future compatible ([#1571](https://github.com/agentclientprotocol/agent-client-protocol/pull/1571))
+- *(unstable-v2)* Make empty MCP arrays optional ([#1570](https://github.com/agentclientprotocol/agent-client-protocol/pull/1570))
+- *(unstable-v2)* Make all session lifecycle requests consistent ([#1555](https://github.com/agentclientprotocol/agent-client-protocol/pull/1555))
+
+### Other
+
+- *(schema)* Clean up generated documentation and make wording more consistent ([#1568](https://github.com/agentclientprotocol/agent-client-protocol/pull/1568))
+- *(rust)* Box v2 protocol enum variants ([#1562](https://github.com/agentclientprotocol/agent-client-protocol/pull/1562))
+
 ## [1.2.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.1.0...v1.2.0) - 2026-06-29
 
 ### Added
