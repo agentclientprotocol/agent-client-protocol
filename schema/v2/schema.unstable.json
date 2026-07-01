@@ -1590,7 +1590,7 @@
           "additionalProperties": true
         }
       },
-      "oneOf": [
+      "anyOf": [
         {
           "description": "Form-based elicitation where the client renders a form from the provided schema.",
           "type": "object",
@@ -1622,6 +1622,63 @@
               "$ref": "#/$defs/ElicitationUrlMode"
             }
           ]
+        },
+        {
+          "title": "other",
+          "description": "Custom or future elicitation mode.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nClients that do not understand this mode should preserve the raw payload\nwhen storing, replaying, proxying, or forwarding elicitation requests.\nThey MUST NOT render it as a known elicitation mode.",
+          "type": "object",
+          "properties": {
+            "mode": {
+              "description": "Custom or future elicitation mode.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+              "type": "string"
+            }
+          },
+          "required": ["mode"],
+          "anyOf": [
+            {
+              "title": "Session",
+              "description": "Tied to a session, optionally to a specific tool call within that session.",
+              "allOf": [
+                {
+                  "$ref": "#/$defs/ElicitationSessionScope"
+                }
+              ]
+            },
+            {
+              "title": "Request",
+              "description": "Tied to a specific JSON-RPC request outside of a session\n(e.g., during auth/configuration phases before any session is started).",
+              "allOf": [
+                {
+                  "$ref": "#/$defs/ElicitationRequestScope"
+                }
+              ]
+            }
+          ],
+          "unevaluatedProperties": true,
+          "not": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "mode": {
+                    "type": "string",
+                    "const": "form"
+                  }
+                },
+                "required": ["mode"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "mode": {
+                    "type": "string",
+                    "const": "url"
+                  }
+                },
+                "required": ["mode"]
+              }
+            ]
+          }
         }
       ],
       "discriminator": {

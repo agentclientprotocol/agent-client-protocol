@@ -8323,6 +8323,7 @@ impl IntoV1 for super::ElicitationMode {
         Ok(match self {
             Self::Form(value) => crate::v1::ElicitationMode::Form(value.into_v1()?),
             Self::Url(value) => crate::v1::ElicitationMode::Url(value.into_v1()?),
+            Self::Other(value) => crate::v1::ElicitationMode::Other(value.into_v1()?),
         })
     }
 }
@@ -8335,6 +8336,43 @@ impl IntoV2 for crate::v1::ElicitationMode {
         Ok(match self {
             Self::Form(value) => super::ElicitationMode::Form(value.into_v2()?),
             Self::Url(value) => super::ElicitationMode::Url(value.into_v2()?),
+            Self::Other(value) => super::ElicitationMode::Other(value.into_v2()?),
+        })
+    }
+}
+
+#[cfg(feature = "unstable_elicitation")]
+impl IntoV1 for super::OtherElicitationMode {
+    type Output = crate::v1::OtherElicitationMode;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        let Self {
+            mode,
+            scope,
+            fields,
+        } = self;
+        Ok(crate::v1::OtherElicitationMode {
+            mode: mode.into_v1()?,
+            scope: scope.into_v1()?,
+            fields: fields.into_v1()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_elicitation")]
+impl IntoV2 for crate::v1::OtherElicitationMode {
+    type Output = super::OtherElicitationMode;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        let Self {
+            mode,
+            scope,
+            fields,
+        } = self;
+        Ok(super::OtherElicitationMode {
+            mode: mode.into_v2()?,
+            scope: scope.into_v2()?,
+            fields: fields.into_v2()?,
         })
     }
 }
@@ -9674,6 +9712,45 @@ mod tests {
         );
 
         assert_v2_round_trip::<v2::ElicitationSchema, v1::ElicitationSchema>(v2_schema);
+    }
+
+    #[cfg(feature = "unstable_elicitation")]
+    #[test]
+    fn round_trips_elicitation_mode_unknown_type() {
+        let v1_request = v1::CreateElicitationRequest::new(
+            v1::OtherElicitationMode::new(
+                "_browser",
+                v1::ElicitationRequestScope::new(v1::RequestId::Number(42)),
+                std::collections::BTreeMap::from([(
+                    "target".to_string(),
+                    serde_json::json!("login"),
+                )]),
+            ),
+            "Open a browser window",
+        );
+
+        assert_v1_round_trip::<v1::CreateElicitationRequest, v2::CreateElicitationRequest>(
+            v1_request.clone(),
+        );
+        assert_json_eq_after_v1_to_v2::<v1::CreateElicitationRequest, v2::CreateElicitationRequest>(
+            v1_request,
+        );
+
+        let v2_request = v2::CreateElicitationRequest::new(
+            v2::OtherElicitationMode::new(
+                "_browser",
+                v2::ElicitationRequestScope::new(v2::RequestId::Number(42)),
+                std::collections::BTreeMap::from([(
+                    "target".to_string(),
+                    serde_json::json!("login"),
+                )]),
+            ),
+            "Open a browser window",
+        );
+
+        assert_v2_round_trip::<v2::CreateElicitationRequest, v1::CreateElicitationRequest>(
+            v2_request,
+        );
     }
 
     #[test]

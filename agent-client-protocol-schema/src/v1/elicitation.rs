@@ -1458,6 +1458,130 @@ pub enum ElicitationMode {
     Form(ElicitationFormMode),
     /// URL-based elicitation where the client directs the user to a URL.
     Url(ElicitationUrlMode),
+    /// Custom or future elicitation mode.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    ///
+    /// Clients that do not understand this mode should preserve the raw payload
+    /// when storing, replaying, proxying, or forwarding elicitation requests.
+    /// They MUST NOT render it as a known elicitation mode.
+    #[serde(untagged)]
+    Other(OtherElicitationMode),
+}
+
+/// Custom or future elicitation mode payload.
+///
+/// This preserves the unknown `mode` discriminator and the rest of the mode
+/// object for clients that store, replay, proxy, or forward elicitation
+/// requests.
+#[derive(Debug, Clone, Serialize, JsonSchema, PartialEq)]
+#[schemars(inline)]
+#[schemars(transform = other_elicitation_mode_schema)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct OtherElicitationMode {
+    /// Custom or future elicitation mode.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    pub mode: String,
+    /// The scope this elicitation is tied to.
+    #[serde(flatten)]
+    pub scope: ElicitationScope,
+    /// Additional fields from the unknown elicitation mode payload.
+    #[serde(flatten)]
+    pub fields: BTreeMap<String, serde_json::Value>,
+}
+
+impl OtherElicitationMode {
+    /// Builds [`OtherElicitationMode`] from an unknown discriminator and preserves the remaining extension fields.
+    #[must_use]
+    pub fn new(
+        mode: impl Into<String>,
+        scope: impl Into<ElicitationScope>,
+        mut fields: BTreeMap<String, serde_json::Value>,
+    ) -> Self {
+        fields.remove("mode");
+        remove_elicitation_scope_fields(&mut fields);
+        Self {
+            mode: mode.into(),
+            scope: scope.into(),
+            fields,
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for OtherElicitationMode {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let mode = fields
+            .remove("mode")
+            .ok_or_else(|| serde::de::Error::missing_field("mode"))?;
+        let serde_json::Value::String(mode) = mode else {
+            return Err(serde::de::Error::custom("`mode` must be a string"));
+        };
+
+        if is_known_elicitation_mode(&mode) {
+            return Err(serde::de::Error::custom(format!(
+                "known elicitation mode `{mode}` did not match its schema"
+            )));
+        }
+
+        let scope = serde_json::from_value::<ElicitationScope>(serde_json::Value::Object(
+            fields.clone().into_iter().collect(),
+        ))
+        .map_err(serde::de::Error::custom)?;
+        remove_elicitation_scope_fields(&mut fields);
+
+        Ok(Self {
+            mode,
+            scope,
+            fields,
+        })
+    }
+}
+
+const KNOWN_ELICITATION_MODES: &[&str] = &["form", "url"];
+
+fn is_known_elicitation_mode(mode: &str) -> bool {
+    KNOWN_ELICITATION_MODES.contains(&mode)
+}
+
+fn remove_elicitation_scope_fields(fields: &mut BTreeMap<String, serde_json::Value>) {
+    fields.remove("sessionId");
+    fields.remove("toolCallId");
+    fields.remove("requestId");
+}
+
+fn other_elicitation_mode_schema(schema: &mut Schema) {
+    let known_value_schemas: Vec<_> = KNOWN_ELICITATION_MODES
+        .iter()
+        .map(|value| {
+            serde_json::json!({
+                "properties": {
+                    "mode": {
+                        "const": value,
+                        "type": "string"
+                    }
+                },
+                "required": ["mode"],
+                "type": "object"
+            })
+        })
+        .collect();
+
+    schema.insert(
+        "not".into(),
+        serde_json::json!({
+            "anyOf": known_value_schemas
+        }),
+    );
 }
 
 impl From<ElicitationFormMode> for ElicitationMode {
@@ -1472,6 +1596,12 @@ impl From<ElicitationUrlMode> for ElicitationMode {
     }
 }
 
+impl From<OtherElicitationMode> for ElicitationMode {
+    fn from(mode: OtherElicitationMode) -> Self {
+        Self::Other(mode)
+    }
+}
+
 impl ElicitationMode {
     /// Returns the scope this elicitation mode is tied to.
     #[must_use]
@@ -1479,6 +1609,7 @@ impl ElicitationMode {
         match self {
             Self::Form(f) => &f.scope,
             Self::Url(u) => &u.scope,
+            Self::Other(other) => &other.scope,
         }
     }
 }
@@ -1969,6 +2100,47 @@ mod tests {
             ElicitationRequestScope::new(RequestId::Number(42)).into()
         );
         assert!(matches!(roundtripped.mode, ElicitationMode::Url(_)));
+    }
+
+    #[test]
+    fn unknown_mode_request_serialization() {
+        let json = json!({
+            "requestId": 42,
+            "mode": "_browser",
+            "message": "Open a browser window",
+            "target": "login"
+        });
+
+        let req: CreateElicitationRequest = serde_json::from_value(json.clone()).unwrap();
+        let ElicitationMode::Other(other) = &req.mode else {
+            panic!("expected unknown elicitation mode");
+        };
+
+        assert_eq!(other.mode, "_browser");
+        assert_eq!(
+            other.scope,
+            ElicitationRequestScope::new(RequestId::Number(42)).into()
+        );
+        assert_eq!(other.fields.get("target"), Some(&json!("login")));
+        assert_eq!(
+            *req.scope(),
+            ElicitationRequestScope::new(RequestId::Number(42)).into()
+        );
+        assert_eq!(serde_json::to_value(&req).unwrap(), json);
+    }
+
+    #[test]
+    fn unknown_mode_does_not_hide_malformed_known_mode() {
+        let missing_requested_schema = json!({
+            "requestId": 42,
+            "mode": "form",
+            "message": "Enter your name"
+        });
+
+        assert!(
+            serde_json::from_value::<CreateElicitationRequest>(missing_requested_schema).is_err()
+        );
+        assert!(serde_json::from_value::<ElicitationMode>(json!({})).is_err());
     }
 
     #[test]

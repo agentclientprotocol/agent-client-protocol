@@ -1687,6 +1687,31 @@ URL-based elicitation where the client directs the user to a URL.
 </Expandable>
 </ResponseField>
 
+<ResponseField name="other" type="object">
+Custom or future elicitation mode.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+Clients that do not understand this mode should preserve the raw payload
+when storing, replaying, proxying, or forwarding elicitation requests.
+They MUST NOT render it as a known elicitation mode.
+
+<Expandable title="Properties">
+
+<ResponseField name="mode" type={"string"} required>
+  Custom or future elicitation mode.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 #### <span class="font-mono">CreateElicitationResponse</span>
 
 **UNSTABLE**

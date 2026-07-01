@@ -198,6 +198,8 @@ This distinction is reflected in the client capabilities model, allowing clients
 - For URL mode, the `url` parameter MUST contain a valid URL.
 - Agents MUST NOT return the `URLElicitationRequiredError` (code `-32042`) except when URL mode elicitation is required.
 
+Unknown elicitation `mode` values are reserved for future ACP variants or implementation-specific extensions. Implementation-specific modes MUST begin with `_`. Clients that do not understand a mode should preserve the raw payload when storing, replaying, proxying, or forwarding elicitation requests, but MUST NOT render it as `form` or `url` or otherwise treat it as supported.
+
 ### Restricted JSON Schema
 
 Aligning with [MCP's draft elicitation specification](https://modelcontextprotocol.io/specification/draft/client/elicitation), form mode elicitation uses a restricted subset of JSON Schema. Schemas are limited to flat objects with primitive properties only—the client decides how to render appropriate input UI based on the schema.
