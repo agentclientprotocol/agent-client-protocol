@@ -2732,7 +2732,7 @@ The input specification for a command.
 
 **Type:** Union
 
-<ResponseField name="unstructured">
+<ResponseField name="text" type="object">
 All text that was typed after the command name is provided as input.
 
 <Expandable title="Properties">
@@ -2747,6 +2747,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="hint" type={"string"} required>
   A hint to display when the input hasn't been provided yet
+</ResponseField>
+<ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"text"`.
 </ResponseField>
 
 </Expandable>
@@ -8047,6 +8050,26 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 </ResponseField>
 
+## <span class="font-mono">TextCommandInput</span>
+
+All text that was typed after the command name is provided as input.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="hint" type={"string"} required>
+  A hint to display when the input hasn't been provided yet
+</ResponseField>
+
 ## <span class="font-mono">TextContent</span>
 
 Text provided to or from an LLM.
@@ -8459,26 +8482,6 @@ Values beginning with `_` are reserved for implementation-specific
 extensions. Unknown values that do not begin with `_` are reserved for
 future ACP variants.
 
-</ResponseField>
-
-## <span class="font-mono">UnstructuredCommandInput</span>
-
-All text that was typed after the command name is provided as input.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="hint" type={"string"} required>
-  A hint to display when the input hasn't been provided yet
 </ResponseField>
 
 ## <span class="font-mono">Usage</span>

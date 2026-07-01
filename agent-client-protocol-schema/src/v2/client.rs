@@ -1119,11 +1119,13 @@ impl AvailableCommand {
 
 /// The input specification for a command.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[serde(untagged, rename_all = "camelCase")]
+#[serde(tag = "type", rename_all = "snake_case")]
+#[schemars(extend("discriminator" = {"propertyName": "type"}))]
 #[non_exhaustive]
 pub enum AvailableCommandInput {
     /// All text that was typed after the command name is provided as input.
-    Unstructured(UnstructuredCommandInput),
+    #[serde(rename = "text")]
+    Text(TextCommandInput),
     /// Custom or future command input specification.
     ///
     /// Values beginning with `_` are reserved for implementation-specific
@@ -1134,12 +1136,14 @@ pub enum AvailableCommandInput {
     /// payload when storing, replaying, proxying, or forwarding command
     /// metadata, and otherwise ignore the input specification or display the
     /// command without structured input.
+    #[serde(untagged)]
     Other(OtherAvailableCommandInput),
 }
 
 /// Custom or future command input specification.
 #[derive(Debug, Clone, Serialize, JsonSchema, PartialEq, Eq)]
 #[schemars(inline)]
+#[schemars(transform = other_available_command_input_schema)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct OtherAvailableCommandInput {
@@ -1180,18 +1184,37 @@ impl<'de> Deserialize<'de> for OtherAvailableCommandInput {
             return Err(serde::de::Error::custom("`type` must be a string"));
         };
 
+        if is_known_available_command_input_type(&type_) {
+            return Err(serde::de::Error::custom(format!(
+                "known available command input type `{type_}` did not match its schema"
+            )));
+        }
+
         Ok(Self { type_, fields })
     }
+}
+
+const KNOWN_AVAILABLE_COMMAND_INPUT_TYPES: &[&str] = &["text"];
+
+fn is_known_available_command_input_type(type_: &str) -> bool {
+    KNOWN_AVAILABLE_COMMAND_INPUT_TYPES.contains(&type_)
+}
+
+fn other_available_command_input_schema(schema: &mut Schema) {
+    super::schema_util::reject_known_string_discriminators(
+        schema,
+        "type",
+        KNOWN_AVAILABLE_COMMAND_INPUT_TYPES,
+    );
 }
 
 /// All text that was typed after the command name is provided as input.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, JsonSchema, PartialEq, Eq)]
-#[schemars(transform = unstructured_command_input_schema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct UnstructuredCommandInput {
+pub struct TextCommandInput {
     /// A hint to display when the input hasn't been provided yet
     pub hint: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1206,8 +1229,8 @@ pub struct UnstructuredCommandInput {
     pub meta: Option<Meta>,
 }
 
-impl UnstructuredCommandInput {
-    /// Builds [`UnstructuredCommandInput`] with the required fields set; optional fields start unset or empty.
+impl TextCommandInput {
+    /// Builds [`TextCommandInput`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(hint: impl Into<String>) -> Self {
         Self {
@@ -1226,39 +1249,6 @@ impl UnstructuredCommandInput {
         self.meta = meta.into_option();
         self
     }
-}
-
-impl<'de> Deserialize<'de> for UnstructuredCommandInput {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        #[derive(Deserialize)]
-        #[serde(rename_all = "camelCase")]
-        struct RawUnstructuredCommandInput {
-            hint: String,
-            #[serde(rename = "_meta")]
-            meta: Option<Meta>,
-            #[serde(flatten)]
-            fields: BTreeMap<String, serde_json::Value>,
-        }
-
-        let raw = RawUnstructuredCommandInput::deserialize(deserializer)?;
-        if raw.fields.contains_key("type") {
-            return Err(serde::de::Error::custom(
-                "unstructured command input cannot include a `type` field",
-            ));
-        }
-
-        Ok(Self {
-            hint: raw.hint,
-            meta: raw.meta,
-        })
-    }
-}
-
-fn unstructured_command_input_schema(schema: &mut Schema) {
-    super::schema_util::reject_property(schema, "type");
 }
 
 // Permission
@@ -2590,6 +2580,25 @@ mod tests {
     }
 
     #[test]
+    fn available_command_input_text_uses_type_discriminator() {
+        use serde_json::json;
+
+        let input = AvailableCommandInput::Text(TextCommandInput::new("Describe changes"));
+
+        let json = serde_json::to_value(&input).unwrap();
+        assert_eq!(
+            json,
+            json!({
+                "type": "text",
+                "hint": "Describe changes"
+            })
+        );
+
+        let roundtripped: AvailableCommandInput = serde_json::from_value(json).unwrap();
+        assert!(matches!(roundtripped, AvailableCommandInput::Text(_)));
+    }
+
+    #[test]
     fn request_permission_outcome_preserves_unknown_variant() {
         use serde_json::json;
 
@@ -2636,13 +2645,26 @@ mod tests {
     }
 
     #[test]
-    fn available_command_input_unknown_does_not_hide_malformed_unstructured_variant() {
+    fn available_command_input_unknown_does_not_hide_malformed_text_variant() {
         use serde_json::json;
 
         assert!(serde_json::from_value::<AvailableCommandInput>(json!({})).is_err());
         assert!(
             serde_json::from_value::<AvailableCommandInput>(json!({
+                "hint": "Pick one"
+            }))
+            .is_err()
+        );
+        assert!(
+            serde_json::from_value::<AvailableCommandInput>(json!({
                 "type": 1,
+                "hint": "Pick one"
+            }))
+            .is_err()
+        );
+        assert!(
+            serde_json::from_value::<OtherAvailableCommandInput>(json!({
+                "type": "text",
                 "hint": "Pick one"
             }))
             .is_err()

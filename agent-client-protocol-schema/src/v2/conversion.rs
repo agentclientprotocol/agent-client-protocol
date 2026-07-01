@@ -1442,9 +1442,7 @@ impl IntoV1 for super::AvailableCommandInput {
 
     fn into_v1(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::Unstructured(value) => {
-                crate::v1::AvailableCommandInput::Unstructured(value.into_v1()?)
-            }
+            Self::Text(value) => crate::v1::AvailableCommandInput::Unstructured(value.into_v1()?),
             Self::Other(value) => {
                 return Err(unknown_v2_enum_variant(
                     "AvailableCommandInput",
@@ -1460,14 +1458,12 @@ impl IntoV2 for crate::v1::AvailableCommandInput {
 
     fn into_v2(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::Unstructured(value) => {
-                super::AvailableCommandInput::Unstructured(value.into_v2()?)
-            }
+            Self::Unstructured(value) => super::AvailableCommandInput::Text(value.into_v2()?),
         })
     }
 }
 
-impl IntoV1 for super::UnstructuredCommandInput {
+impl IntoV1 for super::TextCommandInput {
     type Output = crate::v1::UnstructuredCommandInput;
 
     fn into_v1(self) -> Result<Self::Output> {
@@ -1480,11 +1476,11 @@ impl IntoV1 for super::UnstructuredCommandInput {
 }
 
 impl IntoV2 for crate::v1::UnstructuredCommandInput {
-    type Output = super::UnstructuredCommandInput;
+    type Output = super::TextCommandInput;
 
     fn into_v2(self) -> Result<Self::Output> {
         let Self { hint, meta } = self;
-        Ok(super::UnstructuredCommandInput {
+        Ok(super::TextCommandInput {
             hint: hint.into_v2()?,
             meta: meta.into_v2()?,
         })
@@ -10434,6 +10430,31 @@ mod tests {
                 .annotations
                 .and_then(|annotations| annotations.audience),
             Some(vec![v1::Role::User])
+        );
+    }
+
+    #[test]
+    fn available_command_input_conversion_adds_v2_discriminator() {
+        let input = v1::AvailableCommandInput::Unstructured(v1::UnstructuredCommandInput::new(
+            "Describe changes",
+        ));
+
+        let v2_input: v2::AvailableCommandInput = v1_to_v2(input.clone()).unwrap();
+        assert_eq!(
+            serde_json::to_value(&v2_input).unwrap(),
+            serde_json::json!({
+                "type": "text",
+                "hint": "Describe changes"
+            })
+        );
+
+        let v1_input: v1::AvailableCommandInput = v2_to_v1(v2_input).unwrap();
+        assert_eq!(v1_input, input);
+        assert_eq!(
+            serde_json::to_value(v1_input).unwrap(),
+            serde_json::json!({
+                "hint": "Describe changes"
+            })
         );
     }
 
