@@ -1,0 +1,346 @@
+---
+title: "Workspace Trust for Agent-Loaded Project Context"
+---
+
+- Author(s): [@nemtecl](https://github.com/nemtecl)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+ACP should standardize how Agents report workspace trust state to Clients and how Clients apply a user's trust decision.
+
+This RFD proposes:
+
+- a typed `workspaceTrust` field on session lifecycle responses; and
+- one Agent-handled `trust/apply` request for applying a selected trust decision.
+
+The goal is to standardize a trusted-folder workflow for Agents that load workspace-local context capable of changing agent behavior.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+Some Agents load project-local instructions, configuration, skills, hooks, or similar files that can change agent behavior. Loading those files before the user trusts the workspace can be surprising or unsafe, especially in cloned repositories, nested workspaces, and IDE sessions where the Agent is launched automatically.
+
+Several Agent implementations need a workspace trust model with these properties:
+
+- detect local files that affect agent behavior, such as project instructions or agent configuration;
+- avoid loading those files while the folder is untrusted;
+- record persistent trusted and untrusted folders in an Agent-owned trust store;
+- support a session-only trust grant for automation and temporary use;
+- offer either the current working directory or the enclosing repository as the trust target; and
+- after a trust grant, reload the active session so newly trusted local context becomes available.
+
+ACP does not currently define how to communicate this state. Without a protocol-level shape:
+
+- Agents have no standard place to report that workspace-local context was ignored;
+- Clients have no standard way to render a trust affordance from session setup state;
+- Clients have no standard method for applying a user-selected trust decision; and
+- independent Clients and Agents can easily drift in terminology, decision semantics, and security UX.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+Add first-class workspace trust state and one standard apply method to ACP.
+
+Workspace trust is a consent signal for loading Agent-selected, workspace-local files that can affect agent behavior. It is not a filesystem permission model. It does not grant read, write, execute, terminal, MCP, or sandbox privileges by itself.
+
+Agents that support workspace trust advertise:
+
+```ts
+agentCapabilities.sessionCapabilities.workspaceTrust?: {};
+```
+
+Session lifecycle responses MAY include:
+
+```ts
+workspaceTrust?: WorkspaceTrustState;
+```
+
+on:
+
+- `NewSessionResponse`
+- `LoadSessionResponse`
+- `ResumeSessionResponse`
+- `ForkSessionResponse`
+
+Agents handle:
+
+- `trust/apply`
+
+This proposal does not standardize an Agent-initiated trust prompt as part of the initial protocol surface because Clients can render trust UI directly from the lifecycle response.
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+A Client starts or loads a session. The Agent creates the session without loading untrusted local behavior-changing files. If the Agent discovered ignored local context, it returns `workspaceTrust` details in the lifecycle response.
+
+The Client can render a trust affordance using only standard protocol fields. If the user chooses to trust the current folder, trust the repository, trust for this session, or decline, the Client calls `trust/apply`. The Agent validates that the decision is still available, updates its trust state, and refreshes the active session if needed.
+
+Implementations can still choose their own trust-sensitive file names and formats. ACP standardizes the communication, not the local project conventions.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+### Goals / Non-goals
+
+#### Goals
+
+- Standardize workspace trust state and decision flow.
+- Define one typed method for applying trust decisions.
+- Define a typed lifecycle response field for workspace trust state.
+- Preserve persistent trust, persistent decline, and session-only trust semantics.
+- Let Agents describe which absolute paths are being ignored because the workspace is untrusted.
+- Let Clients render native, security-sensitive UI without knowing Agent-specific file conventions.
+
+#### Non-goals
+
+- Defining standard project instruction, configuration, skill, hook, or agent file names.
+- Defining how an Agent must store trust decisions.
+- Defining a general filesystem permission, sandbox, or approval model.
+- Replacing `cwd` or `additionalDirectories`.
+- Requiring Clients to show modal UI.
+- Standardizing an Agent-initiated "ask the user" request in this initial RFD.
+- Standardizing a standalone trust status query in this initial RFD.
+
+### Schema changes
+
+No fields introduced by this RFD accept `null`. Optional fields are omitted when absent, and `null` is invalid. Every path string introduced by this RFD MUST be an absolute path under the same platform path rules used for `cwd`.
+
+```ts
+type WorkspaceTrustStatus = "trusted" | "session" | "untrusted";
+
+type WorkspaceTrustDecision =
+  | "trust_repo"
+  | "trust_cwd"
+  | "trust_session"
+  | "decline";
+
+interface WorkspaceTrustDetails {
+  cwd: string;
+  repoRoot?: string;
+  ignoredPaths: string[];
+  availableDecisions: WorkspaceTrustDecision[];
+}
+
+interface WorkspaceTrustState {
+  status: WorkspaceTrustStatus;
+  details?: WorkspaceTrustDetails;
+}
+```
+
+`WorkspaceTrustStatus` means:
+
+- `trusted`: the relevant workspace path is trusted persistently, or by an implementation-defined durable grant.
+- `session`: the relevant workspace path is trusted for the active session or current Agent process only.
+- `untrusted`: the Agent is not currently allowed to load trust-sensitive local context for the relevant workspace path.
+
+`WorkspaceTrustDetails` is present only when the Agent has actionable trust information for the Client. When `details` is omitted, the Client should not infer that no trust model exists; it only means there is no user-actionable trust prompt for the current response.
+
+`cwd` is the absolute working directory whose trust state is being described.
+
+`repoRoot` is omitted when the Agent has no relevant repository root to offer. If present, it MUST be an absolute path and SHOULD be an ancestor of, or equal to, `cwd`.
+
+`ignoredPaths` contains absolute paths to files or directories that the Agent detected but is not loading because the workspace is untrusted. Agents SHOULD include paths that help the user understand what behavior-changing local context is being ignored. ACP does not define what makes a file trust-sensitive.
+
+`availableDecisions` contains only decisions that are currently valid for the `WorkspaceTrustDetails`. If `trust_repo` is present, `repoRoot` MUST also be present.
+
+### Session lifecycle responses
+
+Add this optional field to session lifecycle responses:
+
+```ts
+workspaceTrust?: WorkspaceTrustState;
+```
+
+Agents that advertise `agentCapabilities.sessionCapabilities.workspaceTrust` SHOULD include `workspaceTrust` on lifecycle responses that create or attach to an active session.
+
+Example `session/new` response:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "sessionId": "sess_abc123",
+    "workspaceTrust": {
+      "status": "untrusted",
+      "details": {
+        "cwd": "/home/user/project/packages/app",
+        "repoRoot": "/home/user/project",
+        "ignoredPaths": [
+          "/home/user/project/AGENTS.md",
+          "/home/user/project/packages/app/.vibe"
+        ],
+        "availableDecisions": [
+          "trust_repo",
+          "trust_cwd",
+          "trust_session",
+          "decline"
+        ]
+      }
+    }
+  }
+}
+```
+
+### Agent method: `trust/apply`
+
+The Client calls `trust/apply` after the user selects a trust decision.
+
+User-facing method name: `apply_trust`.
+
+Request and response structs:
+
+- `ApplyTrustRequest`
+- `ApplyTrustResponse`
+
+Method names struct field:
+
+- `trust_apply: &'static str`
+
+```ts
+interface ApplyTrustRequest {
+  cwd: string;
+  decision: WorkspaceTrustDecision;
+  sessionId?: string;
+}
+
+interface ApplyTrustResponse {
+  workspaceTrust: WorkspaceTrustState;
+}
+```
+
+`cwd` is required and MUST be absolute. `sessionId` is optional. When omitted, the Agent applies the decision to its trust state but does not need to refresh an active ACP session. `sessionId` is required for `trust_session`.
+
+Decision semantics:
+
+- `trust_repo`: trust `repoRoot` persistently or durably. This decision is valid only when the current trust details include `repoRoot` and `availableDecisions` contains `trust_repo`.
+- `trust_cwd`: trust `cwd` persistently or durably.
+- `trust_session`: trust `cwd` only for the active session or current Agent process. This decision requires `sessionId`.
+- `decline`: mark `cwd` as untrusted at least for the active connection. Agents that maintain a persistent trust store SHOULD persist the decline.
+
+The Agent MUST validate the decision against current trust details before applying it. If the decision is not available, the Agent MUST reject the request with `invalid_params`.
+
+If `sessionId` is present and the decision expands trust for that session, the Agent SHOULD refresh any session-local configuration, instructions, tools, skills, or other Agent-specific context that was previously ignored. The response MAY return before that refresh completes. Agents that refresh asynchronously SHOULD use existing session update mechanisms for any user-visible changes.
+
+Example:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "trust/apply",
+  "params": {
+    "cwd": "/home/user/project/packages/app",
+    "decision": "trust_cwd",
+    "sessionId": "sess_abc123"
+  }
+}
+```
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "result": {
+    "workspaceTrust": {
+      "status": "trusted"
+    }
+  }
+}
+```
+
+### Capability advertisement example
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 0,
+  "result": {
+    "protocolVersion": 1,
+    "agentCapabilities": {
+      "sessionCapabilities": {
+        "workspaceTrust": {}
+      }
+    }
+  }
+}
+```
+
+### Validation and error handling
+
+An Agent receiving `trust/apply` MUST reject the request if:
+
+- `cwd` is missing, empty, not a string, or not absolute;
+- `sessionId` is present but empty, not a string, or unknown;
+- `decision` is missing, unknown, or unavailable for the current trust details;
+- `decision` is `trust_session` and `sessionId` is omitted; or
+- current Agent policy does not allow the requested trust change.
+
+`invalid_params` is the recommended error class for malformed or unavailable decisions. `session_not_found` is the recommended error class for unknown `sessionId`.
+
+### Security considerations
+
+Workspace trust communicates whether an Agent may load behavior-changing local context. It MUST NOT be treated as general filesystem access approval.
+
+Agents SHOULD fail closed: when a workspace is untrusted, trust-sensitive local context should remain ignored until a valid trust decision is applied.
+
+Clients SHOULD make persistent trust decisions visibly different from session-only trust decisions. A UI should show the absolute target path and whether the decision applies to the current folder, the repository, or only the active session.
+
+Clients MUST NOT automatically select a trust decision just because a path is under `cwd`, under `additionalDirectories`, or accessible through the operating system. Filesystem reachability is not equivalent to trust.
+
+Agents that compare paths for trust enforcement SHOULD use platform-appropriate path resolution and MUST account for symlinks, junctions, mount points, and equivalent mechanisms when those can affect containment.
+
+### Backward compatibility
+
+This proposal is additive. Clients can ignore `workspaceTrust` fields. Agents can continue omitting them.
+
+Clients MUST gate `trust/apply` on `agentCapabilities.sessionCapabilities.workspaceTrust`.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Why not include a standalone `trust/status` method?
+
+The initial protocol path puts actionable trust state on session lifecycle responses.
+
+A standalone status query can be added later if Clients need to refresh trust state independently of session lifecycle. It is intentionally left out of the initial proposal to avoid adding a method that is not needed for the main flow.
+
+### Why not include an Agent-initiated `trust/request` method?
+
+Asking the user is a different direction from `trust/apply`: it asks for a decision instead of applying a decision.
+
+This RFD leaves that out of the initial proposal because Clients can show trust UI from `workspaceTrust.details` returned by session lifecycle responses. If Agents later need to interrupt an active flow with a trust prompt, a future RFD can add `trust/request` as a Client-handled method.
+
+### Why not use only `session/request_permission`?
+
+`session/request_permission` is oriented around an Agent action during a prompt turn. Workspace trust is session setup state: it can be discovered before a prompt, can affect which instructions and configuration are loaded, and can require a session reload after the decision. A dedicated trust surface avoids overloading tool permission UI and semantics.
+
+### Does ACP define which files require trust?
+
+No. Agents decide which local files are trust-sensitive. Examples include project instructions, project configuration, skills, hooks, tools, or other files that can change agent behavior. This RFD only standardizes how that state is reported and resolved.
+
+### How does this interact with `additionalDirectories`?
+
+`additionalDirectories` declares workspace scope. Workspace trust declares whether the Agent may load behavior-changing local context from a path. A path can be in scope but still untrusted for Agent-local context loading.
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+Alternatives considered:
+
+- adding a standalone `trust/status` method;
+- adding an Agent-initiated `trust/request` method;
+- using only `session/request_permission`; and
+- adding trust decisions directly to `session/new` requests.
+
+This proposal is preferred because it is typed, capability-gated, compatible with native Client UI, and does not require Clients to grant trust before a session can exist.
+
+## Revision history
+
+- 2026-06-23: Initial draft.
