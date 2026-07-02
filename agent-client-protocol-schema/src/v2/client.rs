@@ -228,6 +228,10 @@ impl<'de> Deserialize<'de> for OtherSessionUpdate {
 }
 
 fn is_known_session_update(session_update: &str) -> bool {
+    #[cfg(feature = "unstable_plan_operations")]
+    if session_update == "plan_removed" {
+        return true;
+    }
     matches!(
         session_update,
         "user_message_chunk"
@@ -1290,13 +1294,9 @@ pub struct RequestPermissionRequest {
     /// Optional structured context about the operation requiring permission.
     ///
     /// Omitted or `null` both mean no structured subject was provided.
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub subject: Option<RequestPermissionSubject>,
     /// Available permission options for the user to choose from.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     pub options: Vec<PermissionOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -3118,5 +3118,40 @@ mod tests {
         }))
         .unwrap();
         assert!(deserialized.terminal.is_none());
+    }
+
+    #[test]
+    fn request_permission_request_rejects_malformed_options() {
+        use serde_json::json;
+
+        assert!(
+            serde_json::from_value::<RequestPermissionRequest>(json!({
+                "sessionId": "sess-1",
+                "title": "Run tool?",
+                "options": "not-an-array"
+            }))
+            .is_err()
+        );
+        assert!(
+            serde_json::from_value::<RequestPermissionRequest>(json!({
+                "sessionId": "sess-1",
+                "title": "Run tool?",
+                "options": [{"optionId": "allow"}]
+            }))
+            .is_err()
+        );
+    }
+
+    #[cfg(feature = "unstable_plan_operations")]
+    #[test]
+    fn malformed_plan_removed_is_not_hidden_as_unknown_update() {
+        use serde_json::json;
+
+        assert!(
+            serde_json::from_value::<SessionUpdate>(json!({
+                "sessionUpdate": "plan_removed"
+            }))
+            .is_err()
+        );
     }
 }

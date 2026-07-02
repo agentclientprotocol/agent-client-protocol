@@ -146,8 +146,6 @@ pub struct MessageMcpRequest {
     /// Optional inner MCP params.
     ///
     /// If omitted or set to `null`, the inner MCP message has no params.
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub params: Option<serde_json::Map<String, serde_json::Value>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional

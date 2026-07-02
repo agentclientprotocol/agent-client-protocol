@@ -355,9 +355,7 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/PermissionOption"
-          },
-          "x-deserialize-default-on-error": true,
-          "x-deserialize-skip-invalid-items": true
+          }
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -3740,9 +3738,7 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/HttpHeader"
-          },
-          "x-deserialize-default-on-error": true,
-          "x-deserialize-skip-invalid-items": true
+          }
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -3770,9 +3766,7 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/HttpHeader"
-          },
-          "x-deserialize-default-on-error": true,
-          "x-deserialize-skip-invalid-items": true
+          }
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -3800,18 +3794,14 @@
           "type": "array",
           "items": {
             "type": "string"
-          },
-          "x-deserialize-default-on-error": true,
-          "x-deserialize-skip-invalid-items": true
+          }
         },
         "env": {
           "description": "Environment variables to set when launching the MCP server.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/EnvVariable"
-          },
-          "x-deserialize-default-on-error": true,
-          "x-deserialize-skip-invalid-items": true
+          }
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -3873,13 +3863,11 @@
       "properties": {
         "cwd": {
           "description": "Filter sessions by working directory. Must be an absolute path.",
-          "type": ["string", "null"],
-          "x-deserialize-default-on-error": true
+          "type": ["string", "null"]
         },
         "cursor": {
           "description": "Opaque cursor token from a previous response's nextCursor field for cursor-based pagination",
-          "type": ["string", "null"],
-          "x-deserialize-default-on-error": true
+          "type": ["string", "null"]
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -4069,9 +4057,7 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/ContentBlock"
-          },
-          "x-deserialize-default-on-error": true,
-          "x-deserialize-skip-invalid-items": true
+          }
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",

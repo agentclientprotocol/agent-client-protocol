@@ -1735,13 +1735,9 @@ impl CloseSessionResponse {
 #[non_exhaustive]
 pub struct ListSessionsRequest {
     /// Filter sessions by working directory. Must be an absolute path.
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub cwd: Option<PathBuf>,
     /// Opaque cursor token from a previous response's nextCursor field for cursor-based pagination
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub cursor: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -2986,8 +2982,6 @@ pub struct McpServerHttp {
     #[schemars(url)]
     pub url: String,
     /// HTTP headers to set when making requests to the MCP server.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub headers: Vec<HttpHeader>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -3128,13 +3122,9 @@ pub struct McpServerStdio {
     /// Absolute path to the MCP server executable.
     pub command: PathBuf,
     /// Command-line arguments to pass to the MCP server.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub args: Vec<String>,
     /// Environment variables to set when launching the MCP server.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub env: Vec<EnvVariable>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -3309,8 +3299,6 @@ pub struct PromptRequest {
     /// When available, [`ContentBlock::Resource`] is preferred
     /// as it avoids extra round-trips and allows the message to include
     /// pieces of context from sources the agent may not have access to.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     pub prompt: Vec<ContentBlock>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -3652,8 +3640,6 @@ pub struct ProviderInfo {
     pub required: bool,
     /// Current effective non-secret routing config.
     /// Null or omitted means provider is disabled.
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub current: Option<ProviderCurrentConfig>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -3758,8 +3744,6 @@ impl ListProvidersRequest {
 #[non_exhaustive]
 pub struct ListProvidersResponse {
     /// Configurable providers with current routing info suitable for UI display.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     pub providers: Vec<ProviderInfo>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -3819,8 +3803,6 @@ pub struct SetProviderRequest {
     pub base_url: String,
     /// Full headers map for this provider.
     /// May include authorization, routing, or other integration-specific headers.
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub headers: HashMap<String, String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -7129,6 +7111,32 @@ mod test_serialization {
             json!({
                 "acp": {}
             })
+        );
+    }
+
+    #[test]
+    fn prompt_request_rejects_malformed_content_block() {
+        use serde_json::json;
+
+        assert!(
+            serde_json::from_value::<PromptRequest>(json!({
+                "sessionId": "sess-1",
+                "prompt": [{"type": "text"}]
+            }))
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn prompt_request_rejects_non_array_prompt() {
+        use serde_json::json;
+
+        assert!(
+            serde_json::from_value::<PromptRequest>(json!({
+                "sessionId": "sess-1",
+                "prompt": "hello"
+            }))
+            .is_err()
         );
     }
 }
