@@ -182,7 +182,6 @@
             "group": "Draft",
             "pages": [
               "rfds/session-fork",
-              "rfds/agent-telemetry-export",
               "rfds/proxy-chains",
               "rfds/mcp-over-acp",
               "rfds/end-turn-token-usage",

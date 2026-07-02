@@ -6,6 +6,13 @@ rss: true
 
 This page tracks lifecycle changes for ACP Requests for Dialog. For broader ACP announcements, see [Updates](/updates).
 
+<Update label="July 2, 2026" tags={["Removed"]}>
+## Agent Telemetry Export RFD removed
+
+The Agent Telemetry Export RFD has been removed. Its design relied on clients injecting OpenTelemetry environment variables when launching agent subprocesses, which doesn't translate to the new remote transports where agents aren't launched by the client. Since the approach required no changes to the protocol itself, clients and agents that want this setup can adopt standard [OpenTelemetry SDK environment variable configuration](https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/) directly.
+
+</Update>
+
 <Update label="July 2, 2026" tags={["Active"]}>
 ## Active RFD stage added
 
@@ -364,7 +371,7 @@ The RFD for adding proxy chain functionality in the protocol has been moved to D
 <Update label="December 11, 2025" tags={["Draft"]}>
 ## Agent Telemetry Export RFD moves to Draft stage
 
-The RFD for providing more guidance on how agents should export telemetry has been moved to Draft stage. Please review the [RFD](/rfds/agent-telemetry-export) for more information on the current proposal and provide feedback as work on the implementation begins.
+The RFD for providing more guidance on how agents should export telemetry has been moved to Draft stage. (This RFD was later removed — see the July 2, 2026 update.)
 
 </Update>
 
