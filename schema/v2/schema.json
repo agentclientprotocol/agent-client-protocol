@@ -557,11 +557,12 @@
           ]
         },
         "options": {
-          "description": "Available permission options for the user to choose from.",
+          "description": "Available permission options for the user to choose from.\nMust contain at least one option.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/PermissionOption"
-          }
+          },
+          "minItems": 1
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
@@ -1045,8 +1046,9 @@
           "x-deserialize-skip-invalid-items": true
         },
         "lastModified": {
-          "description": "Timestamp indicating when the underlying resource was last modified.",
+          "description": "Timestamp indicating when the underlying resource was last modified.\n\nMust be an ISO 8601 formatted string (e.g., \"2025-01-12T15:00:58Z\").",
           "type": ["string", "null"],
+          "format": "date-time",
           "x-deserialize-default-on-error": true
         },
         "priority": {
@@ -2831,6 +2833,7 @@
         "updatedAt": {
           "description": "ISO 8601 timestamp of last activity",
           "type": ["string", "null"],
+          "format": "date-time",
           "x-deserialize-default-on-error": true
         },
         "_meta": {
@@ -4199,6 +4202,7 @@
         "updatedAt": {
           "description": "ISO 8601 timestamp of last activity. Set to null to clear.",
           "type": ["string", "null"],
+          "format": "date-time",
           "x-deserialize-default-on-error": true
         },
         "_meta": {
@@ -4220,7 +4224,8 @@
         },
         "currency": {
           "description": "ISO 4217 currency code (e.g., \"USD\", \"EUR\").",
-          "type": "string"
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",

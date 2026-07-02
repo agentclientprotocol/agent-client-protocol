@@ -142,6 +142,7 @@ pub struct StringPropertySchema {
     #[serde(default)]
     pub max_length: Option<u32>,
     /// Pattern the string must match.
+    #[schemars(extend("format" = "regex"))]
     #[serde(default)]
     pub pattern: Option<String>,
     /// String format.
@@ -153,10 +154,14 @@ pub struct StringPropertySchema {
     #[serde(default)]
     pub default: Option<String>,
     /// Enum values for untitled single-select enums.
+    /// Must contain at least one value when present.
+    #[schemars(length(min = 1))]
     #[serde(default)]
     #[serde(rename = "enum")]
     pub enum_values: Option<Vec<String>>,
     /// Titled enum options for titled single-select enums.
+    /// Must contain at least one option when present.
+    #[schemars(length(min = 1))]
     #[serde(default)]
     #[serde(rename = "oneOf")]
     pub one_of: Option<Vec<EnumOption>>,
@@ -558,7 +563,8 @@ impl BooleanPropertySchema {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[non_exhaustive]
 pub struct StringMultiSelectItems {
-    /// Allowed enum values.
+    /// Allowed enum values. Must contain at least one value.
+    #[schemars(length(min = 1))]
     #[serde(rename = "enum")]
     pub values: Vec<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -598,7 +604,8 @@ impl StringMultiSelectItems {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[non_exhaustive]
 pub struct TitledMultiSelectItems {
-    /// Titled enum options.
+    /// Titled enum options. Must contain at least one option.
+    #[schemars(length(min = 1))]
     #[serde(rename = "anyOf")]
     pub options: Vec<EnumOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1667,7 +1674,7 @@ pub struct ElicitationUrlMode {
     /// The unique identifier for this elicitation.
     pub elicitation_id: ElicitationId,
     /// The URL to direct the user to.
-    #[schemars(extend("format" = "uri"))]
+    #[schemars(url)]
     pub url: String,
 }
 

@@ -1964,6 +1964,7 @@ permission description was provided.
 </ResponseField>
 <ResponseField name="options" type={<a href="#permissionoption">PermissionOption[]</a>} required>
   Available permission options for the user to choose from.
+Must contain at least one option.
 </ResponseField>
 <ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
   The session ID for this request.
@@ -2272,6 +2273,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="lastModified" type={"string | null"} >
   Timestamp indicating when the underlying resource was last modified.
+
+Must be an ISO 8601 formatted string (e.g., "2025-01-12T15:00:58Z").
+
 </ResponseField>
 <ResponseField name="priority" type={"number | null"} >
   Relative importance of this content when clients choose what to surface.
@@ -3203,6 +3207,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="currency" type={"string"} required>
   ISO 4217 currency code (e.g., "USD", "EUR").
+
+    - Pattern: `"^[A-Z]{3}$"`
+
 </ResponseField>
 
 ## <span class="font-mono">Diff</span>
@@ -3683,6 +3690,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="enum" type={<><span><><span>"string"</span><span>[]</span></></span><span> | null</span></>} >
   Enum values for untitled single-select enums.
+Must contain at least one value when present.
 </ResponseField>
 <ResponseField name="format" type={<><span><a href="#stringformat">StringFormat</a></span><span> | null</span></>} >
   String format.
@@ -3701,6 +3709,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="oneOf" type={<><span><a href="#enumoption">EnumOption[]</a></span><span> | null</span></>} >
   Titled enum options for titled single-select enums.
+Must contain at least one option when present.
 </ResponseField>
 <ResponseField name="pattern" type={"string | null"} >
   Pattern the string must match.
@@ -4958,7 +4967,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 </ResponseField>
 <ResponseField name="enum" type={<><span>"string"</span><span>[]</span></>} required>
-  Allowed enum values.
+  Allowed enum values. Must contain at least one value.
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
   The discriminator value. Must be `"string"`.
@@ -4998,7 +5007,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 </ResponseField>
 <ResponseField name="anyOf" type={<a href="#enumoption">EnumOption[]</a>} required>
-  Titled enum options.
+  Titled enum options. Must contain at least one option.
 </ResponseField>
 
 </Expandable>
@@ -5369,7 +5378,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
   Optional suggested cursor position after applying edits.
 </ResponseField>
 <ResponseField name="edits" type={<a href="#nestextedit">NesTextEdit[]</a>} required>
-  The text edits to apply.
+  The text edits to apply. Must contain at least one edit.
 </ResponseField>
 <ResponseField name="suggestionId" type={<a href="#nessuggestionid">NesSuggestionId</a>} required>
   Unique identifier for accept/reject tracking.
@@ -5821,7 +5830,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
   Optional suggested cursor position after applying edits.
 </ResponseField>
 <ResponseField name="edits" type={<a href="#nestextedit">NesTextEdit[]</a>} required>
-  The text edits to apply.
+  The text edits to apply. Must contain at least one edit.
 </ResponseField>
 <ResponseField name="kind" type={"string"} required>
   The discriminator value. Must be `"edit"`.
@@ -8295,7 +8304,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 </ResponseField>
 <ResponseField name="enum" type={<><span>"string"</span><span>[]</span></>} required>
-  Allowed enum values.
+  Allowed enum values. Must contain at least one value.
 </ResponseField>
 
 ## <span class="font-mono">StringPropertySchema</span>
@@ -8325,6 +8334,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="enum" type={<><span><><span>"string"</span><span>[]</span></></span><span> | null</span></>} >
   Enum values for untitled single-select enums.
+Must contain at least one value when present.
 </ResponseField>
 <ResponseField name="format" type={<><span><a href="#stringformat">StringFormat</a></span><span> | null</span></>} >
   String format.
@@ -8343,6 +8353,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="oneOf" type={<><span><a href="#enumoption">EnumOption[]</a></span><span> | null</span></>} >
   Titled enum options for titled single-select enums.
+Must contain at least one option when present.
 </ResponseField>
 <ResponseField name="pattern" type={"string | null"} >
   Pattern the string must match.
@@ -8500,7 +8511,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 </ResponseField>
 <ResponseField name="anyOf" type={<a href="#enumoption">EnumOption[]</a>} required>
-  Titled enum options.
+  Titled enum options. Must contain at least one option.
 </ResponseField>
 
 ## <span class="font-mono">ToolCallContent</span>

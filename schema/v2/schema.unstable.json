@@ -701,11 +701,12 @@
           ]
         },
         "options": {
-          "description": "Available permission options for the user to choose from.",
+          "description": "Available permission options for the user to choose from.\nMust contain at least one option.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/PermissionOption"
-          }
+          },
+          "minItems": 1
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
@@ -1189,8 +1190,9 @@
           "x-deserialize-skip-invalid-items": true
         },
         "lastModified": {
-          "description": "Timestamp indicating when the underlying resource was last modified.",
+          "description": "Timestamp indicating when the underlying resource was last modified.\n\nMust be an ISO 8601 formatted string (e.g., \"2025-01-12T15:00:58Z\").",
           "type": ["string", "null"],
+          "format": "date-time",
           "x-deserialize-default-on-error": true
         },
         "priority": {
@@ -2442,7 +2444,8 @@
         },
         "pattern": {
           "description": "Pattern the string must match.",
-          "type": ["string", "null"]
+          "type": ["string", "null"],
+          "format": "regex"
         },
         "format": {
           "description": "String format.",
@@ -2461,18 +2464,20 @@
           "x-deserialize-default-on-error": true
         },
         "enum": {
-          "description": "Enum values for untitled single-select enums.",
+          "description": "Enum values for untitled single-select enums.\nMust contain at least one value when present.",
           "type": ["array", "null"],
           "items": {
             "type": "string"
-          }
+          },
+          "minItems": 1
         },
         "oneOf": {
-          "description": "Titled enum options for titled single-select enums.",
+          "description": "Titled enum options for titled single-select enums.\nMust contain at least one option when present.",
           "type": ["array", "null"],
           "items": {
             "$ref": "#/$defs/EnumOption"
-          }
+          },
+          "minItems": 1
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
@@ -2650,11 +2655,12 @@
       "type": "object",
       "properties": {
         "enum": {
-          "description": "Allowed enum values.",
+          "description": "Allowed enum values. Must contain at least one value.",
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "minItems": 1
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
@@ -2670,11 +2676,12 @@
       "type": "object",
       "properties": {
         "anyOf": {
-          "description": "Titled enum options.",
+          "description": "Titled enum options. Must contain at least one option.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/EnumOption"
-          }
+          },
+          "minItems": 1
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
@@ -4189,6 +4196,7 @@
         "link": {
           "description": "Optional link to a page where the user can obtain their credentials.",
           "type": ["string", "null"],
+          "format": "uri",
           "x-deserialize-default-on-error": true
         },
         "_meta": {
@@ -4433,7 +4441,8 @@
         },
         "baseUrl": {
           "description": "Base URL currently used by this provider.",
-          "type": "string"
+          "type": "string",
+          "format": "uri"
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
@@ -4857,6 +4866,7 @@
         "updatedAt": {
           "description": "ISO 8601 timestamp of last activity",
           "type": ["string", "null"],
+          "format": "date-time",
           "x-deserialize-default-on-error": true
         },
         "_meta": {
@@ -5268,14 +5278,16 @@
         },
         "uri": {
           "description": "The URI of the file to edit.",
-          "type": "string"
+          "type": "string",
+          "format": "uri"
         },
         "edits": {
-          "description": "The text edits to apply.",
+          "description": "The text edits to apply. Must contain at least one edit.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/NesTextEdit"
-          }
+          },
+          "minItems": 1
         },
         "cursorPosition": {
           "description": "Optional suggested cursor position after applying edits.",
@@ -5312,7 +5324,8 @@
         },
         "uri": {
           "description": "The file to navigate to.",
-          "type": "string"
+          "type": "string",
+          "format": "uri"
         },
         "position": {
           "description": "The target position within the file.",
@@ -5345,7 +5358,8 @@
         },
         "uri": {
           "description": "The file URI containing the symbol.",
-          "type": "string"
+          "type": "string",
+          "format": "uri"
         },
         "position": {
           "description": "The position of the symbol to rename.",
@@ -5382,7 +5396,8 @@
         },
         "uri": {
           "description": "The file URI to search within.",
-          "type": "string"
+          "type": "string",
+          "format": "uri"
         },
         "search": {
           "description": "The text or pattern to find.",
@@ -6668,7 +6683,8 @@
         },
         "uri": {
           "description": "The URI of the file containing the plan.",
-          "type": "string"
+          "type": "string",
+          "format": "uri"
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
@@ -6903,6 +6919,7 @@
         "updatedAt": {
           "description": "ISO 8601 timestamp of last activity. Set to null to clear.",
           "type": ["string", "null"],
+          "format": "date-time",
           "x-deserialize-default-on-error": true
         },
         "_meta": {
@@ -6924,7 +6941,8 @@
         },
         "currency": {
           "description": "ISO 4217 currency code (e.g., \"USD\", \"EUR\").",
-          "type": "string"
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
@@ -7572,7 +7590,8 @@
         },
         "baseUrl": {
           "description": "Base URL for requests sent through this provider.",
-          "type": "string"
+          "type": "string",
+          "format": "uri"
         },
         "headers": {
           "description": "Full headers map for this provider.\nMay include authorization, routing, or other integration-specific headers.",
@@ -8265,6 +8284,7 @@
         "workspaceUri": {
           "description": "The root URI of the workspace.",
           "type": ["string", "null"],
+          "format": "uri",
           "x-deserialize-default-on-error": true
         },
         "workspaceFolders": {
@@ -8302,7 +8322,8 @@
       "properties": {
         "uri": {
           "description": "The URI of the folder.",
-          "type": "string"
+          "type": "string",
+          "format": "uri"
         },
         "name": {
           "description": "The display name of the folder.",
@@ -8356,7 +8377,8 @@
         },
         "uri": {
           "description": "The URI of the document to suggest for.",
-          "type": "string"
+          "type": "string",
+          "format": "uri"
         },
         "version": {
           "description": "The version number of the document.",
@@ -8497,7 +8519,8 @@
       "properties": {
         "uri": {
           "description": "The URI of the file.",
-          "type": "string"
+          "type": "string",
+          "format": "uri"
         },
         "languageId": {
           "description": "The language identifier.",
@@ -8522,7 +8545,8 @@
       "properties": {
         "uri": {
           "description": "The URI of the file containing the snippets.",
-          "type": "string"
+          "type": "string",
+          "format": "uri"
         },
         "excerpts": {
           "description": "The code excerpts.",
@@ -8575,7 +8599,8 @@
       "properties": {
         "uri": {
           "description": "The URI of the edited file.",
-          "type": "string"
+          "type": "string",
+          "format": "uri"
         },
         "diff": {
           "description": "A diff representing the edit.",
@@ -8600,7 +8625,8 @@
         },
         "uri": {
           "description": "The URI of the file where the action occurred.",
-          "type": "string"
+          "type": "string",
+          "format": "uri"
         },
         "position": {
           "description": "The position where the action occurred.",
@@ -8631,7 +8657,8 @@
       "properties": {
         "uri": {
           "description": "The URI of the file.",
-          "type": "string"
+          "type": "string",
+          "format": "uri"
         },
         "languageId": {
           "description": "The language identifier.",
@@ -8671,7 +8698,8 @@
       "properties": {
         "uri": {
           "description": "The URI of the file containing the diagnostic.",
-          "type": "string"
+          "type": "string",
+          "format": "uri"
         },
         "range": {
           "description": "The range of the diagnostic.",
@@ -9317,7 +9345,8 @@
         },
         "uri": {
           "description": "The URI of the opened document.",
-          "type": "string"
+          "type": "string",
+          "format": "uri"
         },
         "languageId": {
           "description": "The language identifier of the document (e.g., \"rust\", \"python\").",
@@ -9357,7 +9386,8 @@
         },
         "uri": {
           "description": "The URI of the changed document.",
-          "type": "string"
+          "type": "string",
+          "format": "uri"
         },
         "version": {
           "description": "The new version number of the document.",
@@ -9426,7 +9456,8 @@
         },
         "uri": {
           "description": "The URI of the closed document.",
-          "type": "string"
+          "type": "string",
+          "format": "uri"
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
@@ -9453,7 +9484,8 @@
         },
         "uri": {
           "description": "The URI of the saved document.",
-          "type": "string"
+          "type": "string",
+          "format": "uri"
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
@@ -9480,7 +9512,8 @@
         },
         "uri": {
           "description": "The URI of the focused document.",
-          "type": "string"
+          "type": "string",
+          "format": "uri"
         },
         "version": {
           "description": "The version number of the document.",

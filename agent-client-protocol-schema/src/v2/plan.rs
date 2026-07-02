@@ -280,6 +280,7 @@ pub struct PlanFile {
     /// The plan ID to update.
     pub plan_id: PlanId,
     /// The URI of the file containing the plan.
+    #[schemars(url)]
     pub uri: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at

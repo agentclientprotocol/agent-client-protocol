@@ -725,6 +725,7 @@ permission description was provided.
 </ResponseField>
 <ResponseField name="options" type={<a href="#permissionoption">PermissionOption[]</a>} required>
   Available permission options for the user to choose from.
+Must contain at least one option.
 </ResponseField>
 <ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
   The session ID for this request.
@@ -1003,6 +1004,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 </ResponseField>
 <ResponseField name="lastModified" type={"string | null"} >
   Timestamp indicating when the underlying resource was last modified.
+
+Must be an ISO 8601 formatted string (e.g., "2025-01-12T15:00:58Z").
+
 </ResponseField>
 <ResponseField name="priority" type={"number | null"} >
   Relative importance of this content when clients choose what to surface.
@@ -1608,6 +1612,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 </ResponseField>
 <ResponseField name="currency" type={"string"} required>
   ISO 4217 currency code (e.g., "USD", "EUR").
+
+    - Pattern: `"^[A-Z]{3}$"`
+
 </ResponseField>
 
 ## <span class="font-mono">Diff</span>

@@ -1028,6 +1028,7 @@ pub struct DidOpenDocumentNotification {
     /// The session ID for this notification.
     pub session_id: SessionId,
     /// The URI of the opened document.
+    #[schemars(url)]
     pub uri: String,
     /// The language identifier of the document (e.g., "rust", "python").
     pub language_id: String,
@@ -1090,6 +1091,7 @@ pub struct DidChangeDocumentNotification {
     /// The session ID for this notification.
     pub session_id: SessionId,
     /// The URI of the changed document.
+    #[schemars(url)]
     pub uri: String,
     /// The new version number of the document.
     pub version: i64,
@@ -1210,6 +1212,7 @@ pub struct DidCloseDocumentNotification {
     /// The session ID for this notification.
     pub session_id: SessionId,
     /// The URI of the closed document.
+    #[schemars(url)]
     pub uri: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -1257,6 +1260,7 @@ pub struct DidSaveDocumentNotification {
     /// The session ID for this notification.
     pub session_id: SessionId,
     /// The URI of the saved document.
+    #[schemars(url)]
     pub uri: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -1304,6 +1308,7 @@ pub struct DidFocusDocumentNotification {
     /// The session ID for this notification.
     pub session_id: SessionId,
     /// The URI of the focused document.
+    #[schemars(url)]
     pub uri: String,
     /// The version number of the document.
     pub version: i64,
@@ -1368,6 +1373,7 @@ pub struct StartNesRequest {
     /// The root URI of the workspace.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[schemars(url)]
     #[serde(default)]
     pub workspace_uri: Option<String>,
     /// The workspace folders.
@@ -1452,6 +1458,7 @@ impl Default for StartNesRequest {
 #[non_exhaustive]
 pub struct WorkspaceFolder {
     /// The URI of the folder.
+    #[schemars(url)]
     pub uri: String,
     /// The display name of the folder.
     pub name: String,
@@ -1710,6 +1717,7 @@ pub struct SuggestNesRequest {
     /// The session ID for this request.
     pub session_id: SessionId,
     /// The URI of the document to suggest for.
+    #[schemars(url)]
     pub uri: String,
     /// The version number of the document.
     pub version: i64,
@@ -1892,6 +1900,7 @@ impl NesSuggestContext {
 #[non_exhaustive]
 pub struct NesRecentFile {
     /// The URI of the file.
+    #[schemars(url)]
     pub uri: String,
     /// The language identifier.
     pub language_id: String,
@@ -1945,6 +1954,7 @@ impl NesRecentFile {
 #[non_exhaustive]
 pub struct NesRelatedSnippet {
     /// The URI of the file containing the snippets.
+    #[schemars(url)]
     pub uri: String,
     /// The code excerpts.
     pub excerpts: Vec<NesExcerpt>,
@@ -2040,6 +2050,7 @@ impl NesExcerpt {
 #[non_exhaustive]
 pub struct NesEditHistoryEntry {
     /// The URI of the edited file.
+    #[schemars(url)]
     pub uri: String,
     /// A diff representing the edit.
     pub diff: String,
@@ -2088,6 +2099,7 @@ pub struct NesUserAction {
     /// The kind of action (e.g., "insertChar", "cursorMovement").
     pub action: String,
     /// The URI of the file where the action occurred.
+    #[schemars(url)]
     pub uri: String,
     /// The position where the action occurred.
     pub position: Position,
@@ -2143,6 +2155,7 @@ impl NesUserAction {
 #[non_exhaustive]
 pub struct NesOpenFile {
     /// The URI of the file.
+    #[schemars(url)]
     pub uri: String,
     /// The language identifier.
     pub language_id: String,
@@ -2215,6 +2228,7 @@ impl NesOpenFile {
 #[non_exhaustive]
 pub struct NesDiagnostic {
     /// The URI of the file containing the diagnostic.
+    #[schemars(url)]
     pub uri: String,
     /// The range of the diagnostic.
     pub range: Range,
@@ -2455,8 +2469,10 @@ pub struct NesEditSuggestion {
     /// Unique identifier for accept/reject tracking.
     pub suggestion_id: NesSuggestionId,
     /// The URI of the file to edit.
+    #[schemars(url)]
     pub uri: String,
-    /// The text edits to apply.
+    /// The text edits to apply. Must contain at least one edit.
+    #[schemars(length(min = 1))]
     pub edits: Vec<NesTextEdit>,
     /// Optional suggested cursor position after applying edits.
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -2567,6 +2583,7 @@ pub struct NesJumpSuggestion {
     /// Unique identifier for accept/reject tracking.
     pub suggestion_id: NesSuggestionId,
     /// The file to navigate to.
+    #[schemars(url)]
     pub uri: String,
     /// The target position within the file.
     pub position: Position,
@@ -2620,6 +2637,7 @@ pub struct NesRenameSuggestion {
     /// Unique identifier for accept/reject tracking.
     pub suggestion_id: NesSuggestionId,
     /// The file URI containing the symbol.
+    #[schemars(url)]
     pub uri: String,
     /// The position of the symbol to rename.
     pub position: Position,
@@ -2677,6 +2695,7 @@ pub struct NesSearchAndReplaceSuggestion {
     /// Unique identifier for accept/reject tracking.
     pub suggestion_id: NesSuggestionId,
     /// The file URI to search within.
+    #[schemars(url)]
     pub uri: String,
     /// The text or pattern to find.
     pub search: String,

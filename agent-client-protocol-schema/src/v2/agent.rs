@@ -810,6 +810,7 @@ pub struct AuthMethodEnvVar {
     /// Optional link to a page where the user can obtain their credentials.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[schemars(url)]
     #[serde(default)]
     pub link: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -2013,7 +2014,7 @@ pub struct SessionInfo {
     pub title: Option<String>,
     /// ISO 8601 timestamp of last activity
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "format" = "date-time"))]
     #[serde(default)]
     pub updated_at: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -3612,6 +3613,7 @@ pub struct ProviderCurrentConfig {
     /// Protocol currently used by this provider.
     pub api_type: LlmProtocol,
     /// Base URL currently used by this provider.
+    #[schemars(url)]
     pub base_url: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -3853,6 +3855,7 @@ pub struct SetProviderRequest {
     /// Protocol type for this provider.
     pub api_type: LlmProtocol,
     /// Base URL for requests sent through this provider.
+    #[schemars(url)]
     pub base_url: String,
     /// Full headers map for this provider.
     /// May include authorization, routing, or other integration-specific headers.

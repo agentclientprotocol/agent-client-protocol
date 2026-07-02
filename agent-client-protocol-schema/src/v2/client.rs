@@ -341,7 +341,7 @@ pub struct SessionInfoUpdate {
     pub title: MaybeUndefined<String>,
     /// ISO 8601 timestamp of last activity. Set to null to clear.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "format" = "date-time"))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub updated_at: MaybeUndefined<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -710,6 +710,7 @@ pub struct Cost {
     /// Total cumulative cost for session.
     pub amount: f64,
     /// ISO 4217 currency code (e.g., "USD", "EUR").
+    #[schemars(pattern(r"^[A-Z]{3}$"))]
     pub currency: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -1297,6 +1298,8 @@ pub struct RequestPermissionRequest {
     #[serde(default)]
     pub subject: Option<RequestPermissionSubject>,
     /// Available permission options for the user to choose from.
+    /// Must contain at least one option.
+    #[schemars(length(min = 1))]
     pub options: Vec<PermissionOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at

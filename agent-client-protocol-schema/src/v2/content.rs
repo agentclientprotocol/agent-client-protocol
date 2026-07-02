@@ -742,8 +742,10 @@ pub struct Annotations {
     #[serde(default)]
     pub audience: Option<Vec<Role>>,
     /// Timestamp indicating when the underlying resource was last modified.
+    ///
+    /// Must be an ISO 8601 formatted string (e.g., "2025-01-12T15:00:58Z").
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "format" = "date-time"))]
     #[serde(default)]
     pub last_modified: Option<String>,
     /// Relative importance of this content when clients choose what to surface.
@@ -984,6 +986,7 @@ mod tests {
 
         assert_eq!(json["properties"]["priority"]["minimum"], 0);
         assert_eq!(json["properties"]["priority"]["maximum"], 1);
+        assert_eq!(json["properties"]["lastModified"]["format"], "date-time");
     }
 
     #[test]
