@@ -1,0 +1,93 @@
+---
+title: "v2 Session Resume Replay"
+---
+
+Author(s): [@benbrandt](https://github.com/benbrandt)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+ACP v2 should unify `session/load` and `session/resume` into a single
+`session/resume` method. Clients that need replay can set a `replayFrom` cursor
+on `session/resume`; clients that omit `replayFrom` get the current resume
+behavior without history replay.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+In v1, `session/load` and `session/resume` are separate methods. They restore
+the same existing session context, reconnect MCP servers, and accept the same
+workspace parameters. The main behavioral difference is replay:
+
+- `session/load` replays previous conversation history before responding.
+- `session/resume` restores the session without replaying previous history.
+
+Keeping both methods in v2 preserves a distinction that is better represented as
+an option on one restore operation. It also forces capability and transport docs
+to explain two methods when the client is choosing between replay modes.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+Remove `session/load` from the v2 method surface and keep `session/resume`.
+`ResumeSessionRequest` gains an optional `replayFrom` field.
+
+Omitted `replayFrom` and `replayFrom: null` are equivalent: the Agent resumes
+without replaying previous conversation history.
+
+The initial replay cursor is:
+
+```json
+{
+  "type": "start"
+}
+```
+
+`replayFrom: { "type": "start" }` means the Agent replays the whole
+conversation through `session/update` notifications before responding to the
+`session/resume` request.
+
+Replay cursors are inclusive: replay includes the position identified by the
+cursor. Future cursors that identify a message would replay that message before
+continuing with later history.
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+Clients always reconnect to existing sessions through `session/resume`. They
+choose replay behavior by setting or omitting `replayFrom`, rather than choosing
+between two different restore methods.
+
+This leaves room for future replay cursors, such as replaying from a specific
+message, checkpoint, or server-provided cursor, without adding more session
+restore methods.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+1. Remove `session/load`, `LoadSessionRequest`, and `LoadSessionResponse` from
+   the v2 schema.
+2. Add `replayFrom` to `ResumeSessionRequest` as an optional tagged union.
+3. Add the initial `replayFrom` variant `{ "type": "start" }`.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Is `replayFrom` required?
+
+No. The field is optional. Omitted and `null` both mean no history replay.
+
+### Why use an object instead of a string?
+
+An object leaves room for future cursor forms that need fields. The initial
+`start` form has no fields beyond `type`.
+
+## Revision history
+
+- 2026-07-02: Initial draft.

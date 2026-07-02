@@ -3324,29 +3324,8 @@ impl IntoV2 for crate::v1::NewSessionResponse {
     }
 }
 
-impl IntoV1 for super::LoadSessionRequest {
-    type Output = crate::v1::LoadSessionRequest;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self {
-            mcp_servers,
-            cwd,
-            additional_directories,
-            session_id,
-            meta,
-        } = self;
-        Ok(crate::v1::LoadSessionRequest {
-            mcp_servers: mcp_servers.into_v1()?,
-            cwd: cwd.into_v1()?,
-            additional_directories: additional_directories.into_v1()?,
-            session_id: session_id.into_v1()?,
-            meta: meta.into_v1()?,
-        })
-    }
-}
-
 impl IntoV2 for crate::v1::LoadSessionRequest {
-    type Output = super::LoadSessionRequest;
+    type Output = super::ResumeSessionRequest;
 
     fn into_v2(self) -> Result<Self::Output> {
         let Self {
@@ -3356,34 +3335,19 @@ impl IntoV2 for crate::v1::LoadSessionRequest {
             session_id,
             meta,
         } = self;
-        Ok(super::LoadSessionRequest {
+        Ok(super::ResumeSessionRequest {
             mcp_servers: mcp_servers.into_v2()?,
             cwd: cwd.into_v2()?,
             additional_directories: additional_directories.into_v2()?,
             session_id: session_id.into_v2()?,
+            replay_from: Some(super::ReplayFrom::Start(super::ReplayFromStart::new())),
             meta: meta.into_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::LoadSessionResponse {
-    type Output = crate::v1::LoadSessionResponse;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self {
-            config_options,
-            meta,
-        } = self;
-        Ok(crate::v1::LoadSessionResponse {
-            modes: None,
-            config_options: Some(into_v1_vec_skip_errors(config_options)),
-            meta: meta.into_v1()?,
-        })
-    }
-}
-
 impl IntoV2 for crate::v1::LoadSessionResponse {
-    type Output = super::LoadSessionResponse;
+    type Output = super::ResumeSessionResponse;
 
     fn into_v2(self) -> Result<Self::Output> {
         let Self {
@@ -3391,10 +3355,57 @@ impl IntoV2 for crate::v1::LoadSessionResponse {
             config_options,
             meta,
         } = self;
-        Ok(super::LoadSessionResponse {
+        Ok(super::ResumeSessionResponse {
             config_options: option_vec_into_v2_default_skip_errors(config_options),
             meta: meta.into_v2()?,
         })
+    }
+}
+
+fn v2_resume_session_request_into_v1_load(
+    request: super::ResumeSessionRequest,
+) -> Result<crate::v1::LoadSessionRequest> {
+    let super::ResumeSessionRequest {
+        session_id,
+        cwd,
+        additional_directories,
+        mcp_servers,
+        replay_from: _,
+        meta,
+    } = request;
+    Ok(crate::v1::LoadSessionRequest {
+        mcp_servers: mcp_servers.into_v1()?,
+        cwd: cwd.into_v1()?,
+        additional_directories: additional_directories.into_v1()?,
+        session_id: session_id.into_v1()?,
+        meta: meta.into_v1()?,
+    })
+}
+
+fn unsupported_replay_from_for_v1_resume(
+    replay_from: super::ReplayFrom,
+) -> ProtocolConversionError {
+    match replay_from {
+        super::ReplayFrom::Start(_) => ProtocolConversionError::new(
+            "v2 ResumeSessionRequest `replayFrom: start` maps to v1 session/load, not v1 session/resume",
+        ),
+        super::ReplayFrom::Other(other) => unknown_v2_enum_variant("ReplayFrom", &other.type_),
+    }
+}
+
+fn v2_resume_session_request_into_v1_client_request(
+    request: super::ResumeSessionRequest,
+) -> Result<crate::v1::ClientRequest> {
+    match request.replay_from.clone() {
+        None => Ok(crate::v1::ClientRequest::ResumeSessionRequest(
+            request.into_v1()?,
+        )),
+        Some(super::ReplayFrom::Start(_)) => Ok(crate::v1::ClientRequest::LoadSessionRequest(
+            v2_resume_session_request_into_v1_load(request)?,
+        )),
+        Some(super::ReplayFrom::Other(other)) => {
+            Err(unknown_v2_enum_variant("ReplayFrom", &other.type_))
+        }
     }
 }
 
@@ -3489,8 +3500,12 @@ impl IntoV1 for super::ResumeSessionRequest {
             cwd,
             additional_directories,
             mcp_servers,
+            replay_from,
             meta,
         } = self;
+        if let Some(replay_from) = replay_from {
+            return Err(unsupported_replay_from_for_v1_resume(replay_from));
+        }
         Ok(crate::v1::ResumeSessionRequest {
             session_id: session_id.into_v1()?,
             cwd: cwd.into_v1()?,
@@ -3517,6 +3532,7 @@ impl IntoV2 for crate::v1::ResumeSessionRequest {
             cwd: cwd.into_v2()?,
             additional_directories: additional_directories.into_v2()?,
             mcp_servers: mcp_servers.into_v2()?,
+            replay_from: None,
             meta: meta.into_v2()?,
         })
     }
@@ -5199,9 +5215,6 @@ impl IntoV1 for super::ClientRequest {
             Self::NewSessionRequest(value) => {
                 crate::v1::ClientRequest::NewSessionRequest(value.into_v1()?)
             }
-            Self::LoadSessionRequest(value) => {
-                crate::v1::ClientRequest::LoadSessionRequest(value.into_v1()?)
-            }
             Self::ListSessionsRequest(value) => {
                 crate::v1::ClientRequest::ListSessionsRequest(value.into_v1()?)
             }
@@ -5213,7 +5226,7 @@ impl IntoV1 for super::ClientRequest {
                 crate::v1::ClientRequest::ForkSessionRequest(value.into_v1()?)
             }
             Self::ResumeSessionRequest(value) => {
-                crate::v1::ClientRequest::ResumeSessionRequest(value.into_v1()?)
+                v2_resume_session_request_into_v1_client_request(*value)?
             }
             Self::CloseSessionRequest(value) => {
                 crate::v1::ClientRequest::CloseSessionRequest(value.into_v1()?)
@@ -5275,7 +5288,7 @@ impl IntoV2 for crate::v1::ClientRequest {
                 super::ClientRequest::NewSessionRequest(Box::new(value.into_v2()?))
             }
             Self::LoadSessionRequest(value) => {
-                super::ClientRequest::LoadSessionRequest(Box::new(value.into_v2()?))
+                super::ClientRequest::ResumeSessionRequest(Box::new(value.into_v2()?))
             }
             Self::ListSessionsRequest(value) => {
                 super::ClientRequest::ListSessionsRequest(Box::new(value.into_v2()?))
@@ -5354,9 +5367,6 @@ impl IntoV1 for super::AgentResponse {
             Self::NewSessionResponse(value) => {
                 crate::v1::AgentResponse::NewSessionResponse(value.into_v1()?)
             }
-            Self::LoadSessionResponse(value) => {
-                crate::v1::AgentResponse::LoadSessionResponse(value.into_v1()?)
-            }
             Self::ListSessionsResponse(value) => {
                 crate::v1::AgentResponse::ListSessionsResponse(value.into_v1()?)
             }
@@ -5432,7 +5442,7 @@ impl IntoV2 for crate::v1::AgentResponse {
                 super::AgentResponse::NewSessionResponse(Box::new(value.into_v2()?))
             }
             Self::LoadSessionResponse(value) => {
-                super::AgentResponse::LoadSessionResponse(Box::new(value.into_v2()?))
+                super::AgentResponse::ResumeSessionResponse(Box::new(value.into_v2()?))
             }
             Self::ListSessionsResponse(value) => {
                 super::AgentResponse::ListSessionsResponse(Box::new(value.into_v2()?))
@@ -10214,7 +10224,7 @@ mod tests {
             v1_to_v2(v1::NewSessionResponse::new("sess")).unwrap();
         assert!(new_response.config_options.is_empty());
 
-        let load_response: v2::LoadSessionResponse =
+        let load_response: v2::ResumeSessionResponse =
             v1_to_v2(v1::LoadSessionResponse::new()).unwrap();
         assert!(load_response.config_options.is_empty());
 
@@ -10228,6 +10238,39 @@ mod tests {
                 v1_to_v2(v1::ForkSessionResponse::new("fork")).unwrap();
             assert!(fork_response.config_options.is_empty());
         }
+    }
+
+    #[test]
+    fn v2_resume_replay_from_start_maps_to_v1_load_request() {
+        let v1_load = v1::ClientRequest::LoadSessionRequest(v1::LoadSessionRequest::new(
+            "sess",
+            "/workspace/project",
+        ));
+        let v2_request: v2::ClientRequest = v1_to_v2(v1_load).unwrap();
+        let v2::ClientRequest::ResumeSessionRequest(resume) = v2_request else {
+            panic!("v1 session/load should convert to v2 session/resume");
+        };
+        assert!(matches!(resume.replay_from, Some(v2::ReplayFrom::Start(_))));
+
+        let v1_request: v1::ClientRequest =
+            v2_to_v1(v2::ClientRequest::ResumeSessionRequest(resume)).unwrap();
+        assert!(matches!(
+            v1_request,
+            v1::ClientRequest::LoadSessionRequest(_)
+        ));
+    }
+
+    #[test]
+    fn v2_resume_without_replay_maps_to_v1_resume_request() {
+        let v2_request = v2::ClientRequest::ResumeSessionRequest(Box::new(
+            v2::ResumeSessionRequest::new("sess", "/workspace/project"),
+        ));
+
+        let v1_request: v1::ClientRequest = v2_to_v1(v2_request).unwrap();
+        assert!(matches!(
+            v1_request,
+            v1::ClientRequest::ResumeSessionRequest(_)
+        ));
     }
 
     #[test]

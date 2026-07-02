@@ -31,7 +31,7 @@ A typical flow follows this pattern:
 <Step title="Session Setup - either:">
 
 - Client → Agent: `session/new` to create a new session
-- Client → Agent: `session/load` or `session/resume` to resume an existing session
+- Client → Agent: `session/resume` to resume an existing session
 
 </Step>
 
@@ -90,13 +90,6 @@ Agents are programs that use generative AI to autonomously modify code. They typ
 </ResponseField>
 
 <ResponseField
-  name="session/load"
-  post={[<a href="/protocol/v2/schema#session%2Fload">Schema</a>]}
->
-  [Load an existing session](/protocol/v2/session-setup#loading-sessions).
-</ResponseField>
-
-<ResponseField
   name="session/list"
   post={[<a href="/protocol/v2/schema#session%2Flist">Schema</a>]}
 >
@@ -107,7 +100,7 @@ Agents are programs that use generative AI to autonomously modify code. They typ
   name="session/resume"
   post={[<a href="/protocol/v2/schema#session%2Fresume">Schema</a>]}
 >
-  [Resume an existing session without replaying
+  [Resume an existing session, optionally replaying
   history](/protocol/v2/session-setup#resuming-sessions).
 </ResponseField>
 

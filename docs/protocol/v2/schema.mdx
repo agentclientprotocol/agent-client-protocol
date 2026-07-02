@@ -389,76 +389,6 @@ to fetch the next page. If absent, there are no more results.
   Array of session information objects.
 </ResponseField>
 
-<a id="session-load"></a>
-### <span class="font-mono">session/load</span>
-
-Loads an existing session to resume a previous conversation.
-
-The agent should:
-
-- Restore the session context and conversation history
-- Connect to the specified MCP servers
-- Stream the entire conversation history back to the client via notifications
-
-See protocol docs: [Loading Sessions](https://agentclientprotocol.com/protocol/v2/session-setup#loading-sessions)
-
-#### <span class="font-mono">LoadSessionRequest</span>
-
-Request parameters for loading an existing session.
-
-See protocol docs: [Loading Sessions](https://agentclientprotocol.com/protocol/v2/session-setup#loading-sessions)
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
-
-</ResponseField>
-<ResponseField name="additionalDirectories" type={<><span>"string"</span><span>[]</span></>} >
-  Additional workspace roots to activate for this session. Each path must be absolute.
-
-When omitted or empty, no additional roots are activated. When non-empty,
-this is the complete resulting additional-root list for the loaded
-session. It may differ from any previously used or reported list as long as
-the request `cwd` matches the session's `cwd`.
-
-</ResponseField>
-<ResponseField name="cwd" type={"string"} required>
-  The working directory for this session. Must be an absolute path.
-</ResponseField>
-<ResponseField name="mcpServers" type={<a href="#mcpserver">McpServer[]</a>} >
-  List of MCP servers to connect to for this session.
-</ResponseField>
-<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
-  The ID of the session to load.
-</ResponseField>
-
-#### <span class="font-mono">LoadSessionResponse</span>
-
-Response from loading an existing session.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
-
-</ResponseField>
-<ResponseField name="configOptions" type={<a href="#sessionconfigoption">SessionConfigOption[]</a>} >
-  Initial session configuration options.
-</ResponseField>
-
 <a id="session-new"></a>
 ### <span class="font-mono">session/new</span>
 
@@ -618,18 +548,18 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 <a id="session-resume"></a>
 ### <span class="font-mono">session/resume</span>
 
-Resumes an existing session without returning previous messages.
+Resumes an existing session.
 
-The agent should resume the session context, allowing the conversation to continue
-without replaying the message history (unlike `session/load`).
+The agent should resume the session context, allowing the conversation
+to continue. If `replayFrom` is set, the agent should replay
+conversation history before responding.
 
 #### <span class="font-mono">ResumeSessionRequest</span>
 
 Request parameters for resuming an existing session.
 
-Resumes an existing session without returning previous messages (unlike `session/load`).
-This is useful when a Client already has the session history and only needs
-to reconnect to the Agent's session state.
+Resumes an existing session and optionally replays prior conversation
+history according to `replayFrom`.
 
 **Type:** Object
 
@@ -657,6 +587,16 @@ the request `cwd` matches the session's `cwd`.
 </ResponseField>
 <ResponseField name="mcpServers" type={<a href="#mcpserver">McpServer[]</a>} >
   List of MCP servers to connect to for this session.
+</ResponseField>
+<ResponseField name="replayFrom" type={<><span><a href="#replayfrom">ReplayFrom</a></span><span> | null</span></>} >
+  Inclusive cursor describing where conversation replay should begin.
+
+Optional. Omitted or `null` both mean the Agent should resume without
+replaying previous conversation history. Replay cursors are inclusive:
+replay includes the position identified by the cursor. Supplying
+`\{ "type": "start" \}` means the Agent should replay the whole
+conversation before responding.
+
 </ResponseField>
 <ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
   The ID of the session to resume.
@@ -2710,6 +2650,84 @@ Non-breaking changes should be introduced via capabilities.
 | Minimum    | `0`     |
 | Maximum    | `65535` |
 
+## <span class="font-mono">ReplayFrom</span>
+
+Inclusive cursor describing where replayed session history should begin.
+
+Replay includes the position identified by the cursor.
+
+**Type:** Union
+
+<ResponseField name="start" type="object">
+Replay the whole conversation from its first replayable entry.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+<ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"start"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="other" type="object">
+Custom or future replay cursor.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+Receivers that do not understand this cursor should preserve the raw
+payload when storing, replaying, proxying, or forwarding requests, and
+otherwise reject the request rather than guessing where to replay from.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+<ResponseField name="type" type={"string"} required>
+  Custom or future replay cursor type.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+## <span class="font-mono">ReplayFromStart</span>
+
+Inclusive replay cursor requesting replay from the start of the conversation.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+
 ## <span class="font-mono">RequestId</span>
 
 JSON RPC Request Id
@@ -3005,9 +3023,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 Session capabilities supported by the agent.
 
 Supplying `\{\}` means the agent supports the baseline session methods:
-`session/new`, `session/load`, `session/list`, `session/resume`,
-`session/close`, `session/prompt`, `session/cancel`, and
-`session/update`.
+`session/new`, `session/list`, `session/resume`, `session/close`,
+`session/prompt`, `session/cancel`, and `session/update`.
 
 Agents that support sessions **MAY** support additional session methods,
 prompt content types, and MCP transports by specifying additional

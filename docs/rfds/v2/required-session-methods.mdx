@@ -9,7 +9,7 @@ Author(s): [@benbrandt](https://github.com/benbrandt)
 > What are you proposing to change?
 
 For ACP v2, Agents that advertise the `session` capability should be required
-to support the core session lifecycle methods: `session/load`, `session/list`,
+to support the core session lifecycle methods: `session/list`,
 `session/resume`, and `session/close`.
 
 These methods should no longer have individual v2 capability markers. The
@@ -25,7 +25,7 @@ In v1, several session lifecycle methods were added as optional capabilities:
 `sessionCapabilities.close`.
 
 For v2, we can set a cleaner baseline. If an Agent supports sessions, it should
-support the lifecycle operations needed to create, discover, reconnect, load,
+support the lifecycle operations needed to create, discover, reconnect, replay,
 prompt, cancel, update, and close them.
 
 In practice, almost all agents, especially the most popular ones, already support these,
@@ -39,7 +39,6 @@ When an Agent includes `capabilities.session` in its v2 `initialize` response,
 the Agent **MUST** support these baseline session methods:
 
 - `session/new`
-- `session/load`
 - `session/list`
 - `session/resume`
 - `session/close`
@@ -47,8 +46,10 @@ the Agent **MUST** support these baseline session methods:
 - `session/cancel`
 - `session/update`
 
-The v2 schema should remove the optional `session.load`, `session.list`,
-`session.resume`, and `session.close` capability fields.
+The v2 schema should remove the optional `session.list`, `session.resume`, and
+`session.close` capability fields. The [Session Resume Replay](./session-resume-replay.mdx)
+RFD removes `session/load` from v2 and folds history replay into
+`session/resume`.
 
 The remaining optional session capabilities continue to represent optional
 features:

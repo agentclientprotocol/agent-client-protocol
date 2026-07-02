@@ -1,6 +1,6 @@
 ---
 title: "Session Setup"
-description: "Creating and loading sessions"
+description: "Creating and resuming sessions"
 ---
 
 Sessions represent a specific conversation or thread between the [Client](/protocol/v2/overview#client) and [Agent](/protocol/v2/overview#agent). Each session maintains its own context, conversation history, and state, allowing multiple independent interactions with the same Agent.
@@ -22,18 +22,15 @@ sequenceDiagram
         Note over Agent: Connect to MCP servers
         Agent-->>Client: session/new response (sessionId)
     else
-        Client->>Agent: session/load (sessionId)
-        Note over Agent: Restore session context
-        Note over Agent: Connect to MCP servers
-        Note over Agent,Client: Replay conversation history...
-        Agent->>Client: session/update
-        Agent->>Client: session/update
-        Note over Agent,Client: All content reported
-        Agent-->>Client: session/load response
-    else
         Client->>Agent: session/resume (sessionId)
         Note over Agent: Restore session context
         Note over Agent: Connect to MCP servers
+        opt replayFrom: start
+            Note over Agent,Client: Replay conversation history...
+            Agent->>Client: session/update
+            Agent->>Client: session/update
+            Note over Agent,Client: All content reported
+        end
         Agent-->>Client: session/resume response
     end
 
@@ -81,24 +78,27 @@ The Agent **MUST** respond with a unique [Session ID](#session-id) that identifi
 }
 ```
 
-## Loading Sessions
+## Resuming Sessions
 
 Agents that support the `session` method surface **MUST** support
-`session/load`, allowing Clients to resume previous conversations. This feature
-enables persistence across restarts and sharing sessions between different
-Client instances.
+`session/resume`, allowing Clients to reconnect to existing sessions. By
+default, resume restores the session context without replaying prior
+conversation history. Clients that need history replay can request it with
+`replayFrom`.
 
-To load an existing session, Clients **MUST** call the `session/load` method with:
+To resume an existing session, Clients **MUST** call the `session/resume` method
+with:
 
 - The [Session ID](#session-id) to resume
 - [MCP servers](#mcp-servers) to connect to
 - The [working directory](#working-directory)
+- Optionally, a `replayFrom` cursor
 
 ```json
 {
   "jsonrpc": "2.0",
-  "id": 1,
-  "method": "session/load",
+  "id": 2,
+  "method": "session/resume",
   "params": {
     "sessionId": "sess_789xyz",
     "cwd": "/home/user/project",
@@ -115,7 +115,36 @@ To load an existing session, Clients **MUST** call the `session/load` method wit
 }
 ```
 
-The Agent **MUST** replay the entire conversation to the Client in the form of `session/update` notifications (like `session/prompt`). User, agent, and thought messages can each be replayed as message updates with full `content` arrays or as chunks.
+When `replayFrom` is omitted or `null`, the Agent **MUST NOT** replay the
+conversation history via `session/update` notifications before responding. It
+restores the session context, reconnects to the requested MCP servers, and
+returns once the session is ready to continue.
+
+To request full history replay, Clients set `replayFrom` to
+`{ "type": "start" }`:
+
+Replay cursors are inclusive: replay includes the position identified by the
+cursor. For `{ "type": "start" }`, that means replaying the whole conversation.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "session/resume",
+  "params": {
+    "sessionId": "sess_789xyz",
+    "cwd": "/home/user/project",
+    "replayFrom": {
+      "type": "start"
+    }
+  }
+}
+```
+
+When `replayFrom.type` is `"start"`, the Agent **MUST** replay the entire
+conversation to the Client in the form of `session/update` notifications before
+responding. User, agent, and thought messages can each be replayed as message
+updates with full `content` arrays or as chunks.
 
 For example, a user message from the conversation history:
 
@@ -161,64 +190,25 @@ Followed by the agent's response:
 }
 ```
 
-During replay, the Agent **MUST** include an opaque, unique `messageId` for each replayed message. `user_message`, `agent_message`, and `agent_thought` updates are upserts keyed by `messageId`; their `content` arrays replace the whole message content, while chunk updates with the same `messageId` append content.
+During replay, the Agent **MUST** include an opaque, unique `messageId` for each
+replayed message. `user_message`, `agent_message`, and `agent_thought` updates
+are upserts keyed by `messageId`; their `content` arrays replace the whole
+message content, while chunk updates with the same `messageId` append content.
 
-Clients apply replayed message updates and chunks in the order they are received. If a message update with `content` arrives after chunks for the same `messageId`, it replaces the content accumulated from those chunks. If chunks arrive after a message update, they append to that update's current content. Message updates that omit `content` can update other optional fields without changing the current content.
+Clients apply replayed message updates and chunks in the order they are
+received. If a message update with `content` arrives after chunks for the same
+`messageId`, it replaces the content accumulated from those chunks. If chunks
+arrive after a message update, they append to that update's current content.
+Message updates that omit `content` can update other optional fields without
+changing the current content.
 
-When **all** the conversation entries have been reported to the Client, the Agent **MUST** respond to the original `session/load` request.
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "result": {}
-}
-```
-
-The response **MAY** also include initial session configuration state when that
-feature is supported by the Agent.
-
-The Client can then continue sending prompts as if the session was never interrupted.
-
-## Resuming Sessions
-
-Agents that support the `session` method surface **MUST** support
-`session/resume`, allowing Clients to reconnect to an existing session without
-replaying the conversation history.
-
-To resume an existing session without replaying prior messages, Clients **MUST** call the `session/resume` method with:
-
-- The [Session ID](#session-id) to resume
-- [MCP servers](#mcp-servers) to connect to
-- The [working directory](#working-directory)
+When all requested replay entries have been reported to the Client, the Agent
+**MUST** respond to the original `session/resume` request.
 
 ```json
 {
   "jsonrpc": "2.0",
-  "id": 2,
-  "method": "session/resume",
-  "params": {
-    "sessionId": "sess_789xyz",
-    "cwd": "/home/user/project",
-    "mcpServers": [
-      {
-        "type": "stdio",
-        "name": "workspace-tools",
-        "command": "/path/to/mcp-server",
-        "args": ["--mode", "workspace"],
-        "env": []
-      }
-    ]
-  }
-}
-```
-
-Unlike `session/load`, the Agent **MUST NOT** replay the conversation history via `session/update` notifications before responding. Instead, it restores the session context, reconnects to the requested MCP servers, and returns once the session is ready to continue.
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 2,
+  "id": 3,
   "result": {}
 }
 ```
@@ -268,13 +258,13 @@ Agents MAY return an error if the session does not exist or is not currently act
 Agents that advertise `session.additionalDirectories` allow Clients
 to include `additionalDirectories` on supported session lifecycle requests to
 expand the session's effective workspace root set. Supported stable lifecycle
-requests include `session/new`, `session/load`, and `session/resume`.
+requests include `session/new` and `session/resume`.
 
 ```json
 {
   "jsonrpc": "2.0",
   "id": 2,
-  "method": "session/load",
+  "method": "session/resume",
   "params": {
     "sessionId": "sess_789xyz",
     "cwd": "/home/user/project",
@@ -291,7 +281,7 @@ When present, `additionalDirectories` has the following behavior:
 - `cwd` remains the primary working directory and the base for relative paths
 - each `additionalDirectories` entry **MUST** be an absolute path
 - omitting the field or providing an empty array activates no additional roots for the resulting session
-- on `session/load` and `session/resume`, Clients must send the full intended additional-root list again; that list may differ from any previous or reported list as long as the request `cwd` matches the session's `cwd`, and omitting the field or providing an empty array does not restore stored roots implicitly
+- on `session/resume`, Clients must send the full intended additional-root list again; that list may differ from any previous or reported list as long as the request `cwd` matches the session's `cwd`, and omitting the field or providing an empty array does not restore stored roots implicitly
 
 Clients **MUST** only send `additionalDirectories` when the Agent advertises `session.additionalDirectories`.
 
@@ -303,7 +293,6 @@ Clients use this ID to:
 
 - Send prompt requests via `session/prompt`
 - Cancel ongoing operations via `session/cancel`
-- Load previous sessions via `session/load`
 - Resume previous sessions via `session/resume`
 - Close active sessions via `session/close`
 

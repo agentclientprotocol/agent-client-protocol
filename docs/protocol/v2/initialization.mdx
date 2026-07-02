@@ -119,9 +119,9 @@ The Agent **SHOULD** specify whether it supports the following capabilities:
 <ResponseField name="session" type="SessionCapabilities Object">
   The Agent supports the `session/*` method surface. Omitted or `null` means the
   Agent does not support session methods. Supplying `{}` means the Agent
-  supports the baseline session methods: `session/new`, `session/load`,
-  `session/list`, `session/resume`, `session/close`, `session/prompt`,
-  `session/cancel`, and `session/update`.
+  supports the baseline session methods: `session/new`, `session/list`,
+  `session/resume`, `session/close`, `session/prompt`, `session/cancel`, and
+  `session/update`.
 </ResponseField>
 
 <ResponseField name="auth" type="AgentAuthCapabilities Object">
@@ -131,8 +131,8 @@ The Agent **SHOULD** specify whether it supports the following capabilities:
 #### Session Capabilities
 
 Supplying `session: {}` means the Agent supports `session/new`,
-`session/load`, `session/list`, `session/resume`, `session/close`,
-`session/prompt`, `session/cancel`, and `session/update`.
+`session/list`, `session/resume`, `session/close`, `session/prompt`,
+`session/cancel`, and `session/update`.
 
 Optionally, Agents **MAY** support prompt extensions, MCP server transports, and
 additional session methods such as `session/delete` by specifying nested

@@ -1214,139 +1214,6 @@ impl NewSessionResponse {
     }
 }
 
-// Load session
-
-/// Request parameters for loading an existing session.
-///
-/// See protocol docs: [Loading Sessions](https://agentclientprotocol.com/protocol/session-setup#loading-sessions)
-#[serde_as]
-#[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = SESSION_LOAD_METHOD_NAME))]
-#[serde(rename_all = "camelCase")]
-#[non_exhaustive]
-pub struct LoadSessionRequest {
-    /// The ID of the session to load.
-    pub session_id: SessionId,
-    /// The working directory for this session. Must be an absolute path.
-    pub cwd: PathBuf,
-    /// Additional workspace roots to activate for this session. Each path must be absolute.
-    ///
-    /// When omitted or empty, no additional roots are activated. When non-empty,
-    /// this is the complete resulting additional-root list for the loaded
-    /// session. It may differ from any previously used or reported list as long as
-    /// the request `cwd` matches the session's `cwd`.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub additional_directories: Vec<PathBuf>,
-    /// List of MCP servers to connect to for this session.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub mcp_servers: Vec<McpServer>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
-    #[serde(default)]
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
-}
-
-impl LoadSessionRequest {
-    /// Builds [`LoadSessionRequest`] with the required request fields set; optional fields start unset or empty.
-    #[must_use]
-    pub fn new(session_id: impl Into<SessionId>, cwd: impl Into<PathBuf>) -> Self {
-        Self {
-            mcp_servers: vec![],
-            cwd: cwd.into(),
-            additional_directories: vec![],
-            session_id: session_id.into(),
-            meta: None,
-        }
-    }
-
-    /// Additional workspace roots to activate for this session. Each path must be absolute.
-    #[must_use]
-    pub fn additional_directories(mut self, additional_directories: Vec<PathBuf>) -> Self {
-        self.additional_directories = additional_directories;
-        self
-    }
-
-    /// List of MCP servers to connect to for this session.
-    #[must_use]
-    pub fn mcp_servers(mut self, mcp_servers: Vec<McpServer>) -> Self {
-        self.mcp_servers = mcp_servers;
-        self
-    }
-
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[must_use]
-    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
-        self.meta = meta.into_option();
-        self
-    }
-}
-
-/// Response from loading an existing session.
-#[serde_as]
-#[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = SESSION_LOAD_METHOD_NAME))]
-#[serde(rename_all = "camelCase")]
-#[non_exhaustive]
-pub struct LoadSessionResponse {
-    /// Initial session configuration options.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub config_options: Vec<SessionConfigOption>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
-    #[serde(default)]
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
-}
-
-impl LoadSessionResponse {
-    /// Builds [`LoadSessionResponse`] with the required response fields set; optional fields start unset or empty.
-    #[must_use]
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Initial session configuration options.
-    #[must_use]
-    pub fn config_options(mut self, config_options: Vec<SessionConfigOption>) -> Self {
-        self.config_options = config_options;
-        self
-    }
-
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[must_use]
-    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
-        self.meta = meta.into_option();
-        self
-    }
-}
-
 // Fork session
 
 /// **UNSTABLE**
@@ -1504,9 +1371,8 @@ impl ForkSessionResponse {
 
 /// Request parameters for resuming an existing session.
 ///
-/// Resumes an existing session without returning previous messages (unlike `session/load`).
-/// This is useful when a Client already has the session history and only needs
-/// to reconnect to the Agent's session state.
+/// Resumes an existing session and optionally replays prior conversation
+/// history according to `replayFrom`.
 #[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -1533,6 +1399,17 @@ pub struct ResumeSessionRequest {
     #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mcp_servers: Vec<McpServer>,
+    /// Inclusive cursor describing where conversation replay should begin.
+    ///
+    /// Optional. Omitted or `null` both mean the Agent should resume without
+    /// replaying previous conversation history. Replay cursors are inclusive:
+    /// replay includes the position identified by the cursor. Supplying
+    /// `{ "type": "start" }` means the Agent should replay the whole
+    /// conversation before responding.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
+    pub replay_from: Option<ReplayFrom>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -1554,6 +1431,7 @@ impl ResumeSessionRequest {
             cwd: cwd.into(),
             additional_directories: vec![],
             mcp_servers: vec![],
+            replay_from: None,
             meta: None,
         }
     }
@@ -1572,6 +1450,19 @@ impl ResumeSessionRequest {
         self
     }
 
+    /// Inclusive cursor describing where conversation replay should begin.
+    ///
+    /// Omitted or `null` both mean the Agent should resume without replaying
+    /// previous conversation history. Replay cursors are inclusive: replay
+    /// includes the position identified by the cursor. Supplying
+    /// `{ "type": "start" }` means the Agent should replay the whole
+    /// conversation before responding.
+    #[must_use]
+    pub fn replay_from(mut self, replay_from: impl IntoOption<ReplayFrom>) -> Self {
+        self.replay_from = replay_from.into_option();
+        self
+    }
+
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -1582,6 +1473,168 @@ impl ResumeSessionRequest {
         self.meta = meta.into_option();
         self
     }
+}
+
+/// Inclusive cursor describing where replayed session history should begin.
+///
+/// Replay includes the position identified by the cursor.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(tag = "type", rename_all = "snake_case")]
+#[schemars(extend("discriminator" = {"propertyName": "type"}))]
+#[non_exhaustive]
+pub enum ReplayFrom {
+    /// Replay the whole conversation from its first replayable entry.
+    Start(ReplayFromStart),
+    /// Custom or future replay cursor.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    ///
+    /// Receivers that do not understand this cursor should preserve the raw
+    /// payload when storing, replaying, proxying, or forwarding requests, and
+    /// otherwise reject the request rather than guessing where to replay from.
+    #[serde(untagged)]
+    Other(OtherReplayFrom),
+}
+
+impl From<ReplayFromStart> for ReplayFrom {
+    fn from(replay_from: ReplayFromStart) -> Self {
+        Self::Start(replay_from)
+    }
+}
+
+/// Inclusive replay cursor requesting replay from the start of the conversation.
+#[serde_as]
+#[skip_serializing_none]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct ReplayFromStart {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl ReplayFromStart {
+    /// Builds [`ReplayFromStart`].
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// Custom or future replay cursor payload.
+#[serde_as]
+#[skip_serializing_none]
+#[derive(Debug, Clone, Serialize, JsonSchema, PartialEq, Eq)]
+#[schemars(inline)]
+#[schemars(transform = other_replay_from_schema)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct OtherReplayFrom {
+    /// Custom or future replay cursor type.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(rename = "type")]
+    pub type_: String,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+    /// Additional fields from the unknown replay cursor payload.
+    #[serde(flatten)]
+    pub fields: BTreeMap<String, serde_json::Value>,
+}
+
+impl OtherReplayFrom {
+    /// Builds [`OtherReplayFrom`] from an unknown discriminator and preserves the remaining extension fields.
+    #[must_use]
+    pub fn new(type_: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
+        fields.remove("type");
+        fields.remove("_meta");
+        Self {
+            type_: type_.into(),
+            meta: None,
+            fields,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+impl<'de> Deserialize<'de> for OtherReplayFrom {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let type_ = fields
+            .remove("type")
+            .ok_or_else(|| serde::de::Error::missing_field("type"))?;
+        let serde_json::Value::String(type_) = type_ else {
+            return Err(serde::de::Error::custom("`type` must be a string"));
+        };
+
+        if is_known_replay_from_type(&type_) {
+            return Err(serde::de::Error::custom(format!(
+                "known replay cursor `{type_}` did not match its schema"
+            )));
+        }
+
+        let meta = fields
+            .remove("_meta")
+            .and_then(|value| serde_json::from_value(value).ok());
+
+        Ok(Self {
+            type_,
+            meta,
+            fields,
+        })
+    }
+}
+
+fn is_known_replay_from_type(type_: &str) -> bool {
+    matches!(type_, "start")
+}
+
+fn other_replay_from_schema(schema: &mut Schema) {
+    super::schema_util::reject_known_string_discriminators(schema, "type", &["start"]);
 }
 
 /// Response from resuming an existing session.
@@ -4216,9 +4269,8 @@ impl ProvidersCapabilities {
 /// Session capabilities supported by the agent.
 ///
 /// Supplying `{}` means the agent supports the baseline session methods:
-/// `session/new`, `session/load`, `session/list`, `session/resume`,
-/// `session/close`, `session/prompt`, `session/cancel`, and
-/// `session/update`.
+/// `session/new`, `session/list`, `session/resume`, `session/close`,
+/// `session/prompt`, `session/cancel`, and `session/update`.
 ///
 /// Agents that support sessions **MAY** support additional session methods,
 /// prompt content types, and MCP transports by specifying additional
@@ -5020,8 +5072,6 @@ pub struct AgentMethodNames {
     pub providers_disable: &'static str,
     /// Method for creating a new session.
     pub session_new: &'static str,
-    /// Method for loading an existing session.
-    pub session_load: &'static str,
     /// Method for setting a configuration option for a session.
     pub session_set_config_option: &'static str,
     /// Method for sending a prompt to the agent.
@@ -5087,7 +5137,6 @@ pub const AGENT_METHOD_NAMES: AgentMethodNames = AgentMethodNames {
     #[cfg(feature = "unstable_llm_providers")]
     providers_disable: PROVIDERS_DISABLE_METHOD_NAME,
     session_new: SESSION_NEW_METHOD_NAME,
-    session_load: SESSION_LOAD_METHOD_NAME,
     session_set_config_option: SESSION_SET_CONFIG_OPTION_METHOD_NAME,
     session_prompt: SESSION_PROMPT_METHOD_NAME,
     session_cancel: SESSION_CANCEL_METHOD_NAME,
@@ -5137,8 +5186,6 @@ pub(crate) const PROVIDERS_SET_METHOD_NAME: &str = "providers/set";
 pub(crate) const PROVIDERS_DISABLE_METHOD_NAME: &str = "providers/disable";
 /// Method name for creating a new session.
 pub(crate) const SESSION_NEW_METHOD_NAME: &str = "session/new";
-/// Method name for loading an existing session.
-pub(crate) const SESSION_LOAD_METHOD_NAME: &str = "session/load";
 /// Method name for setting a configuration option for a session.
 pub(crate) const SESSION_SET_CONFIG_OPTION_METHOD_NAME: &str = "session/set_config_option";
 /// Method name for sending a prompt.
@@ -5230,15 +5277,6 @@ pub enum ClientRequest {
     ///
     /// See protocol docs: [Session Setup](https://agentclientprotocol.com/protocol/session-setup)
     NewSessionRequest(Box<NewSessionRequest>),
-    /// Loads an existing session to resume a previous conversation.
-    ///
-    /// The agent should:
-    /// - Restore the session context and conversation history
-    /// - Connect to the specified MCP servers
-    /// - Stream the entire conversation history back to the client via notifications
-    ///
-    /// See protocol docs: [Loading Sessions](https://agentclientprotocol.com/protocol/session-setup#loading-sessions)
-    LoadSessionRequest(Box<LoadSessionRequest>),
     /// Lists existing sessions known to the agent.
     ///
     /// The agent should return metadata about sessions with optional filtering and pagination support.
@@ -5260,10 +5298,11 @@ pub enum ClientRequest {
     /// original, allowing operations like generating summaries without affecting the
     /// original session's history.
     ForkSessionRequest(Box<ForkSessionRequest>),
-    /// Resumes an existing session without returning previous messages.
+    /// Resumes an existing session.
     ///
-    /// The agent should resume the session context, allowing the conversation to continue
-    /// without replaying the message history (unlike `session/load`).
+    /// The agent should resume the session context, allowing the conversation
+    /// to continue. If `replayFrom` is set, the agent should replay
+    /// conversation history before responding.
     ResumeSessionRequest(Box<ResumeSessionRequest>),
     /// Closes an active session and frees up any resources associated with it.
     ///
@@ -5339,7 +5378,6 @@ impl ClientRequest {
             Self::DisableProviderRequest(_) => AGENT_METHOD_NAMES.providers_disable,
             Self::LogoutAuthRequest(_) => AGENT_METHOD_NAMES.auth_logout,
             Self::NewSessionRequest(_) => AGENT_METHOD_NAMES.session_new,
-            Self::LoadSessionRequest(_) => AGENT_METHOD_NAMES.session_load,
             Self::ListSessionsRequest(_) => AGENT_METHOD_NAMES.session_list,
             Self::DeleteSessionRequest(_) => AGENT_METHOD_NAMES.session_delete,
             #[cfg(feature = "unstable_session_fork")]
@@ -5389,8 +5427,6 @@ pub enum AgentResponse {
     LogoutAuthResponse(#[serde(default)] Box<LogoutAuthResponse>),
     /// Successful result returned for a `session/new` request.
     NewSessionResponse(Box<NewSessionResponse>),
-    /// Successful result returned for a `session/load` request.
-    LoadSessionResponse(#[serde(default)] Box<LoadSessionResponse>),
     /// Successful result returned for a `session/list` request.
     ListSessionsResponse(Box<ListSessionsResponse>),
     /// Successful result returned for a `session/delete` request.
@@ -5903,10 +5939,6 @@ mod test_serialization {
             json!({ "sessionId": "sess" })
         );
         assert_eq!(
-            serde_json::to_value(LoadSessionResponse::new()).unwrap(),
-            json!({})
-        );
-        assert_eq!(
             serde_json::to_value(ResumeSessionResponse::new()).unwrap(),
             json!({})
         );
@@ -5951,8 +5983,6 @@ mod test_serialization {
         .unwrap();
         assert_eq!(mixed.config_options.len(), 1);
 
-        let load: LoadSessionResponse = serde_json::from_value(json!({})).unwrap();
-        assert!(load.config_options.is_empty());
         let resume: ResumeSessionResponse = serde_json::from_value(json!({})).unwrap();
         assert!(resume.config_options.is_empty());
         #[cfg(feature = "unstable_session_fork")]
@@ -5961,6 +5991,53 @@ mod test_serialization {
                 serde_json::from_value(json!({ "sessionId": "fork" })).unwrap();
             assert!(fork.config_options.is_empty());
         }
+    }
+
+    #[test]
+    fn test_resume_session_replay_from_serialization() {
+        assert_eq!(
+            serde_json::to_value(ResumeSessionRequest::new(
+                "sess_abc123",
+                "/home/user/project"
+            ))
+            .unwrap(),
+            json!({
+                "sessionId": "sess_abc123",
+                "cwd": "/home/user/project"
+            })
+        );
+        assert_eq!(
+            serde_json::to_value(
+                ResumeSessionRequest::new("sess_abc123", "/home/user/project")
+                    .replay_from(ReplayFrom::from(ReplayFromStart::new()))
+            )
+            .unwrap(),
+            json!({
+                "sessionId": "sess_abc123",
+                "cwd": "/home/user/project",
+                "replayFrom": {
+                    "type": "start"
+                }
+            })
+        );
+
+        let replay: ResumeSessionRequest = serde_json::from_value(json!({
+            "sessionId": "sess_abc123",
+            "cwd": "/home/user/project",
+            "replayFrom": {
+                "type": "start"
+            }
+        }))
+        .unwrap();
+        assert!(matches!(replay.replay_from, Some(ReplayFrom::Start(_))));
+
+        let none: ResumeSessionRequest = serde_json::from_value(json!({
+            "sessionId": "sess_abc123",
+            "cwd": "/home/user/project",
+            "replayFrom": null
+        }))
+        .unwrap();
+        assert!(none.replay_from.is_none());
     }
 
     #[test]
@@ -6135,15 +6212,18 @@ mod test_serialization {
             })
         );
         assert_eq!(
-            serde_json::to_value(LoadSessionRequest::new("sess_abc123", "/home/user/project"))
-                .unwrap(),
+            serde_json::to_value(ResumeSessionRequest::new(
+                "sess_abc123",
+                "/home/user/project"
+            ))
+            .unwrap(),
             json!({
                 "sessionId": "sess_abc123",
                 "cwd": "/home/user/project",
             })
         );
         assert_eq!(
-            serde_json::from_value::<LoadSessionRequest>(json!({
+            serde_json::from_value::<ResumeSessionRequest>(json!({
                 "sessionId": "sess_abc123",
                 "cwd": "/home/user/project"
             }))
@@ -6152,7 +6232,7 @@ mod test_serialization {
             Vec::<McpServer>::new()
         );
         assert_eq!(
-            serde_json::from_value::<LoadSessionRequest>(json!({
+            serde_json::from_value::<ResumeSessionRequest>(json!({
                 "sessionId": "sess_abc123",
                 "cwd": "/home/user/project",
                 "mcpServers": null

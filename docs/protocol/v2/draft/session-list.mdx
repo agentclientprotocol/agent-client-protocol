@@ -22,9 +22,9 @@ sequenceDiagram
     Agent-->>Client: session/list response (sessions)
 
     alt User selects a session
-        Client->>Agent: session/load (sessionId)
+        Client->>Agent: session/resume (sessionId, replayFrom)
         Note over Agent,Client: Replay conversation history...
-        Agent-->>Client: session/load response
+        Agent-->>Client: session/resume response
     end
 
     Note over Client,Agent: Ready for prompts
@@ -202,4 +202,4 @@ after the first meaningful exchange to auto-generate a title.
 
 1. Client calls `session/list` to discover available sessions
 2. User selects a session from the list
-3. Client calls [`session/load`](/protocol/v2/draft/session-setup#loading-sessions) with the chosen `sessionId` to resume the conversation
+3. Client calls [`session/resume`](/protocol/v2/draft/session-setup#resuming-sessions) with the chosen `sessionId` to resume the conversation, optionally setting `replayFrom` to request history replay

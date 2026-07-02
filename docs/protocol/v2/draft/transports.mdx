@@ -75,7 +75,7 @@ When receiving a batch call:
   fail.
 
 Clients and agents **SHOULD NOT** batch lifecycle-sensitive messages such as
-`initialize`, `auth/login`, `session/new`, `session/load`, and
+`initialize`, `auth/login`, `session/new`, `session/resume`, and
 `session/prompt`. These messages are easier to reason about as individual
 transport messages and can change which later messages are valid.
 

@@ -31,6 +31,7 @@ Current RFDs with active maintainer focus that are targeting the v2 release
 - [New Prompt Lifecycle](./prompt.mdx)
 - [Enum Variant Extension](./enum-variant-extension.mdx)
 - [Required Session Methods](./required-session-methods.mdx)
+- [Session Resume Replay](./session-resume-replay.mdx)
 - [Client Filesystem and Terminal Surface](./client-filesystem-terminal-capabilities.mdx)
 - [Plan Variants](./plan-variants.mdx)
 - [Tool Call Updates](./tool-call-updates.mdx)
@@ -58,7 +59,8 @@ Other RFDs will progress separately and are not dependent on breaking changes (s
   - Group authentication methods under `auth/*`: v2 uses `auth/login` and `auth/logout` instead of v1's top-level `authenticate` and `logout` method names. `auth/logout` is required for v2 Agents and no longer uses a `capabilities.auth.logout` support marker. The generated request and response type names follow the grouped method naming as `LoginAuthRequest` / `LoginAuthResponse` and `LogoutAuthRequest` / `LogoutAuthResponse`.
   - Use concise capability group names such as `session` and `auth`, replacing names like `sessionCapabilities`.
   - Make `session` optional so non-session agents, such as NES-only agents, can omit it.
-  - Require the baseline session lifecycle methods when `session` is present: `session/new`, `session/load`, `session/list`, `session/resume`, `session/close`, `session/prompt`, `session/cancel`, and `session/update`.
+  - Require the baseline session lifecycle methods when `session` is present: `session/new`, `session/list`, `session/resume`, `session/close`, `session/prompt`, `session/cancel`, and `session/update`.
+  - Remove `session/load` from v2. `session/resume` handles both no-replay resume and full replay by using the optional `replayFrom` cursor from the [Session Resume Replay](./session-resume-replay.mdx) RFD.
   - Move optional session-scoped capability groups under `session`, including `prompt` and `mcp` as `session.prompt` and `session.mcp`.
   - Represent support markers as capability objects instead of booleans. Supplying `{}` means supported, while omission or `null` means unsupported. Booleans remain appropriate for actual data or configuration inside an already-advertised capability.
 - Align MCP server transports with the current MCP transport model:
@@ -109,14 +111,15 @@ With the needed breaking changes, as much as possible I am targeting having a co
 
 - 2026-07-02: Moved the v2 RFD collection to Active.
 - 2026-07-02: Added the v2 Permission Requests RFD for required permission titles, optional structured subjects, and tool-call permission subjects.
-- 2026-07-02: Added the v2 Required Session Methods RFD and recorded that `session/load`, `session/list`, `session/resume`, and `session/close` are baseline when `session` is present.
+- 2026-07-02: Added the v2 Session Resume Replay RFD and recorded that `session/resume` replaces `session/load` in v2 by using optional `replayFrom` cursors.
+- 2026-07-02: Added the v2 Required Session Methods RFD and recorded that `session/list`, `session/resume`, and `session/close` are baseline when `session` is present.
 - 2026-06-30: Recorded the v2 ID unification principle: prefer domain-specific ID field names.
 - 2026-06-25: Recorded the v2 initialize information cleanup: required role-agnostic `info` in both params and results, replacing `clientInfo` and `agentInfo`.
 - 2026-06-25: Recorded the v2 authentication method cleanup: grouped `auth/login` and required `auth/logout` method names replace v1's top-level `authenticate` and capability-gated `logout`, with matching generated type names for login and logout auth requests and responses.
 - 2026-06-09: Added tool-call content chunks for streaming individual `ToolCallContent` items.
 - 2026-06-09: Added the v2 Message Updates and Chunks RFD to define whole-message upserts alongside streamed message chunks.
 - 2026-06-08: Added the v2 Tool Call Updates RFD to make `tool_call_update` the single upsert-style tool-call session update.
-- 2026-06-05: Recorded the v2 capability cleanup: unified initialize capability fields, optional `session` support for NES-only agents, session-scoped `prompt`, `mcp`, and `loadSession` capabilities, object-shaped support markers, explicit `session.mcp.stdio`, removal of deprecated MCP SSE transport, and tagged MCP server transport configs.
+- 2026-06-05: Recorded the v2 capability cleanup: unified initialize capability fields, optional `session` support for NES-only agents, session-scoped `prompt` and `mcp` capabilities, object-shaped support markers, explicit `session.mcp.stdio`, removal of deprecated MCP SSE transport, and tagged MCP server transport configs.
 - 2026-06-02: Recorded the v2 decision to follow JSON-RPC 2.0 batch request and notification behavior.
 - 2026-06-02: Recorded the v2 decision to remove Client filesystem and terminal execution capabilities, methods, and terminal tool-call content.
 - 2026-06-02: Added the v2 Plan Variants RFD to make item-based `plan_update` the default v2 plan shape.

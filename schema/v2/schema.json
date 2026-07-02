@@ -189,15 +189,6 @@
                     ]
                   },
                   {
-                    "title": "LoadSessionResponse",
-                    "description": "Successful result returned for a `session/load` request.",
-                    "allOf": [
-                      {
-                        "$ref": "#/$defs/LoadSessionResponse"
-                      }
-                    ]
-                  },
-                  {
                     "title": "ListSessionsResponse",
                     "description": "Successful result returned for a `session/list` request.",
                     "allOf": [
@@ -1645,15 +1636,6 @@
                   ]
                 },
                 {
-                  "title": "LoadSessionResponse",
-                  "description": "Successful result returned for a `session/load` request.",
-                  "allOf": [
-                    {
-                      "$ref": "#/$defs/LoadSessionResponse"
-                    }
-                  ]
-                },
-                {
                   "title": "ListSessionsResponse",
                   "description": "Successful result returned for a `session/list` request.",
                   "allOf": [
@@ -1868,7 +1850,7 @@
       }
     },
     "SessionCapabilities": {
-      "description": "Session capabilities supported by the agent.\n\nSupplying `{}` means the agent supports the baseline session methods:\n`session/new`, `session/load`, `session/list`, `session/resume`,\n`session/close`, `session/prompt`, `session/cancel`, and\n`session/update`.\n\nAgents that support sessions **MAY** support additional session methods,\nprompt content types, and MCP transports by specifying additional\ncapabilities.\n\nSee protocol docs: [Session Capabilities](https://agentclientprotocol.com/protocol/v2/initialization#session-capabilities)",
+      "description": "Session capabilities supported by the agent.\n\nSupplying `{}` means the agent supports the baseline session methods:\n`session/new`, `session/list`, `session/resume`, `session/close`,\n`session/prompt`, `session/cancel`, and `session/update`.\n\nAgents that support sessions **MAY** support additional session methods,\nprompt content types, and MCP transports by specifying additional\ncapabilities.\n\nSee protocol docs: [Session Capabilities](https://agentclientprotocol.com/protocol/v2/initialization#session-capabilities)",
       "type": "object",
       "properties": {
         "prompt": {
@@ -2511,29 +2493,6 @@
         }
       },
       "required": ["currentValue", "options"]
-    },
-    "LoadSessionResponse": {
-      "description": "Response from loading an existing session.",
-      "type": "object",
-      "properties": {
-        "configOptions": {
-          "description": "Initial session configuration options.",
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/SessionConfigOption"
-          },
-          "x-deserialize-default-on-error": true,
-          "x-deserialize-skip-invalid-items": true
-        },
-        "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
-          "type": ["object", "null"],
-          "x-deserialize-default-on-error": true,
-          "additionalProperties": true
-        }
-      },
-      "x-side": "agent",
-      "x-method": "session/load"
     },
     "ListSessionsResponse": {
       "description": "Response from listing sessions.",
@@ -4096,15 +4055,6 @@
                   ]
                 },
                 {
-                  "title": "LoadSessionRequest",
-                  "description": "Loads an existing session to resume a previous conversation.\n\nThe agent should:\n- Restore the session context and conversation history\n- Connect to the specified MCP servers\n- Stream the entire conversation history back to the client via notifications\n\nSee protocol docs: [Loading Sessions](https://agentclientprotocol.com/protocol/v2/session-setup#loading-sessions)",
-                  "allOf": [
-                    {
-                      "$ref": "#/$defs/LoadSessionRequest"
-                    }
-                  ]
-                },
-                {
                   "title": "ListSessionsRequest",
                   "description": "Lists existing sessions known to the agent.\n\nThe agent should return metadata about sessions with optional filtering and pagination support.",
                   "allOf": [
@@ -4124,7 +4074,7 @@
                 },
                 {
                   "title": "ResumeSessionRequest",
-                  "description": "Resumes an existing session without returning previous messages.\n\nThe agent should resume the session context, allowing the conversation to continue\nwithout replaying the message history (unlike `session/load`).",
+                  "description": "Resumes an existing session.\n\nThe agent should resume the session context, allowing the conversation\nto continue. If `replayFrom` is set, the agent should replay\nconversation history before responding.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/ResumeSessionRequest"
@@ -4494,51 +4444,6 @@
       },
       "required": ["name", "command"]
     },
-    "LoadSessionRequest": {
-      "description": "Request parameters for loading an existing session.\n\nSee protocol docs: [Loading Sessions](https://agentclientprotocol.com/protocol/v2/session-setup#loading-sessions)",
-      "type": "object",
-      "properties": {
-        "sessionId": {
-          "description": "The ID of the session to load.",
-          "allOf": [
-            {
-              "$ref": "#/$defs/SessionId"
-            }
-          ]
-        },
-        "cwd": {
-          "description": "The working directory for this session. Must be an absolute path.",
-          "type": "string"
-        },
-        "additionalDirectories": {
-          "description": "Additional workspace roots to activate for this session. Each path must be absolute.\n\nWhen omitted or empty, no additional roots are activated. When non-empty,\nthis is the complete resulting additional-root list for the loaded\nsession. It may differ from any previously used or reported list as long as\nthe request `cwd` matches the session's `cwd`.",
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "x-deserialize-default-on-error": true,
-          "x-deserialize-skip-invalid-items": true
-        },
-        "mcpServers": {
-          "description": "List of MCP servers to connect to for this session.",
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/McpServer"
-          },
-          "x-deserialize-default-on-error": true,
-          "x-deserialize-skip-invalid-items": true
-        },
-        "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
-          "type": ["object", "null"],
-          "x-deserialize-default-on-error": true,
-          "additionalProperties": true
-        }
-      },
-      "required": ["sessionId", "cwd"],
-      "x-side": "agent",
-      "x-method": "session/load"
-    },
     "ListSessionsRequest": {
       "description": "Request parameters for listing existing sessions.",
       "type": "object",
@@ -4587,7 +4492,7 @@
       "x-method": "session/delete"
     },
     "ResumeSessionRequest": {
-      "description": "Request parameters for resuming an existing session.\n\nResumes an existing session without returning previous messages (unlike `session/load`).\nThis is useful when a Client already has the session history and only needs\nto reconnect to the Agent's session state.",
+      "description": "Request parameters for resuming an existing session.\n\nResumes an existing session and optionally replays prior conversation\nhistory according to `replayFrom`.",
       "type": "object",
       "properties": {
         "sessionId": {
@@ -4620,6 +4525,18 @@
           "x-deserialize-default-on-error": true,
           "x-deserialize-skip-invalid-items": true
         },
+        "replayFrom": {
+          "description": "Inclusive cursor describing where conversation replay should begin.\n\nOptional. Omitted or `null` both mean the Agent should resume without\nreplaying previous conversation history. Replay cursors are inclusive:\nreplay includes the position identified by the cursor. Supplying\n`{ \"type\": \"start\" }` means the Agent should replay the whole\nconversation before responding.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ReplayFrom"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
           "type": ["object", "null"],
@@ -4630,6 +4547,75 @@
       "required": ["sessionId", "cwd"],
       "x-side": "agent",
       "x-method": "session/resume"
+    },
+    "ReplayFrom": {
+      "description": "Inclusive cursor describing where replayed session history should begin.\n\nReplay includes the position identified by the cursor.",
+      "anyOf": [
+        {
+          "description": "Replay the whole conversation from its first replayable entry.",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "start"
+            }
+          },
+          "required": ["type"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/ReplayFromStart"
+            }
+          ]
+        },
+        {
+          "title": "other",
+          "description": "Custom or future replay cursor.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nReceivers that do not understand this cursor should preserve the raw\npayload when storing, replaying, proxying, or forwarding requests, and\notherwise reject the request rather than guessing where to replay from.",
+          "type": "object",
+          "properties": {
+            "type": {
+              "description": "Custom or future replay cursor type.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+              "type": "string"
+            },
+            "_meta": {
+              "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
+              "type": ["object", "null"],
+              "x-deserialize-default-on-error": true,
+              "additionalProperties": true
+            }
+          },
+          "required": ["type"],
+          "not": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "start"
+                  }
+                },
+                "required": ["type"]
+              }
+            ]
+          },
+          "additionalProperties": true
+        }
+      ],
+      "discriminator": {
+        "propertyName": "type"
+      }
+    },
+    "ReplayFromStart": {
+      "description": "Inclusive replay cursor requesting replay from the start of the conversation.",
+      "type": "object",
+      "properties": {
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
     },
     "CloseSessionRequest": {
       "description": "Request parameters for closing an active session.\n\nThe agent **must** cancel any ongoing work related to the session (treat it\nas if `session/cancel` was called) and then free up any resources associated\nwith the session.",
