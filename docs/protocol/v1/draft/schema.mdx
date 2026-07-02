@@ -3918,6 +3918,39 @@ Unique identifier for an elicitation.
 
 **Type:** `string`
 
+## <span class="font-mono">ElicitationObjectSchema</span>
+
+JSON Schema object with primitive-typed properties, as required by the
+elicitation specification.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="description" type={"string | null"} >
+  Optional description of what this schema represents.
+</ResponseField>
+<ResponseField name="properties" type={"object"} >
+  Property definitions (must be primitive types).
+
+    - Default: `{}`
+
+</ResponseField>
+<ResponseField name="required" type={<><span><><span>"string"</span><span>[]</span></></span><span> | null</span></>} >
+  List of required property names.
+</ResponseField>
+<ResponseField name="title" type={"string | null"} >
+  Optional title for the schema.
+</ResponseField>
+
 ## <span class="font-mono">ElicitationPropertySchema</span>
 
 Property schema for elicitation form fields.
@@ -4174,12 +4207,15 @@ Request-scoped elicitation, tied to a specific JSON-RPC request outside of a ses
 
 Type-safe elicitation schema for requesting structured user input.
 
-This represents a JSON Schema object with primitive-typed properties,
-as required by the elicitation specification.
+The known ACP/MCP shape is a JSON Schema object with primitive-typed
+properties. Unknown schema types are preserved for forward compatibility.
 
-**Type:** Object
+**Type:** Union
 
-**Properties:**
+<ResponseField name="object" type="object">
+Object schema with primitive-typed properties.
+
+<Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -4204,21 +4240,36 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 <ResponseField name="title" type={"string | null"} >
   Optional title for the schema.
 </ResponseField>
-<ResponseField name="type" type={<a href="#elicitationschematype">ElicitationSchemaType</a>} >
-  Type discriminator. Always `"object"`.
+<ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"object"`.
+</ResponseField>
 
-    - Default: `"object"`
+</Expandable>
+</ResponseField>
+
+<ResponseField name="other" type="object">
+Custom or future elicitation schema.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+Clients that do not understand this schema type should preserve the raw
+schema when storing, replaying, proxying, or forwarding elicitation
+requests. They MUST NOT render it as a known input form.
+
+<Expandable title="Properties">
+
+<ResponseField name="type" type={"string"} required>
+  Custom or future elicitation schema type.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
 
 </ResponseField>
 
-## <span class="font-mono">ElicitationSchemaType</span>
-
-Type discriminator for elicitation schemas.
-
-**Type:** Union
-
-<ResponseField name="object" type="string">
-  Object schema type.
+</Expandable>
 </ResponseField>
 
 ## <span class="font-mono">ElicitationSessionScope</span>

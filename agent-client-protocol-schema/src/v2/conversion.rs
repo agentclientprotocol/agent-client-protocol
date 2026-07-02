@@ -7617,28 +7617,6 @@ impl IntoV2 for crate::v1::StringFormat {
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV1 for super::ElicitationSchemaType {
-    type Output = crate::v1::ElicitationSchemaType;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        Ok(match self {
-            Self::Object => crate::v1::ElicitationSchemaType::Object,
-        })
-    }
-}
-
-#[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::ElicitationSchemaType {
-    type Output = super::ElicitationSchemaType;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        Ok(match self {
-            Self::Object => super::ElicitationSchemaType::Object,
-        })
-    }
-}
-
-#[cfg(feature = "unstable_elicitation")]
 impl IntoV1 for super::EnumOption {
     type Output = crate::v1::EnumOption;
 
@@ -8085,16 +8063,38 @@ impl IntoV1 for super::ElicitationSchema {
     type Output = crate::v1::ElicitationSchema;
 
     fn into_v1(self) -> Result<Self::Output> {
+        Ok(match self {
+            Self::Object(value) => crate::v1::ElicitationSchema::Object(value.into_v1()?),
+            Self::Other(value) => crate::v1::ElicitationSchema::Other(value.into_v1()?),
+        })
+    }
+}
+
+#[cfg(feature = "unstable_elicitation")]
+impl IntoV2 for crate::v1::ElicitationSchema {
+    type Output = super::ElicitationSchema;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        Ok(match self {
+            Self::Object(value) => super::ElicitationSchema::Object(value.into_v2()?),
+            Self::Other(value) => super::ElicitationSchema::Other(value.into_v2()?),
+        })
+    }
+}
+
+#[cfg(feature = "unstable_elicitation")]
+impl IntoV1 for super::ElicitationObjectSchema {
+    type Output = crate::v1::ElicitationObjectSchema;
+
+    fn into_v1(self) -> Result<Self::Output> {
         let Self {
-            type_,
             title,
             properties,
             required,
             description,
             meta,
         } = self;
-        Ok(crate::v1::ElicitationSchema {
-            type_: type_.into_v1()?,
+        Ok(crate::v1::ElicitationObjectSchema {
             title: title.into_v1()?,
             properties: properties.into_v1()?,
             required: required.into_v1()?,
@@ -8105,25 +8105,49 @@ impl IntoV1 for super::ElicitationSchema {
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::ElicitationSchema {
-    type Output = super::ElicitationSchema;
+impl IntoV2 for crate::v1::ElicitationObjectSchema {
+    type Output = super::ElicitationObjectSchema;
 
     fn into_v2(self) -> Result<Self::Output> {
         let Self {
-            type_,
             title,
             properties,
             required,
             description,
             meta,
         } = self;
-        Ok(super::ElicitationSchema {
-            type_: type_.into_v2()?,
+        Ok(super::ElicitationObjectSchema {
             title: title.into_v2()?,
             properties: properties.into_v2()?,
             required: required.into_v2()?,
             description: description.into_v2()?,
             meta: meta.into_v2()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_elicitation")]
+impl IntoV1 for super::OtherElicitationSchema {
+    type Output = crate::v1::OtherElicitationSchema;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        let Self { type_, fields } = self;
+        Ok(crate::v1::OtherElicitationSchema {
+            type_: type_.into_v1()?,
+            fields: fields.into_v1()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_elicitation")]
+impl IntoV2 for crate::v1::OtherElicitationSchema {
+    type Output = super::OtherElicitationSchema;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        let Self { type_, fields } = self;
+        Ok(super::OtherElicitationSchema {
+            type_: type_.into_v2()?,
+            fields: fields.into_v2()?,
         })
     }
 }
@@ -9654,6 +9678,31 @@ mod tests {
             )),
             false,
         );
+
+        assert_v2_round_trip::<v2::ElicitationSchema, v1::ElicitationSchema>(v2_schema);
+    }
+
+    #[cfg(feature = "unstable_elicitation")]
+    #[test]
+    fn round_trips_elicitation_schema_unknown_type() {
+        let v1_schema = v1::ElicitationSchema::Other(v1::OtherElicitationSchema::new(
+            "_layout",
+            std::collections::BTreeMap::from([
+                ("title".to_string(), serde_json::json!("Custom layout")),
+                ("columns".to_string(), serde_json::json!(2)),
+            ]),
+        ));
+
+        assert_v1_round_trip::<v1::ElicitationSchema, v2::ElicitationSchema>(v1_schema.clone());
+        assert_json_eq_after_v1_to_v2::<v1::ElicitationSchema, v2::ElicitationSchema>(v1_schema);
+
+        let v2_schema = v2::ElicitationSchema::Other(v2::OtherElicitationSchema::new(
+            "_layout",
+            std::collections::BTreeMap::from([
+                ("title".to_string(), serde_json::json!("Custom layout")),
+                ("columns".to_string(), serde_json::json!(2)),
+            ]),
+        ));
 
         assert_v2_round_trip::<v2::ElicitationSchema, v1::ElicitationSchema>(v2_schema);
     }

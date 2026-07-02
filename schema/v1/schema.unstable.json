@@ -1535,64 +1535,55 @@
       "required": ["requestId"]
     },
     "ElicitationSchema": {
-      "description": "Type-safe elicitation schema for requesting structured user input.\n\nThis represents a JSON Schema object with primitive-typed properties,\nas required by the elicitation specification.",
-      "type": "object",
-      "properties": {
-        "type": {
-          "description": "Type discriminator. Always `\"object\"`.",
-          "x-deserialize-default-on-error": true,
-          "default": "object",
+      "description": "Type-safe elicitation schema for requesting structured user input.\n\nThe known ACP/MCP shape is a JSON Schema object with primitive-typed\nproperties. Unknown schema types are preserved for forward compatibility.",
+      "anyOf": [
+        {
+          "description": "Object schema with primitive-typed properties.",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "object"
+            }
+          },
+          "required": ["type"],
           "allOf": [
             {
-              "$ref": "#/$defs/ElicitationSchemaType"
+              "$ref": "#/$defs/ElicitationObjectSchema"
             }
           ]
         },
-        "title": {
-          "description": "Optional title for the schema.",
-          "type": ["string", "null"],
-          "x-deserialize-default-on-error": true
-        },
-        "properties": {
-          "description": "Property definitions (must be primitive types).",
+        {
+          "title": "other",
+          "description": "Custom or future elicitation schema.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nClients that do not understand this schema type should preserve the raw\nschema when storing, replaying, proxying, or forwarding elicitation\nrequests. They MUST NOT render it as a known input form.",
           "type": "object",
-          "x-deserialize-default-on-error": true,
-          "default": {},
-          "additionalProperties": {
-            "$ref": "#/$defs/ElicitationPropertySchema"
-          }
-        },
-        "required": {
-          "description": "List of required property names.",
-          "type": ["array", "null"],
-          "items": {
-            "type": "string"
+          "properties": {
+            "type": {
+              "description": "Custom or future elicitation schema type.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+              "type": "string"
+            }
           },
-          "x-deserialize-default-on-error": true,
-          "x-deserialize-skip-invalid-items": true
-        },
-        "description": {
-          "description": "Optional description of what this schema represents.",
-          "type": ["string", "null"],
-          "x-deserialize-default-on-error": true
-        },
-        "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"],
-          "x-deserialize-default-on-error": true,
+          "required": ["type"],
+          "not": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "object"
+                  }
+                },
+                "required": ["type"]
+              }
+            ]
+          },
           "additionalProperties": true
         }
+      ],
+      "discriminator": {
+        "propertyName": "type"
       }
-    },
-    "ElicitationSchemaType": {
-      "description": "Type discriminator for elicitation schemas.",
-      "oneOf": [
-        {
-          "description": "Object schema type.",
-          "type": "string",
-          "const": "object"
-        }
-      ]
     },
     "ElicitationPropertySchema": {
       "description": "Property schema for elicitation form fields.\n\nEach variant corresponds to a JSON Schema `\"type\"` value.\nSingle-select enums use the `String` variant with `enum` or `oneOf` set.\nMulti-select enums use the `Array` variant.",
@@ -2135,6 +2126,46 @@
         }
       },
       "required": ["items"]
+    },
+    "ElicitationObjectSchema": {
+      "description": "JSON Schema object with primitive-typed properties, as required by the\nelicitation specification.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "description": "Optional title for the schema.",
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
+        },
+        "properties": {
+          "description": "Property definitions (must be primitive types).",
+          "type": "object",
+          "x-deserialize-default-on-error": true,
+          "default": {},
+          "additionalProperties": {
+            "$ref": "#/$defs/ElicitationPropertySchema"
+          }
+        },
+        "required": {
+          "description": "List of required property names.",
+          "type": ["array", "null"],
+          "items": {
+            "type": "string"
+          },
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
+        },
+        "description": {
+          "description": "Optional description of what this schema represents.",
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
     },
     "ElicitationFormMode": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nForm-based elicitation mode where the client renders a form from the provided schema.",
