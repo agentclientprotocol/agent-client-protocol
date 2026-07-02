@@ -2242,11 +2242,11 @@ baseline session methods: `session/new`, `session/prompt`,
 
 An agent message upsert.
 
-Only `AgentMessage::message_id` is required. Other fields have patch
-semantics: omitted fields leave the existing message value unchanged, `null`
-clears or unsets the value, and concrete values replace the previous value.
-For a new `messageId`, omitted fields use client defaults. `content` is
-replaced as a whole array; send `[]` or `null` to clear it.
+Only `AgentMessage::message_id` is required. `content` has patch semantics:
+an omitted field leaves existing message content unchanged, `null` clears the
+value, and a concrete array replaces the previous value. For a new
+`messageId`, omitted fields use client defaults. `content` is replaced as a
+whole array; send `[]` or `null` to clear it.
 
 Message updates and chunks are applied in the order they are received. When
 an `agent_message` update includes `content`, that array replaces any
@@ -2261,7 +2261,7 @@ content.
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
 metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
+these keys. Omitted means no metadata update; `null` is an explicit clear signal.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
@@ -2277,11 +2277,11 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 An agent thought or reasoning message upsert.
 
-Only `AgentThought::message_id` is required. Other fields have patch
-semantics: omitted fields leave the existing thought value unchanged, `null`
-clears or unsets the value, and concrete values replace the previous value.
-For a new `messageId`, omitted fields use client defaults. `content` is
-replaced as a whole array; send `[]` or `null` to clear it.
+Only `AgentThought::message_id` is required. `content` has patch semantics:
+an omitted field leaves existing thought content unchanged, `null` clears the
+value, and a concrete array replaces the previous value. For a new
+`messageId`, omitted fields use client defaults. `content` is replaced as a
+whole array; send `[]` or `null` to clear it.
 
 Message updates and chunks are applied in the order they are received. When
 an `agent_thought` update includes `content`, that array replaces any
@@ -2296,7 +2296,7 @@ content.
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
 metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
+these keys. Omitted means no metadata update; `null` is an explicit clear signal.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
@@ -3205,7 +3205,7 @@ future ACP variants.
 
 ## <span class="font-mono">ContentChunk</span>
 
-A streamed item of content
+A streamed item of message content.
 
 **Type:** Object
 
@@ -3214,7 +3214,7 @@ A streamed item of content
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
 metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
+these keys. This field is chunk-scoped.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
@@ -7276,14 +7276,17 @@ Update to session metadata. All fields are optional to support partial updates.
 Agents send this notification to update session information like title or custom metadata.
 This allows clients to display dynamic session names and track session state changes.
 
+Omitted fields leave the existing session info unchanged. `null` clears the
+corresponding value.
+
 **Type:** Object
 
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
+metadata to their interactions. Omitted means no metadata update; `null` is an
+explicit clear signal. Implementations MUST NOT make assumptions about values at these keys.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
@@ -7370,7 +7373,7 @@ A chunk of the user's message being streamed.
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
 metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
+these keys. This field is chunk-scoped.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
@@ -7404,7 +7407,7 @@ fields in the new update patch the previous fields for that message.
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
 metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
+these keys. Omitted means no metadata update; `null` is an explicit clear signal.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
@@ -7430,7 +7433,7 @@ A chunk of the agent's response being streamed.
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
 metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
+these keys. This field is chunk-scoped.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
@@ -7464,7 +7467,7 @@ fields in the new update patch the previous fields for that message.
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
 metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
+these keys. Omitted means no metadata update; `null` is an explicit clear signal.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
@@ -7490,7 +7493,7 @@ A chunk of the agent's internal reasoning being streamed.
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
 metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
+these keys. This field is chunk-scoped.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
@@ -7524,7 +7527,7 @@ fields in the new update patch the previous fields for that message.
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
 metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
+these keys. Omitted means no metadata update; `null` is an explicit clear signal.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
@@ -7566,8 +7569,7 @@ A chunk of tool-call content being streamed.
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
 metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys. This field is optional; omitted or `null` means there is no
-chunk-level metadata.
+these keys. This field is chunk-scoped.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
@@ -7592,8 +7594,8 @@ A tool call has been created or updated.
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
+metadata to their interactions. Omitted means no metadata update; `null` is an
+explicit clear signal. Implementations MUST NOT make assumptions about values at these keys.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
@@ -7735,8 +7737,8 @@ Session metadata has been updated (title, timestamps, custom metadata)
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
+metadata to their interactions. Omitted means no metadata update; `null` is an
+explicit clear signal. Implementations MUST NOT make assumptions about values at these keys.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
@@ -8328,8 +8330,7 @@ collection instead.
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
 metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys. This field is optional; omitted or `null` means there is no
-chunk-level metadata.
+these keys. This field is chunk-scoped.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
@@ -8436,8 +8437,8 @@ See protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/v2/draf
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
+metadata to their interactions. Omitted means no metadata update; `null` is an
+explicit clear signal. Implementations MUST NOT make assumptions about values at these keys.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
@@ -8622,11 +8623,11 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 A user message upsert.
 
-Only `UserMessage::message_id` is required. Other fields have patch
-semantics: omitted fields leave the existing message value unchanged, `null`
-clears or unsets the value, and concrete values replace the previous value.
-For a new `messageId`, omitted fields use client defaults. `content` is
-replaced as a whole array; send `[]` or `null` to clear it.
+Only `UserMessage::message_id` is required. `content` has patch semantics:
+an omitted field leaves existing message content unchanged, `null` clears the
+value, and a concrete array replaces the previous value. For a new
+`messageId`, omitted fields use client defaults. `content` is replaced as a
+whole array; send `[]` or `null` to clear it.
 
 Message updates and chunks are applied in the order they are received. When
 a `user_message` update includes `content`, that array replaces any content
@@ -8641,7 +8642,7 @@ content.
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
 metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
+these keys. Omitted means no metadata update; `null` is an explicit clear signal.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 

@@ -645,7 +645,7 @@
           "x-deserialize-default-on-error": true
         },
         "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted means no metadata update; `null` is an\nexplicit clear signal. Implementations MUST NOT make assumptions about values at these keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -3199,7 +3199,7 @@
       "type": "string"
     },
     "ContentChunk": {
-      "description": "A streamed item of content",
+      "description": "A streamed item of message content.",
       "type": "object",
       "properties": {
         "messageId": {
@@ -3219,7 +3219,7 @@
           ]
         },
         "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys. This field is chunk-scoped.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -3228,7 +3228,7 @@
       "required": ["messageId", "content"]
     },
     "UserMessage": {
-      "description": "A user message upsert.\n\nOnly [`UserMessage::message_id`] is required. Other fields have patch\nsemantics: omitted fields leave the existing message value unchanged, `null`\nclears or unsets the value, and concrete values replace the previous value.\nFor a new `messageId`, omitted fields use client defaults. `content` is\nreplaced as a whole array; send `[]` or `null` to clear it.\n\nMessage updates and chunks are applied in the order they are received. When\na `user_message` update includes `content`, that array replaces any content\npreviously accumulated for the message, including content from earlier\nchunks. Later chunks with the same `messageId` append to the current\ncontent.",
+      "description": "A user message upsert.\n\nOnly [`UserMessage::message_id`] is required. `content` has patch semantics:\nan omitted field leaves existing message content unchanged, `null` clears the\nvalue, and a concrete array replaces the previous value. For a new\n`messageId`, omitted fields use client defaults. `content` is replaced as a\nwhole array; send `[]` or `null` to clear it.\n\nMessage updates and chunks are applied in the order they are received. When\na `user_message` update includes `content`, that array replaces any content\npreviously accumulated for the message, including content from earlier\nchunks. Later chunks with the same `messageId` append to the current\ncontent.",
       "type": "object",
       "properties": {
         "messageId": {
@@ -3249,7 +3249,7 @@
           "x-deserialize-skip-invalid-items": true
         },
         "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys. Omitted means no metadata update; `null` is an explicit clear signal.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -3258,7 +3258,7 @@
       "required": ["messageId"]
     },
     "AgentMessage": {
-      "description": "An agent message upsert.\n\nOnly [`AgentMessage::message_id`] is required. Other fields have patch\nsemantics: omitted fields leave the existing message value unchanged, `null`\nclears or unsets the value, and concrete values replace the previous value.\nFor a new `messageId`, omitted fields use client defaults. `content` is\nreplaced as a whole array; send `[]` or `null` to clear it.\n\nMessage updates and chunks are applied in the order they are received. When\nan `agent_message` update includes `content`, that array replaces any\ncontent previously accumulated for the message, including content from\nearlier chunks. Later chunks with the same `messageId` append to the current\ncontent.",
+      "description": "An agent message upsert.\n\nOnly [`AgentMessage::message_id`] is required. `content` has patch semantics:\nan omitted field leaves existing message content unchanged, `null` clears the\nvalue, and a concrete array replaces the previous value. For a new\n`messageId`, omitted fields use client defaults. `content` is replaced as a\nwhole array; send `[]` or `null` to clear it.\n\nMessage updates and chunks are applied in the order they are received. When\nan `agent_message` update includes `content`, that array replaces any\ncontent previously accumulated for the message, including content from\nearlier chunks. Later chunks with the same `messageId` append to the current\ncontent.",
       "type": "object",
       "properties": {
         "messageId": {
@@ -3279,7 +3279,7 @@
           "x-deserialize-skip-invalid-items": true
         },
         "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys. Omitted means no metadata update; `null` is an explicit clear signal.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -3288,7 +3288,7 @@
       "required": ["messageId"]
     },
     "AgentThought": {
-      "description": "An agent thought or reasoning message upsert.\n\nOnly [`AgentThought::message_id`] is required. Other fields have patch\nsemantics: omitted fields leave the existing thought value unchanged, `null`\nclears or unsets the value, and concrete values replace the previous value.\nFor a new `messageId`, omitted fields use client defaults. `content` is\nreplaced as a whole array; send `[]` or `null` to clear it.\n\nMessage updates and chunks are applied in the order they are received. When\nan `agent_thought` update includes `content`, that array replaces any\ncontent previously accumulated for the thought, including content from\nearlier chunks. Later chunks with the same `messageId` append to the current\ncontent.",
+      "description": "An agent thought or reasoning message upsert.\n\nOnly [`AgentThought::message_id`] is required. `content` has patch semantics:\nan omitted field leaves existing thought content unchanged, `null` clears the\nvalue, and a concrete array replaces the previous value. For a new\n`messageId`, omitted fields use client defaults. `content` is replaced as a\nwhole array; send `[]` or `null` to clear it.\n\nMessage updates and chunks are applied in the order they are received. When\nan `agent_thought` update includes `content`, that array replaces any\ncontent previously accumulated for the thought, including content from\nearlier chunks. Later chunks with the same `messageId` append to the current\ncontent.",
       "type": "object",
       "properties": {
         "messageId": {
@@ -3309,7 +3309,7 @@
           "x-deserialize-skip-invalid-items": true
         },
         "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys. Omitted means no metadata update; `null` is an explicit clear signal.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -3524,7 +3524,7 @@
           ]
         },
         "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys. This field is optional; omitted or `null` means there is no\nchunk-level metadata.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys. This field is chunk-scoped.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -3895,7 +3895,7 @@
       "required": ["configOptions"]
     },
     "SessionInfoUpdate": {
-      "description": "Update to session metadata. All fields are optional to support partial updates.\n\nAgents send this notification to update session information like title or custom metadata.\nThis allows clients to display dynamic session names and track session state changes.",
+      "description": "Update to session metadata. All fields are optional to support partial updates.\n\nAgents send this notification to update session information like title or custom metadata.\nThis allows clients to display dynamic session names and track session state changes.\n\nOmitted fields leave the existing session info unchanged. `null` clears the\ncorresponding value.",
       "type": "object",
       "properties": {
         "title": {
@@ -3909,7 +3909,7 @@
           "x-deserialize-default-on-error": true
         },
         "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted means no metadata update; `null` is an\nexplicit clear signal. Implementations MUST NOT make assumptions about values at these keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true

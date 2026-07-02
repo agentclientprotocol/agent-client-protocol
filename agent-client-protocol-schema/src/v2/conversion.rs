@@ -1235,7 +1235,7 @@ impl IntoV1 for super::SessionInfoUpdate {
         Ok(crate::v1::SessionInfoUpdate {
             title: title.into_v1()?,
             updated_at: updated_at.into_v1()?,
-            meta: meta.into_v1()?,
+            meta: maybe_undefined_meta_into_v1_option("SessionInfoUpdate", meta)?,
         })
     }
 }
@@ -1252,7 +1252,7 @@ impl IntoV2 for crate::v1::SessionInfoUpdate {
         Ok(super::SessionInfoUpdate {
             title: title.into_v2()?,
             updated_at: updated_at.into_v2()?,
-            meta: meta.into_v2()?,
+            meta: option_into_v2_maybe_undefined(meta)?,
         })
     }
 }
@@ -2380,6 +2380,19 @@ where
     }
 }
 
+fn maybe_undefined_meta_into_v1_option(
+    context: &str,
+    value: crate::MaybeUndefined<super::Meta>,
+) -> Result<Option<crate::v1::Meta>> {
+    match value {
+        crate::MaybeUndefined::Value(value) => Ok(Some(value.into_v1()?)),
+        crate::MaybeUndefined::Null => Err(ProtocolConversionError::new(format!(
+            "v2 {context} with null _meta cannot be represented in v1"
+        ))),
+        crate::MaybeUndefined::Undefined => Ok(None),
+    }
+}
+
 fn option_into_v2_maybe_undefined<T>(value: Option<T>) -> Result<crate::MaybeUndefined<T::Output>>
 where
     T: IntoV2,
@@ -2441,7 +2454,7 @@ impl IntoV1 for super::ToolCallUpdate {
                 raw_input: maybe_undefined_value_into_v1_option(raw_input),
                 raw_output: maybe_undefined_value_into_v1_option(raw_output),
             },
-            meta: meta.into_v1()?,
+            meta: maybe_undefined_meta_into_v1_option("ToolCallUpdate", meta)?,
         })
     }
 }
@@ -2478,7 +2491,7 @@ impl IntoV2 for crate::v1::ToolCall {
             locations: vec_into_v2_maybe_undefined_skip_errors(locations),
             raw_input: option_into_v2_maybe_undefined(raw_input)?,
             raw_output: option_into_v2_maybe_undefined(raw_output)?,
-            meta: meta.into_v2()?,
+            meta: option_into_v2_maybe_undefined(meta)?,
         })
     }
 }
@@ -2510,7 +2523,7 @@ impl IntoV2 for crate::v1::ToolCallUpdate {
             locations: option_vec_into_v2_maybe_undefined_skip_errors(locations),
             raw_input: option_into_v2_maybe_undefined(raw_input)?,
             raw_output: option_into_v2_maybe_undefined(raw_output)?,
-            meta: meta.into_v2()?,
+            meta: option_into_v2_maybe_undefined(meta)?,
         })
     }
 }
@@ -9915,6 +9928,18 @@ mod tests {
 
         assert_v1_round_trip::<v1::ToolCallUpdate, v2::ToolCallUpdate>(update.clone());
         assert_json_eq_after_v1_to_v2::<v1::ToolCallUpdate, v2::ToolCallUpdate>(update);
+    }
+
+    #[test]
+    fn v2_entity_meta_null_does_not_convert_to_v1() {
+        assert_v2_to_v1_error(
+            v2::SessionInfoUpdate::new().meta(None::<v2::Meta>),
+            "v2 SessionInfoUpdate with null _meta cannot be represented in v1",
+        );
+        assert_v2_to_v1_error(
+            v2::ToolCallUpdate::new("tc").meta(None::<v2::Meta>),
+            "v2 ToolCallUpdate with null _meta cannot be represented in v1",
+        );
     }
 
     #[test]

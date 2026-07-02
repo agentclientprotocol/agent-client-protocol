@@ -321,6 +321,9 @@ impl ConfigOptionUpdate {
 ///
 /// Agents send this notification to update session information like title or custom metadata.
 /// This allows clients to display dynamic session names and track session state changes.
+///
+/// Omitted fields leave the existing session info unchanged. `null` clears the
+/// corresponding value.
 #[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -338,15 +341,18 @@ pub struct SessionInfoUpdate {
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub updated_at: MaybeUndefined<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted means no metadata update; `null` is an
+    /// explicit clear signal. Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
-    #[serde(default)]
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
+    #[serde(
+        rename = "_meta",
+        default,
+        skip_serializing_if = "MaybeUndefined::is_undefined"
+    )]
+    pub meta: MaybeUndefined<Meta>,
 }
 
 impl SessionInfoUpdate {
@@ -371,13 +377,13 @@ impl SessionInfoUpdate {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted means no metadata update; `null` is an
+    /// explicit clear signal. Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
-        self.meta = meta.into_option();
+    pub fn meta(mut self, meta: impl IntoMaybeUndefined<Meta>) -> Self {
+        self.meta = meta.into_maybe_undefined();
         self
     }
 }
@@ -736,7 +742,7 @@ impl Cost {
     }
 }
 
-/// A streamed item of content
+/// A streamed item of message content.
 #[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
@@ -752,7 +758,7 @@ pub struct ContentChunk {
     pub content: ContentBlock,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// these keys. This field is chunk-scoped.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -775,7 +781,7 @@ impl ContentChunk {
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// these keys. This field is chunk-scoped.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
@@ -787,11 +793,11 @@ impl ContentChunk {
 
 /// A user message upsert.
 ///
-/// Only [`UserMessage::message_id`] is required. Other fields have patch
-/// semantics: omitted fields leave the existing message value unchanged, `null`
-/// clears or unsets the value, and concrete values replace the previous value.
-/// For a new `messageId`, omitted fields use client defaults. `content` is
-/// replaced as a whole array; send `[]` or `null` to clear it.
+/// Only [`UserMessage::message_id`] is required. `content` has patch semantics:
+/// an omitted field leaves existing message content unchanged, `null` clears the
+/// value, and a concrete array replaces the previous value. For a new
+/// `messageId`, omitted fields use client defaults. `content` is replaced as a
+/// whole array; send `[]` or `null` to clear it.
 ///
 /// Message updates and chunks are applied in the order they are received. When
 /// a `user_message` update includes `content`, that array replaces any content
@@ -813,7 +819,7 @@ pub struct UserMessage {
     pub content: MaybeUndefined<Vec<ContentBlock>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// these keys. Omitted means no metadata update; `null` is an explicit clear signal.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
@@ -858,11 +864,11 @@ impl UserMessage {
 
 /// An agent message upsert.
 ///
-/// Only [`AgentMessage::message_id`] is required. Other fields have patch
-/// semantics: omitted fields leave the existing message value unchanged, `null`
-/// clears or unsets the value, and concrete values replace the previous value.
-/// For a new `messageId`, omitted fields use client defaults. `content` is
-/// replaced as a whole array; send `[]` or `null` to clear it.
+/// Only [`AgentMessage::message_id`] is required. `content` has patch semantics:
+/// an omitted field leaves existing message content unchanged, `null` clears the
+/// value, and a concrete array replaces the previous value. For a new
+/// `messageId`, omitted fields use client defaults. `content` is replaced as a
+/// whole array; send `[]` or `null` to clear it.
 ///
 /// Message updates and chunks are applied in the order they are received. When
 /// an `agent_message` update includes `content`, that array replaces any
@@ -884,7 +890,7 @@ pub struct AgentMessage {
     pub content: MaybeUndefined<Vec<ContentBlock>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// these keys. Omitted means no metadata update; `null` is an explicit clear signal.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
@@ -929,11 +935,11 @@ impl AgentMessage {
 
 /// An agent thought or reasoning message upsert.
 ///
-/// Only [`AgentThought::message_id`] is required. Other fields have patch
-/// semantics: omitted fields leave the existing thought value unchanged, `null`
-/// clears or unsets the value, and concrete values replace the previous value.
-/// For a new `messageId`, omitted fields use client defaults. `content` is
-/// replaced as a whole array; send `[]` or `null` to clear it.
+/// Only [`AgentThought::message_id`] is required. `content` has patch semantics:
+/// an omitted field leaves existing thought content unchanged, `null` clears the
+/// value, and a concrete array replaces the previous value. For a new
+/// `messageId`, omitted fields use client defaults. `content` is replaced as a
+/// whole array; send `[]` or `null` to clear it.
 ///
 /// Message updates and chunks are applied in the order they are received. When
 /// an `agent_thought` update includes `content`, that array replaces any
@@ -955,7 +961,7 @@ pub struct AgentThought {
     pub content: MaybeUndefined<Vec<ContentBlock>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// these keys. Omitted means no metadata update; `null` is an explicit clear signal.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
@@ -2104,7 +2110,7 @@ mod tests {
             SessionInfoUpdate {
                 title: MaybeUndefined::Undefined,
                 updated_at: MaybeUndefined::Undefined,
-                meta: None
+                meta: MaybeUndefined::Undefined
             }
         );
         assert_eq!(
@@ -2113,7 +2119,7 @@ mod tests {
             SessionInfoUpdate {
                 title: MaybeUndefined::Null,
                 updated_at: MaybeUndefined::Null,
-                meta: None
+                meta: MaybeUndefined::Undefined
             }
         );
         assert_eq!(
@@ -2124,13 +2130,41 @@ mod tests {
             SessionInfoUpdate {
                 title: MaybeUndefined::Value("title".to_string()),
                 updated_at: MaybeUndefined::Value("timestamp".to_string()),
-                meta: None
+                meta: MaybeUndefined::Undefined
             }
+        );
+
+        let clear_meta =
+            serde_json::from_value::<SessionInfoUpdate>(json!({"_meta": null})).unwrap();
+        assert_eq!(clear_meta.meta, MaybeUndefined::Null);
+
+        let mut meta = Meta::new();
+        meta.insert("source".to_string(), json!("session-info"));
+
+        assert_eq!(
+            serde_json::from_value::<SessionInfoUpdate>(json!({"_meta": {
+                "source": "session-info"
+            }}))
+            .unwrap()
+            .meta,
+            MaybeUndefined::Value(meta.clone())
         );
 
         assert_eq!(
             serde_json::to_value(SessionInfoUpdate::new()).unwrap(),
             json!({})
+        );
+
+        assert_eq!(
+            serde_json::to_value(SessionInfoUpdate::new().meta(None::<Meta>)).unwrap(),
+            json!({"_meta": null})
+        );
+
+        assert_eq!(
+            serde_json::to_value(SessionInfoUpdate::new().meta(meta)).unwrap(),
+            json!({"_meta": {
+                "source": "session-info"
+            }})
         );
         assert_eq!(
             serde_json::to_value(SessionInfoUpdate::new().title("title")).unwrap(),

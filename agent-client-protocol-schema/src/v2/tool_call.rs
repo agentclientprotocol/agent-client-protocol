@@ -73,15 +73,18 @@ pub struct ToolCallUpdate {
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub raw_output: MaybeUndefined<serde_json::Value>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted means no metadata update; `null` is an
+    /// explicit clear signal. Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
-    #[serde(default)]
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
+    #[serde(
+        rename = "_meta",
+        default,
+        skip_serializing_if = "MaybeUndefined::is_undefined"
+    )]
+    pub meta: MaybeUndefined<Meta>,
 }
 
 impl ToolCallUpdate {
@@ -97,7 +100,7 @@ impl ToolCallUpdate {
             locations: MaybeUndefined::Undefined,
             raw_input: MaybeUndefined::Undefined,
             raw_output: MaybeUndefined::Undefined,
-            meta: None,
+            meta: MaybeUndefined::Undefined,
         }
     }
 
@@ -153,13 +156,13 @@ impl ToolCallUpdate {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted means no metadata update; `null` is an
+    /// explicit clear signal. Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
-        self.meta = meta.into_option();
+    pub fn meta(mut self, meta: impl IntoMaybeUndefined<Meta>) -> Self {
+        self.meta = meta.into_maybe_undefined();
         self
     }
 
@@ -190,6 +193,9 @@ impl ToolCallUpdate {
         if !update.raw_output.is_undefined() {
             self.raw_output = update.raw_output;
         }
+        if !update.meta.is_undefined() {
+            self.meta = update.meta;
+        }
     }
 }
 
@@ -211,8 +217,7 @@ pub struct ToolCallContentChunk {
     pub content: ToolCallContent,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys. This field is optional; omitted or `null` means there is no
-    /// chunk-level metadata.
+    /// these keys. This field is chunk-scoped.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -235,7 +240,7 @@ impl ToolCallContentChunk {
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// these keys. This field is chunk-scoped.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
@@ -652,6 +657,44 @@ mod tests {
         assert_eq!(deserialized.title, MaybeUndefined::Undefined);
         assert_eq!(deserialized.status, MaybeUndefined::Null);
         assert_eq!(deserialized.locations, MaybeUndefined::Value(Vec::new()));
+    }
+
+    #[test]
+    fn tool_call_update_distinguishes_meta_omitted_null_and_value() {
+        let mut meta = Meta::new();
+        meta.insert("source".to_string(), serde_json::json!("tool-call"));
+
+        assert_eq!(
+            serde_json::to_value(ToolCallUpdate::new("tc_1").meta(meta.clone())).unwrap(),
+            serde_json::json!({
+                "toolCallId": "tc_1",
+                "_meta": {
+                    "source": "tool-call"
+                }
+            })
+        );
+
+        assert_eq!(
+            serde_json::to_value(ToolCallUpdate::new("tc_1").meta(None::<Meta>)).unwrap(),
+            serde_json::json!({
+                "toolCallId": "tc_1",
+                "_meta": null
+            })
+        );
+
+        let deserialized: ToolCallUpdate = serde_json::from_value(serde_json::json!({
+            "toolCallId": "tc_1",
+            "_meta": null
+        }))
+        .unwrap();
+        assert_eq!(deserialized.meta, MaybeUndefined::Null);
+
+        let patch = ToolCallUpdate::new("tc_1");
+        assert_eq!(patch.meta, MaybeUndefined::Undefined);
+
+        let mut stored = ToolCallUpdate::new("tc_1").meta(meta);
+        stored.apply_update(ToolCallUpdate::new("tc_1").meta(None::<Meta>));
+        assert_eq!(stored.meta, MaybeUndefined::Null);
     }
 
     #[test]

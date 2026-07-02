@@ -79,11 +79,13 @@ Custom or future tool kinds can be used when Clients can fall back to generic to
 </ParamField>
 
 The `tool_call_update` notification is an upsert keyed by `toolCallId`. For
-existing tool calls, omitted fields leave the previous value unchanged, `null`
-explicitly clears or unsets the field, and concrete values replace the previous
-value. For a new `toolCallId`, omitted fields use Client defaults. `content` and
-`locations` are replaced as whole arrays; send `[]` or `null` to clear them.
-Use `tool_call_content_chunk` when a tool produces content incrementally and the
+existing tool calls, fields other than `_meta` leave the previous value
+unchanged when omitted, explicitly clear or unset the value when `null`, and
+replace the previous value when concrete values are sent. For a new
+`toolCallId`, omitted fields use Client defaults. `content` and `locations` are
+replaced as whole arrays; send `[]` or `null` to clear them. For `_meta`, omit
+the field to leave it unchanged or set it to `null` to clear it. Use
+`tool_call_content_chunk` when a tool produces content incrementally and the
 Client should append each item instead of replacing the whole `content`
 collection.
 
@@ -157,7 +159,8 @@ the order they are received for each `toolCallId`. A
 content. A later `tool_call_update` with `content` replaces all content
 currently stored for that tool call, including content accumulated from earlier
 chunks. Later chunks append to that replacement content. A `tool_call_update`
-with `content: []` or `content: null` clears the tool-call content.
+with `content: []` or `content: null` clears the tool-call content. A
+`tool_call_content_chunk`'s `_meta`, when present, is chunk-scoped.
 
 ## Requesting Permission
 

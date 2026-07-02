@@ -183,7 +183,7 @@ Followed by the agent's response:
 
 During replay, the Agent **MUST** include an opaque, unique `messageId` for each replayed message. `user_message`, `agent_message`, and `agent_thought` updates are upserts keyed by `messageId`; their `content` arrays replace the whole message content, while chunk updates with the same `messageId` append content.
 
-Clients apply replayed message updates and chunks in the order they are received. If a message update with `content` arrives after chunks for the same `messageId`, it replaces the content accumulated from those chunks. If chunks arrive after a message update, they append to that update's current content. Message updates that omit `content` can update `_meta` or future fields without changing the current content.
+Clients apply replayed message updates and chunks in the order they are received. If a message update with `content` arrives after chunks for the same `messageId`, it replaces the content accumulated from those chunks. If chunks arrive after a message update, they append to that update's current content. Message updates that omit `content` can update other optional fields without changing the current content.
 
 When **all** the conversation entries have been reported to the Client, the Agent **MUST** respond to the original `session/load` request.
 

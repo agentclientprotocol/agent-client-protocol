@@ -53,6 +53,7 @@ The v2 `ToolCallUpdate` payload has the following semantics:
 - Any concrete value replaces the previous value.
 - `content` and `locations` are replaced as whole arrays, not appended.
 - `[]` and `null` both clear a collection field.
+- `_meta` preserves omitted, `null`, and object values as distinct update signals.
 - For a new `toolCallId`, omitted fields use Client defaults.
 - Agents **SHOULD** include `title` the first time they report a `toolCallId`.
 

@@ -196,7 +196,7 @@ Agents can update session metadata in real-time by sending a `session_info_updat
 }
 ```
 
-All fields are optional. Only include fields that have changed — omitted fields are left unchanged.
+All fields are optional. Only include fields that have changed; omitted fields are left unchanged. Set a nullable field to `null` to clear it.
 
 <ResponseField name="title" type="string | null">
   Human-readable title for the session. Set to `null` to clear.
@@ -206,8 +206,9 @@ All fields are optional. Only include fields that have changed — omitted field
   ISO 8601 timestamp of last activity. Set to `null` to clear.
 </ResponseField>
 
-<ResponseField name="_meta" type="object">
-  Agent-specific metadata. See [Extensibility](/protocol/v2/extensibility).
+<ResponseField name="_meta" type="object | null">
+  Agent-specific metadata update. Omit to leave unchanged; set to `null` to
+  clear. See [Extensibility](/protocol/v2/extensibility).
 </ResponseField>
 
 The `sessionId`, `cwd`, and `additionalDirectories` fields are **not** included

@@ -227,14 +227,15 @@ The Agent can report the model's text response as an `agent_message` update with
 
 The Agent **MUST** include an opaque `messageId` on message updates and message chunks.
 
-User, agent, and thought messages can each be reported either as a message update with a full `content` array or as streamed chunks. `user_message`, `agent_message`, and `agent_thought` updates are upserts keyed by `messageId`: omitted fields leave the existing message unchanged, `null` clears a field, and concrete values replace the previous value. `content` arrays replace the whole message content; send `[]` or `null` to clear content. Chunk updates with the same `messageId` append content; a changed `messageId` indicates a new message.
+User, agent, and thought messages can each be reported either as a message update with a full `content` array or as streamed chunks. `user_message`, `agent_message`, and `agent_thought` updates are upserts keyed by `messageId`: omitted `content` leaves the existing message content unchanged, `content: null` clears it, and concrete `content` arrays replace the previous content. Chunk updates with the same `messageId` append content; a changed `messageId` indicates a new message.
 
 Clients apply message updates and chunks in the order they are received for each `messageId`:
 
-- A message update without `content` leaves the current content unchanged, so Agents can update `_meta` or future optional fields without resending content.
+- A message update without `content` leaves the current content unchanged, so Agents can update other optional fields without resending content.
 - A message update with `content` replaces all content currently stored for that message, including content accumulated from earlier chunks.
 - A message update with `content: []` or `content: null` clears the message content.
 - A chunk appends its `content` to whatever content is current for that message, whether that content came from an earlier message update or earlier chunks.
+- A chunk's `_meta`, when present, is chunk-scoped.
 
 For example, if an Agent sends `agent_message` with `content: [A]`, then sends `agent_message_chunk` with `B`, the rendered message content is `[A, B]`. If it later sends another `agent_message` with `content: [C]`, the rendered content becomes `[C]`; the earlier full content and chunks are replaced. Subsequent chunks append to `[C]`.
 
