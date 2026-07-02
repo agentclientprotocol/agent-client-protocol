@@ -31,7 +31,7 @@ A typical flow follows this pattern:
 <Step title="Session Setup - either:">
 
 - Client → Agent: `session/new` to create a new session
-- Client → Agent: `session/load` to resume an existing session if supported
+- Client → Agent: `session/load` or `session/resume` to resume an existing session
 
 </Step>
 
@@ -90,14 +90,34 @@ Agents are programs that use generative AI to autonomously modify code. They typ
   Agent.
 </ResponseField>
 
-### Optional Methods
-
 <ResponseField
   name="session/load"
   post={[<a href="/protocol/v2/draft/schema#session%2Fload">Schema</a>]}
 >
-  [Load an existing session](/protocol/v2/draft/session-setup#loading-sessions)
-  (requires `session.load` capability).
+  [Load an existing session](/protocol/v2/draft/session-setup#loading-sessions).
+</ResponseField>
+
+<ResponseField
+  name="session/list"
+  post={[<a href="/protocol/v2/draft/schema#session%2Flist">Schema</a>]}
+>
+  [List known sessions](/protocol/v2/draft/session-list).
+</ResponseField>
+
+<ResponseField
+  name="session/resume"
+  post={[<a href="/protocol/v2/draft/schema#session%2Fresume">Schema</a>]}
+>
+  [Resume an existing session without replaying
+  history](/protocol/v2/draft/session-setup#resuming-sessions).
+</ResponseField>
+
+<ResponseField
+  name="session/close"
+  post={[<a href="/protocol/v2/draft/schema#session%2Fclose">Schema</a>]}
+>
+  [Close an active
+  session](/protocol/v2/draft/session-setup#closing-active-sessions).
 </ResponseField>
 
 ### Notifications

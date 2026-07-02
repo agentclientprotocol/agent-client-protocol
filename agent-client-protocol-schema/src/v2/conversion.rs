@@ -4963,30 +4963,26 @@ impl super::SessionCapabilities {
         let Self {
             prompt,
             mcp,
-            load,
-            list,
             delete,
             additional_directories,
             #[cfg(feature = "unstable_session_fork")]
             fork,
-            resume,
-            close,
             meta,
         } = self;
 
         Ok(V1SessionCapabilityParts {
             session_capabilities: crate::v1::SessionCapabilities {
-                list: into_v1_default_on_error(list),
+                list: Some(crate::v1::SessionListCapabilities::new()),
                 delete: into_v1_default_on_error(delete),
                 additional_directories: into_v1_default_on_error(additional_directories),
                 #[cfg(feature = "unstable_session_fork")]
                 fork: into_v1_default_on_error(fork),
-                resume: into_v1_default_on_error(resume),
-                close: into_v1_default_on_error(close),
+                resume: Some(crate::v1::SessionResumeCapabilities::new()),
+                close: Some(crate::v1::SessionCloseCapabilities::new()),
                 meta: meta.into_v1()?,
             },
             prompt_capabilities: prompt.unwrap_or_default().into_v1()?,
-            load_session: load.is_some(),
+            load_session: true,
             mcp_capabilities: mcp.unwrap_or_default().into_v1()?,
         })
     }
@@ -5001,53 +4997,27 @@ impl super::SessionCapabilities {
     pub fn from_v1(
         session_capabilities: crate::v1::SessionCapabilities,
         prompt_capabilities: crate::v1::PromptCapabilities,
-        load_session: bool,
+        _load_session: bool,
         mcp_capabilities: crate::v1::McpCapabilities,
     ) -> Result<Self> {
         let crate::v1::SessionCapabilities {
-            list,
+            list: _,
             delete,
             additional_directories,
             #[cfg(feature = "unstable_session_fork")]
             fork,
-            resume,
-            close,
+            resume: _,
+            close: _,
             meta,
         } = session_capabilities;
 
         Ok(super::SessionCapabilities {
             prompt: Some(prompt_capabilities.into_v2()?),
             mcp: Some(mcp_capabilities.into_v2()?),
-            load: load_session.then(super::SessionLoadCapabilities::new),
-            list: into_v2_default_on_error(list),
             delete: into_v2_default_on_error(delete),
             additional_directories: into_v2_default_on_error(additional_directories),
             #[cfg(feature = "unstable_session_fork")]
             fork: into_v2_default_on_error(fork),
-            resume: into_v2_default_on_error(resume),
-            close: into_v2_default_on_error(close),
-            meta: meta.into_v2()?,
-        })
-    }
-}
-
-impl IntoV1 for super::SessionListCapabilities {
-    type Output = crate::v1::SessionListCapabilities;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self { meta } = self;
-        Ok(crate::v1::SessionListCapabilities {
-            meta: meta.into_v1()?,
-        })
-    }
-}
-
-impl IntoV2 for crate::v1::SessionListCapabilities {
-    type Output = super::SessionListCapabilities;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        let Self { meta } = self;
-        Ok(super::SessionListCapabilities {
             meta: meta.into_v2()?,
         })
     }
@@ -5115,50 +5085,6 @@ impl IntoV2 for crate::v1::SessionForkCapabilities {
     fn into_v2(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(super::SessionForkCapabilities {
-            meta: meta.into_v2()?,
-        })
-    }
-}
-
-impl IntoV1 for super::SessionResumeCapabilities {
-    type Output = crate::v1::SessionResumeCapabilities;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self { meta } = self;
-        Ok(crate::v1::SessionResumeCapabilities {
-            meta: meta.into_v1()?,
-        })
-    }
-}
-
-impl IntoV2 for crate::v1::SessionResumeCapabilities {
-    type Output = super::SessionResumeCapabilities;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        let Self { meta } = self;
-        Ok(super::SessionResumeCapabilities {
-            meta: meta.into_v2()?,
-        })
-    }
-}
-
-impl IntoV1 for super::SessionCloseCapabilities {
-    type Output = crate::v1::SessionCloseCapabilities;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self { meta } = self;
-        Ok(crate::v1::SessionCloseCapabilities {
-            meta: meta.into_v1()?,
-        })
-    }
-}
-
-impl IntoV2 for crate::v1::SessionCloseCapabilities {
-    type Output = super::SessionCloseCapabilities;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        let Self { meta } = self;
-        Ok(super::SessionCloseCapabilities {
             meta: meta.into_v2()?,
         })
     }
@@ -9274,9 +9200,15 @@ mod tests {
 
     #[test]
     fn round_trips_initialize_response() {
+        let session_capabilities = v1::SessionCapabilities::new()
+            .list(v1::SessionListCapabilities::new())
+            .resume(v1::SessionResumeCapabilities::new())
+            .close(v1::SessionCloseCapabilities::new());
         let response = v1::InitializeResponse::new(ProtocolVersion::V1)
             .agent_capabilities(
                 v1::AgentCapabilities::new()
+                    .load_session(true)
+                    .session_capabilities(session_capabilities)
                     .auth(v1::AgentAuthCapabilities::new().logout(v1::LogoutCapabilities::new())),
             )
             .agent_info(v1::Implementation::new("test-agent", "2.0.0").title("Test Agent"));
@@ -9293,7 +9225,7 @@ mod tests {
     }
 
     #[test]
-    fn agent_load_session_capability_moves_between_v1_and_v2() {
+    fn required_v2_session_methods_convert_to_v1_capability_markers() {
         let v1_capabilities = v1::AgentCapabilities::new().load_session(true);
 
         let v2_capabilities: v2::AgentCapabilities =
@@ -9302,17 +9234,20 @@ mod tests {
             .session
             .as_ref()
             .expect("v1 capabilities imply v2 session support");
-        assert!(session.load.is_some());
+        assert!(session.delete.is_none());
         let v2_json = serde_json::to_value(&v2_capabilities).expect("v2 serialize");
         assert_eq!(v2_json.get("loadSession"), None);
-        assert_eq!(
-            v2_json.pointer("/session/load"),
-            Some(&serde_json::json!({}))
-        );
+        assert_eq!(v2_json.pointer("/session/load"), None);
+        assert_eq!(v2_json.pointer("/session/list"), None);
+        assert_eq!(v2_json.pointer("/session/resume"), None);
+        assert_eq!(v2_json.pointer("/session/close"), None);
 
         let v1_after: v1::AgentCapabilities =
             v2_to_v1(v2_capabilities).expect("v2 -> v1 conversion");
         assert!(v1_after.load_session);
+        assert!(v1_after.session_capabilities.list.is_some());
+        assert!(v1_after.session_capabilities.resume.is_some());
+        assert!(v1_after.session_capabilities.close.is_some());
     }
 
     #[test]
@@ -9343,14 +9278,14 @@ mod tests {
     #[test]
     fn v2_session_capabilities_convert_to_v1_agent_capability_parts() {
         let parts = v2::SessionCapabilities::new()
-            .load(v2::SessionLoadCapabilities::new())
             .prompt(v2::PromptCapabilities::new().image(v2::PromptImageCapabilities::new()))
             .mcp(v2::McpCapabilities::new().http(v2::McpHttpCapabilities::new()))
-            .list(v2::SessionListCapabilities::new())
             .into_v1()
             .expect("v2 session capabilities -> v1 parts");
 
         assert!(parts.session_capabilities.list.is_some());
+        assert!(parts.session_capabilities.resume.is_some());
+        assert!(parts.session_capabilities.close.is_some());
         assert!(parts.prompt_capabilities.image);
         assert!(parts.load_session);
         assert!(parts.mcp_capabilities.http);

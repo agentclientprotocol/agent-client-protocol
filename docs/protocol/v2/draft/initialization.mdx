@@ -62,8 +62,7 @@ The Agent **MUST** respond with the chosen [protocol version](#protocol-version)
         "mcp": {
           "stdio": {},
           "http": {}
-        },
-        "load": {}
+        }
       }
     },
     "info": {
@@ -119,7 +118,8 @@ The Agent **SHOULD** specify whether it supports the following capabilities:
 <ResponseField name="session" type="SessionCapabilities Object">
   The Agent supports the `session/*` method surface. Omitted or `null` means the
   Agent does not support session methods. Supplying `{}` means the Agent
-  supports the baseline session methods: `session/new`, `session/prompt`,
+  supports the baseline session methods: `session/new`, `session/load`,
+  `session/list`, `session/resume`, `session/close`, `session/prompt`,
   `session/cancel`, and `session/update`.
 </ResponseField>
 
@@ -135,9 +135,13 @@ The Agent **SHOULD** specify whether it supports the following capabilities:
 
 #### Session Capabilities
 
-Supplying `session: {}` means the Agent supports `session/new`, `session/prompt`, `session/cancel`, and `session/update`.
+Supplying `session: {}` means the Agent supports `session/new`,
+`session/load`, `session/list`, `session/resume`, `session/close`,
+`session/prompt`, `session/cancel`, and `session/update`.
 
-Optionally, Agents **MAY** support prompt extensions, MCP server transports, and additional session methods by specifying nested capabilities.
+Optionally, Agents **MAY** support prompt extensions, MCP server transports, and
+additional session methods such as `session/delete` by specifying nested
+capabilities.
 
 <ResponseField name="prompt" type="PromptCapabilities Object">
   Object indicating the different types of [content](/protocol/v2/draft/content)
@@ -150,12 +154,6 @@ Optionally, Agents **MAY** support prompt extensions, MCP server transports, and
   Object indicating the MCP server transports that may be included in session
   lifecycle requests. Omitted or `null` both mean the Agent does not advertise
   MCP server transport support for sessions.
-</ResponseField>
-
-<ResponseField name="load" type="SessionLoadCapabilities Object">
-  The [`session/load`](/protocol/v2/draft/session-setup#loading-sessions) method
-  is available. Omitted or `null` both mean the Agent does not advertise
-  support. Supplying `{}` means the Agent supports loading sessions.
 </ResponseField>
 
 <ResponseField name="delete" type="SessionDeleteCapabilities Object">

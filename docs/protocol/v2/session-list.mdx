@@ -7,7 +7,7 @@ The `session/list` method allows Clients to discover sessions known to an Agent.
 
 Agents can also push session metadata updates to Clients in real-time via the `session_info_update` notification, keeping session titles and metadata in sync without polling.
 
-Before listing sessions, Clients **MUST** first complete the [initialization](/protocol/v2/initialization) phase to verify the Agent supports this capability.
+Before listing sessions, Clients **MUST** first complete the [initialization](/protocol/v2/initialization) phase. Agents that support the `session` method surface **MUST** support `session/list`.
 
 <br />
 
@@ -31,27 +31,6 @@ sequenceDiagram
 ```
 
 <br />
-
-## Checking Support
-
-Before attempting to list sessions, Clients **MUST** verify that the Agent supports this capability by checking the `session.list` field in the `initialize` response:
-
-```json highlight={7-9}
-{
-  "jsonrpc": "2.0",
-  "id": 0,
-  "result": {
-    "protocolVersion": 2,
-    "capabilities": {
-      "session": {
-        "list": {}
-      }
-    }
-  }
-}
-```
-
-If `session.list` is not present, the Agent does not support listing sessions and Clients **MUST NOT** attempt to call `session/list`.
 
 Agents that also advertise `session.additionalDirectories` may
 include `additionalDirectories` in returned `SessionInfo` objects to report

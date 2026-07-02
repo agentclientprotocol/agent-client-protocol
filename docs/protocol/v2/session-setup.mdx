@@ -83,30 +83,10 @@ The Agent **MUST** respond with a unique [Session ID](#session-id) that identifi
 
 ## Loading Sessions
 
-Agents that support the `session.load` capability allow Clients to resume previous conversations. This feature enables persistence across restarts and sharing sessions between different Client instances.
-
-### Checking Support
-
-Before attempting to load a session, Clients **MUST** verify that the Agent supports this capability by checking the `session.load` field in the `initialize` response:
-
-```json highlight={7}
-{
-  "jsonrpc": "2.0",
-  "id": 0,
-  "result": {
-    "protocolVersion": 2,
-    "capabilities": {
-      "session": {
-        "load": {}
-      }
-    }
-  }
-}
-```
-
-If `session.load` is omitted or `null`, the Agent does not support loading sessions and Clients **MUST NOT** attempt to call `session/load`.
-
-### Loading a Session
+Agents that support the `session` method surface **MUST** support
+`session/load`, allowing Clients to resume previous conversations. This feature
+enables persistence across restarts and sharing sessions between different
+Client instances.
 
 To load an existing session, Clients **MUST** call the `session/load` method with:
 
@@ -191,38 +171,20 @@ When **all** the conversation entries have been reported to the Client, the Agen
 {
   "jsonrpc": "2.0",
   "id": 1,
-  "result": null
+  "result": {}
 }
 ```
+
+The response **MAY** also include initial session configuration state when that
+feature is supported by the Agent.
 
 The Client can then continue sending prompts as if the session was never interrupted.
 
 ## Resuming Sessions
 
-Agents that advertise `session.resume` allow Clients to reconnect to an existing session without replaying the conversation history.
-
-### Checking Support
-
-Before attempting to resume a session, Clients **MUST** verify that the Agent supports this capability by checking for the `session.resume` field in the `initialize` response:
-
-```json highlight={7-9}
-{
-  "jsonrpc": "2.0",
-  "id": 0,
-  "result": {
-    "protocolVersion": 2,
-    "capabilities": {
-      "session": {
-        "resume": {}
-      }
-    }
-  }
-}
-```
-
-If `session.resume` is not present, the Agent does not support resuming sessions and Clients **MUST NOT** attempt to call `session/resume`.
-
-### Resuming a Session
+Agents that support the `session` method surface **MUST** support
+`session/resume`, allowing Clients to reconnect to an existing session without
+replaying the conversation history.
 
 To resume an existing session without replaying prior messages, Clients **MUST** call the `session/resume` method with:
 
@@ -266,30 +228,9 @@ feature is supported by the Agent.
 
 ## Closing Active Sessions
 
-Agents that advertise `session.close` allow Clients to tell the Agent to cancel any ongoing work for a session and free any resources associated with that active session.
-
-### Checking Support
-
-Before attempting to close a session, Clients **MUST** verify that the Agent supports this capability by checking the `session.close` field in the `initialize` response:
-
-```json highlight={7-9}
-{
-  "jsonrpc": "2.0",
-  "id": 0,
-  "result": {
-    "protocolVersion": 2,
-    "capabilities": {
-      "session": {
-        "close": {}
-      }
-    }
-  }
-}
-```
-
-If `session.close` is not present, the Agent does not support closing sessions and Clients **MUST NOT** attempt to call `session/close`.
-
-### Closing a Session
+Agents that support the `session` method surface **MUST** support
+`session/close`, allowing Clients to tell the Agent to cancel any ongoing work
+for a session and free any resources associated with that active session.
 
 To close an active session, Clients **MUST** call the `session/close` method with the session ID:
 
@@ -362,9 +303,9 @@ Clients use this ID to:
 
 - Send prompt requests via `session/prompt`
 - Cancel ongoing operations via `session/cancel`
-- Load previous sessions via `session/load` (if the Agent supports the `session.load` capability)
-- Resume previous sessions via `session/resume` (if the Agent supports the `session.resume` capability)
-- Close active sessions via `session/close` (if the Agent supports the `session.close` capability)
+- Load previous sessions via `session/load`
+- Resume previous sessions via `session/resume`
+- Close active sessions via `session/close`
 
 ## Working Directory
 

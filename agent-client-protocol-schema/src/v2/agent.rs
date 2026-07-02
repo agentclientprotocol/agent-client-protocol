@@ -1218,8 +1218,6 @@ impl NewSessionResponse {
 
 /// Request parameters for loading an existing session.
 ///
-/// Only available if the Agent supports the `session.load` capability.
-///
 /// See protocol docs: [Loading Sessions](https://agentclientprotocol.com/protocol/session-setup#loading-sessions)
 #[serde_as]
 #[skip_serializing_none]
@@ -1507,9 +1505,8 @@ impl ForkSessionResponse {
 /// Request parameters for resuming an existing session.
 ///
 /// Resumes an existing session without returning previous messages (unlike `session/load`).
-/// This is useful for agents that can resume sessions but don't implement full session loading.
-///
-/// Only available if the Agent supports the `session.resume` capability.
+/// This is useful when a Client already has the session history and only needs
+/// to reconnect to the Agent's session state.
 #[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -1642,11 +1639,9 @@ impl ResumeSessionResponse {
 
 /// Request parameters for closing an active session.
 ///
-/// If supported, the agent **must** cancel any ongoing work related to the session
-/// (treat it as if `session/cancel` was called) and then free up any resources
-/// associated with the session.
-///
-/// Only available if the Agent supports the `session.close` capability.
+/// The agent **must** cancel any ongoing work related to the session (treat it
+/// as if `session/cancel` was called) and then free up any resources associated
+/// with the session.
 #[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -1732,8 +1727,6 @@ impl CloseSessionResponse {
 // List sessions
 
 /// Request parameters for listing existing sessions.
-///
-/// Only available if the Agent supports the `session.list` capability.
 #[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -4223,7 +4216,9 @@ impl ProvidersCapabilities {
 /// Session capabilities supported by the agent.
 ///
 /// Supplying `{}` means the agent supports the baseline session methods:
-/// `session/new`, `session/prompt`, `session/cancel`, and `session/update`.
+/// `session/new`, `session/load`, `session/list`, `session/resume`,
+/// `session/close`, `session/prompt`, `session/cancel`, and
+/// `session/update`.
 ///
 /// Agents that support sessions **MAY** support additional session methods,
 /// prompt content types, and MCP transports by specifying additional
@@ -4253,22 +4248,6 @@ pub struct SessionCapabilities {
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub mcp: Option<McpCapabilities>,
-    /// Whether the agent supports `session/load`.
-    ///
-    /// Optional. Omitted or `null` both mean the agent does not advertise support.
-    /// Supplying `{}` means the agent supports loading sessions.
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
-    #[serde(default)]
-    pub load: Option<SessionLoadCapabilities>,
-    /// Whether the agent supports `session/list`.
-    ///
-    /// Optional. Omitted or `null` both mean the agent does not advertise support.
-    /// Supplying `{}` means the agent supports listing sessions.
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
-    #[serde(default)]
-    pub list: Option<SessionListCapabilities>,
     /// Whether the agent supports `session/delete`.
     ///
     /// Optional. Omitted or `null` both mean the agent does not advertise support.
@@ -4283,9 +4262,8 @@ pub struct SessionCapabilities {
     /// Supplying `{}` means the agent supports `additionalDirectories` on
     /// supported session lifecycle requests.
     ///
-    /// Agents that also support `session/list` may return
-    /// `SessionInfo.additionalDirectories` to report the complete ordered
-    /// additional-root list associated with a listed session.
+    /// Agents may return `SessionInfo.additionalDirectories` to report the
+    /// complete ordered additional-root list associated with a listed session.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
@@ -4303,22 +4281,6 @@ pub struct SessionCapabilities {
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub fork: Option<SessionForkCapabilities>,
-    /// Whether the agent supports `session/resume`.
-    ///
-    /// Optional. Omitted or `null` both mean the agent does not advertise support.
-    /// Supplying `{}` means the agent supports resuming sessions.
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
-    #[serde(default)]
-    pub resume: Option<SessionResumeCapabilities>,
-    /// Whether the agent supports `session/close`.
-    ///
-    /// Optional. Omitted or `null` both mean the agent does not advertise support.
-    /// Supplying `{}` means the agent supports closing sessions.
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
-    #[serde(default)]
-    pub close: Option<SessionCloseCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -4359,26 +4321,6 @@ impl SessionCapabilities {
         self
     }
 
-    /// Whether the agent supports `session/load`.
-    ///
-    /// Omitted or `null` both mean the agent does not advertise support.
-    /// Supplying `{}` means the agent supports loading sessions.
-    #[must_use]
-    pub fn load(mut self, load: impl IntoOption<SessionLoadCapabilities>) -> Self {
-        self.load = load.into_option();
-        self
-    }
-
-    /// Whether the agent supports `session/list`.
-    ///
-    /// Omitted or `null` both mean the agent does not advertise support.
-    /// Supplying `{}` means the agent supports listing sessions.
-    #[must_use]
-    pub fn list(mut self, list: impl IntoOption<SessionListCapabilities>) -> Self {
-        self.list = list.into_option();
-        self
-    }
-
     /// Whether the agent supports `session/delete`.
     ///
     /// Omitted or `null` both mean the agent does not advertise support.
@@ -4395,9 +4337,8 @@ impl SessionCapabilities {
     /// Supplying `{}` means the agent supports `additionalDirectories` on
     /// supported session lifecycle requests.
     ///
-    /// Agents that also support `session/list` may return
-    /// `SessionInfo.additionalDirectories` to report the complete ordered
-    /// additional-root list associated with a listed session.
+    /// Agents may return `SessionInfo.additionalDirectories` to report the
+    /// complete ordered additional-root list associated with a listed session.
     #[must_use]
     pub fn additional_directories(
         mut self,
@@ -4416,104 +4357,6 @@ impl SessionCapabilities {
     pub fn fork(mut self, fork: impl IntoOption<SessionForkCapabilities>) -> Self {
         self.fork = fork.into_option();
         self
-    }
-
-    /// Whether the agent supports `session/resume`.
-    ///
-    /// Omitted or `null` both mean the agent does not advertise support.
-    /// Supplying `{}` means the agent supports resuming sessions.
-    #[must_use]
-    pub fn resume(mut self, resume: impl IntoOption<SessionResumeCapabilities>) -> Self {
-        self.resume = resume.into_option();
-        self
-    }
-
-    /// Whether the agent supports `session/close`.
-    ///
-    /// Omitted or `null` both mean the agent does not advertise support.
-    /// Supplying `{}` means the agent supports closing sessions.
-    #[must_use]
-    pub fn close(mut self, close: impl IntoOption<SessionCloseCapabilities>) -> Self {
-        self.close = close.into_option();
-        self
-    }
-
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[must_use]
-    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
-        self.meta = meta.into_option();
-        self
-    }
-}
-
-/// Capabilities for the `session/load` method.
-///
-/// Supplying `{}` means the agent supports loading sessions.
-#[serde_as]
-#[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[non_exhaustive]
-pub struct SessionLoadCapabilities {
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
-    #[serde(default)]
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
-}
-
-impl SessionLoadCapabilities {
-    /// Builds an empty [`SessionLoadCapabilities`]; use builder methods to advertise supported sub-capabilities.
-    #[must_use]
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[must_use]
-    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
-        self.meta = meta.into_option();
-        self
-    }
-}
-
-/// Capabilities for the `session/list` method.
-///
-/// Supplying `{}` means the agent supports listing sessions.
-#[serde_as]
-#[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[non_exhaustive]
-pub struct SessionListCapabilities {
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
-    #[serde(default)]
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
-}
-
-impl SessionListCapabilities {
-    /// Builds an empty [`SessionListCapabilities`]; use builder methods to advertise supported sub-capabilities.
-    #[must_use]
-    pub fn new() -> Self {
-        Self::default()
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -4637,84 +4480,6 @@ pub struct SessionForkCapabilities {
 #[cfg(feature = "unstable_session_fork")]
 impl SessionForkCapabilities {
     /// Builds an empty [`SessionForkCapabilities`]; use builder methods to advertise supported sub-capabilities.
-    #[must_use]
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[must_use]
-    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
-        self.meta = meta.into_option();
-        self
-    }
-}
-
-/// Capabilities for the `session/resume` method.
-///
-/// Supplying `{}` means the agent supports resuming sessions.
-#[serde_as]
-#[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[non_exhaustive]
-pub struct SessionResumeCapabilities {
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
-    #[serde(default)]
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
-}
-
-impl SessionResumeCapabilities {
-    /// Builds an empty [`SessionResumeCapabilities`]; use builder methods to advertise supported sub-capabilities.
-    #[must_use]
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[must_use]
-    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
-        self.meta = meta.into_option();
-        self
-    }
-}
-
-/// Capabilities for the `session/close` method.
-///
-/// Supplying `{}` means the agent supports closing sessions.
-#[serde_as]
-#[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[non_exhaustive]
-pub struct SessionCloseCapabilities {
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
-    #[serde(default)]
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
-}
-
-impl SessionCloseCapabilities {
-    /// Builds an empty [`SessionCloseCapabilities`]; use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -5467,8 +5232,6 @@ pub enum ClientRequest {
     NewSessionRequest(Box<NewSessionRequest>),
     /// Loads an existing session to resume a previous conversation.
     ///
-    /// This method is only available if the agent advertises the `session.load` capability.
-    ///
     /// The agent should:
     /// - Restore the session context and conversation history
     /// - Connect to the specified MCP servers
@@ -5477,8 +5240,6 @@ pub enum ClientRequest {
     /// See protocol docs: [Loading Sessions](https://agentclientprotocol.com/protocol/session-setup#loading-sessions)
     LoadSessionRequest(Box<LoadSessionRequest>),
     /// Lists existing sessions known to the agent.
-    ///
-    /// This method is only available if the agent advertises the `session.list` capability.
     ///
     /// The agent should return metadata about sessions with optional filtering and pagination support.
     ListSessionsRequest(Box<ListSessionsRequest>),
@@ -5501,14 +5262,10 @@ pub enum ClientRequest {
     ForkSessionRequest(Box<ForkSessionRequest>),
     /// Resumes an existing session without returning previous messages.
     ///
-    /// This method is only available if the agent advertises the `session.resume` capability.
-    ///
     /// The agent should resume the session context, allowing the conversation to continue
     /// without replaying the message history (unlike `session/load`).
     ResumeSessionRequest(Box<ResumeSessionRequest>),
     /// Closes an active session and frees up any resources associated with it.
-    ///
-    /// This method is only available if the agent advertises the `session.close` capability.
     ///
     /// The agent must cancel any ongoing work (as if `session/cancel` was called)
     /// and then free up any resources associated with the session.
@@ -6439,17 +6196,6 @@ mod test_serialization {
         );
     }
     #[test]
-    fn test_session_load_capabilities_serialization() {
-        assert_eq!(
-            serde_json::to_value(SessionCapabilities::new().load(SessionLoadCapabilities::new()))
-                .unwrap(),
-            json!({
-                "load": {}
-            })
-        );
-    }
-
-    #[test]
     fn test_session_additional_directories_capabilities_serialization() {
         assert_eq!(
             serde_json::to_value(
@@ -7299,8 +7045,7 @@ mod test_serialization {
         let caps = AgentCapabilities::new().session(
             SessionCapabilities::new()
                 .prompt(PromptCapabilities::new().image(PromptImageCapabilities::new()))
-                .mcp(McpCapabilities::new().stdio(McpStdioCapabilities::new()))
-                .load(SessionLoadCapabilities::new()),
+                .mcp(McpCapabilities::new().stdio(McpStdioCapabilities::new())),
         );
 
         assert_eq!(
@@ -7312,8 +7057,7 @@ mod test_serialization {
                     },
                     "mcp": {
                         "stdio": {}
-                    },
-                    "load": {}
+                    }
                 }
             })
         );

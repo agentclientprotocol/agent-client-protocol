@@ -200,6 +200,7 @@
                 "pages": [
                   "rfds/v2/prompt",
                   "rfds/v2/enum-variant-extension",
+                  "rfds/v2/required-session-methods",
                   "rfds/v2/client-filesystem-terminal-capabilities",
                   "rfds/v2/plan-variants",
                   "rfds/v2/tool-call-updates",

@@ -918,8 +918,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 Closes an active session and frees up any resources associated with it.
 
-This method is only available if the agent advertises the `session.close` capability.
-
 The agent must cancel any ongoing work (as if `session/cancel` was called)
 and then free up any resources associated with the session.
 
@@ -927,11 +925,9 @@ and then free up any resources associated with the session.
 
 Request parameters for closing an active session.
 
-If supported, the agent **must** cancel any ongoing work related to the session
-(treat it as if `session/cancel` was called) and then free up any resources
-associated with the session.
-
-Only available if the Agent supports the `session.close` capability.
+The agent **must** cancel any ongoing work related to the session (treat it
+as if `session/cancel` was called) and then free up any resources associated
+with the session.
 
 **Type:** Object
 
@@ -1102,15 +1098,11 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 Lists existing sessions known to the agent.
 
-This method is only available if the agent advertises the `session.list` capability.
-
 The agent should return metadata about sessions with optional filtering and pagination support.
 
 #### <span class="font-mono">ListSessionsRequest</span>
 
 Request parameters for listing existing sessions.
-
-Only available if the Agent supports the `session.list` capability.
 
 **Type:** Object
 
@@ -1160,8 +1152,6 @@ to fetch the next page. If absent, there are no more results.
 
 Loads an existing session to resume a previous conversation.
 
-This method is only available if the agent advertises the `session.load` capability.
-
 The agent should:
 
 - Restore the session context and conversation history
@@ -1173,8 +1163,6 @@ See protocol docs: [Loading Sessions](https://agentclientprotocol.com/protocol/v
 #### <span class="font-mono">LoadSessionRequest</span>
 
 Request parameters for loading an existing session.
-
-Only available if the Agent supports the `session.load` capability.
 
 See protocol docs: [Loading Sessions](https://agentclientprotocol.com/protocol/v2/draft/session-setup#loading-sessions)
 
@@ -1390,8 +1378,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 Resumes an existing session without returning previous messages.
 
-This method is only available if the agent advertises the `session.resume` capability.
-
 The agent should resume the session context, allowing the conversation to continue
 without replaying the message history (unlike `session/load`).
 
@@ -1400,9 +1386,8 @@ without replaying the message history (unlike `session/load`).
 Request parameters for resuming an existing session.
 
 Resumes an existing session without returning previous messages (unlike `session/load`).
-This is useful for agents that can resume sessions but don't implement full session loading.
-
-Only available if the Agent supports the `session.resume` capability.
+This is useful when a Client already has the session history and only needs
+to reconnect to the Agent's session state.
 
 **Type:** Object
 
@@ -6942,7 +6927,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 Session capabilities supported by the agent.
 
 Supplying `\{\}` means the agent supports the baseline session methods:
-`session/new`, `session/prompt`, `session/cancel`, and `session/update`.
+`session/new`, `session/load`, `session/list`, `session/resume`,
+`session/close`, `session/prompt`, `session/cancel`, and
+`session/update`.
 
 Agents that support sessions **MAY** support additional session methods,
 prompt content types, and MCP transports by specifying additional
@@ -6969,16 +6956,8 @@ Optional. Omitted or `null` both mean the agent does not advertise support.
 Supplying `\{\}` means the agent supports `additionalDirectories` on
 supported session lifecycle requests.
 
-Agents that also support `session/list` may return
-`SessionInfo.additionalDirectories` to report the complete ordered
-additional-root list associated with a listed session.
-
-</ResponseField>
-<ResponseField name="close" type={<><span><a href="#sessionclosecapabilities">SessionCloseCapabilities</a></span><span> | null</span></>} >
-  Whether the agent supports `session/close`.
-
-Optional. Omitted or `null` both mean the agent does not advertise support.
-Supplying `\{\}` means the agent supports closing sessions.
+Agents may return `SessionInfo.additionalDirectories` to report the
+complete ordered additional-root list associated with a listed session.
 
 </ResponseField>
 <ResponseField name="delete" type={<><span><a href="#sessiondeletecapabilities">SessionDeleteCapabilities</a></span><span> | null</span></>} >
@@ -6999,20 +6978,6 @@ Optional. Omitted or `null` both mean the agent does not advertise support.
 Supplying `\{\}` means the agent supports forking sessions.
 
 </ResponseField>
-<ResponseField name="list" type={<><span><a href="#sessionlistcapabilities">SessionListCapabilities</a></span><span> | null</span></>} >
-  Whether the agent supports `session/list`.
-
-Optional. Omitted or `null` both mean the agent does not advertise support.
-Supplying `\{\}` means the agent supports listing sessions.
-
-</ResponseField>
-<ResponseField name="load" type={<><span><a href="#sessionloadcapabilities">SessionLoadCapabilities</a></span><span> | null</span></>} >
-  Whether the agent supports `session/load`.
-
-Optional. Omitted or `null` both mean the agent does not advertise support.
-Supplying `\{\}` means the agent supports loading sessions.
-
-</ResponseField>
 <ResponseField name="mcp" type={<><span><a href="#mcpcapabilities">McpCapabilities</a></span><span> | null</span></>} >
   MCP capabilities supported by the agent for session lifecycle requests.
 
@@ -7026,32 +6991,6 @@ server transport support for sessions.
 Optional. Omitted or `null` both mean the agent does not advertise any
 prompt extensions beyond the baseline text and resource-link content
 required by `session/prompt`.
-
-</ResponseField>
-<ResponseField name="resume" type={<><span><a href="#sessionresumecapabilities">SessionResumeCapabilities</a></span><span> | null</span></>} >
-  Whether the agent supports `session/resume`.
-
-Optional. Omitted or `null` both mean the agent does not advertise support.
-Supplying `\{\}` means the agent supports resuming sessions.
-
-</ResponseField>
-
-## <span class="font-mono">SessionCloseCapabilities</span>
-
-Capabilities for the `session/close` method.
-
-Supplying `\{\}` means the agent supports closing sessions.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
 
@@ -7435,63 +7374,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="updatedAt" type={"string | null"} >
   ISO 8601 timestamp of last activity. Set to null to clear.
-</ResponseField>
-
-## <span class="font-mono">SessionListCapabilities</span>
-
-Capabilities for the `session/list` method.
-
-Supplying `\{\}` means the agent supports listing sessions.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
-
-</ResponseField>
-
-## <span class="font-mono">SessionLoadCapabilities</span>
-
-Capabilities for the `session/load` method.
-
-Supplying `\{\}` means the agent supports loading sessions.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
-
-</ResponseField>
-
-## <span class="font-mono">SessionResumeCapabilities</span>
-
-Capabilities for the `session/resume` method.
-
-Supplying `\{\}` means the agent supports resuming sessions.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
-
 </ResponseField>
 
 ## <span class="font-mono">SessionUpdate</span>
