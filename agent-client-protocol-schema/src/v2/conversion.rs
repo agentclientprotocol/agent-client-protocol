@@ -8912,6 +8912,7 @@ impl IntoV1 for super::ResourceLink {
         let Self {
             annotations,
             description,
+            icons,
             mime_type,
             name,
             size,
@@ -8919,6 +8920,13 @@ impl IntoV1 for super::ResourceLink {
             uri,
             meta,
         } = self;
+
+        if matches!(icons.as_ref(), Some(icons) if !icons.is_empty()) {
+            return Err(ProtocolConversionError::new(
+                "v2 ResourceLink.icons cannot be represented in v1",
+            ));
+        }
+
         Ok(crate::v1::ResourceLink {
             annotations: into_v1_default_on_error(annotations),
             description: description.into_v1()?,
@@ -8949,6 +8957,7 @@ impl IntoV2 for crate::v1::ResourceLink {
         Ok(super::ResourceLink {
             annotations: into_v2_default_on_error(annotations),
             description: description.into_v2()?,
+            icons: None,
             mime_type: mime_type.into_v2()?,
             name: name.into_v2()?,
             size: size.into_v2()?,
@@ -9208,16 +9217,16 @@ mod tests {
 
     #[test]
     fn round_trips_initialize_request() {
-        let mut client_capabilities = v1::ClientCapabilities::new();
+        let client_capabilities = v1::ClientCapabilities::new();
         #[cfg(feature = "unstable_boolean_config")]
-        {
-            client_capabilities = client_capabilities.session(
+        let client_capabilities = {
+            client_capabilities.session(
                 v1::ClientSessionCapabilities::new().config_options(
                     v1::SessionConfigOptionsCapabilities::new()
                         .boolean(v1::BooleanConfigOptionCapabilities::new()),
                 ),
-            );
-        }
+            )
+        };
 
         let request = v1::InitializeRequest::new(ProtocolVersion::V1)
             .client_capabilities(client_capabilities)
@@ -10447,6 +10456,15 @@ mod tests {
                 "/tmp/file.txt",
                 "new"
             ))])
+        );
+    }
+
+    #[test]
+    fn v2_resource_link_icons_do_not_convert_to_v1() {
+        assert_v2_to_v1_error(
+            v2::ResourceLink::new("file.txt", "file:///file.txt")
+                .icons(vec![v2::Icon::new("https://example.com/icon.png")]),
+            "v2 ResourceLink.icons cannot be represented in v1",
         );
     }
 

@@ -13,7 +13,7 @@ Content blocks appear in:
 
 ## Content Types
 
-The Agent Client Protocol uses the same `ContentBlock` structure as the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/specification/2025-06-18/schema#contentblock).
+The Agent Client Protocol uses the same `ContentBlock` structure as the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/specification/2026-07-28/schema#contentblock).
 
 This design choice enables Agents to seamlessly forward content from MCP tool outputs without transformation.
 
@@ -38,7 +38,7 @@ All Agents **MUST** support text content blocks when included in prompts.
 
 <ParamField path="annotations" type="Annotations">
   Optional metadata about how the content should be used or displayed. [Learn
-  more](https://modelcontextprotocol.io/specification/2025-06-18/server/resources#annotations).
+  more](https://modelcontextprotocol.io/specification/2026-07-28/schema#annotations).
 </ParamField>
 
 ### Image Content <Icon icon="asterisk" size="14" />
@@ -71,7 +71,7 @@ prompts.
 
 <ParamField path="annotations" type="Annotations">
   Optional metadata about how the content should be used or displayed. [Learn
-  more](https://modelcontextprotocol.io/specification/2025-06-18/server/resources#annotations).
+  more](https://modelcontextprotocol.io/specification/2026-07-28/schema#annotations).
 </ParamField>
 
 ### Audio Content <Icon icon="asterisk" size="14" />
@@ -100,7 +100,7 @@ prompts.
 
 <ParamField path="annotations" type="Annotations">
   Optional metadata about how the content should be used or displayed. [Learn
-  more](https://modelcontextprotocol.io/specification/2025-06-18/server/resources#annotations).
+  more](https://modelcontextprotocol.io/specification/2026-07-28/schema#annotations).
 </ParamField>
 
 ### Embedded Resource <Icon icon="asterisk" size="14" />
@@ -162,7 +162,7 @@ prompts.
 
 <ParamField path="annotations" type="Annotations">
   Optional metadata about how the content should be used or displayed. [Learn
-  more](https://modelcontextprotocol.io/specification/2025-06-18/server/resources#annotations).
+  more](https://modelcontextprotocol.io/specification/2026-07-28/schema#annotations).
 </ParamField>
 
 ### Resource Link
@@ -175,6 +175,13 @@ References to resources that the Agent can access.
   "uri": "file:///home/user/document.pdf",
   "name": "document.pdf",
   "mimeType": "application/pdf",
+  "icons": [
+    {
+      "src": "https://example.com/icons/pdf.png",
+      "mimeType": "image/png",
+      "sizes": ["48x48"]
+    }
+  ],
   "size": 1024000
 }
 ```
@@ -199,11 +206,16 @@ References to resources that the Agent can access.
   Optional description of the resource contents
 </ParamField>
 
+<ParamField path="icons" type="Icon[]">
+  Optional icons Clients can display for this resource. Each icon requires a
+  `src` URI and may include `mimeType`, `sizes`, and `theme`.
+</ParamField>
+
 <ParamField path="size" type="integer">
   Optional size of the resource in bytes
 </ParamField>
 
 <ParamField path="annotations" type="Annotations">
   Optional metadata about how the content should be used or displayed. [Learn
-  more](https://modelcontextprotocol.io/specification/2025-06-18/server/resources#annotations).
+  more](https://modelcontextprotocol.io/specification/2026-07-28/schema#annotations).
 </ParamField>

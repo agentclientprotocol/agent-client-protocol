@@ -212,12 +212,14 @@ impl<T: Into<String>> From<T> for ContentBlock {
 #[non_exhaustive]
 pub struct ImageContent {
     /// Base64-encoded media payload.
+    #[schemars(extend("format" = "byte"))]
     pub data: String,
     /// MIME type describing the encoded media payload.
     pub mime_type: String,
     /// URI associated with this resource or media payload.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[schemars(url)]
     #[serde(default)]
     pub uri: Option<String>,
     /// Optional annotations that help clients decide how to display or route this content.
@@ -284,6 +286,7 @@ impl ImageContent {
 #[non_exhaustive]
 pub struct AudioContent {
     /// Base64-encoded media payload.
+    #[schemars(extend("format" = "byte"))]
     pub data: String,
     /// MIME type describing the encoded media payload.
     pub mime_type: String,
@@ -411,6 +414,7 @@ pub struct TextResourceContents {
     /// Text payload carried by this content block.
     pub text: String,
     /// URI associated with this resource or media payload.
+    #[schemars(url)]
     pub uri: String,
     /// MIME type describing the encoded media payload.
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -468,8 +472,10 @@ impl TextResourceContents {
 #[non_exhaustive]
 pub struct BlobResourceContents {
     /// Base64-encoded bytes for a binary resource payload.
+    #[schemars(extend("format" = "byte"))]
     pub blob: String,
     /// URI associated with this resource or media payload.
+    #[schemars(url)]
     pub uri: String,
     /// MIME type describing the encoded media payload.
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -529,6 +535,7 @@ pub struct ResourceLink {
     /// Human-readable name shown for this protocol object.
     pub name: String,
     /// URI associated with this resource or media payload.
+    #[schemars(url)]
     pub uri: String,
     /// Optional display title for end-user UI.
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -540,6 +547,11 @@ pub struct ResourceLink {
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub description: Option<String>,
+    /// Optional set of sized icons that the client can display in a user interface.
+    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
+    #[serde(default)]
+    pub icons: Option<Vec<Icon>>,
     /// MIME type describing the encoded media payload.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
@@ -574,6 +586,7 @@ impl ResourceLink {
         Self {
             annotations: None,
             description: None,
+            icons: None,
             mime_type: None,
             name: name.into(),
             size: None,
@@ -594,6 +607,13 @@ impl ResourceLink {
     #[must_use]
     pub fn description(mut self, description: impl IntoOption<String>) -> Self {
         self.description = description.into_option();
+        self
+    }
+
+    /// Sets or clears the optional `icons` field.
+    #[must_use]
+    pub fn icons(mut self, icons: impl IntoOption<Vec<Icon>>) -> Self {
+        self.icons = icons.into_option();
         self
     }
 
@@ -630,6 +650,85 @@ impl ResourceLink {
     }
 }
 
+/// An optionally-sized icon that can be displayed in a user interface.
+#[serde_as]
+#[skip_serializing_none]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct Icon {
+    /// A standard URI pointing to an icon resource.
+    #[schemars(url)]
+    pub src: String,
+    /// Optional MIME type override if the source MIME type is missing or generic.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
+    pub mime_type: Option<String>,
+    /// Optional sizes at which the icon can be used.
+    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
+    #[serde(default)]
+    pub sizes: Option<Vec<String>>,
+    /// Optional theme this icon is designed for.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
+    pub theme: Option<IconTheme>,
+}
+
+impl Icon {
+    /// Builds [`Icon`] with the required source URI; optional display hints start unset.
+    #[must_use]
+    pub fn new(src: impl Into<String>) -> Self {
+        Self {
+            src: src.into(),
+            mime_type: None,
+            sizes: None,
+            theme: None,
+        }
+    }
+
+    /// Sets or clears the optional `mimeType` field.
+    #[must_use]
+    pub fn mime_type(mut self, mime_type: impl IntoOption<String>) -> Self {
+        self.mime_type = mime_type.into_option();
+        self
+    }
+
+    /// Sets or clears the optional `sizes` field.
+    #[must_use]
+    pub fn sizes(mut self, sizes: impl IntoOption<Vec<String>>) -> Self {
+        self.sizes = sizes.into_option();
+        self
+    }
+
+    /// Sets or clears the optional `theme` field.
+    #[must_use]
+    pub fn theme(mut self, theme: impl IntoOption<IconTheme>) -> Self {
+        self.theme = theme.into_option();
+        self
+    }
+}
+
+/// Theme an icon is designed for.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub enum IconTheme {
+    /// Icon designed for light backgrounds.
+    Light,
+    /// Icon designed for dark backgrounds.
+    Dark,
+    /// Custom or future icon theme.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(untagged)]
+    Other(String),
+}
+
 /// Optional annotations for the client. The client can use annotations to inform how objects are used or displayed
 #[serde_as]
 #[skip_serializing_none]
@@ -650,6 +749,7 @@ pub struct Annotations {
     /// Relative importance of this content when clients choose what to surface.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[schemars(range(min = 0, max = 1))]
     #[serde(default)]
     pub priority: Option<f64>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -775,6 +875,13 @@ mod tests {
     }
 
     #[test]
+    fn icon_theme_preserves_unknown_variant() {
+        let theme: IconTheme = serde_json::from_str("\"contrast\"").unwrap();
+        assert_eq!(theme, IconTheme::Other("contrast".to_string()));
+        assert_eq!(serde_json::to_value(&theme).unwrap(), "contrast");
+    }
+
+    #[test]
     fn content_block_preserves_unknown_variant() {
         let block: ContentBlock = serde_json::from_value(serde_json::json!({
             "type": "_widget",
@@ -850,5 +957,57 @@ mod tests {
         let json = serde_json::to_value(&content).unwrap();
         assert!(!json.as_object().unwrap().contains_key("annotations"));
         assert!(!json.as_object().unwrap().contains_key("meta"));
+    }
+
+    #[test]
+    fn resource_link_icons_roundtrip() {
+        let icon = Icon::new("https://example.com/icon.png")
+            .mime_type("image/png")
+            .sizes(vec!["48x48".to_string(), "any".to_string()])
+            .theme(IconTheme::Dark);
+        let link = ResourceLink::new("Example", "file:///example.txt").icons(vec![icon]);
+
+        let json = serde_json::to_value(&link).unwrap();
+        assert_eq!(json["icons"][0]["src"], "https://example.com/icon.png");
+        assert_eq!(json["icons"][0]["mimeType"], "image/png");
+        assert_eq!(json["icons"][0]["sizes"][0], "48x48");
+        assert_eq!(json["icons"][0]["theme"], "dark");
+
+        let parsed: ResourceLink = serde_json::from_value(json).unwrap();
+        assert_eq!(link, parsed);
+    }
+
+    #[test]
+    fn annotations_priority_schema_matches_mcp_bounds() {
+        let schema = schemars::schema_for!(Annotations);
+        let json = serde_json::to_value(schema).unwrap();
+
+        assert_eq!(json["properties"]["priority"]["minimum"], 0);
+        assert_eq!(json["properties"]["priority"]["maximum"], 1);
+    }
+
+    #[test]
+    fn content_schema_matches_mcp_string_formats() {
+        let image = serde_json::to_value(schemars::schema_for!(ImageContent)).unwrap();
+        assert_eq!(image["properties"]["data"]["format"], "byte");
+        assert_eq!(image["properties"]["uri"]["format"], "uri");
+
+        let audio = serde_json::to_value(schemars::schema_for!(AudioContent)).unwrap();
+        assert_eq!(audio["properties"]["data"]["format"], "byte");
+
+        let text_resource =
+            serde_json::to_value(schemars::schema_for!(TextResourceContents)).unwrap();
+        assert_eq!(text_resource["properties"]["uri"]["format"], "uri");
+
+        let blob_resource =
+            serde_json::to_value(schemars::schema_for!(BlobResourceContents)).unwrap();
+        assert_eq!(blob_resource["properties"]["blob"]["format"], "byte");
+        assert_eq!(blob_resource["properties"]["uri"]["format"], "uri");
+
+        let resource_link = serde_json::to_value(schemars::schema_for!(ResourceLink)).unwrap();
+        assert_eq!(resource_link["properties"]["uri"]["format"], "uri");
+
+        let icon = serde_json::to_value(schemars::schema_for!(Icon)).unwrap();
+        assert_eq!(icon["properties"]["src"]["format"], "uri");
     }
 }

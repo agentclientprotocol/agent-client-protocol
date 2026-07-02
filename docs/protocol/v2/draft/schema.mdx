@@ -2332,6 +2332,12 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="priority" type={"number | null"} >
   Relative importance of this content when clients choose what to surface.
+
+    | Constraint | Value |
+    | ---------- | ----- |
+    | Minimum | `0` |
+    | Maximum | `1` |
+
 </ResponseField>
 
 ## <span class="font-mono">AudioContent</span>
@@ -3125,6 +3131,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
   Optional human-readable details shown with this protocol object.
+</ResponseField>
+<ResponseField name="icons" type={<><span><a href="#icon">Icon[]</a></span><span> | null</span></>} >
+  Optional set of sized icons that the client can display in a user interface.
 </ResponseField>
 <ResponseField name="mimeType" type={"string | null"} >
   MIME type describing the encoded media payload.
@@ -4144,6 +4153,73 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="value" type={"string"} required>
   The value to set for the HTTP header.
+</ResponseField>
+
+## <span class="font-mono">Icon</span>
+
+An optionally-sized icon that can be displayed in a user interface.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="mimeType" type={"string | null"}>
+  Optional MIME type override if the source MIME type is missing or generic.
+</ResponseField>
+<ResponseField
+  name="sizes"
+  type={
+    <>
+      <span>
+        <>
+          <span>"string"</span>
+          <span>[]</span>
+        </>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Optional sizes at which the icon can be used.
+</ResponseField>
+<ResponseField name="src" type={"string"} required>
+  A standard URI pointing to an icon resource.
+</ResponseField>
+<ResponseField
+  name="theme"
+  type={
+    <>
+      <span>
+        <a href="#icontheme">IconTheme</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Optional theme this icon is designed for.
+</ResponseField>
+
+## <span class="font-mono">IconTheme</span>
+
+Theme an icon is designed for.
+
+**Type:** Union
+
+<ResponseField name="light" type="string">
+  Icon designed for light backgrounds.
+</ResponseField>
+
+<ResponseField name="dark" type="string">
+  Icon designed for dark backgrounds.
+</ResponseField>
+
+<ResponseField name="other" type="string">
+Custom or future icon theme.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
 </ResponseField>
 
 ## <span class="font-mono">IdleStateUpdate</span>
@@ -6690,6 +6766,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
   Optional human-readable details shown with this protocol object.
+</ResponseField>
+<ResponseField name="icons" type={<><span><a href="#icon">Icon[]</a></span><span> | null</span></>} >
+  Optional set of sized icons that the client can display in a user interface.
 </ResponseField>
 <ResponseField name="mimeType" type={"string | null"} >
   MIME type describing the encoded media payload.

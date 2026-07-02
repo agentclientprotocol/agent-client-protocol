@@ -2990,6 +2990,7 @@ pub struct McpServerHttp {
     /// Human-readable name identifying this MCP server.
     pub name: String,
     /// URL to the MCP server.
+    #[schemars(url)]
     pub url: String,
     /// HTTP headers to set when making requests to the MCP server.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
@@ -6005,6 +6006,13 @@ mod test_serialization {
             }
             _ => panic!("Expected Http variant"),
         }
+    }
+
+    #[test]
+    fn mcp_server_http_schema_marks_url_as_uri() {
+        let schema = serde_json::to_value(schemars::schema_for!(McpServerHttp)).unwrap();
+
+        assert_eq!(schema["properties"]["url"]["format"], "uri");
     }
 
     #[cfg(feature = "unstable_mcp_over_acp")]

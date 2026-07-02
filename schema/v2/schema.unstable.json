@@ -1145,6 +1145,8 @@
           "description": "Relative importance of this content when clients choose what to surface.",
           "type": ["number", "null"],
           "format": "double",
+          "minimum": 0,
+          "maximum": 1,
           "x-deserialize-default-on-error": true
         },
         "_meta": {
@@ -1210,7 +1212,8 @@
       "properties": {
         "data": {
           "description": "Base64-encoded media payload.",
-          "type": "string"
+          "type": "string",
+          "format": "byte"
         },
         "mimeType": {
           "description": "MIME type describing the encoded media payload.",
@@ -1219,6 +1222,7 @@
         "uri": {
           "description": "URI associated with this resource or media payload.",
           "type": ["string", "null"],
+          "format": "uri",
           "x-deserialize-default-on-error": true
         },
         "annotations": {
@@ -1248,7 +1252,8 @@
       "properties": {
         "data": {
           "description": "Base64-encoded media payload.",
-          "type": "string"
+          "type": "string",
+          "format": "byte"
         },
         "mimeType": {
           "description": "MIME type describing the encoded media payload.",
@@ -1275,6 +1280,64 @@
       },
       "required": ["data", "mimeType"]
     },
+    "Icon": {
+      "description": "An optionally-sized icon that can be displayed in a user interface.",
+      "type": "object",
+      "properties": {
+        "src": {
+          "description": "A standard URI pointing to an icon resource.",
+          "type": "string",
+          "format": "uri"
+        },
+        "mimeType": {
+          "description": "Optional MIME type override if the source MIME type is missing or generic.",
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
+        },
+        "sizes": {
+          "description": "Optional sizes at which the icon can be used.",
+          "type": ["array", "null"],
+          "items": {
+            "type": "string"
+          },
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
+        },
+        "theme": {
+          "description": "Optional theme this icon is designed for.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/IconTheme"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        }
+      },
+      "required": ["src"]
+    },
+    "IconTheme": {
+      "description": "Theme an icon is designed for.",
+      "anyOf": [
+        {
+          "description": "Icon designed for light backgrounds.",
+          "type": "string",
+          "const": "light"
+        },
+        {
+          "description": "Icon designed for dark backgrounds.",
+          "type": "string",
+          "const": "dark"
+        },
+        {
+          "title": "other",
+          "description": "Custom or future icon theme.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+          "type": "string"
+        }
+      ]
+    },
     "ResourceLink": {
       "description": "A resource that the server is capable of reading, included in a prompt or tool call result.",
       "type": "object",
@@ -1285,7 +1348,8 @@
         },
         "uri": {
           "description": "URI associated with this resource or media payload.",
-          "type": "string"
+          "type": "string",
+          "format": "uri"
         },
         "title": {
           "description": "Optional display title for end-user UI.",
@@ -1296,6 +1360,15 @@
           "description": "Optional human-readable details shown with this protocol object.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
+        },
+        "icons": {
+          "description": "Optional set of sized icons that the client can display in a user interface.",
+          "type": ["array", "null"],
+          "items": {
+            "$ref": "#/$defs/Icon"
+          },
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
         },
         "mimeType": {
           "description": "MIME type describing the encoded media payload.",
@@ -1362,7 +1435,8 @@
         },
         "uri": {
           "description": "URI associated with this resource or media payload.",
-          "type": "string"
+          "type": "string",
+          "format": "uri"
         },
         "mimeType": {
           "description": "MIME type describing the encoded media payload.",
@@ -1384,11 +1458,13 @@
       "properties": {
         "blob": {
           "description": "Base64-encoded bytes for a binary resource payload.",
-          "type": "string"
+          "type": "string",
+          "format": "byte"
         },
         "uri": {
           "description": "URI associated with this resource or media payload.",
-          "type": "string"
+          "type": "string",
+          "format": "uri"
         },
         "mimeType": {
           "description": "MIME type describing the encoded media payload.",
@@ -7547,7 +7623,8 @@
         },
         "url": {
           "description": "URL to the MCP server.",
-          "type": "string"
+          "type": "string",
+          "format": "uri"
         },
         "headers": {
           "description": "HTTP headers to set when making requests to the MCP server.",
