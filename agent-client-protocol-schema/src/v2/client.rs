@@ -1259,7 +1259,7 @@ impl TextCommandInput {
 
 // Permission
 
-/// Request for user permission to execute a tool call.
+/// Request for user permission to proceed with an operation.
 ///
 /// Sent when the agent needs authorization before performing a sensitive operation.
 ///
@@ -1273,8 +1273,8 @@ impl TextCommandInput {
 pub struct RequestPermissionRequest {
     /// The session ID for this request.
     pub session_id: SessionId,
-    /// Details about the tool call requiring permission.
-    pub tool_call: ToolCallUpdate,
+    /// Details about the operation requiring permission.
+    pub subject: RequestPermissionSubject,
     /// Available permission options for the user to choose from.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
     #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
@@ -1296,12 +1296,12 @@ impl RequestPermissionRequest {
     #[must_use]
     pub fn new(
         session_id: impl Into<SessionId>,
-        tool_call: ToolCallUpdate,
+        subject: impl Into<RequestPermissionSubject>,
         options: Vec<PermissionOption>,
     ) -> Self {
         Self {
             session_id: session_id.into(),
-            tool_call,
+            subject: subject.into(),
             options,
             meta: None,
         }
@@ -1317,6 +1317,119 @@ impl RequestPermissionRequest {
         self.meta = meta.into_option();
         self
     }
+}
+
+/// The operation requiring permission.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[serde(tag = "type", rename_all = "snake_case")]
+#[schemars(extend("discriminator" = {"propertyName": "type"}))]
+#[non_exhaustive]
+pub enum RequestPermissionSubject {
+    /// Permission is requested before executing a tool call.
+    ToolCall(Box<ToolCallPermissionSubject>),
+    /// Custom or future permission subject.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    ///
+    /// Clients that do not understand this subject type should preserve the raw
+    /// payload when storing, replaying, proxying, or forwarding permission
+    /// requests, and otherwise display a generic permission prompt or decline it
+    /// according to policy.
+    #[serde(untagged)]
+    Other(OtherRequestPermissionSubject),
+}
+
+impl From<ToolCallPermissionSubject> for RequestPermissionSubject {
+    fn from(subject: ToolCallPermissionSubject) -> Self {
+        Self::ToolCall(Box::new(subject))
+    }
+}
+
+impl From<ToolCallUpdate> for RequestPermissionSubject {
+    fn from(tool_call: ToolCallUpdate) -> Self {
+        ToolCallPermissionSubject::new(tool_call).into()
+    }
+}
+
+/// Permission request details for a tool call.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct ToolCallPermissionSubject {
+    /// Details about the tool call requiring permission.
+    pub tool_call: ToolCallUpdate,
+}
+
+impl ToolCallPermissionSubject {
+    /// Builds [`ToolCallPermissionSubject`] with the required fields set.
+    #[must_use]
+    pub fn new(tool_call: ToolCallUpdate) -> Self {
+        Self { tool_call }
+    }
+}
+
+/// Custom or future permission subject payload.
+#[derive(Debug, Clone, Serialize, JsonSchema, PartialEq)]
+#[schemars(inline)]
+#[schemars(transform = other_request_permission_subject_schema)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct OtherRequestPermissionSubject {
+    /// Custom or future permission subject type.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(rename = "type")]
+    pub type_: String,
+    /// Additional fields from the unknown permission subject payload.
+    #[serde(flatten)]
+    pub fields: BTreeMap<String, serde_json::Value>,
+}
+
+impl OtherRequestPermissionSubject {
+    /// Builds [`OtherRequestPermissionSubject`] from an unknown discriminator and preserves the remaining extension fields.
+    #[must_use]
+    pub fn new(type_: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
+        fields.remove("type");
+        Self {
+            type_: type_.into(),
+            fields,
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for OtherRequestPermissionSubject {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let type_ = fields
+            .remove("type")
+            .ok_or_else(|| serde::de::Error::missing_field("type"))?;
+        let serde_json::Value::String(type_) = type_ else {
+            return Err(serde::de::Error::custom("`type` must be a string"));
+        };
+
+        if is_known_request_permission_subject_type(&type_) {
+            return Err(serde::de::Error::custom(format!(
+                "known request permission subject `{type_}` did not match its schema"
+            )));
+        }
+
+        Ok(Self { type_, fields })
+    }
+}
+
+fn is_known_request_permission_subject_type(type_: &str) -> bool {
+    matches!(type_, "tool_call")
+}
+
+fn other_request_permission_subject_schema(schema: &mut Schema) {
+    super::schema_util::reject_known_string_discriminators(schema, "type", &["tool_call"]);
 }
 
 /// An option presented to the user when requesting permission.
@@ -1924,7 +2037,7 @@ pub(crate) const ELICITATION_COMPLETE_NOTIFICATION: &str = "elicitation/complete
 #[schemars(inline)]
 #[non_exhaustive]
 pub enum AgentRequest {
-    /// Requests permission from the user for a tool call operation.
+    /// Requests permission from the user for an operation.
     ///
     /// Called by the agent when it needs user authorization before executing
     /// a potentially sensitive operation. The client should present the options
@@ -2639,6 +2752,76 @@ mod tests {
 
         let roundtripped: AvailableCommandInput = serde_json::from_value(json).unwrap();
         assert!(matches!(roundtripped, AvailableCommandInput::Text(_)));
+    }
+
+    #[test]
+    fn request_permission_subject_tool_call_uses_type_discriminator() {
+        use serde_json::json;
+
+        let subject = RequestPermissionSubject::from(ToolCallUpdate::new("call_001"));
+
+        let json = serde_json::to_value(&subject).unwrap();
+        assert_eq!(
+            json,
+            json!({
+                "type": "tool_call",
+                "toolCall": {
+                    "toolCallId": "call_001"
+                }
+            })
+        );
+
+        let roundtripped: RequestPermissionSubject = serde_json::from_value(json).unwrap();
+        assert!(matches!(
+            roundtripped,
+            RequestPermissionSubject::ToolCall(_)
+        ));
+    }
+
+    #[test]
+    fn request_permission_subject_preserves_unknown_variant() {
+        use serde_json::json;
+
+        let subject: RequestPermissionSubject = serde_json::from_value(json!({
+            "type": "_review",
+            "reason": "needs-review",
+            "retryAfterSeconds": 30
+        }))
+        .unwrap();
+
+        let RequestPermissionSubject::Other(unknown) = subject else {
+            panic!("expected unknown permission subject");
+        };
+
+        assert_eq!(unknown.type_, "_review");
+        assert_eq!(unknown.fields.get("reason"), Some(&json!("needs-review")));
+        assert_eq!(unknown.fields.get("retryAfterSeconds"), Some(&json!(30)));
+        assert_eq!(
+            serde_json::to_value(RequestPermissionSubject::Other(unknown)).unwrap(),
+            json!({
+                "type": "_review",
+                "reason": "needs-review",
+                "retryAfterSeconds": 30
+            })
+        );
+    }
+
+    #[test]
+    fn request_permission_subject_unknown_does_not_hide_malformed_known_variant() {
+        use serde_json::json;
+
+        assert!(
+            serde_json::from_value::<RequestPermissionSubject>(json!({
+                "type": "tool_call"
+            }))
+            .is_err()
+        );
+        assert!(
+            serde_json::from_value::<RequestPermissionSubject>(json!({
+                "type": 1
+            }))
+            .is_err()
+        );
     }
 
     #[test]

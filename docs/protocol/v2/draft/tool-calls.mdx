@@ -173,8 +173,11 @@ The Agent **MAY** request permission from the user before executing a tool call 
   "method": "session/request_permission",
   "params": {
     "sessionId": "sess_abc123def456",
-    "toolCall": {
-      "toolCallId": "call_001"
+    "subject": {
+      "type": "tool_call",
+      "toolCall": {
+        "toolCallId": "call_001"
+      }
     },
     "options": [
       {
@@ -196,8 +199,12 @@ The Agent **MAY** request permission from the user before executing a tool call 
   The session ID for this request
 </ParamField>
 
-<ParamField path="toolCall" type="ToolCallUpdate" required>
-  The tool call update containing details about the operation
+<ParamField path="subject" type="RequestPermissionSubject" required>
+  The operation requiring permission. For tool calls, use `type: "tool_call"`
+  with a `toolCall` update containing details about the operation. Custom or
+  future subject types may appear; clients that do not understand a subject
+  should preserve it when proxying and use a generic permission prompt or
+  decline according to policy.
 </ParamField>
 
 <ParamField path="options" type="PermissionOption[]" required>

@@ -1493,10 +1493,22 @@ impl IntoV1 for super::RequestPermissionRequest {
     fn into_v1(self) -> Result<Self::Output> {
         let Self {
             session_id,
-            tool_call,
+            subject,
             options,
             meta,
         } = self;
+        let tool_call = match subject {
+            super::RequestPermissionSubject::ToolCall(subject) => {
+                let super::ToolCallPermissionSubject { tool_call } = *subject;
+                tool_call
+            }
+            super::RequestPermissionSubject::Other(subject) => {
+                return Err(unknown_v2_enum_variant(
+                    "RequestPermissionSubject",
+                    &subject.type_,
+                ));
+            }
+        };
         Ok(crate::v1::RequestPermissionRequest {
             session_id: session_id.into_v1()?,
             tool_call: tool_call.into_v1()?,
@@ -1518,7 +1530,7 @@ impl IntoV2 for crate::v1::RequestPermissionRequest {
         } = self;
         Ok(super::RequestPermissionRequest {
             session_id: session_id.into_v2()?,
-            tool_call: tool_call.into_v2()?,
+            subject: super::RequestPermissionSubject::from(tool_call.into_v2()?),
             options: options.into_v2()?,
             meta: meta.into_v2()?,
         })
@@ -10472,6 +10484,17 @@ mod tests {
                 std::collections::BTreeMap::new(),
             )),
             "v2 AvailableCommandInput variant `_choices` cannot be represented in v1",
+        );
+        assert_v2_to_v1_error(
+            v2::RequestPermissionRequest::new(
+                "session-id",
+                v2::RequestPermissionSubject::Other(v2::OtherRequestPermissionSubject::new(
+                    "_review",
+                    std::collections::BTreeMap::new(),
+                )),
+                Vec::new(),
+            ),
+            "v2 RequestPermissionSubject variant `_review` cannot be represented in v1",
         );
         assert_v2_to_v1_error(
             v2::RequestPermissionOutcome::Other(v2::OtherRequestPermissionOutcome::new(

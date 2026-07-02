@@ -593,7 +593,7 @@
               "anyOf": [
                 {
                   "title": "RequestPermissionRequest",
-                  "description": "Requests permission from the user for a tool call operation.\n\nCalled by the agent when it needs user authorization before executing\na potentially sensitive operation. The client should present the options\nto the user and return their decision.\n\nIf the client cancels active session work via `session/cancel`, it MUST\nrespond to this request with `RequestPermissionOutcome::Cancelled`.\n\nSee protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/v2/draft/tool-calls#requesting-permission)",
+                  "description": "Requests permission from the user for an operation.\n\nCalled by the agent when it needs user authorization before executing\na potentially sensitive operation. The client should present the options\nto the user and return their decision.\n\nIf the client cancels active session work via `session/cancel`, it MUST\nrespond to this request with `RequestPermissionOutcome::Cancelled`.\n\nSee protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/v2/draft/tool-calls#requesting-permission)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/RequestPermissionRequest"
@@ -678,7 +678,7 @@
       ]
     },
     "RequestPermissionRequest": {
-      "description": "Request for user permission to execute a tool call.\n\nSent when the agent needs authorization before performing a sensitive operation.\n\nSee protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/v2/draft/tool-calls#requesting-permission)",
+      "description": "Request for user permission to proceed with an operation.\n\nSent when the agent needs authorization before performing a sensitive operation.\n\nSee protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/v2/draft/tool-calls#requesting-permission)",
       "type": "object",
       "properties": {
         "sessionId": {
@@ -689,11 +689,11 @@
             }
           ]
         },
-        "toolCall": {
-          "description": "Details about the tool call requiring permission.",
+        "subject": {
+          "description": "Details about the operation requiring permission.",
           "allOf": [
             {
-              "$ref": "#/$defs/ToolCallUpdate"
+              "$ref": "#/$defs/RequestPermissionSubject"
             }
           ]
         },
@@ -713,13 +713,64 @@
           "additionalProperties": true
         }
       },
-      "required": ["sessionId", "toolCall", "options"],
+      "required": ["sessionId", "subject", "options"],
       "x-side": "client",
       "x-method": "session/request_permission"
     },
     "SessionId": {
       "description": "A unique identifier for a conversation session between a client and agent.\n\nSessions maintain their own context, conversation history, and state,\nallowing multiple independent interactions with the same agent.\n\nSee protocol docs: [Session ID](https://agentclientprotocol.com/protocol/v2/draft/session-setup#session-id)",
       "type": "string"
+    },
+    "RequestPermissionSubject": {
+      "description": "The operation requiring permission.",
+      "anyOf": [
+        {
+          "description": "Permission is requested before executing a tool call.",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "tool_call"
+            }
+          },
+          "required": ["type"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/ToolCallPermissionSubject"
+            }
+          ]
+        },
+        {
+          "title": "other",
+          "description": "Custom or future permission subject.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nClients that do not understand this subject type should preserve the raw\npayload when storing, replaying, proxying, or forwarding permission\nrequests, and otherwise display a generic permission prompt or decline it\naccording to policy.",
+          "type": "object",
+          "properties": {
+            "type": {
+              "description": "Custom or future permission subject type.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+              "type": "string"
+            }
+          },
+          "required": ["type"],
+          "not": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "tool_call"
+                  }
+                },
+                "required": ["type"]
+              }
+            ]
+          },
+          "additionalProperties": true
+        }
+      ],
+      "discriminator": {
+        "propertyName": "type"
+      }
     },
     "ToolCallUpdate": {
       "description": "Represents an upsert for a tool call that the language model has requested.\n\nTool calls are actions that the agent executes on behalf of the language model,\nsuch as reading files, executing code, or fetching data from external sources.\n\nOnly [`ToolCallUpdate::tool_call_id`] is required. Other fields have patch semantics:\nomitted fields leave the existing tool call value unchanged, `null` clears or\nunsets the value, and concrete values replace the previous value. For\ncollection fields, concrete arrays replace the previous collection, and both\n`null` and `[]` clear the collection. When a client receives a tool call ID it\nhas not seen before, omitted fields use client defaults.\n\nSee protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/v2/draft/tool-calls)",
@@ -1507,6 +1558,21 @@
         }
       },
       "required": ["path"]
+    },
+    "ToolCallPermissionSubject": {
+      "description": "Permission request details for a tool call.",
+      "type": "object",
+      "properties": {
+        "toolCall": {
+          "description": "Details about the tool call requiring permission.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/ToolCallUpdate"
+            }
+          ]
+        }
+      },
+      "required": ["toolCall"]
     },
     "PermissionOption": {
       "description": "An option presented to the user when requesting permission.",
