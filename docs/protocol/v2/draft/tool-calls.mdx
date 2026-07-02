@@ -332,28 +332,85 @@ Standard [content blocks](/protocol/v2/draft/content) like text, images, or reso
 
 ### Diffs
 
-File modifications shown as diffs:
+File modifications shown as diffs. A diff always includes structured file
+changes and can optionally include renderable patch text.
+
+Clients can use `changes` to identify affected absolute paths and file
+operations without parsing patch text. When `patch` is present, clients can
+also render the patch text directly. Agents SHOULD provide `patch` whenever
+feasible. Clients MUST handle diffs where `patch` is omitted or `null`.
 
 ```json
 {
   "type": "diff",
-  "path": "/home/user/project/src/config.json",
-  "oldText": "{\n  \"debug\": false\n}",
-  "newText": "{\n  \"debug\": true\n}"
+  "changes": [
+    {
+      "operation": "modify",
+      "path": "/home/user/project/src/config.json",
+      "fileType": "text",
+      "mimeType": "application/json"
+    }
+  ],
+  "patch": {
+    "format": "git_patch",
+    "diff": "diff --git /home/user/project/src/config.json /home/user/project/src/config.json\n--- /home/user/project/src/config.json\n+++ /home/user/project/src/config.json\n@@ -1,3 +1,3 @@\n {\n-  \"debug\": false\n+  \"debug\": true\n }\n"
+  }
 }
 ```
 
-<ParamField path="path" type="string" required>
-  The absolute file path being modified
+<ParamField path="changes" type="DiffChange[]" required>
+  Structured file changes described by this diff.
 </ParamField>
 
-<ParamField path="oldText" type="string">
-  The original content (null for new files)
+<ParamField path="patch" type="DiffPatch">
+  Optional renderable patch text. Agents SHOULD provide this whenever feasible.
+  Omitted or `null` means no patch text was provided.
 </ParamField>
 
-<ParamField path="newText" type="string" required>
-  The new content after modification
+<ParamField path="patch.format" type="string" required>
+  Patch format. The ACP-defined value is `git_patch`.
 </ParamField>
+
+<ParamField path="patch.diff" type="string" required>
+  Git patch text.
+</ParamField>
+
+<ParamField path="changes[].operation" type="string" required>
+  File operation: `add`, `delete`, `modify`, `move`, or `copy`.
+</ParamField>
+
+<ParamField path="changes[].path" type="string" required>
+  The absolute path after the operation. For deletes, this is the deleted path.
+</ParamField>
+
+<ParamField path="changes[].oldPath" type="string">
+  The absolute path before the operation. Required for `move` and `copy`.
+</ParamField>
+
+<ParamField path="changes[].fileType" type="string">
+  Optional file kind: `text`, `binary`, `directory`, or `symlink`.
+</ParamField>
+
+<ParamField path="changes[].mimeType" type="string">
+  Optional MIME type for the file contents.
+</ParamField>
+
+Omit `patch` when there is no useful text patch, such as a same-path binary
+update or symlink target change:
+
+```json
+{
+  "type": "diff",
+  "changes": [
+    {
+      "operation": "modify",
+      "path": "/home/user/project/assets/logo.png",
+      "fileType": "binary",
+      "mimeType": "image/png"
+    }
+  ]
+}
+```
 
 ## Following the Agent
 

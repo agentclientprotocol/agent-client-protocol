@@ -36,7 +36,7 @@ unstable = [
 # Protocol v2 is intentionally NOT part of the `unstable` umbrella.
 # It introduces a parallel `v2` module and (eventually) a different wire
 # version, so it must be opted into explicitly.
-unstable_protocol_v2 = []
+unstable_protocol_v2 = ["dep:diffy"]
 unstable_auth_methods = []
 unstable_elicitation = []
 unstable_llm_providers = []
@@ -55,6 +55,7 @@ tracing = ["dep:tracing"]
 [dependencies]
 anyhow = "1"
 derive_more = { version = "2", features = ["from", "display"] }
+diffy = { version = "0.5.0", optional = true }
 schemars = { version = "1" }
 # `rc` is required for Arc-based protocol strings and RawValue payloads.
 serde = { version = "1", features = ["derive", "rc"] }

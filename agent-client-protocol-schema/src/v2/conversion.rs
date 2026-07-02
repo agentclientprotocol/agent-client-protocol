@@ -8,7 +8,7 @@ use std::{
     collections::{BTreeMap, HashMap},
     fmt,
     hash::{BuildHasher, Hash},
-    path::PathBuf,
+    path::{Path, PathBuf},
     sync::Arc,
 };
 
@@ -2693,18 +2693,9 @@ impl IntoV1 for super::Diff {
     type Output = crate::v1::Diff;
 
     fn into_v1(self) -> Result<Self::Output> {
-        let Self {
-            path,
-            old_text,
-            new_text,
-            meta,
-        } = self;
-        Ok(crate::v1::Diff {
-            path: path.into_v1()?,
-            old_text: old_text.into_v1()?,
-            new_text: new_text.into_v1()?,
-            meta: meta.into_v1()?,
-        })
+        Err(ProtocolConversionError::new(
+            "v2 Diff cannot be represented in v1 because v1 requires oldText/newText while v2 carries standard patch text and structured changes",
+        ))
     }
 }
 
@@ -2718,13 +2709,40 @@ impl IntoV2 for crate::v1::Diff {
             new_text,
             meta,
         } = self;
-        Ok(super::Diff {
-            path: path.into_v2()?,
-            old_text: old_text.into_v2()?,
-            new_text: new_text.into_v2()?,
-            meta: meta.into_v2()?,
-        })
+        let path = path.into_v2()?;
+        let old_text = old_text.into_v2()?;
+        let new_text = new_text.into_v2()?;
+        let change = if old_text.is_some() {
+            super::DiffChange::modify(path.clone()).file_type(super::DiffFileType::Text)
+        } else {
+            super::DiffChange::add(path.clone()).file_type(super::DiffFileType::Text)
+        };
+        let diff = full_file_git_patch(&path, old_text.as_deref(), &new_text);
+
+        Ok(super::Diff::patch(diff, vec![change]).meta(meta.into_v2()?))
     }
+}
+
+fn full_file_git_patch(path: &Path, old_text: Option<&str>, new_text: &str) -> String {
+    let path = path.to_string_lossy();
+    let old = old_text.unwrap_or_default();
+    let original_filename = if old_text.is_some() {
+        path.to_string()
+    } else {
+        "/dev/null".to_string()
+    };
+
+    let mut options = diffy::DiffOptions::new();
+    options
+        .set_original_filename(original_filename)
+        .set_modified_filename(path.to_string());
+
+    let mut diff = format!("diff --git {path} {path}\n");
+    if old_text.is_none() {
+        diff.push_str("new file mode 100644\n");
+    }
+    diff.push_str(&options.create_patch(old, new_text).to_string());
+    diff
 }
 
 impl IntoV1 for super::ToolCallLocation {
@@ -9765,9 +9783,17 @@ mod tests {
                 "content": [
                     {
                         "type": "diff",
-                        "path": "/path",
-                        "oldText": "old contents",
-                        "newText": "new contents"
+                        "changes": [
+                            {
+                                "operation": "modify",
+                                "path": "/path",
+                                "fileType": "text"
+                            }
+                        ],
+                        "patch": {
+                            "format": "git_patch",
+                            "diff": "diff --git /path /path\n--- /path\n+++ /path\n@@ -1 +1 @@\n-old contents\n\\ No newline at end of file\n+new contents\n\\ No newline at end of file\n"
+                        }
                     }
                 ],
                 "locations": [
@@ -9790,7 +9816,7 @@ mod tests {
         assert_eq!(back.fields.title.as_deref(), Some("editing files"));
         assert_eq!(back.fields.kind, Some(v1::ToolKind::Edit));
         assert_eq!(back.fields.status, Some(v1::ToolCallStatus::InProgress));
-        assert_eq!(back.fields.content.as_ref().map(Vec::len), Some(1));
+        assert_eq!(back.fields.content.as_ref().map(Vec::len), Some(0));
         assert_eq!(back.fields.locations.as_ref().map(Vec::len), Some(1));
         assert_eq!(
             back.fields.raw_input,
@@ -10252,20 +10278,17 @@ mod tests {
                     "_chart",
                     BTreeMap::default(),
                 )),
-                v2::ToolCallContent::Diff(v2::Diff::new("/tmp/file.txt", "new")),
+                v2::ToolCallContent::Diff(v2::Diff::patch(
+                    "diff --git /tmp/file.txt /tmp/file.txt\n",
+                    vec![v2::DiffChange::modify("/tmp/file.txt")],
+                )),
             ]);
 
         let converted: v1::ToolCallUpdate = v2_to_v1(update).unwrap();
 
         assert_eq!(converted.fields.kind, None);
         assert_eq!(converted.fields.status, None);
-        assert_eq!(
-            converted.fields.content,
-            Some(vec![v1::ToolCallContent::Diff(v1::Diff::new(
-                "/tmp/file.txt",
-                "new"
-            ))])
-        );
+        assert_eq!(converted.fields.content, Some(vec![]));
     }
 
     #[test]
@@ -10414,9 +10437,9 @@ mod tests {
         let converted: v2::ToolCallUpdate = v1_to_v2(update).unwrap();
         assert_eq!(
             converted.content,
-            crate::MaybeUndefined::Value(vec![v2::ToolCallContent::Diff(v2::Diff::new(
-                "/tmp/file.txt",
-                "new"
+            crate::MaybeUndefined::Value(vec![v2::ToolCallContent::Diff(v2::Diff::patch(
+                full_file_git_patch(&PathBuf::from("/tmp/file.txt"), None, "new"),
+                vec![v2::DiffChange::add("/tmp/file.txt").file_type(v2::DiffFileType::Text)],
             ))])
         );
     }
