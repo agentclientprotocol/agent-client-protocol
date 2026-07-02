@@ -188,13 +188,18 @@
               "rfds/end-turn-token-usage",
               "rfds/auth-methods",
               "rfds/diff-delete",
-              "rfds/elicitation",
               "rfds/next-edit-suggestions",
               "rfds/custom-llm-endpoint",
-              "rfds/plan-operations",
+              "rfds/plan-operations"
+            ]
+          },
+          {
+            "group": "Active",
+            "pages": [
+              "rfds/elicitation",
               "rfds/streamable-http-websocket-transport",
               {
-                "group": "v2 Draft",
+                "group": "v2 Active",
                 "expanded": true,
                 "root": "rfds/v2/overview",
                 "pages": [
