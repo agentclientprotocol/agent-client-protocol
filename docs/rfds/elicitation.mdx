@@ -196,7 +196,6 @@ This distinction is reflected in the client capabilities model, allowing clients
 - Clients declaring the `elicitation` capability MUST support at least one mode (`form` or `url`).
 - Agents MUST NOT send elicitation requests with modes that are not supported by the client.
 - For URL mode, the `url` parameter MUST contain a valid URL.
-- Agents MUST NOT return the `URLElicitationRequiredError` (code `-32042`) except when URL mode elicitation is required.
 
 Unknown elicitation `mode` values are reserved for future ACP variants or implementation-specific extensions. Implementation-specific modes MUST begin with `_`. Clients that do not understand a mode should preserve the raw payload when storing, replaying, proxying, or forwarding elicitation requests, but MUST NOT render it as `form` or `url` or otherwise treat it as supported.
 
@@ -537,34 +536,6 @@ sequenceDiagram
     Note over Agent: Continue processing with new information
 ```
 
-#### URL Mode With Elicitation Required Error Flow
-
-```mermaid
-sequenceDiagram
-    participant UserAgent as User Agent (Browser)
-    participant User
-    participant Client
-    participant Agent
-
-    Client->>Agent: Request (e.g., tool call)
-
-    Note over Agent: Agent needs authorization
-    Agent->>Client: URLElicitationRequiredError
-    Note over Client: Client notes the original request can be retried after elicitation
-
-    Client->>User: Present consent to open URL
-    User-->>Client: Provide consent
-
-    Client->>UserAgent: Open URL
-
-    Note over User,UserAgent: User interaction
-
-    UserAgent-->>Agent: Interaction complete
-    Agent-->>Client: elicitation/complete (optional)
-
-    Client->>Agent: Retry original request (optional)
-```
-
 ### Completion Notifications for URL Mode
 
 Following MCP, agents MAY send an `elicitation/complete` notification when an out-of-band interaction started by URL mode elicitation is completed:
@@ -590,38 +561,7 @@ Clients:
 - MAY use this notification to automatically retry requests, update UI, or continue an interaction
 - SHOULD provide manual controls for the user to retry or cancel if the notification never arrives
 
-### URL Elicitation Required Error
-
-When a request cannot be processed until a URL mode elicitation is completed, the agent MAY return a `URLElicitationRequiredError` (code `-32042`). This allows clients to understand that a specific elicitation is required before retrying the original request.
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 2,
-  "error": {
-    "code": -32042,
-    "message": "This request requires authorization.",
-    "data": {
-      "elicitations": [
-        {
-          "mode": "url",
-          "elicitationId": "github-oauth-001",
-          "url": "https://agent.example.com/connect?elicitationId=github-oauth-001",
-          "message": "Authorization is required to access your GitHub repositories."
-        }
-      ]
-    }
-  }
-}
-```
-
-Any elicitations returned in the error MUST be URL mode elicitations with an `elicitationId`. Clients may automatically retry the failed request after receiving a completion notification.
-
 ### Error Handling
-
-Agents MUST return standard JSON-RPC errors for common failure cases:
-
-- When a request cannot be processed until a URL mode elicitation is completed: `-32042` (`URLElicitationRequiredError`)
 
 Clients MUST return standard JSON-RPC errors for common failure cases:
 
@@ -849,7 +789,8 @@ For v1, we recommend starting with JSON Schema validation only. If more complex 
 
 ## Revision history
 
-- 2026-02-06: Spec alignment review. Fixed OAuth URL examples to use agent connect endpoints (not direct OAuth provider URLs) per MCP phishing prevention guidance. Added normative requirements section (MUST support at least one mode, MUST NOT send unsupported modes, url MUST be valid). Added Error Handling section with `-32042` and `-32602` error codes. Added message flow diagrams (form mode, URL mode, URL mode with error). Expanded safe URL handling requirements (pre-fetch prohibition, Punycode warnings, non-clickable URLs in form fields). Added server-side schema validation SHOULD requirement. Added Statefulness subsection with normative requirements for state association and user identification.
-- 2026-02-05: Major revision to align with MCP draft elicitation specification. Updated enum schema to use `oneOf`/`anyOf` with `const`/`title` instead of `enumNames`. Added multi-select array support. Added `pattern` field for strings. Added URLElicitationRequiredError (-32042) section. Added completion notifications section. Expanded security considerations including phishing prevention. Updated all examples to match MCP draft spec format.
+- 2026-07-01: Removed the separate URL-required error flow; URL elicitations use `elicitation/create` and optional `elicitation/complete`.
+- 2026-02-06: Spec alignment review. Fixed OAuth URL examples to use agent connect endpoints (not direct OAuth provider URLs) per MCP phishing prevention guidance. Added normative requirements section (MUST support at least one mode, MUST NOT send unsupported modes, url MUST be valid). Added Error Handling section for unsupported elicitation modes. Added message flow diagrams (form mode and URL mode). Expanded safe URL handling requirements (pre-fetch prohibition, Punycode warnings, non-clickable URLs in form fields). Added server-side schema validation SHOULD requirement. Added Statefulness subsection with normative requirements for state association and user identification.
+- 2026-02-05: Major revision to align with MCP draft elicitation specification. Updated enum schema to use `oneOf`/`anyOf` with `const`/`title` instead of `enumNames`. Added multi-select array support. Added `pattern` field for strings. Added completion notifications section. Expanded security considerations including phishing prevention. Updated all examples to match MCP draft spec format.
 - 2026-02-05: Initial MCP alignment. Removed explicit "input types" in favor of restricted JSON Schema (client decides rendering). Added `mode` field (`form`/`url`). Updated capability model to use `form`/`url` sub-objects per MCP SEP-1036. Added three-action response model (`accept`/`decline`/`cancel`). Removed `password` type (MCP prohibits sensitive data in form mode).
 - 2026-01-12: Initial draft based on community discussions in PR #340 (user selection), PR #210 (session config alignment), and PR #330 (authentication use cases). Aligned with MCP elicitation patterns.

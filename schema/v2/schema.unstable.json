@@ -5247,13 +5247,6 @@
           "const": -32002
         },
         {
-          "title": "URL elicitation required",
-          "description": "**URL elicitation required**: **UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nThe agent requires user input via a URL-based elicitation before it can proceed.",
-          "type": "integer",
-          "format": "int32",
-          "const": -32042
-        },
-        {
           "title": "Other",
           "description": "Other undefined error code.",
           "type": "integer",

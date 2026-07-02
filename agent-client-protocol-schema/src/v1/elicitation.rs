@@ -2094,78 +2094,6 @@ impl CompleteElicitationNotification {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
-/// Data payload for the `UrlElicitationRequired` error, describing the URL elicitations
-/// the user must complete.
-#[serde_as]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-#[non_exhaustive]
-pub struct UrlElicitationRequiredData {
-    /// The URL elicitations the user must complete.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
-    pub elicitations: Vec<UrlElicitationRequiredItem>,
-}
-
-impl UrlElicitationRequiredData {
-    /// Builds [`UrlElicitationRequiredData`] with the required fields set; optional fields start unset or empty.
-    #[must_use]
-    pub fn new(elicitations: Vec<UrlElicitationRequiredItem>) -> Self {
-        Self { elicitations }
-    }
-}
-
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
-/// A single URL elicitation item within the `UrlElicitationRequired` error data.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-#[non_exhaustive]
-pub struct UrlElicitationRequiredItem {
-    /// The elicitation mode (always `"url"` for this item type).
-    pub mode: ElicitationUrlOnlyMode,
-    /// The unique identifier for this elicitation.
-    pub elicitation_id: ElicitationId,
-    /// The URL the user should be directed to.
-    #[schemars(extend("format" = "uri"))]
-    pub url: String,
-    /// A human-readable message describing what input is needed.
-    pub message: String,
-}
-
-/// Type discriminator for URL-only elicitation error items.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema, Default)]
-#[serde(rename_all = "snake_case")]
-#[non_exhaustive]
-pub enum ElicitationUrlOnlyMode {
-    /// URL elicitation mode.
-    #[default]
-    Url,
-}
-
-impl UrlElicitationRequiredItem {
-    /// Builds [`UrlElicitationRequiredItem`] with the required fields set; optional fields start unset or empty.
-    #[must_use]
-    pub fn new(
-        elicitation_id: impl Into<ElicitationId>,
-        url: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
-        Self {
-            mode: ElicitationUrlOnlyMode::Url,
-            elicitation_id: elicitation_id.into(),
-            url: url.into(),
-            message: message.into(),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2522,27 +2450,6 @@ mod tests {
         let roundtripped: ElicitationCapabilities = serde_json::from_value(json).unwrap();
         assert!(roundtripped.form.is_some());
         assert!(roundtripped.url.is_some());
-    }
-
-    #[test]
-    fn url_elicitation_required_data_serialization() {
-        let data = UrlElicitationRequiredData::new(vec![UrlElicitationRequiredItem::new(
-            "elic_1",
-            "https://example.com/auth",
-            "Please authenticate",
-        )]);
-
-        let json = serde_json::to_value(&data).unwrap();
-        assert_eq!(json["elicitations"][0]["mode"], "url");
-        assert_eq!(json["elicitations"][0]["elicitationId"], "elic_1");
-        assert_eq!(json["elicitations"][0]["url"], "https://example.com/auth");
-
-        let roundtripped: UrlElicitationRequiredData = serde_json::from_value(json).unwrap();
-        assert_eq!(roundtripped.elicitations.len(), 1);
-        assert_eq!(
-            roundtripped.elicitations[0].mode,
-            ElicitationUrlOnlyMode::Url
-        );
     }
 
     #[test]
