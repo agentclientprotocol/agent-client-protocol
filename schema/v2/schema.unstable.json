@@ -689,13 +689,26 @@
             }
           ]
         },
+        "title": {
+          "description": "Human-readable title for the permission prompt.\n\nThis title is specific to the permission prompt and does not update any\nsubject's displayed title.",
+          "type": "string"
+        },
+        "description": {
+          "description": "Optional human-readable explanation of why permission is needed.\n\nThis text is specific to the permission prompt and does not update any\nsubject's displayed content. Omitted or `null` both mean no separate\npermission description was provided.",
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
+        },
         "subject": {
-          "description": "Details about the operation requiring permission.",
-          "allOf": [
+          "description": "Optional structured context about the operation requiring permission.\n\nOmitted or `null` both mean no structured subject was provided.",
+          "anyOf": [
             {
               "$ref": "#/$defs/RequestPermissionSubject"
+            },
+            {
+              "type": "null"
             }
-          ]
+          ],
+          "x-deserialize-default-on-error": true
         },
         "options": {
           "description": "Available permission options for the user to choose from.",
@@ -713,7 +726,7 @@
           "additionalProperties": true
         }
       },
-      "required": ["sessionId", "subject", "options"],
+      "required": ["sessionId", "title", "options"],
       "x-side": "client",
       "x-method": "session/request_permission"
     },

@@ -1493,10 +1493,17 @@ impl IntoV1 for super::RequestPermissionRequest {
     fn into_v1(self) -> Result<Self::Output> {
         let Self {
             session_id,
+            title: _,
+            description: _,
             subject,
             options,
             meta,
         } = self;
+        let Some(subject) = subject else {
+            return Err(ProtocolConversionError::new(
+                "v2 RequestPermissionRequest without `subject` cannot be represented in v1",
+            ));
+        };
         let tool_call = match subject {
             super::RequestPermissionSubject::ToolCall(subject) => {
                 let super::ToolCallPermissionSubject { tool_call } = *subject;
@@ -1528,9 +1535,17 @@ impl IntoV2 for crate::v1::RequestPermissionRequest {
             options,
             meta,
         } = self;
+        let title = tool_call
+            .fields
+            .title
+            .clone()
+            .filter(|title| !title.is_empty())
+            .unwrap_or_else(|| "Permission requested".to_string());
         Ok(super::RequestPermissionRequest {
             session_id: session_id.into_v2()?,
-            subject: super::RequestPermissionSubject::from(tool_call.into_v2()?),
+            title,
+            description: None,
+            subject: Some(super::RequestPermissionSubject::from(tool_call.into_v2()?)),
             options: options.into_v2()?,
             meta: meta.into_v2()?,
         })
@@ -10486,15 +10501,18 @@ mod tests {
             "v2 AvailableCommandInput variant `_choices` cannot be represented in v1",
         );
         assert_v2_to_v1_error(
-            v2::RequestPermissionRequest::new(
-                "session-id",
-                v2::RequestPermissionSubject::Other(v2::OtherRequestPermissionSubject::new(
-                    "_review",
-                    std::collections::BTreeMap::new(),
+            v2::RequestPermissionRequest::new("session-id", "Permission requested", Vec::new())
+                .subject(v2::RequestPermissionSubject::Other(
+                    v2::OtherRequestPermissionSubject::new(
+                        "_review",
+                        std::collections::BTreeMap::new(),
+                    ),
                 )),
-                Vec::new(),
-            ),
             "v2 RequestPermissionSubject variant `_review` cannot be represented in v1",
+        );
+        assert_v2_to_v1_error(
+            v2::RequestPermissionRequest::new("session-id", "Permission requested", Vec::new()),
+            "v2 RequestPermissionRequest without `subject` cannot be represented in v1",
         );
         assert_v2_to_v1_error(
             v2::RequestPermissionOutcome::Other(v2::OtherRequestPermissionOutcome::new(
@@ -10553,6 +10571,35 @@ mod tests {
         assert_v1_round_trip::<v1::RequestPermissionResponse, v2::RequestPermissionResponse>(
             selected,
         );
+    }
+
+    #[test]
+    fn converts_v1_request_permission_request_with_required_v2_title() {
+        let titled = v1::RequestPermissionRequest::new(
+            "session-id",
+            v1::ToolCallUpdate::new("call_1", v1::ToolCallUpdateFields::new().title("Read file")),
+            Vec::new(),
+        );
+
+        let converted: v2::RequestPermissionRequest = v1_to_v2(titled).unwrap();
+        assert_eq!(converted.title, "Read file");
+        let Some(v2::RequestPermissionSubject::ToolCall(subject)) = converted.subject else {
+            panic!("expected tool-call permission subject");
+        };
+        assert_eq!(subject.tool_call.tool_call_id.to_string(), "call_1");
+
+        let fallback = v1::RequestPermissionRequest::new(
+            "session-id",
+            v1::ToolCallUpdate::new("call_2", v1::ToolCallUpdateFields::new()),
+            Vec::new(),
+        );
+
+        let converted: v2::RequestPermissionRequest = v1_to_v2(fallback).unwrap();
+        assert_eq!(converted.title, "Permission requested");
+        let Some(v2::RequestPermissionSubject::ToolCall(subject)) = converted.subject else {
+            panic!("expected tool-call permission subject");
+        };
+        assert_eq!(subject.tool_call.tool_call_id.to_string(), "call_2");
     }
 
     #[test]

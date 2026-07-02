@@ -164,7 +164,7 @@ with `content: []` or `content: null` clears the tool-call content. A
 
 ## Requesting Permission
 
-The Agent **MAY** request permission from the user before executing a tool call by calling the `session/request_permission` method:
+The Agent **MAY** request permission from the user before proceeding with an operation, such as executing a tool call, by calling the `session/request_permission` method:
 
 ```json
 {
@@ -173,6 +173,8 @@ The Agent **MAY** request permission from the user before executing a tool call 
   "method": "session/request_permission",
   "params": {
     "sessionId": "sess_abc123def456",
+    "title": "Approve file edit?",
+    "description": "Allow the agent to edit src/main.rs?",
     "subject": {
       "type": "tool_call",
       "toolCall": {
@@ -199,12 +201,24 @@ The Agent **MAY** request permission from the user before executing a tool call 
   The session ID for this request
 </ParamField>
 
-<ParamField path="subject" type="RequestPermissionSubject" required>
-  The operation requiring permission. For tool calls, use `type: "tool_call"`
-  with a `toolCall` update containing details about the operation. Custom or
-  future subject types may appear; clients that do not understand a subject
-  should preserve it when proxying and use a generic permission prompt or
-  decline according to policy.
+<ParamField path="title" type="string" required>
+  Title shown with the permission prompt. This text is separate from any
+  `toolCall` update and does not replace the tool-call title.
+</ParamField>
+
+<ParamField path="description" type="string">
+  Optional explanation shown with the permission prompt. This text is separate
+  from any `toolCall` update and does not replace tool-call content. Omitted or
+  `null` means no separate permission description was provided.
+</ParamField>
+
+<ParamField path="subject" type="RequestPermissionSubject">
+  Optional structured context about the operation requiring permission. For tool
+  calls, use `type: "tool_call"` with a `toolCall` update containing details
+  about the operation. Omitted or `null` means no structured subject was
+  provided. Custom or future subject types may appear. Clients that do not
+  understand a subject should preserve it when proxying and use the common
+  prompt fields or decline according to policy.
 </ParamField>
 
 <ParamField path="options" type="PermissionOption[]" required>

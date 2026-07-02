@@ -1,0 +1,101 @@
+---
+title: "v2 Permission Requests"
+---
+
+Author(s): [@benbrandt](https://github.com/benbrandt)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+ACP v2 should make `session/request_permission` extensible beyond tool calls by giving every permission prompt a required `title` and optional structured `subject` context. Tool-call permissions use `subject.type: "tool_call"`, while permission requests that are not tied to a structured subject omit `subject`.
+
+Permission prompt copy should live in common `title` and `description` fields rather than in subject-specific data.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+In v1, permission requests are tied directly to a `toolCall` field. This works for tool execution approvals, but it makes the method harder to extend to other approval-like decisions.
+
+It also tempts agents to put permission prompt text into `ToolCallUpdate.title` or `ToolCallUpdate.content`. In v2, those fields are patch state for the displayed tool call. Using them for permission-only UI copy can accidentally change the tool call shown elsewhere.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+`RequestPermissionRequest` should have these common fields:
+
+- `sessionId`
+- `title`
+- `description`
+- `options`
+- `subject`
+- `_meta`
+
+`title` is required and is the minimum user-visible prompt text. `description` is optional explanatory text. Omitted and `null` descriptions are equivalent and mean no extra detail was provided.
+
+`subject` is optional structured context and uses a tagged union when present:
+
+```json
+{
+  "title": "Approve file edit?",
+  "description": "Allow the agent to edit src/main.rs?",
+  "subject": {
+    "type": "tool_call",
+    "toolCall": {
+      "toolCallId": "call_001"
+    }
+  }
+}
+```
+
+```json
+{
+  "title": "Continue with elevated permissions?"
+}
+```
+
+Omitted and `null` subjects are equivalent and mean no structured subject was provided. A missing subject is not a separate subject variant.
+
+Unknown future subject types should be preserved by clients that proxy, store, replay, or forward permission requests. Clients that cannot understand the subject should show a generic permission prompt or decline according to policy.
+
+## Shiny future
+
+> How will things play out once this feature exists?
+
+Agents can request permission for tool calls without conflating permission UI text with tool-call state. They can also request permission for operations that have no structured subject, and future structured subjects can be added without changing the common permission request fields.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+1. Replace the v1-style top-level `toolCall` request field in v2 with an optional `subject` tagged union.
+2. Add the `tool_call` subject variant.
+3. Add common required `title` and optional `description` fields.
+4. Keep `options` as the required list of choices the user can select.
+5. Preserve unknown subject variants while keeping known subject payloads distinct from unknown fallback variants.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Why require `title`?
+
+The title is the minimum text a client can display when asking the user to choose an option. Requiring it keeps subject-less permission requests usable without requiring clients to synthesize prompt copy.
+
+### Why make `subject` optional?
+
+Some permission requests are valid without a structured target. In those cases, `title`, `description`, and `options` are the permission request, while `subject` is additional context for clients that can render a richer prompt.
+
+### Why not flatten subject fields into the request?
+
+`title`, `description`, and `options` describe the permission prompt. `subject` describes what the permission is about. Keeping the subject nested avoids collisions between common request fields and future subject-specific fields.
+
+### Why not use `ToolCallUpdate.title` or `ToolCallUpdate.content` for permission copy?
+
+Those fields patch the displayed tool call. Permission-only prompt copy belongs in the common `title` and `description` fields so a permission request does not accidentally replace tool-call title or content. It's quite common to have a reason you want to display for the permission request itself without updating the persisted tool call for the rest of the session.
+
+## Revision history
+
+- 2026-07-02: Initial draft

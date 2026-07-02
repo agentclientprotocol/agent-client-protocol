@@ -2029,14 +2029,32 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
+<ResponseField name="description" type={"string | null"} >
+  Optional human-readable explanation of why permission is needed.
+
+This text is specific to the permission prompt and does not update any
+subject's displayed content. Omitted or `null` both mean no separate
+permission description was provided.
+
+</ResponseField>
 <ResponseField name="options" type={<a href="#permissionoption">PermissionOption[]</a>} required>
   Available permission options for the user to choose from.
 </ResponseField>
 <ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
   The session ID for this request.
 </ResponseField>
-<ResponseField name="subject" type={<a href="#requestpermissionsubject">RequestPermissionSubject</a>} required>
-  Details about the operation requiring permission.
+<ResponseField name="subject" type={<><span><a href="#requestpermissionsubject">RequestPermissionSubject</a></span><span> | null</span></>} >
+  Optional structured context about the operation requiring permission.
+
+Omitted or `null` both mean no structured subject was provided.
+
+</ResponseField>
+<ResponseField name="title" type={"string"} required>
+  Human-readable title for the permission prompt.
+
+This title is specific to the permission prompt and does not update any
+subject's displayed title.
+
 </ResponseField>
 
 #### <span class="font-mono">RequestPermissionResponse</span>

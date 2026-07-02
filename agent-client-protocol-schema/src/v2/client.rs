@@ -1273,8 +1273,27 @@ impl TextCommandInput {
 pub struct RequestPermissionRequest {
     /// The session ID for this request.
     pub session_id: SessionId,
-    /// Details about the operation requiring permission.
-    pub subject: RequestPermissionSubject,
+    /// Human-readable title for the permission prompt.
+    ///
+    /// This title is specific to the permission prompt and does not update any
+    /// subject's displayed title.
+    pub title: String,
+    /// Optional human-readable explanation of why permission is needed.
+    ///
+    /// This text is specific to the permission prompt and does not update any
+    /// subject's displayed content. Omitted or `null` both mean no separate
+    /// permission description was provided.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
+    pub description: Option<String>,
+    /// Optional structured context about the operation requiring permission.
+    ///
+    /// Omitted or `null` both mean no structured subject was provided.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
+    pub subject: Option<RequestPermissionSubject>,
     /// Available permission options for the user to choose from.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
     #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
@@ -1296,15 +1315,31 @@ impl RequestPermissionRequest {
     #[must_use]
     pub fn new(
         session_id: impl Into<SessionId>,
-        subject: impl Into<RequestPermissionSubject>,
+        title: impl Into<String>,
         options: Vec<PermissionOption>,
     ) -> Self {
         Self {
             session_id: session_id.into(),
-            subject: subject.into(),
+            title: title.into(),
+            description: None,
+            subject: None,
             options,
             meta: None,
         }
+    }
+
+    /// Sets or clears the optional `description` field.
+    #[must_use]
+    pub fn description(mut self, description: impl IntoOption<String>) -> Self {
+        self.description = description.into_option();
+        self
+    }
+
+    /// Sets or clears the optional `subject` field.
+    #[must_use]
+    pub fn subject(mut self, subject: impl IntoOption<RequestPermissionSubject>) -> Self {
+        self.subject = subject.into_option();
+        self
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -2819,6 +2854,79 @@ mod tests {
         assert!(
             serde_json::from_value::<RequestPermissionSubject>(json!({
                 "type": 1
+            }))
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn request_permission_title_and_description_are_separate_from_tool_call_content() {
+        use serde_json::json;
+
+        let request =
+            RequestPermissionRequest::new("sess_abc123def456", "Approve file edit?", Vec::new())
+                .description("Allow this tool to edit src/main.rs?")
+                .subject(RequestPermissionSubject::from(ToolCallUpdate::new(
+                    "call_001",
+                )));
+
+        assert_eq!(
+            serde_json::to_value(request).unwrap(),
+            json!({
+                "sessionId": "sess_abc123def456",
+                "title": "Approve file edit?",
+                "description": "Allow this tool to edit src/main.rs?",
+                "subject": {
+                    "type": "tool_call",
+                    "toolCall": {
+                        "toolCallId": "call_001"
+                    }
+                },
+                "options": []
+            })
+        );
+    }
+
+    #[test]
+    fn request_permission_requires_title_and_allows_missing_subject() {
+        use serde_json::json;
+
+        let request = RequestPermissionRequest::new(
+            "sess_abc123def456",
+            "Approve elevated permissions?",
+            Vec::new(),
+        );
+
+        assert_eq!(
+            serde_json::to_value(request).unwrap(),
+            json!({
+                "sessionId": "sess_abc123def456",
+                "title": "Approve elevated permissions?",
+                "options": []
+            })
+        );
+
+        let missing_subject: RequestPermissionRequest = serde_json::from_value(json!({
+            "sessionId": "sess_abc123def456",
+            "title": "Approve elevated permissions?",
+            "options": []
+        }))
+        .unwrap();
+        assert!(missing_subject.subject.is_none());
+
+        let null_subject: RequestPermissionRequest = serde_json::from_value(json!({
+            "sessionId": "sess_abc123def456",
+            "title": "Approve elevated permissions?",
+            "subject": null,
+            "options": []
+        }))
+        .unwrap();
+        assert!(null_subject.subject.is_none());
+
+        assert!(
+            serde_json::from_value::<RequestPermissionRequest>(json!({
+                "sessionId": "sess_abc123def456",
+                "options": []
             }))
             .is_err()
         );
