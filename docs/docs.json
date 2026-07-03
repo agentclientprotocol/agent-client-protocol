@@ -119,6 +119,7 @@
                 "hidden": true,
                 "pages": [
                   "protocol/v2/overview",
+                  "protocol/v2/migration",
                   "protocol/v2/initialization",
                   "protocol/v2/authentication",
                   "protocol/v2/session-setup",
