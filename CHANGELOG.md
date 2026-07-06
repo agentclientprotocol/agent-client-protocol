@@ -1,5 +1,33 @@
 # Changelog
 
+## [1.3.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.2.0...v1.3.0) - 2026-07-06
+
+### Added
+
+- *(schema)* Stabilize boolean session config options ([#1604](https://github.com/agentclientprotocol/agent-client-protocol/pull/1604))
+- *(unstable-v2)* tighten v2 field validation ([#1587](https://github.com/agentclientprotocol/agent-client-protocol/pull/1587))
+- *(unstable-v2)* New diff format ([#1586](https://github.com/agentclientprotocol/agent-client-protocol/pull/1586))
+- *(unstable-v2)* Unify session/load and session/resume ([#1584](https://github.com/agentclientprotocol/agent-client-protocol/pull/1584))
+- *(unstable-v2)* require more session methods by default ([#1578](https://github.com/agentclientprotocol/agent-client-protocol/pull/1578))
+- *(unstable-v2)* More flexible permission requests ([#1577](https://github.com/agentclientprotocol/agent-client-protocol/pull/1577))
+- *(unstable-v2)* Align v2 Content types with the latest MCP spec ([#1576](https://github.com/agentclientprotocol/agent-client-protocol/pull/1576))
+- *(unstable-v2)* Unify the ID naming conventions across the schema ([#1567](https://github.com/agentclientprotocol/agent-client-protocol/pull/1567))
+- *(unstable-v2)* require typed config values ([#1561](https://github.com/agentclientprotocol/agent-client-protocol/pull/1561))
+
+### Fixed
+
+- *(schema)* Reject malformed protocol fields ([#1583](https://github.com/agentclientprotocol/agent-client-protocol/pull/1583))
+- *(unstable)* remove URL elicitation error ([#1574](https://github.com/agentclientprotocol/agent-client-protocol/pull/1574))
+- *(unstable-v2)* Preserve meta update signals in v2 ([#1573](https://github.com/agentclientprotocol/agent-client-protocol/pull/1573))
+- *(unstable-v2)* Continue to make more enums future compatible ([#1571](https://github.com/agentclientprotocol/agent-client-protocol/pull/1571))
+- *(unstable-v2)* Make empty MCP arrays optional ([#1570](https://github.com/agentclientprotocol/agent-client-protocol/pull/1570))
+- *(unstable-v2)* Make all session lifecycle requests consistent ([#1555](https://github.com/agentclientprotocol/agent-client-protocol/pull/1555))
+
+### Other
+
+- *(schema)* Clean up generated documentation and make wording more consistent ([#1568](https://github.com/agentclientprotocol/agent-client-protocol/pull/1568))
+- *(rust)* Box v2 protocol enum variants ([#1562](https://github.com/agentclientprotocol/agent-client-protocol/pull/1562))
+
 ## [1.2.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.1.0...v1.2.0) - 2026-06-29
 
 ### Added
