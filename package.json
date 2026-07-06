@@ -25,7 +25,7 @@
     "spellcheck": "./scripts/spellcheck.sh",
     "spellcheck:fix": "./scripts/spellcheck.sh --write-changes",
     "generate:registry": "python3 scripts/generate_registry_docs.py",
-    "check": "cargo clippy --all-features && npm run format:check && npm run spellcheck && cargo test --all-features",
+    "check": "cargo clippy && cargo clippy --all-targets --all-features && npm run format:check && npm run spellcheck && cargo test --all-features",
     "docs": "cd docs && npx mint dev"
   },
   "devDependencies": {
