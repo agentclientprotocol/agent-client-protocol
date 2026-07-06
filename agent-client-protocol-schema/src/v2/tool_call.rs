@@ -347,7 +347,6 @@ pub enum ToolCallStatus {
 /// See protocol docs: [Content](https://agentclientprotocol.com/protocol/tool-calls#content)
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(tag = "type", rename_all = "snake_case")]
-#[schemars(extend("discriminator" = {"propertyName": "type"}))]
 #[non_exhaustive]
 pub enum ToolCallContent {
     /// Standard content block (text, images, resources).
@@ -738,7 +737,6 @@ impl DiffChange {
 /// File operation for a [`DiffChange`].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(tag = "operation", rename_all = "snake_case")]
-#[schemars(extend("discriminator" = {"propertyName": "operation"}))]
 #[non_exhaustive]
 pub enum DiffChangeOperation {
     /// A file was added.

@@ -1481,7 +1481,6 @@ impl ResumeSessionRequest {
 /// Replay includes the position identified by the cursor.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(tag = "type", rename_all = "snake_case")]
-#[schemars(extend("discriminator" = {"propertyName": "type"}))]
 #[non_exhaustive]
 pub enum ReplayFrom {
     /// Replay the whole conversation from its first replayable entry.
@@ -2337,7 +2336,6 @@ pub enum SessionConfigOptionCategory {
 /// Type-specific session configuration option payload.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(tag = "type", rename_all = "snake_case")]
-#[schemars(extend("discriminator" = {"propertyName": "type"}))]
 #[non_exhaustive]
 pub enum SessionConfigKind {
     /// Single-value selector (dropdown).
@@ -2539,7 +2537,6 @@ impl SessionConfigOption {
 /// text option would get its own variant.
 #[derive(Debug, Clone, Serialize, JsonSchema, PartialEq, Eq)]
 #[serde(tag = "type", rename_all = "snake_case")]
-#[schemars(extend("discriminator" = {"propertyName": "type"}))]
 #[non_exhaustive]
 pub enum SessionConfigOptionValue {
     /// A [`SessionConfigValueId`] string value (`type: "id"`).
@@ -2849,7 +2846,6 @@ impl SetSessionConfigOptionResponse {
 /// See protocol docs: [MCP Servers](https://agentclientprotocol.com/protocol/session-setup#mcp-servers)
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(tag = "type", rename_all = "snake_case")]
-#[schemars(extend("discriminator" = {"propertyName": "type"}))]
 #[non_exhaustive]
 pub enum McpServer {
     /// HTTP transport configuration

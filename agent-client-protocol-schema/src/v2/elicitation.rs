@@ -730,7 +730,6 @@ fn other_multi_select_items_schema(schema: &mut Schema) {
 /// Items for a multi-select (array) property schema.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(tag = "type", rename_all = "snake_case")]
-#[schemars(extend("discriminator" = {"propertyName": "type"}))]
 #[non_exhaustive]
 pub enum MultiSelectItems {
     /// Multi-select string items with plain string values.
@@ -871,7 +870,6 @@ impl MultiSelectPropertySchema {
 /// Multi-select enums use the `Array` variant.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(tag = "type", rename_all = "snake_case")]
-#[schemars(extend("discriminator" = {"propertyName": "type"}))]
 #[non_exhaustive]
 pub enum ElicitationPropertySchema {
     /// String property (or single-select enum when `enum`/`oneOf` is set).
@@ -1503,7 +1501,6 @@ impl CreateElicitationRequest {
 /// The mode of elicitation, determining how user input is collected.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[serde(tag = "mode", rename_all = "snake_case")]
-#[schemars(extend("discriminator" = {"propertyName": "mode"}))]
 #[non_exhaustive]
 pub enum ElicitationMode {
     /// Form-based elicitation where the client renders a form from the provided schema.
@@ -1763,7 +1760,6 @@ impl CreateElicitationResponse {
 /// The user's action in response to an elicitation.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[serde(tag = "action", rename_all = "snake_case")]
-#[schemars(extend("discriminator" = {"propertyName": "action"}))]
 #[non_exhaustive]
 pub enum ElicitationAction {
     /// The user accepted and provided content.

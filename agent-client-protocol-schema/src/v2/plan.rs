@@ -74,7 +74,6 @@ impl PlanUpdate {
 /// Updated content for a plan.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(tag = "type", rename_all = "snake_case")]
-#[schemars(extend("discriminator" = {"propertyName": "type"}))]
 #[non_exhaustive]
 pub enum PlanUpdateContent {
     /// Structured plan entries.

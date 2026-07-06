@@ -35,7 +35,6 @@ use crate::{IntoOption, SkipListener};
 /// See protocol docs: [Content](https://agentclientprotocol.com/protocol/content)
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, JsonSchema)]
 #[serde(tag = "type", rename_all = "snake_case")]
-#[schemars(extend("discriminator" = {"propertyName": "type"}))]
 #[non_exhaustive]
 pub enum ContentBlock {
     /// Text content. May be plain text or formatted with Markdown.

@@ -95,7 +95,6 @@ impl UpdateSessionNotification {
 /// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-lifecycle#3-agent-reports-output)
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[serde(tag = "sessionUpdate", rename_all = "snake_case")]
-#[schemars(extend("discriminator" = {"propertyName": "sessionUpdate"}))]
 #[non_exhaustive]
 pub enum SessionUpdate {
     /// A chunk of the user's message being streamed.
@@ -459,7 +458,6 @@ impl UsageUpdate {
 /// that the session is idle, or that progress is blocked on user action.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[serde(tag = "state", rename_all = "snake_case")]
-#[schemars(extend("discriminator" = {"propertyName": "state"}))]
 #[non_exhaustive]
 pub enum StateUpdate {
     /// The agent is actively processing work in the session.
@@ -1131,7 +1129,6 @@ impl AvailableCommand {
 /// The input specification for a command.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(tag = "type", rename_all = "snake_case")]
-#[schemars(extend("discriminator" = {"propertyName": "type"}))]
 #[non_exhaustive]
 pub enum AvailableCommandInput {
     /// All text that was typed after the command name is provided as input.
@@ -1360,7 +1357,6 @@ impl RequestPermissionRequest {
 /// The operation requiring permission.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[serde(tag = "type", rename_all = "snake_case")]
-#[schemars(extend("discriminator" = {"propertyName": "type"}))]
 #[non_exhaustive]
 pub enum RequestPermissionSubject {
     /// Permission is requested before executing a tool call.
@@ -1609,7 +1605,6 @@ impl RequestPermissionResponse {
 /// The outcome of a permission request.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(tag = "outcome", rename_all = "snake_case")]
-#[schemars(extend("discriminator" = {"propertyName": "outcome"}))]
 #[non_exhaustive]
 pub enum RequestPermissionOutcome {
     /// Active session work was cancelled before the user responded.

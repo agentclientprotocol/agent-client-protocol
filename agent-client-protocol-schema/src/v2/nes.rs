@@ -2352,7 +2352,6 @@ impl SuggestNesResponse {
 /// A suggestion returned by the agent.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(tag = "kind", rename_all = "camelCase")]
-#[schemars(extend("discriminator" = {"propertyName": "kind"}))]
 #[non_exhaustive]
 pub enum NesSuggestion {
     /// A text edit suggestion.

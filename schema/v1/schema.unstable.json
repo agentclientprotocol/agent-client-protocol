@@ -1483,9 +1483,6 @@
           }
         }
       ],
-      "discriminator": {
-        "propertyName": "mode"
-      },
       "required": ["message"],
       "x-side": "client",
       "x-method": "elicitation/create"
@@ -1739,10 +1736,7 @@
           },
           "additionalProperties": true
         }
-      ],
-      "discriminator": {
-        "propertyName": "type"
-      }
+      ]
     },
     "StringFormat": {
       "description": "String format types for string properties in elicitation schemas.",
@@ -2021,10 +2015,7 @@
             }
           ]
         }
-      ],
-      "discriminator": {
-        "propertyName": "type"
-      }
+      ]
     },
     "StringMultiSelectItems": {
       "description": "String item schema for multi-select enum properties.",
@@ -8255,9 +8246,6 @@
           "additionalProperties": true
         }
       ],
-      "discriminator": {
-        "propertyName": "action"
-      },
       "x-side": "client",
       "x-method": "elicitation/create"
     },
