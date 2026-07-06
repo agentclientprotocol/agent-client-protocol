@@ -1,18 +1,14 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use serde_with::skip_serializing_none;
+use serde_with::{DefaultOnError, serde_as, skip_serializing_none};
 
 use super::{Meta, RequestId};
 use crate::IntoOption;
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Notification to cancel an ongoing request.
 ///
 /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/cancellation)
-#[cfg(feature = "unstable_cancel_request")]
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "protocol", "x-method" = CANCEL_REQUEST_METHOD_NAME))]
@@ -26,11 +22,13 @@ pub struct CancelRequestNotification {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_cancel_request")]
 impl CancelRequestNotification {
     /// Builds [`CancelRequestNotification`] with the required notification fields set; optional fields start unset or empty.
     #[must_use]
@@ -62,13 +60,11 @@ impl CancelRequestNotification {
 #[non_exhaustive]
 pub struct GeneralMethodNames {
     /// Method name for protocol-level request cancellation notifications.
-    #[cfg(feature = "unstable_cancel_request")]
     pub cancel_request: &'static str,
 }
 
 /// Constant containing all agent method names.
 pub const PROTOCOL_LEVEL_METHOD_NAMES: GeneralMethodNames = GeneralMethodNames {
-    #[cfg(feature = "unstable_cancel_request")]
     cancel_request: CANCEL_REQUEST_METHOD_NAME,
 };
 
@@ -91,25 +87,19 @@ pub(crate) const CANCEL_REQUEST_METHOD_NAME: &str = "$/cancel_request";
 #[schemars(inline)]
 #[non_exhaustive]
 pub enum ProtocolLevelNotification {
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or
-    /// changed at any point.
-    ///
     /// Cancels an ongoing request.
     ///
     /// This is a notification sent by the side that sent a request to cancel that request.
     ///
     /// Upon receiving this notification, the receiver:
     ///
-    /// 1. MUST cancel the corresponding request activity and all nested activities
+    /// 1. MAY cancel the corresponding request activity and all nested activities
     /// 2. MAY send any pending notifications.
     /// 3. MUST send one of these responses for the original request:
     ///   - Valid response with appropriate data (partial results or cancellation marker)
     ///   - Error response with code `-32800` (Cancelled)
     ///
     /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/cancellation)
-    #[cfg(feature = "unstable_cancel_request")]
     CancelRequestNotification(CancelRequestNotification),
 }
 
@@ -118,7 +108,6 @@ impl ProtocolLevelNotification {
     #[must_use]
     pub fn method(&self) -> &str {
         match self {
-            #[cfg(feature = "unstable_cancel_request")]
             Self::CancelRequestNotification(..) => PROTOCOL_LEVEL_METHOD_NAMES.cancel_request,
         }
     }

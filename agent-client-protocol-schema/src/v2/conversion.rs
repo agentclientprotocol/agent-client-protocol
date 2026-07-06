@@ -8,7 +8,7 @@ use std::{
     collections::{BTreeMap, HashMap},
     fmt,
     hash::{BuildHasher, Hash},
-    path::PathBuf,
+    path::{Path, PathBuf},
     sync::Arc,
 };
 
@@ -302,6 +302,13 @@ where
     T: IntoV2,
 {
     value.map(into_v2_vec_skip_errors)
+}
+
+fn option_vec_into_v2_default_skip_errors<T>(value: Option<Vec<T>>) -> Vec<T::Output>
+where
+    T: IntoV2,
+{
+    value.map(into_v2_vec_skip_errors).unwrap_or_default()
 }
 
 impl<T> IntoV2 for Vec<T>
@@ -608,7 +615,7 @@ impl IntoV1 for super::PlanUpdate {
         Ok(match plan {
             super::PlanUpdateContent::Items(items) => {
                 let super::PlanItems {
-                    id: _,
+                    plan_id: _,
                     entries,
                     meta: items_meta,
                 } = items;
@@ -702,9 +709,13 @@ impl IntoV1 for super::PlanItems {
     type Output = crate::v1::PlanItems;
 
     fn into_v1(self) -> Result<Self::Output> {
-        let Self { id, entries, meta } = self;
+        let Self {
+            plan_id,
+            entries,
+            meta,
+        } = self;
         Ok(crate::v1::PlanItems {
-            id: id.into_v1()?,
+            plan_id: plan_id.into_v1()?,
             entries: into_v1_vec_skip_errors(entries),
             meta: meta.into_v1()?,
         })
@@ -716,9 +727,13 @@ impl IntoV2 for crate::v1::PlanItems {
     type Output = super::PlanItems;
 
     fn into_v2(self) -> Result<Self::Output> {
-        let Self { id, entries, meta } = self;
+        let Self {
+            plan_id,
+            entries,
+            meta,
+        } = self;
         Ok(super::PlanItems {
-            id: id.into_v2()?,
+            plan_id: plan_id.into_v2()?,
             entries: into_v2_vec_skip_errors(entries),
             meta: meta.into_v2()?,
         })
@@ -730,9 +745,9 @@ impl IntoV1 for super::PlanFile {
     type Output = crate::v1::PlanFile;
 
     fn into_v1(self) -> Result<Self::Output> {
-        let Self { id, uri, meta } = self;
+        let Self { plan_id, uri, meta } = self;
         Ok(crate::v1::PlanFile {
-            id: id.into_v1()?,
+            plan_id: plan_id.into_v1()?,
             uri: uri.into_v1()?,
             meta: meta.into_v1()?,
         })
@@ -744,9 +759,9 @@ impl IntoV2 for crate::v1::PlanFile {
     type Output = super::PlanFile;
 
     fn into_v2(self) -> Result<Self::Output> {
-        let Self { id, uri, meta } = self;
+        let Self { plan_id, uri, meta } = self;
         Ok(super::PlanFile {
-            id: id.into_v2()?,
+            plan_id: plan_id.into_v2()?,
             uri: uri.into_v2()?,
             meta: meta.into_v2()?,
         })
@@ -758,9 +773,13 @@ impl IntoV1 for super::PlanMarkdown {
     type Output = crate::v1::PlanMarkdown;
 
     fn into_v1(self) -> Result<Self::Output> {
-        let Self { id, content, meta } = self;
+        let Self {
+            plan_id,
+            content,
+            meta,
+        } = self;
         Ok(crate::v1::PlanMarkdown {
-            id: id.into_v1()?,
+            plan_id: plan_id.into_v1()?,
             content: content.into_v1()?,
             meta: meta.into_v1()?,
         })
@@ -772,9 +791,13 @@ impl IntoV2 for crate::v1::PlanMarkdown {
     type Output = super::PlanMarkdown;
 
     fn into_v2(self) -> Result<Self::Output> {
-        let Self { id, content, meta } = self;
+        let Self {
+            plan_id,
+            content,
+            meta,
+        } = self;
         Ok(super::PlanMarkdown {
-            id: id.into_v2()?,
+            plan_id: plan_id.into_v2()?,
             content: content.into_v2()?,
             meta: meta.into_v2()?,
         })
@@ -786,9 +809,9 @@ impl IntoV1 for super::PlanRemoved {
     type Output = crate::v1::PlanRemoved;
 
     fn into_v1(self) -> Result<Self::Output> {
-        let Self { id, meta } = self;
+        let Self { plan_id, meta } = self;
         Ok(crate::v1::PlanRemoved {
-            id: id.into_v1()?,
+            plan_id: plan_id.into_v1()?,
             meta: meta.into_v1()?,
         })
     }
@@ -799,9 +822,9 @@ impl IntoV2 for crate::v1::PlanRemoved {
     type Output = super::PlanRemoved;
 
     fn into_v2(self) -> Result<Self::Output> {
-        let Self { id, meta } = self;
+        let Self { plan_id, meta } = self;
         Ok(super::PlanRemoved {
-            id: id.into_v2()?,
+            plan_id: plan_id.into_v2()?,
             meta: meta.into_v2()?,
         })
     }
@@ -897,7 +920,6 @@ impl IntoV2 for crate::v1::PlanEntryStatus {
     }
 }
 
-#[cfg(feature = "unstable_cancel_request")]
 impl IntoV1 for super::CancelRequestNotification {
     type Output = crate::v1::CancelRequestNotification;
 
@@ -910,7 +932,6 @@ impl IntoV1 for super::CancelRequestNotification {
     }
 }
 
-#[cfg(feature = "unstable_cancel_request")]
 impl IntoV2 for crate::v1::CancelRequestNotification {
     type Output = super::CancelRequestNotification;
 
@@ -923,7 +944,6 @@ impl IntoV2 for crate::v1::CancelRequestNotification {
     }
 }
 
-#[cfg(feature = "unstable_cancel_request")]
 impl IntoV1 for super::ProtocolLevelNotification {
     type Output = crate::v1::ProtocolLevelNotification;
 
@@ -936,7 +956,6 @@ impl IntoV1 for super::ProtocolLevelNotification {
     }
 }
 
-#[cfg(feature = "unstable_cancel_request")]
 impl IntoV2 for crate::v1::ProtocolLevelNotification {
     type Output = super::ProtocolLevelNotification;
 
@@ -949,7 +968,7 @@ impl IntoV2 for crate::v1::ProtocolLevelNotification {
     }
 }
 
-impl IntoV1Many for super::SessionNotification {
+impl IntoV1Many for super::UpdateSessionNotification {
     type Output = crate::v1::SessionNotification;
 
     fn into_v1_many(self) -> Result<Vec<Self::Output>> {
@@ -975,7 +994,7 @@ impl IntoV1Many for super::SessionNotification {
 }
 
 impl IntoV2 for crate::v1::SessionNotification {
-    type Output = super::SessionNotification;
+    type Output = super::UpdateSessionNotification;
 
     fn into_v2(self) -> Result<Self::Output> {
         let Self {
@@ -983,7 +1002,7 @@ impl IntoV2 for crate::v1::SessionNotification {
             update,
             meta,
         } = self;
-        Ok(super::SessionNotification {
+        Ok(super::UpdateSessionNotification {
             session_id: session_id.into_v2()?,
             update: update.into_v2()?,
             meta: meta.into_v2()?,
@@ -1216,7 +1235,7 @@ impl IntoV1 for super::SessionInfoUpdate {
         Ok(crate::v1::SessionInfoUpdate {
             title: title.into_v1()?,
             updated_at: updated_at.into_v1()?,
-            meta: meta.into_v1()?,
+            meta: maybe_undefined_meta_into_v1_option("SessionInfoUpdate", meta)?,
         })
     }
 }
@@ -1233,7 +1252,7 @@ impl IntoV2 for crate::v1::SessionInfoUpdate {
         Ok(super::SessionInfoUpdate {
             title: title.into_v2()?,
             updated_at: updated_at.into_v2()?,
-            meta: meta.into_v2()?,
+            meta: option_into_v2_maybe_undefined(meta)?,
         })
     }
 }
@@ -1423,9 +1442,7 @@ impl IntoV1 for super::AvailableCommandInput {
 
     fn into_v1(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::Unstructured(value) => {
-                crate::v1::AvailableCommandInput::Unstructured(value.into_v1()?)
-            }
+            Self::Text(value) => crate::v1::AvailableCommandInput::Unstructured(value.into_v1()?),
             Self::Other(value) => {
                 return Err(unknown_v2_enum_variant(
                     "AvailableCommandInput",
@@ -1441,14 +1458,12 @@ impl IntoV2 for crate::v1::AvailableCommandInput {
 
     fn into_v2(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::Unstructured(value) => {
-                super::AvailableCommandInput::Unstructured(value.into_v2()?)
-            }
+            Self::Unstructured(value) => super::AvailableCommandInput::Text(value.into_v2()?),
         })
     }
 }
 
-impl IntoV1 for super::UnstructuredCommandInput {
+impl IntoV1 for super::TextCommandInput {
     type Output = crate::v1::UnstructuredCommandInput;
 
     fn into_v1(self) -> Result<Self::Output> {
@@ -1461,11 +1476,11 @@ impl IntoV1 for super::UnstructuredCommandInput {
 }
 
 impl IntoV2 for crate::v1::UnstructuredCommandInput {
-    type Output = super::UnstructuredCommandInput;
+    type Output = super::TextCommandInput;
 
     fn into_v2(self) -> Result<Self::Output> {
         let Self { hint, meta } = self;
-        Ok(super::UnstructuredCommandInput {
+        Ok(super::TextCommandInput {
             hint: hint.into_v2()?,
             meta: meta.into_v2()?,
         })
@@ -1478,10 +1493,29 @@ impl IntoV1 for super::RequestPermissionRequest {
     fn into_v1(self) -> Result<Self::Output> {
         let Self {
             session_id,
-            tool_call,
+            title: _,
+            description: _,
+            subject,
             options,
             meta,
         } = self;
+        let Some(subject) = subject else {
+            return Err(ProtocolConversionError::new(
+                "v2 RequestPermissionRequest without `subject` cannot be represented in v1",
+            ));
+        };
+        let tool_call = match subject {
+            super::RequestPermissionSubject::ToolCall(subject) => {
+                let super::ToolCallPermissionSubject { tool_call } = *subject;
+                tool_call
+            }
+            super::RequestPermissionSubject::Other(subject) => {
+                return Err(unknown_v2_enum_variant(
+                    "RequestPermissionSubject",
+                    &subject.type_,
+                ));
+            }
+        };
         Ok(crate::v1::RequestPermissionRequest {
             session_id: session_id.into_v1()?,
             tool_call: tool_call.into_v1()?,
@@ -1501,9 +1535,17 @@ impl IntoV2 for crate::v1::RequestPermissionRequest {
             options,
             meta,
         } = self;
+        let title = tool_call
+            .fields
+            .title
+            .clone()
+            .filter(|title| !title.is_empty())
+            .unwrap_or_else(|| "Permission requested".to_string());
         Ok(super::RequestPermissionRequest {
             session_id: session_id.into_v2()?,
-            tool_call: tool_call.into_v2()?,
+            title,
+            description: None,
+            subject: Some(super::RequestPermissionSubject::from(tool_call.into_v2()?)),
             options: options.into_v2()?,
             meta: meta.into_v2()?,
         })
@@ -1626,6 +1668,12 @@ impl IntoV1 for super::RequestPermissionOutcome {
             Self::Selected(value) => {
                 crate::v1::RequestPermissionOutcome::Selected(value.into_v1()?)
             }
+            Self::Other(value) => {
+                return Err(unknown_v2_enum_variant(
+                    "RequestPermissionOutcome",
+                    &value.outcome,
+                ));
+            }
         })
     }
 }
@@ -1670,9 +1718,9 @@ impl IntoV1 for super::ConnectMcpRequest {
     type Output = crate::v1::ConnectMcpRequest;
 
     fn into_v1(self) -> Result<Self::Output> {
-        let Self { acp_id, meta } = self;
+        let Self { server_id, meta } = self;
         Ok(crate::v1::ConnectMcpRequest {
-            acp_id: acp_id.into_v1()?,
+            server_id: server_id.into_v1()?,
             meta: meta.into_v1()?,
         })
     }
@@ -1683,9 +1731,9 @@ impl IntoV2 for crate::v1::ConnectMcpRequest {
     type Output = super::ConnectMcpRequest;
 
     fn into_v2(self) -> Result<Self::Output> {
-        let Self { acp_id, meta } = self;
+        let Self { server_id, meta } = self;
         Ok(super::ConnectMcpRequest {
-            acp_id: acp_id.into_v2()?,
+            server_id: server_id.into_v2()?,
             meta: meta.into_v2()?,
         })
     }
@@ -1897,10 +1945,16 @@ impl IntoV1 for super::ClientCapabilities {
         Ok(crate::v1::ClientCapabilities {
             fs: crate::v1::FileSystemCapabilities::default(),
             terminal: false,
+            session: Some(
+                crate::v1::ClientSessionCapabilities::new().config_options(
+                    crate::v1::SessionConfigOptionsCapabilities::new()
+                        .boolean(crate::v1::BooleanConfigOptionCapabilities::new()),
+                ),
+            ),
             #[cfg(feature = "unstable_plan_operations")]
             plan: None,
             #[cfg(feature = "unstable_auth_methods")]
-            auth: auth.into_v1()?,
+            auth: auth.map(IntoV1::into_v1).transpose()?.unwrap_or_default(),
             #[cfg(feature = "unstable_elicitation")]
             elicitation: into_v1_default_on_error(elicitation),
             #[cfg(feature = "unstable_nes")]
@@ -1919,6 +1973,7 @@ impl IntoV2 for crate::v1::ClientCapabilities {
         let Self {
             fs: _,
             terminal: _,
+            session: _,
             #[cfg(feature = "unstable_plan_operations")]
                 plan: _,
             #[cfg(feature = "unstable_auth_methods")]
@@ -1933,7 +1988,7 @@ impl IntoV2 for crate::v1::ClientCapabilities {
         } = self;
         Ok(super::ClientCapabilities {
             #[cfg(feature = "unstable_auth_methods")]
-            auth: auth.into_v2()?,
+            auth: Some(auth.into_v2()?),
             #[cfg(feature = "unstable_elicitation")]
             elicitation: into_v2_default_on_error(elicitation),
             #[cfg(feature = "unstable_nes")]
@@ -2039,22 +2094,22 @@ impl IntoV2 for crate::v1::AgentRequest {
             }
             #[cfg(feature = "unstable_elicitation")]
             Self::CreateElicitationRequest(value) => {
-                super::AgentRequest::CreateElicitationRequest(value.into_v2()?)
+                super::AgentRequest::CreateElicitationRequest(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_mcp_over_acp")]
             Self::ConnectMcpRequest(value) => {
-                super::AgentRequest::ConnectMcpRequest(value.into_v2()?)
+                super::AgentRequest::ConnectMcpRequest(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_mcp_over_acp")]
             Self::MessageMcpRequest(value) => {
-                super::AgentRequest::MessageMcpRequest(value.into_v2()?)
+                super::AgentRequest::MessageMcpRequest(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_mcp_over_acp")]
             Self::DisconnectMcpRequest(value) => {
-                super::AgentRequest::DisconnectMcpRequest(value.into_v2()?)
+                super::AgentRequest::DisconnectMcpRequest(Box::new(value.into_v2()?))
             }
             Self::ExtMethodRequest(value) => {
-                super::AgentRequest::ExtMethodRequest(value.into_v2()?)
+                super::AgentRequest::ExtMethodRequest(Box::new(value.into_v2()?))
             }
         })
     }
@@ -2109,7 +2164,7 @@ impl IntoV2 for crate::v1::ClientResponse {
                 ));
             }
             Self::RequestPermissionResponse(value) => {
-                super::ClientResponse::RequestPermissionResponse(value.into_v2()?)
+                super::ClientResponse::RequestPermissionResponse(Box::new(value.into_v2()?))
             }
             Self::CreateTerminalResponse(_) => {
                 return Err(removed_v1_enum_variant("ClientResponse", "terminal/create"));
@@ -2134,22 +2189,22 @@ impl IntoV2 for crate::v1::ClientResponse {
             }
             #[cfg(feature = "unstable_elicitation")]
             Self::CreateElicitationResponse(value) => {
-                super::ClientResponse::CreateElicitationResponse(value.into_v2()?)
+                super::ClientResponse::CreateElicitationResponse(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_mcp_over_acp")]
             Self::ConnectMcpResponse(value) => {
-                super::ClientResponse::ConnectMcpResponse(value.into_v2()?)
+                super::ClientResponse::ConnectMcpResponse(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_mcp_over_acp")]
             Self::MessageMcpResponse(value) => {
-                super::ClientResponse::MessageMcpResponse(value.into_v2()?)
+                super::ClientResponse::MessageMcpResponse(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_mcp_over_acp")]
             Self::DisconnectMcpResponse(value) => {
-                super::ClientResponse::DisconnectMcpResponse(value.into_v2()?)
+                super::ClientResponse::DisconnectMcpResponse(Box::new(value.into_v2()?))
             }
             Self::ExtMethodResponse(value) => {
-                super::ClientResponse::ExtMethodResponse(value.into_v2()?)
+                super::ClientResponse::ExtMethodResponse(Box::new(value.into_v2()?))
             }
         })
     }
@@ -2160,7 +2215,7 @@ impl IntoV1Many for super::AgentNotification {
 
     fn into_v1_many(self) -> Result<Vec<Self::Output>> {
         Ok(match self {
-            Self::SessionNotification(value) => {
+            Self::UpdateSessionNotification(value) => {
                 return value
                     .into_v1_many()?
                     .into_iter()
@@ -2194,18 +2249,20 @@ impl IntoV2 for crate::v1::AgentNotification {
     fn into_v2(self) -> Result<Self::Output> {
         Ok(match self {
             Self::SessionNotification(value) => {
-                super::AgentNotification::SessionNotification(Box::new(value.into_v2()?))
+                super::AgentNotification::UpdateSessionNotification(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_elicitation")]
             Self::CompleteElicitationNotification(value) => {
-                super::AgentNotification::CompleteElicitationNotification(value.into_v2()?)
+                super::AgentNotification::CompleteElicitationNotification(Box::new(
+                    value.into_v2()?,
+                ))
             }
             #[cfg(feature = "unstable_mcp_over_acp")]
             Self::MessageMcpNotification(value) => {
-                super::AgentNotification::MessageMcpNotification(value.into_v2()?)
+                super::AgentNotification::MessageMcpNotification(Box::new(value.into_v2()?))
             }
             Self::ExtNotification(value) => {
-                super::AgentNotification::ExtNotification(value.into_v2()?)
+                super::AgentNotification::ExtNotification(Box::new(value.into_v2()?))
             }
         })
     }
@@ -2348,6 +2405,19 @@ where
     }
 }
 
+fn maybe_undefined_meta_into_v1_option(
+    context: &str,
+    value: crate::MaybeUndefined<super::Meta>,
+) -> Result<Option<crate::v1::Meta>> {
+    match value {
+        crate::MaybeUndefined::Value(value) => Ok(Some(value.into_v1()?)),
+        crate::MaybeUndefined::Null => Err(ProtocolConversionError::new(format!(
+            "v2 {context} with null _meta cannot be represented in v1"
+        ))),
+        crate::MaybeUndefined::Undefined => Ok(None),
+    }
+}
+
 fn option_into_v2_maybe_undefined<T>(value: Option<T>) -> Result<crate::MaybeUndefined<T::Output>>
 where
     T: IntoV2,
@@ -2409,7 +2479,7 @@ impl IntoV1 for super::ToolCallUpdate {
                 raw_input: maybe_undefined_value_into_v1_option(raw_input),
                 raw_output: maybe_undefined_value_into_v1_option(raw_output),
             },
-            meta: meta.into_v1()?,
+            meta: maybe_undefined_meta_into_v1_option("ToolCallUpdate", meta)?,
         })
     }
 }
@@ -2446,7 +2516,7 @@ impl IntoV2 for crate::v1::ToolCall {
             locations: vec_into_v2_maybe_undefined_skip_errors(locations),
             raw_input: option_into_v2_maybe_undefined(raw_input)?,
             raw_output: option_into_v2_maybe_undefined(raw_output)?,
-            meta: meta.into_v2()?,
+            meta: option_into_v2_maybe_undefined(meta)?,
         })
     }
 }
@@ -2478,7 +2548,7 @@ impl IntoV2 for crate::v1::ToolCallUpdate {
             locations: option_vec_into_v2_maybe_undefined_skip_errors(locations),
             raw_input: option_into_v2_maybe_undefined(raw_input)?,
             raw_output: option_into_v2_maybe_undefined(raw_output)?,
-            meta: meta.into_v2()?,
+            meta: option_into_v2_maybe_undefined(meta)?,
         })
     }
 }
@@ -2621,18 +2691,9 @@ impl IntoV1 for super::Diff {
     type Output = crate::v1::Diff;
 
     fn into_v1(self) -> Result<Self::Output> {
-        let Self {
-            path,
-            old_text,
-            new_text,
-            meta,
-        } = self;
-        Ok(crate::v1::Diff {
-            path: path.into_v1()?,
-            old_text: old_text.into_v1()?,
-            new_text: new_text.into_v1()?,
-            meta: meta.into_v1()?,
-        })
+        Err(ProtocolConversionError::new(
+            "v2 Diff cannot be represented in v1 because v1 requires oldText/newText while v2 carries standard patch text and structured changes",
+        ))
     }
 }
 
@@ -2646,13 +2707,40 @@ impl IntoV2 for crate::v1::Diff {
             new_text,
             meta,
         } = self;
-        Ok(super::Diff {
-            path: path.into_v2()?,
-            old_text: old_text.into_v2()?,
-            new_text: new_text.into_v2()?,
-            meta: meta.into_v2()?,
-        })
+        let path = path.into_v2()?;
+        let old_text = old_text.into_v2()?;
+        let new_text = new_text.into_v2()?;
+        let change = if old_text.is_some() {
+            super::DiffChange::modify(path.clone()).file_type(super::DiffFileType::Text)
+        } else {
+            super::DiffChange::add(path.clone()).file_type(super::DiffFileType::Text)
+        };
+        let diff = full_file_git_patch(&path, old_text.as_deref(), &new_text);
+
+        Ok(super::Diff::patch(diff, vec![change]).meta(meta.into_v2()?))
     }
+}
+
+fn full_file_git_patch(path: &Path, old_text: Option<&str>, new_text: &str) -> String {
+    let path = path.to_string_lossy();
+    let old = old_text.unwrap_or_default();
+    let original_filename = if old_text.is_some() {
+        path.to_string()
+    } else {
+        "/dev/null".to_string()
+    };
+
+    let mut options = diffy::DiffOptions::new();
+    options
+        .set_original_filename(original_filename)
+        .set_modified_filename(path.to_string());
+
+    let mut diff = format!("diff --git {path} {path}\n");
+    if old_text.is_none() {
+        diff.push_str("new file mode 100644\n");
+    }
+    diff.push_str(&options.create_patch(old, new_text).to_string());
+    diff
 }
 
 impl IntoV1 for super::ToolCallLocation {
@@ -2688,13 +2776,13 @@ impl IntoV1 for super::InitializeRequest {
         let Self {
             protocol_version,
             capabilities,
-            client_info,
+            info,
             meta,
         } = self;
         Ok(crate::v1::InitializeRequest {
             protocol_version: protocol_version.into_v1()?,
             client_capabilities: capabilities.into_v1()?,
-            client_info: into_v1_default_on_error(client_info),
+            client_info: Some(info.into_v1()?),
             meta: meta.into_v1()?,
         })
     }
@@ -2710,10 +2798,18 @@ impl IntoV2 for crate::v1::InitializeRequest {
             client_info,
             meta,
         } = self;
+        let info = match client_info {
+            Some(client_info) => client_info.into_v2()?,
+            None => {
+                return Err(ProtocolConversionError::new(
+                    "v1 InitializeRequest without `clientInfo` cannot be represented in v2",
+                ));
+            }
+        };
         Ok(super::InitializeRequest {
             protocol_version: protocol_version.into_v2()?,
             capabilities: client_capabilities.into_v2()?,
-            client_info: into_v2_default_on_error(client_info),
+            info,
             meta: meta.into_v2()?,
         })
     }
@@ -2727,14 +2823,14 @@ impl IntoV1 for super::InitializeResponse {
             protocol_version,
             capabilities: agent_capabilities,
             auth_methods,
-            agent_info,
+            info,
             meta,
         } = self;
         Ok(crate::v1::InitializeResponse {
             protocol_version: protocol_version.into_v1()?,
             agent_capabilities: agent_capabilities.into_v1()?,
             auth_methods: into_v1_vec_skip_errors(auth_methods),
-            agent_info: into_v1_default_on_error(agent_info),
+            agent_info: Some(info.into_v1()?),
             meta: meta.into_v1()?,
         })
     }
@@ -2751,11 +2847,19 @@ impl IntoV2 for crate::v1::InitializeResponse {
             agent_info,
             meta,
         } = self;
+        let info = match agent_info {
+            Some(agent_info) => agent_info.into_v2()?,
+            None => {
+                return Err(ProtocolConversionError::new(
+                    "v1 InitializeResponse without `agentInfo` cannot be represented in v2",
+                ));
+            }
+        };
         Ok(super::InitializeResponse {
             protocol_version: protocol_version.into_v2()?,
             capabilities: agent_capabilities.into_v2()?,
             auth_methods: into_v2_vec_skip_errors(auth_methods),
-            agent_info: into_v2_default_on_error(agent_info),
+            info,
             meta: meta.into_v2()?,
         })
     }
@@ -2799,7 +2903,7 @@ impl IntoV2 for crate::v1::Implementation {
     }
 }
 
-impl IntoV1 for super::AuthenticateRequest {
+impl IntoV1 for super::LoginAuthRequest {
     type Output = crate::v1::AuthenticateRequest;
 
     fn into_v1(self) -> Result<Self::Output> {
@@ -2812,18 +2916,18 @@ impl IntoV1 for super::AuthenticateRequest {
 }
 
 impl IntoV2 for crate::v1::AuthenticateRequest {
-    type Output = super::AuthenticateRequest;
+    type Output = super::LoginAuthRequest;
 
     fn into_v2(self) -> Result<Self::Output> {
         let Self { method_id, meta } = self;
-        Ok(super::AuthenticateRequest {
+        Ok(super::LoginAuthRequest {
             method_id: method_id.into_v2()?,
             meta: meta.into_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::AuthenticateResponse {
+impl IntoV1 for super::LoginAuthResponse {
     type Output = crate::v1::AuthenticateResponse;
 
     fn into_v1(self) -> Result<Self::Output> {
@@ -2835,17 +2939,17 @@ impl IntoV1 for super::AuthenticateResponse {
 }
 
 impl IntoV2 for crate::v1::AuthenticateResponse {
-    type Output = super::AuthenticateResponse;
+    type Output = super::LoginAuthResponse;
 
     fn into_v2(self) -> Result<Self::Output> {
         let Self { meta } = self;
-        Ok(super::AuthenticateResponse {
+        Ok(super::LoginAuthResponse {
             meta: meta.into_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::LogoutRequest {
+impl IntoV1 for super::LogoutAuthRequest {
     type Output = crate::v1::LogoutRequest;
 
     fn into_v1(self) -> Result<Self::Output> {
@@ -2857,17 +2961,17 @@ impl IntoV1 for super::LogoutRequest {
 }
 
 impl IntoV2 for crate::v1::LogoutRequest {
-    type Output = super::LogoutRequest;
+    type Output = super::LogoutAuthRequest;
 
     fn into_v2(self) -> Result<Self::Output> {
         let Self { meta } = self;
-        Ok(super::LogoutRequest {
+        Ok(super::LogoutAuthRequest {
             meta: meta.into_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::LogoutResponse {
+impl IntoV1 for super::LogoutAuthResponse {
     type Output = crate::v1::LogoutResponse;
 
     fn into_v1(self) -> Result<Self::Output> {
@@ -2879,11 +2983,11 @@ impl IntoV1 for super::LogoutResponse {
 }
 
 impl IntoV2 for crate::v1::LogoutResponse {
-    type Output = super::LogoutResponse;
+    type Output = super::LogoutAuthResponse;
 
     fn into_v2(self) -> Result<Self::Output> {
         let Self { meta } = self;
-        Ok(super::LogoutResponse {
+        Ok(super::LogoutAuthResponse {
             meta: meta.into_v2()?,
         })
     }
@@ -2893,9 +2997,9 @@ impl IntoV1 for super::AgentAuthCapabilities {
     type Output = crate::v1::AgentAuthCapabilities;
 
     fn into_v1(self) -> Result<Self::Output> {
-        let Self { logout, meta } = self;
+        let Self { meta } = self;
         Ok(crate::v1::AgentAuthCapabilities {
-            logout: into_v1_default_on_error(logout),
+            logout: Some(crate::v1::LogoutCapabilities::new()),
             meta: meta.into_v1()?,
         })
     }
@@ -2905,31 +3009,8 @@ impl IntoV2 for crate::v1::AgentAuthCapabilities {
     type Output = super::AgentAuthCapabilities;
 
     fn into_v2(self) -> Result<Self::Output> {
-        let Self { logout, meta } = self;
+        let Self { logout: _, meta } = self;
         Ok(super::AgentAuthCapabilities {
-            logout: into_v2_default_on_error(logout),
-            meta: meta.into_v2()?,
-        })
-    }
-}
-
-impl IntoV1 for super::LogoutCapabilities {
-    type Output = crate::v1::LogoutCapabilities;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self { meta } = self;
-        Ok(crate::v1::LogoutCapabilities {
-            meta: meta.into_v1()?,
-        })
-    }
-}
-
-impl IntoV2 for crate::v1::LogoutCapabilities {
-    type Output = super::LogoutCapabilities;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        let Self { meta } = self;
-        Ok(super::LogoutCapabilities {
             meta: meta.into_v2()?,
         })
     }
@@ -2987,13 +3068,13 @@ impl IntoV1 for super::AuthMethodAgent {
 
     fn into_v1(self) -> Result<Self::Output> {
         let Self {
-            id,
+            method_id,
             name,
             description,
             meta,
         } = self;
         Ok(crate::v1::AuthMethodAgent {
-            id: id.into_v1()?,
+            id: method_id.into_v1()?,
             name: name.into_v1()?,
             description: description.into_v1()?,
             meta: meta.into_v1()?,
@@ -3012,7 +3093,7 @@ impl IntoV2 for crate::v1::AuthMethodAgent {
             meta,
         } = self;
         Ok(super::AuthMethodAgent {
-            id: id.into_v2()?,
+            method_id: id.into_v2()?,
             name: name.into_v2()?,
             description: description.into_v2()?,
             meta: meta.into_v2()?,
@@ -3026,7 +3107,7 @@ impl IntoV1 for super::AuthMethodEnvVar {
 
     fn into_v1(self) -> Result<Self::Output> {
         let Self {
-            id,
+            method_id,
             name,
             description,
             vars,
@@ -3034,7 +3115,7 @@ impl IntoV1 for super::AuthMethodEnvVar {
             meta,
         } = self;
         Ok(crate::v1::AuthMethodEnvVar {
-            id: id.into_v1()?,
+            id: method_id.into_v1()?,
             name: name.into_v1()?,
             description: description.into_v1()?,
             vars: vars.into_v1()?,
@@ -3058,7 +3139,7 @@ impl IntoV2 for crate::v1::AuthMethodEnvVar {
             meta,
         } = self;
         Ok(super::AuthMethodEnvVar {
-            id: id.into_v2()?,
+            method_id: id.into_v2()?,
             name: name.into_v2()?,
             description: description.into_v2()?,
             vars: vars.into_v2()?,
@@ -3118,19 +3199,39 @@ impl IntoV1 for super::AuthMethodTerminal {
 
     fn into_v1(self) -> Result<Self::Output> {
         let Self {
-            id,
+            method_id,
             name,
             description,
             args,
             env,
             meta,
         } = self;
+        let env = env
+            .into_iter()
+            .map(|env_var| {
+                let super::EnvVariable { name, value, meta } = env_var;
+                if meta.is_some() {
+                    return Err(ProtocolConversionError::new(
+                        "v2 AuthMethodTerminal env variable `_meta` cannot be represented in v1",
+                    ));
+                }
+                Ok((name.into_v1()?, value.into_v1()?))
+            })
+            .try_fold(HashMap::new(), |mut env, item| {
+                let (name, value) = item?;
+                if env.insert(name.clone(), value).is_some() {
+                    return Err(ProtocolConversionError::new(format!(
+                        "v2 AuthMethodTerminal env variable `{name}` is duplicated and cannot be represented in v1",
+                    )));
+                }
+                Ok(env)
+            })?;
         Ok(crate::v1::AuthMethodTerminal {
-            id: id.into_v1()?,
+            id: method_id.into_v1()?,
             name: name.into_v1()?,
             description: description.into_v1()?,
             args: args.into_v1()?,
-            env: env.into_v1()?,
+            env,
             meta: meta.into_v1()?,
         })
     }
@@ -3149,12 +3250,17 @@ impl IntoV2 for crate::v1::AuthMethodTerminal {
             env,
             meta,
         } = self;
+        let mut env = env
+            .into_iter()
+            .map(|(name, value)| Ok(super::EnvVariable::new(name.into_v2()?, value.into_v2()?)))
+            .collect::<Result<Vec<_>>>()?;
+        env.sort_by(|left, right| left.name.cmp(&right.name));
         Ok(super::AuthMethodTerminal {
-            id: id.into_v2()?,
+            method_id: id.into_v2()?,
             name: name.into_v2()?,
             description: description.into_v2()?,
             args: args.into_v2()?,
-            env: env.into_v2()?,
+            env,
             meta: meta.into_v2()?,
         })
     }
@@ -3210,7 +3316,7 @@ impl IntoV1 for super::NewSessionResponse {
         Ok(crate::v1::NewSessionResponse {
             session_id: session_id.into_v1()?,
             modes: None,
-            config_options: option_vec_into_v1_skip_errors(config_options),
+            config_options: Some(into_v1_vec_skip_errors(config_options)),
             meta: meta.into_v1()?,
         })
     }
@@ -3228,35 +3334,14 @@ impl IntoV2 for crate::v1::NewSessionResponse {
         } = self;
         Ok(super::NewSessionResponse {
             session_id: session_id.into_v2()?,
-            config_options: option_vec_into_v2_skip_errors(config_options),
+            config_options: option_vec_into_v2_default_skip_errors(config_options),
             meta: meta.into_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::LoadSessionRequest {
-    type Output = crate::v1::LoadSessionRequest;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self {
-            mcp_servers,
-            cwd,
-            additional_directories,
-            session_id,
-            meta,
-        } = self;
-        Ok(crate::v1::LoadSessionRequest {
-            mcp_servers: mcp_servers.into_v1()?,
-            cwd: cwd.into_v1()?,
-            additional_directories: additional_directories.into_v1()?,
-            session_id: session_id.into_v1()?,
-            meta: meta.into_v1()?,
-        })
-    }
-}
-
 impl IntoV2 for crate::v1::LoadSessionRequest {
-    type Output = super::LoadSessionRequest;
+    type Output = super::ResumeSessionRequest;
 
     fn into_v2(self) -> Result<Self::Output> {
         let Self {
@@ -3266,34 +3351,19 @@ impl IntoV2 for crate::v1::LoadSessionRequest {
             session_id,
             meta,
         } = self;
-        Ok(super::LoadSessionRequest {
+        Ok(super::ResumeSessionRequest {
             mcp_servers: mcp_servers.into_v2()?,
             cwd: cwd.into_v2()?,
             additional_directories: additional_directories.into_v2()?,
             session_id: session_id.into_v2()?,
+            replay_from: Some(super::ReplayFrom::Start(super::ReplayFromStart::new())),
             meta: meta.into_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::LoadSessionResponse {
-    type Output = crate::v1::LoadSessionResponse;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self {
-            config_options,
-            meta,
-        } = self;
-        Ok(crate::v1::LoadSessionResponse {
-            modes: None,
-            config_options: option_vec_into_v1_skip_errors(config_options),
-            meta: meta.into_v1()?,
-        })
-    }
-}
-
 impl IntoV2 for crate::v1::LoadSessionResponse {
-    type Output = super::LoadSessionResponse;
+    type Output = super::ResumeSessionResponse;
 
     fn into_v2(self) -> Result<Self::Output> {
         let Self {
@@ -3301,10 +3371,57 @@ impl IntoV2 for crate::v1::LoadSessionResponse {
             config_options,
             meta,
         } = self;
-        Ok(super::LoadSessionResponse {
-            config_options: option_vec_into_v2_skip_errors(config_options),
+        Ok(super::ResumeSessionResponse {
+            config_options: option_vec_into_v2_default_skip_errors(config_options),
             meta: meta.into_v2()?,
         })
+    }
+}
+
+fn v2_resume_session_request_into_v1_load(
+    request: super::ResumeSessionRequest,
+) -> Result<crate::v1::LoadSessionRequest> {
+    let super::ResumeSessionRequest {
+        session_id,
+        cwd,
+        additional_directories,
+        mcp_servers,
+        replay_from: _,
+        meta,
+    } = request;
+    Ok(crate::v1::LoadSessionRequest {
+        mcp_servers: mcp_servers.into_v1()?,
+        cwd: cwd.into_v1()?,
+        additional_directories: additional_directories.into_v1()?,
+        session_id: session_id.into_v1()?,
+        meta: meta.into_v1()?,
+    })
+}
+
+fn unsupported_replay_from_for_v1_resume(
+    replay_from: super::ReplayFrom,
+) -> ProtocolConversionError {
+    match replay_from {
+        super::ReplayFrom::Start(_) => ProtocolConversionError::new(
+            "v2 ResumeSessionRequest `replayFrom: start` maps to v1 session/load, not v1 session/resume",
+        ),
+        super::ReplayFrom::Other(other) => unknown_v2_enum_variant("ReplayFrom", &other.type_),
+    }
+}
+
+fn v2_resume_session_request_into_v1_client_request(
+    request: super::ResumeSessionRequest,
+) -> Result<crate::v1::ClientRequest> {
+    match request.replay_from.clone() {
+        None => Ok(crate::v1::ClientRequest::ResumeSessionRequest(
+            request.into_v1()?,
+        )),
+        Some(super::ReplayFrom::Start(_)) => Ok(crate::v1::ClientRequest::LoadSessionRequest(
+            v2_resume_session_request_into_v1_load(request)?,
+        )),
+        Some(super::ReplayFrom::Other(other)) => {
+            Err(unknown_v2_enum_variant("ReplayFrom", &other.type_))
+        }
     }
 }
 
@@ -3365,7 +3482,7 @@ impl IntoV1 for super::ForkSessionResponse {
         Ok(crate::v1::ForkSessionResponse {
             session_id: session_id.into_v1()?,
             modes: None,
-            config_options: option_vec_into_v1_skip_errors(config_options),
+            config_options: Some(into_v1_vec_skip_errors(config_options)),
             meta: meta.into_v1()?,
         })
     }
@@ -3384,7 +3501,7 @@ impl IntoV2 for crate::v1::ForkSessionResponse {
         } = self;
         Ok(super::ForkSessionResponse {
             session_id: session_id.into_v2()?,
-            config_options: option_vec_into_v2_skip_errors(config_options),
+            config_options: option_vec_into_v2_default_skip_errors(config_options),
             meta: meta.into_v2()?,
         })
     }
@@ -3399,8 +3516,12 @@ impl IntoV1 for super::ResumeSessionRequest {
             cwd,
             additional_directories,
             mcp_servers,
+            replay_from,
             meta,
         } = self;
+        if let Some(replay_from) = replay_from {
+            return Err(unsupported_replay_from_for_v1_resume(replay_from));
+        }
         Ok(crate::v1::ResumeSessionRequest {
             session_id: session_id.into_v1()?,
             cwd: cwd.into_v1()?,
@@ -3427,6 +3548,7 @@ impl IntoV2 for crate::v1::ResumeSessionRequest {
             cwd: cwd.into_v2()?,
             additional_directories: additional_directories.into_v2()?,
             mcp_servers: mcp_servers.into_v2()?,
+            replay_from: None,
             meta: meta.into_v2()?,
         })
     }
@@ -3442,7 +3564,7 @@ impl IntoV1 for super::ResumeSessionResponse {
         } = self;
         Ok(crate::v1::ResumeSessionResponse {
             modes: None,
-            config_options: option_vec_into_v1_skip_errors(config_options),
+            config_options: Some(into_v1_vec_skip_errors(config_options)),
             meta: meta.into_v1()?,
         })
     }
@@ -3458,7 +3580,7 @@ impl IntoV2 for crate::v1::ResumeSessionResponse {
             meta,
         } = self;
         Ok(super::ResumeSessionResponse {
-            config_options: option_vec_into_v2_skip_errors(config_options),
+            config_options: option_vec_into_v2_default_skip_errors(config_options),
             meta: meta.into_v2()?,
         })
     }
@@ -3753,13 +3875,13 @@ impl IntoV1 for super::SessionConfigSelectGroup {
 
     fn into_v1(self) -> Result<Self::Output> {
         let Self {
-            group,
+            group_id,
             name,
             options,
             meta,
         } = self;
         Ok(crate::v1::SessionConfigSelectGroup {
-            group: group.into_v1()?,
+            group: group_id.into_v1()?,
             name: name.into_v1()?,
             options: options.into_v1()?,
             meta: meta.into_v1()?,
@@ -3778,7 +3900,7 @@ impl IntoV2 for crate::v1::SessionConfigSelectGroup {
             meta,
         } = self;
         Ok(super::SessionConfigSelectGroup {
-            group: group.into_v2()?,
+            group_id: group.into_v2()?,
             name: name.into_v2()?,
             options: options.into_v2()?,
             meta: meta.into_v2()?,
@@ -3844,7 +3966,6 @@ impl IntoV2 for crate::v1::SessionConfigSelect {
     }
 }
 
-#[cfg(feature = "unstable_boolean_config")]
 impl IntoV1 for super::SessionConfigBoolean {
     type Output = crate::v1::SessionConfigBoolean;
 
@@ -3856,7 +3977,6 @@ impl IntoV1 for super::SessionConfigBoolean {
     }
 }
 
-#[cfg(feature = "unstable_boolean_config")]
 impl IntoV2 for crate::v1::SessionConfigBoolean {
     type Output = super::SessionConfigBoolean;
 
@@ -3875,7 +3995,6 @@ impl IntoV1 for super::SessionConfigOptionCategory {
         Ok(match self {
             Self::Mode => crate::v1::SessionConfigOptionCategory::Mode,
             Self::Model => crate::v1::SessionConfigOptionCategory::Model,
-            #[cfg(feature = "unstable_model_config_category")]
             Self::ModelConfig => crate::v1::SessionConfigOptionCategory::ModelConfig,
             Self::ThoughtLevel => crate::v1::SessionConfigOptionCategory::ThoughtLevel,
             Self::Other(value) => crate::v1::SessionConfigOptionCategory::Other(value.into_v1()?),
@@ -3890,7 +4009,6 @@ impl IntoV2 for crate::v1::SessionConfigOptionCategory {
         Ok(match self {
             Self::Mode => super::SessionConfigOptionCategory::Mode,
             Self::Model => super::SessionConfigOptionCategory::Model,
-            #[cfg(feature = "unstable_model_config_category")]
             Self::ModelConfig => super::SessionConfigOptionCategory::ModelConfig,
             Self::ThoughtLevel => super::SessionConfigOptionCategory::ThoughtLevel,
             Self::Other(value) => super::SessionConfigOptionCategory::Other(value.into_v2()?),
@@ -3904,7 +4022,6 @@ impl IntoV1 for super::SessionConfigKind {
     fn into_v1(self) -> Result<Self::Output> {
         Ok(match self {
             Self::Select(value) => crate::v1::SessionConfigKind::Select(value.into_v1()?),
-            #[cfg(feature = "unstable_boolean_config")]
             Self::Boolean(value) => crate::v1::SessionConfigKind::Boolean(value.into_v1()?),
             Self::Other(value) => {
                 return Err(unknown_v2_enum_variant("SessionConfigKind", &value.type_));
@@ -3919,7 +4036,6 @@ impl IntoV2 for crate::v1::SessionConfigKind {
     fn into_v2(self) -> Result<Self::Output> {
         Ok(match self {
             Self::Select(value) => super::SessionConfigKind::Select(value.into_v2()?),
-            #[cfg(feature = "unstable_boolean_config")]
             Self::Boolean(value) => super::SessionConfigKind::Boolean(value.into_v2()?),
         })
     }
@@ -3930,7 +4046,7 @@ impl IntoV1 for super::SessionConfigOption {
 
     fn into_v1(self) -> Result<Self::Output> {
         let Self {
-            id,
+            config_id,
             name,
             description,
             category,
@@ -3938,7 +4054,7 @@ impl IntoV1 for super::SessionConfigOption {
             meta,
         } = self;
         Ok(crate::v1::SessionConfigOption {
-            id: id.into_v1()?,
+            id: config_id.into_v1()?,
             name: name.into_v1()?,
             description: description.into_v1()?,
             category: into_v1_default_on_error(category),
@@ -3961,7 +4077,7 @@ impl IntoV2 for crate::v1::SessionConfigOption {
             meta,
         } = self;
         Ok(super::SessionConfigOption {
-            id: id.into_v2()?,
+            config_id: id.into_v2()?,
             name: name.into_v2()?,
             description: description.into_v2()?,
             category: into_v2_default_on_error(category),
@@ -3971,23 +4087,27 @@ impl IntoV2 for crate::v1::SessionConfigOption {
     }
 }
 
-#[cfg(feature = "unstable_boolean_config")]
 impl IntoV1 for super::SessionConfigOptionValue {
     type Output = crate::v1::SessionConfigOptionValue;
 
     fn into_v1(self) -> Result<Self::Output> {
         Ok(match self {
+            Self::Id { value } => crate::v1::SessionConfigOptionValue::ValueId {
+                value: value.into_v1()?,
+            },
             Self::Boolean { value } => crate::v1::SessionConfigOptionValue::Boolean {
                 value: value.into_v1()?,
             },
-            Self::ValueId { value } => crate::v1::SessionConfigOptionValue::ValueId {
-                value: value.into_v1()?,
-            },
+            Self::Other(value) => {
+                return Err(unknown_v2_enum_variant(
+                    "SessionConfigOptionValue",
+                    &value.type_,
+                ));
+            }
         })
     }
 }
 
-#[cfg(feature = "unstable_boolean_config")]
 impl IntoV2 for crate::v1::SessionConfigOptionValue {
     type Output = super::SessionConfigOptionValue;
 
@@ -3996,7 +4116,7 @@ impl IntoV2 for crate::v1::SessionConfigOptionValue {
             Self::Boolean { value } => super::SessionConfigOptionValue::Boolean {
                 value: value.into_v2()?,
             },
-            Self::ValueId { value } => super::SessionConfigOptionValue::ValueId {
+            Self::ValueId { value } => super::SessionConfigOptionValue::Id {
                 value: value.into_v2()?,
             },
         })
@@ -4178,10 +4298,14 @@ impl IntoV1 for super::McpServerAcp {
     type Output = crate::v1::McpServerAcp;
 
     fn into_v1(self) -> Result<Self::Output> {
-        let Self { name, id, meta } = self;
+        let Self {
+            name,
+            server_id,
+            meta,
+        } = self;
         Ok(crate::v1::McpServerAcp {
             name: name.into_v1()?,
-            id: id.into_v1()?,
+            server_id: server_id.into_v1()?,
             meta: meta.into_v1()?,
         })
     }
@@ -4192,10 +4316,14 @@ impl IntoV2 for crate::v1::McpServerAcp {
     type Output = super::McpServerAcp;
 
     fn into_v2(self) -> Result<Self::Output> {
-        let Self { name, id, meta } = self;
+        let Self {
+            name,
+            server_id,
+            meta,
+        } = self;
         Ok(super::McpServerAcp {
             name: name.into_v2()?,
-            id: id.into_v2()?,
+            server_id: server_id.into_v2()?,
             meta: meta.into_v2()?,
         })
     }
@@ -4499,19 +4627,37 @@ impl IntoV2 for crate::v1::ProviderCurrentConfig {
 }
 
 #[cfg(feature = "unstable_llm_providers")]
+impl IntoV1 for super::ProviderId {
+    type Output = crate::v1::ProviderId;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        Ok(crate::v1::ProviderId(self.0.into_v1()?))
+    }
+}
+
+#[cfg(feature = "unstable_llm_providers")]
+impl IntoV2 for crate::v1::ProviderId {
+    type Output = super::ProviderId;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        Ok(super::ProviderId(self.0.into_v2()?))
+    }
+}
+
+#[cfg(feature = "unstable_llm_providers")]
 impl IntoV1 for super::ProviderInfo {
     type Output = crate::v1::ProviderInfo;
 
     fn into_v1(self) -> Result<Self::Output> {
         let Self {
-            id,
+            provider_id,
             supported,
             required,
             current,
             meta,
         } = self;
         Ok(crate::v1::ProviderInfo {
-            id: id.into_v1()?,
+            provider_id: provider_id.into_v1()?,
             supported: into_v1_vec_skip_errors(supported),
             required: required.into_v1()?,
             current: current.into_v1()?,
@@ -4526,14 +4672,14 @@ impl IntoV2 for crate::v1::ProviderInfo {
 
     fn into_v2(self) -> Result<Self::Output> {
         let Self {
-            id,
+            provider_id,
             supported,
             required,
             current,
             meta,
         } = self;
         Ok(super::ProviderInfo {
-            id: id.into_v2()?,
+            provider_id: provider_id.into_v2()?,
             supported: into_v2_vec_skip_errors(supported),
             required: required.into_v2()?,
             current: current.into_v2()?,
@@ -4598,14 +4744,14 @@ impl IntoV1 for super::SetProviderRequest {
 
     fn into_v1(self) -> Result<Self::Output> {
         let Self {
-            id,
+            provider_id,
             api_type,
             base_url,
             headers,
             meta,
         } = self;
         Ok(crate::v1::SetProviderRequest {
-            id: id.into_v1()?,
+            provider_id: provider_id.into_v1()?,
             api_type: api_type.into_v1()?,
             base_url: base_url.into_v1()?,
             headers: headers.into_v1()?,
@@ -4620,14 +4766,14 @@ impl IntoV2 for crate::v1::SetProviderRequest {
 
     fn into_v2(self) -> Result<Self::Output> {
         let Self {
-            id,
+            provider_id,
             api_type,
             base_url,
             headers,
             meta,
         } = self;
         Ok(super::SetProviderRequest {
-            id: id.into_v2()?,
+            provider_id: provider_id.into_v2()?,
             api_type: api_type.into_v2()?,
             base_url: base_url.into_v2()?,
             headers: headers.into_v2()?,
@@ -4665,9 +4811,9 @@ impl IntoV1 for super::DisableProviderRequest {
     type Output = crate::v1::DisableProviderRequest;
 
     fn into_v1(self) -> Result<Self::Output> {
-        let Self { id, meta } = self;
+        let Self { provider_id, meta } = self;
         Ok(crate::v1::DisableProviderRequest {
-            id: id.into_v1()?,
+            provider_id: provider_id.into_v1()?,
             meta: meta.into_v1()?,
         })
     }
@@ -4678,9 +4824,9 @@ impl IntoV2 for crate::v1::DisableProviderRequest {
     type Output = super::DisableProviderRequest;
 
     fn into_v2(self) -> Result<Self::Output> {
-        let Self { id, meta } = self;
+        let Self { provider_id, meta } = self;
         Ok(super::DisableProviderRequest {
-            id: id.into_v2()?,
+            provider_id: provider_id.into_v2()?,
             meta: meta.into_v2()?,
         })
     }
@@ -4742,7 +4888,7 @@ impl IntoV1 for super::AgentCapabilities {
             prompt_capabilities,
             mcp_capabilities,
             session_capabilities,
-            auth: auth.into_v1()?,
+            auth: auth.map(IntoV1::into_v1).transpose()?.unwrap_or_default(),
             #[cfg(feature = "unstable_llm_providers")]
             providers: into_v1_default_on_error(providers),
             #[cfg(feature = "unstable_nes")]
@@ -4781,7 +4927,7 @@ impl IntoV2 for crate::v1::AgentCapabilities {
 
         Ok(super::AgentCapabilities {
             session: Some(session),
-            auth: auth.into_v2()?,
+            auth: Some(auth.into_v2()?),
             #[cfg(feature = "unstable_llm_providers")]
             providers: into_v2_default_on_error(providers),
             #[cfg(feature = "unstable_nes")]
@@ -4843,30 +4989,26 @@ impl super::SessionCapabilities {
         let Self {
             prompt,
             mcp,
-            load,
-            list,
             delete,
             additional_directories,
             #[cfg(feature = "unstable_session_fork")]
             fork,
-            resume,
-            close,
             meta,
         } = self;
 
         Ok(V1SessionCapabilityParts {
             session_capabilities: crate::v1::SessionCapabilities {
-                list: into_v1_default_on_error(list),
+                list: Some(crate::v1::SessionListCapabilities::new()),
                 delete: into_v1_default_on_error(delete),
                 additional_directories: into_v1_default_on_error(additional_directories),
                 #[cfg(feature = "unstable_session_fork")]
                 fork: into_v1_default_on_error(fork),
-                resume: into_v1_default_on_error(resume),
-                close: into_v1_default_on_error(close),
+                resume: Some(crate::v1::SessionResumeCapabilities::new()),
+                close: Some(crate::v1::SessionCloseCapabilities::new()),
                 meta: meta.into_v1()?,
             },
             prompt_capabilities: prompt.unwrap_or_default().into_v1()?,
-            load_session: load.is_some(),
+            load_session: true,
             mcp_capabilities: mcp.unwrap_or_default().into_v1()?,
         })
     }
@@ -4881,53 +5023,27 @@ impl super::SessionCapabilities {
     pub fn from_v1(
         session_capabilities: crate::v1::SessionCapabilities,
         prompt_capabilities: crate::v1::PromptCapabilities,
-        load_session: bool,
+        _load_session: bool,
         mcp_capabilities: crate::v1::McpCapabilities,
     ) -> Result<Self> {
         let crate::v1::SessionCapabilities {
-            list,
+            list: _,
             delete,
             additional_directories,
             #[cfg(feature = "unstable_session_fork")]
             fork,
-            resume,
-            close,
+            resume: _,
+            close: _,
             meta,
         } = session_capabilities;
 
         Ok(super::SessionCapabilities {
             prompt: Some(prompt_capabilities.into_v2()?),
             mcp: Some(mcp_capabilities.into_v2()?),
-            load: load_session.then(super::SessionLoadCapabilities::new),
-            list: into_v2_default_on_error(list),
             delete: into_v2_default_on_error(delete),
             additional_directories: into_v2_default_on_error(additional_directories),
             #[cfg(feature = "unstable_session_fork")]
             fork: into_v2_default_on_error(fork),
-            resume: into_v2_default_on_error(resume),
-            close: into_v2_default_on_error(close),
-            meta: meta.into_v2()?,
-        })
-    }
-}
-
-impl IntoV1 for super::SessionListCapabilities {
-    type Output = crate::v1::SessionListCapabilities;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self { meta } = self;
-        Ok(crate::v1::SessionListCapabilities {
-            meta: meta.into_v1()?,
-        })
-    }
-}
-
-impl IntoV2 for crate::v1::SessionListCapabilities {
-    type Output = super::SessionListCapabilities;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        let Self { meta } = self;
-        Ok(super::SessionListCapabilities {
             meta: meta.into_v2()?,
         })
     }
@@ -4995,50 +5111,6 @@ impl IntoV2 for crate::v1::SessionForkCapabilities {
     fn into_v2(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(super::SessionForkCapabilities {
-            meta: meta.into_v2()?,
-        })
-    }
-}
-
-impl IntoV1 for super::SessionResumeCapabilities {
-    type Output = crate::v1::SessionResumeCapabilities;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self { meta } = self;
-        Ok(crate::v1::SessionResumeCapabilities {
-            meta: meta.into_v1()?,
-        })
-    }
-}
-
-impl IntoV2 for crate::v1::SessionResumeCapabilities {
-    type Output = super::SessionResumeCapabilities;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        let Self { meta } = self;
-        Ok(super::SessionResumeCapabilities {
-            meta: meta.into_v2()?,
-        })
-    }
-}
-
-impl IntoV1 for super::SessionCloseCapabilities {
-    type Output = crate::v1::SessionCloseCapabilities;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self { meta } = self;
-        Ok(crate::v1::SessionCloseCapabilities {
-            meta: meta.into_v1()?,
-        })
-    }
-}
-
-impl IntoV2 for crate::v1::SessionCloseCapabilities {
-    type Output = super::SessionCloseCapabilities;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        let Self { meta } = self;
-        Ok(super::SessionCloseCapabilities {
             meta: meta.into_v2()?,
         })
     }
@@ -5132,7 +5204,7 @@ impl IntoV1 for super::ClientRequest {
             Self::InitializeRequest(value) => {
                 crate::v1::ClientRequest::InitializeRequest(value.into_v1()?)
             }
-            Self::AuthenticateRequest(value) => {
+            Self::LoginAuthRequest(value) => {
                 crate::v1::ClientRequest::AuthenticateRequest(value.into_v1()?)
             }
             #[cfg(feature = "unstable_llm_providers")]
@@ -5147,12 +5219,11 @@ impl IntoV1 for super::ClientRequest {
             Self::DisableProviderRequest(value) => {
                 crate::v1::ClientRequest::DisableProviderRequest(value.into_v1()?)
             }
-            Self::LogoutRequest(value) => crate::v1::ClientRequest::LogoutRequest(value.into_v1()?),
+            Self::LogoutAuthRequest(value) => {
+                crate::v1::ClientRequest::LogoutRequest(value.into_v1()?)
+            }
             Self::NewSessionRequest(value) => {
                 crate::v1::ClientRequest::NewSessionRequest(value.into_v1()?)
-            }
-            Self::LoadSessionRequest(value) => {
-                crate::v1::ClientRequest::LoadSessionRequest(value.into_v1()?)
             }
             Self::ListSessionsRequest(value) => {
                 crate::v1::ClientRequest::ListSessionsRequest(value.into_v1()?)
@@ -5165,7 +5236,7 @@ impl IntoV1 for super::ClientRequest {
                 crate::v1::ClientRequest::ForkSessionRequest(value.into_v1()?)
             }
             Self::ResumeSessionRequest(value) => {
-                crate::v1::ClientRequest::ResumeSessionRequest(value.into_v1()?)
+                v2_resume_session_request_into_v1_client_request(*value)?
             }
             Self::CloseSessionRequest(value) => {
                 crate::v1::ClientRequest::CloseSessionRequest(value.into_v1()?)
@@ -5206,11 +5277,11 @@ impl IntoV2 for crate::v1::ClientRequest {
                 super::ClientRequest::InitializeRequest(Box::new(value.into_v2()?))
             }
             Self::AuthenticateRequest(value) => {
-                super::ClientRequest::AuthenticateRequest(value.into_v2()?)
+                super::ClientRequest::LoginAuthRequest(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_llm_providers")]
             Self::ListProvidersRequest(value) => {
-                super::ClientRequest::ListProvidersRequest(value.into_v2()?)
+                super::ClientRequest::ListProvidersRequest(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_llm_providers")]
             Self::SetProviderRequest(value) => {
@@ -5218,38 +5289,42 @@ impl IntoV2 for crate::v1::ClientRequest {
             }
             #[cfg(feature = "unstable_llm_providers")]
             Self::DisableProviderRequest(value) => {
-                super::ClientRequest::DisableProviderRequest(value.into_v2()?)
+                super::ClientRequest::DisableProviderRequest(Box::new(value.into_v2()?))
             }
-            Self::LogoutRequest(value) => super::ClientRequest::LogoutRequest(value.into_v2()?),
+            Self::LogoutRequest(value) => {
+                super::ClientRequest::LogoutAuthRequest(Box::new(value.into_v2()?))
+            }
             Self::NewSessionRequest(value) => {
-                super::ClientRequest::NewSessionRequest(value.into_v2()?)
+                super::ClientRequest::NewSessionRequest(Box::new(value.into_v2()?))
             }
             Self::LoadSessionRequest(value) => {
-                super::ClientRequest::LoadSessionRequest(value.into_v2()?)
+                super::ClientRequest::ResumeSessionRequest(Box::new(value.into_v2()?))
             }
             Self::ListSessionsRequest(value) => {
-                super::ClientRequest::ListSessionsRequest(value.into_v2()?)
+                super::ClientRequest::ListSessionsRequest(Box::new(value.into_v2()?))
             }
             Self::DeleteSessionRequest(value) => {
-                super::ClientRequest::DeleteSessionRequest(value.into_v2()?)
+                super::ClientRequest::DeleteSessionRequest(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_session_fork")]
             Self::ForkSessionRequest(value) => {
-                super::ClientRequest::ForkSessionRequest(value.into_v2()?)
+                super::ClientRequest::ForkSessionRequest(Box::new(value.into_v2()?))
             }
             Self::ResumeSessionRequest(value) => {
-                super::ClientRequest::ResumeSessionRequest(value.into_v2()?)
+                super::ClientRequest::ResumeSessionRequest(Box::new(value.into_v2()?))
             }
             Self::CloseSessionRequest(value) => {
-                super::ClientRequest::CloseSessionRequest(value.into_v2()?)
+                super::ClientRequest::CloseSessionRequest(Box::new(value.into_v2()?))
             }
             Self::SetSessionModeRequest(_) => {
                 return Err(removed_v1_enum_variant("ClientRequest", "session/set_mode"));
             }
             Self::SetSessionConfigOptionRequest(value) => {
-                super::ClientRequest::SetSessionConfigOptionRequest(value.into_v2()?)
+                super::ClientRequest::SetSessionConfigOptionRequest(Box::new(value.into_v2()?))
             }
-            Self::PromptRequest(value) => super::ClientRequest::PromptRequest(value.into_v2()?),
+            Self::PromptRequest(value) => {
+                super::ClientRequest::PromptRequest(Box::new(value.into_v2()?))
+            }
             #[cfg(feature = "unstable_nes")]
             Self::StartNesRequest(value) => {
                 super::ClientRequest::StartNesRequest(Box::new(value.into_v2()?))
@@ -5259,13 +5334,15 @@ impl IntoV2 for crate::v1::ClientRequest {
                 super::ClientRequest::SuggestNesRequest(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_nes")]
-            Self::CloseNesRequest(value) => super::ClientRequest::CloseNesRequest(value.into_v2()?),
+            Self::CloseNesRequest(value) => {
+                super::ClientRequest::CloseNesRequest(Box::new(value.into_v2()?))
+            }
             #[cfg(feature = "unstable_mcp_over_acp")]
             Self::MessageMcpRequest(value) => {
-                super::ClientRequest::MessageMcpRequest(value.into_v2()?)
+                super::ClientRequest::MessageMcpRequest(Box::new(value.into_v2()?))
             }
             Self::ExtMethodRequest(value) => {
-                super::ClientRequest::ExtMethodRequest(value.into_v2()?)
+                super::ClientRequest::ExtMethodRequest(Box::new(value.into_v2()?))
             }
         })
     }
@@ -5279,7 +5356,7 @@ impl IntoV1 for super::AgentResponse {
             Self::InitializeResponse(value) => {
                 crate::v1::AgentResponse::InitializeResponse(value.into_v1()?)
             }
-            Self::AuthenticateResponse(value) => {
+            Self::LoginAuthResponse(value) => {
                 crate::v1::AgentResponse::AuthenticateResponse(value.into_v1()?)
             }
             #[cfg(feature = "unstable_llm_providers")]
@@ -5294,14 +5371,11 @@ impl IntoV1 for super::AgentResponse {
             Self::DisableProviderResponse(value) => {
                 crate::v1::AgentResponse::DisableProviderResponse(value.into_v1()?)
             }
-            Self::LogoutResponse(value) => {
+            Self::LogoutAuthResponse(value) => {
                 crate::v1::AgentResponse::LogoutResponse(value.into_v1()?)
             }
             Self::NewSessionResponse(value) => {
                 crate::v1::AgentResponse::NewSessionResponse(value.into_v1()?)
-            }
-            Self::LoadSessionResponse(value) => {
-                crate::v1::AgentResponse::LoadSessionResponse(value.into_v1()?)
             }
             Self::ListSessionsResponse(value) => {
                 crate::v1::AgentResponse::ListSessionsResponse(value.into_v1()?)
@@ -5357,68 +5431,72 @@ impl IntoV2 for crate::v1::AgentResponse {
                 super::AgentResponse::InitializeResponse(Box::new(value.into_v2()?))
             }
             Self::AuthenticateResponse(value) => {
-                super::AgentResponse::AuthenticateResponse(value.into_v2()?)
+                super::AgentResponse::LoginAuthResponse(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_llm_providers")]
             Self::ListProvidersResponse(value) => {
-                super::AgentResponse::ListProvidersResponse(value.into_v2()?)
+                super::AgentResponse::ListProvidersResponse(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_llm_providers")]
             Self::SetProviderResponse(value) => {
-                super::AgentResponse::SetProviderResponse(value.into_v2()?)
+                super::AgentResponse::SetProviderResponse(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_llm_providers")]
             Self::DisableProviderResponse(value) => {
-                super::AgentResponse::DisableProviderResponse(value.into_v2()?)
+                super::AgentResponse::DisableProviderResponse(Box::new(value.into_v2()?))
             }
-            Self::LogoutResponse(value) => super::AgentResponse::LogoutResponse(value.into_v2()?),
+            Self::LogoutResponse(value) => {
+                super::AgentResponse::LogoutAuthResponse(Box::new(value.into_v2()?))
+            }
             Self::NewSessionResponse(value) => {
-                super::AgentResponse::NewSessionResponse(value.into_v2()?)
+                super::AgentResponse::NewSessionResponse(Box::new(value.into_v2()?))
             }
             Self::LoadSessionResponse(value) => {
-                super::AgentResponse::LoadSessionResponse(value.into_v2()?)
+                super::AgentResponse::ResumeSessionResponse(Box::new(value.into_v2()?))
             }
             Self::ListSessionsResponse(value) => {
-                super::AgentResponse::ListSessionsResponse(value.into_v2()?)
+                super::AgentResponse::ListSessionsResponse(Box::new(value.into_v2()?))
             }
             Self::DeleteSessionResponse(value) => {
-                super::AgentResponse::DeleteSessionResponse(value.into_v2()?)
+                super::AgentResponse::DeleteSessionResponse(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_session_fork")]
             Self::ForkSessionResponse(value) => {
-                super::AgentResponse::ForkSessionResponse(value.into_v2()?)
+                super::AgentResponse::ForkSessionResponse(Box::new(value.into_v2()?))
             }
             Self::ResumeSessionResponse(value) => {
-                super::AgentResponse::ResumeSessionResponse(value.into_v2()?)
+                super::AgentResponse::ResumeSessionResponse(Box::new(value.into_v2()?))
             }
             Self::CloseSessionResponse(value) => {
-                super::AgentResponse::CloseSessionResponse(value.into_v2()?)
+                super::AgentResponse::CloseSessionResponse(Box::new(value.into_v2()?))
             }
             Self::SetSessionModeResponse(_) => {
                 return Err(removed_v1_enum_variant("AgentResponse", "session/set_mode"));
             }
             Self::SetSessionConfigOptionResponse(value) => {
-                super::AgentResponse::SetSessionConfigOptionResponse(value.into_v2()?)
+                super::AgentResponse::SetSessionConfigOptionResponse(Box::new(value.into_v2()?))
             }
-            Self::PromptResponse(value) => super::AgentResponse::PromptResponse(value.into_v2()?),
+            Self::PromptResponse(value) => {
+                super::AgentResponse::PromptResponse(Box::new(value.into_v2()?))
+            }
             #[cfg(feature = "unstable_nes")]
             Self::StartNesResponse(value) => {
-                super::AgentResponse::StartNesResponse(value.into_v2()?)
+                super::AgentResponse::StartNesResponse(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_nes")]
             Self::SuggestNesResponse(value) => {
-                super::AgentResponse::SuggestNesResponse(value.into_v2()?)
+                super::AgentResponse::SuggestNesResponse(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_nes")]
             Self::CloseNesResponse(value) => {
-                super::AgentResponse::CloseNesResponse(value.into_v2()?)
+                super::AgentResponse::CloseNesResponse(Box::new(value.into_v2()?))
             }
             Self::ExtMethodResponse(value) => {
-                super::AgentResponse::ExtMethodResponse(value.into_v2()?)
+                super::AgentResponse::ExtMethodResponse(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_mcp_over_acp")]
             Self::MessageMcpResponse(value) => {
-                super::AgentResponse::MessageMcpResponse(value.into_v2()?)
+                super::AgentResponse::MessageMcpResponse(Box::new(value.into_v2()?))
             }
         })
     }
@@ -5429,7 +5507,7 @@ impl IntoV1 for super::ClientNotification {
 
     fn into_v1(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::CancelNotification(value) => {
+            Self::CancelSessionNotification(value) => {
                 crate::v1::ClientNotification::CancelNotification(value.into_v1()?)
             }
             #[cfg(feature = "unstable_nes")]
@@ -5477,23 +5555,23 @@ impl IntoV2 for crate::v1::ClientNotification {
     fn into_v2(self) -> Result<Self::Output> {
         Ok(match self {
             Self::CancelNotification(value) => {
-                super::ClientNotification::CancelNotification(value.into_v2()?)
+                super::ClientNotification::CancelSessionNotification(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_nes")]
             Self::DidOpenDocumentNotification(value) => {
-                super::ClientNotification::DidOpenDocumentNotification(value.into_v2()?)
+                super::ClientNotification::DidOpenDocumentNotification(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_nes")]
             Self::DidChangeDocumentNotification(value) => {
-                super::ClientNotification::DidChangeDocumentNotification(value.into_v2()?)
+                super::ClientNotification::DidChangeDocumentNotification(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_nes")]
             Self::DidCloseDocumentNotification(value) => {
-                super::ClientNotification::DidCloseDocumentNotification(value.into_v2()?)
+                super::ClientNotification::DidCloseDocumentNotification(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_nes")]
             Self::DidSaveDocumentNotification(value) => {
-                super::ClientNotification::DidSaveDocumentNotification(value.into_v2()?)
+                super::ClientNotification::DidSaveDocumentNotification(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_nes")]
             Self::DidFocusDocumentNotification(value) => {
@@ -5501,24 +5579,24 @@ impl IntoV2 for crate::v1::ClientNotification {
             }
             #[cfg(feature = "unstable_nes")]
             Self::AcceptNesNotification(value) => {
-                super::ClientNotification::AcceptNesNotification(value.into_v2()?)
+                super::ClientNotification::AcceptNesNotification(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_nes")]
             Self::RejectNesNotification(value) => {
-                super::ClientNotification::RejectNesNotification(value.into_v2()?)
+                super::ClientNotification::RejectNesNotification(Box::new(value.into_v2()?))
             }
             #[cfg(feature = "unstable_mcp_over_acp")]
             Self::MessageMcpNotification(value) => {
-                super::ClientNotification::MessageMcpNotification(value.into_v2()?)
+                super::ClientNotification::MessageMcpNotification(Box::new(value.into_v2()?))
             }
             Self::ExtNotification(value) => {
-                super::ClientNotification::ExtNotification(value.into_v2()?)
+                super::ClientNotification::ExtNotification(Box::new(value.into_v2()?))
             }
         })
     }
 }
 
-impl IntoV1 for super::CancelNotification {
+impl IntoV1 for super::CancelSessionNotification {
     type Output = crate::v1::CancelNotification;
 
     fn into_v1(self) -> Result<Self::Output> {
@@ -5531,11 +5609,11 @@ impl IntoV1 for super::CancelNotification {
 }
 
 impl IntoV2 for crate::v1::CancelNotification {
-    type Output = super::CancelNotification;
+    type Output = super::CancelSessionNotification;
 
     fn into_v2(self) -> Result<Self::Output> {
         let Self { session_id, meta } = self;
-        Ok(super::CancelNotification {
+        Ok(super::CancelSessionNotification {
             session_id: session_id.into_v2()?,
             meta: meta.into_v2()?,
         })
@@ -7130,19 +7208,37 @@ impl IntoV2 for crate::v1::NesSuggestion {
 }
 
 #[cfg(feature = "unstable_nes")]
+impl IntoV1 for super::NesSuggestionId {
+    type Output = crate::v1::NesSuggestionId;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        Ok(crate::v1::NesSuggestionId(self.0.into_v1()?))
+    }
+}
+
+#[cfg(feature = "unstable_nes")]
+impl IntoV2 for crate::v1::NesSuggestionId {
+    type Output = super::NesSuggestionId;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        Ok(super::NesSuggestionId(self.0.into_v2()?))
+    }
+}
+
+#[cfg(feature = "unstable_nes")]
 impl IntoV1 for super::NesEditSuggestion {
     type Output = crate::v1::NesEditSuggestion;
 
     fn into_v1(self) -> Result<Self::Output> {
         let Self {
-            id,
+            suggestion_id,
             uri,
             edits,
             cursor_position,
             meta,
         } = self;
         Ok(crate::v1::NesEditSuggestion {
-            id: id.into_v1()?,
+            id: suggestion_id.into_v1()?,
             uri: uri.into_v1()?,
             edits: edits.into_v1()?,
             cursor_position: into_v1_default_on_error(cursor_position),
@@ -7164,7 +7260,7 @@ impl IntoV2 for crate::v1::NesEditSuggestion {
             meta,
         } = self;
         Ok(super::NesEditSuggestion {
-            id: id.into_v2()?,
+            suggestion_id: id.into_v2()?,
             uri: uri.into_v2()?,
             edits: edits.into_v2()?,
             cursor_position: into_v2_default_on_error(cursor_position),
@@ -7215,13 +7311,13 @@ impl IntoV1 for super::NesJumpSuggestion {
 
     fn into_v1(self) -> Result<Self::Output> {
         let Self {
-            id,
+            suggestion_id,
             uri,
             position,
             meta,
         } = self;
         Ok(crate::v1::NesJumpSuggestion {
-            id: id.into_v1()?,
+            id: suggestion_id.into_v1()?,
             uri: uri.into_v1()?,
             position: position.into_v1()?,
             meta: meta.into_v1()?,
@@ -7241,7 +7337,7 @@ impl IntoV2 for crate::v1::NesJumpSuggestion {
             meta,
         } = self;
         Ok(super::NesJumpSuggestion {
-            id: id.into_v2()?,
+            suggestion_id: id.into_v2()?,
             uri: uri.into_v2()?,
             position: position.into_v2()?,
             meta: meta.into_v2()?,
@@ -7255,14 +7351,14 @@ impl IntoV1 for super::NesRenameSuggestion {
 
     fn into_v1(self) -> Result<Self::Output> {
         let Self {
-            id,
+            suggestion_id,
             uri,
             position,
             new_name,
             meta,
         } = self;
         Ok(crate::v1::NesRenameSuggestion {
-            id: id.into_v1()?,
+            id: suggestion_id.into_v1()?,
             uri: uri.into_v1()?,
             position: position.into_v1()?,
             new_name: new_name.into_v1()?,
@@ -7284,7 +7380,7 @@ impl IntoV2 for crate::v1::NesRenameSuggestion {
             meta,
         } = self;
         Ok(super::NesRenameSuggestion {
-            id: id.into_v2()?,
+            suggestion_id: id.into_v2()?,
             uri: uri.into_v2()?,
             position: position.into_v2()?,
             new_name: new_name.into_v2()?,
@@ -7299,7 +7395,7 @@ impl IntoV1 for super::NesSearchAndReplaceSuggestion {
 
     fn into_v1(self) -> Result<Self::Output> {
         let Self {
-            id,
+            suggestion_id,
             uri,
             search,
             replace,
@@ -7307,7 +7403,7 @@ impl IntoV1 for super::NesSearchAndReplaceSuggestion {
             meta,
         } = self;
         Ok(crate::v1::NesSearchAndReplaceSuggestion {
-            id: id.into_v1()?,
+            id: suggestion_id.into_v1()?,
             uri: uri.into_v1()?,
             search: search.into_v1()?,
             replace: replace.into_v1()?,
@@ -7331,7 +7427,7 @@ impl IntoV2 for crate::v1::NesSearchAndReplaceSuggestion {
             meta,
         } = self;
         Ok(super::NesSearchAndReplaceSuggestion {
-            id: id.into_v2()?,
+            suggestion_id: id.into_v2()?,
             uri: uri.into_v2()?,
             search: search.into_v2()?,
             replace: replace.into_v2()?,
@@ -7348,12 +7444,12 @@ impl IntoV1 for super::AcceptNesNotification {
     fn into_v1(self) -> Result<Self::Output> {
         let Self {
             session_id,
-            id,
+            suggestion_id,
             meta,
         } = self;
         Ok(crate::v1::AcceptNesNotification {
             session_id: session_id.into_v1()?,
-            id: id.into_v1()?,
+            id: suggestion_id.into_v1()?,
             meta: meta.into_v1()?,
         })
     }
@@ -7371,7 +7467,7 @@ impl IntoV2 for crate::v1::AcceptNesNotification {
         } = self;
         Ok(super::AcceptNesNotification {
             session_id: session_id.into_v2()?,
-            id: id.into_v2()?,
+            suggestion_id: id.into_v2()?,
             meta: meta.into_v2()?,
         })
     }
@@ -7384,13 +7480,13 @@ impl IntoV1 for super::RejectNesNotification {
     fn into_v1(self) -> Result<Self::Output> {
         let Self {
             session_id,
-            id,
+            suggestion_id,
             reason,
             meta,
         } = self;
         Ok(crate::v1::RejectNesNotification {
             session_id: session_id.into_v1()?,
-            id: id.into_v1()?,
+            id: suggestion_id.into_v1()?,
             reason: into_v1_default_on_error(reason),
             meta: meta.into_v1()?,
         })
@@ -7410,7 +7506,7 @@ impl IntoV2 for crate::v1::RejectNesNotification {
         } = self;
         Ok(super::RejectNesNotification {
             session_id: session_id.into_v2()?,
-            id: id.into_v2()?,
+            suggestion_id: id.into_v2()?,
             reason: into_v2_default_on_error(reason),
             meta: meta.into_v2()?,
         })
@@ -7756,39 +7852,12 @@ impl IntoV2 for crate::v1::BooleanPropertySchema {
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV1 for super::ElicitationStringType {
-    type Output = crate::v1::ElicitationStringType;
+impl IntoV1 for super::StringMultiSelectItems {
+    type Output = crate::v1::StringMultiSelectItems;
 
     fn into_v1(self) -> Result<Self::Output> {
-        Ok(match self {
-            Self::String => crate::v1::ElicitationStringType::String,
-        })
-    }
-}
-
-#[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::ElicitationStringType {
-    type Output = super::ElicitationStringType;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        Ok(match self {
-            Self::String => super::ElicitationStringType::String,
-        })
-    }
-}
-
-#[cfg(feature = "unstable_elicitation")]
-impl IntoV1 for super::UntitledMultiSelectItems {
-    type Output = crate::v1::UntitledMultiSelectItems;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self {
-            type_,
-            values,
-            meta,
-        } = self;
-        Ok(crate::v1::UntitledMultiSelectItems {
-            type_: type_.into_v1()?,
+        let Self { values, meta } = self;
+        Ok(crate::v1::StringMultiSelectItems {
             values: values.into_v1()?,
             meta: meta.into_v1()?,
         })
@@ -7796,19 +7865,40 @@ impl IntoV1 for super::UntitledMultiSelectItems {
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::UntitledMultiSelectItems {
-    type Output = super::UntitledMultiSelectItems;
+impl IntoV2 for crate::v1::StringMultiSelectItems {
+    type Output = super::StringMultiSelectItems;
 
     fn into_v2(self) -> Result<Self::Output> {
-        let Self {
-            type_,
-            values,
-            meta,
-        } = self;
-        Ok(super::UntitledMultiSelectItems {
-            type_: type_.into_v2()?,
+        let Self { values, meta } = self;
+        Ok(super::StringMultiSelectItems {
             values: values.into_v2()?,
             meta: meta.into_v2()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_elicitation")]
+impl IntoV1 for super::OtherMultiSelectItems {
+    type Output = crate::v1::OtherMultiSelectItems;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        let Self { type_, fields } = self;
+        Ok(crate::v1::OtherMultiSelectItems {
+            type_: type_.into_v1()?,
+            fields: fields.into_v1()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_elicitation")]
+impl IntoV2 for crate::v1::OtherMultiSelectItems {
+    type Output = super::OtherMultiSelectItems;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        let Self { type_, fields } = self;
+        Ok(super::OtherMultiSelectItems {
+            type_: type_.into_v2()?,
+            fields: fields.into_v2()?,
         })
     }
 }
@@ -7845,7 +7935,8 @@ impl IntoV1 for super::MultiSelectItems {
 
     fn into_v1(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::Untitled(value) => crate::v1::MultiSelectItems::Untitled(value.into_v1()?),
+            Self::String(value) => crate::v1::MultiSelectItems::String(value.into_v1()?),
+            Self::Other(value) => crate::v1::MultiSelectItems::Other(value.into_v1()?),
             Self::Titled(value) => crate::v1::MultiSelectItems::Titled(value.into_v1()?),
         })
     }
@@ -7857,7 +7948,8 @@ impl IntoV2 for crate::v1::MultiSelectItems {
 
     fn into_v2(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::Untitled(value) => super::MultiSelectItems::Untitled(value.into_v2()?),
+            Self::String(value) => super::MultiSelectItems::String(value.into_v2()?),
+            Self::Other(value) => super::MultiSelectItems::Other(value.into_v2()?),
             Self::Titled(value) => super::MultiSelectItems::Titled(value.into_v2()?),
         })
     }
@@ -7926,6 +8018,7 @@ impl IntoV1 for super::ElicitationPropertySchema {
             Self::Integer(value) => crate::v1::ElicitationPropertySchema::Integer(value.into_v1()?),
             Self::Boolean(value) => crate::v1::ElicitationPropertySchema::Boolean(value.into_v1()?),
             Self::Array(value) => crate::v1::ElicitationPropertySchema::Array(value.into_v1()?),
+            Self::Other(value) => crate::v1::ElicitationPropertySchema::Other(value.into_v1()?),
         })
     }
 }
@@ -7941,6 +8034,33 @@ impl IntoV2 for crate::v1::ElicitationPropertySchema {
             Self::Integer(value) => super::ElicitationPropertySchema::Integer(value.into_v2()?),
             Self::Boolean(value) => super::ElicitationPropertySchema::Boolean(value.into_v2()?),
             Self::Array(value) => super::ElicitationPropertySchema::Array(value.into_v2()?),
+            Self::Other(value) => super::ElicitationPropertySchema::Other(value.into_v2()?),
+        })
+    }
+}
+
+#[cfg(feature = "unstable_elicitation")]
+impl IntoV1 for super::OtherElicitationPropertySchema {
+    type Output = crate::v1::OtherElicitationPropertySchema;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        let Self { type_, fields } = self;
+        Ok(crate::v1::OtherElicitationPropertySchema {
+            type_: type_.into_v1()?,
+            fields: fields.into_v1()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_elicitation")]
+impl IntoV2 for crate::v1::OtherElicitationPropertySchema {
+    type Output = super::OtherElicitationPropertySchema;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        let Self { type_, fields } = self;
+        Ok(super::OtherElicitationPropertySchema {
+            type_: type_.into_v2()?,
+            fields: fields.into_v2()?,
         })
     }
 }
@@ -8193,6 +8313,7 @@ impl IntoV1 for super::ElicitationMode {
         Ok(match self {
             Self::Form(value) => crate::v1::ElicitationMode::Form(value.into_v1()?),
             Self::Url(value) => crate::v1::ElicitationMode::Url(value.into_v1()?),
+            Self::Other(value) => crate::v1::ElicitationMode::Other(value.into_v1()?),
         })
     }
 }
@@ -8205,6 +8326,43 @@ impl IntoV2 for crate::v1::ElicitationMode {
         Ok(match self {
             Self::Form(value) => super::ElicitationMode::Form(value.into_v2()?),
             Self::Url(value) => super::ElicitationMode::Url(value.into_v2()?),
+            Self::Other(value) => super::ElicitationMode::Other(value.into_v2()?),
+        })
+    }
+}
+
+#[cfg(feature = "unstable_elicitation")]
+impl IntoV1 for super::OtherElicitationMode {
+    type Output = crate::v1::OtherElicitationMode;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        let Self {
+            mode,
+            scope,
+            fields,
+        } = self;
+        Ok(crate::v1::OtherElicitationMode {
+            mode: mode.into_v1()?,
+            scope: scope.into_v1()?,
+            fields: fields.into_v1()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_elicitation")]
+impl IntoV2 for crate::v1::OtherElicitationMode {
+    type Output = super::OtherElicitationMode;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        let Self {
+            mode,
+            scope,
+            fields,
+        } = self;
+        Ok(super::OtherElicitationMode {
+            mode: mode.into_v2()?,
+            scope: scope.into_v2()?,
+            fields: fields.into_v2()?,
         })
     }
 }
@@ -8312,6 +8470,7 @@ impl IntoV1 for super::ElicitationAction {
             Self::Accept(value) => crate::v1::ElicitationAction::Accept(value.into_v1()?),
             Self::Decline => crate::v1::ElicitationAction::Decline,
             Self::Cancel => crate::v1::ElicitationAction::Cancel,
+            Self::Other(value) => crate::v1::ElicitationAction::Other(value.into_v1()?),
         })
     }
 }
@@ -8325,6 +8484,33 @@ impl IntoV2 for crate::v1::ElicitationAction {
             Self::Accept(value) => super::ElicitationAction::Accept(value.into_v2()?),
             Self::Decline => super::ElicitationAction::Decline,
             Self::Cancel => super::ElicitationAction::Cancel,
+            Self::Other(value) => super::ElicitationAction::Other(value.into_v2()?),
+        })
+    }
+}
+
+#[cfg(feature = "unstable_elicitation")]
+impl IntoV1 for super::OtherElicitationAction {
+    type Output = crate::v1::OtherElicitationAction;
+
+    fn into_v1(self) -> Result<Self::Output> {
+        let Self { action, fields } = self;
+        Ok(crate::v1::OtherElicitationAction {
+            action: action.into_v1()?,
+            fields: fields.into_v1()?,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_elicitation")]
+impl IntoV2 for crate::v1::OtherElicitationAction {
+    type Output = super::OtherElicitationAction;
+
+    fn into_v2(self) -> Result<Self::Output> {
+        let Self { action, fields } = self;
+        Ok(super::OtherElicitationAction {
+            action: action.into_v2()?,
+            fields: fields.into_v2()?,
         })
     }
 }
@@ -8415,92 +8601,6 @@ impl IntoV2 for crate::v1::CompleteElicitationNotification {
         Ok(super::CompleteElicitationNotification {
             elicitation_id: elicitation_id.into_v2()?,
             meta: meta.into_v2()?,
-        })
-    }
-}
-
-#[cfg(feature = "unstable_elicitation")]
-impl IntoV1 for super::UrlElicitationRequiredData {
-    type Output = crate::v1::UrlElicitationRequiredData;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self { elicitations } = self;
-        Ok(crate::v1::UrlElicitationRequiredData {
-            elicitations: elicitations.into_v1()?,
-        })
-    }
-}
-
-#[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::UrlElicitationRequiredData {
-    type Output = super::UrlElicitationRequiredData;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        let Self { elicitations } = self;
-        Ok(super::UrlElicitationRequiredData {
-            elicitations: elicitations.into_v2()?,
-        })
-    }
-}
-
-#[cfg(feature = "unstable_elicitation")]
-impl IntoV1 for super::UrlElicitationRequiredItem {
-    type Output = crate::v1::UrlElicitationRequiredItem;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        let Self {
-            mode,
-            elicitation_id,
-            url,
-            message,
-        } = self;
-        Ok(crate::v1::UrlElicitationRequiredItem {
-            mode: mode.into_v1()?,
-            elicitation_id: elicitation_id.into_v1()?,
-            url: url.into_v1()?,
-            message: message.into_v1()?,
-        })
-    }
-}
-
-#[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::UrlElicitationRequiredItem {
-    type Output = super::UrlElicitationRequiredItem;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        let Self {
-            mode,
-            elicitation_id,
-            url,
-            message,
-        } = self;
-        Ok(super::UrlElicitationRequiredItem {
-            mode: mode.into_v2()?,
-            elicitation_id: elicitation_id.into_v2()?,
-            url: url.into_v2()?,
-            message: message.into_v2()?,
-        })
-    }
-}
-
-#[cfg(feature = "unstable_elicitation")]
-impl IntoV1 for super::ElicitationUrlOnlyMode {
-    type Output = crate::v1::ElicitationUrlOnlyMode;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        Ok(match self {
-            Self::Url => crate::v1::ElicitationUrlOnlyMode::Url,
-        })
-    }
-}
-
-#[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::ElicitationUrlOnlyMode {
-    type Output = super::ElicitationUrlOnlyMode;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        Ok(match self {
-            Self::Url => super::ElicitationUrlOnlyMode::Url,
         })
     }
 }
@@ -8797,6 +8897,7 @@ impl IntoV1 for super::ResourceLink {
         let Self {
             annotations,
             description,
+            icons,
             mime_type,
             name,
             size,
@@ -8804,6 +8905,13 @@ impl IntoV1 for super::ResourceLink {
             uri,
             meta,
         } = self;
+
+        if matches!(icons.as_ref(), Some(icons) if !icons.is_empty()) {
+            return Err(ProtocolConversionError::new(
+                "v2 ResourceLink.icons cannot be represented in v1",
+            ));
+        }
+
         Ok(crate::v1::ResourceLink {
             annotations: into_v1_default_on_error(annotations),
             description: description.into_v1()?,
@@ -8834,6 +8942,7 @@ impl IntoV2 for crate::v1::ResourceLink {
         Ok(super::ResourceLink {
             annotations: into_v2_default_on_error(annotations),
             description: description.into_v2()?,
+            icons: None,
             mime_type: mime_type.into_v2()?,
             name: name.into_v2()?,
             size: size.into_v2()?,
@@ -9030,7 +9139,6 @@ mod tests {
         for category in [
             v1::SessionConfigOptionCategory::Mode,
             v1::SessionConfigOptionCategory::Model,
-            #[cfg(feature = "unstable_model_config_category")]
             v1::SessionConfigOptionCategory::ModelConfig,
             v1::SessionConfigOptionCategory::ThoughtLevel,
             v1::SessionConfigOptionCategory::Other("_custom_category".to_string()),
@@ -9043,7 +9151,6 @@ mod tests {
         for category in [
             v2::SessionConfigOptionCategory::Mode,
             v2::SessionConfigOptionCategory::Model,
-            #[cfg(feature = "unstable_model_config_category")]
             v2::SessionConfigOptionCategory::ModelConfig,
             v2::SessionConfigOptionCategory::ThoughtLevel,
             v2::SessionConfigOptionCategory::Other("_custom_category".to_string()),
@@ -9056,25 +9163,51 @@ mod tests {
 
     #[test]
     fn converts_v2_initialize_request_to_v1_without_serde() {
-        let request = v2::InitializeRequest::new(ProtocolVersion::V2);
+        let request = v2::InitializeRequest::new(
+            ProtocolVersion::V2,
+            v2::Implementation::new("test-client", "1.0.0"),
+        );
 
         let converted: v1::InitializeRequest = v2_to_v1(request).unwrap();
 
         assert_eq!(converted.protocol_version, ProtocolVersion::V2);
+        assert_eq!(
+            converted
+                .client_info
+                .as_ref()
+                .map(|info| info.name.as_str()),
+            Some("test-client")
+        );
     }
 
     #[test]
-    fn converts_v1_initialize_request_to_v2_without_serde() {
+    fn v1_initialize_request_without_client_info_does_not_convert_to_v2() {
         let request = v1::InitializeRequest::new(ProtocolVersion::V1);
 
-        let converted: v2::InitializeRequest = v1_to_v2(request).unwrap();
+        assert_v1_to_v2_error(
+            request,
+            "v1 InitializeRequest without `clientInfo` cannot be represented in v2",
+        );
+    }
 
-        assert_eq!(converted.protocol_version, ProtocolVersion::V1);
+    #[test]
+    fn v1_initialize_response_without_agent_info_does_not_convert_to_v2() {
+        let response = v1::InitializeResponse::new(ProtocolVersion::V1);
+
+        assert_v1_to_v2_error(
+            response,
+            "v1 InitializeResponse without `agentInfo` cannot be represented in v2",
+        );
     }
 
     #[test]
     fn round_trips_initialize_request() {
-        let client_capabilities = v1::ClientCapabilities::new();
+        let client_capabilities = v1::ClientCapabilities::new().session(
+            v1::ClientSessionCapabilities::new().config_options(
+                v1::SessionConfigOptionsCapabilities::new()
+                    .boolean(v1::BooleanConfigOptionCapabilities::new()),
+            ),
+        );
 
         let request = v1::InitializeRequest::new(ProtocolVersion::V1)
             .client_capabilities(client_capabilities)
@@ -9084,14 +9217,28 @@ mod tests {
         let converted: v2::InitializeRequest =
             v1_to_v2(request).expect("v1 -> v2 conversion failed");
         let converted_capabilities =
-            serde_json::to_value(converted.capabilities).expect("v2 serialize");
+            serde_json::to_value(&converted.capabilities).expect("v2 serialize");
         assert_eq!(converted_capabilities.get("fs"), None);
         assert_eq!(converted_capabilities.get("terminal"), None);
+        let converted_json = serde_json::to_value(&converted).expect("v2 serialize");
+        assert_eq!(converted_json.get("clientInfo"), None);
+        assert_eq!(converted_json.get("implementation"), None);
+        assert!(converted_json.get("info").is_some());
     }
 
     #[test]
     fn round_trips_initialize_response() {
+        let session_capabilities = v1::SessionCapabilities::new()
+            .list(v1::SessionListCapabilities::new())
+            .resume(v1::SessionResumeCapabilities::new())
+            .close(v1::SessionCloseCapabilities::new());
         let response = v1::InitializeResponse::new(ProtocolVersion::V1)
+            .agent_capabilities(
+                v1::AgentCapabilities::new()
+                    .load_session(true)
+                    .session_capabilities(session_capabilities)
+                    .auth(v1::AgentAuthCapabilities::new().logout(v1::LogoutCapabilities::new())),
+            )
             .agent_info(v1::Implementation::new("test-agent", "2.0.0").title("Test Agent"));
         assert_v1_round_trip::<v1::InitializeResponse, v2::InitializeResponse>(response.clone());
         let converted: v2::InitializeResponse =
@@ -9099,11 +9246,14 @@ mod tests {
         let converted_json = serde_json::to_value(&converted).expect("v2 serialize");
         assert_eq!(converted_json.get("agentCapabilities"), None);
         assert!(converted_json.get("capabilities").is_some());
+        assert_eq!(converted_json.get("agentInfo"), None);
+        assert_eq!(converted_json.get("implementation"), None);
+        assert!(converted_json.get("info").is_some());
         assert_eq!(converted_json.pointer("/capabilities/loadSession"), None);
     }
 
     #[test]
-    fn agent_load_session_capability_moves_between_v1_and_v2() {
+    fn required_v2_session_methods_convert_to_v1_capability_markers() {
         let v1_capabilities = v1::AgentCapabilities::new().load_session(true);
 
         let v2_capabilities: v2::AgentCapabilities =
@@ -9112,17 +9262,20 @@ mod tests {
             .session
             .as_ref()
             .expect("v1 capabilities imply v2 session support");
-        assert!(session.load.is_some());
+        assert!(session.delete.is_none());
         let v2_json = serde_json::to_value(&v2_capabilities).expect("v2 serialize");
         assert_eq!(v2_json.get("loadSession"), None);
-        assert_eq!(
-            v2_json.pointer("/session/load"),
-            Some(&serde_json::json!({}))
-        );
+        assert_eq!(v2_json.pointer("/session/load"), None);
+        assert_eq!(v2_json.pointer("/session/list"), None);
+        assert_eq!(v2_json.pointer("/session/resume"), None);
+        assert_eq!(v2_json.pointer("/session/close"), None);
 
         let v1_after: v1::AgentCapabilities =
             v2_to_v1(v2_capabilities).expect("v2 -> v1 conversion");
         assert!(v1_after.load_session);
+        assert!(v1_after.session_capabilities.list.is_some());
+        assert!(v1_after.session_capabilities.resume.is_some());
+        assert!(v1_after.session_capabilities.close.is_some());
     }
 
     #[test]
@@ -9135,16 +9288,32 @@ mod tests {
     }
 
     #[test]
+    fn v2_auth_logout_is_baseline_not_capability_marker() {
+        let v2_auth = v2::AgentAuthCapabilities::new();
+        let v2_json = serde_json::to_value(&v2_auth).expect("v2 serialize");
+        assert_eq!(v2_json.get("logout"), None);
+
+        let v1_auth: v1::AgentAuthCapabilities = v2_to_v1(v2_auth).expect("v2 -> v1 conversion");
+        assert!(v1_auth.logout.is_some());
+
+        let v1_auth_without_logout = v1::AgentAuthCapabilities::new();
+        let v2_auth: v2::AgentAuthCapabilities =
+            v1_to_v2(v1_auth_without_logout).expect("v1 -> v2 conversion");
+        let v2_json = serde_json::to_value(&v2_auth).expect("v2 serialize");
+        assert_eq!(v2_json.get("logout"), None);
+    }
+
+    #[test]
     fn v2_session_capabilities_convert_to_v1_agent_capability_parts() {
         let parts = v2::SessionCapabilities::new()
-            .load(v2::SessionLoadCapabilities::new())
             .prompt(v2::PromptCapabilities::new().image(v2::PromptImageCapabilities::new()))
             .mcp(v2::McpCapabilities::new().http(v2::McpHttpCapabilities::new()))
-            .list(v2::SessionListCapabilities::new())
             .into_v1()
             .expect("v2 session capabilities -> v1 parts");
 
         assert!(parts.session_capabilities.list.is_some());
+        assert!(parts.session_capabilities.resume.is_some());
+        assert!(parts.session_capabilities.close.is_some());
         assert!(parts.prompt_capabilities.image);
         assert!(parts.load_session);
         assert!(parts.mcp_capabilities.http);
@@ -9219,6 +9388,55 @@ mod tests {
         assert!(v1_after.terminal);
     }
 
+    #[cfg(feature = "unstable_auth_methods")]
+    #[test]
+    fn auth_method_terminal_env_converts_between_map_and_variable_array() {
+        let mut env = HashMap::new();
+        env.insert("TERM".to_string(), "xterm-256color".to_string());
+        env.insert("API_KEY".to_string(), "secret".to_string());
+
+        let v1_method = v1::AuthMethodTerminal::new("tui-auth", "Terminal Auth").env(env);
+        let v2_method: v2::AuthMethodTerminal = v1_to_v2(v1_method).expect("v1 -> v2 conversion");
+        let v2_json = serde_json::to_value(&v2_method).expect("v2 serialize");
+        assert_eq!(
+            v2_json.pointer("/env"),
+            Some(&serde_json::json!([
+                {
+                    "name": "API_KEY",
+                    "value": "secret"
+                },
+                {
+                    "name": "TERM",
+                    "value": "xterm-256color"
+                }
+            ]))
+        );
+
+        let v1_after: v1::AuthMethodTerminal = v2_to_v1(v2_method).expect("v2 -> v1 conversion");
+        assert_eq!(
+            v1_after.env.get("TERM").map(String::as_str),
+            Some("xterm-256color")
+        );
+        assert_eq!(
+            v1_after.env.get("API_KEY").map(String::as_str),
+            Some("secret")
+        );
+    }
+
+    #[cfg(feature = "unstable_auth_methods")]
+    #[test]
+    fn auth_method_terminal_duplicate_env_names_do_not_convert_to_v1() {
+        let v2_method = v2::AuthMethodTerminal::new("tui-auth", "Terminal Auth").env(vec![
+            v2::EnvVariable::new("TERM", "xterm"),
+            v2::EnvVariable::new("TERM", "xterm-256color"),
+        ]);
+
+        assert_v2_to_v1_error(
+            v2_method,
+            "v2 AuthMethodTerminal env variable `TERM` is duplicated and cannot be represented in v1",
+        );
+    }
+
     #[test]
     fn v1_client_fs_and_terminal_capabilities_are_removed_in_v2() {
         let v1_capabilities =
@@ -9247,6 +9465,22 @@ mod tests {
         assert!(!v1_after.fs.read_text_file);
         assert!(!v1_after.fs.write_text_file);
         assert!(!v1_after.terminal);
+    }
+
+    #[test]
+    fn v2_client_capabilities_default_to_v1_boolean_config_option_support() {
+        let v2_capabilities = v2::ClientCapabilities::new();
+
+        let v1_capabilities: v1::ClientCapabilities =
+            v2_to_v1(v2_capabilities).expect("v2 -> v1 conversion");
+
+        assert!(
+            v1_capabilities
+                .session
+                .and_then(|session| session.config_options)
+                .and_then(|config_options| config_options.boolean)
+                .is_some()
+        );
     }
 
     #[test]
@@ -9365,15 +9599,12 @@ mod tests {
                     {
                         "type": "stdio",
                         "name": "local",
-                        "command": "/usr/bin/mcp",
-                        "args": [],
-                        "env": []
+                        "command": "/usr/bin/mcp"
                     },
                     {
                         "type": "http",
                         "name": "remote",
-                        "url": "https://example.com",
-                        "headers": []
+                        "url": "https://example.com"
                     }
                 ]
             })
@@ -9390,6 +9621,140 @@ mod tests {
         let request = v1::PromptRequest::new("sess_1", prompt);
         assert_v1_round_trip::<v1::PromptRequest, v2::PromptRequest>(request.clone());
         assert_json_eq_after_v1_to_v2::<v1::PromptRequest, v2::PromptRequest>(request);
+    }
+
+    #[cfg(feature = "unstable_elicitation")]
+    #[test]
+    fn round_trips_elicitation_property_schema_unknown_type() {
+        let v1_schema = v1::ElicitationSchema::new().property(
+            "location",
+            v1::ElicitationPropertySchema::Other(v1::OtherElicitationPropertySchema::new(
+                "_location",
+                std::collections::BTreeMap::from([(
+                    "precision".to_string(),
+                    serde_json::json!("city"),
+                )]),
+            )),
+            false,
+        );
+
+        assert_v1_round_trip::<v1::ElicitationSchema, v2::ElicitationSchema>(v1_schema.clone());
+        assert_json_eq_after_v1_to_v2::<v1::ElicitationSchema, v2::ElicitationSchema>(v1_schema);
+
+        let v2_schema = v2::ElicitationSchema::new().property(
+            "location",
+            v2::ElicitationPropertySchema::Other(v2::OtherElicitationPropertySchema::new(
+                "_location",
+                std::collections::BTreeMap::from([(
+                    "precision".to_string(),
+                    serde_json::json!("city"),
+                )]),
+            )),
+            false,
+        );
+
+        assert_v2_round_trip::<v2::ElicitationSchema, v1::ElicitationSchema>(v2_schema);
+    }
+
+    #[cfg(feature = "unstable_elicitation")]
+    #[test]
+    fn round_trips_multi_select_items_unknown_type() {
+        let v1_items = v1::MultiSelectItems::Other(v1::OtherMultiSelectItems::new(
+            "_token",
+            std::collections::BTreeMap::from([
+                ("format".to_string(), serde_json::json!("workspace")),
+                (
+                    "anyOf".to_string(),
+                    serde_json::json!([{ "const": "repo", "title": "Repository" }]),
+                ),
+            ]),
+        ));
+
+        assert_v1_round_trip::<v1::MultiSelectItems, v2::MultiSelectItems>(v1_items.clone());
+        assert_json_eq_after_v1_to_v2::<v1::MultiSelectItems, v2::MultiSelectItems>(v1_items);
+
+        let v2_items = v2::MultiSelectItems::Other(v2::OtherMultiSelectItems::new(
+            "_token",
+            std::collections::BTreeMap::from([
+                ("format".to_string(), serde_json::json!("workspace")),
+                (
+                    "anyOf".to_string(),
+                    serde_json::json!([{ "const": "repo", "title": "Repository" }]),
+                ),
+            ]),
+        ));
+
+        assert_v2_round_trip::<v2::MultiSelectItems, v1::MultiSelectItems>(v2_items);
+    }
+
+    #[cfg(feature = "unstable_elicitation")]
+    #[test]
+    fn round_trips_elicitation_mode_unknown_type() {
+        let v1_request = v1::CreateElicitationRequest::new(
+            v1::OtherElicitationMode::new(
+                "_browser",
+                v1::ElicitationRequestScope::new(v1::RequestId::Number(42)),
+                std::collections::BTreeMap::from([(
+                    "target".to_string(),
+                    serde_json::json!("login"),
+                )]),
+            ),
+            "Open a browser window",
+        );
+
+        assert_v1_round_trip::<v1::CreateElicitationRequest, v2::CreateElicitationRequest>(
+            v1_request.clone(),
+        );
+        assert_json_eq_after_v1_to_v2::<v1::CreateElicitationRequest, v2::CreateElicitationRequest>(
+            v1_request,
+        );
+
+        let v2_request = v2::CreateElicitationRequest::new(
+            v2::OtherElicitationMode::new(
+                "_browser",
+                v2::ElicitationRequestScope::new(v2::RequestId::Number(42)),
+                std::collections::BTreeMap::from([(
+                    "target".to_string(),
+                    serde_json::json!("login"),
+                )]),
+            ),
+            "Open a browser window",
+        );
+
+        assert_v2_round_trip::<v2::CreateElicitationRequest, v1::CreateElicitationRequest>(
+            v2_request,
+        );
+    }
+
+    #[cfg(feature = "unstable_elicitation")]
+    #[test]
+    fn round_trips_elicitation_action_unknown_type() {
+        let v1_response = v1::CreateElicitationResponse::new(v1::OtherElicitationAction::new(
+            "_defer",
+            std::collections::BTreeMap::from([
+                ("reason".to_string(), serde_json::json!("waiting")),
+                ("retryAfterMs".to_string(), serde_json::json!(1000)),
+            ]),
+        ));
+
+        assert_v1_round_trip::<v1::CreateElicitationResponse, v2::CreateElicitationResponse>(
+            v1_response.clone(),
+        );
+        assert_json_eq_after_v1_to_v2::<v1::CreateElicitationResponse, v2::CreateElicitationResponse>(
+            v1_response,
+        );
+
+        let v2_response = v2::CreateElicitationResponse::new(v2::OtherElicitationAction::new(
+            "_defer",
+            std::collections::BTreeMap::from([
+                ("reason".to_string(), serde_json::json!("waiting")),
+                ("retryAfterMs".to_string(), serde_json::json!(1000)),
+            ]),
+        ));
+
+        assert_v2_round_trip::<v2::CreateElicitationResponse, v1::CreateElicitationResponse>(
+            v2_response,
+        );
     }
 
     #[test]
@@ -9427,9 +9792,17 @@ mod tests {
                 "content": [
                     {
                         "type": "diff",
-                        "path": "/path",
-                        "oldText": "old contents",
-                        "newText": "new contents"
+                        "changes": [
+                            {
+                                "operation": "modify",
+                                "path": "/path",
+                                "fileType": "text"
+                            }
+                        ],
+                        "patch": {
+                            "format": "git_patch",
+                            "diff": "diff --git /path /path\n--- /path\n+++ /path\n@@ -1 +1 @@\n-old contents\n\\ No newline at end of file\n+new contents\n\\ No newline at end of file\n"
+                        }
                     }
                 ],
                 "locations": [
@@ -9452,7 +9825,7 @@ mod tests {
         assert_eq!(back.fields.title.as_deref(), Some("editing files"));
         assert_eq!(back.fields.kind, Some(v1::ToolKind::Edit));
         assert_eq!(back.fields.status, Some(v1::ToolCallStatus::InProgress));
-        assert_eq!(back.fields.content.as_ref().map(Vec::len), Some(1));
+        assert_eq!(back.fields.content.as_ref().map(Vec::len), Some(0));
         assert_eq!(back.fields.locations.as_ref().map(Vec::len), Some(1));
         assert_eq!(
             back.fields.raw_input,
@@ -9478,6 +9851,18 @@ mod tests {
     }
 
     #[test]
+    fn v2_entity_meta_null_does_not_convert_to_v1() {
+        assert_v2_to_v1_error(
+            v2::SessionInfoUpdate::new().meta(None::<v2::Meta>),
+            "v2 SessionInfoUpdate with null _meta cannot be represented in v1",
+        );
+        assert_v2_to_v1_error(
+            v2::ToolCallUpdate::new("tc").meta(None::<v2::Meta>),
+            "v2 ToolCallUpdate with null _meta cannot be represented in v1",
+        );
+    }
+
+    #[test]
     fn round_trips_session_notification_for_unchanged_update_kinds() {
         fn content_chunk(text: &str, message_id: &str) -> v1::ContentChunk {
             let chunk = v1::ContentChunk::new(v1::ContentBlock::Text(v1::TextContent::new(text)));
@@ -9488,13 +9873,6 @@ mod tests {
             v1::SessionUpdate::UserMessageChunk(content_chunk("u", "msg_user")),
             v1::SessionUpdate::AgentMessageChunk(content_chunk("a", "msg_agent")),
             v1::SessionUpdate::AgentThoughtChunk(content_chunk("t", "msg_thought")),
-            #[cfg(feature = "unstable_plan_operations")]
-            v1::SessionUpdate::PlanUpdate(v1::PlanUpdate::new(v1::PlanUpdateContent::markdown(
-                "plan-1",
-                "## Steps\n- [ ] Test conversion",
-            ))),
-            #[cfg(feature = "unstable_plan_operations")]
-            v1::SessionUpdate::PlanRemoved(v1::PlanRemoved::new("plan-1")),
             v1::SessionUpdate::SessionInfoUpdate(v1::SessionInfoUpdate::new().title("hi")),
             v1::SessionUpdate::UsageUpdate(
                 v1::UsageUpdate::new(53_000, 200_000).cost(v1::Cost::new(0.045, "USD")),
@@ -9503,7 +9881,7 @@ mod tests {
         for update in cases {
             let notification = v1::SessionNotification::new("sess", update);
             let original_json = serde_json::to_value(&notification).expect("v1 serialize");
-            let as_v2: v2::SessionNotification =
+            let as_v2: v2::UpdateSessionNotification =
                 v1_to_v2(notification.clone()).expect("v1 -> v2 conversion");
             let v2_json = serde_json::to_value(&as_v2).expect("v2 serialize");
             assert_eq!(
@@ -9527,7 +9905,8 @@ mod tests {
             "sess",
             v1::SessionUpdate::ToolCall(v1::ToolCall::new("tc", "title")),
         );
-        let create_v2: v2::SessionNotification = v1_to_v2(create).expect("v1 -> v2 conversion");
+        let create_v2: v2::UpdateSessionNotification =
+            v1_to_v2(create).expect("v1 -> v2 conversion");
         assert!(matches!(
             create_v2.update,
             v2::SessionUpdate::ToolCallUpdate(_)
@@ -9551,7 +9930,8 @@ mod tests {
                 v1::ToolCallUpdateFields::new().status(v1::ToolCallStatus::Completed),
             )),
         );
-        let update_v2: v2::SessionNotification = v1_to_v2(update).expect("v1 -> v2 conversion");
+        let update_v2: v2::UpdateSessionNotification =
+            v1_to_v2(update).expect("v1 -> v2 conversion");
         assert!(matches!(
             update_v2.update,
             v2::SessionUpdate::ToolCallUpdate(_)
@@ -9627,7 +10007,7 @@ mod tests {
 
     #[test]
     fn v2_full_message_session_notification_fans_out_to_v1_chunk_notifications() {
-        let notification = v2::SessionNotification::new(
+        let notification = v2::UpdateSessionNotification::new(
             "sess",
             v2::SessionUpdate::AgentMessage(v2::AgentMessage::new("msg_agent").content(vec![
                 v2::ContentBlock::Text(v2::TextContent::new("hello")),
@@ -9665,8 +10045,8 @@ mod tests {
     fn v2_json_rpc_agent_notification_fans_out_to_v1_chunk_notifications() {
         let message = v2::JsonRpcMessage::wrap(v2::Notification {
             method: "session/update".into(),
-            params: Some(v2::AgentNotification::SessionNotification(Box::new(
-                v2::SessionNotification::new(
+            params: Some(v2::AgentNotification::UpdateSessionNotification(Box::new(
+                v2::UpdateSessionNotification::new(
                     "sess",
                     v2::SessionUpdate::AgentMessage(v2::AgentMessage::new("msg_agent").content(
                         vec![
@@ -9785,7 +10165,7 @@ mod tests {
                 "sessionUpdate": "plan_update",
                 "plan": {
                     "type": "items",
-                    "id": LEGACY_V1_PLAN_ID,
+                    "planId": LEGACY_V1_PLAN_ID,
                     "entries": [
                         {
                             "content": "step",
@@ -9864,11 +10244,70 @@ mod tests {
     }
 
     #[test]
+    fn v1_session_response_missing_config_options_becomes_empty_v2_vec() {
+        let new_response: v2::NewSessionResponse =
+            v1_to_v2(v1::NewSessionResponse::new("sess")).unwrap();
+        assert!(new_response.config_options.is_empty());
+
+        let load_response: v2::ResumeSessionResponse =
+            v1_to_v2(v1::LoadSessionResponse::new()).unwrap();
+        assert!(load_response.config_options.is_empty());
+
+        let resume_response: v2::ResumeSessionResponse =
+            v1_to_v2(v1::ResumeSessionResponse::new()).unwrap();
+        assert!(resume_response.config_options.is_empty());
+
+        #[cfg(feature = "unstable_session_fork")]
+        {
+            let fork_response: v2::ForkSessionResponse =
+                v1_to_v2(v1::ForkSessionResponse::new("fork")).unwrap();
+            assert!(fork_response.config_options.is_empty());
+        }
+    }
+
+    #[test]
+    fn v2_resume_replay_from_start_maps_to_v1_load_request() {
+        let v1_load = v1::ClientRequest::LoadSessionRequest(v1::LoadSessionRequest::new(
+            "sess",
+            "/workspace/project",
+        ));
+        let v2_request: v2::ClientRequest = v1_to_v2(v1_load).unwrap();
+        let v2::ClientRequest::ResumeSessionRequest(resume) = v2_request else {
+            panic!("v1 session/load should convert to v2 session/resume");
+        };
+        assert!(matches!(resume.replay_from, Some(v2::ReplayFrom::Start(_))));
+
+        let v1_request: v1::ClientRequest =
+            v2_to_v1(v2::ClientRequest::ResumeSessionRequest(resume)).unwrap();
+        assert!(matches!(
+            v1_request,
+            v1::ClientRequest::LoadSessionRequest(_)
+        ));
+    }
+
+    #[test]
+    fn v2_resume_without_replay_maps_to_v1_resume_request() {
+        let v2_request = v2::ClientRequest::ResumeSessionRequest(Box::new(
+            v2::ResumeSessionRequest::new("sess", "/workspace/project"),
+        ));
+
+        let v1_request: v1::ClientRequest = v2_to_v1(v2_request).unwrap();
+        assert!(matches!(
+            v1_request,
+            v1::ClientRequest::ResumeSessionRequest(_)
+        ));
+    }
+
+    #[test]
     fn v2_session_response_converts_to_v1_without_mode_state() {
         let response: v1::NewSessionResponse =
             v2_to_v1(v2::NewSessionResponse::new("sess")).unwrap();
 
         assert!(response.modes.is_none());
+        assert!(matches!(
+            response.config_options,
+            Some(config_options) if config_options.is_empty()
+        ));
     }
 
     #[test]
@@ -9881,35 +10320,35 @@ mod tests {
                     "_chart",
                     BTreeMap::default(),
                 )),
-                v2::ToolCallContent::Diff(v2::Diff::new("/tmp/file.txt", "new")),
+                v2::ToolCallContent::Diff(v2::Diff::patch(
+                    "diff --git /tmp/file.txt /tmp/file.txt\n",
+                    vec![v2::DiffChange::modify("/tmp/file.txt")],
+                )),
             ]);
 
         let converted: v1::ToolCallUpdate = v2_to_v1(update).unwrap();
 
         assert_eq!(converted.fields.kind, None);
         assert_eq!(converted.fields.status, None);
-        assert_eq!(
-            converted.fields.content,
-            Some(vec![v1::ToolCallContent::Diff(v1::Diff::new(
-                "/tmp/file.txt",
-                "new"
-            ))])
-        );
+        assert_eq!(converted.fields.content, Some(vec![]));
     }
 
     #[test]
     fn v2_collection_conversion_skips_items_like_v1_vec_skip_error() {
-        let response = v2::InitializeResponse::new(ProtocolVersion::V2)
-            .capabilities(v2::AgentCapabilities::new().session(v2::SessionCapabilities::new()))
-            .auth_methods(vec![
-                v2::AuthMethod::Other(v2::OtherAuthMethod::new(
-                    "_oauth",
-                    "oauth",
-                    "OAuth",
-                    BTreeMap::default(),
-                )),
-                v2::AuthMethod::Agent(v2::AuthMethodAgent::new("agent", "Agent")),
-            ]);
+        let response = v2::InitializeResponse::new(
+            ProtocolVersion::V2,
+            v2::Implementation::new("test-agent", "2.0.0"),
+        )
+        .capabilities(v2::AgentCapabilities::new().session(v2::SessionCapabilities::new()))
+        .auth_methods(vec![
+            v2::AuthMethod::Other(v2::OtherAuthMethod::new(
+                "_oauth",
+                "oauth",
+                "OAuth",
+                BTreeMap::default(),
+            )),
+            v2::AuthMethod::Agent(v2::AuthMethodAgent::new("agent", "Agent")),
+        ]);
         let converted: v1::InitializeResponse = v2_to_v1(response).unwrap();
         assert_eq!(converted.auth_methods.len(), 1);
         assert!(matches!(
@@ -9967,6 +10406,31 @@ mod tests {
     }
 
     #[test]
+    fn available_command_input_conversion_adds_v2_discriminator() {
+        let input = v1::AvailableCommandInput::Unstructured(v1::UnstructuredCommandInput::new(
+            "Describe changes",
+        ));
+
+        let v2_input: v2::AvailableCommandInput = v1_to_v2(input.clone()).unwrap();
+        assert_eq!(
+            serde_json::to_value(&v2_input).unwrap(),
+            serde_json::json!({
+                "type": "text",
+                "hint": "Describe changes"
+            })
+        );
+
+        let v1_input: v1::AvailableCommandInput = v2_to_v1(v2_input).unwrap();
+        assert_eq!(v1_input, input);
+        assert_eq!(
+            serde_json::to_value(v1_input).unwrap(),
+            serde_json::json!({
+                "hint": "Describe changes"
+            })
+        );
+    }
+
+    #[test]
     fn v2_plan_entries_skip_unrepresentable_items_inside_tolerant_vectors() {
         let update = v2::PlanUpdate::new(v2::PlanUpdateContent::items(
             "main",
@@ -10015,10 +10479,19 @@ mod tests {
         let converted: v2::ToolCallUpdate = v1_to_v2(update).unwrap();
         assert_eq!(
             converted.content,
-            crate::MaybeUndefined::Value(vec![v2::ToolCallContent::Diff(v2::Diff::new(
-                "/tmp/file.txt",
-                "new"
+            crate::MaybeUndefined::Value(vec![v2::ToolCallContent::Diff(v2::Diff::patch(
+                full_file_git_patch(&PathBuf::from("/tmp/file.txt"), None, "new"),
+                vec![v2::DiffChange::add("/tmp/file.txt").file_type(v2::DiffFileType::Text)],
             ))])
+        );
+    }
+
+    #[test]
+    fn v2_resource_link_icons_do_not_convert_to_v1() {
+        assert_v2_to_v1_error(
+            v2::ResourceLink::new("file.txt", "file:///file.txt")
+                .icons(vec![v2::Icon::new("https://example.com/icon.png")]),
+            "v2 ResourceLink.icons cannot be represented in v1",
         );
     }
 
@@ -10044,6 +10517,27 @@ mod tests {
                 std::collections::BTreeMap::new(),
             )),
             "v2 AvailableCommandInput variant `_choices` cannot be represented in v1",
+        );
+        assert_v2_to_v1_error(
+            v2::RequestPermissionRequest::new("session-id", "Permission requested", Vec::new())
+                .subject(v2::RequestPermissionSubject::Other(
+                    v2::OtherRequestPermissionSubject::new(
+                        "_review",
+                        std::collections::BTreeMap::new(),
+                    ),
+                )),
+            "v2 RequestPermissionSubject variant `_review` cannot be represented in v1",
+        );
+        assert_v2_to_v1_error(
+            v2::RequestPermissionRequest::new("session-id", "Permission requested", Vec::new()),
+            "v2 RequestPermissionRequest without `subject` cannot be represented in v1",
+        );
+        assert_v2_to_v1_error(
+            v2::RequestPermissionOutcome::Other(v2::OtherRequestPermissionOutcome::new(
+                "_defer",
+                std::collections::BTreeMap::new(),
+            )),
+            "v2 RequestPermissionOutcome variant `_defer` cannot be represented in v1",
         );
         assert_v2_to_v1_error(
             v2::SessionConfigKind::Other(v2::OtherSessionConfigKind::new(
@@ -10075,6 +10569,7 @@ mod tests {
         assert_v2_to_v1_error(
             v2::NesSuggestion::Other(v2::OtherNesSuggestion::new(
                 "_preview",
+                "preview-1",
                 std::collections::BTreeMap::new(),
             )),
             "v2 NesSuggestion variant `_preview` cannot be represented in v1",
@@ -10094,6 +10589,35 @@ mod tests {
         assert_v1_round_trip::<v1::RequestPermissionResponse, v2::RequestPermissionResponse>(
             selected,
         );
+    }
+
+    #[test]
+    fn converts_v1_request_permission_request_with_required_v2_title() {
+        let titled = v1::RequestPermissionRequest::new(
+            "session-id",
+            v1::ToolCallUpdate::new("call_1", v1::ToolCallUpdateFields::new().title("Read file")),
+            Vec::new(),
+        );
+
+        let converted: v2::RequestPermissionRequest = v1_to_v2(titled).unwrap();
+        assert_eq!(converted.title, "Read file");
+        let Some(v2::RequestPermissionSubject::ToolCall(subject)) = converted.subject else {
+            panic!("expected tool-call permission subject");
+        };
+        assert_eq!(subject.tool_call.tool_call_id.to_string(), "call_1");
+
+        let fallback = v1::RequestPermissionRequest::new(
+            "session-id",
+            v1::ToolCallUpdate::new("call_2", v1::ToolCallUpdateFields::new()),
+            Vec::new(),
+        );
+
+        let converted: v2::RequestPermissionRequest = v1_to_v2(fallback).unwrap();
+        assert_eq!(converted.title, "Permission requested");
+        let Some(v2::RequestPermissionSubject::ToolCall(subject)) = converted.subject else {
+            panic!("expected tool-call permission subject");
+        };
+        assert_eq!(subject.tool_call.tool_call_id.to_string(), "call_2");
     }
 
     #[test]
@@ -10117,11 +10641,9 @@ mod tests {
     }
 
     #[test]
-    fn protocol_version_v1_constant_is_unchanged_by_feature_flag() {
-        // Guards against `LATEST` accidentally being re-pointed to V2 in the
-        // future; the contract is that `LATEST` is always the latest **stable**
-        // version, even when the v2 draft feature is enabled.
-        assert_eq!(ProtocolVersion::LATEST, ProtocolVersion::V1);
+    fn protocol_version_constants_remain_explicit() {
+        assert_eq!(ProtocolVersion::V1.as_u16(), 1);
+        assert_eq!(ProtocolVersion::V2.as_u16(), 2);
     }
 
     /// `?` bubbles a [`ProtocolConversionError`] into a [`v1::Error`] without

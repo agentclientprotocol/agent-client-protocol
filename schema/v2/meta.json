@@ -2,9 +2,8 @@
   "version": 2,
   "agentMethods": {
     "initialize": "initialize",
-    "authenticate": "authenticate",
+    "auth_login": "auth/login",
     "session_new": "session/new",
-    "session_load": "session/load",
     "session_set_config_option": "session/set_config_option",
     "session_prompt": "session/prompt",
     "session_cancel": "session/cancel",
@@ -12,10 +11,13 @@
     "session_delete": "session/delete",
     "session_resume": "session/resume",
     "session_close": "session/close",
-    "logout": "logout"
+    "auth_logout": "auth/logout"
   },
   "clientMethods": {
     "session_request_permission": "session/request_permission",
     "session_update": "session/update"
+  },
+  "protocolMethods": {
+    "cancel_request": "$/cancel_request"
   }
 }

@@ -53,10 +53,13 @@ The v2 `ToolCallUpdate` payload has the following semantics:
 - Any concrete value replaces the previous value.
 - `content` and `locations` are replaced as whole arrays, not appended.
 - `[]` and `null` both clear a collection field.
+- `_meta` preserves omitted, `null`, and object values as distinct update signals.
 - For a new `toolCallId`, omitted fields use Client defaults.
 - Agents **SHOULD** include `title` the first time they report a `toolCallId`.
 
-The `session/request_permission` method should also carry this same `ToolCallUpdate` shape in its `toolCall` field, so the permission UI receives the same patch/upsert payload shape as session updates.
+The `session/request_permission` method should also carry this same `ToolCallUpdate` shape for tool-call permissions. In v2, [permission requests](./permission-requests.mdx) use an optional `subject` tagged union; tool-call permissions set `subject.type: "tool_call"` and carry the update in the subject's `toolCall` field, so the permission UI receives the same patch/upsert payload shape as session updates while leaving room for future permission subjects.
+
+Permission-specific prompt text should be carried by the request's common required `title` and optional `description` fields instead of `ToolCallUpdate.title` or `ToolCallUpdate.content`. That keeps a permission prompt from accidentally replacing displayed tool-call state.
 
 ACP v2 should define a matching streaming update:
 
@@ -113,5 +116,6 @@ Tool-call updates need both operations. Omission means "I am not changing this f
 
 ## Revision history
 
+- 2026-07-02: Updated permission requests to carry tool-call updates through an optional `subject` tagged union and to use separate `title` and `description` fields for permission-specific prompt text.
 - 2026-06-09: Added `tool_call_content_chunk` for streaming tool-call content.
 - 2026-06-08: Initial draft

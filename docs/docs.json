@@ -77,6 +77,7 @@
                   "protocol/v1/content",
                   "protocol/v1/tool-calls",
                   "protocol/v1/file-system",
+                  "protocol/v1/cancellation",
                   "protocol/v1/terminals",
                   "protocol/v1/agent-plan",
                   "protocol/v1/session-modes",
@@ -126,6 +127,7 @@
                   "protocol/v2/prompt-lifecycle",
                   "protocol/v2/content",
                   "protocol/v2/tool-calls",
+                  "protocol/v2/cancellation",
                   "protocol/v2/agent-plan",
                   "protocol/v2/session-config-options",
                   "protocol/v2/slash-commands",
@@ -180,54 +182,64 @@
             "group": "Draft",
             "pages": [
               "rfds/session-fork",
-              "rfds/request-cancellation",
-              "rfds/agent-telemetry-export",
               "rfds/proxy-chains",
               "rfds/mcp-over-acp",
               "rfds/end-turn-token-usage",
               "rfds/auth-methods",
               "rfds/diff-delete",
-              "rfds/boolean-config-option",
-              "rfds/elicitation",
               "rfds/next-edit-suggestions",
               "rfds/custom-llm-endpoint",
-              "rfds/plan-operations",
+              "rfds/plan-operations"
+            ]
+          },
+          {
+            "group": "Active",
+            "pages": [
+              "rfds/elicitation",
+              "rfds/streamable-http-websocket-transport",
               {
-                "group": "v2 Draft",
+                "group": "v2 Active",
                 "expanded": true,
                 "root": "rfds/v2/overview",
                 "pages": [
                   "rfds/v2/prompt",
                   "rfds/v2/enum-variant-extension",
+                  "rfds/v2/required-session-methods",
+                  "rfds/v2/session-resume-replay",
                   "rfds/v2/client-filesystem-terminal-capabilities",
                   "rfds/v2/plan-variants",
                   "rfds/v2/tool-call-updates",
-                  "rfds/v2/message-updates",
-                  "rfds/streamable-http-websocket-transport"
+                  "rfds/v2/diff-file-states",
+                  "rfds/v2/permission-requests",
+                  "rfds/v2/message-updates"
                 ]
               }
             ]
           },
           {
             "group": "Preview",
-            "pages": ["rfds/model-config-category", "rfds/rust-sdk-v1"]
+            "pages": []
           },
           {
             "group": "Completed",
             "pages": [
               "rfds/introduce-rfd-process",
               "rfds/session-config-options",
-              "rfds/session-list",
-              "rfds/session-usage",
-              "rfds/message-id",
-              "rfds/session-delete",
-              "rfds/session-info-update",
-              "rfds/meta-propagation",
               "rfds/acp-agent-registry",
+              "rfds/session-info-update",
+              "rfds/session-list",
               "rfds/session-resume",
               "rfds/session-close",
               "rfds/logout-method",
-              "rfds/additional-directories"
+              "rfds/additional-directories",
+              "rfds/meta-propagation",
+              "rfds/message-id",
+              "rfds/session-usage",
+              "rfds/session-delete",
+              "rfds/model-config-category",
+              "rfds/rust-sdk-v1",
+              "rfds/request-cancellation",
+              "rfds/boolean-config-option"
             ]
           }
         ]

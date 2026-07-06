@@ -44,17 +44,23 @@ Once a proposal is moved to draft, code and implementation may begin to land int
 
 Further discussion on the RFD can take place on [Zulip](https://agentclientprotocol.zulipchat.com/) if needed.
 
+#### Moving to the "active" section
+
+When core maintainers or a working group are actively spending bandwidth on an RFD, the champion can open a PR to move the file to the active section. Active RFDs are the proposals the project is currently trying to move forward. This is a visibility signal, not a stability commitment or final approval.
+
+Active RFDs should have a current owner, a plausible implementation or design plan, and should be updated as the work changes. If work pauses or the owner no longer has bandwidth, the RFD can move back to draft.
+
 #### Moving to the "preview" section
 
 Once the champion feels the RFD is ready for others to check it out, they can open a PR to move the file to the preview section. This is a signal to the community (and particularly other core team members) to check out the proposal and see what they think. The PR should stay open for "a few days" to give people an opportunity to leave feedback. The champion is empowered to decide whether to land the PR. As ever, all new feedback should be recorded in the FAQ section.
 
-#### Deciding to accept an RFD
+#### Deciding to complete an RFD
 
 When they feel the RFD is ready to be completed, the champion requests review by the team. The team can raise concerns and notes during discussion. Final decision on an RFD is made by the core team lead.
 
 #### Implementation of an RFD
 
-Once accepted, RFDs become living documents that track implementation progress. Status badges in design documentation link back to the relevant RFD, creating a clear connection between "why we're building this" and "how it works." When building code with an agent, agents should read RFDs during implementation to understand design rationale and update them with implementation progress.
+Active RFDs are living documents that track implementation progress. Status badges in design documentation link back to the relevant RFD, creating a clear connection between "why we're building this" and "how it works." When building code with an agent, agents should read RFDs during implementation to understand design rationale and update them with implementation progress.
 
 ### Moderating and managing RFD discussions
 
@@ -67,7 +73,7 @@ If the discussion on the PR gets to the point where Github begins to hide commen
 > What is your implementation plan?
 
 - ✅ Create RFD infrastructure (about, TEMPLATE, navigation setup)
-- ✅ Establish lifecycle: Draft → Preview → Accepted → Completed
+- ✅ Establish lifecycle: Draft → Active → Preview → Completed
 - ⏳ Write RFDs for major in-progress features
 
 ## Frequently asked questions
@@ -78,4 +84,5 @@ Well, partly because "dialog" emphasizes conversation and exploration rather tha
 
 ## Revision history
 
+- 2026-07-02: Added Active between Draft and Preview to show which RFDs have current maintainer or working-group bandwidth.
 - 2025-10-28: Initial version, created alongside RFD infrastructure

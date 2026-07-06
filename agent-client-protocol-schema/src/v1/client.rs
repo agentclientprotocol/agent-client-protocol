@@ -41,6 +41,7 @@ use super::{ClientNesCapabilities, PositionEncodingKind};
 /// Used to stream real-time progress and results during prompt processing.
 ///
 /// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-turn#3-agent-reports-output)
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[schemars(extend("x-side" = "client", "x-method" = SESSION_UPDATE_NOTIFICATION))]
@@ -56,6 +57,9 @@ pub struct SessionNotification {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -137,6 +141,7 @@ pub enum SessionUpdate {
 /// The current mode of the session has changed
 ///
 /// See protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/session-modes)
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -149,6 +154,9 @@ pub struct CurrentModeUpdate {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -191,6 +199,9 @@ pub struct ConfigOptionUpdate {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -221,15 +232,20 @@ impl ConfigOptionUpdate {
 ///
 /// Agents send this notification to update session information like title or custom metadata.
 /// This allows clients to display dynamic session names and track session state changes.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SessionInfoUpdate {
     /// Human-readable title for the session. Set to null to clear.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub title: MaybeUndefined<String>,
     /// ISO 8601 timestamp of last activity. Set to null to clear.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub updated_at: MaybeUndefined<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -237,6 +253,9 @@ pub struct SessionInfoUpdate {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -295,6 +314,9 @@ pub struct UsageUpdate {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -331,6 +353,7 @@ impl UsageUpdate {
 }
 
 /// Cost information for a session.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -345,6 +368,9 @@ pub struct Cost {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -373,6 +399,7 @@ impl Cost {
 }
 
 /// A streamed item of content
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -384,12 +411,18 @@ pub struct ContentChunk {
     ///
     /// All chunks belonging to the same message share the same `messageId`.
     /// A change in `messageId` indicates a new message has started.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub message_id: Option<MessageId>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -464,6 +497,9 @@ pub struct AvailableCommandsUpdate {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -511,6 +547,9 @@ pub struct AvailableCommand {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -556,6 +595,7 @@ pub enum AvailableCommandInput {
 }
 
 /// All text that was typed after the command name is provided as input.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -568,6 +608,9 @@ pub struct UnstructuredCommandInput {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -601,6 +644,7 @@ impl UnstructuredCommandInput {
 /// Sent when the agent needs authorization before performing a sensitive operation.
 ///
 /// See protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/tool-calls#requesting-permission)
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[schemars(extend("x-side" = "client", "x-method" = SESSION_REQUEST_PERMISSION_METHOD_NAME))]
@@ -618,6 +662,9 @@ pub struct RequestPermissionRequest {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -651,6 +698,7 @@ impl RequestPermissionRequest {
 }
 
 /// An option presented to the user when requesting permission.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -667,6 +715,9 @@ pub struct PermissionOption {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -732,6 +783,7 @@ pub enum PermissionOptionKind {
 }
 
 /// Response to a permission request.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "client", "x-method" = SESSION_REQUEST_PERMISSION_METHOD_NAME))]
@@ -746,6 +798,9 @@ pub struct RequestPermissionResponse {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -792,6 +847,7 @@ pub enum RequestPermissionOutcome {
 }
 
 /// The user selected one of the provided options.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -804,6 +860,9 @@ pub struct SelectedPermissionOutcome {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -835,6 +894,7 @@ impl SelectedPermissionOutcome {
 /// Request to write content to a text file.
 ///
 /// Only available if the client supports the `fs.writeTextFile` capability.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "client", "x-method" = FS_WRITE_TEXT_FILE_METHOD_NAME))]
@@ -852,6 +912,9 @@ pub struct WriteTextFileRequest {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -885,6 +948,7 @@ impl WriteTextFileRequest {
 }
 
 /// Response to `fs/write_text_file`
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -896,6 +960,9 @@ pub struct WriteTextFileResponse {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -924,6 +991,7 @@ impl WriteTextFileResponse {
 /// Request to read content from a text file.
 ///
 /// Only available if the client supports the `fs.readTextFile` capability.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "client", "x-method" = FS_READ_TEXT_FILE_METHOD_NAME))]
@@ -935,14 +1003,23 @@ pub struct ReadTextFileRequest {
     /// Absolute path to the file to read.
     pub path: PathBuf,
     /// Line number to start reading from (1-based).
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub line: Option<u32>,
     /// Maximum number of lines to read.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub limit: Option<u32>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -987,6 +1064,7 @@ impl ReadTextFileRequest {
 }
 
 /// Response containing the contents of a text file.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "client", "x-method" = FS_READ_TEXT_FILE_METHOD_NAME))]
@@ -1000,6 +1078,9 @@ pub struct ReadTextFileResponse {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -1044,6 +1125,7 @@ impl TerminalId {
 }
 
 /// Request to create a new terminal and execute a command.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -1055,12 +1137,19 @@ pub struct CreateTerminalRequest {
     /// The command to execute.
     pub command: String,
     /// Array of command arguments.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub args: Vec<String>,
     /// Environment variables for the command.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub env: Vec<EnvVariable>,
-    /// Working directory for the command (absolute path).
+    /// Working directory for the command. Must be an absolute path.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub cwd: Option<PathBuf>,
     /// Maximum number of output bytes to retain.
     ///
@@ -1070,12 +1159,18 @@ pub struct CreateTerminalRequest {
     /// The Client MUST ensure truncation happens at a character boundary to maintain valid
     /// string output, even if this means the retained output is slightly less than the
     /// specified limit.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub output_byte_limit: Option<u64>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -1109,7 +1204,7 @@ impl CreateTerminalRequest {
         self
     }
 
-    /// Working directory for the command (absolute path).
+    /// Working directory for the command. Must be an absolute path.
     #[must_use]
     pub fn cwd(mut self, cwd: impl IntoOption<PathBuf>) -> Self {
         self.cwd = cwd.into_option();
@@ -1143,6 +1238,7 @@ impl CreateTerminalRequest {
 }
 
 /// Response containing the ID of the created terminal.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -1156,6 +1252,9 @@ pub struct CreateTerminalResponse {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -1183,6 +1282,7 @@ impl CreateTerminalResponse {
 }
 
 /// Request to get the current output and status of a terminal.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -1198,6 +1298,9 @@ pub struct TerminalOutputRequest {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -1226,6 +1329,7 @@ impl TerminalOutputRequest {
 }
 
 /// Response containing the terminal output and exit status.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -1237,12 +1341,18 @@ pub struct TerminalOutputResponse {
     /// Whether the output was truncated due to byte limits.
     pub truncated: bool,
     /// Exit status if the command has completed.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub exit_status: Option<TerminalExitStatus>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -1279,6 +1389,7 @@ impl TerminalOutputResponse {
 }
 
 /// Request to release a terminal and free its resources.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -1294,6 +1405,9 @@ pub struct ReleaseTerminalRequest {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -1322,6 +1436,7 @@ impl ReleaseTerminalRequest {
 }
 
 /// Response to terminal/release method
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -1333,6 +1448,9 @@ pub struct ReleaseTerminalResponse {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -1357,6 +1475,7 @@ impl ReleaseTerminalResponse {
 }
 
 /// Request to kill a terminal without releasing it.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -1372,6 +1491,9 @@ pub struct KillTerminalRequest {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -1400,6 +1522,7 @@ impl KillTerminalRequest {
 }
 
 /// Response to `terminal/kill` method
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -1411,6 +1534,9 @@ pub struct KillTerminalResponse {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -1435,6 +1561,7 @@ impl KillTerminalResponse {
 }
 
 /// Request to wait for a terminal command to exit.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -1450,6 +1577,9 @@ pub struct WaitForTerminalExitRequest {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -1478,6 +1608,7 @@ impl WaitForTerminalExitRequest {
 }
 
 /// Response containing the exit status of a terminal command.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -1492,6 +1623,9 @@ pub struct WaitForTerminalExitResponse {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -1519,20 +1653,30 @@ impl WaitForTerminalExitResponse {
 }
 
 /// Exit status of a terminal command.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct TerminalExitStatus {
     /// The process exit code (may be null if terminated by signal).
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub exit_code: Option<u32>,
     /// The signal that terminated the process (may be null if exited normally).
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub signal: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -1586,18 +1730,30 @@ impl TerminalExitStatus {
 pub struct ClientCapabilities {
     /// File system capabilities supported by the client.
     /// Determines which file operations the agent can request.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub fs: FileSystemCapabilities,
     /// Whether the Client support all `terminal/*` methods.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub terminal: bool,
+    /// Session-related capabilities supported by the client.
+    ///
+    /// Optional. Omitted or `null` both mean the client does not advertise any
+    /// session-related extensions.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
+    pub session: Option<ClientSessionCapabilities>,
     /// **UNSTABLE**
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
     /// Whether the client supports `plan_update` and `plan_removed` session updates.
     ///
-    /// Optional. Omitted means the client does not advertise support.
+    /// Optional. Omitted or `null` both mean the client does not advertise support.
     /// Supplying `{}` means the client can receive both update types.
     #[cfg(feature = "unstable_plan_operations")]
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -1612,6 +1768,8 @@ pub struct ClientCapabilities {
     /// Determines which authentication method types the agent may include
     /// in its `InitializeResponse`.
     #[cfg(feature = "unstable_auth_methods")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub auth: AuthCapabilities,
     /// **UNSTABLE**
@@ -1620,6 +1778,9 @@ pub struct ClientCapabilities {
     ///
     /// Elicitation capabilities supported by the client.
     /// Determines which elicitation modes the agent may use.
+    ///
+    /// Optional. Omitted or `null` both mean the client does not advertise
+    /// elicitation support.
     #[cfg(feature = "unstable_elicitation")]
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
@@ -1630,6 +1791,9 @@ pub struct ClientCapabilities {
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
     /// NES (Next Edit Suggestions) capabilities supported by the client.
+    ///
+    /// Optional. Omitted or `null` both mean the client does not advertise any
+    /// NES suggestion-kind extensions.
     #[cfg(feature = "unstable_nes")]
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
@@ -1651,6 +1815,9 @@ pub struct ClientCapabilities {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -1677,13 +1844,20 @@ impl ClientCapabilities {
         self
     }
 
+    /// Session-related capabilities supported by the client.
+    #[must_use]
+    pub fn session(mut self, session: impl IntoOption<ClientSessionCapabilities>) -> Self {
+        self.session = session.into_option();
+        self
+    }
+
     /// **UNSTABLE**
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
     /// Whether the client supports `plan_update` and `plan_removed` session updates.
     ///
-    /// Omitted means the client does not advertise support.
+    /// Omitted or `null` both mean the client does not advertise support.
     /// Supplying `{}` means the client can receive both update types.
     #[cfg(feature = "unstable_plan_operations")]
     #[must_use]
@@ -1751,6 +1925,164 @@ impl ClientCapabilities {
     }
 }
 
+/// Session-related capabilities supported by the client.
+#[serde_as]
+#[skip_serializing_none]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct ClientSessionCapabilities {
+    /// Config option capabilities supported by the client.
+    ///
+    /// Omitted or `null` both mean the client does not advertise support for any
+    /// config option extensions.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
+    pub config_options: Option<SessionConfigOptionsCapabilities>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl ClientSessionCapabilities {
+    /// Builds an empty [`ClientSessionCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Config option capabilities supported by the client.
+    ///
+    /// Omitted or `null` both mean the client does not advertise support for any
+    /// config option extensions.
+    #[must_use]
+    pub fn config_options(
+        mut self,
+        config_options: impl IntoOption<SessionConfigOptionsCapabilities>,
+    ) -> Self {
+        self.config_options = config_options.into_option();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// Session configuration option capabilities supported by the client.
+#[serde_as]
+#[skip_serializing_none]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct SessionConfigOptionsCapabilities {
+    /// Whether the client supports boolean session configuration options.
+    ///
+    /// Optional. Omitted or `null` both mean the client does not advertise support.
+    /// Supplying `{}` means agents may include `type: "boolean"` entries in
+    /// `configOptions`, and the client may send `session/set_config_option`
+    /// requests with `type: "boolean"` and a boolean `value`.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
+    pub boolean: Option<BooleanConfigOptionCapabilities>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl SessionConfigOptionsCapabilities {
+    /// Builds an empty [`SessionConfigOptionsCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Whether the client supports boolean session configuration options.
+    ///
+    /// Omitted or `null` both mean the client does not advertise support.
+    /// Supplying `{}` means agents may include `type: "boolean"` entries in
+    /// `configOptions`, and the client may send `session/set_config_option`
+    /// requests with `type: "boolean"` and a boolean `value`.
+    #[must_use]
+    pub fn boolean(mut self, boolean: impl IntoOption<BooleanConfigOptionCapabilities>) -> Self {
+        self.boolean = boolean.into_option();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// Capabilities for boolean session configuration options.
+///
+/// Supplying `{}` means the client supports boolean session configuration options.
+#[serde_as]
+#[skip_serializing_none]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct BooleanConfigOptionCapabilities {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl BooleanConfigOptionCapabilities {
+    /// Builds an empty [`BooleanConfigOptionCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
 /// **UNSTABLE**
 ///
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -1761,6 +2093,7 @@ impl ClientCapabilities {
 /// method types the client can handle. This governs opt-in types that require
 /// additional client-side support.
 #[cfg(feature = "unstable_auth_methods")]
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -1769,6 +2102,8 @@ pub struct AuthCapabilities {
     /// Whether the client supports `terminal` authentication methods.
     ///
     /// When `true`, the agent may include `terminal` entries in its authentication methods.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub terminal: bool,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1776,6 +2111,9 @@ pub struct AuthCapabilities {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -1813,15 +2151,20 @@ impl AuthCapabilities {
 /// File system capabilities that a client may support.
 ///
 /// See protocol docs: [FileSystem](https://agentclientprotocol.com/protocol/initialization#filesystem)
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct FileSystemCapabilities {
     /// Whether the Client supports `fs/read_text_file` requests.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub read_text_file: bool,
     /// Whether the Client supports `fs/write_text_file` requests.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub write_text_file: bool,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1829,6 +2172,9 @@ pub struct FileSystemCapabilities {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -2146,11 +2492,11 @@ pub enum ClientResponse {
     /// Successful result returned for a `mcp/disconnect` request.
     #[cfg(feature = "unstable_mcp_over_acp")]
     DisconnectMcpResponse(#[serde(default)] DisconnectMcpResponse),
-    /// Successful result returned by an extension method outside the core ACP method set.
-    ExtMethodResponse(ExtResponse),
     /// Successful result returned by an MCP-over-ACP `mcp/message` request.
     #[cfg(feature = "unstable_mcp_over_acp")]
     MessageMcpResponse(MessageMcpResponse),
+    /// Successful result returned by an extension method outside the core ACP method set.
+    ExtMethodResponse(ExtResponse),
 }
 
 /// All possible notifications that an agent can send to a client.
@@ -2219,6 +2565,45 @@ impl AgentNotification {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_client_capabilities_default_on_malformed_values() {
+        use serde_json::json;
+
+        let capabilities: ClientCapabilities = serde_json::from_value(json!({
+            "fs": {
+                "readTextFile": "yes",
+                "writeTextFile": true
+            },
+            "terminal": {}
+        }))
+        .unwrap();
+
+        assert!(!capabilities.fs.read_text_file);
+        assert!(capabilities.fs.write_text_file);
+        assert!(!capabilities.terminal);
+
+        let capabilities: ClientCapabilities = serde_json::from_value(json!({
+            "fs": false
+        }))
+        .unwrap();
+        assert_eq!(capabilities.fs, FileSystemCapabilities::default());
+
+        #[cfg(feature = "unstable_auth_methods")]
+        {
+            let capabilities: ClientCapabilities = serde_json::from_value(json!({
+                "auth": false
+            }))
+            .unwrap();
+            assert_eq!(capabilities.auth, AuthCapabilities::default());
+
+            let capabilities: AuthCapabilities = serde_json::from_value(json!({
+                "terminal": {}
+            }))
+            .unwrap();
+            assert!(!capabilities.terminal);
+        }
+    }
 
     #[test]
     fn test_serialization_behavior() {
@@ -2384,6 +2769,59 @@ mod tests {
         assert_eq!(json["positionEncodings"], json!(["utf-32", "utf-16"]));
     }
 
+    #[test]
+    fn test_client_capabilities_boolean_config_options_serialization() {
+        use serde_json::json;
+
+        let capabilities = ClientCapabilities::new().session(
+            ClientSessionCapabilities::new().config_options(
+                SessionConfigOptionsCapabilities::new()
+                    .boolean(BooleanConfigOptionCapabilities::new()),
+            ),
+        );
+        let json = serde_json::to_value(&capabilities).unwrap();
+
+        assert_eq!(json["session"]["configOptions"]["boolean"], json!({}));
+
+        let omitted: ClientCapabilities = serde_json::from_value(json!({})).unwrap();
+        assert!(omitted.session.is_none());
+
+        let null_session: ClientCapabilities = serde_json::from_value(json!({
+            "session": null
+        }))
+        .unwrap();
+        assert!(null_session.session.is_none());
+
+        let null_config_options: ClientCapabilities = serde_json::from_value(json!({
+            "session": {
+                "configOptions": null
+            }
+        }))
+        .unwrap();
+        assert!(
+            null_config_options
+                .session
+                .and_then(|session| session.config_options)
+                .is_none()
+        );
+
+        let null_boolean: ClientCapabilities = serde_json::from_value(json!({
+            "session": {
+                "configOptions": {
+                    "boolean": null
+                }
+            }
+        }))
+        .unwrap();
+        assert!(
+            null_boolean
+                .session
+                .and_then(|session| session.config_options)
+                .and_then(|config_options| config_options.boolean)
+                .is_none()
+        );
+    }
+
     #[cfg(feature = "unstable_plan_operations")]
     #[test]
     fn test_plan_operations_serialization() {
@@ -2406,7 +2844,7 @@ mod tests {
                 "sessionUpdate": "plan_update",
                 "plan": {
                     "type": "items",
-                    "id": "plan-1",
+                    "planId": "plan-1",
                     "entries": [
                         {
                             "content": "Step 1",
@@ -2422,7 +2860,7 @@ mod tests {
             serde_json::to_value(SessionUpdate::PlanRemoved(PlanRemoved::new("plan-1"))).unwrap(),
             json!({
                 "sessionUpdate": "plan_removed",
-                "id": "plan-1"
+                "planId": "plan-1"
             })
         );
 
@@ -2474,7 +2912,7 @@ mod tests {
 
         assert_eq!(
             serde_json::to_value(ConnectMcpRequest::new("server-1")).unwrap(),
-            json!({ "acpId": "server-1" })
+            json!({ "serverId": "server-1" })
         );
         assert_eq!(
             serde_json::to_value(ConnectMcpResponse::new("conn-1")).unwrap(),
@@ -2512,5 +2950,27 @@ mod tests {
         }))
         .unwrap();
         assert_eq!(request_with_null_params.params, None);
+    }
+
+    #[test]
+    fn request_permission_request_rejects_malformed_options() {
+        use serde_json::json;
+
+        assert!(
+            serde_json::from_value::<RequestPermissionRequest>(json!({
+                "sessionId": "sess-1",
+                "toolCall": {"toolCallId": "tc-1"},
+                "options": "not-an-array"
+            }))
+            .is_err()
+        );
+        assert!(
+            serde_json::from_value::<RequestPermissionRequest>(json!({
+                "sessionId": "sess-1",
+                "toolCall": {"toolCallId": "tc-1"},
+                "options": [{"optionId": "allow"}]
+            }))
+            .is_err()
+        );
     }
 }

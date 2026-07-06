@@ -85,5 +85,5 @@ On success, the Agent returns an empty result:
 - Deleted sessions no longer appear in future `session/list` results.
 - Deleting an already-deleted session, or a session that never existed, **SHOULD** succeed silently.
 - Agents may implement soft delete or hard delete. ACP only specifies the user-facing session-list behavior.
-- Behavior for `session/load` on a deleted session is implementation-defined.
+- Behavior for `session/resume` on a deleted session is implementation-defined.
 - Behavior for deleting an active session is implementation-defined.

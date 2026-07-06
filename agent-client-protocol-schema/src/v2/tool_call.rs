@@ -36,13 +36,19 @@ pub struct ToolCallUpdate {
     /// Unique identifier for this tool call within the session.
     pub tool_call_id: ToolCallId,
     /// Human-readable title describing what the tool is doing.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub title: MaybeUndefined<String>,
     /// The category of tool being invoked.
     /// Helps clients choose appropriate icons and UI treatment.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub kind: MaybeUndefined<ToolKind>,
     /// Current execution status of the tool call.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub status: MaybeUndefined<ToolCallStatus>,
     /// Content produced by the tool call.
@@ -57,18 +63,28 @@ pub struct ToolCallUpdate {
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub locations: MaybeUndefined<Vec<ToolCallLocation>>,
     /// Raw input parameters sent to the tool.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub raw_input: MaybeUndefined<serde_json::Value>,
     /// Raw output returned by the tool.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub raw_output: MaybeUndefined<serde_json::Value>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted means no metadata update; `null` is an
+    /// explicit clear signal. Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
+    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(
+        rename = "_meta",
+        default,
+        skip_serializing_if = "MaybeUndefined::is_undefined"
+    )]
+    pub meta: MaybeUndefined<Meta>,
 }
 
 impl ToolCallUpdate {
@@ -84,7 +100,7 @@ impl ToolCallUpdate {
             locations: MaybeUndefined::Undefined,
             raw_input: MaybeUndefined::Undefined,
             raw_output: MaybeUndefined::Undefined,
-            meta: None,
+            meta: MaybeUndefined::Undefined,
         }
     }
 
@@ -140,13 +156,13 @@ impl ToolCallUpdate {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted means no metadata update; `null` is an
+    /// explicit clear signal. Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
-        self.meta = meta.into_option();
+    pub fn meta(mut self, meta: impl IntoMaybeUndefined<Meta>) -> Self {
+        self.meta = meta.into_maybe_undefined();
         self
     }
 
@@ -177,6 +193,9 @@ impl ToolCallUpdate {
         if !update.raw_output.is_undefined() {
             self.raw_output = update.raw_output;
         }
+        if !update.meta.is_undefined() {
+            self.meta = update.meta;
+        }
     }
 }
 
@@ -186,6 +205,7 @@ impl ToolCallUpdate {
 /// content for the matching [`ToolCallId`]. Agents can use
 /// [`ToolCallUpdate::content`] when they need to replace the whole content
 /// collection instead.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
@@ -197,10 +217,12 @@ pub struct ToolCallContentChunk {
     pub content: ToolCallContent,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys. This field is optional; omitted or `null` means there is no
-    /// chunk-level metadata.
+    /// these keys. This field is chunk-scoped.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -218,7 +240,7 @@ impl ToolCallContentChunk {
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// these keys. This field is chunk-scoped.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
@@ -420,6 +442,7 @@ impl From<Diff> for ToolCallContent {
 }
 
 /// Standard content block (text, images, resources).
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
@@ -432,6 +455,9 @@ pub struct Content {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -458,47 +484,67 @@ impl Content {
     }
 }
 
-/// A diff representing file modifications.
+/// File changes produced by a tool call.
 ///
-/// Shows changes to files in a format suitable for display in the client UI.
+/// `changes` identifies affected absolute paths and operations. `patch`
+/// optionally carries renderable patch text for clients that can show it.
+/// Agents SHOULD provide `patch` whenever feasible. Clients MUST handle diffs
+/// where `patch` is omitted or `null`.
 ///
 /// See protocol docs: [Content](https://agentclientprotocol.com/protocol/tool-calls#content)
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct Diff {
-    /// The file path being modified.
-    pub path: PathBuf,
-    /// The original content (None for new files).
-    pub old_text: Option<String>,
-    /// The new content after modification.
-    pub new_text: String,
+    /// Structured file changes described by this diff.
+    ///
+    /// Clients can use this field without parsing patch text to determine affected paths.
+    #[serde_as(deserialize_as = "VecSkipError<_, SkipListener>")]
+    #[schemars(extend("x-deserialize-skip-invalid-items" = true))]
+    pub changes: Vec<DiffChange>,
+    /// Renderable patch text.
+    ///
+    /// Agents SHOULD provide patch text whenever feasible. Omitted or `null`
+    /// means no renderable patch text was provided.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
+    pub patch: Option<DiffPatch>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
 impl Diff {
-    /// Builds [`Diff`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`Diff`] with structured file changes.
     #[must_use]
-    pub fn new(path: impl Into<PathBuf>, new_text: impl Into<String>) -> Self {
+    pub fn new(changes: Vec<DiffChange>) -> Self {
         Self {
-            path: path.into(),
-            old_text: None,
-            new_text: new_text.into(),
+            changes,
+            patch: None,
             meta: None,
         }
     }
 
-    /// The original content (None for new files).
+    /// Builds [`Diff`] with git patch text and structured file changes.
     #[must_use]
-    pub fn old_text(mut self, old_text: impl IntoOption<String>) -> Self {
-        self.old_text = old_text.into_option();
+    pub fn patch(diff: impl Into<String>, changes: Vec<DiffChange>) -> Self {
+        Self::new(changes).with_patch(DiffPatch::new(diff))
+    }
+
+    /// Sets renderable patch text.
+    #[must_use]
+    pub fn with_patch(mut self, patch: impl IntoOption<DiffPatch>) -> Self {
+        self.patch = patch.into_option();
         self
     }
 
@@ -514,20 +560,336 @@ impl Diff {
     }
 }
 
+/// Renderable patch text.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct DiffPatch {
+    /// Patch format. The only ACP-defined value is `git_patch`.
+    pub format: DiffPatchFormat,
+    /// Git patch text.
+    pub diff: String,
+}
+
+impl DiffPatch {
+    /// Builds [`DiffPatch`] with git patch text.
+    #[must_use]
+    pub fn new(diff: impl Into<String>) -> Self {
+        Self {
+            format: DiffPatchFormat::GitPatch,
+            diff: diff.into(),
+        }
+    }
+}
+
+/// Text patch format used by [`DiffPatch`].
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum DiffPatchFormat {
+    /// Git patch format.
+    GitPatch,
+    /// Custom or future diff format.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(untagged)]
+    Other(String),
+}
+
+/// Kind of file content represented by a diff change.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum DiffFileType {
+    /// Text content.
+    Text,
+    /// Binary or otherwise non-text content.
+    Binary,
+    /// Directory entry.
+    Directory,
+    /// Symbolic link.
+    Symlink,
+    /// Custom or future file type.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(untagged)]
+    Other(String),
+}
+
+/// One file-level change described by a [`Diff`].
+///
+/// Structured change metadata lets clients identify affected files and
+/// operations without parsing the text patch.
+#[serde_as]
+#[skip_serializing_none]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct DiffChange {
+    /// File content kind.
+    ///
+    /// Omitted or `null` means the content kind is unknown.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
+    pub file_type: Option<DiffFileType>,
+    /// MIME type of the file contents.
+    ///
+    /// Omitted or `null` means the MIME type is unknown.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
+    pub mime_type: Option<String>,
+    /// File operation-specific fields.
+    #[serde(flatten)]
+    pub operation: DiffChangeOperation,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl DiffChange {
+    /// Builds [`DiffChange`] with the required fields set; optional fields start unset or empty.
+    #[must_use]
+    pub fn new(operation: DiffChangeOperation) -> Self {
+        Self {
+            file_type: None,
+            mime_type: None,
+            operation,
+            meta: None,
+        }
+    }
+
+    /// Builds a file add change.
+    #[must_use]
+    pub fn add(path: impl Into<PathBuf>) -> Self {
+        Self::new(DiffChangeOperation::Add(DiffPathChange::new(path)))
+    }
+
+    /// Builds a file delete change.
+    #[must_use]
+    pub fn delete(path: impl Into<PathBuf>) -> Self {
+        Self::new(DiffChangeOperation::Delete(DiffPathChange::new(path)))
+    }
+
+    /// Builds a file modify change.
+    #[must_use]
+    pub fn modify(path: impl Into<PathBuf>) -> Self {
+        Self::new(DiffChangeOperation::Modify(DiffPathChange::new(path)))
+    }
+
+    /// Builds a file move or rename change.
+    #[must_use]
+    pub fn move_file(old_path: impl Into<PathBuf>, path: impl Into<PathBuf>) -> Self {
+        Self::new(DiffChangeOperation::Move(DiffPathPairChange::new(
+            old_path, path,
+        )))
+    }
+
+    /// Builds a file copy change.
+    #[must_use]
+    pub fn copy(old_path: impl Into<PathBuf>, path: impl Into<PathBuf>) -> Self {
+        Self::new(DiffChangeOperation::Copy(DiffPathPairChange::new(
+            old_path, path,
+        )))
+    }
+
+    /// File content kind.
+    ///
+    /// Omitted or `null` means the content kind is unknown.
+    #[must_use]
+    pub fn file_type(mut self, file_type: impl IntoOption<DiffFileType>) -> Self {
+        self.file_type = file_type.into_option();
+        self
+    }
+
+    /// MIME type of the file contents.
+    ///
+    /// Omitted or `null` means the MIME type is unknown.
+    #[must_use]
+    pub fn mime_type(mut self, mime_type: impl IntoOption<String>) -> Self {
+        self.mime_type = mime_type.into_option();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// File operation for a [`DiffChange`].
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(tag = "operation", rename_all = "snake_case")]
+#[schemars(extend("discriminator" = {"propertyName": "operation"}))]
+#[non_exhaustive]
+pub enum DiffChangeOperation {
+    /// A file was added.
+    Add(DiffPathChange),
+    /// A file was deleted.
+    Delete(DiffPathChange),
+    /// A file was modified in place.
+    Modify(DiffPathChange),
+    /// A file was moved or renamed.
+    Move(DiffPathPairChange),
+    /// A file was copied.
+    Copy(DiffPathPairChange),
+    /// Custom or future file operation.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(untagged)]
+    Other(OtherDiffChange),
+}
+
+/// Operation metadata for add, delete, and modify changes.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct DiffPathChange {
+    /// Absolute path for the operation.
+    pub path: PathBuf,
+}
+
+impl DiffPathChange {
+    /// Builds [`DiffPathChange`] with the required fields set; optional fields start unset or empty.
+    #[must_use]
+    pub fn new(path: impl Into<PathBuf>) -> Self {
+        Self { path: path.into() }
+    }
+}
+
+/// Operation metadata for move and copy changes.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct DiffPathPairChange {
+    /// Absolute path before the operation.
+    pub old_path: PathBuf,
+    /// Absolute path after the operation.
+    pub path: PathBuf,
+}
+
+impl DiffPathPairChange {
+    /// Builds [`DiffPathPairChange`] with the required fields set; optional fields start unset or empty.
+    #[must_use]
+    pub fn new(old_path: impl Into<PathBuf>, path: impl Into<PathBuf>) -> Self {
+        Self {
+            old_path: old_path.into(),
+            path: path.into(),
+        }
+    }
+}
+
+/// Custom or future file operation payload.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonSchema)]
+#[schemars(inline)]
+#[schemars(transform = other_diff_change_schema)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct OtherDiffChange {
+    /// Custom or future file operation.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    pub operation: String,
+    /// Additional fields from the unknown file operation payload.
+    #[serde(flatten)]
+    pub fields: BTreeMap<String, serde_json::Value>,
+}
+
+impl OtherDiffChange {
+    /// Builds [`OtherDiffChange`] from an unknown discriminator and preserves the remaining extension fields.
+    #[must_use]
+    pub fn new(
+        operation: impl Into<String>,
+        mut fields: BTreeMap<String, serde_json::Value>,
+    ) -> Self {
+        fields.remove("operation");
+        fields.remove("fileType");
+        fields.remove("mimeType");
+        fields.remove("_meta");
+        Self {
+            operation: operation.into(),
+            fields,
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for OtherDiffChange {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let operation = fields
+            .remove("operation")
+            .ok_or_else(|| serde::de::Error::missing_field("operation"))?;
+        let serde_json::Value::String(operation) = operation else {
+            return Err(serde::de::Error::custom("`operation` must be a string"));
+        };
+
+        if is_known_diff_change_operation(&operation) {
+            return Err(serde::de::Error::custom(format!(
+                "known diff change operation `{operation}` did not match its schema"
+            )));
+        }
+        fields.remove("fileType");
+        fields.remove("mimeType");
+        fields.remove("_meta");
+
+        Ok(Self { operation, fields })
+    }
+}
+
+fn is_known_diff_change_operation(operation: &str) -> bool {
+    matches!(operation, "add" | "delete" | "modify" | "move" | "copy")
+}
+
+fn other_diff_change_schema(schema: &mut Schema) {
+    super::schema_util::reject_known_string_discriminators(
+        schema,
+        "operation",
+        &["add", "delete", "modify", "move", "copy"],
+    );
+}
+
 /// A file location being accessed or modified by a tool.
 ///
 /// Enables clients to implement "follow-along" features that track
 /// which files the agent is working with in real-time.
 ///
 /// See protocol docs: [Following the Agent](https://agentclientprotocol.com/protocol/tool-calls#following-the-agent)
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ToolCallLocation {
-    /// The file path being accessed or modified.
+    /// The absolute file path being accessed or modified.
     pub path: PathBuf,
     /// Optional line number within the file.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub line: Option<u32>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -535,6 +897,9 @@ pub struct ToolCallLocation {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -621,6 +986,44 @@ mod tests {
     }
 
     #[test]
+    fn tool_call_update_distinguishes_meta_omitted_null_and_value() {
+        let mut meta = Meta::new();
+        meta.insert("source".to_string(), serde_json::json!("tool-call"));
+
+        assert_eq!(
+            serde_json::to_value(ToolCallUpdate::new("tc_1").meta(meta.clone())).unwrap(),
+            serde_json::json!({
+                "toolCallId": "tc_1",
+                "_meta": {
+                    "source": "tool-call"
+                }
+            })
+        );
+
+        assert_eq!(
+            serde_json::to_value(ToolCallUpdate::new("tc_1").meta(None::<Meta>)).unwrap(),
+            serde_json::json!({
+                "toolCallId": "tc_1",
+                "_meta": null
+            })
+        );
+
+        let deserialized: ToolCallUpdate = serde_json::from_value(serde_json::json!({
+            "toolCallId": "tc_1",
+            "_meta": null
+        }))
+        .unwrap();
+        assert_eq!(deserialized.meta, MaybeUndefined::Null);
+
+        let patch = ToolCallUpdate::new("tc_1");
+        assert_eq!(patch.meta, MaybeUndefined::Undefined);
+
+        let mut stored = ToolCallUpdate::new("tc_1").meta(meta);
+        stored.apply_update(ToolCallUpdate::new("tc_1").meta(None::<Meta>));
+        assert_eq!(stored.meta, MaybeUndefined::Null);
+    }
+
+    #[test]
     fn tool_call_update_skips_malformed_list_items() {
         let deserialized: ToolCallUpdate = serde_json::from_value(serde_json::json!({
             "toolCallId": "tc_1",
@@ -680,6 +1083,113 @@ mod tests {
                 }
             })
         );
+    }
+
+    #[test]
+    fn diff_patch_serializes_git_patch_with_structured_changes() {
+        let diff = ToolCallContent::Diff(Diff::patch(
+            "diff --git /repo/config.json /repo/config.json\n",
+            vec![
+                DiffChange::modify("/repo/config.json")
+                    .file_type(DiffFileType::Text)
+                    .mime_type("application/json"),
+            ],
+        ));
+
+        assert_eq!(
+            serde_json::to_value(diff).unwrap(),
+            serde_json::json!({
+                "type": "diff",
+                "changes": [
+                    {
+                        "operation": "modify",
+                        "path": "/repo/config.json",
+                        "fileType": "text",
+                        "mimeType": "application/json"
+                    }
+                ],
+                "patch": {
+                    "format": "git_patch",
+                    "diff": "diff --git /repo/config.json /repo/config.json\n"
+                }
+            })
+        );
+    }
+
+    #[test]
+    fn diff_serializes_binary_modify_without_patch_text() {
+        let diff = ToolCallContent::Diff(Diff::new(vec![
+            DiffChange::modify("/repo/assets/logo.png")
+                .file_type(DiffFileType::Binary)
+                .mime_type("image/png"),
+        ]));
+
+        assert_eq!(
+            serde_json::to_value(diff).unwrap(),
+            serde_json::json!({
+                "type": "diff",
+                "changes": [
+                    {
+                        "operation": "modify",
+                        "path": "/repo/assets/logo.png",
+                        "fileType": "binary",
+                        "mimeType": "image/png"
+                    }
+                ]
+            })
+        );
+    }
+
+    #[test]
+    fn diff_move_serializes_shared_fields_with_operation_payload() {
+        let diff = ToolCallContent::Diff(Diff::new(vec![
+            DiffChange::move_file("/repo/src/old.rs", "/repo/src/new.rs")
+                .file_type(DiffFileType::Text)
+                .mime_type("text/rust"),
+        ]));
+
+        assert_eq!(
+            serde_json::to_value(diff).unwrap(),
+            serde_json::json!({
+                "type": "diff",
+                "changes": [
+                    {
+                        "operation": "move",
+                        "oldPath": "/repo/src/old.rs",
+                        "path": "/repo/src/new.rs",
+                        "fileType": "text",
+                        "mimeType": "text/rust"
+                    }
+                ]
+            })
+        );
+    }
+
+    #[test]
+    fn diff_changes_skip_malformed_list_items() {
+        let content: ToolCallContent = serde_json::from_value(serde_json::json!({
+            "type": "diff",
+            "changes": [
+                {
+                    "operation": "modify"
+                },
+                {
+                    "operation": "delete",
+                    "path": "/ok"
+                }
+            ],
+            "patch": {
+                "format": "git_patch",
+                "diff": "diff --git /ok /ok\n"
+            }
+        }))
+        .unwrap();
+
+        let ToolCallContent::Diff(diff) = content else {
+            panic!("expected diff content");
+        };
+        assert_eq!(diff.changes, vec![DiffChange::delete("/ok")]);
+        assert_eq!(diff.patch, Some(DiffPatch::new("diff --git /ok /ok\n")));
     }
 
     #[test]

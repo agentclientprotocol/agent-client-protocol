@@ -446,7 +446,7 @@ the request `cwd` matches the session's `cwd`.
 
 </ResponseField>
 <ResponseField name="cwd" type={"string"} required>
-  The working directory for this session.
+  The working directory for this session. Must be an absolute path.
 </ResponseField>
 <ResponseField name="mcpServers" type={<a href="#mcpserver">McpServer[]</a>} required>
   List of MCP servers to connect to for this session.
@@ -684,7 +684,7 @@ the request `cwd` matches the session's `cwd`.
 
 </ResponseField>
 <ResponseField name="cwd" type={"string"} required>
-  The working directory for this session.
+  The working directory for this session. Must be an absolute path.
 </ResponseField>
 <ResponseField name="mcpServers" type={<a href="#mcpserver">McpServer[]</a>} >
   List of MCP servers to connect to for this session.
@@ -728,9 +728,9 @@ Sets the current value for a session configuration option.
 
 Request parameters for setting a session configuration option.
 
-**Type:** Object
+**Type:** Union
 
-**Properties:**
+**Shared properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -746,8 +746,42 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
 <ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
   The ID of the session to set the configuration option for.
 </ResponseField>
-<ResponseField name="value" type={<a href="#sessionconfigvalueid">SessionConfigValueId</a>} required>
-  The ID of the configuration option value to set.
+
+**Variants:**
+
+<ResponseField name="boolean" type="object">
+A boolean value (`type: "boolean"`).
+
+<Expandable title="Properties">
+
+<ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"boolean"`.
+</ResponseField>
+<ResponseField name="value" type={"boolean"} required>
+  The boolean value.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="value_id" type="object">
+A `SessionConfigValueId` string value.
+
+This is the default when `type` is absent on the wire. Unknown `type`
+values with string payloads also gracefully deserialize into this
+variant.
+
+<Expandable title="Properties">
+
+<ResponseField
+  name="value"
+  type={<a href="#sessionconfigvalueid">SessionConfigValueId</a>}
+  required
+>
+  The value ID.
+</ResponseField>
+
+</Expandable>
 </ResponseField>
 
 #### <span class="font-mono">SetSessionConfigOptionResponse</span>
@@ -1104,7 +1138,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
   The command to execute.
 </ResponseField>
 <ResponseField name="cwd" type={"string | null"} >
-  Working directory for the command (absolute path).
+  Working directory for the command. Must be an absolute path.
 </ResponseField>
 <ResponseField name="env" type={<a href="#envvariable">EnvVariable[]</a>} >
   Environment variables for the command.
@@ -1373,6 +1407,57 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
   The signal that terminated the process (may be null if exited normally).
 </ResponseField>
 
+## Protocol Level
+
+Defines the interface that ACP-compliant agents and clients must both implement.
+
+Notifications whose methods start with '$/' are messages which are protocol
+implementation dependent and might not be implementable in all clients or
+agents. For example if the implementation uses a single threaded synchronous
+programming language then there is little it can do to react to a
+`$/cancel_request` notification. If an agent or client receives notifications
+starting with '$/' it is free to ignore the notification.
+
+<a id="$-cancel_request"></a>
+### <span class="font-mono">$/cancel_request</span>
+
+Cancels an ongoing request.
+
+This is a notification sent by the side that sent a request to cancel that request.
+
+Upon receiving this notification, the receiver:
+
+1. MAY cancel the corresponding request activity and all nested activities
+2. MAY send any pending notifications.
+3. MUST send one of these responses for the original request:
+
+- Valid response with appropriate data (partial results or cancellation marker)
+- Error response with code `-32800` (Cancelled)
+
+See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v1/cancellation)
+
+#### <span class="font-mono">CancelRequestNotification</span>
+
+Notification to cancel an ongoing request.
+
+See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v1/cancellation)
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+
+</ResponseField>
+<ResponseField name="requestId" type={<a href="#requestid">RequestId</a>} required>
+  The ID of the request to cancel.
+</ResponseField>
+
 ## <span class="font-mono">AgentAuthCapabilities</span>
 
 Authentication-related capabilities supported by the agent.
@@ -1392,7 +1477,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
 <ResponseField name="logout" type={<><span><a href="#logoutcapabilities">LogoutCapabilities</a></span><span> | null</span></>} >
   Whether the agent supports the logout method.
 
-By supplying `\{\}` it means that the agent supports the logout method.
+Optional. Omitted or `null` both mean the agent does not advertise support.
+Supplying `\{\}` means the agent supports the logout method.
 
 </ResponseField>
 
@@ -1661,6 +1747,25 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
   URI associated with this resource or media payload.
 </ResponseField>
 
+## <span class="font-mono">BooleanConfigOptionCapabilities</span>
+
+Capabilities for boolean session configuration options.
+
+Supplying `\{\}` means the client supports boolean session configuration options.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+
+</ResponseField>
+
 ## <span class="font-mono">ClientCapabilities</span>
 
 Capabilities supported by the client.
@@ -1689,10 +1794,41 @@ Determines which file operations the agent can request.
     - Default: `{"readTextFile":false,"writeTextFile":false}`
 
 </ResponseField>
+<ResponseField name="session" type={<><span><a href="#clientsessioncapabilities">ClientSessionCapabilities</a></span><span> | null</span></>} >
+  Session-related capabilities supported by the client.
+
+Optional. Omitted or `null` both mean the client does not advertise any
+session-related extensions.
+
+</ResponseField>
 <ResponseField name="terminal" type={"boolean"} >
   Whether the Client support all `terminal/*` methods.
 
     - Default: `false`
+
+</ResponseField>
+
+## <span class="font-mono">ClientSessionCapabilities</span>
+
+Session-related capabilities supported by the client.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+
+</ResponseField>
+<ResponseField name="configOptions" type={<><span><a href="#sessionconfigoptionscapabilities">SessionConfigOptionsCapabilities</a></span><span> | null</span></>} >
+  Config option capabilities supported by the client.
+
+Omitted or `null` both mean the client does not advertise support for any
+config option extensions.
 
 </ResponseField>
 
@@ -2022,7 +2158,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
   The original content (None for new files).
 </ResponseField>
 <ResponseField name="path" type={"string"} required>
-  The file path being modified.
+  The absolute file path being modified.
 </ResponseField>
 
 ## <span class="font-mono">EmbeddedResource</span>
@@ -2187,6 +2323,12 @@ and use the reserved range (-32000 to -32099) for protocol-specific errors.
   implementation-defined server errors.
 </ResponseField>
 
+<ResponseField name="-32800" type="int32">
+  **Request cancelled**: Execution of the method was aborted either due to a
+  cancellation request from the caller or because of resource constraints or
+  shutdown.
+</ResponseField>
+
 <ResponseField name="-32000" type="int32">
   **Authentication required**: Authentication is required before this operation
   can be performed.
@@ -2310,7 +2452,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
 ## <span class="font-mono">Implementation</span>
 
 Metadata about the implementation of the client or agent.
-Describes the name and version of an MCP implementation, with an optional
+Describes the name and version of an ACP implementation, with an optional
 title for UI representation.
 
 **Type:** Object
@@ -2345,7 +2487,7 @@ for debugging or metrics purposes. (e.g. "1.0.0").
 
 Logout capabilities supported by the agent.
 
-By supplying `\{\}` it means that the agent supports the logout method.
+Supplying `\{\}` means the agent supports the logout method.
 
 **Type:** Object
 
@@ -2481,7 +2623,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
   Command-line arguments to pass to the MCP server.
 </ResponseField>
 <ResponseField name="command" type={"string"} required>
-  Path to the MCP server executable.
+  Absolute path to the MCP server executable.
 </ResponseField>
 <ResponseField name="env" type={<a href="#envvariable">EnvVariable[]</a>} required>
   Environment variables to set when launching the MCP server.
@@ -2565,7 +2707,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
   Command-line arguments to pass to the MCP server.
 </ResponseField>
 <ResponseField name="command" type={"string"} required>
-  Path to the MCP server executable.
+  Absolute path to the MCP server executable.
 </ResponseField>
 <ResponseField name="env" type={<a href="#envvariable">EnvVariable[]</a>} required>
   Environment variables to set when launching the MCP server.
@@ -2952,8 +3094,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
 
 Capabilities for additional session directories support.
 
-By supplying `\{\}` it means that the agent supports the `additionalDirectories`
-field on supported session lifecycle requests. Agents that also support
+Supplying `\{\}` means the agent supports the `additionalDirectories` field on
+supported session lifecycle requests. Agents that also support
 `session/list` may return `SessionInfo.additionalDirectories` to report the
 complete ordered additional-root list associated with a listed session.
 
@@ -2997,6 +3139,10 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
 <ResponseField name="additionalDirectories" type={<><span><a href="#sessionadditionaldirectoriescapabilities">SessionAdditionalDirectoriesCapabilities</a></span><span> | null</span></>} >
   Whether the agent supports `additionalDirectories` on supported session lifecycle requests.
 
+Optional. Omitted or `null` both mean the agent does not advertise support.
+Supplying `\{\}` means the agent supports `additionalDirectories` on
+supported session lifecycle requests.
+
 Agents that also support `session/list` may return
 `SessionInfo.additionalDirectories` to report the complete ordered
 additional-root list associated with a listed session.
@@ -3004,6 +3150,10 @@ additional-root list associated with a listed session.
 </ResponseField>
 <ResponseField name="close" type={<><span><a href="#sessionclosecapabilities">SessionCloseCapabilities</a></span><span> | null</span></>} >
   Whether the agent supports `session/close`.
+
+Optional. Omitted or `null` both mean the agent does not advertise support.
+Supplying `\{\}` means the agent supports closing sessions.
+
 </ResponseField>
 <ResponseField name="delete" type={<><span><a href="#sessiondeletecapabilities">SessionDeleteCapabilities</a></span><span> | null</span></>} >
   Whether the agent supports `session/delete`.
@@ -3014,16 +3164,24 @@ Supplying `\{\}` means the agent supports deleting sessions from `session/list`.
 </ResponseField>
 <ResponseField name="list" type={<><span><a href="#sessionlistcapabilities">SessionListCapabilities</a></span><span> | null</span></>} >
   Whether the agent supports `session/list`.
+
+Optional. Omitted or `null` both mean the agent does not advertise support.
+Supplying `\{\}` means the agent supports listing sessions.
+
 </ResponseField>
 <ResponseField name="resume" type={<><span><a href="#sessionresumecapabilities">SessionResumeCapabilities</a></span><span> | null</span></>} >
   Whether the agent supports `session/resume`.
+
+Optional. Omitted or `null` both mean the agent does not advertise support.
+Supplying `\{\}` means the agent supports resuming sessions.
+
 </ResponseField>
 
 ## <span class="font-mono">SessionCloseCapabilities</span>
 
 Capabilities for the `session/close` method.
 
-By supplying `\{\}` it means that the agent supports closing of sessions.
+Supplying `\{\}` means the agent supports closing sessions.
 
 **Type:** Object
 
@@ -3036,6 +3194,18 @@ these keys.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
 
+</ResponseField>
+
+## <span class="font-mono">SessionConfigBoolean</span>
+
+A boolean on/off toggle session configuration option payload.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="currentValue" type={"boolean"} required>
+  The current value of the boolean option.
 </ResponseField>
 
 ## <span class="font-mono">SessionConfigGroupId</span>
@@ -3054,11 +3224,37 @@ Unique identifier for a session configuration option.
 
 A session configuration option selector and its current state.
 
+**Type:** Union
+
+**Shared properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+
+</ResponseField>
+<ResponseField name="category" type={<><span><a href="#sessionconfigoptioncategory">SessionConfigOptionCategory</a></span><span> | null</span></>} >
+  Optional semantic category for this option (UX only).
+</ResponseField>
+<ResponseField name="description" type={"string | null"} >
+  Optional description for the Client to display to the user.
+</ResponseField>
+<ResponseField name="id" type={<a href="#sessionconfigid">SessionConfigId</a>} required>
+  Unique identifier for the configuration option.
+</ResponseField>
+<ResponseField name="name" type={"string"} required>
+  Human-readable label for the option.
+</ResponseField>
+
+**Variants:**
+
+<ResponseField name="select" type="object">
 Single-value selector (dropdown).
 
-**Type:** Object
-
-**Properties:**
+<Expandable title="Properties">
 
 <ResponseField
   name="currentValue"
@@ -3076,6 +3272,24 @@ Single-value selector (dropdown).
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
   The discriminator value. Must be `"select"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="boolean" type="object">
+Boolean on/off toggle.
+
+<Expandable title="Properties">
+
+<ResponseField name="currentValue" type={"boolean"} required>
+  The current value of the boolean option.
+</ResponseField>
+<ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"boolean"`.
+</ResponseField>
+
+</Expandable>
 </ResponseField>
 
 ## <span class="font-mono">SessionConfigOptionCategory</span>
@@ -3100,12 +3314,42 @@ Category names that do not begin with `_` are reserved for the ACP spec.
   Model selector.
 </ResponseField>
 
+<ResponseField name="model_config" type="string">
+  Model-related configuration parameter.
+</ResponseField>
+
 <ResponseField name="thought_level" type="string">
   Thought/reasoning level selector.
 </ResponseField>
 
 <ResponseField name="other" type="string">
   Unknown / uncategorized selector.
+</ResponseField>
+
+## <span class="font-mono">SessionConfigOptionsCapabilities</span>
+
+Session configuration option capabilities supported by the client.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+
+</ResponseField>
+<ResponseField name="boolean" type={<><span><a href="#booleanconfigoptioncapabilities">BooleanConfigOptionCapabilities</a></span><span> | null</span></>} >
+  Whether the client supports boolean session configuration options.
+
+Optional. Omitted or `null` both mean the client does not advertise support.
+Supplying `\{\}` means agents may include `type: "boolean"` entries in
+`configOptions`, and the client may send `session/set_config_option`
+requests with `type: "boolean"` and a boolean `value`.
+
 </ResponseField>
 
 ## <span class="font-mono">SessionConfigSelect</span>
@@ -3300,7 +3544,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
 
 Capabilities for the `session/list` method.
 
-By supplying `\{\}` it means that the agent supports listing of sessions.
+Supplying `\{\}` means the agent supports listing sessions.
 
 **Type:** Object
 
@@ -3376,7 +3620,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
 
 Capabilities for the `session/resume` method.
 
-By supplying `\{\}` it means that the agent supports resuming of sessions.
+Supplying `\{\}` means the agent supports resuming sessions.
 
 **Type:** Object
 
@@ -3985,7 +4229,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
   The original content (None for new files).
 </ResponseField>
 <ResponseField name="path" type={"string"} required>
-  The file path being modified.
+  The absolute file path being modified.
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
   The discriminator value. Must be `"diff"`.
@@ -4055,7 +4299,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
 
 </ResponseField>
 <ResponseField name="path" type={"string"} required>
-  The file path being accessed or modified.
+  The absolute file path being accessed or modified.
 </ResponseField>
 
 ## <span class="font-mono">ToolCallStatus</span>

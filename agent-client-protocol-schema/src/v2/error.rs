@@ -14,7 +14,7 @@ use std::{fmt::Display, str};
 
 use schemars::{JsonSchema, Schema};
 use serde::{Deserialize, Serialize};
-use serde_with::skip_serializing_none;
+use serde_with::{DefaultOnError, serde_as, skip_serializing_none};
 
 use crate::IntoOption;
 
@@ -27,6 +27,7 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 /// JSON-RPC 2.0 error object specification with optional additional data.
 ///
 /// See protocol docs: [JSON-RPC Error Object](https://www.jsonrpc.org/specification#error_object)
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[non_exhaustive]
@@ -39,6 +40,9 @@ pub struct Error {
     pub message: String,
     /// Optional primitive or structured value that contains additional information about the error.
     /// This may include debugging information or context-specific details.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub data: Option<serde_json::Value>,
 }
 
@@ -95,15 +99,10 @@ impl Error {
         ErrorCode::InternalError.into()
     }
 
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Request was cancelled.
     ///
     /// Execution of the method was aborted either due to a cancellation request from the caller
     /// or because of resource constraints or shutdown.
-    #[cfg(feature = "unstable_cancel_request")]
     #[must_use]
     pub fn request_cancelled() -> Self {
         ErrorCode::RequestCancelled.into()
@@ -113,17 +112,6 @@ impl Error {
     #[must_use]
     pub fn auth_required() -> Self {
         ErrorCode::AuthRequired.into()
-    }
-
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// The agent requires user input via a URL-based elicitation before it can proceed.
-    #[cfg(feature = "unstable_elicitation")]
-    #[must_use]
-    pub fn url_elicitation_required() -> Self {
-        ErrorCode::UrlElicitationRequired.into()
     }
 
     /// A given resource, such as a file, was not found.
@@ -179,11 +167,6 @@ pub enum ErrorCode {
     #[schemars(transform = error_code_transform)]
     #[strum(to_string = "Internal error")]
     InternalError, // -32603
-    #[cfg(feature = "unstable_cancel_request")]
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Execution of the method was aborted either due to a cancellation request from the caller or
     /// because of resource constraints or shutdown.
     #[schemars(transform = error_code_transform)]
@@ -199,16 +182,6 @@ pub enum ErrorCode {
     #[schemars(transform = error_code_transform)]
     #[strum(to_string = "Resource not found")]
     ResourceNotFound, // -32002
-    #[cfg(feature = "unstable_elicitation")]
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// The agent requires user input via a URL-based elicitation before it can proceed.
-    #[schemars(transform = error_code_transform)]
-    #[strum(to_string = "URL elicitation required")]
-    UrlElicitationRequired, // -32042
-
     /// Other undefined error code.
     #[schemars(untagged)]
     #[strum(to_string = "Unknown error")]
@@ -223,12 +196,9 @@ impl From<i32> for ErrorCode {
             -32601 => ErrorCode::MethodNotFound,
             -32602 => ErrorCode::InvalidParams,
             -32603 => ErrorCode::InternalError,
-            #[cfg(feature = "unstable_cancel_request")]
             -32800 => ErrorCode::RequestCancelled,
             -32000 => ErrorCode::AuthRequired,
             -32002 => ErrorCode::ResourceNotFound,
-            #[cfg(feature = "unstable_elicitation")]
-            -32042 => ErrorCode::UrlElicitationRequired,
             _ => ErrorCode::Other(value),
         }
     }
@@ -242,12 +212,9 @@ impl From<ErrorCode> for i32 {
             ErrorCode::MethodNotFound => -32601,
             ErrorCode::InvalidParams => -32602,
             ErrorCode::InternalError => -32603,
-            #[cfg(feature = "unstable_cancel_request")]
             ErrorCode::RequestCancelled => -32800,
             ErrorCode::AuthRequired => -32000,
             ErrorCode::ResourceNotFound => -32002,
-            #[cfg(feature = "unstable_elicitation")]
-            ErrorCode::UrlElicitationRequired => -32042,
             ErrorCode::Other(value) => value,
         }
     }
@@ -271,12 +238,9 @@ fn error_code_transform(schema: &mut Schema) {
         "MethodNotFound" => ErrorCode::MethodNotFound,
         "InvalidParams" => ErrorCode::InvalidParams,
         "InternalError" => ErrorCode::InternalError,
-        #[cfg(feature = "unstable_cancel_request")]
         "RequestCancelled" => ErrorCode::RequestCancelled,
         "AuthRequired" => ErrorCode::AuthRequired,
         "ResourceNotFound" => ErrorCode::ResourceNotFound,
-        #[cfg(feature = "unstable_elicitation")]
-        "UrlElicitationRequired" => ErrorCode::UrlElicitationRequired,
         _ => panic!("Unexpected error code name {name}"),
     };
     let mut description = schema

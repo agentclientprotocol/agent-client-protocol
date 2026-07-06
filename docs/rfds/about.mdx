@@ -24,7 +24,7 @@ Some changes do not require an RFD:
 
 ### 2. Merge to "Draft" when championed
 
-RFD proposals are merged into the "Draft" section if a core team member decides to champion them. The champion becomes the point-of-contact and will work with authors to make it reality. Once in draft, implementation may begin (properly feature-gated with the RFD name). Implementation can also begin at a particular SDK or agent/client level to prove out the design for better review and feedback before broader adoption.
+RFD proposals are merged into the "Draft" section if a core team member decides to champion them. The champion becomes the point-of-contact and will work with authors to make it reality. Draft means the proposal belongs in the RFD process, but it may still be waiting for design work, implementation work, or maintainer bandwidth. Experimental implementation may begin, properly feature-gated with the RFD name, to prove out the design before broader adoption.
 
 RFDs are living documents that track implementation progress. PRs working towards an RFD will typically update it to reflect changes in design or direction.
 
@@ -32,23 +32,30 @@ RFDs are living documents that track implementation progress. PRs working toward
 
 RFDs that have never landed may be closed at the discretion of a core team member. RFDs that have landed in draft form are moved to "To be removed" instead until there has been time to remove them fully from the codebase, then they are removed entirely.
 
-### 3. Move to "Preview" when fully implemented
+### 3. Move to "Active" when it has current maintainer or working-group focus
+
+When core maintainers or a working group are actively spending bandwidth on an RFD, the champion can open a PR to move it to "Active." Active RFDs are the proposals the project is currently trying to move forward. This is a visibility signal, not a stability commitment or final approval.
+
+Active RFDs should have a current owner, a plausible implementation or design plan, and should be updated as the work changes. If work pauses or the owner no longer has bandwidth, the RFD can move back to Draft.
+
+### 4. Move to "Preview" when fully implemented
 
 When the champion feels the RFD is ready for broader review, they open a PR to move it to "Preview." This signals the community to provide feedback. The PR stays open for a few days before the champion decides whether to land it.
 
-### 4. Completed
+### 5. Completed
 
 Once in preview, the RFD can be moved to "completed" with a final PR. The core team should comment and express concerns, but **final decision is always made by the core team lead**. Depending on what the RFD is about, "completed" is the only state that can represent a 1-way door (if there is a stability commitment involved), as changes might require a breaking change to the protocol after this point.
 
 Preview RFDs don't have to be completed. They may also go back to draft to await further changes or even be moved to "To be removed".
 
-### 5. Implementation and completion
+### 6. Lifecycle summary
 
 #### RFD Lifecycle
 
 - **Early drafts**: Initial ideas, brainstorming, early exploration
 - **Mature drafts**: Well-formed proposals ready for broader review
-- **Accepted**: Approved for implementation, may reference implementation work
+- **Active**: Current implementation or design work is being driven by core maintainers or a working group
+- **Preview**: Fully implemented and ready for broad review before completion
 - **To be removed (yet?)**: Decided against for now, but preserved for future consideration
 - **Completed**: Implementation finished and merged
 

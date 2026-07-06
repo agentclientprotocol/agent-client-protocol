@@ -15,7 +15,7 @@ Cancellation will remain optional as it might not be implementable in all client
 
 When a `$/cancel_request` notification is received by a supporting implementation, the implementation:
 
-- **MUST** cancel the corresponding request activity and all nested activities related to that request
+- **MAY** cancel the corresponding request activity and all nested activities related to that request
 - **MAY** finish sending any pending notifications before responding
 - **MUST** send one of these responses for the original request:
   - A valid response with appropriate data (such as partial results or cancellation marker)
@@ -32,7 +32,7 @@ Requests can also be cancelled internally by the executing party without receivi
 - **Client-side examples**: User closes IDE, switches to different project, file becomes unavailable
 - **Agent-side examples**: LLM context limit reached, internal timeout, resource constraints
 
-When internal cancellation occurs, the executing party **MUST**:
+When internal cancellation occurs, the executing party **SHOULD**:
 
 - Send the same `-32800` (Cancelled) error response as if `$/cancel_request` was received
 - Ensure consistent behavior regardless of cancellation source

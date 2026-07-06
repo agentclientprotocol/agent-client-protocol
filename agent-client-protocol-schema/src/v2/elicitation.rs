@@ -8,15 +8,16 @@
 use std::{collections::BTreeMap, sync::Arc};
 
 use derive_more::{Display, From};
-use schemars::JsonSchema;
+use schemars::{JsonSchema, Schema};
 use serde::{Deserialize, Serialize};
-use serde_with::{DefaultOnError, serde_as, skip_serializing_none};
+use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
 use super::{
     ELICITATION_COMPLETE_NOTIFICATION, ELICITATION_CREATE_METHOD_NAME, Meta, RequestId, SessionId,
     ToolCallId,
 };
 use crate::IntoOption;
+use crate::SkipListener;
 
 /// **UNSTABLE**
 ///
@@ -69,6 +70,7 @@ pub enum ElicitationSchemaType {
 }
 
 /// A titled enum option with a const value, human-readable title, and optional description.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[non_exhaustive]
@@ -85,6 +87,9 @@ pub struct EnumOption {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -124,29 +129,50 @@ impl EnumOption {
 ///
 /// When `enum` or `oneOf` is set, this represents a single-select enum
 /// with `"type": "string"`.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct StringPropertySchema {
     /// Optional title for the property.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub title: Option<String>,
     /// Human-readable description.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub description: Option<String>,
     /// Minimum string length.
+    #[serde(default)]
     pub min_length: Option<u32>,
     /// Maximum string length.
+    #[serde(default)]
     pub max_length: Option<u32>,
     /// Pattern the string must match.
+    #[schemars(extend("format" = "regex"))]
+    #[serde(default)]
     pub pattern: Option<String>,
     /// String format.
+    #[serde(default)]
     pub format: Option<StringFormat>,
     /// Default value.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub default: Option<String>,
     /// Enum values for untitled single-select enums.
+    /// Must contain at least one value when present.
+    #[schemars(length(min = 1))]
+    #[serde(default)]
     #[serde(rename = "enum")]
     pub enum_values: Option<Vec<String>>,
     /// Titled enum options for titled single-select enums.
+    /// Must contain at least one option when present.
+    #[schemars(length(min = 1))]
+    #[serde(default)]
     #[serde(rename = "oneOf")]
     pub one_of: Option<Vec<EnumOption>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -154,6 +180,9 @@ pub struct StringPropertySchema {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -277,26 +306,41 @@ impl StringPropertySchema {
 }
 
 /// Schema for number (floating-point) properties in an elicitation form.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NumberPropertySchema {
     /// Optional title for the property.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub title: Option<String>,
     /// Human-readable description.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub description: Option<String>,
     /// Minimum value (inclusive).
+    #[serde(default)]
     pub minimum: Option<f64>,
     /// Maximum value (inclusive).
+    #[serde(default)]
     pub maximum: Option<f64>,
     /// Default value.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub default: Option<f64>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -356,26 +400,41 @@ impl NumberPropertySchema {
 }
 
 /// Schema for integer properties in an elicitation form.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct IntegerPropertySchema {
     /// Optional title for the property.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub title: Option<String>,
     /// Human-readable description.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub description: Option<String>,
     /// Minimum value (inclusive).
+    #[serde(default)]
     pub minimum: Option<i64>,
     /// Maximum value (inclusive).
+    #[serde(default)]
     pub maximum: Option<i64>,
     /// Default value.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub default: Option<i64>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -435,22 +494,35 @@ impl IntegerPropertySchema {
 }
 
 /// Schema for boolean properties in an elicitation form.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct BooleanPropertySchema {
     /// Optional title for the property.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub title: Option<String>,
     /// Human-readable description.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub description: Option<String>,
     /// Default value.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub default: Option<bool>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -495,25 +567,14 @@ impl BooleanPropertySchema {
     }
 }
 
-/// Items definition for untitled multi-select enum properties.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema, Default)]
-#[serde(rename_all = "snake_case")]
-#[non_exhaustive]
-pub enum ElicitationStringType {
-    /// String schema type.
-    #[default]
-    String,
-}
-
-/// Items definition for untitled multi-select enum properties.
+/// String item schema for multi-select enum properties.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[non_exhaustive]
-pub struct UntitledMultiSelectItems {
-    /// Item type discriminator. Must be `"string"`.
-    #[serde(rename = "type")]
-    pub type_: ElicitationStringType,
-    /// Allowed enum values.
+pub struct StringMultiSelectItems {
+    /// Allowed enum values. Must contain at least one value.
+    #[schemars(length(min = 1))]
     #[serde(rename = "enum")]
     pub values: Vec<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -521,11 +582,20 @@ pub struct UntitledMultiSelectItems {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
-impl UntitledMultiSelectItems {
+impl StringMultiSelectItems {
+    /// Create new string multi-select items.
+    #[must_use]
+    pub fn new(values: Vec<String>) -> Self {
+        Self { values, meta: None }
+    }
+
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -539,11 +609,13 @@ impl UntitledMultiSelectItems {
 }
 
 /// Items definition for titled multi-select enum properties.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[non_exhaustive]
 pub struct TitledMultiSelectItems {
-    /// Titled enum options.
+    /// Titled enum options. Must contain at least one option.
+    #[schemars(length(min = 1))]
     #[serde(rename = "anyOf")]
     pub options: Vec<EnumOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -551,6 +623,9 @@ pub struct TitledMultiSelectItems {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -577,40 +652,132 @@ impl TitledMultiSelectItems {
     }
 }
 
+/// Custom or future typed item schema for multi-select properties.
+///
+/// This preserves unknown item `type` values and the rest of the `items`
+/// payload for clients that store, replay, proxy, or forward elicitation
+/// requests.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonSchema)]
+#[schemars(inline)]
+#[schemars(transform = other_multi_select_items_schema)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct OtherMultiSelectItems {
+    /// Custom or future multi-select item type.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(rename = "type")]
+    pub type_: String,
+    /// Additional fields from the unknown item schema payload.
+    #[serde(flatten)]
+    pub fields: BTreeMap<String, serde_json::Value>,
+}
+
+impl OtherMultiSelectItems {
+    /// Builds [`OtherMultiSelectItems`] from an unknown discriminator and preserves the remaining extension fields.
+    #[must_use]
+    pub fn new(type_: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
+        fields.remove("type");
+        Self {
+            type_: type_.into(),
+            fields,
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for OtherMultiSelectItems {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let type_ = fields
+            .remove("type")
+            .ok_or_else(|| serde::de::Error::missing_field("type"))?;
+        let serde_json::Value::String(type_) = type_ else {
+            return Err(serde::de::Error::custom("`type` must be a string"));
+        };
+
+        if is_known_multi_select_item_type(&type_) {
+            return Err(serde::de::Error::custom(format!(
+                "known multi-select item type `{type_}` did not match its schema"
+            )));
+        }
+
+        Ok(Self { type_, fields })
+    }
+}
+
+const KNOWN_MULTI_SELECT_ITEM_TYPES: &[&str] = &["string"];
+
+fn is_known_multi_select_item_type(type_: &str) -> bool {
+    KNOWN_MULTI_SELECT_ITEM_TYPES.contains(&type_)
+}
+
+fn other_multi_select_items_schema(schema: &mut Schema) {
+    super::schema_util::reject_known_string_discriminators(
+        schema,
+        "type",
+        KNOWN_MULTI_SELECT_ITEM_TYPES,
+    );
+}
+
 /// Items for a multi-select (array) property schema.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(untagged)]
+#[serde(tag = "type", rename_all = "snake_case")]
+#[schemars(extend("discriminator" = {"propertyName": "type"}))]
 #[non_exhaustive]
 pub enum MultiSelectItems {
-    /// Untitled multi-select items with plain string values.
-    Untitled(UntitledMultiSelectItems),
+    /// Multi-select string items with plain string values.
+    String(StringMultiSelectItems),
+    /// Custom or future typed multi-select items.
+    #[serde(untagged)]
+    Other(OtherMultiSelectItems),
     /// Titled multi-select items with human-readable labels.
+    #[serde(untagged)]
     Titled(TitledMultiSelectItems),
 }
 
 /// Schema for multi-select (array) properties in an elicitation form.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct MultiSelectPropertySchema {
     /// Optional title for the property.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub title: Option<String>,
     /// Human-readable description.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub description: Option<String>,
     /// Minimum number of items to select.
+    #[serde(default)]
     pub min_items: Option<u64>,
     /// Maximum number of items to select.
+    #[serde(default)]
     pub max_items: Option<u64>,
     /// The items definition describing allowed values.
     pub items: MultiSelectItems,
     /// Default selected values.
+    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
+    #[serde(default)]
     pub default: Option<Vec<String>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -624,11 +791,7 @@ impl MultiSelectPropertySchema {
             description: None,
             min_items: None,
             max_items: None,
-            items: MultiSelectItems::Untitled(UntitledMultiSelectItems {
-                type_: ElicitationStringType::String,
-                values,
-                meta: None,
-            }),
+            items: MultiSelectItems::String(StringMultiSelectItems::new(values)),
             default: None,
             meta: None,
         }
@@ -718,6 +881,90 @@ pub enum ElicitationPropertySchema {
     Boolean(BooleanPropertySchema),
     /// Multi-select array property.
     Array(MultiSelectPropertySchema),
+    /// Custom or future elicitation property schema.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    ///
+    /// Clients that do not understand this property schema type should preserve
+    /// the raw schema when storing, replaying, proxying, or forwarding
+    /// elicitation requests. They MUST NOT render it as a known input control.
+    #[serde(untagged)]
+    Other(OtherElicitationPropertySchema),
+}
+
+/// Custom or future elicitation property schema payload.
+///
+/// This preserves the unknown `type` discriminator and the rest of the property
+/// schema object for clients that store, replay, proxy, or forward elicitation
+/// requests.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonSchema)]
+#[schemars(inline)]
+#[schemars(transform = other_elicitation_property_schema_schema)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct OtherElicitationPropertySchema {
+    /// Custom or future elicitation property schema type.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(rename = "type")]
+    pub type_: String,
+    /// Additional fields from the unknown property schema payload.
+    #[serde(flatten)]
+    pub fields: BTreeMap<String, serde_json::Value>,
+}
+
+impl OtherElicitationPropertySchema {
+    /// Builds [`OtherElicitationPropertySchema`] from an unknown discriminator and preserves the remaining extension fields.
+    #[must_use]
+    pub fn new(type_: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
+        fields.remove("type");
+        Self {
+            type_: type_.into(),
+            fields,
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for OtherElicitationPropertySchema {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let type_ = fields
+            .remove("type")
+            .ok_or_else(|| serde::de::Error::missing_field("type"))?;
+        let serde_json::Value::String(type_) = type_ else {
+            return Err(serde::de::Error::custom("`type` must be a string"));
+        };
+
+        if is_known_elicitation_property_schema_type(&type_) {
+            return Err(serde::de::Error::custom(format!(
+                "known elicitation property schema type `{type_}` did not match its schema"
+            )));
+        }
+
+        Ok(Self { type_, fields })
+    }
+}
+
+const KNOWN_ELICITATION_PROPERTY_SCHEMA_TYPES: &[&str] =
+    &["string", "number", "integer", "boolean", "array"];
+
+fn is_known_elicitation_property_schema_type(type_: &str) -> bool {
+    KNOWN_ELICITATION_PROPERTY_SCHEMA_TYPES.contains(&type_)
+}
+
+fn other_elicitation_property_schema_schema(schema: &mut Schema) {
+    super::schema_util::reject_known_string_discriminators(
+        schema,
+        "type",
+        KNOWN_ELICITATION_PROPERTY_SCHEMA_TYPES,
+    );
 }
 
 impl From<StringPropertySchema> for ElicitationPropertySchema {
@@ -758,28 +1005,41 @@ fn default_object_type() -> ElicitationSchemaType {
 ///
 /// This represents a JSON Schema object with primitive-typed properties,
 /// as required by the elicitation specification.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ElicitationSchema {
     /// Type discriminator. Always `"object"`.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(rename = "type", default = "default_object_type")]
     pub type_: ElicitationSchemaType,
     /// Optional title for the schema.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub title: Option<String>,
     /// Property definitions (must be primitive types).
     #[serde(default)]
     pub properties: BTreeMap<String, ElicitationPropertySchema>,
     /// List of required property names.
+    #[serde(default)]
     pub required: Option<Vec<String>>,
     /// Optional description of what this schema represents.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub description: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -923,11 +1183,17 @@ impl ElicitationSchema {
 #[non_exhaustive]
 pub struct ElicitationCapabilities {
     /// Whether the client supports form-based elicitation.
+    ///
+    /// Optional. Omitted or `null` both mean the client does not advertise support.
+    /// Supplying `{}` means the client supports form-based elicitation.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub form: Option<ElicitationFormCapabilities>,
     /// Whether the client supports URL-based elicitation.
+    ///
+    /// Optional. Omitted or `null` both mean the client does not advertise support.
+    /// Supplying `{}` means the client supports URL-based elicitation.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
@@ -937,6 +1203,9 @@ pub struct ElicitationCapabilities {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -949,6 +1218,9 @@ impl ElicitationCapabilities {
     }
 
     /// Whether the client supports form-based elicitation.
+    ///
+    /// Omitted or `null` both mean the client does not advertise support.
+    /// Supplying `{}` means the client supports form-based elicitation.
     #[must_use]
     pub fn form(mut self, form: impl IntoOption<ElicitationFormCapabilities>) -> Self {
         self.form = form.into_option();
@@ -956,6 +1228,9 @@ impl ElicitationCapabilities {
     }
 
     /// Whether the client supports URL-based elicitation.
+    ///
+    /// Omitted or `null` both mean the client does not advertise support.
+    /// Supplying `{}` means the client supports URL-based elicitation.
     #[must_use]
     pub fn url(mut self, url: impl IntoOption<ElicitationUrlCapabilities>) -> Self {
         self.url = url.into_option();
@@ -979,6 +1254,9 @@ impl ElicitationCapabilities {
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
 /// Form-based elicitation capabilities.
+///
+/// Supplying `{}` means the client supports form-based elicitation.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -989,6 +1267,9 @@ pub struct ElicitationFormCapabilities {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -1017,6 +1298,9 @@ impl ElicitationFormCapabilities {
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
 /// URL-based elicitation capabilities.
+///
+/// Supplying `{}` means the client supports URL-based elicitation.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -1027,6 +1311,9 @@ pub struct ElicitationUrlCapabilities {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -1075,6 +1362,7 @@ pub enum ElicitationScope {
 /// When `tool_call_id` is set, the elicitation is tied to a specific tool call.
 /// This is useful when an agent receives an elicitation from an MCP server
 /// during a tool call and needs to redirect it to the user.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -1083,6 +1371,9 @@ pub struct ElicitationSessionScope {
     /// The session this elicitation is tied to.
     pub session_id: SessionId,
     /// Optional tool call within the session.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub tool_call_id: Option<ToolCallId>,
 }
 
@@ -1149,6 +1440,7 @@ impl From<ElicitationRequestScope> for ElicitationScope {
 /// The agent sends this to the client to request information from the user,
 /// either via a form or by directing them to a URL.
 /// Elicitations are tied to a session (optionally a tool call) or a request.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[schemars(extend("x-side" = "client", "x-method" = ELICITATION_CREATE_METHOD_NAME))]
@@ -1165,6 +1457,9 @@ pub struct CreateElicitationRequest {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -1212,6 +1507,109 @@ pub enum ElicitationMode {
     Form(ElicitationFormMode),
     /// URL-based elicitation where the client directs the user to a URL.
     Url(ElicitationUrlMode),
+    /// Custom or future elicitation mode.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    ///
+    /// Clients that do not understand this mode should preserve the raw payload
+    /// when storing, replaying, proxying, or forwarding elicitation requests.
+    /// They MUST NOT render it as a known elicitation mode.
+    #[serde(untagged)]
+    Other(OtherElicitationMode),
+}
+
+/// Custom or future elicitation mode payload.
+///
+/// This preserves the unknown `mode` discriminator and the rest of the mode
+/// object for clients that store, replay, proxy, or forward elicitation
+/// requests.
+#[derive(Debug, Clone, Serialize, JsonSchema, PartialEq)]
+#[schemars(inline)]
+#[schemars(transform = other_elicitation_mode_schema)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct OtherElicitationMode {
+    /// Custom or future elicitation mode.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    pub mode: String,
+    /// The scope this elicitation is tied to.
+    #[serde(flatten)]
+    pub scope: ElicitationScope,
+    /// Additional fields from the unknown elicitation mode payload.
+    #[serde(flatten)]
+    pub fields: BTreeMap<String, serde_json::Value>,
+}
+
+impl OtherElicitationMode {
+    /// Builds [`OtherElicitationMode`] from an unknown discriminator and preserves the remaining extension fields.
+    #[must_use]
+    pub fn new(
+        mode: impl Into<String>,
+        scope: impl Into<ElicitationScope>,
+        mut fields: BTreeMap<String, serde_json::Value>,
+    ) -> Self {
+        fields.remove("mode");
+        remove_elicitation_scope_fields(&mut fields);
+        Self {
+            mode: mode.into(),
+            scope: scope.into(),
+            fields,
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for OtherElicitationMode {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let mode = fields
+            .remove("mode")
+            .ok_or_else(|| serde::de::Error::missing_field("mode"))?;
+        let serde_json::Value::String(mode) = mode else {
+            return Err(serde::de::Error::custom("`mode` must be a string"));
+        };
+
+        if is_known_elicitation_mode(&mode) {
+            return Err(serde::de::Error::custom(format!(
+                "known elicitation mode `{mode}` did not match its schema"
+            )));
+        }
+
+        let scope = serde_json::from_value::<ElicitationScope>(serde_json::Value::Object(
+            fields.clone().into_iter().collect(),
+        ))
+        .map_err(serde::de::Error::custom)?;
+        remove_elicitation_scope_fields(&mut fields);
+
+        Ok(Self {
+            mode,
+            scope,
+            fields,
+        })
+    }
+}
+
+const KNOWN_ELICITATION_MODES: &[&str] = &["form", "url"];
+
+fn is_known_elicitation_mode(mode: &str) -> bool {
+    KNOWN_ELICITATION_MODES.contains(&mode)
+}
+
+fn remove_elicitation_scope_fields(fields: &mut BTreeMap<String, serde_json::Value>) {
+    fields.remove("sessionId");
+    fields.remove("toolCallId");
+    fields.remove("requestId");
+}
+
+fn other_elicitation_mode_schema(schema: &mut Schema) {
+    super::schema_util::reject_known_string_discriminators(schema, "mode", KNOWN_ELICITATION_MODES);
 }
 
 impl From<ElicitationFormMode> for ElicitationMode {
@@ -1226,6 +1624,12 @@ impl From<ElicitationUrlMode> for ElicitationMode {
     }
 }
 
+impl From<OtherElicitationMode> for ElicitationMode {
+    fn from(mode: OtherElicitationMode) -> Self {
+        Self::Other(mode)
+    }
+}
+
 impl ElicitationMode {
     /// Returns the scope this elicitation mode is tied to.
     #[must_use]
@@ -1233,6 +1637,7 @@ impl ElicitationMode {
         match self {
             Self::Form(f) => &f.scope,
             Self::Url(u) => &u.scope,
+            Self::Other(other) => &other.scope,
         }
     }
 }
@@ -1279,7 +1684,7 @@ pub struct ElicitationUrlMode {
     /// The unique identifier for this elicitation.
     pub elicitation_id: ElicitationId,
     /// The URL to direct the user to.
-    #[schemars(extend("format" = "uri"))]
+    #[schemars(url)]
     pub url: String,
 }
 
@@ -1304,6 +1709,7 @@ impl ElicitationUrlMode {
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
 /// Response from the client to an elicitation request.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[schemars(extend("x-side" = "client", "x-method" = ELICITATION_CREATE_METHOD_NAME))]
@@ -1318,6 +1724,9 @@ pub struct CreateElicitationResponse {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -1325,8 +1734,11 @@ pub struct CreateElicitationResponse {
 impl CreateElicitationResponse {
     /// Builds [`CreateElicitationResponse`] with the required response fields set; optional fields start unset or empty.
     #[must_use]
-    pub fn new(action: ElicitationAction) -> Self {
-        Self { action, meta: None }
+    pub fn new(action: impl Into<ElicitationAction>) -> Self {
+        Self {
+            action: action.into(),
+            meta: None,
+        }
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1357,6 +1769,100 @@ pub enum ElicitationAction {
     Decline,
     /// The elicitation was cancelled.
     Cancel,
+    /// Custom or future elicitation action.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    ///
+    /// Agents that do not understand this action should preserve the raw
+    /// payload when storing, replaying, proxying, or forwarding elicitation
+    /// responses. They MUST NOT treat it as a known elicitation action.
+    #[serde(untagged)]
+    Other(OtherElicitationAction),
+}
+
+/// Custom or future elicitation action payload.
+///
+/// This preserves the unknown `action` discriminator and the rest of the
+/// response object for agents that store, replay, proxy, or forward elicitation
+/// responses.
+#[derive(Debug, Clone, Serialize, JsonSchema, PartialEq)]
+#[schemars(inline)]
+#[schemars(transform = other_elicitation_action_schema)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct OtherElicitationAction {
+    /// Custom or future elicitation action.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    pub action: String,
+    /// Additional fields from the unknown elicitation action payload.
+    #[serde(flatten)]
+    pub fields: BTreeMap<String, serde_json::Value>,
+}
+
+impl OtherElicitationAction {
+    /// Builds [`OtherElicitationAction`] from an unknown discriminator and preserves the remaining extension fields.
+    #[must_use]
+    pub fn new(action: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
+        fields.remove("action");
+        Self {
+            action: action.into(),
+            fields,
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for OtherElicitationAction {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let action = fields
+            .remove("action")
+            .ok_or_else(|| serde::de::Error::missing_field("action"))?;
+        let serde_json::Value::String(action) = action else {
+            return Err(serde::de::Error::custom("`action` must be a string"));
+        };
+
+        if is_known_elicitation_action(&action) {
+            return Err(serde::de::Error::custom(format!(
+                "known elicitation action `{action}` did not match its schema"
+            )));
+        }
+
+        Ok(Self { action, fields })
+    }
+}
+
+const KNOWN_ELICITATION_ACTIONS: &[&str] = &["accept", "decline", "cancel"];
+
+fn is_known_elicitation_action(action: &str) -> bool {
+    KNOWN_ELICITATION_ACTIONS.contains(&action)
+}
+
+fn other_elicitation_action_schema(schema: &mut Schema) {
+    super::schema_util::reject_known_string_discriminators(
+        schema,
+        "action",
+        KNOWN_ELICITATION_ACTIONS,
+    );
+}
+
+impl From<ElicitationAcceptAction> for ElicitationAction {
+    fn from(action: ElicitationAcceptAction) -> Self {
+        Self::Accept(action)
+    }
+}
+
+impl From<OtherElicitationAction> for ElicitationAction {
+    fn from(action: OtherElicitationAction) -> Self {
+        Self::Other(action)
+    }
 }
 
 /// **UNSTABLE**
@@ -1364,6 +1870,7 @@ pub enum ElicitationAction {
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
 /// The user accepted the elicitation and provided content.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -1468,6 +1975,7 @@ impl Default for ElicitationAcceptAction {
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
 /// Notification sent by the agent when a URL-based elicitation is complete.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "client", "x-method" = ELICITATION_COMPLETE_NOTIFICATION))]
@@ -1481,6 +1989,9 @@ pub struct CompleteElicitationNotification {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -1504,75 +2015,6 @@ impl CompleteElicitationNotification {
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
         self
-    }
-}
-
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
-/// Data payload for the `UrlElicitationRequired` error, describing the URL elicitations
-/// the user must complete.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-#[non_exhaustive]
-pub struct UrlElicitationRequiredData {
-    /// The URL elicitations the user must complete.
-    pub elicitations: Vec<UrlElicitationRequiredItem>,
-}
-
-impl UrlElicitationRequiredData {
-    /// Builds [`UrlElicitationRequiredData`] with the required fields set; optional fields start unset or empty.
-    #[must_use]
-    pub fn new(elicitations: Vec<UrlElicitationRequiredItem>) -> Self {
-        Self { elicitations }
-    }
-}
-
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
-/// A single URL elicitation item within the `UrlElicitationRequired` error data.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-#[non_exhaustive]
-pub struct UrlElicitationRequiredItem {
-    /// The elicitation mode (always `"url"` for this item type).
-    pub mode: ElicitationUrlOnlyMode,
-    /// The unique identifier for this elicitation.
-    pub elicitation_id: ElicitationId,
-    /// The URL the user should be directed to.
-    #[schemars(extend("format" = "uri"))]
-    pub url: String,
-    /// A human-readable message describing what input is needed.
-    pub message: String,
-}
-
-/// Type discriminator for URL-only elicitation error items.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema, Default)]
-#[serde(rename_all = "snake_case")]
-#[non_exhaustive]
-pub enum ElicitationUrlOnlyMode {
-    /// URL elicitation mode.
-    #[default]
-    Url,
-}
-
-impl UrlElicitationRequiredItem {
-    /// Builds [`UrlElicitationRequiredItem`] with the required fields set; optional fields start unset or empty.
-    #[must_use]
-    pub fn new(
-        elicitation_id: impl Into<ElicitationId>,
-        url: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
-        Self {
-            mode: ElicitationUrlOnlyMode::Url,
-            elicitation_id: elicitation_id.into(),
-            url: url.into(),
-            message: message.into(),
-        }
     }
 }
 
@@ -1685,6 +2127,37 @@ mod tests {
     }
 
     #[test]
+    fn unknown_action_response_serialization() {
+        let json = json!({
+            "action": "_defer",
+            "reason": "waiting",
+            "retryAfterMs": 1000
+        });
+
+        let resp: CreateElicitationResponse = serde_json::from_value(json.clone()).unwrap();
+        let ElicitationAction::Other(other) = &resp.action else {
+            panic!("expected unknown elicitation action");
+        };
+
+        assert_eq!(other.action, "_defer");
+        assert_eq!(other.fields.get("reason"), Some(&json!("waiting")));
+        assert_eq!(other.fields.get("retryAfterMs"), Some(&json!(1000)));
+        assert_eq!(serde_json::to_value(&resp).unwrap(), json);
+    }
+
+    #[test]
+    fn unknown_action_does_not_hide_known_action() {
+        assert!(
+            serde_json::from_value::<OtherElicitationAction>(json!({
+                "action": "accept",
+                "content": {}
+            }))
+            .is_err()
+        );
+        assert!(serde_json::from_value::<ElicitationAction>(json!({})).is_err());
+    }
+
+    #[test]
     fn url_mode_request_scope_serialization() {
         let req = CreateElicitationRequest::new(
             ElicitationUrlMode::new(
@@ -1709,6 +2182,47 @@ mod tests {
             ElicitationRequestScope::new(RequestId::Number(42)).into()
         );
         assert!(matches!(roundtripped.mode, ElicitationMode::Url(_)));
+    }
+
+    #[test]
+    fn unknown_mode_request_serialization() {
+        let json = json!({
+            "requestId": 42,
+            "mode": "_browser",
+            "message": "Open a browser window",
+            "target": "login"
+        });
+
+        let req: CreateElicitationRequest = serde_json::from_value(json.clone()).unwrap();
+        let ElicitationMode::Other(other) = &req.mode else {
+            panic!("expected unknown elicitation mode");
+        };
+
+        assert_eq!(other.mode, "_browser");
+        assert_eq!(
+            other.scope,
+            ElicitationRequestScope::new(RequestId::Number(42)).into()
+        );
+        assert_eq!(other.fields.get("target"), Some(&json!("login")));
+        assert_eq!(
+            *req.scope(),
+            ElicitationRequestScope::new(RequestId::Number(42)).into()
+        );
+        assert_eq!(serde_json::to_value(&req).unwrap(), json);
+    }
+
+    #[test]
+    fn unknown_mode_does_not_hide_malformed_known_mode() {
+        let missing_requested_schema = json!({
+            "requestId": 42,
+            "mode": "form",
+            "message": "Enter your name"
+        });
+
+        assert!(
+            serde_json::from_value::<CreateElicitationRequest>(missing_requested_schema).is_err()
+        );
+        assert!(serde_json::from_value::<ElicitationMode>(json!({})).is_err());
     }
 
     #[test]
@@ -1739,12 +2253,12 @@ mod tests {
     fn client_response_serialization_accept() {
         use crate::v2::ClientResponse;
 
-        let resp = ClientResponse::CreateElicitationResponse(CreateElicitationResponse::new(
-            ElicitationAction::Accept(ElicitationAcceptAction::new().content(BTreeMap::from([(
-                "name".to_string(),
-                ElicitationContentValue::from("Alice"),
-            )]))),
-        ));
+        let resp =
+            ClientResponse::CreateElicitationResponse(Box::new(CreateElicitationResponse::new(
+                ElicitationAction::Accept(ElicitationAcceptAction::new().content(BTreeMap::from(
+                    [("name".to_string(), ElicitationContentValue::from("Alice"))],
+                ))),
+            )));
         let json = serde_json::to_value(&resp).unwrap();
         assert_eq!(json["action"], "accept");
         assert_eq!(json["content"]["name"], "Alice");
@@ -1758,8 +2272,8 @@ mod tests {
     fn client_response_serialization_decline() {
         use crate::v2::ClientResponse;
 
-        let resp = ClientResponse::CreateElicitationResponse(CreateElicitationResponse::new(
-            ElicitationAction::Decline,
+        let resp = ClientResponse::CreateElicitationResponse(Box::new(
+            CreateElicitationResponse::new(ElicitationAction::Decline),
         ));
         let json = serde_json::to_value(&resp).unwrap();
         assert_eq!(json["action"], "decline");
@@ -1772,8 +2286,8 @@ mod tests {
     fn client_response_serialization_cancel() {
         use crate::v2::ClientResponse;
 
-        let resp = ClientResponse::CreateElicitationResponse(CreateElicitationResponse::new(
-            ElicitationAction::Cancel,
+        let resp = ClientResponse::CreateElicitationResponse(Box::new(
+            CreateElicitationResponse::new(ElicitationAction::Cancel),
         ));
         let json = serde_json::to_value(&resp).unwrap();
         assert_eq!(json["action"], "cancel");
@@ -1857,27 +2371,6 @@ mod tests {
         let roundtripped: ElicitationCapabilities = serde_json::from_value(json).unwrap();
         assert!(roundtripped.form.is_some());
         assert!(roundtripped.url.is_some());
-    }
-
-    #[test]
-    fn url_elicitation_required_data_serialization() {
-        let data = UrlElicitationRequiredData::new(vec![UrlElicitationRequiredItem::new(
-            "elic_1",
-            "https://example.com/auth",
-            "Please authenticate",
-        )]);
-
-        let json = serde_json::to_value(&data).unwrap();
-        assert_eq!(json["elicitations"][0]["mode"], "url");
-        assert_eq!(json["elicitations"][0]["elicitationId"], "elic_1");
-        assert_eq!(json["elicitations"][0]["url"], "https://example.com/auth");
-
-        let roundtripped: UrlElicitationRequiredData = serde_json::from_value(json).unwrap();
-        assert_eq!(roundtripped.elicitations.len(), 1);
-        assert_eq!(
-            roundtripped.elicitations[0].mode,
-            ElicitationUrlOnlyMode::Url
-        );
     }
 
     #[test]
@@ -1965,10 +2458,111 @@ mod tests {
         assert_eq!(json["properties"]["colors"]["maxItems"], 3);
 
         let roundtripped: ElicitationSchema = serde_json::from_value(json).unwrap();
-        assert!(matches!(
-            roundtripped.properties.get("colors").unwrap(),
-            ElicitationPropertySchema::Array(_)
-        ));
+        let ElicitationPropertySchema::Array(array) =
+            roundtripped.properties.get("colors").unwrap()
+        else {
+            panic!("expected Array variant");
+        };
+        let MultiSelectItems::String(items) = &array.items else {
+            panic!("expected String multi-select items");
+        };
+        assert_eq!(items.values.len(), 3);
+    }
+
+    #[test]
+    fn multi_select_titled_items_keep_mcp_shape() {
+        let items = MultiSelectItems::Titled(TitledMultiSelectItems::new(vec![EnumOption::new(
+            "#ff0000", "Red",
+        )]));
+
+        let json = serde_json::to_value(&items).unwrap();
+        assert!(json.get("type").is_none());
+        assert_eq!(json["anyOf"][0]["const"], "#ff0000");
+        assert_eq!(json["anyOf"][0]["title"], "Red");
+
+        let roundtripped: MultiSelectItems = serde_json::from_value(json).unwrap();
+        assert!(matches!(roundtripped, MultiSelectItems::Titled(_)));
+    }
+
+    #[test]
+    fn multi_select_items_preserve_unknown_type() {
+        let json = json!({
+            "type": "_token",
+            "format": "workspace",
+            "anyOf": [
+                { "const": "repo", "title": "Repository" }
+            ]
+        });
+
+        let items: MultiSelectItems = serde_json::from_value(json.clone()).unwrap();
+        let MultiSelectItems::Other(other) = &items else {
+            panic!("expected unknown multi-select items");
+        };
+
+        assert_eq!(other.type_, "_token");
+        assert_eq!(other.fields.get("format"), Some(&json!("workspace")));
+        assert_eq!(other.fields.get("anyOf"), Some(&json["anyOf"]));
+        assert_eq!(serde_json::to_value(&items).unwrap(), json);
+    }
+
+    #[test]
+    fn multi_select_items_unknown_does_not_hide_malformed_string_type() {
+        assert!(
+            serde_json::from_value::<MultiSelectItems>(json!({
+                "type": "string"
+            }))
+            .is_err()
+        );
+        assert!(
+            serde_json::from_value::<OtherMultiSelectItems>(json!({
+                "type": "string",
+                "format": "workspace"
+            }))
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn property_schema_preserves_unknown_type() {
+        let schema: ElicitationSchema = serde_json::from_value(json!({
+            "type": "object",
+            "properties": {
+                "location": {
+                    "type": "_location",
+                    "title": "Location",
+                    "precision": "city"
+                }
+            }
+        }))
+        .unwrap();
+
+        let ElicitationPropertySchema::Other(unknown) = schema.properties.get("location").unwrap()
+        else {
+            panic!("expected unknown property schema");
+        };
+
+        assert_eq!(unknown.type_, "_location");
+        assert_eq!(unknown.fields.get("title"), Some(&json!("Location")));
+        assert_eq!(unknown.fields.get("precision"), Some(&json!("city")));
+        assert_eq!(
+            serde_json::to_value(ElicitationPropertySchema::Other(unknown.clone())).unwrap(),
+            json!({
+                "type": "_location",
+                "title": "Location",
+                "precision": "city"
+            })
+        );
+    }
+
+    #[test]
+    fn property_schema_unknown_does_not_hide_malformed_known_type() {
+        assert!(
+            serde_json::from_value::<ElicitationPropertySchema>(json!({
+                "type": "array"
+            }))
+            .is_err()
+        );
+        assert!(serde_json::from_value::<ElicitationPropertySchema>(json!({})).is_err());
     }
 
     #[test]
@@ -2085,8 +2679,8 @@ mod tests {
     }
 
     #[test]
-    fn schema_rejects_invalid_object_type() {
-        let err = serde_json::from_value::<ElicitationSchema>(json!({
+    fn schema_defaults_invalid_object_type() {
+        let schema = serde_json::from_value::<ElicitationSchema>(json!({
             "type": "array",
             "properties": {
                 "name": {
@@ -2094,9 +2688,10 @@ mod tests {
                 }
             }
         }))
-        .unwrap_err();
+        .unwrap();
 
-        assert!(err.to_string().contains("unknown variant"));
+        assert_eq!(schema.type_, ElicitationSchemaType::Object);
+        assert!(schema.properties.contains_key("name"));
     }
 
     #[test]
@@ -2116,28 +2711,28 @@ mod tests {
 
     #[test]
     fn response_accept_rejects_non_object_content() {
-        let err = serde_json::from_value::<CreateElicitationResponse>(json!({
-            "action": "accept",
-            "content": "Alice"
-        }))
-        .unwrap_err();
-
-        assert!(err.to_string().contains("invalid type"));
+        assert!(
+            serde_json::from_value::<CreateElicitationResponse>(json!({
+                "action": "accept",
+                "content": "Alice"
+            }))
+            .is_err()
+        );
     }
 
     #[test]
     fn response_accept_rejects_nested_object_content() {
-        let err = serde_json::from_value::<CreateElicitationResponse>(json!({
-            "action": "accept",
-            "content": {
-                "profile": {
-                    "name": "Alice"
+        assert!(
+            serde_json::from_value::<CreateElicitationResponse>(json!({
+                "action": "accept",
+                "content": {
+                    "profile": {
+                        "name": "Alice"
+                    }
                 }
-            }
-        }))
-        .unwrap_err();
-
-        assert!(err.to_string().contains("data did not match any variant"));
+            }))
+            .is_err()
+        );
     }
 
     #[test]

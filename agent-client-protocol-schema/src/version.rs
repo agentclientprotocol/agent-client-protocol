@@ -1,13 +1,24 @@
 use derive_more::{Display, From};
 use schemars::JsonSchema;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// Protocol version identifier.
 ///
 /// This version is only bumped for breaking changes.
 /// Non-breaking changes should be introduced via capabilities.
 #[derive(
-    Debug, Clone, Copy, Serialize, JsonSchema, PartialEq, Eq, PartialOrd, Ord, From, Display,
+    Debug,
+    Clone,
+    Copy,
+    Serialize,
+    Deserialize,
+    JsonSchema,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    From,
+    Display,
 )]
 pub struct ProtocolVersion(u16);
 
@@ -15,8 +26,7 @@ impl ProtocolVersion {
     /// Version `0` of the protocol.
     ///
     /// This was a pre-release version that shouldn't be used in production.
-    /// It is used as a fallback for any request whose version cannot be parsed
-    /// as a valid version, and should likely be treated as unsupported.
+    /// It should likely be treated as unsupported.
     pub const V0: Self = Self(0);
     /// Version `1` of the protocol.
     ///
@@ -25,16 +35,18 @@ impl ProtocolVersion {
     /// Version `2` of the protocol.
     ///
     /// This is an unstable draft used for protocol iteration. It is only
-    /// available when the `unstable_protocol_v2` feature is enabled and is
-    /// **not** advertised by [`ProtocolVersion::LATEST`] yet — callers must
-    /// opt into V2 explicitly.
+    /// available when the `unstable_protocol_v2` feature is enabled and must
+    /// be selected explicitly.
     #[cfg(feature = "unstable_protocol_v2")]
     pub const V2: Self = Self(2);
     /// The latest stable supported version of the protocol.
     ///
-    /// Currently this is version `1`. Enabling the `unstable_protocol_v2`
-    /// feature exposes `ProtocolVersion::V2` but does **not** change the
-    /// value of `LATEST` — v2 will only become the latest once it stabilizes.
+    /// Currently this is version `1`.
+    ///
+    /// This shorthand is intentionally unavailable when the
+    /// `unstable_protocol_v2` feature is enabled, so code that opts into the
+    /// v2 draft must choose `V1` or `V2` explicitly.
+    #[cfg(not(feature = "unstable_protocol_v2"))]
     pub const LATEST: Self = Self::V1;
 
     /// Returns the numeric protocol version.
@@ -50,56 +62,6 @@ impl ProtocolVersion {
     }
 }
 
-use serde::{Deserialize, Deserializer};
-
-impl<'de> Deserialize<'de> for ProtocolVersion {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        use serde::de::{self, Visitor};
-        use std::fmt;
-
-        struct ProtocolVersionVisitor;
-
-        impl Visitor<'_> for ProtocolVersionVisitor {
-            type Value = ProtocolVersion;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str("a protocol version number or string")
-            }
-
-            fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
-            where
-                E: de::Error,
-            {
-                match u16::try_from(value) {
-                    Ok(value) => Ok(ProtocolVersion(value)),
-                    Err(_) => Err(E::custom(format!("protocol version {value} is too large"))),
-                }
-            }
-
-            fn visit_str<E>(self, _value: &str) -> Result<Self::Value, E>
-            where
-                E: de::Error,
-            {
-                // Old versions used strings, we consider all of those version 0
-                Ok(ProtocolVersion::V0)
-            }
-
-            fn visit_string<E>(self, _value: String) -> Result<Self::Value, E>
-            where
-                E: de::Error,
-            {
-                // Old versions used strings, we consider all of those version 0
-                Ok(ProtocolVersion::V0)
-            }
-        }
-
-        deserializer.deserialize_any(ProtocolVersionVisitor)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -112,10 +74,10 @@ mod tests {
     }
 
     #[test]
-    fn test_deserialize_string() {
+    fn test_deserialize_string_errors() {
         let json = "\"1.0.0\"";
-        let version: ProtocolVersion = serde_json::from_str(json).unwrap();
-        assert_eq!(version, ProtocolVersion::new(0));
+        let result: Result<ProtocolVersion, _> = serde_json::from_str(json);
+        assert!(result.is_err());
     }
 
     #[test]
@@ -143,6 +105,8 @@ mod tests {
     fn test_as_u16() {
         assert_eq!(ProtocolVersion::V0.as_u16(), 0);
         assert_eq!(ProtocolVersion::V1.as_u16(), 1);
+
+        #[cfg(not(feature = "unstable_protocol_v2"))]
         assert_eq!(ProtocolVersion::LATEST.as_u16(), 1);
 
         #[cfg(feature = "unstable_protocol_v2")]

@@ -93,15 +93,19 @@ During [Session Setup](/protocol/v1/session-setup) the Agent **MAY** return a li
 </ResponseField>
 
 <ResponseField name="type" type="ConfigOptionType" required>
-  The type of input control. Currently only `select` is supported.
+  The type of input control. `select` is supported by default. `boolean` is only
+  supported when the Client advertises `session.configOptions.boolean: {}` in
+  `clientCapabilities`.
 </ResponseField>
 
-<ResponseField name="currentValue" type="string" required>
-  The currently selected value for this option
+<ResponseField name="currentValue" type="string | boolean" required>
+  The current value for this option. For `select` options this is a string value
+  ID. For `boolean` options this is a boolean.
 </ResponseField>
 
-<ResponseField name="options" type="ConfigOptionValue[]" required>
-  The available values for this option
+<ResponseField name="options" type="ConfigOptionValue[]">
+  The available values for a `select` option. Required when `type` is `"select"`
+  and omitted when `type` is `"boolean"`.
 </ResponseField>
 
 ### ConfigOptionValue
@@ -118,6 +122,43 @@ During [Session Setup](/protocol/v1/session-setup) the Agent **MAY** return a li
   Optional description of what this value does
 </ResponseField>
 
+### Boolean Config Options
+
+Agents **MAY** include boolean config options only after the Client advertises
+support during initialization:
+
+```json
+{
+  "clientCapabilities": {
+    "session": {
+      "configOptions": {
+        "boolean": {}
+      }
+    }
+  }
+}
+```
+
+Omitting `session`, `configOptions`, or `boolean` means the Client does not
+advertise support.
+
+When support is advertised, a boolean option uses `type: "boolean"` and a
+boolean `currentValue`:
+
+```json
+{
+  "id": "brave_mode",
+  "name": "Brave Mode",
+  "description": "Skip confirmation prompts and act autonomously",
+  "type": "boolean",
+  "currentValue": true
+}
+```
+
+Agents **MUST NOT** include `type: "boolean"` options in `configOptions`
+payloads unless the Client advertised support. Agents that need to support
+older Clients should omit the boolean option or provide a `select` fallback.
+
 ## Option Categories
 
 Each config option **MAY** include a `category` field. Categories are semantic metadata intended to help Clients provide consistent UX, such as attaching keyboard shortcuts, choosing icons, or deciding placement.
@@ -129,11 +170,14 @@ Each config option **MAY** include a `category` field. Categories are semantic m
 
 Category names beginning with `_` are free for custom use (e.g., `_my_custom_category`). Category names that do not begin with `_` are reserved for the ACP spec.
 
-| Category        | Description                      |
-| --------------- | -------------------------------- |
-| `mode`          | Session mode selector            |
-| `model`         | Model selector                   |
-| `thought_level` | Thought/reasoning level selector |
+| Category        | Description                                                              |
+| --------------- | ------------------------------------------------------------------------ |
+| `mode`          | Session mode selector                                                    |
+| `model`         | Model selector                                                           |
+| `model_config`  | Model-related parameter, such as context size or speed/quality trade-off |
+| `thought_level` | Thought/reasoning level selector                                         |
+
+Clients **SHOULD** render `model_config` options near the `model` selector, such as in the same popover or panel. No capability negotiation is required for category values.
 
 When multiple options share the same category, Clients **SHOULD** use the array ordering to resolve ties, preferring earlier options in the list for prominent placement or keyboard shortcuts.
 
@@ -186,10 +230,27 @@ Clients can change a config option value by calling the `session/set_config_opti
   The `id` of the configuration option to change
 </ParamField>
 
-<ParamField path="value" type="string" required>
-  The new value to set. Must be one of the values listed in the option's
-  `options` array.
+<ParamField path="value" type="string | boolean" required>
+  The new value to set. For `select` options, this must be one of the values
+  listed in the option's `options` array. For `boolean` options, this must be a
+  boolean.
 </ParamField>
+
+For boolean options, Clients send `type: "boolean"` with a boolean `value`:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "session/set_config_option",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "configId": "brave_mode",
+    "type": "boolean",
+    "value": true
+  }
+}
+```
 
 The Agent **MUST** respond with the complete list of all configuration options and their current values:
 

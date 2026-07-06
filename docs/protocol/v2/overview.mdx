@@ -24,14 +24,14 @@ A typical flow follows this pattern:
 <Step title="Initialization Phase">
 
 - Client → Agent: `initialize` to establish connection
-- Client → Agent: `authenticate` if required by the Agent
+- Client → Agent: `auth/login` if required by the Agent
 
 </Step>
 
 <Step title="Session Setup - either:">
 
 - Client → Agent: `session/new` to create a new session
-- Client → Agent: `session/load` to resume an existing session if supported
+- Client → Agent: `session/resume` to resume an existing session
 
 </Step>
 
@@ -59,10 +59,18 @@ Agents are programs that use generative AI to autonomously modify code. They typ
 </ResponseField>
 
 <ResponseField
-  name="authenticate"
-  post={[<a href="/protocol/v2/schema#authenticate">Schema</a>]}
+  name="auth/login"
+  post={[<a href="/protocol/v2/schema#auth%2Flogin">Schema</a>]}
 >
   Authenticate with the Agent (if required).
+</ResponseField>
+
+<ResponseField
+  name="auth/logout"
+  post={[<a href="/protocol/v2/schema#auth%2Flogout">Schema</a>]}
+>
+  [End the current authenticated
+  state](/protocol/v2/authentication#logging-out).
 </ResponseField>
 
 <ResponseField
@@ -81,22 +89,26 @@ Agents are programs that use generative AI to autonomously modify code. They typ
   Agent.
 </ResponseField>
 
-### Optional Methods
-
 <ResponseField
-  name="session/load"
-  post={[<a href="/protocol/v2/schema#session%2Fload">Schema</a>]}
+  name="session/list"
+  post={[<a href="/protocol/v2/schema#session%2Flist">Schema</a>]}
 >
-  [Load an existing session](/protocol/v2/session-setup#loading-sessions)
-  (requires `session.load` capability).
+  [List known sessions](/protocol/v2/session-list).
 </ResponseField>
 
 <ResponseField
-  name="logout"
-  post={[<a href="/protocol/v2/schema#logout">Schema</a>]}
+  name="session/resume"
+  post={[<a href="/protocol/v2/schema#session%2Fresume">Schema</a>]}
 >
-  [End the current authenticated state](/protocol/v2/authentication#logging-out)
-  (requires `capabilities.auth.logout` capability).
+  [Resume an existing session, optionally replaying
+  history](/protocol/v2/session-setup#resuming-sessions).
+</ResponseField>
+
+<ResponseField
+  name="session/close"
+  post={[<a href="/protocol/v2/schema#session%2Fclose">Schema</a>]}
+>
+  [Close an active session](/protocol/v2/session-setup#closing-active-sessions).
 </ResponseField>
 
 ### Notifications
@@ -120,7 +132,7 @@ Clients provide the interface between users and agents. They are typically code 
   post={[<a href="/protocol/v2/schema#session%2Frequest_permission">Schema</a>]}
 >
   [Request user authorization](/protocol/v2/tool-calls#requesting-permission)
-  for tool calls.
+  for operations such as tool calls.
 </ResponseField>
 
 ### Notifications

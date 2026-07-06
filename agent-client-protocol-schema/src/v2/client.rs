@@ -42,12 +42,13 @@ use super::{ClientNesCapabilities, PositionEncodingKind};
 /// Used to stream real-time progress and results during prompt processing.
 ///
 /// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-lifecycle#3-agent-reports-output)
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[schemars(extend("x-side" = "client", "x-method" = SESSION_UPDATE_NOTIFICATION))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct SessionNotification {
+pub struct UpdateSessionNotification {
     /// The ID of the session this update pertains to.
     pub session_id: SessionId,
     /// The actual update content.
@@ -57,11 +58,14 @@ pub struct SessionNotification {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
-impl SessionNotification {
+impl UpdateSessionNotification {
     /// Builds [`SessionNotification`] with the required notification fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>, update: SessionUpdate) -> Self {
@@ -224,6 +228,10 @@ impl<'de> Deserialize<'de> for OtherSessionUpdate {
 }
 
 fn is_known_session_update(session_update: &str) -> bool {
+    #[cfg(feature = "unstable_plan_operations")]
+    if session_update == "plan_removed" {
+        return true;
+    }
     matches!(
         session_update,
         "user_message_chunk"
@@ -284,6 +292,9 @@ pub struct ConfigOptionUpdate {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -314,24 +325,38 @@ impl ConfigOptionUpdate {
 ///
 /// Agents send this notification to update session information like title or custom metadata.
 /// This allows clients to display dynamic session names and track session state changes.
+///
+/// Omitted fields leave the existing session info unchanged. `null` clears the
+/// corresponding value.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SessionInfoUpdate {
     /// Human-readable title for the session. Set to null to clear.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub title: MaybeUndefined<String>,
     /// ISO 8601 timestamp of last activity. Set to null to clear.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true, "format" = "date-time"))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub updated_at: MaybeUndefined<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted means no metadata update; `null` is an
+    /// explicit clear signal. Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
+    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(
+        rename = "_meta",
+        default,
+        skip_serializing_if = "MaybeUndefined::is_undefined"
+    )]
+    pub meta: MaybeUndefined<Meta>,
 }
 
 impl SessionInfoUpdate {
@@ -356,13 +381,13 @@ impl SessionInfoUpdate {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted means no metadata update; `null` is an
+    /// explicit clear signal. Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
-    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
-        self.meta = meta.into_option();
+    pub fn meta(mut self, meta: impl IntoMaybeUndefined<Meta>) -> Self {
+        self.meta = meta.into_maybe_undefined();
         self
     }
 }
@@ -388,6 +413,9 @@ pub struct UsageUpdate {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -450,6 +478,7 @@ pub enum StateUpdate {
 }
 
 /// The agent is actively processing work in the session.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -460,6 +489,9 @@ pub struct RunningStateUpdate {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -516,6 +548,9 @@ pub struct IdleStateUpdate {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -559,6 +594,7 @@ impl IdleStateUpdate {
 }
 
 /// The agent is waiting on user action before it can continue.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -569,6 +605,9 @@ pub struct RequiresActionStateUpdate {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -662,6 +701,7 @@ fn other_state_update_schema(schema: &mut Schema) {
 }
 
 /// Cost information for a session.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -670,12 +710,16 @@ pub struct Cost {
     /// Total cumulative cost for session.
     pub amount: f64,
     /// ISO 4217 currency code (e.g., "USD", "EUR").
+    #[schemars(pattern(r"^[A-Z]{3}$"))]
     pub currency: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -703,24 +747,28 @@ impl Cost {
     }
 }
 
-/// A streamed item of content
+/// A streamed item of message content.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ContentChunk {
-    /// A single item of content
-    pub content: ContentBlock,
     /// A unique identifier for the message this chunk belongs to.
     ///
     /// All chunks belonging to the same message share the same `messageId`.
     /// A change in `messageId` indicates a new message has started.
     pub message_id: MessageId,
+    /// A single item of content
+    pub content: ContentBlock,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// these keys. This field is chunk-scoped.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -738,7 +786,7 @@ impl ContentChunk {
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// these keys. This field is chunk-scoped.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[must_use]
@@ -750,11 +798,11 @@ impl ContentChunk {
 
 /// A user message upsert.
 ///
-/// Only [`UserMessage::message_id`] is required. Other fields have patch
-/// semantics: omitted fields leave the existing message value unchanged, `null`
-/// clears or unsets the value, and concrete values replace the previous value.
-/// For a new `messageId`, omitted fields use client defaults. `content` is
-/// replaced as a whole array; send `[]` or `null` to clear it.
+/// Only [`UserMessage::message_id`] is required. `content` has patch semantics:
+/// an omitted field leaves existing message content unchanged, `null` clears the
+/// value, and a concrete array replaces the previous value. For a new
+/// `messageId`, omitted fields use client defaults. `content` is replaced as a
+/// whole array; send `[]` or `null` to clear it.
 ///
 /// Message updates and chunks are applied in the order they are received. When
 /// a `user_message` update includes `content`, that array replaces any content
@@ -776,9 +824,11 @@ pub struct UserMessage {
     pub content: MaybeUndefined<Vec<ContentBlock>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// these keys. Omitted means no metadata update; `null` is an explicit clear signal.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(
         rename = "_meta",
         default,
@@ -819,11 +869,11 @@ impl UserMessage {
 
 /// An agent message upsert.
 ///
-/// Only [`AgentMessage::message_id`] is required. Other fields have patch
-/// semantics: omitted fields leave the existing message value unchanged, `null`
-/// clears or unsets the value, and concrete values replace the previous value.
-/// For a new `messageId`, omitted fields use client defaults. `content` is
-/// replaced as a whole array; send `[]` or `null` to clear it.
+/// Only [`AgentMessage::message_id`] is required. `content` has patch semantics:
+/// an omitted field leaves existing message content unchanged, `null` clears the
+/// value, and a concrete array replaces the previous value. For a new
+/// `messageId`, omitted fields use client defaults. `content` is replaced as a
+/// whole array; send `[]` or `null` to clear it.
 ///
 /// Message updates and chunks are applied in the order they are received. When
 /// an `agent_message` update includes `content`, that array replaces any
@@ -845,9 +895,11 @@ pub struct AgentMessage {
     pub content: MaybeUndefined<Vec<ContentBlock>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// these keys. Omitted means no metadata update; `null` is an explicit clear signal.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(
         rename = "_meta",
         default,
@@ -888,11 +940,11 @@ impl AgentMessage {
 
 /// An agent thought or reasoning message upsert.
 ///
-/// Only [`AgentThought::message_id`] is required. Other fields have patch
-/// semantics: omitted fields leave the existing thought value unchanged, `null`
-/// clears or unsets the value, and concrete values replace the previous value.
-/// For a new `messageId`, omitted fields use client defaults. `content` is
-/// replaced as a whole array; send `[]` or `null` to clear it.
+/// Only [`AgentThought::message_id`] is required. `content` has patch semantics:
+/// an omitted field leaves existing thought content unchanged, `null` clears the
+/// value, and a concrete array replaces the previous value. For a new
+/// `messageId`, omitted fields use client defaults. `content` is replaced as a
+/// whole array; send `[]` or `null` to clear it.
 ///
 /// Message updates and chunks are applied in the order they are received. When
 /// an `agent_thought` update includes `content`, that array replaces any
@@ -914,9 +966,11 @@ pub struct AgentThought {
     pub content: MaybeUndefined<Vec<ContentBlock>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// these keys. Omitted means no metadata update; `null` is an explicit clear signal.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(
         rename = "_meta",
         default,
@@ -977,7 +1031,7 @@ impl MessageId {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct AvailableCommandsUpdate {
-    /// Commands the agent can execute
+    /// Commands the agent can execute.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
     #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     pub available_commands: Vec<AvailableCommand>,
@@ -986,6 +1040,9 @@ pub struct AvailableCommandsUpdate {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -1033,6 +1090,9 @@ pub struct AvailableCommand {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -1070,11 +1130,13 @@ impl AvailableCommand {
 
 /// The input specification for a command.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[serde(untagged, rename_all = "camelCase")]
+#[serde(tag = "type", rename_all = "snake_case")]
+#[schemars(extend("discriminator" = {"propertyName": "type"}))]
 #[non_exhaustive]
 pub enum AvailableCommandInput {
     /// All text that was typed after the command name is provided as input.
-    Unstructured(UnstructuredCommandInput),
+    #[serde(rename = "text")]
+    Text(TextCommandInput),
     /// Custom or future command input specification.
     ///
     /// Values beginning with `_` are reserved for implementation-specific
@@ -1085,12 +1147,14 @@ pub enum AvailableCommandInput {
     /// payload when storing, replaying, proxying, or forwarding command
     /// metadata, and otherwise ignore the input specification or display the
     /// command without structured input.
+    #[serde(untagged)]
     Other(OtherAvailableCommandInput),
 }
 
 /// Custom or future command input specification.
 #[derive(Debug, Clone, Serialize, JsonSchema, PartialEq, Eq)]
 #[schemars(inline)]
+#[schemars(transform = other_available_command_input_schema)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct OtherAvailableCommandInput {
@@ -1131,17 +1195,37 @@ impl<'de> Deserialize<'de> for OtherAvailableCommandInput {
             return Err(serde::de::Error::custom("`type` must be a string"));
         };
 
+        if is_known_available_command_input_type(&type_) {
+            return Err(serde::de::Error::custom(format!(
+                "known available command input type `{type_}` did not match its schema"
+            )));
+        }
+
         Ok(Self { type_, fields })
     }
 }
 
+const KNOWN_AVAILABLE_COMMAND_INPUT_TYPES: &[&str] = &["text"];
+
+fn is_known_available_command_input_type(type_: &str) -> bool {
+    KNOWN_AVAILABLE_COMMAND_INPUT_TYPES.contains(&type_)
+}
+
+fn other_available_command_input_schema(schema: &mut Schema) {
+    super::schema_util::reject_known_string_discriminators(
+        schema,
+        "type",
+        KNOWN_AVAILABLE_COMMAND_INPUT_TYPES,
+    );
+}
+
 /// All text that was typed after the command name is provided as input.
+#[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, JsonSchema, PartialEq, Eq)]
-#[schemars(transform = unstructured_command_input_schema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct UnstructuredCommandInput {
+pub struct TextCommandInput {
     /// A hint to display when the input hasn't been provided yet
     pub hint: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1149,12 +1233,15 @@ pub struct UnstructuredCommandInput {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
 
-impl UnstructuredCommandInput {
-    /// Builds [`UnstructuredCommandInput`] with the required fields set; optional fields start unset or empty.
+impl TextCommandInput {
+    /// Builds [`TextCommandInput`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(hint: impl Into<String>) -> Self {
         Self {
@@ -1175,46 +1262,14 @@ impl UnstructuredCommandInput {
     }
 }
 
-impl<'de> Deserialize<'de> for UnstructuredCommandInput {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        #[derive(Deserialize)]
-        #[serde(rename_all = "camelCase")]
-        struct RawUnstructuredCommandInput {
-            hint: String,
-            #[serde(rename = "_meta")]
-            meta: Option<Meta>,
-            #[serde(flatten)]
-            fields: BTreeMap<String, serde_json::Value>,
-        }
-
-        let raw = RawUnstructuredCommandInput::deserialize(deserializer)?;
-        if raw.fields.contains_key("type") {
-            return Err(serde::de::Error::custom(
-                "unstructured command input cannot include a `type` field",
-            ));
-        }
-
-        Ok(Self {
-            hint: raw.hint,
-            meta: raw.meta,
-        })
-    }
-}
-
-fn unstructured_command_input_schema(schema: &mut Schema) {
-    super::schema_util::reject_property(schema, "type");
-}
-
 // Permission
 
-/// Request for user permission to execute a tool call.
+/// Request for user permission to proceed with an operation.
 ///
 /// Sent when the agent needs authorization before performing a sensitive operation.
 ///
 /// See protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/tool-calls#requesting-permission)
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[schemars(extend("x-side" = "client", "x-method" = SESSION_REQUEST_PERMISSION_METHOD_NAME))]
@@ -1223,15 +1278,37 @@ fn unstructured_command_input_schema(schema: &mut Schema) {
 pub struct RequestPermissionRequest {
     /// The session ID for this request.
     pub session_id: SessionId,
-    /// Details about the tool call requiring permission.
-    pub tool_call: ToolCallUpdate,
+    /// Human-readable title for the permission prompt.
+    ///
+    /// This title is specific to the permission prompt and does not update any
+    /// subject's displayed title.
+    pub title: String,
+    /// Optional human-readable explanation of why permission is needed.
+    ///
+    /// This text is specific to the permission prompt and does not update any
+    /// subject's displayed content. Omitted or `null` both mean no separate
+    /// permission description was provided.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
+    pub description: Option<String>,
+    /// Optional structured context about the operation requiring permission.
+    ///
+    /// Omitted or `null` both mean no structured subject was provided.
+    #[serde(default)]
+    pub subject: Option<RequestPermissionSubject>,
     /// Available permission options for the user to choose from.
+    /// Must contain at least one option.
+    #[schemars(length(min = 1))]
     pub options: Vec<PermissionOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -1241,15 +1318,31 @@ impl RequestPermissionRequest {
     #[must_use]
     pub fn new(
         session_id: impl Into<SessionId>,
-        tool_call: ToolCallUpdate,
+        title: impl Into<String>,
         options: Vec<PermissionOption>,
     ) -> Self {
         Self {
             session_id: session_id.into(),
-            tool_call,
+            title: title.into(),
+            description: None,
+            subject: None,
             options,
             meta: None,
         }
+    }
+
+    /// Sets or clears the optional `description` field.
+    #[must_use]
+    pub fn description(mut self, description: impl IntoOption<String>) -> Self {
+        self.description = description.into_option();
+        self
+    }
+
+    /// Sets or clears the optional `subject` field.
+    #[must_use]
+    pub fn subject(mut self, subject: impl IntoOption<RequestPermissionSubject>) -> Self {
+        self.subject = subject.into_option();
+        self
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1264,7 +1357,121 @@ impl RequestPermissionRequest {
     }
 }
 
+/// The operation requiring permission.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[serde(tag = "type", rename_all = "snake_case")]
+#[schemars(extend("discriminator" = {"propertyName": "type"}))]
+#[non_exhaustive]
+pub enum RequestPermissionSubject {
+    /// Permission is requested before executing a tool call.
+    ToolCall(Box<ToolCallPermissionSubject>),
+    /// Custom or future permission subject.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    ///
+    /// Clients that do not understand this subject type should preserve the raw
+    /// payload when storing, replaying, proxying, or forwarding permission
+    /// requests, and otherwise display a generic permission prompt or decline it
+    /// according to policy.
+    #[serde(untagged)]
+    Other(OtherRequestPermissionSubject),
+}
+
+impl From<ToolCallPermissionSubject> for RequestPermissionSubject {
+    fn from(subject: ToolCallPermissionSubject) -> Self {
+        Self::ToolCall(Box::new(subject))
+    }
+}
+
+impl From<ToolCallUpdate> for RequestPermissionSubject {
+    fn from(tool_call: ToolCallUpdate) -> Self {
+        ToolCallPermissionSubject::new(tool_call).into()
+    }
+}
+
+/// Permission request details for a tool call.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct ToolCallPermissionSubject {
+    /// Details about the tool call requiring permission.
+    pub tool_call: ToolCallUpdate,
+}
+
+impl ToolCallPermissionSubject {
+    /// Builds [`ToolCallPermissionSubject`] with the required fields set.
+    #[must_use]
+    pub fn new(tool_call: ToolCallUpdate) -> Self {
+        Self { tool_call }
+    }
+}
+
+/// Custom or future permission subject payload.
+#[derive(Debug, Clone, Serialize, JsonSchema, PartialEq)]
+#[schemars(inline)]
+#[schemars(transform = other_request_permission_subject_schema)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct OtherRequestPermissionSubject {
+    /// Custom or future permission subject type.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(rename = "type")]
+    pub type_: String,
+    /// Additional fields from the unknown permission subject payload.
+    #[serde(flatten)]
+    pub fields: BTreeMap<String, serde_json::Value>,
+}
+
+impl OtherRequestPermissionSubject {
+    /// Builds [`OtherRequestPermissionSubject`] from an unknown discriminator and preserves the remaining extension fields.
+    #[must_use]
+    pub fn new(type_: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
+        fields.remove("type");
+        Self {
+            type_: type_.into(),
+            fields,
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for OtherRequestPermissionSubject {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let type_ = fields
+            .remove("type")
+            .ok_or_else(|| serde::de::Error::missing_field("type"))?;
+        let serde_json::Value::String(type_) = type_ else {
+            return Err(serde::de::Error::custom("`type` must be a string"));
+        };
+
+        if is_known_request_permission_subject_type(&type_) {
+            return Err(serde::de::Error::custom(format!(
+                "known request permission subject `{type_}` did not match its schema"
+            )));
+        }
+
+        Ok(Self { type_, fields })
+    }
+}
+
+fn is_known_request_permission_subject_type(type_: &str) -> bool {
+    matches!(type_, "tool_call")
+}
+
+fn other_request_permission_subject_schema(schema: &mut Schema) {
+    super::schema_util::reject_known_string_discriminators(schema, "type", &["tool_call"]);
+}
+
 /// An option presented to the user when requesting permission.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -1281,6 +1488,9 @@ pub struct PermissionOption {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -1353,6 +1563,7 @@ pub enum PermissionOptionKind {
 }
 
 /// Response to a permission request.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[schemars(extend("x-side" = "client", "x-method" = SESSION_REQUEST_PERMISSION_METHOD_NAME))]
@@ -1360,13 +1571,15 @@ pub enum PermissionOptionKind {
 #[non_exhaustive]
 pub struct RequestPermissionResponse {
     /// The user's decision on the permission request.
-    // This extra-level is unfortunately needed because the output must be an object
     pub outcome: RequestPermissionOutcome,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -1410,9 +1623,94 @@ pub enum RequestPermissionOutcome {
     /// The user selected one of the provided options.
     #[serde(rename_all = "camelCase")]
     Selected(SelectedPermissionOutcome),
+    /// Custom or future permission outcome.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    ///
+    /// Agents that do not understand this outcome MUST NOT treat it as approval.
+    /// They should preserve the raw payload when storing, replaying, proxying, or
+    /// forwarding permission responses, and otherwise fail or decline the
+    /// permission request according to policy.
+    #[serde(untagged)]
+    Other(OtherRequestPermissionOutcome),
+}
+
+/// Custom or future permission outcome payload.
+///
+/// This preserves the unknown `outcome` discriminator and the rest of the
+/// outcome object for agents that store, replay, proxy, or forward permission
+/// responses.
+#[derive(Debug, Clone, Serialize, JsonSchema, PartialEq, Eq)]
+#[schemars(inline)]
+#[schemars(transform = other_request_permission_outcome_schema)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct OtherRequestPermissionOutcome {
+    /// Custom or future permission outcome.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    pub outcome: String,
+    /// Additional fields from the unknown permission outcome payload.
+    #[serde(flatten)]
+    pub fields: BTreeMap<String, serde_json::Value>,
+}
+
+impl OtherRequestPermissionOutcome {
+    /// Builds [`OtherRequestPermissionOutcome`] from an unknown discriminator and preserves the remaining extension fields.
+    #[must_use]
+    pub fn new(
+        outcome: impl Into<String>,
+        mut fields: BTreeMap<String, serde_json::Value>,
+    ) -> Self {
+        fields.remove("outcome");
+        Self {
+            outcome: outcome.into(),
+            fields,
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for OtherRequestPermissionOutcome {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let outcome = fields
+            .remove("outcome")
+            .ok_or_else(|| serde::de::Error::missing_field("outcome"))?;
+        let serde_json::Value::String(outcome) = outcome else {
+            return Err(serde::de::Error::custom("`outcome` must be a string"));
+        };
+
+        if is_known_request_permission_outcome(&outcome) {
+            return Err(serde::de::Error::custom(format!(
+                "known request permission outcome `{outcome}` did not match its schema"
+            )));
+        }
+
+        Ok(Self { outcome, fields })
+    }
+}
+
+fn is_known_request_permission_outcome(outcome: &str) -> bool {
+    matches!(outcome, "cancelled" | "selected")
+}
+
+fn other_request_permission_outcome_schema(schema: &mut Schema) {
+    super::schema_util::reject_known_string_discriminators(
+        schema,
+        "outcome",
+        &["cancelled", "selected"],
+    );
 }
 
 /// The user selected one of the provided options.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -1425,6 +1723,9 @@ pub struct SelectedPermissionOutcome {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -1472,15 +1773,23 @@ pub struct ClientCapabilities {
     /// Authentication capabilities supported by the client.
     /// Determines which authentication method types the agent may include
     /// in its `InitializeResponse`.
+    ///
+    /// Optional. Omitted or `null` both mean the client does not advertise any
+    /// authentication-method extensions.
     #[cfg(feature = "unstable_auth_methods")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
-    pub auth: AuthCapabilities,
+    pub auth: Option<AuthCapabilities>,
     /// **UNSTABLE**
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
     /// Elicitation capabilities supported by the client.
     /// Determines which elicitation modes the agent may use.
+    ///
+    /// Optional. Omitted or `null` both mean the client does not advertise
+    /// elicitation support.
     #[cfg(feature = "unstable_elicitation")]
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
@@ -1491,6 +1800,9 @@ pub struct ClientCapabilities {
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
     /// NES (Next Edit Suggestions) capabilities supported by the client.
+    ///
+    /// Optional. Omitted or `null` both mean the client does not advertise any
+    /// NES suggestion-kind extensions.
     #[cfg(feature = "unstable_nes")]
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
@@ -1512,6 +1824,9 @@ pub struct ClientCapabilities {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -1532,8 +1847,8 @@ impl ClientCapabilities {
     /// in its `InitializeResponse`.
     #[cfg(feature = "unstable_auth_methods")]
     #[must_use]
-    pub fn auth(mut self, auth: AuthCapabilities) -> Self {
-        self.auth = auth;
+    pub fn auth(mut self, auth: impl IntoOption<AuthCapabilities>) -> Self {
+        self.auth = auth.into_option();
         self
     }
 
@@ -1611,6 +1926,9 @@ pub struct AuthCapabilities {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -1653,6 +1971,7 @@ impl AuthCapabilities {
 ///
 /// Supplying `{}` means the client supports terminal authentication methods.
 #[cfg(feature = "unstable_auth_methods")]
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[non_exhaustive]
@@ -1662,6 +1981,9 @@ pub struct TerminalAuthCapabilities {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -1753,7 +2075,7 @@ pub(crate) const ELICITATION_COMPLETE_NOTIFICATION: &str = "elicitation/complete
 #[schemars(inline)]
 #[non_exhaustive]
 pub enum AgentRequest {
-    /// Requests permission from the user for a tool call operation.
+    /// Requests permission from the user for an operation.
     ///
     /// Called by the agent when it needs user authorization before executing
     /// a potentially sensitive operation. The client should present the options
@@ -1770,28 +2092,28 @@ pub enum AgentRequest {
     ///
     /// Requests structured user input via a form or URL.
     #[cfg(feature = "unstable_elicitation")]
-    CreateElicitationRequest(CreateElicitationRequest),
+    CreateElicitationRequest(Box<CreateElicitationRequest>),
     /// **UNSTABLE**
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
     /// Opens an MCP-over-ACP connection.
     #[cfg(feature = "unstable_mcp_over_acp")]
-    ConnectMcpRequest(ConnectMcpRequest),
+    ConnectMcpRequest(Box<ConnectMcpRequest>),
     /// **UNSTABLE**
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
     /// Exchanges an MCP-over-ACP message.
     #[cfg(feature = "unstable_mcp_over_acp")]
-    MessageMcpRequest(MessageMcpRequest),
+    MessageMcpRequest(Box<MessageMcpRequest>),
     /// **UNSTABLE**
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
     /// Closes an MCP-over-ACP connection.
     #[cfg(feature = "unstable_mcp_over_acp")]
-    DisconnectMcpRequest(DisconnectMcpRequest),
+    DisconnectMcpRequest(Box<DisconnectMcpRequest>),
     /// Handles extension method requests from the agent.
     ///
     /// Allows the Agent to send an arbitrary request that is not part of the ACP spec.
@@ -1799,7 +2121,7 @@ pub enum AgentRequest {
     /// protocol compatibility.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    ExtMethodRequest(ExtRequest),
+    ExtMethodRequest(Box<ExtRequest>),
 }
 
 impl AgentRequest {
@@ -1833,21 +2155,21 @@ impl AgentRequest {
 #[non_exhaustive]
 pub enum ClientResponse {
     /// Successful result returned for a `session/request_permission` request.
-    RequestPermissionResponse(RequestPermissionResponse),
+    RequestPermissionResponse(Box<RequestPermissionResponse>),
     /// Successful result returned for a `elicitation/create` request.
     #[cfg(feature = "unstable_elicitation")]
-    CreateElicitationResponse(CreateElicitationResponse),
+    CreateElicitationResponse(Box<CreateElicitationResponse>),
     /// Successful result returned for a `mcp/connect` request.
     #[cfg(feature = "unstable_mcp_over_acp")]
-    ConnectMcpResponse(ConnectMcpResponse),
+    ConnectMcpResponse(Box<ConnectMcpResponse>),
     /// Successful result returned for a `mcp/disconnect` request.
     #[cfg(feature = "unstable_mcp_over_acp")]
-    DisconnectMcpResponse(#[serde(default)] DisconnectMcpResponse),
-    /// Successful result returned by an extension method outside the core ACP method set.
-    ExtMethodResponse(ExtResponse),
+    DisconnectMcpResponse(#[serde(default)] Box<DisconnectMcpResponse>),
     /// Successful result returned by an MCP-over-ACP `mcp/message` request.
     #[cfg(feature = "unstable_mcp_over_acp")]
-    MessageMcpResponse(MessageMcpResponse),
+    MessageMcpResponse(Box<MessageMcpResponse>),
+    /// Successful result returned by an extension method outside the core ACP method set.
+    ExtMethodResponse(Box<ExtResponse>),
 }
 
 /// All possible notifications that an agent can send to a client.
@@ -1873,21 +2195,21 @@ pub enum AgentNotification {
     /// stop reason.
     ///
     /// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-lifecycle#3-agent-reports-output)
-    SessionNotification(Box<SessionNotification>),
+    UpdateSessionNotification(Box<UpdateSessionNotification>),
     /// **UNSTABLE**
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
     /// Notification that a URL-based elicitation has completed.
     #[cfg(feature = "unstable_elicitation")]
-    CompleteElicitationNotification(CompleteElicitationNotification),
+    CompleteElicitationNotification(Box<CompleteElicitationNotification>),
     /// **UNSTABLE**
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
     /// Receives an MCP-over-ACP notification.
     #[cfg(feature = "unstable_mcp_over_acp")]
-    MessageMcpNotification(MessageMcpNotification),
+    MessageMcpNotification(Box<MessageMcpNotification>),
     /// Handles extension notifications from the agent.
     ///
     /// Allows the Agent to send an arbitrary notification that is not part of the ACP spec.
@@ -1895,7 +2217,7 @@ pub enum AgentNotification {
     /// while maintaining protocol compatibility.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    ExtNotification(ExtNotification),
+    ExtNotification(Box<ExtNotification>),
 }
 
 impl AgentNotification {
@@ -1903,7 +2225,7 @@ impl AgentNotification {
     #[must_use]
     pub fn method(&self) -> &str {
         match self {
-            Self::SessionNotification(_) => CLIENT_METHOD_NAMES.session_update,
+            Self::UpdateSessionNotification(_) => CLIENT_METHOD_NAMES.session_update,
             #[cfg(feature = "unstable_elicitation")]
             Self::CompleteElicitationNotification(_) => CLIENT_METHOD_NAMES.elicitation_complete,
             #[cfg(feature = "unstable_mcp_over_acp")]
@@ -1917,6 +2239,19 @@ impl AgentNotification {
 mod tests {
     use super::*;
 
+    #[cfg(feature = "unstable_auth_methods")]
+    #[test]
+    fn test_client_capabilities_auth_defaults_on_malformed_value() {
+        use serde_json::json;
+
+        let capabilities: ClientCapabilities = serde_json::from_value(json!({
+            "auth": false
+        }))
+        .unwrap();
+
+        assert_eq!(capabilities.auth, None);
+    }
+
     #[test]
     fn test_serialization_behavior() {
         use serde_json::json;
@@ -1926,7 +2261,7 @@ mod tests {
             SessionInfoUpdate {
                 title: MaybeUndefined::Undefined,
                 updated_at: MaybeUndefined::Undefined,
-                meta: None
+                meta: MaybeUndefined::Undefined
             }
         );
         assert_eq!(
@@ -1935,7 +2270,7 @@ mod tests {
             SessionInfoUpdate {
                 title: MaybeUndefined::Null,
                 updated_at: MaybeUndefined::Null,
-                meta: None
+                meta: MaybeUndefined::Undefined
             }
         );
         assert_eq!(
@@ -1946,13 +2281,41 @@ mod tests {
             SessionInfoUpdate {
                 title: MaybeUndefined::Value("title".to_string()),
                 updated_at: MaybeUndefined::Value("timestamp".to_string()),
-                meta: None
+                meta: MaybeUndefined::Undefined
             }
+        );
+
+        let clear_meta =
+            serde_json::from_value::<SessionInfoUpdate>(json!({"_meta": null})).unwrap();
+        assert_eq!(clear_meta.meta, MaybeUndefined::Null);
+
+        let mut meta = Meta::new();
+        meta.insert("source".to_string(), json!("session-info"));
+
+        assert_eq!(
+            serde_json::from_value::<SessionInfoUpdate>(json!({"_meta": {
+                "source": "session-info"
+            }}))
+            .unwrap()
+            .meta,
+            MaybeUndefined::Value(meta.clone())
         );
 
         assert_eq!(
             serde_json::to_value(SessionInfoUpdate::new()).unwrap(),
             json!({})
+        );
+
+        assert_eq!(
+            serde_json::to_value(SessionInfoUpdate::new().meta(None::<Meta>)).unwrap(),
+            json!({"_meta": null})
+        );
+
+        assert_eq!(
+            serde_json::to_value(SessionInfoUpdate::new().meta(meta)).unwrap(),
+            json!({"_meta": {
+                "source": "session-info"
+            }})
         );
         assert_eq!(
             serde_json::to_value(SessionInfoUpdate::new().title("title")).unwrap(),
@@ -2138,6 +2501,13 @@ mod tests {
         assert_eq!(patch.content, MaybeUndefined::Undefined);
         assert_eq!(patch.meta, MaybeUndefined::Undefined);
 
+        let malformed_meta = serde_json::from_value::<AgentMessage>(json!({
+            "messageId": "msg_agent_c42b9",
+            "_meta": false
+        }))
+        .unwrap();
+        assert_eq!(malformed_meta.meta, MaybeUndefined::Undefined);
+
         let patch = serde_json::from_value::<AgentThought>(json!({
             "messageId": "msg_thought_a12"
         }))
@@ -2150,6 +2520,13 @@ mod tests {
         }))
         .unwrap();
         assert_eq!(clear.content, MaybeUndefined::Null);
+
+        let clear_meta = serde_json::from_value::<UserMessage>(json!({
+            "messageId": "msg_user_8f7a1",
+            "_meta": null
+        }))
+        .unwrap();
+        assert_eq!(clear_meta.meta, MaybeUndefined::Null);
 
         let mut meta = Meta::new();
         meta.insert("source".to_string(), json!("replay"));
@@ -2338,7 +2715,7 @@ mod tests {
                 "sessionUpdate": "plan_update",
                 "plan": {
                     "type": "items",
-                    "id": "plan-1",
+                    "planId": "plan-1",
                     "entries": [
                         {
                             "content": "Step 1",
@@ -2360,7 +2737,7 @@ mod tests {
             serde_json::to_value(SessionUpdate::PlanRemoved(PlanRemoved::new("plan-1"))).unwrap(),
             json!({
                 "sessionUpdate": "plan_removed",
-                "id": "plan-1"
+                "planId": "plan-1"
             })
         );
     }
@@ -2397,13 +2774,234 @@ mod tests {
     }
 
     #[test]
-    fn available_command_input_unknown_does_not_hide_malformed_unstructured_variant() {
+    fn available_command_input_text_uses_type_discriminator() {
+        use serde_json::json;
+
+        let input = AvailableCommandInput::Text(TextCommandInput::new("Describe changes"));
+
+        let json = serde_json::to_value(&input).unwrap();
+        assert_eq!(
+            json,
+            json!({
+                "type": "text",
+                "hint": "Describe changes"
+            })
+        );
+
+        let roundtripped: AvailableCommandInput = serde_json::from_value(json).unwrap();
+        assert!(matches!(roundtripped, AvailableCommandInput::Text(_)));
+    }
+
+    #[test]
+    fn request_permission_subject_tool_call_uses_type_discriminator() {
+        use serde_json::json;
+
+        let subject = RequestPermissionSubject::from(ToolCallUpdate::new("call_001"));
+
+        let json = serde_json::to_value(&subject).unwrap();
+        assert_eq!(
+            json,
+            json!({
+                "type": "tool_call",
+                "toolCall": {
+                    "toolCallId": "call_001"
+                }
+            })
+        );
+
+        let roundtripped: RequestPermissionSubject = serde_json::from_value(json).unwrap();
+        assert!(matches!(
+            roundtripped,
+            RequestPermissionSubject::ToolCall(_)
+        ));
+    }
+
+    #[test]
+    fn request_permission_subject_preserves_unknown_variant() {
+        use serde_json::json;
+
+        let subject: RequestPermissionSubject = serde_json::from_value(json!({
+            "type": "_review",
+            "reason": "needs-review",
+            "retryAfterSeconds": 30
+        }))
+        .unwrap();
+
+        let RequestPermissionSubject::Other(unknown) = subject else {
+            panic!("expected unknown permission subject");
+        };
+
+        assert_eq!(unknown.type_, "_review");
+        assert_eq!(unknown.fields.get("reason"), Some(&json!("needs-review")));
+        assert_eq!(unknown.fields.get("retryAfterSeconds"), Some(&json!(30)));
+        assert_eq!(
+            serde_json::to_value(RequestPermissionSubject::Other(unknown)).unwrap(),
+            json!({
+                "type": "_review",
+                "reason": "needs-review",
+                "retryAfterSeconds": 30
+            })
+        );
+    }
+
+    #[test]
+    fn request_permission_subject_unknown_does_not_hide_malformed_known_variant() {
+        use serde_json::json;
+
+        assert!(
+            serde_json::from_value::<RequestPermissionSubject>(json!({
+                "type": "tool_call"
+            }))
+            .is_err()
+        );
+        assert!(
+            serde_json::from_value::<RequestPermissionSubject>(json!({
+                "type": 1
+            }))
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn request_permission_title_and_description_are_separate_from_tool_call_content() {
+        use serde_json::json;
+
+        let request =
+            RequestPermissionRequest::new("sess_abc123def456", "Approve file edit?", Vec::new())
+                .description("Allow this tool to edit src/main.rs?")
+                .subject(RequestPermissionSubject::from(ToolCallUpdate::new(
+                    "call_001",
+                )));
+
+        assert_eq!(
+            serde_json::to_value(request).unwrap(),
+            json!({
+                "sessionId": "sess_abc123def456",
+                "title": "Approve file edit?",
+                "description": "Allow this tool to edit src/main.rs?",
+                "subject": {
+                    "type": "tool_call",
+                    "toolCall": {
+                        "toolCallId": "call_001"
+                    }
+                },
+                "options": []
+            })
+        );
+    }
+
+    #[test]
+    fn request_permission_requires_title_and_allows_missing_subject() {
+        use serde_json::json;
+
+        let request = RequestPermissionRequest::new(
+            "sess_abc123def456",
+            "Approve elevated permissions?",
+            Vec::new(),
+        );
+
+        assert_eq!(
+            serde_json::to_value(request).unwrap(),
+            json!({
+                "sessionId": "sess_abc123def456",
+                "title": "Approve elevated permissions?",
+                "options": []
+            })
+        );
+
+        let missing_subject: RequestPermissionRequest = serde_json::from_value(json!({
+            "sessionId": "sess_abc123def456",
+            "title": "Approve elevated permissions?",
+            "options": []
+        }))
+        .unwrap();
+        assert!(missing_subject.subject.is_none());
+
+        let null_subject: RequestPermissionRequest = serde_json::from_value(json!({
+            "sessionId": "sess_abc123def456",
+            "title": "Approve elevated permissions?",
+            "subject": null,
+            "options": []
+        }))
+        .unwrap();
+        assert!(null_subject.subject.is_none());
+
+        assert!(
+            serde_json::from_value::<RequestPermissionRequest>(json!({
+                "sessionId": "sess_abc123def456",
+                "options": []
+            }))
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn request_permission_outcome_preserves_unknown_variant() {
+        use serde_json::json;
+
+        let outcome: RequestPermissionOutcome = serde_json::from_value(json!({
+            "outcome": "_defer",
+            "reason": "needs-review",
+            "retryAfterSeconds": 30
+        }))
+        .unwrap();
+
+        let RequestPermissionOutcome::Other(unknown) = outcome else {
+            panic!("expected unknown permission outcome");
+        };
+
+        assert_eq!(unknown.outcome, "_defer");
+        assert_eq!(unknown.fields.get("reason"), Some(&json!("needs-review")));
+        assert_eq!(unknown.fields.get("retryAfterSeconds"), Some(&json!(30)));
+        assert_eq!(
+            serde_json::to_value(RequestPermissionOutcome::Other(unknown)).unwrap(),
+            json!({
+                "outcome": "_defer",
+                "reason": "needs-review",
+                "retryAfterSeconds": 30
+            })
+        );
+    }
+
+    #[test]
+    fn request_permission_outcome_unknown_does_not_hide_malformed_known_variant() {
+        use serde_json::json;
+
+        assert!(
+            serde_json::from_value::<RequestPermissionOutcome>(json!({
+                "outcome": "selected"
+            }))
+            .is_err()
+        );
+        assert!(
+            serde_json::from_value::<RequestPermissionOutcome>(json!({
+                "outcome": 1
+            }))
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn available_command_input_unknown_does_not_hide_malformed_text_variant() {
         use serde_json::json;
 
         assert!(serde_json::from_value::<AvailableCommandInput>(json!({})).is_err());
         assert!(
             serde_json::from_value::<AvailableCommandInput>(json!({
+                "hint": "Pick one"
+            }))
+            .is_err()
+        );
+        assert!(
+            serde_json::from_value::<AvailableCommandInput>(json!({
                 "type": 1,
+                "hint": "Pick one"
+            }))
+            .is_err()
+        );
+        assert!(
+            serde_json::from_value::<OtherAvailableCommandInput>(json!({
+                "type": "text",
                 "hint": "Pick one"
             }))
             .is_err()
@@ -2437,30 +3035,34 @@ mod tests {
         assert_eq!(CLIENT_METHOD_NAMES.mcp_disconnect, "mcp/disconnect");
 
         assert_eq!(
-            AgentRequest::ConnectMcpRequest(ConnectMcpRequest::new("server-1")).method(),
+            AgentRequest::ConnectMcpRequest(Box::new(ConnectMcpRequest::new("server-1"))).method(),
             "mcp/connect"
         );
         assert_eq!(
-            AgentRequest::MessageMcpRequest(MessageMcpRequest::new("conn-1", "tools/list"))
-                .method(),
+            AgentRequest::MessageMcpRequest(Box::new(MessageMcpRequest::new(
+                "conn-1",
+                "tools/list"
+            )))
+            .method(),
             "mcp/message"
         );
         assert_eq!(
-            AgentRequest::DisconnectMcpRequest(DisconnectMcpRequest::new("conn-1")).method(),
+            AgentRequest::DisconnectMcpRequest(Box::new(DisconnectMcpRequest::new("conn-1")))
+                .method(),
             "mcp/disconnect"
         );
         assert_eq!(
-            AgentNotification::MessageMcpNotification(MessageMcpNotification::new(
+            AgentNotification::MessageMcpNotification(Box::new(MessageMcpNotification::new(
                 "conn-1",
                 "notifications/progress"
-            ))
+            )))
             .method(),
             "mcp/message"
         );
 
         assert_eq!(
             serde_json::to_value(ConnectMcpRequest::new("server-1")).unwrap(),
-            json!({ "acpId": "server-1" })
+            json!({ "serverId": "server-1" })
         );
         assert_eq!(
             serde_json::to_value(ConnectMcpResponse::new("conn-1")).unwrap(),
@@ -2519,5 +3121,40 @@ mod tests {
         }))
         .unwrap();
         assert!(deserialized.terminal.is_none());
+    }
+
+    #[test]
+    fn request_permission_request_rejects_malformed_options() {
+        use serde_json::json;
+
+        assert!(
+            serde_json::from_value::<RequestPermissionRequest>(json!({
+                "sessionId": "sess-1",
+                "title": "Run tool?",
+                "options": "not-an-array"
+            }))
+            .is_err()
+        );
+        assert!(
+            serde_json::from_value::<RequestPermissionRequest>(json!({
+                "sessionId": "sess-1",
+                "title": "Run tool?",
+                "options": [{"optionId": "allow"}]
+            }))
+            .is_err()
+        );
+    }
+
+    #[cfg(feature = "unstable_plan_operations")]
+    #[test]
+    fn malformed_plan_removed_is_not_hidden_as_unknown_update() {
+        use serde_json::json;
+
+        assert!(
+            serde_json::from_value::<SessionUpdate>(json!({
+                "sessionUpdate": "plan_removed"
+            }))
+            .is_err()
+        );
     }
 }

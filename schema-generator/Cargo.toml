@@ -11,12 +11,8 @@ repository = "https://github.com/agentclientprotocol/agent-client-protocol"
 workspace = true
 
 [features]
-unstable = [
-    "agent-client-protocol-schema/unstable",
-    "unstable_cancel_request",
-]
+unstable = ["agent-client-protocol-schema/unstable"]
 unstable_protocol_v2 = ["agent-client-protocol-schema/unstable_protocol_v2"]
-unstable_cancel_request = ["agent-client-protocol-schema/unstable_cancel_request"]
 
 [dependencies]
 agent-client-protocol-schema = { workspace = true }

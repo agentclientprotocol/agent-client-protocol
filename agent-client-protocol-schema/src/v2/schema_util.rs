@@ -29,13 +29,3 @@ pub(crate) fn reject_known_string_discriminators(
         }),
     );
 }
-
-pub(crate) fn reject_property(schema: &mut Schema, property_name: &str) {
-    schema.insert(
-        "not".into(),
-        json!({
-            "required": [property_name],
-            "type": "object"
-        }),
-    );
-}

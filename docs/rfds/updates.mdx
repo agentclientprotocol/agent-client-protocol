@@ -6,6 +6,62 @@ rss: true
 
 This page tracks lifecycle changes for ACP Requests for Dialog. For broader ACP announcements, see [Updates](/updates).
 
+<Update label="July 6, 2026" tags={["Completed"]}>
+## Boolean Config Option RFD moves to Completed
+
+The RFD for boolean session configuration options has been stabilized and is now part of the protocol. Agents can expose simple on/off toggles with `type: "boolean"` config options, and Clients opt in on v1 by advertising the `session.configOptions.boolean` capability. Please review the [documentation](/protocol/v1/session-config-options#boolean-config-options) for more information.
+
+</Update>
+
+<Update label="July 2, 2026" tags={["Removed"]}>
+## Agent Telemetry Export RFD removed
+
+The Agent Telemetry Export RFD has been removed. Its design relied on clients injecting OpenTelemetry environment variables when launching agent subprocesses, which doesn't translate to the new remote transports where agents aren't launched by the client. Since the approach required no changes to the protocol itself, clients and agents that want this setup can adopt standard [OpenTelemetry SDK environment variable configuration](https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/) directly.
+
+</Update>
+
+<Update label="July 2, 2026" tags={["Active"]}>
+## Active RFD stage added
+
+The RFD lifecycle now includes an Active stage between Draft and Preview. Active RFDs are the proposals that core maintainers or a working group are currently spending bandwidth on.
+
+</Update>
+
+<Update label="June 30, 2026" tags={["Preview"]}>
+## Boolean Config Option RFD moves to Preview stage
+
+The RFD for adding boolean session configuration options has been moved to Preview stage. Please review the [RFD](/rfds/boolean-config-option) for more information on the current proposal and provide feedback before the feature is stabilized.
+
+</Update>
+
+<Update label="June 29, 2026" tags={["Completed"]}>
+## Request Cancellation RFD moves to Completed
+
+The RFD for `$/cancel_request` protocol-level request cancellation has been stabilized and is now part of the protocol. Either side can send this notification to request cancellation of an outstanding JSON-RPC request by ID. Please review the [documentation](/protocol/v1/cancellation) for more information.
+
+</Update>
+
+<Update label="June 25, 2026" tags={["Completed"]}>
+## Rust SDK based on SACP RFD moves to Completed
+
+The RFD for basing the Rust SDK on SACP has been completed with the 1.0 SDK releases. The Rust SDK is available as [`agent-client-protocol` v1.0.0](https://crates.io/crates/agent-client-protocol/1.0.0), and the TypeScript SDK reached the same milestone with [`@agentclientprotocol/sdk` v1.0.0](https://www.npmjs.com/package/@agentclientprotocol/sdk/v/1.0.0), showing that the SDK design goals apply beyond Rust.
+
+</Update>
+
+<Update label="June 24, 2026" tags={["Completed"]}>
+## model_config Category RFD moves to Completed
+
+The RFD for the `model_config` session configuration option category has been stabilized and is now a part of the protocol. Agents can use `model_config` for model-related parameters such as context size or speed/quality trade-offs. Please review the [documentation](/protocol/v1/session-config-options#option-categories) for more information.
+
+</Update>
+
+<Update label="June 24, 2026" tags={["Preview"]}>
+## Request Cancellation RFD moves to Preview stage
+
+The RFD for adding `$/cancel_request` protocol-level request cancellation has been moved to Preview stage. Please review the [RFD](/rfds/request-cancellation) for more information on the current proposal and provide feedback before the feature is stabilized.
+
+</Update>
+
 <Update label="June 22, 2026" tags={["Preview"]}>
 ## model_config Category RFD moves to Preview stage
 
@@ -322,7 +378,7 @@ The RFD for adding proxy chain functionality in the protocol has been moved to D
 <Update label="December 11, 2025" tags={["Draft"]}>
 ## Agent Telemetry Export RFD moves to Draft stage
 
-The RFD for providing more guidance on how agents should export telemetry has been moved to Draft stage. Please review the [RFD](/rfds/agent-telemetry-export) for more information on the current proposal and provide feedback as work on the implementation begins.
+The RFD for providing more guidance on how agents should export telemetry has been moved to Draft stage. (This RFD was later removed — see the July 2, 2026 update.)
 
 </Update>
 

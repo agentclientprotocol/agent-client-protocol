@@ -6,7 +6,7 @@ use derive_more::{Display, From};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::value::RawValue;
-use serde_with::skip_serializing_none;
+use serde_with::{DefaultOnError, serde_as, skip_serializing_none};
 
 use crate::IntoOption;
 
@@ -36,6 +36,7 @@ impl McpConnectionId {
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
 /// Request parameters for `mcp/connect`.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -43,12 +44,15 @@ impl McpConnectionId {
 #[non_exhaustive]
 pub struct ConnectMcpRequest {
     /// The ACP MCP server ID that was provided by the component declaring the MCP server.
-    pub acp_id: McpServerAcpId,
+    pub server_id: McpServerAcpId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -56,9 +60,9 @@ pub struct ConnectMcpRequest {
 impl ConnectMcpRequest {
     /// Builds [`ConnectMcpRequest`] with the required request fields set; optional fields start unset or empty.
     #[must_use]
-    pub fn new(acp_id: impl Into<McpServerAcpId>) -> Self {
+    pub fn new(server_id: impl Into<McpServerAcpId>) -> Self {
         Self {
-            acp_id: acp_id.into(),
+            server_id: server_id.into(),
             meta: None,
         }
     }
@@ -80,6 +84,7 @@ impl ConnectMcpRequest {
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
 /// Response to `mcp/connect`.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -93,6 +98,9 @@ pub struct ConnectMcpResponse {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -124,6 +132,7 @@ impl ConnectMcpResponse {
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
 /// Request parameters for `mcp/message`.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -144,6 +153,9 @@ pub struct MessageMcpRequest {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -192,6 +204,7 @@ impl MessageMcpRequest {
 ///
 /// This is used when the wrapped MCP message is a notification and the outer JSON-RPC
 /// envelope has no `id`.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -205,6 +218,8 @@ pub struct MessageMcpNotification {
     /// Optional inner MCP params.
     ///
     /// If omitted or set to `null`, the inner MCP message has no params.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub params: Option<serde_json::Map<String, serde_json::Value>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -212,6 +227,9 @@ pub struct MessageMcpNotification {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -278,6 +296,7 @@ impl MessageMcpResponse {
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
 /// Request parameters for `mcp/disconnect`.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -291,6 +310,9 @@ pub struct DisconnectMcpRequest {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }
@@ -322,6 +344,7 @@ impl DisconnectMcpRequest {
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
 /// Response to `mcp/disconnect`.
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -333,6 +356,9 @@ pub struct DisconnectMcpResponse {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
 }

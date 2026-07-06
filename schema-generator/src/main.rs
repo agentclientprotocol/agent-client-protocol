@@ -4,22 +4,15 @@ use agent_client_protocol_schema::ProtocolVersion;
 #[cfg(not(feature = "unstable_protocol_v2"))]
 use agent_client_protocol_schema::v1::{
     AGENT_METHOD_NAMES, AgentNotification, AgentRequest, AgentResponse, CLIENT_METHOD_NAMES,
-    ClientNotification, ClientRequest, ClientResponse, JsonRpcMessage, Notification, Request,
-    Response,
+    ClientNotification, ClientRequest, ClientResponse, JsonRpcMessage, Notification,
+    PROTOCOL_LEVEL_METHOD_NAMES, ProtocolLevelNotification, Request, Response,
 };
-#[cfg(all(
-    feature = "unstable_cancel_request",
-    not(feature = "unstable_protocol_v2")
-))]
-use agent_client_protocol_schema::v1::{PROTOCOL_LEVEL_METHOD_NAMES, ProtocolLevelNotification};
 #[cfg(feature = "unstable_protocol_v2")]
 use agent_client_protocol_schema::v2::{
     AGENT_METHOD_NAMES, AgentNotification, AgentRequest, AgentResponse, CLIENT_METHOD_NAMES,
     ClientNotification, ClientRequest, ClientResponse, JsonRpcBatch, JsonRpcMessage, Notification,
-    Request, Response,
+    PROTOCOL_LEVEL_METHOD_NAMES, ProtocolLevelNotification, Request, Response,
 };
-#[cfg(all(feature = "unstable_cancel_request", feature = "unstable_protocol_v2"))]
-use agent_client_protocol_schema::v2::{PROTOCOL_LEVEL_METHOD_NAMES, ProtocolLevelNotification};
 use schemars::{
     JsonSchema,
     generate::SchemaSettings,
@@ -32,6 +25,28 @@ use std::{
 };
 
 use markdown_generator::MarkdownGenerator;
+
+#[cfg(feature = "unstable_protocol_v2")]
+const PROTOCOL_DOC_BASE: &str = "https://agentclientprotocol.com/protocol";
+
+#[cfg(feature = "unstable_protocol_v2")]
+const VERSIONED_PROTOCOL_DOC_PATHS: &[&str] = &[
+    "agent-plan",
+    "authentication",
+    "cancellation",
+    "content",
+    "error",
+    "extensibility",
+    "initialization",
+    "prompt-lifecycle",
+    "session-config-options",
+    "session-delete",
+    "session-list",
+    "session-setup",
+    "slash-commands",
+    "tool-calls",
+    "transports",
+];
 
 /// All messages that an agent can send to a client.
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -64,7 +79,6 @@ enum ClientOutgoingMessage {
 enum AgentBatchCallMessage {
     Request(Request<AgentRequest>),
     Notification(Notification<AgentNotification>),
-    #[cfg(feature = "unstable_cancel_request")]
     ProtocolLevelNotification(Notification<ProtocolLevelNotification>),
 }
 
@@ -77,7 +91,6 @@ enum AgentBatchCallMessage {
 enum ClientBatchCallMessage {
     Request(Request<ClientRequest>),
     Notification(Notification<ClientNotification>),
-    #[cfg(feature = "unstable_cancel_request")]
     ProtocolLevelNotification(Notification<ProtocolLevelNotification>),
 }
 
@@ -97,7 +110,6 @@ enum AcpTypes {
     ClientBatchCall(JsonRpcBatch<ClientBatchCallMessage>),
     #[cfg(feature = "unstable_protocol_v2")]
     ClientBatchResponse(JsonRpcBatch<Response<ClientResponse>>),
-    #[cfg(feature = "unstable_cancel_request")]
     ProtocolLevel(JsonRpcMessage<Notification<ProtocolLevelNotification>>),
 }
 
@@ -175,23 +187,15 @@ fn write_schema(schema_value: &serde_json::Value, schema_dir: &Path, docs_protoc
         .unwrap_or_else(|e| panic!("Failed to write {schema_file}: {e}"));
 
     // The version embedded in `meta*.json` reflects the protocol version the
-    // *schema itself describes*, not `ProtocolVersion::LATEST` (which always
-    // tracks the latest **stable** version). Generating with the
-    // `unstable_protocol_v2` feature emits v2-shaped types, so the metadata
-    // file must advertise version 2 to stay consistent with its contents.
+    // *schema itself describes*. Generating with the `unstable_protocol_v2`
+    // feature emits v2-shaped types, so the metadata file must advertise
+    // version 2 to stay consistent with its contents.
     #[cfg(feature = "unstable_protocol_v2")]
     let schema_protocol_version = ProtocolVersion::V2;
     #[cfg(not(feature = "unstable_protocol_v2"))]
     let schema_protocol_version = ProtocolVersion::V1;
 
     // Create a combined metadata object
-    #[cfg(not(feature = "unstable_cancel_request"))]
-    let metadata = serde_json::json!({
-        "version": schema_protocol_version,
-        "agentMethods": AGENT_METHOD_NAMES,
-        "clientMethods": CLIENT_METHOD_NAMES,
-    });
-    #[cfg(feature = "unstable_cancel_request")]
     let metadata = serde_json::json!({
         "version": schema_protocol_version,
         "agentMethods": AGENT_METHOD_NAMES,
@@ -268,11 +272,19 @@ fn schema_value_for_publication(schema_value: &serde_json::Value) -> serde_json:
     #[cfg(feature = "unstable_protocol_v2")]
     {
         let mut schema_value = schema_value.clone();
-        replace_string_values(
-            &mut schema_value,
-            "https://agentclientprotocol.com/protocol/prompt-lifecycle",
-            "https://agentclientprotocol.com/protocol/v2/prompt-lifecycle",
-        );
+        let protocol_doc_base = if cfg!(feature = "unstable") {
+            format!("{PROTOCOL_DOC_BASE}/v2/draft")
+        } else {
+            format!("{PROTOCOL_DOC_BASE}/v2")
+        };
+
+        for path in VERSIONED_PROTOCOL_DOC_PATHS {
+            replace_string_values(
+                &mut schema_value,
+                &format!("{PROTOCOL_DOC_BASE}/{path}"),
+                &format!("{protocol_doc_base}/{path}"),
+            );
+        }
         schema_value
     }
 
@@ -306,7 +318,9 @@ fn replace_string_values(value: &mut serde_json::Value, from: &str, to: &str) {
 mod schema_annotation_tests {
     #[cfg(feature = "unstable_protocol_v2")]
     use super::schema_value_for_publication;
-    use super::{root_schema_value, schema_crate_dir};
+    use super::{
+        PROTOCOL_DOC_BASE, VERSIONED_PROTOCOL_DOC_PATHS, root_schema_value, schema_crate_dir,
+    };
     use serde_json::Value;
     use std::fs;
 
@@ -317,9 +331,34 @@ mod schema_annotation_tests {
     fn generated_schema_includes_tolerant_deserialization_extensions() {
         let schema = root_schema_value();
 
-        let client_info = property_schema(&schema, "InitializeRequest", "clientInfo");
-        assert_bool_extension(client_info, DEFAULT_ON_ERROR_EXTENSION);
-        assert_no_extension(client_info, SKIP_INVALID_ITEMS_EXTENSION);
+        #[cfg(not(feature = "unstable_protocol_v2"))]
+        {
+            let client_info = property_schema(&schema, "InitializeRequest", "clientInfo");
+            assert_bool_extension(client_info, DEFAULT_ON_ERROR_EXTENSION);
+            assert_no_extension(client_info, SKIP_INVALID_ITEMS_EXTENSION);
+        }
+
+        #[cfg(feature = "unstable_protocol_v2")]
+        {
+            let request = def_schema(&schema, "InitializeRequest");
+            assert!(
+                request
+                    .pointer("/required")
+                    .and_then(Value::as_array)
+                    .is_some_and(|required| required.iter().any(|field| field == "info"))
+            );
+            let info = property_schema(&schema, "InitializeRequest", "info");
+            assert_no_extension(info, DEFAULT_ON_ERROR_EXTENSION);
+            assert_no_extension(info, SKIP_INVALID_ITEMS_EXTENSION);
+
+            let response = def_schema(&schema, "InitializeResponse");
+            assert!(
+                response
+                    .pointer("/required")
+                    .and_then(Value::as_array)
+                    .is_some_and(|required| required.iter().any(|field| field == "info"))
+            );
+        }
 
         let auth_methods = property_schema(&schema, "InitializeResponse", "authMethods");
         assert_bool_extension(auth_methods, DEFAULT_ON_ERROR_EXTENSION);
@@ -347,7 +386,6 @@ mod schema_annotation_tests {
             );
         }
 
-        #[cfg(feature = "unstable_cancel_request")]
         for title in ["AgentBatchCall", "ClientBatchCall"] {
             let batch_schema = root_variant_schema(&schema, title);
             assert!(
@@ -356,7 +394,6 @@ mod schema_annotation_tests {
             );
         }
 
-        #[cfg(feature = "unstable_cancel_request")]
         {
             let protocol_level = root_variant_schema(&schema, "ProtocolLevel");
             assert_eq!(
@@ -394,14 +431,31 @@ mod schema_annotation_tests {
 
     #[cfg(feature = "unstable_protocol_v2")]
     #[test]
-    fn published_v2_schema_links_to_v2_prompt_lifecycle_docs() {
+    fn published_v2_schema_links_to_versioned_v2_protocol_docs() {
         let schema = schema_value_for_publication(&root_schema_value());
         let schema_json = serde_json::to_string(&schema).unwrap();
 
+        let protocol_doc_base = if cfg!(feature = "unstable") {
+            format!("{PROTOCOL_DOC_BASE}/v2/draft")
+        } else {
+            format!("{PROTOCOL_DOC_BASE}/v2")
+        };
+
+        assert!(schema_json.contains(&format!("{protocol_doc_base}/prompt-lifecycle")));
+        assert!(schema_json.contains(&format!("{protocol_doc_base}/tool-calls")));
+        assert!(schema_json.contains(&format!("{protocol_doc_base}/initialization")));
+
+        for path in VERSIONED_PROTOCOL_DOC_PATHS {
+            assert!(
+                !schema_json.contains(&format!("{PROTOCOL_DOC_BASE}/{path}")),
+                "found unversioned v2 schema docs link for {path}"
+            );
+        }
+
         assert!(
-            schema_json.contains("https://agentclientprotocol.com/protocol/v2/prompt-lifecycle")
+            !schema_json.contains(&format!("{PROTOCOL_DOC_BASE}/v2/v2/")),
+            "v2 docs links should not be double-versioned"
         );
-        assert!(!schema_json.contains("https://agentclientprotocol.com/protocol/prompt-lifecycle"));
     }
 
     #[test]
@@ -442,6 +496,55 @@ mod schema_annotation_tests {
         }
     }
 
+    #[test]
+    fn source_meta_fields_are_default_on_error_annotated() {
+        let root = schema_crate_dir();
+        for module_dir in ["src/v1", "src/v2"] {
+            for entry in fs::read_dir(root.join(module_dir)).unwrap() {
+                let path = entry.unwrap().path();
+                if path.extension().and_then(|ext| ext.to_str()) != Some("rs") {
+                    continue;
+                }
+
+                let source = fs::read_to_string(&path).unwrap();
+                let lines: Vec<_> = source.lines().collect();
+                for (line_index, line) in lines.iter().enumerate() {
+                    if !line.trim_start().starts_with("pub meta:") || !line.contains("Meta") {
+                        continue;
+                    }
+
+                    let annotations = lines
+                        .get(line_index.saturating_sub(8)..line_index)
+                        .unwrap_or_default()
+                        .join("\n");
+
+                    assert!(
+                        annotations.contains(r#"#[serde_as(deserialize_as = "DefaultOnError"#),
+                        "{}:{} missing DefaultOnError on meta field",
+                        path.display(),
+                        line_index + 1
+                    );
+                    assert!(
+                        annotations.contains(r#""x-deserialize-default-on-error" = true"#),
+                        "{}:{} missing {DEFAULT_ON_ERROR_EXTENSION} on meta field",
+                        path.display(),
+                        line_index + 1
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn generated_schema_meta_fields_are_default_on_error_annotated() {
+        let schema = root_schema_value();
+        let mut checked = 0;
+
+        assert_meta_properties_are_annotated(&schema, &mut checked);
+
+        assert!(checked > 0, "expected at least one _meta schema property");
+    }
+
     fn property_schema<'a>(schema: &'a Value, def_name: &str, prop_name: &str) -> &'a Value {
         def_schema(schema, def_name)
             .pointer(&format!("/properties/{prop_name}"))
@@ -475,6 +578,29 @@ mod schema_annotation_tests {
         );
     }
 
+    fn assert_meta_properties_are_annotated(schema: &Value, checked: &mut usize) {
+        match schema {
+            Value::Object(object) => {
+                if let Some(properties) = object.get("properties").and_then(Value::as_object)
+                    && let Some(meta) = properties.get("_meta")
+                {
+                    *checked += 1;
+                    assert_bool_extension(meta, DEFAULT_ON_ERROR_EXTENSION);
+                }
+
+                for value in object.values() {
+                    assert_meta_properties_are_annotated(value, checked);
+                }
+            }
+            Value::Array(values) => {
+                for value in values {
+                    assert_meta_properties_are_annotated(value, checked);
+                }
+            }
+            Value::Null | Value::Bool(_) | Value::Number(_) | Value::String(_) => {}
+        }
+    }
+
     fn assert_no_extension(schema: &Value, extension: &str) {
         assert!(
             schema.get(extension).is_none(),
@@ -482,7 +608,7 @@ mod schema_annotation_tests {
         );
     }
 
-    #[cfg(all(feature = "unstable_protocol_v2", feature = "unstable_cancel_request"))]
+    #[cfg(feature = "unstable_protocol_v2")]
     fn schema_contains_ref(schema: &Value, ref_path: &str) -> bool {
         match schema {
             Value::Object(object) => object.iter().any(|(key, value)| {
@@ -654,7 +780,6 @@ and control access to resources."
                     types,
                 );
             }
-            #[cfg(feature = "unstable_cancel_request")]
             {
                 writeln!(&mut self.output, "## Protocol Level").unwrap();
                 writeln!(&mut self.output).unwrap();
@@ -1553,6 +1678,7 @@ starting with '$/' it is free to ignore the notification."
             match method_name {
                 "initialize" => self.agent.get("InitializeRequest").unwrap(),
                 "authenticate" => self.agent.get("AuthenticateRequest").unwrap(),
+                "auth/login" => self.agent.get("LoginAuthRequest").unwrap(),
                 "providers/list" => self.agent.get("ListProvidersRequest").unwrap(),
                 "providers/set" => self.agent.get("SetProviderRequest").unwrap(),
                 "providers/disable" => self.agent.get("DisableProviderRequest").unwrap(),
@@ -1567,9 +1693,14 @@ starting with '$/' it is free to ignore the notification."
                     self.agent.get("SetSessionConfigOptionRequest").unwrap()
                 }
                 "session/prompt" => self.agent.get("PromptRequest").unwrap(),
-                "session/cancel" => self.agent.get("CancelNotification").unwrap(),
+                "session/cancel" => self
+                    .agent
+                    .get("CancelSessionNotification")
+                    .or_else(|| self.agent.get("CancelNotification"))
+                    .unwrap(),
                 "session/close" => self.agent.get("CloseSessionRequest").unwrap(),
                 "logout" => self.agent.get("LogoutRequest").unwrap(),
+                "auth/logout" => self.agent.get("LogoutAuthRequest").unwrap(),
                 "nes/start" => self.agent.get("StartNesRequest").unwrap(),
                 "nes/suggest" => self.agent.get("SuggestNesRequest").unwrap(),
                 "nes/close" => self.agent.get("CloseNesRequest").unwrap(),
@@ -1592,7 +1723,11 @@ starting with '$/' it is free to ignore the notification."
                 }
                 "fs/write_text_file" => self.client.get("WriteTextFileRequest").unwrap(),
                 "fs/read_text_file" => self.client.get("ReadTextFileRequest").unwrap(),
-                "session/update" => self.client.get("SessionNotification").unwrap(),
+                "session/update" => self
+                    .client
+                    .get("UpdateSessionNotification")
+                    .or_else(|| self.client.get("SessionNotification"))
+                    .unwrap(),
                 "terminal/create" => self.client.get("CreateTerminalRequest").unwrap(),
                 "terminal/output" => self.client.get("TerminalOutputRequest").unwrap(),
                 "terminal/release" => self.client.get("ReleaseTerminalRequest").unwrap(),
@@ -1609,7 +1744,6 @@ starting with '$/' it is free to ignore the notification."
             }
         }
 
-        #[cfg(feature = "unstable_cancel_request")]
         fn protocol_method_doc(&self, method_name: &str) -> &String {
             match method_name {
                 "$/cancel_request" => self.protocol.get("CancelRequestNotification").unwrap(),

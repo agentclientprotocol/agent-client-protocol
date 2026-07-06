@@ -1,0 +1,105 @@
+---
+title: "v2 Required Session Methods"
+---
+
+Author(s): [@benbrandt](https://github.com/benbrandt)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+For ACP v2, Agents that advertise the `session` capability should be required
+to support the core session lifecycle methods: `session/list`,
+`session/resume`, and `session/close`.
+
+These methods should no longer have individual v2 capability markers. The
+presence of `capabilities.session` should be enough for Clients to rely on the
+baseline session surface.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+In v1, several session lifecycle methods were added as optional capabilities:
+`loadSession`, `sessionCapabilities.list`, `sessionCapabilities.resume`, and
+`sessionCapabilities.close`.
+
+For v2, we can set a cleaner baseline. If an Agent supports sessions, it should
+support the lifecycle operations needed to create, discover, reconnect, replay,
+prompt, cancel, update, and close them.
+
+In practice, almost all agents, especially the most popular ones, already support these,
+and we know from users that they don't want to interact without these capabilities.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+When an Agent includes `capabilities.session` in its v2 `initialize` response,
+the Agent **MUST** support these baseline session methods:
+
+- `session/new`
+- `session/list`
+- `session/resume`
+- `session/close`
+- `session/prompt`
+- `session/cancel`
+- `session/update`
+
+The v2 schema should remove the optional `session.list`, `session.resume`, and
+`session.close` capability fields. The [Session Resume Replay](./session-resume-replay.mdx)
+RFD removes `session/load` from v2 and folds history replay into
+`session/resume`.
+
+The remaining optional session capabilities continue to represent optional
+features:
+
+- `session.prompt` advertises prompt content extensions beyond the baseline.
+- `session.mcp` advertises supported MCP server transports.
+- `session.delete` advertises support for deleting sessions from future
+  `session/list` results.
+- `session.additionalDirectories` advertises support for extra workspace roots
+  on supported session lifecycle requests.
+- `session.fork` remains an unstable optional capability while the Session Fork
+  RFD is in progress.
+
+## Shiny future
+
+> How will things play out once this feature exists?
+
+Clients targeting v2 can treat `capabilities.session` as the single signal for
+the baseline session surface. This makes session history, reconnection, replay,
+and cleanup flows simpler to implement and less surprising for users.
+
+Agents that do not support sessions can still omit `capabilities.session`
+entirely, preserving the option for non-session surfaces such as next edit
+suggestions.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+1. Remove the v2 `session.load`, `session.list`, `session.resume`, and
+   `session.close` capability fields and their generated support-marker types.
+2. Update the v2 docs to describe these methods as baseline whenever
+   `capabilities.session` is present.
+3. Update the v2 overview RFD and initialization docs to call out the required
+   session lifecycle methods.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Does this make sessions required for every v2 Agent?
+
+No. `capabilities.session` remains optional. This RFD only defines the baseline
+methods required once an Agent chooses to advertise the session surface.
+
+### Why is `session/delete` still optional?
+
+`session/delete` removes a persisted session from future list results. That is a
+separate storage-management operation, not part of the minimal lifecycle needed.
+
+## Revision history
+
+- 2026-07-02: Initial draft.

@@ -52,7 +52,7 @@ When the language model creates an execution plan, the Agent **SHOULD** report i
 
 Agents **MUST NOT** send `plan_update` or `plan_removed` unless the Client advertised `plan`. If the Client omits `plan`, the Agent **MUST** fall back to the existing `plan` update.
 
-`plan_update` carries a `plan` object with a `type` discriminator. Every plan format includes a required `id` so Clients can track multiple plans independently.
+`plan_update` carries a `plan` object with a `type` discriminator. Every plan format includes a required `planId` so Clients can track multiple plans independently.
 
 ### Item-Based Plans
 
@@ -66,7 +66,7 @@ Agents **MUST NOT** send `plan_update` or `plan_removed` unless the Client adver
       "sessionUpdate": "plan_update",
       "plan": {
         "type": "items",
-        "id": "plan-1",
+        "planId": "plan-1",
         "entries": [
           {
             "content": "Analyze the existing codebase structure",
@@ -92,7 +92,7 @@ Agents **MUST NOT** send `plan_update` or `plan_removed` unless the Client adver
       "sessionUpdate": "plan_update",
       "plan": {
         "type": "markdown",
-        "id": "implementation-plan",
+        "planId": "implementation-plan",
         "content": "## Steps\n- [ ] Refactor module\n- [ ] Add tests"
       }
     }
@@ -112,7 +112,7 @@ Agents **MUST NOT** send `plan_update` or `plan_removed` unless the Client adver
       "sessionUpdate": "plan_update",
       "plan": {
         "type": "file",
-        "id": "design-doc",
+        "planId": "design-doc",
         "uri": "file:///tmp/plan.md"
       }
     }
@@ -132,7 +132,7 @@ Agents can remove a plan by sending `plan_removed` with the plan ID:
     "sessionId": "sess_abc123def456",
     "update": {
       "sessionUpdate": "plan_removed",
-      "id": "plan-1"
+      "planId": "plan-1"
     }
   }
 }

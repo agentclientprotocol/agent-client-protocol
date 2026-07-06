@@ -838,7 +838,7 @@ However, this is complicated by the trait implementations: the generic traits ne
 
 ### Cross-language SDK alignment
 
-The design principles here - builder patterns, context parameters, directional naming, component abstractions - aren't Rust-specific. They represent good SDK design that could inform TypeScript and other language SDKs.
+The design principles here - builder patterns, context parameters, directional naming, component abstractions - aren't Rust-specific. They also informed the 1.0 TypeScript SDK, which is available as [`@agentclientprotocol/sdk` v1.0.0](https://www.npmjs.com/package/@agentclientprotocol/sdk/v/1.0.0).
 
 This doesn't mean other SDKs should be ports of the Rust SDK. Each language has its own idioms. But the core ideas (explicit message ordering, composable components, context in callbacks) translate across languages.
 
@@ -865,7 +865,9 @@ The new SDK is organized into several crates with clear responsibilities:
 
 ### Current status
 
-The implementation has been upstreamed to [agentclientprotocol/rust-sdk](https://github.com/agentclientprotocol/rust-sdk) for preview. The original [`sacp`](https://github.com/symposium-dev/symposium-acp) crates remain published on crates.io and power:
+This RFD is completed. The SACP-based Rust SDK has been released as [`agent-client-protocol` v1.0.0](https://crates.io/crates/agent-client-protocol/1.0.0), with API documentation on [docs.rs](https://docs.rs/agent-client-protocol/1.0.0). The TypeScript SDK also reached 1.0 as [`@agentclientprotocol/sdk` v1.0.0](https://www.npmjs.com/package/@agentclientprotocol/sdk/v/1.0.0), validating that the SDK direction was not Rust-only.
+
+The implementation lives in [agentclientprotocol/rust-sdk](https://github.com/agentclientprotocol/rust-sdk). The original [`sacp`](https://github.com/symposium-dev/symposium-acp) crates remain historical upstream packages and powered:
 
 - The conductor (proxy chain orchestration)
 - patchwork-rs (programmatic agent orchestration)
@@ -873,15 +875,14 @@ The implementation has been upstreamed to [agentclientprotocol/rust-sdk](https:/
 
 ### Migration path
 
-The transition involves upstreaming the `sacp` implementation to the `agentclientprotocol/rust-sdk` repository and stabilizing it after preview:
+The transition has been completed through the 1.0 SDK release:
 
 1. **Import `sacp` crates** to `agentclientprotocol/rust-sdk` with the new `agent-client-protocol-*` naming
 2. **Preview the upstreamed SDK** to collect feedback on the new builder-based API
-3. **Release `agent-client-protocol` v1.0** when this RFD is marked Completed
-4. **Deprecate `sacp` crates** on crates.io, pointing users to the `agent-client-protocol` family
-5. **Provide migration guidance** for users of the current v0.x SDK
+3. **Release `agent-client-protocol` v1.0** as the stable Rust SDK
+4. **Align other official SDKs** around the same design goals where language idioms allow, starting with the TypeScript SDK's 1.0 release
 
-Most users will find the migration straightforward - the builder pattern is more ergonomic than the trait-based approach, so the new code is often simpler than the old.
+Most users should find migration straightforward - the builder pattern is more ergonomic than the trait-based approach, so the new code is often simpler than the old. Follow-up migration guides, compatibility helpers, or `sacp` deprecation notices can be handled as normal SDK maintenance outside this RFD.
 
 ## Frequently asked questions
 
@@ -911,11 +912,10 @@ This is a potential future enhancement - enum derives could dispatch to differen
 
 ### What changes are needed before stabilizing?
 
-Now that the implementation has been upstreamed, preview feedback should focus on API polish, method review, and identifying any candidates that can be removed or simplified before the 1.0 release.
-
-The conductor is feature complete but the support for MCP-over-ACP needs a few minor improvements (in particular, it should detect when the agent only supports stdio bridging and not attempt to use HTTP, which it currently does not).
+The Rust SDK has been stabilized as `agent-client-protocol` v1.0.0, so no RFD-blocking work remains. Future API polish, compatibility helpers, and MCP-over-ACP refinements should be tracked as normal SDK follow-up work.
 
 ## Revision history
 
+- 2026-06-25: Moved to Completed after the Rust SDK and TypeScript SDK reached v1.0.0.
 - 2026-05-12: Moved to Preview after the initial crate import was upstreamed to agentclientprotocol/rust-sdk.
 - Initial draft based on working implementation in symposium-acp repository.

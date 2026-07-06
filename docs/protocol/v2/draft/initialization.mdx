@@ -3,8 +3,6 @@ title: "Initialization"
 description: "How all Agent Client Protocol connections begin"
 ---
 
-{/* todo! link to all concepts */}
-
 The Initialization phase allows [Clients](/protocol/v2/draft/overview#client) and [Agents](/protocol/v2/draft/overview#agent) to negotiate protocol versions, capabilities, and authentication methods.
 
 <br />
@@ -27,8 +25,7 @@ Before a Session can be created, Clients **MUST** initialize the connection by c
 
 - The latest [protocol version](#protocol-version) supported
 - The [capabilities](#client-capabilities) supported
-
-They **SHOULD** also provide a name and version to the Agent.
+- The [implementation information](#implementation-information) for the Client
 
 ```json
 {
@@ -38,7 +35,7 @@ They **SHOULD** also provide a name and version to the Agent.
   "params": {
     "protocolVersion": 2,
     "capabilities": {},
-    "clientInfo": {
+    "info": {
       "name": "my-client",
       "title": "My Client",
       "version": "1.0.0"
@@ -47,7 +44,7 @@ They **SHOULD** also provide a name and version to the Agent.
 }
 ```
 
-The Agent **MUST** respond with the chosen [protocol version](#protocol-version) and the [capabilities](#agent-capabilities) it supports. It **SHOULD** also provide a name and version to the Client as well:
+The Agent **MUST** respond with the chosen [protocol version](#protocol-version), the [capabilities](#agent-capabilities) it supports, and its [implementation information](#implementation-information):
 
 ```json
 {
@@ -65,11 +62,10 @@ The Agent **MUST** respond with the chosen [protocol version](#protocol-version)
         "mcp": {
           "stdio": {},
           "http": {}
-        },
-        "load": {}
+        }
       }
     },
-    "agentInfo": {
+    "info": {
       "name": "my-agent",
       "title": "My Agent",
       "version": "1.0.0"
@@ -122,8 +118,9 @@ The Agent **SHOULD** specify whether it supports the following capabilities:
 <ResponseField name="session" type="SessionCapabilities Object">
   The Agent supports the `session/*` method surface. Omitted or `null` means the
   Agent does not support session methods. Supplying `{}` means the Agent
-  supports the baseline session methods: `session/new`, `session/prompt`,
-  `session/cancel`, and `session/update`.
+  supports the baseline session methods: `session/new`, `session/list`,
+  `session/resume`, `session/close`, `session/prompt`, `session/cancel`, and
+  `session/update`.
 </ResponseField>
 
 <ResponseField name="nes" type="NesCapabilities Object">
@@ -138,9 +135,13 @@ The Agent **SHOULD** specify whether it supports the following capabilities:
 
 #### Session Capabilities
 
-Supplying `session: {}` means the Agent supports `session/new`, `session/prompt`, `session/cancel`, and `session/update`.
+Supplying `session: {}` means the Agent supports `session/new`,
+`session/list`, `session/resume`, `session/close`, `session/prompt`,
+`session/cancel`, and `session/update`.
 
-Optionally, Agents **MAY** support prompt extensions, MCP server transports, and additional session methods by specifying nested capabilities.
+Optionally, Agents **MAY** support prompt extensions, MCP server transports, and
+additional session methods such as `session/delete` by specifying nested
+capabilities.
 
 <ResponseField name="prompt" type="PromptCapabilities Object">
   Object indicating the different types of [content](/protocol/v2/draft/content)
@@ -151,20 +152,14 @@ Optionally, Agents **MAY** support prompt extensions, MCP server transports, and
 
 <ResponseField name="mcp" type="McpCapabilities Object">
   Object indicating the MCP server transports that may be included in session
-  lifecycle requests. Omitted or `null` means the Agent does not advertise MCP
-  server transport support for sessions.
-</ResponseField>
-
-<ResponseField name="load" type="SessionLoadCapabilities Object">
-  The [`session/load`](/protocol/v2/draft/session-setup#loading-sessions) method
-  is available. Omitted or `null` means the Agent does not advertise support.
-  Supplying `{}` means the Agent supports loading sessions.
+  lifecycle requests. Omitted or `null` both mean the Agent does not advertise
+  MCP server transport support for sessions.
 </ResponseField>
 
 <ResponseField name="delete" type="SessionDeleteCapabilities Object">
   The [`session/delete`](/protocol/v2/draft/session-delete) method is available.
-  Omitted or `null` means the Agent does not advertise support. Supplying `{}`
-  means the Agent supports deleting sessions from `session/list`.
+  Omitted or `null` both mean the Agent does not advertise support. Supplying an
+  empty object means the Agent supports deleting sessions from `session/list`.
 </ResponseField>
 
 <ResponseField
@@ -172,7 +167,7 @@ Optionally, Agents **MAY** support prompt extensions, MCP server transports, and
   type="SessionAdditionalDirectoriesCapabilities Object"
 >
   The Agent supports `additionalDirectories` on supported session lifecycle
-  requests. Omitted or `null` means the Agent does not advertise support.
+  requests. Omitted or `null` both mean the Agent does not advertise support.
   Supplying `{}` means the Agent supports additional workspace roots.
 </ResponseField>
 
@@ -217,20 +212,13 @@ Optionally, they **MAY** support richer types of [content](/protocol/v2/draft/co
   supports HTTP MCP server transports.
 </ResponseField>
 
-#### Authentication Capabilities
-
-<ResponseField name="logout" type="LogoutCapabilities Object">
-  The [`logout`](/protocol/v2/draft/authentication#logging-out) method is
-  available.
-</ResponseField>
-
 <Card icon="shield-check" horizontal href="/protocol/v2/draft/authentication">
   Learn more about Authentication
 </Card>
 
 ## Implementation Information
 
-Both Clients and Agents **SHOULD** provide information about their implementation in the `clientInfo` and `agentInfo` fields respectively. Both take the following three fields:
+Both Clients and Agents **MUST** provide information about their implementation in the `info` field. It takes the following three fields:
 
 <ParamField path="name" type="string">
   Intended for programmatic or logical use, but can be used as a display name
@@ -246,10 +234,6 @@ Both Clients and Agents **SHOULD** provide information about their implementatio
   Version of the implementation. Can be displayed to the user or used for
   debugging or metrics purposes.
 </ParamField>
-
-<Info>
-  Note: in future versions of the protocol, this information will be required.
-</Info>
 
 ---
 

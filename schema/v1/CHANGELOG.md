@@ -7,6 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.18.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.17.0...schema-v1.18.0) - 2026-07-06
+
+### Added
+
+- *(schema)* Stabilize boolean session config options ([#1604](https://github.com/agentclientprotocol/agent-client-protocol/pull/1604))
+- *(unstable-v2)* Unify the ID naming conventions across the schema ([#1567](https://github.com/agentclientprotocol/agent-client-protocol/pull/1567))
+
+### Fixed
+
+- *(schema)* Reject malformed protocol fields ([#1583](https://github.com/agentclientprotocol/agent-client-protocol/pull/1583))
+- *(unstable)* remove URL elicitation error ([#1574](https://github.com/agentclientprotocol/agent-client-protocol/pull/1574))
+- *(unstable-v2)* Continue to make more enums future compatible ([#1571](https://github.com/agentclientprotocol/agent-client-protocol/pull/1571))
+
+### Other
+
+- *(schema)* Clean up generated documentation and make wording more consistent ([#1568](https://github.com/agentclientprotocol/agent-client-protocol/pull/1568))
+
+## [1.17.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.16.0...schema-v1.17.0) - 2026-06-29
+
+### Added
+
+- *(schema)* Stabilize request cancellation ([#1549](https://github.com/agentclientprotocol/agent-client-protocol/pull/1549))
+
+### Fixed
+
+- Deserialization leniency part 2 ([#1526](https://github.com/agentclientprotocol/agent-client-protocol/pull/1526))
+- *(unstable-v2)* make mcpServers optional in new sessions ([#1523](https://github.com/agentclientprotocol/agent-client-protocol/pull/1523))
+
+### Other
+
+- *(unstable-v2)* Clean up client schema types ([#1540](https://github.com/agentclientprotocol/agent-client-protocol/pull/1540))
+- *(schema)* correct Implementation description ([#1518](https://github.com/agentclientprotocol/agent-client-protocol/pull/1518))
+
+## [1.16.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.15.0...schema-v1.16.0) - 2026-06-24
+
+### Added
+
+- *(schema)* Stabilize model_config option category ([#1502](https://github.com/agentclientprotocol/agent-client-protocol/pull/1502))
+
+## [1.15.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.14.0...schema-v1.15.0) - 2026-06-24
+
+### Added
+
+- *(unstable)* Add boolean config option capabilities ([#1490](https://github.com/agentclientprotocol/agent-client-protocol/pull/1490))
+
 ## [1.14.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.13.7...schema-v1.14.0) - 2026-06-18
 
 ### Added
