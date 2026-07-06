@@ -15,7 +15,23 @@ If you only remember five things, remember these:
 4. **Capabilities were reorganized.** One `capabilities` + required `info` field on both sides, session-scoped groups nested under `session`, object support markers instead of booleans, and a required baseline of session methods.
 5. **Everything is extensible now.** Enums and tagged unions accept unknown values; `_`-prefixed values are yours, the rest are reserved for future ACP versions.
 
-The rest of this guide walks through each area: the [at-a-glance tables](#at-a-glance) for a quick diff, one section per change with before/after wire messages, and [step-by-step checklists](#migration-checklist-agents) at the end.
+The rest of this guide walks through each area: the [at-a-glance tables](#at-a-glance) for a quick diff, one section per change with before/after wire messages, and [step-by-step checklists](#migration-checklist-agents) and [common mistakes](#common-migration-mistakes) at the end.
+
+## Scope: stable v2 and draft surfaces
+
+This guide describes the stable v2 baseline (`schema/v2/schema.json`). The v2 protocol surface as a whole is still labeled draft, so gate v2 support behind explicit version negotiation and feature flags until it stabilizes.
+
+The unstable schema (`schema/v2/schema.unstable.json`) layers opt-in draft features on top of that baseline. Negotiating `protocolVersion: 2` does **not** imply any of them — gate each behind its own capability or feature flag, and keep stable-v2 and unstable-v2 test fixtures separate. Draft-only surfaces currently include:
+
+- Provider configuration (`providers/list`, `providers/set`, `providers/disable`)
+- Session forking (`session/fork` and `session.fork`)
+- ACP-tunneled MCP servers (`session.mcp.acp` with `mcp/connect`, `mcp/message`, `mcp/disconnect`)
+- Client elicitation (`elicitation/create`, `elicitation/complete`)
+- Next Edit Suggestions and document sync (`nes/*`, `document/*`, and position-encoding negotiation)
+- The `env_var` and `terminal` auth method types and the Client auth capabilities backing them
+- Boolean session config options
+- `file` and `markdown` plan content types
+- Token `usage` on idle `state_update` notifications
 
 ## Version negotiation
 
@@ -65,6 +81,16 @@ Nothing about v2 changes the underlying JSON-RPC framing, so a single connection
 | `config_option_update`      | Unchanged                                                                           |
 | `session_info_update`       | Unchanged                                                                           |
 | `usage_update`              | Unchanged                                                                           |
+
+## Suggested migration order
+
+1. Add `protocolVersion: 2` negotiation and route each connection to a separate v1 or v2 protocol surface after `initialize`.
+2. Update `initialize` params/results and all capability checks.
+3. Remove v1-only surfaces from v2 code paths: `fs/*`, `terminal/*`, session modes, `session/load`.
+4. Rework prompt handling around `state_update` instead of the `session/prompt` response.
+5. Convert message, tool-call, and plan handling to keyed upserts.
+6. Update permissions, diffs, MCP configs, and slash-command input.
+7. Make parsing forward-compatible (open enums, batch arrays) and add v2 fixtures covering the full prompt lifecycle, replay, cancellation, permissions, and diff rendering.
 
 ## Initialization
 
@@ -373,7 +399,7 @@ The v1 diff shape — a single `path` with `oldText`/`newText` — could not dis
   ],
   "patch": {
     "format": "git_patch",
-    "diff": "diff --git a/src/config.json b/src/config.json\n--- a/src/config.json\n+++ b/src/config.json\n@@ -1,3 +1,3 @@\n {\n-  \"debug\": false\n+  \"debug\": true\n }\n"
+    "diff": "diff --git /home/user/project/src/config.json /home/user/project/src/config.json\n--- /home/user/project/src/config.json\n+++ /home/user/project/src/config.json\n@@ -1,3 +1,3 @@\n {\n-  \"debug\": false\n+  \"debug\": true\n }\n"
   }
 }
 ```
@@ -434,7 +460,7 @@ There is no mechanical mapping from v2 diffs back to `oldText`/`newText` — whe
 
 In v1, agents routinely stuffed permission prompt text into the tool call's `title`, mutating displayed tool state as a side effect. In v2, put prompt copy in `title`/`description` and let `subject.toolCall` carry only genuine tool-call state.
 
-`options` and the response shape are unchanged: options carry `optionId`, `name`, and `kind` (`allow_once`, `allow_always`, `reject_once`, `reject_always`), and the response outcome is `{ "outcome": "selected", "optionId": ... }` or `{ "outcome": "cancelled" }`.
+`options` and the response shape are unchanged: options carry `optionId`, `name`, and `kind` (`allow_once`, `allow_always`, `reject_once`, `reject_always`), and the response outcome is `{ "outcome": "selected", "optionId": ... }` or `{ "outcome": "cancelled" }`. Both unions are extensible in v2, with one safety rule: an Agent that receives an outcome it does not understand **MUST NOT** treat it as approval.
 
 While a permission request is pending, the Agent **SHOULD** report `state_update` with `requires_action`, and `running` again once resolved.
 
@@ -504,7 +530,9 @@ The cursor is a tagged union so future versions can add replay-from-a-point vari
 
 ### Consistent lifecycle requests
 
-`session/new` and `session/resume` take the same shape of environment parameters: a required `cwd` (absolute path), plus optional `additionalDirectories` and `mcpServers`. Note that `mcpServers` was required (even if empty) on `session/new` in v1 and is now optional. Both responses carry the session's `configOptions`; neither carries `modes` anymore.
+`session/new` and `session/resume` take the same shape of environment parameters: a required `cwd` (absolute path), plus optional `additionalDirectories` and `mcpServers`. Note that `mcpServers` was required (even if empty) on `session/new` in v1 and is now optional; omitting it and sending `[]` are equivalent. Both responses carry the session's `configOptions`; neither carries `modes` anymore.
+
+`additionalDirectories` still requires the `session.additionalDirectories` capability and absolute paths, and each `session/resume` must send the full intended additional-root list — omitting the field or sending `[]` activates no additional roots rather than restoring previous ones.
 
 ### Baseline methods
 
@@ -571,7 +599,9 @@ MCP transport configuration is aligned with the current MCP transport model:
 
 ## Content blocks
 
-The five content block types are unchanged: `text`, `image`, `audio`, `resource_link`, and `resource`. v2 realigns their fields with the latest MCP specification — notably, `resource_link` gains an optional `icons` array — and the `type` discriminator is extensible like every other v2 enum, so unknown block types no longer break deserialization for receivers that have a fallback.
+The five content block types are unchanged: `text`, `image`, `audio`, `resource_link`, and `resource`. v2 realigns their fields with the latest MCP specification — notably, `resource_link` gains an optional `icons` array (each icon has a required `src` URI plus optional `mimeType`, `sizes`, and `theme` of `light`/`dark`) — and the `type` discriminator is extensible like every other v2 enum, so unknown block types no longer break deserialization for receivers that have a fallback.
+
+If you maintain a validator or generated models, v2 also tightens schema-level details that v1 left loose: base64 payloads (image/audio `data`, resource `blob`) are marked `format: "byte"`, URI fields are marked `format: "uri"`, and `annotations.priority` is bounded to the inclusive range 0–1.
 
 ## Slash commands
 
@@ -662,6 +692,30 @@ A standard remote transport (streamable HTTP with SSE streams, plus WebSocket) i
 12. **Cancellation.** After `session/cancel`, keep accepting updates and wait for the idle `state_update` with `stopReason: "cancelled"` as confirmation.
 13. **Parsing.** Preserve unknown enum variants, tolerate unknown `sessionUpdate` types, read command `input` as a tagged union, and accept batch arrays on stdio.
 
+## Migration checklist: SDKs, validators, and proxies
+
+1. **Separate the versions.** Keep v1 and v2 schemas, generated models, and test fixtures fully separate, and gate unstable-v2 surfaces independently of `protocolVersion: 2`.
+2. **Three-state fields.** Model omitted vs `null` vs concrete values distinctly wherever v2 defines patch semantics — a plain nullable/optional type erases a distinction the protocol depends on.
+3. **Strict where it counts.** Reject malformed payloads for _known_ discriminator values instead of demoting them to the unknown-variant fallback; the fallback exists only for genuinely unknown values.
+4. **Preserve what you don't understand.** Round-trip `_`-prefixed extension values, unknown future variants, and `_meta` when storing, replaying, proxying, or forwarding.
+5. **Validation refinements.** Account for `format: "uri"`, `format: "byte"`, and the 0–1 `annotations.priority` bounds when generating validators.
+6. **Fixtures.** Cover the full prompt lifecycle, resume replay, cancellation, permission flow, message replacement and clearing, tool-call content chunks, structured diffs, and JSON-RPC batches — and document anywhere your v2→v1 bridging is lossy.
+
+## Common migration mistakes
+
+- Treating the `session/prompt` response as turn completion — or treating `requires_action` as idle.
+- Rendering the outgoing prompt as the canonical user message instead of the Agent's `user_message` acknowledgment.
+- Appending a whole-message `content` array instead of replacing accumulated content (or replacing on chunks, which should append).
+- Collapsing omitted and `null` patch fields into a single "missing" state.
+- Still checking `clientCapabilities.fs` / `clientCapabilities.terminal`, or calling `session/load` or `session/set_mode`, on v2 connections.
+- Assuming terminal _authentication_ was removed because terminal _execution_ was — they are separate surfaces, and only execution is gone.
+- Advertising `capabilities.session` without implementing the entire baseline method set.
+- Omitting the `type` discriminator on auth methods, MCP server configs, or command input because v1 had implicit defaults.
+- Reading config options from `id`/`group` instead of `configId`/`groupId`.
+- Minting non-underscore custom enum values, or treating an unknown non-underscore value as someone's extension when it is reserved for future ACP versions.
+- Enabling unstable-v2 methods on every v2 connection instead of gating each behind its own flag.
+- Treating an unknown permission outcome as approval.
+
 ## Supporting v1 and v2 side by side
 
 Version negotiation gives you one protocol version per connection, so the cleanest approach is to keep two thin protocol surfaces behind shared application logic and select one after `initialize`. Design your internal model around v2 concepts — upserts, message IDs, session states, structured diffs — and downgrade at the edge for v1 peers, because the reverse direction doesn't round-trip:
@@ -670,4 +724,8 @@ Version negotiation gives you one protocol version per connection, so the cleane
 - v2 deliberately drops v1's client file system and terminal surface and the modes API, so v1 peers relying on those need genuine fallback behavior, not just field mapping.
 - The prompt lifecycles differ architecturally: emulating v1 on top of a v2 core means holding the `session/prompt` response until your v2-style idle state fires — simple in that direction, impossible in the other.
 
-If a message can't be expressed for a v1 peer, degrade deliberately (drop the refinement, not the message) rather than relying on any automatic translation to decide for you.
+Treat the two versions as separate wire contracts with version-specific encoders and decoders — don't build a v2 implementation on generic v1↔v2 conversion helpers. If a message can't be expressed for a v1 peer, degrade deliberately (drop the refinement, not the message) rather than letting an automatic translation decide for you, and fail clearly when a v2 feature has no v1 representation at all.
+
+## Next steps
+
+Work through the v2 docs in an order that mirrors a connection's lifecycle: [Initialization](/protocol/v2/initialization), [Authentication](/protocol/v2/authentication), [Session Setup](/protocol/v2/session-setup), [Prompt Lifecycle](/protocol/v2/prompt-lifecycle), [Content](/protocol/v2/content), [Tool Calls](/protocol/v2/tool-calls), [Agent Plan](/protocol/v2/agent-plan), [Session Config Options](/protocol/v2/session-config-options), [Extensibility](/protocol/v2/extensibility), [Transports](/protocol/v2/transports), and the [Schema](/protocol/v2/schema) reference.
