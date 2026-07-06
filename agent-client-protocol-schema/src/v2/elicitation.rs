@@ -80,7 +80,10 @@ pub struct EnumOption {
     pub value: String,
     /// Human-readable title for this option.
     pub title: String,
-    /// Optional description for this option value.
+    /// Human-readable description.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
     pub description: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -106,7 +109,7 @@ impl EnumOption {
         }
     }
 
-    /// Optional description for this option value.
+    /// Human-readable description.
     #[must_use]
     pub fn description(mut self, description: impl IntoOption<String>) -> Self {
         self.description = description.into_option();
