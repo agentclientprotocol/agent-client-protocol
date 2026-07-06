@@ -110,8 +110,7 @@ During [Session Setup](/protocol/v2/draft/session-setup) the Agent **MAY** retur
 </ResponseField>
 
 <ResponseField name="type" type="ConfigOptionType" required>
-  The type of input control. `select` is supported by default. The draft boolean
-  config option extension also defines `boolean`.
+  The type of input control. `select` and `boolean` are supported.
 </ResponseField>
 
 <ResponseField name="currentValue" type="string | boolean" required>
@@ -140,8 +139,7 @@ During [Session Setup](/protocol/v2/draft/session-setup) the Agent **MAY** retur
 
 ### Boolean Config Options
 
-The draft boolean config option extension defines `type: "boolean"` for simple
-on/off toggles:
+Boolean config options use `type: "boolean"` for simple on/off toggles:
 
 ```json
 {

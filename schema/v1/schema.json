@@ -2141,6 +2141,22 @@
               "$ref": "#/$defs/SessionConfigSelect"
             }
           ]
+        },
+        {
+          "description": "Boolean on/off toggle.",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "boolean"
+            }
+          },
+          "required": ["type"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionConfigBoolean"
+            }
+          ]
         }
       ],
       "discriminator": {
@@ -2296,6 +2312,17 @@
         }
       },
       "required": ["currentValue", "options"]
+    },
+    "SessionConfigBoolean": {
+      "description": "A boolean on/off toggle session configuration option payload.",
+      "type": "object",
+      "properties": {
+        "currentValue": {
+          "description": "The current value of the boolean option.",
+          "type": "boolean"
+        }
+      },
+      "required": ["currentValue"]
     },
     "LoadSessionResponse": {
       "description": "Response from loading an existing session.",
@@ -3548,6 +3575,18 @@
           "default": false,
           "x-deserialize-default-on-error": true
         },
+        "session": {
+          "description": "Session-related capabilities supported by the client.\n\nOptional. Omitted or `null` both mean the client does not advertise any\nsession-related extensions.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ClientSessionCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"],
@@ -3572,6 +3611,66 @@
           "default": false,
           "x-deserialize-default-on-error": true
         },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
+    },
+    "ClientSessionCapabilities": {
+      "description": "Session-related capabilities supported by the client.",
+      "type": "object",
+      "properties": {
+        "configOptions": {
+          "description": "Config option capabilities supported by the client.\n\nOmitted or `null` both mean the client does not advertise support for any\nconfig option extensions.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SessionConfigOptionsCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
+    },
+    "SessionConfigOptionsCapabilities": {
+      "description": "Session configuration option capabilities supported by the client.",
+      "type": "object",
+      "properties": {
+        "boolean": {
+          "description": "Whether the client supports boolean session configuration options.\n\nOptional. Omitted or `null` both mean the client does not advertise support.\nSupplying `{}` means agents may include `type: \"boolean\"` entries in\n`configOptions`, and the client may send `session/set_config_option`\nrequests with `type: \"boolean\"` and a boolean `value`.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BooleanConfigOptionCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
+    },
+    "BooleanConfigOptionCapabilities": {
+      "description": "Capabilities for boolean session configuration options.\n\nSupplying `{}` means the client supports boolean session configuration options.",
+      "type": "object",
+      "properties": {
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"],
@@ -4021,14 +4120,6 @@
             }
           ]
         },
-        "value": {
-          "description": "The ID of the configuration option value to set.",
-          "allOf": [
-            {
-              "$ref": "#/$defs/SessionConfigValueId"
-            }
-          ]
-        },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"],
@@ -4036,7 +4127,40 @@
           "additionalProperties": true
         }
       },
-      "required": ["sessionId", "configId", "value"],
+      "required": ["sessionId", "configId"],
+      "anyOf": [
+        {
+          "description": "A boolean value (`type: \"boolean\"`).",
+          "type": "object",
+          "properties": {
+            "value": {
+              "description": "The boolean value.",
+              "type": "boolean"
+            },
+            "type": {
+              "type": "string",
+              "const": "boolean"
+            }
+          },
+          "required": ["type", "value"]
+        },
+        {
+          "title": "value_id",
+          "description": "A [`SessionConfigValueId`] string value.\n\nThis is the default when `type` is absent on the wire. Unknown `type`\nvalues with string payloads also gracefully deserialize into this\nvariant.",
+          "type": "object",
+          "properties": {
+            "value": {
+              "description": "The value ID.",
+              "allOf": [
+                {
+                  "$ref": "#/$defs/SessionConfigValueId"
+                }
+              ]
+            }
+          },
+          "required": ["value"]
+        }
+      ],
       "x-side": "agent",
       "x-method": "session/set_config_option"
     },

@@ -218,7 +218,7 @@
           },
           {
             "group": "Preview",
-            "pages": ["rfds/boolean-config-option"]
+            "pages": []
           },
           {
             "group": "Completed",
@@ -238,7 +238,8 @@
               "rfds/session-delete",
               "rfds/model-config-category",
               "rfds/rust-sdk-v1",
-              "rfds/request-cancellation"
+              "rfds/request-cancellation",
+              "rfds/boolean-config-option"
             ]
           }
         ]

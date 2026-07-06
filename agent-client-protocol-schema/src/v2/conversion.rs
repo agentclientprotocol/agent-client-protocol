@@ -1945,7 +1945,6 @@ impl IntoV1 for super::ClientCapabilities {
         Ok(crate::v1::ClientCapabilities {
             fs: crate::v1::FileSystemCapabilities::default(),
             terminal: false,
-            #[cfg(feature = "unstable_boolean_config")]
             session: Some(
                 crate::v1::ClientSessionCapabilities::new().config_options(
                     crate::v1::SessionConfigOptionsCapabilities::new()
@@ -1974,8 +1973,7 @@ impl IntoV2 for crate::v1::ClientCapabilities {
         let Self {
             fs: _,
             terminal: _,
-            #[cfg(feature = "unstable_boolean_config")]
-                session: _,
+            session: _,
             #[cfg(feature = "unstable_plan_operations")]
                 plan: _,
             #[cfg(feature = "unstable_auth_methods")]
@@ -3968,7 +3966,6 @@ impl IntoV2 for crate::v1::SessionConfigSelect {
     }
 }
 
-#[cfg(feature = "unstable_boolean_config")]
 impl IntoV1 for super::SessionConfigBoolean {
     type Output = crate::v1::SessionConfigBoolean;
 
@@ -3980,7 +3977,6 @@ impl IntoV1 for super::SessionConfigBoolean {
     }
 }
 
-#[cfg(feature = "unstable_boolean_config")]
 impl IntoV2 for crate::v1::SessionConfigBoolean {
     type Output = super::SessionConfigBoolean;
 
@@ -4026,7 +4022,6 @@ impl IntoV1 for super::SessionConfigKind {
     fn into_v1(self) -> Result<Self::Output> {
         Ok(match self {
             Self::Select(value) => crate::v1::SessionConfigKind::Select(value.into_v1()?),
-            #[cfg(feature = "unstable_boolean_config")]
             Self::Boolean(value) => crate::v1::SessionConfigKind::Boolean(value.into_v1()?),
             Self::Other(value) => {
                 return Err(unknown_v2_enum_variant("SessionConfigKind", &value.type_));
@@ -4041,7 +4036,6 @@ impl IntoV2 for crate::v1::SessionConfigKind {
     fn into_v2(self) -> Result<Self::Output> {
         Ok(match self {
             Self::Select(value) => super::SessionConfigKind::Select(value.into_v2()?),
-            #[cfg(feature = "unstable_boolean_config")]
             Self::Boolean(value) => super::SessionConfigKind::Boolean(value.into_v2()?),
         })
     }
@@ -4093,7 +4087,6 @@ impl IntoV2 for crate::v1::SessionConfigOption {
     }
 }
 
-#[cfg(feature = "unstable_boolean_config")]
 impl IntoV1 for super::SessionConfigOptionValue {
     type Output = crate::v1::SessionConfigOptionValue;
 
@@ -4115,7 +4108,6 @@ impl IntoV1 for super::SessionConfigOptionValue {
     }
 }
 
-#[cfg(feature = "unstable_boolean_config")]
 impl IntoV2 for crate::v1::SessionConfigOptionValue {
     type Output = super::SessionConfigOptionValue;
 
@@ -9198,16 +9190,12 @@ mod tests {
 
     #[test]
     fn round_trips_initialize_request() {
-        let client_capabilities = v1::ClientCapabilities::new();
-        #[cfg(feature = "unstable_boolean_config")]
-        let client_capabilities = {
-            client_capabilities.session(
-                v1::ClientSessionCapabilities::new().config_options(
-                    v1::SessionConfigOptionsCapabilities::new()
-                        .boolean(v1::BooleanConfigOptionCapabilities::new()),
-                ),
-            )
-        };
+        let client_capabilities = v1::ClientCapabilities::new().session(
+            v1::ClientSessionCapabilities::new().config_options(
+                v1::SessionConfigOptionsCapabilities::new()
+                    .boolean(v1::BooleanConfigOptionCapabilities::new()),
+            ),
+        );
 
         let request = v1::InitializeRequest::new(ProtocolVersion::V1)
             .client_capabilities(client_capabilities)
@@ -9467,7 +9455,6 @@ mod tests {
         assert!(!v1_after.terminal);
     }
 
-    #[cfg(feature = "unstable_boolean_config")]
     #[test]
     fn v2_client_capabilities_default_to_v1_boolean_config_option_support() {
         let v2_capabilities = v2::ClientCapabilities::new();

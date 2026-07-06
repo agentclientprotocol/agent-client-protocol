@@ -631,9 +631,9 @@ Sets the current value for a session configuration option.
 
 Request parameters for setting a session configuration option.
 
-**Type:** Object
+**Type:** Union
 
-**Properties:**
+**Shared properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -649,8 +649,65 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 <ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
   The ID of the session to set the configuration option for.
 </ResponseField>
-<ResponseField name="value" type={<a href="#sessionconfigvalueid">SessionConfigValueId</a>} required>
-  The ID of the configuration option value to set.
+
+**Variants:**
+
+<ResponseField name="id" type="object">
+A `SessionConfigValueId` string value (`type: "id"`).
+
+<Expandable title="Properties">
+
+<ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"id"`.
+</ResponseField>
+<ResponseField
+  name="value"
+  type={<a href="#sessionconfigvalueid">SessionConfigValueId</a>}
+  required
+>
+  The value ID.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="boolean" type="object">
+A boolean value (`type: "boolean"`).
+
+<Expandable title="Properties">
+
+<ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"boolean"`.
+</ResponseField>
+<ResponseField name="value" type={"boolean"} required>
+  The boolean value.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="other" type="object">
+Custom or future session configuration option value payload.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+<Expandable title="Properties">
+
+<ResponseField name="type" type={"string"} required>
+  Custom or future session configuration option value type.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+</ResponseField>
+<ResponseField name="value" type={"object"} required>
+  Raw value payload for the custom or future value type.
+</ResponseField>
+
+</Expandable>
 </ResponseField>
 
 #### <span class="font-mono">SetSessionConfigOptionResponse</span>
@@ -3324,6 +3381,18 @@ required by `session/prompt`.
 
 </ResponseField>
 
+## <span class="font-mono">SessionConfigBoolean</span>
+
+A boolean on/off toggle session configuration option payload.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="currentValue" type={"boolean"} required>
+  The current value of the boolean option.
+</ResponseField>
+
 ## <span class="font-mono">SessionConfigGroupId</span>
 
 Unique identifier for a session configuration option value group.
@@ -3388,6 +3457,21 @@ Single-value selector (dropdown).
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
   The discriminator value. Must be `"select"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="boolean" type="object">
+Boolean on/off toggle.
+
+<Expandable title="Properties">
+
+<ResponseField name="currentValue" type={"boolean"} required>
+  The current value of the boolean option.
+</ResponseField>
+<ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"boolean"`.
 </ResponseField>
 
 </Expandable>

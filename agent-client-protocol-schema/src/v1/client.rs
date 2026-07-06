@@ -1739,15 +1739,10 @@ pub struct ClientCapabilities {
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub terminal: bool,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Session-related capabilities supported by the client.
     ///
     /// Optional. Omitted or `null` both mean the client does not advertise any
     /// session-related extensions.
-    #[cfg(feature = "unstable_boolean_config")]
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
@@ -1849,12 +1844,7 @@ impl ClientCapabilities {
         self
     }
 
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Session-related capabilities supported by the client.
-    #[cfg(feature = "unstable_boolean_config")]
     #[must_use]
     pub fn session(mut self, session: impl IntoOption<ClientSessionCapabilities>) -> Self {
         self.session = session.into_option();
@@ -1935,12 +1925,7 @@ impl ClientCapabilities {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Session-related capabilities supported by the client.
-#[cfg(feature = "unstable_boolean_config")]
 #[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -1967,7 +1952,6 @@ pub struct ClientSessionCapabilities {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_boolean_config")]
 impl ClientSessionCapabilities {
     /// Builds an empty [`ClientSessionCapabilities`]; use builder methods to advertise supported sub-capabilities.
     #[must_use]
@@ -2000,12 +1984,7 @@ impl ClientSessionCapabilities {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Session configuration option capabilities supported by the client.
-#[cfg(feature = "unstable_boolean_config")]
 #[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -2034,7 +2013,6 @@ pub struct SessionConfigOptionsCapabilities {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_boolean_config")]
 impl SessionConfigOptionsCapabilities {
     /// Builds an empty [`SessionConfigOptionsCapabilities`]; use builder methods to advertise supported sub-capabilities.
     #[must_use]
@@ -2066,14 +2044,9 @@ impl SessionConfigOptionsCapabilities {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Capabilities for boolean session configuration options.
 ///
 /// Supplying `{}` means the client supports boolean session configuration options.
-#[cfg(feature = "unstable_boolean_config")]
 #[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -2091,7 +2064,6 @@ pub struct BooleanConfigOptionCapabilities {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_boolean_config")]
 impl BooleanConfigOptionCapabilities {
     /// Builds an empty [`BooleanConfigOptionCapabilities`]; use builder methods to advertise supported sub-capabilities.
     #[must_use]
@@ -2797,7 +2769,6 @@ mod tests {
         assert_eq!(json["positionEncodings"], json!(["utf-32", "utf-16"]));
     }
 
-    #[cfg(feature = "unstable_boolean_config")]
     #[test]
     fn test_client_capabilities_boolean_config_options_serialization() {
         use serde_json::json;

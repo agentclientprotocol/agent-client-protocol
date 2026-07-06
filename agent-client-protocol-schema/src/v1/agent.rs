@@ -2448,12 +2448,7 @@ impl SessionConfigSelect {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// A boolean on/off toggle session configuration option payload.
-#[cfg(feature = "unstable_boolean_config")]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -2463,7 +2458,6 @@ pub struct SessionConfigBoolean {
     pub current_value: bool,
 }
 
-#[cfg(feature = "unstable_boolean_config")]
 impl SessionConfigBoolean {
     /// Builds [`SessionConfigBoolean`] with the required fields set; optional fields start unset or empty.
     #[must_use]
@@ -2506,12 +2500,7 @@ pub enum SessionConfigOptionCategory {
 pub enum SessionConfigKind {
     /// Single-value selector (dropdown).
     Select(SessionConfigSelect),
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Boolean on/off toggle.
-    #[cfg(feature = "unstable_boolean_config")]
     Boolean(SessionConfigBoolean),
 }
 
@@ -2584,10 +2573,7 @@ impl SessionConfigOption {
         )
     }
 
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    #[cfg(feature = "unstable_boolean_config")]
+    /// Builds a boolean-style session configuration option with its current value.
     #[must_use]
     pub fn boolean(
         id: impl Into<SessionConfigId>,
@@ -2627,10 +2613,6 @@ impl SessionConfigOption {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// The value to set for a session configuration option.
 ///
 /// The `type` field acts as the discriminator in the serialized JSON form.
@@ -2641,7 +2623,6 @@ impl SessionConfigOption {
 /// kind. For example every option kind that picks from a list of ids
 /// (`select`, `radio`, …) would use [`ValueId`](Self::ValueId), while a
 /// future freeform text option would get its own variant.
-#[cfg(feature = "unstable_boolean_config")]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(tag = "type", rename_all = "snake_case")]
 #[non_exhaustive]
@@ -2663,7 +2644,6 @@ pub enum SessionConfigOptionValue {
     },
 }
 
-#[cfg(feature = "unstable_boolean_config")]
 impl SessionConfigOptionValue {
     /// Create a value-id option value (used by `select` and other id-based option types).
     #[must_use]
@@ -2697,21 +2677,18 @@ impl SessionConfigOptionValue {
     }
 }
 
-#[cfg(feature = "unstable_boolean_config")]
 impl From<SessionConfigValueId> for SessionConfigOptionValue {
     fn from(value: SessionConfigValueId) -> Self {
         Self::ValueId { value }
     }
 }
 
-#[cfg(feature = "unstable_boolean_config")]
 impl From<bool> for SessionConfigOptionValue {
     fn from(value: bool) -> Self {
         Self::Boolean { value }
     }
 }
 
-#[cfg(feature = "unstable_boolean_config")]
 impl From<&str> for SessionConfigOptionValue {
     fn from(value: &str) -> Self {
         Self::ValueId {
@@ -2736,12 +2713,8 @@ pub struct SetSessionConfigOptionRequest {
     ///
     /// When `type` is absent on the wire, defaults to treating the value as a
     /// [`SessionConfigValueId`] for `select` options.
-    #[cfg(feature = "unstable_boolean_config")]
     #[serde(flatten)]
     pub value: SessionConfigOptionValue,
-    /// The ID of the configuration option value to set.
-    #[cfg(not(feature = "unstable_boolean_config"))]
-    pub value: SessionConfigValueId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -2756,29 +2729,11 @@ pub struct SetSessionConfigOptionRequest {
 
 impl SetSessionConfigOptionRequest {
     /// Builds [`SetSessionConfigOptionRequest`] with the required request fields set; optional fields start unset or empty.
-    #[cfg(feature = "unstable_boolean_config")]
     #[must_use]
     pub fn new(
         session_id: impl Into<SessionId>,
         config_id: impl Into<SessionConfigId>,
         value: impl Into<SessionConfigOptionValue>,
-    ) -> Self {
-        Self {
-            session_id: session_id.into(),
-            config_id: config_id.into(),
-            value: value.into(),
-            meta: None,
-        }
-    }
-
-    /// Builds a select-value `session/set_config_option` request for crates built
-    /// without boolean session configuration support.
-    #[cfg(not(feature = "unstable_boolean_config"))]
-    #[must_use]
-    pub fn new(
-        session_id: impl Into<SessionId>,
-        config_id: impl Into<SessionConfigId>,
-        value: impl Into<SessionConfigValueId>,
     ) -> Self {
         Self {
             session_id: session_id.into(),
@@ -5401,12 +5356,10 @@ mod test_serialization {
     use super::*;
     use serde_json::json;
 
-    #[cfg(feature = "unstable_boolean_config")]
     fn test_meta() -> Meta {
         json!({ "source": "test" }).as_object().unwrap().clone()
     }
 
-    #[cfg(feature = "unstable_boolean_config")]
     fn serialized_meta_key_count(value: &impl serde::Serialize) -> usize {
         serde_json::to_string(value)
             .unwrap()
@@ -6116,7 +6069,6 @@ mod test_serialization {
         }
     }
 
-    #[cfg(feature = "unstable_boolean_config")]
     #[test]
     fn test_session_config_option_value_id_serialize() {
         let val = SessionConfigOptionValue::value_id("model-1");
@@ -6126,7 +6078,6 @@ mod test_serialization {
         assert!(!json.as_object().unwrap().contains_key("type"));
     }
 
-    #[cfg(feature = "unstable_boolean_config")]
     #[test]
     fn test_session_config_option_value_boolean_serialize() {
         let val = SessionConfigOptionValue::boolean(true);
@@ -6134,7 +6085,6 @@ mod test_serialization {
         assert_eq!(json, json!({ "type": "boolean", "value": true }));
     }
 
-    #[cfg(feature = "unstable_boolean_config")]
     #[test]
     fn test_session_config_option_value_deserialize_no_type() {
         // Missing "type" should default to ValueId
@@ -6144,7 +6094,6 @@ mod test_serialization {
         assert_eq!(val.as_value_id().unwrap().to_string(), "model-1");
     }
 
-    #[cfg(feature = "unstable_boolean_config")]
     #[test]
     fn test_session_config_option_value_deserialize_boolean() {
         let json = json!({ "type": "boolean", "value": true });
@@ -6153,7 +6102,6 @@ mod test_serialization {
         assert_eq!(val.as_bool(), Some(true));
     }
 
-    #[cfg(feature = "unstable_boolean_config")]
     #[test]
     fn test_session_config_option_value_deserialize_boolean_false() {
         let json = json!({ "type": "boolean", "value": false });
@@ -6162,7 +6110,6 @@ mod test_serialization {
         assert_eq!(val.as_bool(), Some(false));
     }
 
-    #[cfg(feature = "unstable_boolean_config")]
     #[test]
     fn test_session_config_option_value_deserialize_unknown_type_with_string_value() {
         // Unknown type with a string value gracefully falls back to ValueId
@@ -6171,7 +6118,6 @@ mod test_serialization {
         assert_eq!(val.as_value_id().unwrap().to_string(), "freeform input");
     }
 
-    #[cfg(feature = "unstable_boolean_config")]
     #[test]
     fn test_session_config_option_value_roundtrip_value_id() {
         let original = SessionConfigOptionValue::value_id("option-a");
@@ -6180,7 +6126,6 @@ mod test_serialization {
         assert_eq!(original, roundtripped);
     }
 
-    #[cfg(feature = "unstable_boolean_config")]
     #[test]
     fn test_session_config_option_value_roundtrip_boolean() {
         let original = SessionConfigOptionValue::boolean(false);
@@ -6189,7 +6134,6 @@ mod test_serialization {
         assert_eq!(original, roundtripped);
     }
 
-    #[cfg(feature = "unstable_boolean_config")]
     #[test]
     fn test_session_config_option_value_type_mismatch_boolean_with_string() {
         // type says "boolean" but value is a string — falls to untagged ValueId
@@ -6203,7 +6147,6 @@ mod test_serialization {
         );
     }
 
-    #[cfg(feature = "unstable_boolean_config")]
     #[test]
     fn test_session_config_option_value_from_impls() {
         let from_str: SessionConfigOptionValue = "model-1".into();
@@ -6216,7 +6159,6 @@ mod test_serialization {
         assert_eq!(from_bool.as_bool(), Some(true));
     }
 
-    #[cfg(feature = "unstable_boolean_config")]
     #[test]
     fn test_set_session_config_option_request_value_id() {
         let req = SetSessionConfigOptionRequest::new("sess_1", "model", "model-1");
@@ -6233,7 +6175,6 @@ mod test_serialization {
         assert!(!json.as_object().unwrap().contains_key("type"));
     }
 
-    #[cfg(feature = "unstable_boolean_config")]
     #[test]
     fn test_set_session_config_option_request_boolean() {
         let req = SetSessionConfigOptionRequest::new("sess_1", "brave_mode", true);
@@ -6249,7 +6190,6 @@ mod test_serialization {
         );
     }
 
-    #[cfg(feature = "unstable_boolean_config")]
     #[test]
     fn test_set_session_config_option_request_deserialize_no_type() {
         // Backwards-compatible: no "type" field → value_id
@@ -6264,7 +6204,6 @@ mod test_serialization {
         assert_eq!(req.value.as_value_id().unwrap().to_string(), "model-1");
     }
 
-    #[cfg(feature = "unstable_boolean_config")]
     #[test]
     fn test_set_session_config_option_request_deserialize_boolean() {
         let json = json!({
@@ -6277,7 +6216,6 @@ mod test_serialization {
         assert_eq!(req.value.as_bool(), Some(true));
     }
 
-    #[cfg(feature = "unstable_boolean_config")]
     #[test]
     fn test_set_session_config_option_request_roundtrip_value_id() {
         let original = SetSessionConfigOptionRequest::new("s", "c", "v");
@@ -6286,7 +6224,6 @@ mod test_serialization {
         assert_eq!(original, roundtripped);
     }
 
-    #[cfg(feature = "unstable_boolean_config")]
     #[test]
     fn test_set_session_config_option_request_roundtrip_boolean() {
         let original = SetSessionConfigOptionRequest::new("s", "c", false);
@@ -6295,7 +6232,6 @@ mod test_serialization {
         assert_eq!(original, roundtripped);
     }
 
-    #[cfg(feature = "unstable_boolean_config")]
     #[test]
     fn test_session_config_boolean_serialization() {
         let cfg = SessionConfigBoolean::new(true);
@@ -6306,7 +6242,6 @@ mod test_serialization {
         assert!(deserialized.current_value);
     }
 
-    #[cfg(feature = "unstable_boolean_config")]
     #[test]
     fn test_session_config_option_boolean_variant() {
         let opt = SessionConfigOption::boolean("brave_mode", "Brave Mode", false)
@@ -6338,7 +6273,6 @@ mod test_serialization {
         }
     }
 
-    #[cfg(feature = "unstable_boolean_config")]
     #[test]
     fn test_session_config_option_select_still_works() {
         // Make sure existing select options are unaffected

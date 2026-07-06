@@ -3961,7 +3961,7 @@
           ]
         },
         {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nBoolean on/off toggle.",
+          "description": "Boolean on/off toggle.",
           "type": "object",
           "properties": {
             "type": {
@@ -4132,7 +4132,7 @@
       "required": ["currentValue", "options"]
     },
     "SessionConfigBoolean": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA boolean on/off toggle session configuration option payload.",
+      "description": "A boolean on/off toggle session configuration option payload.",
       "type": "object",
       "properties": {
         "currentValue": {
@@ -6235,7 +6235,7 @@
           "x-deserialize-default-on-error": true
         },
         "session": {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSession-related capabilities supported by the client.\n\nOptional. Omitted or `null` both mean the client does not advertise any\nsession-related extensions.",
+          "description": "Session-related capabilities supported by the client.\n\nOptional. Omitted or `null` both mean the client does not advertise any\nsession-related extensions.",
           "anyOf": [
             {
               "$ref": "#/$defs/ClientSessionCapabilities"
@@ -6336,7 +6336,7 @@
       }
     },
     "ClientSessionCapabilities": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSession-related capabilities supported by the client.",
+      "description": "Session-related capabilities supported by the client.",
       "type": "object",
       "properties": {
         "configOptions": {
@@ -6360,7 +6360,7 @@
       }
     },
     "SessionConfigOptionsCapabilities": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSession configuration option capabilities supported by the client.",
+      "description": "Session configuration option capabilities supported by the client.",
       "type": "object",
       "properties": {
         "boolean": {
@@ -6384,7 +6384,7 @@
       }
     },
     "BooleanConfigOptionCapabilities": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapabilities for boolean session configuration options.\n\nSupplying `{}` means the client supports boolean session configuration options.",
+      "description": "Capabilities for boolean session configuration options.\n\nSupplying `{}` means the client supports boolean session configuration options.",
       "type": "object",
       "properties": {
         "_meta": {

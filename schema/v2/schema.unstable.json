@@ -4586,7 +4586,7 @@
           ]
         },
         {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nBoolean on/off toggle.",
+          "description": "Boolean on/off toggle.",
           "type": "object",
           "properties": {
             "type": {
@@ -4794,7 +4794,7 @@
       "required": ["currentValue", "options"]
     },
     "SessionConfigBoolean": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA boolean on/off toggle session configuration option payload.",
+      "description": "A boolean on/off toggle session configuration option payload.",
       "type": "object",
       "properties": {
         "currentValue": {

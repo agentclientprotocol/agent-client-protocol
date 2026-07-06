@@ -728,9 +728,9 @@ Sets the current value for a session configuration option.
 
 Request parameters for setting a session configuration option.
 
-**Type:** Object
+**Type:** Union
 
-**Properties:**
+**Shared properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -746,8 +746,42 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
 <ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
   The ID of the session to set the configuration option for.
 </ResponseField>
-<ResponseField name="value" type={<a href="#sessionconfigvalueid">SessionConfigValueId</a>} required>
-  The ID of the configuration option value to set.
+
+**Variants:**
+
+<ResponseField name="boolean" type="object">
+A boolean value (`type: "boolean"`).
+
+<Expandable title="Properties">
+
+<ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"boolean"`.
+</ResponseField>
+<ResponseField name="value" type={"boolean"} required>
+  The boolean value.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="value_id" type="object">
+A `SessionConfigValueId` string value.
+
+This is the default when `type` is absent on the wire. Unknown `type`
+values with string payloads also gracefully deserialize into this
+variant.
+
+<Expandable title="Properties">
+
+<ResponseField
+  name="value"
+  type={<a href="#sessionconfigvalueid">SessionConfigValueId</a>}
+  required
+>
+  The value ID.
+</ResponseField>
+
+</Expandable>
 </ResponseField>
 
 #### <span class="font-mono">SetSessionConfigOptionResponse</span>
@@ -1713,6 +1747,25 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
   URI associated with this resource or media payload.
 </ResponseField>
 
+## <span class="font-mono">BooleanConfigOptionCapabilities</span>
+
+Capabilities for boolean session configuration options.
+
+Supplying `\{\}` means the client supports boolean session configuration options.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+
+</ResponseField>
+
 ## <span class="font-mono">ClientCapabilities</span>
 
 Capabilities supported by the client.
@@ -1741,10 +1794,41 @@ Determines which file operations the agent can request.
     - Default: `{"readTextFile":false,"writeTextFile":false}`
 
 </ResponseField>
+<ResponseField name="session" type={<><span><a href="#clientsessioncapabilities">ClientSessionCapabilities</a></span><span> | null</span></>} >
+  Session-related capabilities supported by the client.
+
+Optional. Omitted or `null` both mean the client does not advertise any
+session-related extensions.
+
+</ResponseField>
 <ResponseField name="terminal" type={"boolean"} >
   Whether the Client support all `terminal/*` methods.
 
     - Default: `false`
+
+</ResponseField>
+
+## <span class="font-mono">ClientSessionCapabilities</span>
+
+Session-related capabilities supported by the client.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+
+</ResponseField>
+<ResponseField name="configOptions" type={<><span><a href="#sessionconfigoptionscapabilities">SessionConfigOptionsCapabilities</a></span><span> | null</span></>} >
+  Config option capabilities supported by the client.
+
+Omitted or `null` both mean the client does not advertise support for any
+config option extensions.
 
 </ResponseField>
 
@@ -3112,6 +3196,18 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
 
 </ResponseField>
 
+## <span class="font-mono">SessionConfigBoolean</span>
+
+A boolean on/off toggle session configuration option payload.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="currentValue" type={"boolean"} required>
+  The current value of the boolean option.
+</ResponseField>
+
 ## <span class="font-mono">SessionConfigGroupId</span>
 
 Unique identifier for a session configuration option value group.
@@ -3128,11 +3224,37 @@ Unique identifier for a session configuration option.
 
 A session configuration option selector and its current state.
 
+**Type:** Union
+
+**Shared properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+
+</ResponseField>
+<ResponseField name="category" type={<><span><a href="#sessionconfigoptioncategory">SessionConfigOptionCategory</a></span><span> | null</span></>} >
+  Optional semantic category for this option (UX only).
+</ResponseField>
+<ResponseField name="description" type={"string | null"} >
+  Optional description for the Client to display to the user.
+</ResponseField>
+<ResponseField name="id" type={<a href="#sessionconfigid">SessionConfigId</a>} required>
+  Unique identifier for the configuration option.
+</ResponseField>
+<ResponseField name="name" type={"string"} required>
+  Human-readable label for the option.
+</ResponseField>
+
+**Variants:**
+
+<ResponseField name="select" type="object">
 Single-value selector (dropdown).
 
-**Type:** Object
-
-**Properties:**
+<Expandable title="Properties">
 
 <ResponseField
   name="currentValue"
@@ -3150,6 +3272,24 @@ Single-value selector (dropdown).
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
   The discriminator value. Must be `"select"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="boolean" type="object">
+Boolean on/off toggle.
+
+<Expandable title="Properties">
+
+<ResponseField name="currentValue" type={"boolean"} required>
+  The current value of the boolean option.
+</ResponseField>
+<ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"boolean"`.
+</ResponseField>
+
+</Expandable>
 </ResponseField>
 
 ## <span class="font-mono">SessionConfigOptionCategory</span>
@@ -3184,6 +3324,32 @@ Category names that do not begin with `_` are reserved for the ACP spec.
 
 <ResponseField name="other" type="string">
   Unknown / uncategorized selector.
+</ResponseField>
+
+## <span class="font-mono">SessionConfigOptionsCapabilities</span>
+
+Session configuration option capabilities supported by the client.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+
+</ResponseField>
+<ResponseField name="boolean" type={<><span><a href="#booleanconfigoptioncapabilities">BooleanConfigOptionCapabilities</a></span><span> | null</span></>} >
+  Whether the client supports boolean session configuration options.
+
+Optional. Omitted or `null` both mean the client does not advertise support.
+Supplying `\{\}` means agents may include `type: "boolean"` entries in
+`configOptions`, and the client may send `session/set_config_option`
+requests with `type: "boolean"` and a boolean `value`.
+
 </ResponseField>
 
 ## <span class="font-mono">SessionConfigSelect</span>

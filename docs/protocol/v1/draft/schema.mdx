@@ -3210,10 +3210,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 ## <span class="font-mono">BooleanConfigOptionCapabilities</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 Capabilities for boolean session configuration options.
 
 Supplying `\{\}` means the client supports boolean session configuration options.
@@ -3340,11 +3336,7 @@ The position encodings supported by the client, in order of preference.
 
 </ResponseField>
 <ResponseField name="session" type={<><span><a href="#clientsessioncapabilities">ClientSessionCapabilities</a></span><span> | null</span></>} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Session-related capabilities supported by the client.
+  Session-related capabilities supported by the client.
 
 Optional. Omitted or `null` both mean the client does not advertise any
 session-related extensions.
@@ -3384,10 +3376,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 </ResponseField>
 
 ## <span class="font-mono">ClientSessionCapabilities</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Session-related capabilities supported by the client.
 
@@ -7131,10 +7119,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 ## <span class="font-mono">SessionConfigBoolean</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 A boolean on/off toggle session configuration option payload.
 
 **Type:** Object
@@ -7215,10 +7199,6 @@ Single-value selector (dropdown).
 </ResponseField>
 
 <ResponseField name="boolean" type="object">
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 Boolean on/off toggle.
 
 <Expandable title="Properties">
@@ -7268,10 +7248,6 @@ Category names that do not begin with `_` are reserved for the ACP spec.
 </ResponseField>
 
 ## <span class="font-mono">SessionConfigOptionsCapabilities</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Session configuration option capabilities supported by the client.
 
