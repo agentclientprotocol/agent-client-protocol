@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.4.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.3.0...v1.4.0) - 2026-07-06
+
+### Added
+
+- *(unstable)* Add descriptions to elicitation enum options ([#1397](https://github.com/agentclientprotocol/agent-client-protocol/pull/1397))
+
 ## [1.3.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.2.0...v1.3.0) - 2026-07-06
 
 ### Added

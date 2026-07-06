@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.19.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.18.0...schema-v1.19.0) - 2026-07-06
+
+### Added
+
+- *(unstable)* Add descriptions to elicitation enum options ([#1397](https://github.com/agentclientprotocol/agent-client-protocol/pull/1397))
+
 ## [1.18.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.17.0...schema-v1.18.0) - 2026-07-06
 
 ### Added
