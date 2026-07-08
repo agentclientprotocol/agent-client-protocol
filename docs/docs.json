@@ -116,7 +116,7 @@
               {
                 "group": "v2",
                 "tag": "Draft",
-                "hidden": true,
+                "expanded": true,
                 "pages": [
                   "protocol/v2/overview",
                   "protocol/v2/migration",
@@ -266,6 +266,7 @@
           {
             "group": "Announcements",
             "pages": [
+              "announcements/acp-v2-draft",
               "announcements/logout-method-stabilized",
               "announcements/session-close-stabilized",
               "announcements/session-resume-stabilized",

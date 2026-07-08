@@ -1,0 +1,79 @@
+---
+title: ACP v2 is available in Draft
+sidebarTitle: ACP v2 Draft
+description: The ACP v2 protocol documentation and schema are published in draft form for review and testing.
+---
+
+import { Author } from "/snippets/author.jsx";
+
+**Published:** July 8, 2026
+
+Today is a day the ACP team has been working towards for months, and we are excited to share the **first Draft of version 2 of the Agent Client Protocol**.
+
+Since releasing v1, we have been able to leverage the future-compatible nature of the protocol and our [RFD process](/rfds) to ship **15+ RFDs** and their related features. A huge thank you to everyone who made this possible, and also proof that we can evolve the protocol rapidly without needing to have huge migrations every few months. With agents, things are evolving rapidly, and we need to be able to evolve with it.
+
+However, it has also become clear that **some** breaking changes would not only be nice, but unlock entire new use cases and features that are hard to express in v1 of the protocol. v2 is all about making it possible to express more session states, consolidating on patterns we have found useful as we've evolved the protocol, and overall making everything more consistent.
+
+There are a lot of features we still want to add (see our [RFDs](/rfds)), and if you don't see it here, it is likely because we can still add it later via the RFD process, and possibly even in v1. The spirit of v2 was to make the necessary changes to remove any unnecessary constraints on how we can express the concept of an agentic session.
+
+I am always driven by our core design goal that as much freedom as possible should be given to both Agents and Clients in terms of how they are able to implement features on top of the protocol, and the goal of the protocol is to agree on the semantically meaningful bits we need in order to do so. Ideally, in v2, we are able to get out of your way and more flexibly represent your creative ideas for how we can all leverage agents in new ways.
+
+## The Big Themes of v2
+
+### Moving beyond the turn
+
+Agents are pushing the boundaries of what is possible, and are pushing more and more work into the background. ACP v1 kind of assumed most of this work would happen after a user-initiated message. While the ACP v1 spec didn't _prohibit_ session/updates from coming outside of the turn, it was a common point of confusion.
+
+Either way, if we want to allow for expressing queueing, steering, or receiving updates in general from work that isn't necessarily initiated by the user, we need to make it clearer that the prompt doesn't own the lifecycle. Now `session/updates` can proceed freely at any point in the session, and a prompt response is the indication that the message was acknowledged by the agent. The agent will replay the user message where it inserted it, which also makes it easier for both replay and the potential for multiple clients observing the same session, both of which were awkward with the request/response assumptions before.
+
+You can read more about this in the [new prompt lifecycle RFD](/rfds/v2/prompt).
+
+### Updates are upserts
+
+Messages, tool calls, and plans are patched by stable IDs with uniform semantics: omitted fields stay unchanged, `null` clears, values replace, and chunks append. Message IDs are now required, and whole-message updates join the existing streaming chunks.
+
+In doing so we've also allowed for streaming tool call content, and the ability to send non-streaming messages (or replacements in the case of redactions or other flows).
+
+### Diff Overhaul
+
+The `oldText`/`newText` diff is replaced by structured file changes (add, delete, modify, move, copy, plus binary and non-text cases) with optional renderable `git_patch` text.
+
+### More flexible permission requests
+
+Permission prompts carry their own required `title` and optional `description`, with an extensible `subject` union instead of a hard-wired tool call. This also opens to the door to supporting permission requests for things other than tool calls.
+
+### Forward compatibility by default
+
+One of the big goals in v1 was to also make ACP extensible, which has been hugely successful, and v2 now makes it possible to extend at just about every layer you can think of to allow for more experimentation or extension points when building tooling on top.
+
+Enum-like values and tagged unions across the schema accept unknown variants, with a `_` prefix reserved for implementation-specific extensions. This builds on the successful pattern we added for session config options and embeds it right in the schema. This makes sure new features don't cause older client and agents to choke on unknown nested data, and provides patterns for extending even more parts of the protocol where needed.
+
+## Draft status
+
+**v2 is a Draft**. I personally went through every single line of the schema at least once, if not more, and I think it is in a solid state to start testing. **However, various pieces can, and will, change before stabilization.** That is the point of the draft stage: to receive feedback before we make this stable.
+
+As you start implementing it, gate it behind the version negotiation AND feature flags. Don't ship it by default in production until we are closer to stabilization. If we're lucky, not much will need to change. But we also want to avoid causing pain for users while we all navigate implementing the necessary changes.
+
+Adding v2 support should not mean dropping v1. v1-only peers will remain common for some time, so implementers should support both versions side by side.
+
+If you maintain an Agent, Client, or SDK, the [migration guide](/protocol/v2/migration) walks through every change with before/after wire examples and per-role checklists.
+
+## Where to start
+
+- Read the [v2 protocol docs](/protocol/v2/overview) and the [migration guide](/protocol/v2/migration).
+- SDK authors can generate against the v2 JSON schemas, published in the repository alongside v1.
+- The [v2 RFD collection](/rfds/v2/overview) records the key decisions behind the larger changes.
+
+## We want your feedback
+
+This is exactly the moment where feedback has the most leverage. If something in v2 doesn't work for your implementation, tell us before it stabilizes: open an issue or discussion on [GitHub](https://github.com/agentclientprotocol/agent-client-protocol), or engage with the individual RFDs through the [RFD process](/rfds/about).
+
+I know there are a lot of changes, some big, many small. But I firmly believe the changes provide a much better foundation for us to build on. It incorporates all of the learnings we've gained in the past year, consolidates on some common patterns, and allows for much more flexibility as we all build our agentic future together.
+
+Overall, I am astounded by how many of you have been using ACP to build your agents, clients, and just about anything else you can imagine. It is a big tent, and every new use case or app that adopts it brings me joy. Your creativity keeps us going, and I am excited to see what you all can do with v2.
+
+<Author
+  name="Ben Brandt"
+  role="Zed Industries / ACP Lead Maintainer"
+  github="https://github.com/benbrandt"
+/>
