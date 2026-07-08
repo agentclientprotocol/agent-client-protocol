@@ -41,8 +41,8 @@ Nothing about v2 changes the underlying JSON-RPC framing, so a single connection
 | `session/new`                                                                                       | `mcpServers` now optional. Response no longer includes `modes`                                         |
 | `session/load`                                                                                      | **Removed**. Use `session/resume` with `"replayFrom": { "type": "start" }`                             |
 | `session/resume`                                                                                    | Gains optional `replayFrom`. Required (no capability marker)                                           |
-| `session/list`                                                                                      | Baseline no capability                                                                                 |
-| `session/close`                                                                                     | Baseline no capability                                                                                 |
+| `session/list`                                                                                      | Required. No capability                                                                                |
+| `session/close`                                                                                     | Required. No capability                                                                                |
 | `session/delete`                                                                                    | Unchanged. Still optional via `session.delete` capability                                              |
 | `session/prompt`                                                                                    | Unchanged shape. **Response semantics redesigned** (see [Prompt lifecycle](#the-new-prompt-lifecycle)) |
 | `session/cancel`                                                                                    | Unchanged name. Completion now reported via `state_update` instead of the prompt response              |

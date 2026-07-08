@@ -24,7 +24,6 @@ git_release_latest = false
 git_release_name = "Schema v{{ version }}"
 git_tag_name = "schema-v{{ version }}"
 publish = false
-release = false
 semver_check = false
 
 [[package]]
