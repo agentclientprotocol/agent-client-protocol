@@ -3,39 +3,29 @@ title: "Migrating from v1"
 description: "A complete guide to ACP v2 for implementers familiar with v1: breaking changes, new features, and step-by-step migration"
 ---
 
-ACP v2 is a consolidation release. It redesigns the prompt lifecycle around session state, unifies streaming and non-streaming updates behind upsert semantics, makes the schema forward-compatible by default, and removes protocol surface that the ecosystem had already moved away from.
+ACP v2 is a consolidation release. It redesigns the prompt lifecycle and allows for more flexible session state patterns, unifies streaming and non-streaming updates, makes the schema forward-compatible by default, and removes protocol surface that the ecosystem had already moved away from.
 
-This guide covers everything an implementer familiar with v1 needs to move an Agent or Client to v2. All examples are JSON wire messages and apply to any language.
+Migrating does not mean dropping v1. v1-only Agents and Clients will remain common for some time, so implementers should support both versions side by side: negotiate the version per connection, keep your v1 support working, and add v2 behind feature flags until it stabilizes. See [Supporting v1 and v2 side by side](#supporting-v1-and-v2-side-by-side) for how to structure this.
 
 If you only remember five things, remember these:
 
-1. **The `session/prompt` response no longer ends the turn.** It acknowledges acceptance; progress and completion arrive as `state_update` notifications, and the stop reason moved there too.
+1. **The `session/prompt` response no longer ends the turn.** It acknowledges acceptance. Progress and completion arrive as `state_update` notifications, and the stop reason moved there too.
 2. **Updates are upserts.** Messages, tool calls, and plans are patched by ID with uniform semantics: omitted field = unchanged, `null` = cleared, value = replaced, chunks append.
 3. **The Client file system, terminal, and session modes APIs are gone.** Use client-provided MCP servers and session config options instead.
 4. **Capabilities were reorganized.** One `capabilities` + required `info` field on both sides, session-scoped groups nested under `session`, object support markers instead of booleans, and a required baseline of session methods.
-5. **Everything is extensible now.** Enums and tagged unions accept unknown values; `_`-prefixed values are yours, the rest are reserved for future ACP versions.
-
-The rest of this guide walks through each area: the [at-a-glance tables](#at-a-glance) for a quick diff, one section per change with before/after wire messages, and [step-by-step checklists](#migration-checklist-agents) and [common mistakes](#common-migration-mistakes) at the end.
+5. **Everything is extensible now.** Enums and tagged unions accept unknown values. `_`-prefixed values are yours, the rest are reserved for future ACP versions.
 
 ## Scope: stable v2 and draft surfaces
 
-This guide describes the stable v2 baseline (`schema/v2/schema.json`). The v2 protocol surface as a whole is still labeled draft, so gate v2 support behind explicit version negotiation and feature flags until it stabilizes.
+This guide describes the stable v2 baseline (`schema/v2/schema.json`). The v2 protocol surface as a whole is still labeled draft, so gate **v2 support behind explicit version negotiation and feature flags until it stabilizes.**
 
-The unstable schema (`schema/v2/schema.unstable.json`) layers opt-in draft features on top of that baseline. Negotiating `protocolVersion: 2` does **not** imply any of them — gate each behind its own capability or feature flag, and keep stable-v2 and unstable-v2 test fixtures separate. Draft-only surfaces currently include:
-
-- Provider configuration (`providers/list`, `providers/set`, `providers/disable`)
-- Session forking (`session/fork` and `session.fork`)
-- ACP-tunneled MCP servers (`session.mcp.acp` with `mcp/connect`, `mcp/message`, `mcp/disconnect`)
-- Client elicitation (`elicitation/create`, `elicitation/complete`)
-- Next Edit Suggestions and document sync (`nes/*`, `document/*`, and position-encoding negotiation)
-- The `env_var` and `terminal` auth method types and the Client auth capabilities backing them
-- Boolean session config options
-- `file` and `markdown` plan content types
-- Token `usage` on idle `state_update` notifications
+The unstable schema (`schema/v2/schema.unstable.json`) layers opt-in draft features on top of that baseline. Negotiating `protocolVersion: 2` does **not** imply any of them. Gate each behind its own capability or feature flag the same as v1.
 
 ## Version negotiation
 
 The mechanism is unchanged: the Client sends the latest protocol version it supports in `initialize`, and the Agent responds with the same version if supported, or its own latest version otherwise. To use v2, send `"protocolVersion": 2`. An Agent that only supports v1 will answer with `"protocolVersion": 1`, and the Client decides whether to continue with v1 or disconnect.
+
+Treat v2 support as additive. Keep serving `protocolVersion: 1` peers when you add v2: an Agent that drops v1 cuts itself off from existing Clients, and a Client that drops v1 loses access to existing Agents. Each side selects its v1 or v2 surface per connection based on the negotiated version.
 
 Nothing about v2 changes the underlying JSON-RPC framing, so a single connection always speaks exactly one negotiated version after `initialize`.
 
@@ -45,58 +35,49 @@ Nothing about v2 changes the underlying JSON-RPC framing, so a single connection
 
 | v1 method                                                                                           | v2                                                                                                     |
 | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `initialize`                                                                                        | Unchanged name; params and result restructured                                                         |
+| `initialize`                                                                                        | Unchanged name. Params and result restructured                                                         |
 | `authenticate`                                                                                      | Renamed to `auth/login`                                                                                |
-| `logout` (gated by `agentCapabilities.auth.logout`)                                                 | Renamed to `auth/logout`; always required, no capability marker                                        |
-| `session/new`                                                                                       | Unchanged name; `mcpServers` now optional; response no longer includes `modes`                         |
-| `session/load`                                                                                      | **Removed** — use `session/resume` with `"replayFrom": { "type": "start" }`                            |
-| `session/resume`                                                                                    | Unchanged name; gains optional `replayFrom`; baseline (no capability marker)                           |
-| `session/list`, `session/close`                                                                     | Baseline when `capabilities.session` is present (no capability markers)                                |
-| `session/delete`                                                                                    | Unchanged; still optional via `session.delete` capability                                              |
-| `session/prompt`                                                                                    | Unchanged shape; **response semantics redesigned** (see [Prompt lifecycle](#the-new-prompt-lifecycle)) |
-| `session/cancel`                                                                                    | Unchanged name; completion now reported via `state_update` instead of the prompt response              |
-| `session/set_mode`                                                                                  | **Removed** — use `session/set_config_option`                                                          |
+| `logout` (gated by `agentCapabilities.auth.logout`)                                                 | Renamed to `auth/logout`. Always required, no capability                                               |
+| `session/new`                                                                                       | `mcpServers` now optional. Response no longer includes `modes`                                         |
+| `session/load`                                                                                      | **Removed**. Use `session/resume` with `"replayFrom": { "type": "start" }`                             |
+| `session/resume`                                                                                    | Gains optional `replayFrom`. Required (no capability marker)                                           |
+| `session/list`                                                                                      | Baseline no capability                                                                                 |
+| `session/close`                                                                                     | Baseline no capability                                                                                 |
+| `session/delete`                                                                                    | Unchanged. Still optional via `session.delete` capability                                              |
+| `session/prompt`                                                                                    | Unchanged shape. **Response semantics redesigned** (see [Prompt lifecycle](#the-new-prompt-lifecycle)) |
+| `session/cancel`                                                                                    | Unchanged name. Completion now reported via `state_update` instead of the prompt response              |
+| `session/set_mode`                                                                                  | **Removed**. Use `session/set_config_option`                                                           |
 | `session/set_config_option`                                                                         | Unchanged                                                                                              |
-| `session/request_permission`                                                                        | Unchanged name; params restructured (required `title`, optional `subject`)                             |
-| `session/update`                                                                                    | Unchanged name; update variants changed (see below)                                                    |
+| `session/request_permission`                                                                        | Unchanged name. Params restructured (required `title`, optional `subject`)                             |
+| `session/update`                                                                                    | Unchanged name. Update variants changed (see below)                                                    |
 | `fs/read_text_file`, `fs/write_text_file`                                                           | **Removed**                                                                                            |
 | `terminal/create`, `terminal/output`, `terminal/release`, `terminal/wait_for_exit`, `terminal/kill` | **Removed**                                                                                            |
 | `$/cancel_request`                                                                                  | Unchanged                                                                                              |
 
 ### `session/update` variant changes
 
-| v1 `sessionUpdate`          | v2                                                                                  |
-| --------------------------- | ----------------------------------------------------------------------------------- |
-| `user_message_chunk`        | Kept; `messageId` now required                                                      |
-| `agent_message_chunk`       | Kept; `messageId` now required                                                      |
-| `agent_thought_chunk`       | Kept; `messageId` now required                                                      |
-| —                           | **New:** `user_message`, `agent_message`, `agent_thought` whole-message upserts     |
-| —                           | **New:** `state_update` (`running`, `idle`, `requires_action`) with stop reasons    |
-| `tool_call`                 | **Removed** — the first `tool_call_update` for a `toolCallId` creates the tool call |
-| `tool_call_update`          | Kept; now an explicit upsert with omit/`null`/value patch semantics                 |
-| —                           | **New:** `tool_call_content_chunk` for streaming individual content items           |
-| `plan`                      | Replaced by `plan_update` with a `planId` and a `type` discriminator                |
-| `current_mode_update`       | **Removed** — modes are config options; use `config_option_update`                  |
-| `available_commands_update` | Kept; command `input` now carries a required `type` discriminator                   |
-| `config_option_update`      | Unchanged                                                                           |
-| `session_info_update`       | Unchanged                                                                           |
-| `usage_update`              | Unchanged                                                                           |
-
-## Suggested migration order
-
-1. Add `protocolVersion: 2` negotiation and route each connection to a separate v1 or v2 protocol surface after `initialize`.
-2. Update `initialize` params/results and all capability checks.
-3. Remove v1-only surfaces from v2 code paths: `fs/*`, `terminal/*`, session modes, `session/load`.
-4. Rework prompt handling around `state_update` instead of the `session/prompt` response.
-5. Convert message, tool-call, and plan handling to keyed upserts.
-6. Update permissions, diffs, MCP configs, and slash-command input.
-7. Make parsing forward-compatible (open enums, batch arrays) and add v2 fixtures covering the full prompt lifecycle, replay, cancellation, permissions, and diff rendering.
+| v1 `sessionUpdate`          | v2                                                                                 |
+| --------------------------- | ---------------------------------------------------------------------------------- |
+| `user_message_chunk`        | Kept. `messageId` now required                                                     |
+| `agent_message_chunk`       | Kept. `messageId` now required                                                     |
+| `agent_thought_chunk`       | Kept. `messageId` now required                                                     |
+| -                           | **New:** `user_message`, `agent_message`, `agent_thought` whole-message upserts    |
+| -                           | **New:** `state_update` (`running`, `idle`, `requires_action`) with stop reasons   |
+| `tool_call`                 | **Removed**. The first `tool_call_update` for a `toolCallId` creates the tool call |
+| `tool_call_update`          | Kept. Now an explicit upsert with omit/`null`/value patch semantics                |
+| -                           | **New:** `tool_call_content_chunk` for streaming individual content items          |
+| `plan`                      | Replaced by `plan_update` with a `planId` and a `type` discriminator               |
+| `current_mode_update`       | **Removed**. Modes are config options. Use `config_option_update`                  |
+| `available_commands_update` | Kept. Command `input` now carries a required `type` discriminator                  |
+| `config_option_update`      | Unchanged                                                                          |
+| `session_info_update`       | Unchanged                                                                          |
+| `usage_update`              | Unchanged                                                                          |
 
 ## Initialization
 
 ### Role-agnostic `info` and `capabilities`
 
-v1 used role-specific field names: the Client sent `clientCapabilities` and optional `clientInfo`, and the Agent returned `agentCapabilities` and optional `agentInfo`. v2 uses the same two field names in both directions — `capabilities` and `info` — and `info` is now **required** on both sides. This keeps symmetric connections (such as agent-to-agent) from needing role-specific names.
+v1 used role-specific field names: the Client sent `clientCapabilities` and optional `clientInfo`, and the Agent returned `agentCapabilities` and optional `agentInfo`. v2 uses the same two field names in both directions (`capabilities` and `info`), and `info` is now **required** on both sides.
 
 <CodeGroup>
 
@@ -193,17 +174,33 @@ v1 used role-specific field names: the Client sent `clientCapabilities` and opti
 
 ### Support markers are objects, not booleans
 
-In v1, capability support was a mix of booleans (`"image": true`) and objects (`"list": {}`). In v2, every support marker is an object: supplying `{}` (or an object with fields) means supported, and omitting the key or supplying `null` means unsupported. Booleans remain appropriate only for actual data or configuration _inside_ an already-advertised capability.
+In v1, capability support was a mix of booleans (`"image": true`) and objects (`"list": {}`). In v2, every support marker is an object: supplying `{}` (or an object with fields) means supported, and omitting the key or supplying `null` means unsupported.
 
-This means checks like `promptCapabilities.image === true` become presence checks: `capabilities.session.prompt.image != null`. The object shape leaves room for each capability to grow fields without another breaking change.
+This means checks like `promptCapabilities.image === true` become presence checks: `capabilities.session.prompt.image != null`. The object shape leaves room for each capability to grow fields or extend with `_meta` without another breaking change.
 
 ### Capability reorganization
 
 - All session-scoped capability groups now live under `capabilities.session`. What was `agentCapabilities.promptCapabilities` is now `capabilities.session.prompt`, and `agentCapabilities.mcpCapabilities` is now `capabilities.session.mcp`.
-- `capabilities.session` itself is **optional**, so agents that don't do session-based prompting (for example, agents that only serve specialized extension surfaces) can omit it entirely.
+- `capabilities.session` itself is **optional**, so agents that don't do session-based prompting (for example, agents that only serve specialized extension surfaces) can omit it entirely. Currently there isn't protocol support for this, but several experiments are in flight and we are making sure non-session components can be expressed via capabilities.
 - `loadSession` is gone along with `session/load` (see [Session setup](#session-setup-and-lifecycle)).
 - The individual `list`, `resume`, and `close` markers are gone: advertising `capabilities.session` at all now **requires** supporting the baseline methods `session/new`, `session/list`, `session/resume`, `session/close`, `session/prompt`, `session/cancel`, and `session/update`. Optional extras such as `session.delete`, `session.additionalDirectories`, `session.prompt`, and `session.mcp` keep their own markers.
-- The v1 Client capabilities `fs` and `terminal` are removed entirely (see [Client file system and terminals](#client-file-system-and-terminals-removed)). Stable v2 currently defines no standard Client capability fields; the object remains as an extension point.
+- The v1 Client capabilities `fs` and `terminal` are removed entirely (see [Client file system and terminals](#client-file-system-and-terminals-removed)). Stable v2 currently defines no standard Client capability fields.
+
+## Authentication
+
+The auth methods are grouped under an `auth/` prefix:
+
+- `authenticate` → `auth/login`. The params are unchanged (`methodId` selecting one of the advertised auth methods). The descriptor's identifier field is renamed from `id` to `methodId` to match, and its `type` discriminator is now required.
+- `logout` → `auth/logout`. In v1, logout support was opt-in via a capability marker. In v2, **every Agent must implement `auth/logout`**. There is no support marker. Agents with no authentication state simply return an empty result.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "auth/login",
+  "params": { "methodId": "agent-login" }
+}
+```
 
 ### Auth methods
 
@@ -218,23 +215,7 @@ Each entry in `authMethods` now uses `methodId` instead of `id`, and carries a r
 }
 ```
 
-Stable v2 defines `type: "agent"`. Custom types **MUST** begin with `_`; unknown values without a leading `_` are reserved for future ACP versions.
-
-## Authentication
-
-The auth methods are grouped under an `auth/` prefix:
-
-- `authenticate` → `auth/login`. The params are unchanged (`methodId` selecting one of the advertised auth methods); the descriptor's identifier field is renamed from `id` to `methodId` to match, and its `type` discriminator is now required.
-- `logout` → `auth/logout`. In v1, logout support was opt-in via a capability marker. In v2, **every Agent must implement `auth/logout`**; there is no support marker. Agents with no authentication state simply return an empty result.
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "method": "auth/login",
-  "params": { "methodId": "agent-login" }
-}
-```
+Stable v2 defines `type: "agent"`. Custom types **MUST** begin with `_`. Unknown values without a leading `_` are reserved for future ACP versions.
 
 ## The new prompt lifecycle
 
@@ -311,11 +292,11 @@ Everything else happens through `session/update` notifications:
 
 `state_update` is new in v2 and carries one of three stable states (extensible like all v2 enums):
 
-- `running` — the Agent is actively processing work in the session.
-- `idle` — the Agent is not currently processing work. Carries a `stopReason` when it completes active work.
-- `requires_action` — the Agent is blocked on user action. Agents **SHOULD** send this while waiting on a permission response, and another `running` update when they resume.
+- `running`: the Agent is actively processing work in the session.
+- `idle`: the Agent is not currently processing work. Carries a `stopReason` when it completes active work.
+- `requires_action`: the Agent is blocked on user action. Agents **SHOULD** send this while waiting on a permission response, and another `running` update when they resume.
 
-The stop reasons themselves are unchanged from v1 — `end_turn`, `max_tokens`, `max_turn_requests`, `refusal`, `cancelled` — they just moved from the `session/prompt` response to the idle `state_update`.
+The stop reasons themselves are unchanged from v1 (`end_turn`, `max_tokens`, `max_turn_requests`, `refusal`, `cancelled`). They just moved from the `session/prompt` response to the idle `state_update`.
 
 ### Cancellation
 
@@ -323,31 +304,31 @@ The stop reasons themselves are unchanged from v1 — `end_turn`, `max_tokens`, 
 
 ### Why this matters beyond bookkeeping
 
-Because turn progress is now expressed entirely in notifications, the same message flow works for history replay on `session/resume`, for multiple clients observing one session, and for future agent-initiated or queued work — none of which fit the v1 request/response turn model.
+Because turn progress is now expressed entirely in notifications, the same message flow works for history replay on `session/resume`, for multiple clients observing one session, and for future agent-initiated or queued work, none of which fit the v1 request/response turn model.
 
 ## Messages and message IDs
 
 ### Message IDs are required
 
-Every message chunk and message update in v2 **MUST** carry a `messageId`. In v1, `messageId` was optional on chunks. Message IDs are opaque strings generated by the Agent — the Agent owns session history, so it is the single source of message identity. All chunks of one message share one `messageId`; a changed `messageId` starts a new message.
+Every message chunk and message update in v2 **MUST** carry a `messageId`. In v1, `messageId` was optional on chunks. Message IDs are opaque strings generated by the Agent: the Agent owns session history, so it is the single source of message identity. All chunks of one message share one `messageId`. A changed `messageId` starts a new message.
 
 ### Whole-message upserts
 
 Alongside the chunk updates, v2 adds `user_message`, `agent_message`, and `agent_thought` updates that carry a full `content` **array** (chunks carry a single content block). These are upserts keyed by `messageId`, with three-state patch semantics:
 
-- **Omitted** `content` — leave existing content unchanged (useful for updating `_meta` or other fields without resending content).
-- `content: null` **or** `content: []` — clear the message content.
-- **Concrete array** — replace all content currently stored for that message, including content accumulated from earlier chunks.
+- **Omitted** `content` leaves existing content unchanged (useful for updating `_meta` or other fields without resending content).
+- `content: null` **or** `content: []` clears the message content.
+- A **concrete array** replaces all content currently stored for that message, including content accumulated from earlier chunks.
 
 Chunks always **append** to whatever content is current. For example: `agent_message` with `content: [A]`, then `agent_message_chunk` with `B` renders as `[A, B]`. A later `agent_message` with `content: [C]` resets the message to `[C]`, and subsequent chunks append to that.
 
-Use chunks for streaming; use whole-message updates for replay, correction, or output that is already complete.
+Use chunks for streaming. Use whole-message updates for replay, correction, or output that is already complete.
 
 ## Tool calls
 
 ### One upsert notification
 
-v1 had `tool_call` (create) and `tool_call_update` (modify). In practice the split bought nothing, so v2 keeps only `tool_call_update`. The first update with an unseen `toolCallId` creates the tool call; subsequent updates patch it. Only `toolCallId` is required, but the Agent **SHOULD** include `title` on the first report:
+v1 had `tool_call` (create) and `tool_call_update` (modify). In practice the split bought nothing, so v2 keeps only `tool_call_update`. The first update with an unseen `toolCallId` creates the tool call. Subsequent updates patch it. Only `toolCallId` is required, but the Agent **SHOULD** include `title` on the first report:
 
 ```json
 {
@@ -376,7 +357,7 @@ v2 adds `tool_call_content_chunk`, which **appends** a single `ToolCallContent` 
 }
 ```
 
-Chunks and updates compose exactly like message chunks and updates: a `tool_call_update` that includes `content` replaces the accumulated content; later chunks append to it.
+Chunks and updates compose exactly like message chunks and updates: a `tool_call_update` that includes `content` replaces the accumulated content. Later chunks append to it.
 
 ### Terminal content removed
 
@@ -384,7 +365,7 @@ The v1 `ToolCallContent` variant `{ "type": "terminal", "terminalId": ... }` is 
 
 ## Diff content
 
-The v1 diff shape — a single `path` with `oldText`/`newText` — could not distinguish a deleted file from an emptied one, had no way to express renames, copies, or binary changes, and forced clients to compute renderable diffs themselves. v2 replaces it with structured changes plus optional renderable patch text:
+The v1 diff shape (a single `path` with `oldText`/`newText`) could not distinguish a deleted file from an emptied one, had no way to express renames, copies, or binary changes, and forced clients to compute renderable diffs themselves. v2 replaces it with structured changes plus optional renderable patch text:
 
 ```json
 {
@@ -404,8 +385,8 @@ The v1 diff shape — a single `path` with `oldText`/`newText` — could not dis
 }
 ```
 
-- `changes` (required) is a list of file-level operations. `add`, `delete`, and `modify` carry a `path`; `move` and `copy` carry `oldPath` and `path`. Each change may carry an optional `fileType` (`text`, `binary`, `directory`, `symlink`) and `mimeType`. Clients can build file trees and summaries from `changes` without parsing any patch text.
-- `patch` (optional) carries renderable patch text with a `format` discriminator; stable v2 defines `git_patch`. Agents **SHOULD** provide `patch` whenever feasible; Clients **MUST** handle diffs where `patch` is omitted or `null` (binary changes, symlink retargets, and similar cases have no useful text rendering).
+- `changes` (required) is a list of file-level operations. `add`, `delete`, and `modify` carry a `path`. `move` and `copy` carry `oldPath` and `path`. Each change may carry an optional `fileType` (`text`, `binary`, `directory`, `symlink`) and `mimeType`. Clients can build file trees and summaries from `changes` without parsing any patch text.
+- `patch` (optional) carries renderable patch text with a `format` discriminator. Stable v2 defines `git_patch`. Agents **SHOULD** provide `patch` whenever feasible. Clients **MUST** handle diffs where `patch` is omitted or `null` (binary changes, symlink retargets, and similar cases have no useful text rendering).
 
 A deleted file is now simply:
 
@@ -422,7 +403,7 @@ A deleted file is now simply:
 }
 ```
 
-There is no mechanical mapping from v2 diffs back to `oldText`/`newText` — when migrating a v1 client, replace your diff rendering with a git-patch renderer driven by `patch`, using `changes` for headers, file trees, and non-text cases.
+There is no mechanical mapping from v2 diffs back to `oldText`/`newText`. When migrating a v1 client, replace your diff rendering with a git-patch renderer driven by `patch`, using `changes` for headers, file trees, and non-text cases.
 
 ## Permission requests
 
@@ -454,9 +435,9 @@ There is no mechanical mapping from v2 diffs back to `oldText`/`newText` — whe
 }
 ```
 
-- `title` is **required** — human-readable text for the permission prompt itself. It does not update any tool call's displayed title.
+- `title` is **required**: human-readable text for the permission prompt itself. It does not update any tool call's displayed title.
 - `description` is optional supporting copy.
-- `subject` is an optional tagged union describing _what_ needs permission. Stable v2 defines `type: "tool_call"`, whose `toolCall` payload is the same `ToolCallUpdate` upsert shape used in session updates — so any fields it carries patch the referenced tool call's displayed state, exactly like a `tool_call_update` would. Requests may omit `subject` entirely for approvals that aren't about a tool call, and unknown subject types should be preserved when proxying and either rendered generically or declined by policy.
+- `subject` is an optional tagged union describing _what_ needs permission. Stable v2 defines `type: "tool_call"`, whose `toolCall` payload is the same `ToolCallUpdate` upsert shape used in session updates, so any fields it carries patch the referenced tool call's displayed state, exactly like a `tool_call_update` would. Requests may omit `subject` entirely for approvals that aren't about a tool call, and unknown subject types should be preserved when proxying and either rendered generically or declined by policy.
 
 In v1, agents routinely stuffed permission prompt text into the tool call's `title`, mutating displayed tool state as a side effect. In v2, put prompt copy in `title`/`description` and let `subject.toolCall` carry only genuine tool-call state.
 
@@ -502,11 +483,11 @@ The v1 `plan` update was a flat entries list with no identity and no room to gro
 
 </CodeGroup>
 
-Stable v2 defines the `items` plan type; the entry shape (`content`, `priority`, `status`, all required) is unchanged from v1, and entry priorities and statuses are now extensible enums. Each `plan_update` for a given `planId` replaces that plan's entries, and the `planId` allows multiple plans per session and future plan content types (such as markdown or file-backed plans, which remain unstable) without another breaking change.
+Stable v2 defines the `items` plan type. The entry shape (`content`, `priority`, `status`, all required) is unchanged from v1, and entry priorities and statuses are now extensible enums. Each `plan_update` for a given `planId` replaces that plan's entries, and the `planId` allows multiple plans per session and future plan content types (such as markdown or file-backed plans, which remain unstable) without another breaking change.
 
 ## Session setup and lifecycle
 
-### `session/load` is gone; `session/resume` does both
+### `session/load` is gone. `session/resume` does both
 
 v1 had two ways to reattach to a session: `session/load` (replays full history, gated by `loadSession`) and `session/resume` (no replay, gated by `sessionCapabilities.resume`). v2 keeps only `session/resume` with an optional `replayFrom` cursor:
 
@@ -530,9 +511,9 @@ The cursor is a tagged union so future versions can add replay-from-a-point vari
 
 ### Consistent lifecycle requests
 
-`session/new` and `session/resume` take the same shape of environment parameters: a required `cwd` (absolute path), plus optional `additionalDirectories` and `mcpServers`. Note that `mcpServers` was required (even if empty) on `session/new` in v1 and is now optional; omitting it and sending `[]` are equivalent. Both responses carry the session's `configOptions`; neither carries `modes` anymore.
+`session/new` and `session/resume` take the same shape of environment parameters: a required `cwd` (absolute path), plus optional `additionalDirectories` and `mcpServers`. Note that `mcpServers` was required (even if empty) on `session/new` in v1 and is now optional. Omitting it and sending `[]` are equivalent. Both responses carry the session's `configOptions`. Neither carries `modes` anymore.
 
-`additionalDirectories` still requires the `session.additionalDirectories` capability and absolute paths, and each `session/resume` must send the full intended additional-root list — omitting the field or sending `[]` activates no additional roots rather than restoring previous ones.
+`additionalDirectories` still requires the `session.additionalDirectories` capability and absolute paths, and each `session/resume` must send the full intended additional-root list. Omitting the field or sending `[]` activates no additional roots rather than restoring previous ones.
 
 ### Baseline methods
 
@@ -540,7 +521,7 @@ As covered under [Initialization](#capability-reorganization), advertising `capa
 
 ## Session modes become config options
 
-The dedicated modes API is removed: the `modes` field on session responses, `session/set_mode`, the `current_mode_update` notification, and all `SessionMode*` types. Mode-like state — and model selection, thinking level, and similar knobs — is expressed through session config options, which already existed in v1:
+The dedicated modes API is removed: the `modes` field on session responses, `session/set_mode`, the `current_mode_update` notification, and all `SessionMode*` types. Mode-like state (and model selection, thinking level, and similar knobs) is expressed through session config options, which already existed in v1:
 
 ```json
 {
@@ -557,7 +538,7 @@ The dedicated modes API is removed: the `modes` field on session responses, `ses
 ```
 
 - The option's identifier field is renamed from `id` to `configId`, matching the parameter name used by `session/set_config_option`.
-- The stable `category` values are `mode`, `model`, `model_config`, and `thought_level`; clients can use them for UX affordances (placement, shortcuts) and must tolerate unknown categories.
+- The stable `category` values are `mode`, `model`, `model_config`, and `thought_level`. Clients can use them for UX affordances (placement, shortcuts) and must tolerate unknown categories.
 - Clients change values with `session/set_config_option` (`sessionId`, `configId`, `value`), and the response returns the full updated `configOptions` array, since one change can affect other options. Agent-initiated changes arrive as `config_option_update` session updates, which replace the v1 `current_mode_update`.
 
 ## Client file system and terminals removed
@@ -568,13 +549,13 @@ v2 removes the entire v1 Client-provided execution surface:
 - `clientCapabilities.terminal` and the `terminal/create`, `terminal/output`, `terminal/release`, `terminal/wait_for_exit`, `terminal/kill` methods
 - The `terminal` tool-call content type
 
-In practice this surface was inconsistently implemented outside of a few IDEs, and agents already needed their own file and execution handling for clients that didn't offer it. Clients that want to expose file access, unsaved editor state, or command execution to agents should do so by providing an **MCP server** to the session (via `mcpServers` on `session/new` / `session/resume`), which puts those tools on the same footing as every other tool the agent uses. Agent-side, drop the capability checks and the dual code paths; report file changes through [diff content](#diff-content) and command output through regular tool-call content.
+In practice this surface was inconsistently implemented outside of a few IDEs, and agents already needed their own file and execution handling for clients that didn't offer it. Clients that want to expose file access, unsaved editor state, or command execution to agents should do so by providing an **MCP server** to the session (via `mcpServers` on `session/new` / `session/resume`), which puts those tools on the same footing as every other tool the agent uses. Agent-side, drop the capability checks and the dual code paths. Report file changes through [diff content](#diff-content) and command output through regular tool-call content.
 
 ## MCP server configuration
 
 MCP transport configuration is aligned with the current MCP transport model:
 
-- Every server config **MUST** carry a `type` discriminator. In v1, stdio configs had no `type` field; in v2 they are `"type": "stdio"`. Unknown transport types can then be carried as extension variants instead of failing to parse.
+- Every server config **MUST** carry a `type` discriminator. In v1, stdio configs had no `type` field. In v2 they are `"type": "stdio"`. Unknown transport types can then be carried as extension variants instead of failing to parse.
 - The deprecated HTTP+SSE transport (`"type": "sse"`) is **removed**.
 - Support is advertised per transport under `capabilities.session.mcp`: `stdio` is now an explicit capability (`session.mcp.stdio`), so agents that cannot launch subprocesses can opt out, and `session.mcp.http` covers remote servers.
 - Empty arrays are no longer required: `args` and `env` on stdio configs and `headers` on HTTP configs are optional in v2 (v1 required `args` and `env` even when empty).
@@ -599,7 +580,7 @@ MCP transport configuration is aligned with the current MCP transport model:
 
 ## Content blocks
 
-The five content block types are unchanged: `text`, `image`, `audio`, `resource_link`, and `resource`. v2 realigns their fields with the latest MCP specification — notably, `resource_link` gains an optional `icons` array (each icon has a required `src` URI plus optional `mimeType`, `sizes`, and `theme` of `light`/`dark`) — and the `type` discriminator is extensible like every other v2 enum, so unknown block types no longer break deserialization for receivers that have a fallback.
+The five content block types are unchanged: `text`, `image`, `audio`, `resource_link`, and `resource`. v2 realigns their fields with the latest MCP specification. Notably, `resource_link` gains an optional `icons` array (each icon has a required `src` URI plus optional `mimeType`, `sizes`, and `theme` of `light`/`dark`), and the `type` discriminator is extensible like every other v2 enum, so unknown block types no longer break deserialization for receivers that have a fallback.
 
 If you maintain a validator or generated models, v2 also tightens schema-level details that v1 left loose: base64 payloads (image/audio `data`, resource `blob`) are marked `format: "byte"`, URI fields are marked `format: "uri"`, and `annotations.priority` is bounded to the inclusive range 0–1.
 
@@ -627,7 +608,7 @@ The advertisement model (`available_commands_update` carrying commands with `nam
 
 </CodeGroup>
 
-As with other extensible unions, unknown input types should be preserved when proxying; a client that can't render one can fall back to plain text input or hide the command's input hint.
+As with other extensible unions, unknown input types should be preserved when proxying. A client that can't render one can fall back to plain text input or hide the command's input hint.
 
 ## Consistent ID naming
 
@@ -639,7 +620,7 @@ v2 applies one naming rule across the schema: a field that identifies a protocol
 | Session config option       | `id`    | `configId` |
 | Session config select group | `group` | `groupId`  |
 
-New entities introduced in v2 follow the same rule (`messageId` on messages, `planId` on plans). If you generate types from the schema, expect these renames to surface as compile-time breaks — a good checklist by itself.
+New entities introduced in v2 follow the same rule (`messageId` on messages, `planId` on plans).
 
 A few schema definition names also changed without any wire-format change, which matters only to schema-codegen consumers: the `session/update` and `session/cancel` payload types are now `UpdateSessionNotification` and `CancelSessionNotification`, and the auth request/response types follow the new method names (`LoginAuthRequest`/`LoginAuthResponse`, `LogoutAuthRequest`/`LogoutAuthResponse`).
 
@@ -647,85 +628,58 @@ A few schema definition names also changed without any wire-format change, which
 
 v2 makes the whole schema forward-compatible by convention:
 
-- **Open enums and tagged unions.** Every enum-like string (`sessionUpdate`, tool `kind`, tool `status`, stop reasons, plan types and entry priorities/statuses, content types, content roles, diff operations and file types, permission subjects, permission option kinds and outcomes, auth method types, config option types and categories, command input types, MCP transports, …) accepts unknown values. Values beginning with `_` are reserved for implementation-specific extensions (e.g. `_mycompany_widget`); unknown values _without_ a leading `_` are reserved for future ACP versions. Receivers **SHOULD** preserve unknown values when storing, replaying, proxying, or forwarding, and either render them generically or fall back safely. Do not mint non-underscore custom values.
+- **Open enums and tagged unions.** Every enum-like string accepts unknown values. Values beginning with `_` are reserved for implementation-specific extensions (e.g. `_mycompany_widget`). Unknown values _without_ a leading `_` are reserved for future ACP versions. Receivers **SHOULD** preserve unknown values when storing, replaying, proxying, or forwarding, and either render them generically or fall back safely. Do not mint non-underscore custom values.
 - **`_meta` everywhere.** As in v1, `_meta` objects carry implementation metadata. In v2's upsert-style updates, `_meta` follows the same patch semantics as other fields: omitted means unchanged, `null` clears. Chunk-level `_meta` is scoped to the chunk.
 - **Custom methods** still use the `_` prefix, unchanged from v1.
-- **Explicit nullability.** Throughout the v2 schema, optional fields document whether `null` is equivalent to omission; for upsert payloads they are deliberately different (omitted = unchanged, `null` = clear).
 
 ## Transports
 
-stdio remains the primary transport and is unchanged except that v2 explicitly follows **JSON-RPC 2.0 batch** behavior: a newline-delimited message may be a single request, notification, response, or a batch array. Receivers may process batch entries concurrently, must not reply to notifications, and return per-entry `-32600` errors for invalid entries. Don't batch lifecycle-sensitive messages (`initialize`, `auth/login`, `session/new`, `session/resume`, `session/prompt`) — they change which later messages are valid.
+stdio remains the primary transport and is unchanged except that v2 explicitly follows **JSON-RPC 2.0 batch** behavior: a newline-delimited message may be a single request, notification, response, or a batch array. Receivers may process batch entries concurrently, must not reply to notifications, and return per-entry `-32600` errors for invalid entries. Don't batch lifecycle-sensitive messages (`initialize`, `auth/login`, `session/new`, `session/resume`, `session/prompt`). They change which later messages are valid.
 
-A standard remote transport (streamable HTTP with SSE streams, plus WebSocket) is being specified in its own RFD and is not part of the core v2 protocol surface; see the [transport RFD](/rfds/streamable-http-websocket-transport) for its current state.
+A standard remote transport (streamable HTTP with SSE streams, plus WebSocket) is being specified in its own RFD and is not part of the core v2 protocol surface. See the [transport RFD](/rfds/streamable-http-websocket-transport) for its current state.
 
 ## Migration checklist: Agents
 
-1. **Initialization.** Read `params.capabilities` / `params.info`; return `capabilities` and a required `info`. Restructure your capability object: nest prompt and MCP capabilities under `session`, convert boolean markers to `{}` objects, drop `loadSession` and the `list`/`resume`/`close` markers.
+1. **Initialization.** Read `params.capabilities` / `params.info`. Return `capabilities` and a required `info`. Restructure your capability object: nest prompt and MCP capabilities under `session`, convert boolean markers to `{}` objects, drop `loadSession` and the `list`/`resume`/`close` markers.
 2. **Implement the baseline.** If you advertise `session`, implement `session/new`, `session/list`, `session/resume`, `session/close`, `session/prompt`, `session/cancel`, and `session/update`.
-3. **Auth.** Rename `authenticate` → `auth/login`; implement `auth/logout` unconditionally; add `type` and `methodId` to your auth method descriptors.
-4. **Prompt lifecycle.** Respond to `session/prompt` immediately with `{}` on acceptance. Emit a `user_message` acknowledgment with an agent-generated `messageId`, a `running` state update when processing starts, and an idle `state_update` carrying the stop reason when the work completes — including `cancelled` after `session/cancel`.
+3. **Auth.** Rename `authenticate` → `auth/login`. Implement `auth/logout` unconditionally. Add `type` and `methodId` to your auth method descriptors.
+4. **Prompt lifecycle.** Respond to `session/prompt` immediately with `{}` on acceptance. Emit a `user_message` acknowledgment with an agent-generated `messageId`, a `running` state update when processing starts, and an idle `state_update` carrying the stop reason when the work completes, including `cancelled` after `session/cancel`.
 5. **Message IDs.** Generate and attach a `messageId` to every message chunk and update.
-6. **Tool calls.** Stop sending `tool_call`; send `tool_call_update` for creation and patches. Use `tool_call_content_chunk` to stream content. Respect omit/`null`/value patch semantics.
+6. **Tool calls.** Stop sending `tool_call`. Send `tool_call_update` for creation and patches. Use `tool_call_content_chunk` to stream content. Respect omit/`null`/value patch semantics.
 7. **Diffs.** Replace `oldText`/`newText` with `changes` (+ `fileType`/`mimeType` where known) and provide a `git_patch` whenever feasible.
-8. **Permissions.** Put prompt copy in required `title` (+ optional `description`); wrap tool-call context in `subject: { "type": "tool_call", "toolCall": ... }`.
+8. **Permissions.** Put prompt copy in required `title` (+ optional `description`). Wrap tool-call context in `subject: { "type": "tool_call", "toolCall": ... }`.
 9. **Plans.** Send `plan_update` with `{ "type": "items", "planId": ..., "entries": [...] }`.
-10. **Modes.** Drop `session/set_mode`, `modes`, and `current_mode_update`; expose the same state as config options with `category: "mode"` and emit `config_option_update`.
-11. **Replay.** Handle `replayFrom` on `session/resume`; replay history as ordinary `session/update` notifications when asked. Remove `session/load`.
-12. **Client surface.** Remove all `fs/*` and `terminal/*` calls and terminal tool content; rely on client-provided MCP servers for client-side access.
-13. **MCP config.** Require and emit `type` discriminators; drop SSE; advertise `session.mcp.stdio` / `session.mcp.http` as appropriate; accept omitted `mcpServers`.
+10. **Modes.** Drop `session/set_mode`, `modes`, and `current_mode_update`. Expose the same state as config options with `category: "mode"` and emit `config_option_update`.
+11. **Replay.** Handle `replayFrom` on `session/resume`. Replay history as ordinary `session/update` notifications when asked. Remove `session/load`.
+12. **Client surface.** Remove all `fs/*` and `terminal/*` calls and terminal tool content.
+13. **MCP config.** Require and emit `type` discriminators. Drop SSE. Advertise `session.mcp.stdio` / `session.mcp.http` as appropriate.
 14. **Slash commands.** Add the `type: "text"` discriminator to command `input` specifications.
 15. **Parsing.** Make enum handling open: preserve unknown variants where a safe fallback exists, and accept batch arrays on stdio.
 
 ## Migration checklist: Clients
 
 1. **Initialization.** Send `protocolVersion: 2`, required `info`, and `capabilities` (drop `fs`/`terminal`). Read the Agent's capabilities from `result.capabilities` with presence checks instead of boolean checks.
-2. **Rely on the baseline.** When `capabilities.session` is present, use list/resume/close/prompt/cancel without probing markers; keep checking `session.delete` and other optional extras.
+2. **Rely on the baseline.** When `capabilities.session` is present, use list/resume/close/prompt/cancel without probing markers. Keep checking `session.delete` and other optional extras.
 3. **Prompt lifecycle.** Don't treat the `session/prompt` response as turn completion. Drive UI from `state_update` (`running` / `idle` / `requires_action`), take the stop reason from the idle update, and render the user's message from the `user_message` acknowledgment (which carries its canonical `messageId`).
 4. **Messages.** Track messages by required `messageId`. Implement upsert semantics: whole-message updates replace content (or clear it with `null`/`[]`), chunks append.
-5. **Tool calls.** Create tool calls on first-seen `toolCallId` in `tool_call_update`; apply omit/`null`/value patches; append `tool_call_content_chunk` items; replace accumulated content when an update carries `content`.
-6. **Diffs.** Render `patch.diff` (git patch format) when present; drive file trees and summaries from `changes`; handle patch-less diffs (binary, symlink, directory).
-7. **Permissions.** Render `title`/`description`; when `subject.type` is `tool_call`, apply its `toolCall` payload to the referenced tool call like any other update; show a generic prompt for absent or unknown subjects.
-8. **Plans.** Handle `plan_update` keyed by `planId`; each update replaces that plan's entries.
-9. **Modes.** Drop `session/set_mode` and `current_mode_update` handling; drive mode/model UI from `configOptions` (using `category`) via `session/set_config_option` and `config_option_update`.
+5. **Tool calls.** Create tool calls on first-seen `toolCallId` in `tool_call_update`. Apply omit/`null`/value patches. Append `tool_call_content_chunk` items. Replace accumulated content when an update carries `content`.
+6. **Diffs.** Render `patch.diff` (git patch format) when present. Drive file trees and summaries from `changes`. Handle patch-less diffs (binary, symlink, directory).
+7. **Permissions.** Render `title`/`description`. When `subject.type` is `tool_call`, apply its `toolCall` payload to the referenced tool call like any other update. Show a generic prompt for absent or unknown subjects.
+8. **Plans.** Handle `plan_update` keyed by `planId`. Each update replaces that plan's entries.
+9. **Modes.** Drop `session/set_mode` and `current_mode_update` handling. Drive mode/model UI from `configOptions` (using `category`) via `session/set_config_option` and `config_option_update`.
 10. **Resume.** Replace `session/load` with `session/resume` + `replayFrom: { "type": "start" }`, and plain reconnects with `session/resume` without `replayFrom`.
-11. **Client surface.** Remove `fs/*` and `terminal/*` implementations for v2 connections; expose that functionality through MCP servers passed in `mcpServers` if you want agents to use it.
+11. **Client surface.** Remove `fs/*` and `terminal/*` implementations for v2 connections. Expose that functionality through MCP servers passed in `mcpServers` if you want agents to use it.
 12. **Cancellation.** After `session/cancel`, keep accepting updates and wait for the idle `state_update` with `stopReason: "cancelled"` as confirmation.
 13. **Parsing.** Preserve unknown enum variants, tolerate unknown `sessionUpdate` types, read command `input` as a tagged union, and accept batch arrays on stdio.
 
-## Migration checklist: SDKs, validators, and proxies
+## Migration checklist: SDKs
 
 1. **Separate the versions.** Keep v1 and v2 schemas, generated models, and test fixtures fully separate, and gate unstable-v2 surfaces independently of `protocolVersion: 2`.
-2. **Three-state fields.** Model omitted vs `null` vs concrete values distinctly wherever v2 defines patch semantics — a plain nullable/optional type erases a distinction the protocol depends on.
-3. **Strict where it counts.** Reject malformed payloads for _known_ discriminator values instead of demoting them to the unknown-variant fallback; the fallback exists only for genuinely unknown values.
+2. **Three-state fields.** Model omitted vs `null` vs concrete values distinctly wherever v2 defines patch semantics. A plain nullable/optional type erases a distinction the protocol depends on.
+3. **Strict where it counts.** Reject malformed payloads for _known_ discriminator values instead of demoting them to the unknown-variant fallback. The fallback exists only for genuinely unknown values.
 4. **Preserve what you don't understand.** Round-trip `_`-prefixed extension values, unknown future variants, and `_meta` when storing, replaying, proxying, or forwarding.
-5. **Validation refinements.** Account for `format: "uri"`, `format: "byte"`, and the 0–1 `annotations.priority` bounds when generating validators.
-6. **Fixtures.** Cover the full prompt lifecycle, resume replay, cancellation, permission flow, message replacement and clearing, tool-call content chunks, structured diffs, and JSON-RPC batches — and document anywhere your v2→v1 bridging is lossy.
-
-## Common migration mistakes
-
-- Treating the `session/prompt` response as turn completion — or treating `requires_action` as idle.
-- Rendering the outgoing prompt as the canonical user message instead of the Agent's `user_message` acknowledgment.
-- Appending a whole-message `content` array instead of replacing accumulated content (or replacing on chunks, which should append).
-- Collapsing omitted and `null` patch fields into a single "missing" state.
-- Still checking `clientCapabilities.fs` / `clientCapabilities.terminal`, or calling `session/load` or `session/set_mode`, on v2 connections.
-- Assuming terminal _authentication_ was removed because terminal _execution_ was — they are separate surfaces, and only execution is gone.
-- Advertising `capabilities.session` without implementing the entire baseline method set.
-- Omitting the `type` discriminator on auth methods, MCP server configs, or command input because v1 had implicit defaults.
-- Reading config options from `id`/`group` instead of `configId`/`groupId`.
-- Minting non-underscore custom enum values, or treating an unknown non-underscore value as someone's extension when it is reserved for future ACP versions.
-- Enabling unstable-v2 methods on every v2 connection instead of gating each behind its own flag.
-- Treating an unknown permission outcome as approval.
+5. **Fixtures.** Cover the full prompt lifecycle, resume replay, cancellation, permission flow, message replacement and clearing, tool-call content chunks, structured diffs, and JSON-RPC batches.
 
 ## Supporting v1 and v2 side by side
 
-Version negotiation gives you one protocol version per connection, so the cleanest approach is to keep two thin protocol surfaces behind shared application logic and select one after `initialize`. Design your internal model around v2 concepts — upserts, message IDs, session states, structured diffs — and downgrade at the edge for v1 peers, because the reverse direction doesn't round-trip:
-
-- v1 has no way to express message-content replacement or clearing, metadata-only message updates, appended tool-call content chunks, structured diff operations (moves, copies, deletes, binary changes), or permission prompt copy separate from tool-call state.
-- v2 deliberately drops v1's client file system and terminal surface and the modes API, so v1 peers relying on those need genuine fallback behavior, not just field mapping.
-- The prompt lifecycles differ architecturally: emulating v1 on top of a v2 core means holding the `session/prompt` response until your v2-style idle state fires — simple in that direction, impossible in the other.
-
-Treat the two versions as separate wire contracts with version-specific encoders and decoders — don't build a v2 implementation on generic v1↔v2 conversion helpers. If a message can't be expressed for a v1 peer, degrade deliberately (drop the refinement, not the message) rather than letting an automatic translation decide for you, and fail clearly when a v2 feature has no v1 representation at all.
-
-## Next steps
-
-Work through the v2 docs in an order that mirrors a connection's lifecycle: [Initialization](/protocol/v2/initialization), [Authentication](/protocol/v2/authentication), [Session Setup](/protocol/v2/session-setup), [Prompt Lifecycle](/protocol/v2/prompt-lifecycle), [Content](/protocol/v2/content), [Tool Calls](/protocol/v2/tool-calls), [Agent Plan](/protocol/v2/agent-plan), [Session Config Options](/protocol/v2/session-config-options), [Extensibility](/protocol/v2/extensibility), [Transports](/protocol/v2/transports), and the [Schema](/protocol/v2/schema) reference.
+Supporting both versions is the recommended path, not an edge case: v1 peers will remain in the wild well after v2 stabilizes, and dropping v1 support means losing them. Version negotiation gives you one protocol version per connection, so the cleanest approach is to keep two thin protocol surfaces behind shared application logic and select one after `initialize`.
