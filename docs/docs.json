@@ -199,7 +199,7 @@
               "rfds/elicitation",
               "rfds/streamable-http-websocket-transport",
               {
-                "group": "v2 Active",
+                "group": "v2",
                 "expanded": true,
                 "root": "rfds/v2/overview",
                 "pages": [
