@@ -1582,7 +1582,8 @@ starting with '$/' it is free to ignore the notification."
             let mut merged = if let Some(ref_val) = variant.get("$ref").and_then(|v| v.as_str()) {
                 let type_name = ref_val.strip_prefix("#/$defs/").unwrap_or(ref_val);
                 self.definitions.get(type_name).cloned()?
-            } else if let Some(all_of) = variant.get("allOf").and_then(|v| v.as_array()) {
+            } else {
+                let all_of = variant.get("allOf").and_then(|v| v.as_array())?;
                 let mut base = None;
 
                 for item in all_of {
@@ -1596,8 +1597,6 @@ starting with '$/' it is free to ignore the notification."
                 }
 
                 base.unwrap_or_else(|| Value::Object(serde_json::Map::new()))
-            } else {
-                return None;
             };
 
             let Some(merged_obj) = merged.as_object_mut() else {
