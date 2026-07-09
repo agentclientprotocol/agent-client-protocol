@@ -2,10 +2,10 @@
 //!
 //! The conversions below intentionally move values field-by-field and
 //! variant-by-variant instead of serializing through JSON so v2 shape changes
-//! have obvious edit points. One-to-one conversions use [`From`] when every
-//! source value has a target representation and [`TryFrom`] when values outside
-//! the shared protocol subset must be rejected instead of guessed, dropped, or
-//! defaulted.
+//! have obvious edit points. Conversions use [`From`] when every source value
+//! has a target representation and [`TryFrom`] when values outside the shared
+//! protocol subset must be rejected instead of guessed, dropped, or defaulted.
+//! One-to-many fan-out is represented as `TryFrom<Source> for Vec<Target>`.
 //!
 //! These helpers are convenience APIs for code that wants to share internal
 //! ACP-shaped values while supporting both protocol versions. They are not a
@@ -146,29 +146,6 @@ trait TryToV1 {
     fn try_to_v1(self) -> Result<Self::Output>;
 }
 
-/// Attempts to convert a value from the v2 draft type namespace into one or more v1 values.
-///
-/// Use this trait for protocol values where a single v2 value may need to fan
-/// out into multiple v1 values. For example, a whole v2 message update contains
-/// an array of content blocks, while v1 represents those blocks as separate
-/// chunk updates.
-///
-/// This is intentionally not blanket-implemented for every one-to-one conversion.
-/// Keeping one-to-one and one-to-many conversions separate makes future v2
-/// fan-out cases explicit and avoids trait coherence conflicts when an
-/// existing one-to-one shape grows a v2-only variant that needs fan-out.
-pub trait TryIntoV1Many {
-    /// The corresponding v1 item type.
-    type Output;
-
-    /// Attempts to convert this value into one or more corresponding v1 items.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`ProtocolConversionError`] when a value cannot be represented in v1.
-    fn try_into_v1_many(self) -> Result<Vec<Self::Output>>;
-}
-
 trait TryToV2 {
     /// The corresponding v2 draft type.
     type Output;
@@ -199,6 +176,8 @@ where
 
 /// Attempts to convert a v2 draft value into one or more corresponding v1 values.
 ///
+/// This is a readability wrapper around `Vec::<U>::try_from(value)`.
+///
 /// One-to-many conversions are stateless. When a v2 update's semantics depend
 /// on previously delivered updates, this helper can only reject cases that are
 /// visible in the value being converted. For example, a content-bearing whole
@@ -209,11 +188,12 @@ where
 /// # Errors
 ///
 /// Returns [`ProtocolConversionError`] when a value cannot be represented in v1.
-pub fn try_v2_to_v1_many<T>(value: T) -> Result<Vec<T::Output>>
+pub fn try_v2_to_v1_many<T, U>(value: T) -> Result<Vec<U>>
 where
-    T: TryIntoV1Many,
+    Vec<U>: TryFrom<T>,
+    ProtocolConversionError: From<<Vec<U> as TryFrom<T>>::Error>,
 {
-    value.try_into_v1_many()
+    Vec::<U>::try_from(value).map_err(ProtocolConversionError::from)
 }
 
 /// Attempts to convert a v1 value into the corresponding v2 draft value type.
@@ -1664,19 +1644,18 @@ impl TryToV2 for crate::v1::ProtocolLevelNotification {
     }
 }
 
-impl TryIntoV1Many for super::UpdateSessionNotification {
-    type Output = crate::v1::SessionNotification;
+impl TryFrom<super::UpdateSessionNotification> for Vec<crate::v1::SessionNotification> {
+    type Error = ProtocolConversionError;
 
-    fn try_into_v1_many(self) -> Result<Vec<Self::Output>> {
-        let Self {
+    fn try_from(value: super::UpdateSessionNotification) -> Result<Self> {
+        let super::UpdateSessionNotification {
             session_id,
             update,
             meta,
-        } = self;
+        } = value;
         let session_id = session_id.try_to_v1()?;
         let meta = meta.try_to_v1()?;
-        update
-            .try_into_v1_many()?
+        Vec::<crate::v1::SessionUpdate>::try_from(update)?
             .into_iter()
             .map(|update| {
                 Ok(crate::v1::SessionNotification {
@@ -1706,89 +1685,91 @@ impl TryToV2 for crate::v1::SessionNotification {
     }
 }
 
-impl TryIntoV1Many for super::SessionUpdate {
-    type Output = crate::v1::SessionUpdate;
+impl TryFrom<super::SessionUpdate> for Vec<crate::v1::SessionUpdate> {
+    type Error = ProtocolConversionError;
 
-    fn try_into_v1_many(self) -> Result<Vec<Self::Output>> {
-        Ok(match self {
-            Self::UserMessageChunk(value) => {
+    fn try_from(value: super::SessionUpdate) -> Result<Self> {
+        Ok(match value {
+            super::SessionUpdate::UserMessageChunk(value) => {
                 vec![crate::v1::SessionUpdate::UserMessageChunk(
                     value.try_to_v1()?,
                 )]
             }
-            Self::UserMessage(value) => v2_message_update_into_v1_chunks(
+            super::SessionUpdate::UserMessage(value) => v2_message_update_into_v1_chunks(
                 "user_message",
                 value.message_id,
                 value.content,
                 value.meta,
                 crate::v1::SessionUpdate::UserMessageChunk,
             )?,
-            Self::AgentMessageChunk(value) => {
+            super::SessionUpdate::AgentMessageChunk(value) => {
                 vec![crate::v1::SessionUpdate::AgentMessageChunk(
                     value.try_to_v1()?,
                 )]
             }
-            Self::AgentMessage(value) => v2_message_update_into_v1_chunks(
+            super::SessionUpdate::AgentMessage(value) => v2_message_update_into_v1_chunks(
                 "agent_message",
                 value.message_id,
                 value.content,
                 value.meta,
                 crate::v1::SessionUpdate::AgentMessageChunk,
             )?,
-            Self::AgentThoughtChunk(value) => {
+            super::SessionUpdate::AgentThoughtChunk(value) => {
                 vec![crate::v1::SessionUpdate::AgentThoughtChunk(
                     value.try_to_v1()?,
                 )]
             }
-            Self::AgentThought(value) => v2_message_update_into_v1_chunks(
+            super::SessionUpdate::AgentThought(value) => v2_message_update_into_v1_chunks(
                 "agent_thought",
                 value.message_id,
                 value.content,
                 value.meta,
                 crate::v1::SessionUpdate::AgentThoughtChunk,
             )?,
-            Self::StateUpdate(_) => {
+            super::SessionUpdate::StateUpdate(_) => {
                 return Err(ProtocolConversionError::new(
                     "v2 SessionUpdate variant `state_update` cannot be represented in v1 because v1 reports completion in the session/prompt response",
                 ));
             }
-            Self::ToolCallContentChunk(_) => {
+            super::SessionUpdate::ToolCallContentChunk(_) => {
                 return Err(ProtocolConversionError::new(
                     "v2 SessionUpdate variant `tool_call_content_chunk` cannot be represented in v1 because v1 tool-call content updates replace content instead of appending",
                 ));
             }
-            Self::ToolCallUpdate(value) => {
+            super::SessionUpdate::ToolCallUpdate(value) => {
                 vec![crate::v1::SessionUpdate::ToolCallUpdate(value.try_to_v1()?)]
             }
             #[cfg(feature = "unstable_plan_operations")]
-            Self::PlanUpdate(value) => {
+            super::SessionUpdate::PlanUpdate(value) => {
                 vec![crate::v1::SessionUpdate::PlanUpdate(value.try_to_v1()?)]
             }
             #[cfg(not(feature = "unstable_plan_operations"))]
-            Self::PlanUpdate(value) => vec![crate::v1::SessionUpdate::Plan(value.try_to_v1()?)],
+            super::SessionUpdate::PlanUpdate(value) => {
+                vec![crate::v1::SessionUpdate::Plan(value.try_to_v1()?)]
+            }
             #[cfg(feature = "unstable_plan_operations")]
-            Self::PlanRemoved(value) => {
+            super::SessionUpdate::PlanRemoved(value) => {
                 vec![crate::v1::SessionUpdate::PlanRemoved(value.try_to_v1()?)]
             }
-            Self::AvailableCommandsUpdate(value) => {
+            super::SessionUpdate::AvailableCommandsUpdate(value) => {
                 vec![crate::v1::SessionUpdate::AvailableCommandsUpdate(
                     value.try_to_v1()?,
                 )]
             }
-            Self::ConfigOptionUpdate(value) => {
+            super::SessionUpdate::ConfigOptionUpdate(value) => {
                 vec![crate::v1::SessionUpdate::ConfigOptionUpdate(
                     value.try_to_v1()?,
                 )]
             }
-            Self::SessionInfoUpdate(value) => {
+            super::SessionUpdate::SessionInfoUpdate(value) => {
                 vec![crate::v1::SessionUpdate::SessionInfoUpdate(
                     value.try_to_v1()?,
                 )]
             }
-            Self::UsageUpdate(value) => {
+            super::SessionUpdate::UsageUpdate(value) => {
                 vec![crate::v1::SessionUpdate::UsageUpdate(value.try_to_v1()?)]
             }
-            Self::Other(value) => {
+            super::SessionUpdate::Other(value) => {
                 return Err(unknown_v2_enum_variant(
                     "SessionUpdate",
                     &value.session_update,
@@ -5465,7 +5446,7 @@ impl TryToV1 for super::AgentCapabilities {
             prompt_capabilities,
             load_session,
             mcp_capabilities,
-        } = V1SessionCapabilityParts::try_from(session)?;
+        } = session.try_into_v1_parts()?;
 
         Ok(crate::v1::AgentCapabilities {
             load_session: load_session.try_to_v1()?,
@@ -5565,7 +5546,18 @@ pub struct V1SessionCapabilityParts {
 }
 
 impl super::SessionCapabilities {
-    fn try_into_v1_parts(self) -> Result<V1SessionCapabilityParts> {
+    /// Splits v2 session capabilities into the v1 agent capability fields that
+    /// v2 groups under `session`.
+    ///
+    /// This is useful when shared internal capability construction produces a
+    /// v2 [`SessionCapabilities`](super::SessionCapabilities) value but a v1
+    /// implementation still needs the corresponding top-level v1 fields.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ProtocolConversionError`] when a nested v2 capability cannot
+    /// be represented by the v1 capability fields.
+    pub fn try_into_v1_parts(self) -> Result<V1SessionCapabilityParts> {
         let Self {
             prompt,
             mcp,
@@ -9365,12 +9357,8 @@ mod tests {
         assert_eq!(error.message(), expected);
     }
 
-    fn assert_v2_to_v1_many_error<T>(value: T, expected: &str)
-    where
-        T: TryIntoV1Many,
-        T::Output: std::fmt::Debug,
-    {
-        let error = try_v2_to_v1_many(value).unwrap_err();
+    fn assert_v2_session_update_to_v1_error(value: v2::SessionUpdate, expected: &str) {
+        let error = try_v2_to_v1_many::<_, v1::SessionUpdate>(value).unwrap_err();
         assert_eq!(error.message(), expected);
     }
 
@@ -9592,12 +9580,11 @@ mod tests {
 
     #[test]
     fn v2_session_capabilities_convert_to_v1_agent_capability_parts() {
-        let parts = V1SessionCapabilityParts::try_from(
-            v2::SessionCapabilities::new()
-                .prompt(v2::PromptCapabilities::new().image(v2::PromptImageCapabilities::new()))
-                .mcp(v2::McpCapabilities::new().http(v2::McpHttpCapabilities::new())),
-        )
-        .expect("v2 session capabilities -> v1 parts");
+        let parts = v2::SessionCapabilities::new()
+            .prompt(v2::PromptCapabilities::new().image(v2::PromptImageCapabilities::new()))
+            .mcp(v2::McpCapabilities::new().http(v2::McpHttpCapabilities::new()))
+            .try_into_v1_parts()
+            .expect("v2 session capabilities -> v1 parts");
 
         assert!(parts.session_capabilities.list.is_some());
         assert!(parts.session_capabilities.resume.is_some());
@@ -10211,7 +10198,8 @@ mod tests {
             ])),
         );
 
-        let notifications = try_v2_to_v1_many(notification).expect("v2 -> v1 conversion");
+        let notifications =
+            Vec::<v1::SessionNotification>::try_from(notification).expect("v2 -> v1 conversion");
         assert_eq!(
             notifications,
             vec![
@@ -10239,26 +10227,26 @@ mod tests {
 
     #[test]
     fn v2_message_patches_and_clears_do_not_convert_to_v1_chunks() {
-        assert_v2_to_v1_many_error(
+        assert_v2_session_update_to_v1_error(
             v2::SessionUpdate::AgentMessage(v2::AgentMessage::new("msg_agent")),
             "v2 SessionUpdate variant `agent_message` without content cannot be represented in v1 chunks",
         );
 
-        assert_v2_to_v1_many_error(
+        assert_v2_session_update_to_v1_error(
             v2::SessionUpdate::AgentMessage(
                 v2::AgentMessage::new("msg_agent").content(None::<Vec<v2::ContentBlock>>),
             ),
             "v2 SessionUpdate variant `agent_message` with null content cannot be represented in v1 chunks",
         );
 
-        assert_v2_to_v1_many_error(
+        assert_v2_session_update_to_v1_error(
             v2::SessionUpdate::AgentMessage(
                 v2::AgentMessage::new("msg_agent").content(Vec::<v2::ContentBlock>::new()),
             ),
             "v2 SessionUpdate variant `agent_message` with empty content cannot be represented in v1 chunks",
         );
 
-        assert_v2_to_v1_many_error(
+        assert_v2_session_update_to_v1_error(
             v2::SessionUpdate::AgentMessage(
                 v2::AgentMessage::new("msg_agent")
                     .content(vec![v2::ContentBlock::Text(v2::TextContent::new("hello"))])
@@ -10270,7 +10258,7 @@ mod tests {
 
     #[test]
     fn v2_tool_call_content_chunk_does_not_convert_to_v1_replacement_update() {
-        assert_v2_to_v1_many_error(
+        assert_v2_session_update_to_v1_error(
             v2::SessionUpdate::ToolCallContentChunk(v2::ToolCallContentChunk::new(
                 "tc_1",
                 v2::ContentBlock::Text(v2::TextContent::new("partial output")),
@@ -10331,7 +10319,7 @@ mod tests {
             std::collections::BTreeMap::new(),
         ));
 
-        assert_v2_to_v1_many_error(
+        assert_v2_session_update_to_v1_error(
             update,
             "v2 SessionUpdate variant `_status_badge` cannot be represented in v1",
         );
@@ -10339,7 +10327,7 @@ mod tests {
 
     #[test]
     fn v2_state_update_does_not_convert_to_v1() {
-        assert_v2_to_v1_many_error(
+        assert_v2_session_update_to_v1_error(
             v2::SessionUpdate::StateUpdate(v2::StateUpdate::Idle(
                 v2::IdleStateUpdate::new().stop_reason(v2::StopReason::EndTurn),
             )),

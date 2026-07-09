@@ -66,7 +66,7 @@ pub struct UpdateSessionNotification {
 }
 
 impl UpdateSessionNotification {
-    /// Builds [`SessionNotification`] with the required notification fields set; optional fields start unset or empty.
+    /// Builds [`UpdateSessionNotification`] with the required notification fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>, update: SessionUpdate) -> Self {
         Self {
