@@ -2,10 +2,19 @@
 //!
 //! The conversions below intentionally move values field-by-field and
 //! variant-by-variant instead of serializing through JSON so v2 shape changes
-//! have obvious edit points.
+//! have obvious edit points. One-to-one conversions use [`From`] when every
+//! source value has a target representation and [`TryFrom`] when values outside
+//! the shared protocol subset must be rejected instead of guessed, dropped, or
+//! defaulted.
+//!
+//! These helpers are convenience APIs for code that wants to share internal
+//! ACP-shaped values while supporting both protocol versions. They are not a
+//! protocol router: SDKs should choose the v1 or v2 implementation for a
+//! connection before dispatching JSON-RPC messages.
 
 use std::{
     collections::{BTreeMap, HashMap},
+    convert::Infallible,
     fmt,
     hash::{BuildHasher, Hash},
     path::{Path, PathBuf},
@@ -16,7 +25,7 @@ use serde_json::value::RawValue;
 
 use crate::version::ProtocolVersion;
 
-/// Result type returned by protocol conversion helpers.
+/// Result type returned by protocol try-conversion helpers.
 pub type Result<T> = std::result::Result<T, ProtocolConversionError>;
 
 /// Error returned when converting between v1 and v2 protocol type namespaces fails.
@@ -50,6 +59,12 @@ impl fmt::Display for ProtocolConversionError {
 
 impl std::error::Error for ProtocolConversionError {}
 
+impl From<Infallible> for ProtocolConversionError {
+    fn from(error: Infallible) -> Self {
+        match error {}
+    }
+}
+
 fn unknown_v2_enum_variant(type_name: &str, value: &str) -> ProtocolConversionError {
     ProtocolConversionError::new(format!(
         "v2 {type_name} variant `{value}` cannot be represented in v1"
@@ -60,6 +75,40 @@ fn removed_v1_enum_variant(type_name: &str, value: &str) -> ProtocolConversionEr
     ProtocolConversionError::new(format!(
         "v1 {type_name} variant `{value}` cannot be represented in v2"
     ))
+}
+
+fn unrepresentable_v1_field(type_name: &str, field: &str) -> ProtocolConversionError {
+    ProtocolConversionError::new(format!(
+        "v1 {type_name}.{field} cannot be represented in v2"
+    ))
+}
+
+fn unrepresentable_v2_field(type_name: &str, field: &str) -> ProtocolConversionError {
+    ProtocolConversionError::new(format!(
+        "v2 {type_name}.{field} cannot be represented in v1"
+    ))
+}
+
+fn reject_v2_marker_meta(type_name: &str, field: &str, meta: Option<&super::Meta>) -> Result<()> {
+    if meta.is_some() {
+        return Err(ProtocolConversionError::new(format!(
+            "v2 {type_name}.{field} metadata cannot be represented in v1"
+        )));
+    }
+    Ok(())
+}
+
+fn reject_v1_marker_meta(
+    type_name: &str,
+    field: &str,
+    meta: Option<&crate::v1::Meta>,
+) -> Result<()> {
+    if meta.is_some() {
+        return Err(ProtocolConversionError::new(format!(
+            "v1 {type_name}.{field} metadata cannot be represented in v2"
+        )));
+    }
+    Ok(())
 }
 
 const LEGACY_V1_PLAN_ID: &str = "main";
@@ -85,68 +134,70 @@ impl From<ProtocolConversionError> for crate::v2::Error {
     }
 }
 
-/// Converts a value from the v2 draft type namespace into the matching v1 type.
-pub trait IntoV1 {
+trait TryToV1 {
     /// The corresponding v1 type.
     type Output;
 
-    /// Converts this value into the corresponding v1 type.
+    /// Attempts to convert this value into the corresponding v1 type.
     ///
     /// # Errors
     ///
     /// Returns [`ProtocolConversionError`] when a value cannot be represented in v1.
-    fn into_v1(self) -> Result<Self::Output>;
+    fn try_to_v1(self) -> Result<Self::Output>;
 }
 
-/// Converts a value from the v2 draft type namespace into one or more v1 values.
+/// Attempts to convert a value from the v2 draft type namespace into one or more v1 values.
 ///
 /// Use this trait for protocol values where a single v2 value may need to fan
 /// out into multiple v1 values. For example, a whole v2 message update contains
 /// an array of content blocks, while v1 represents those blocks as separate
 /// chunk updates.
 ///
-/// This is intentionally not blanket-implemented for every [`IntoV1`] type.
+/// This is intentionally not blanket-implemented for every one-to-one conversion.
 /// Keeping one-to-one and one-to-many conversions separate makes future v2
 /// fan-out cases explicit and avoids trait coherence conflicts when an
 /// existing one-to-one shape grows a v2-only variant that needs fan-out.
-pub trait IntoV1Many {
+pub trait TryIntoV1Many {
     /// The corresponding v1 item type.
     type Output;
 
-    /// Converts this value into one or more corresponding v1 items.
+    /// Attempts to convert this value into one or more corresponding v1 items.
     ///
     /// # Errors
     ///
     /// Returns [`ProtocolConversionError`] when a value cannot be represented in v1.
-    fn into_v1_many(self) -> Result<Vec<Self::Output>>;
+    fn try_into_v1_many(self) -> Result<Vec<Self::Output>>;
 }
 
-/// Converts a value from the v1 type namespace into the matching v2 draft type.
-pub trait IntoV2 {
+trait TryToV2 {
     /// The corresponding v2 draft type.
     type Output;
 
-    /// Converts this value into the corresponding v2 draft type.
+    /// Attempts to convert this value into the corresponding v2 draft type.
     ///
     /// # Errors
     ///
     /// Returns [`ProtocolConversionError`] when a value cannot be represented in v2.
-    fn into_v2(self) -> Result<Self::Output>;
+    fn try_to_v2(self) -> Result<Self::Output>;
 }
 
-/// Converts a v2 draft value into the corresponding v1 value type.
+/// Attempts to convert a v2 draft value into the corresponding v1 value type.
+///
+/// Infallible [`From`] conversions also work with this helper through the
+/// standard library's blanket [`TryFrom`] implementation.
 ///
 /// # Errors
 ///
 /// Returns [`ProtocolConversionError`] when a value cannot be represented in v1.
-pub fn v2_to_v1<T>(value: T) -> Result<T::Output>
+pub fn try_v2_to_v1<T, U>(value: T) -> Result<U>
 where
-    T: IntoV1,
+    U: TryFrom<T>,
+    ProtocolConversionError: From<<U as TryFrom<T>>::Error>,
 {
-    value.into_v1()
+    U::try_from(value).map_err(ProtocolConversionError::from)
 }
 
-/// Converts a v2 draft value into one or more corresponding v1 values.
+/// Attempts to convert a v2 draft value into one or more corresponding v1 values.
 ///
 /// One-to-many conversions are stateless. When a v2 update's semantics depend
 /// on previously delivered updates, this helper can only reject cases that are
@@ -158,40 +209,890 @@ where
 /// # Errors
 ///
 /// Returns [`ProtocolConversionError`] when a value cannot be represented in v1.
-pub fn v2_to_v1_many<T>(value: T) -> Result<Vec<T::Output>>
+pub fn try_v2_to_v1_many<T>(value: T) -> Result<Vec<T::Output>>
 where
-    T: IntoV1Many,
+    T: TryIntoV1Many,
 {
-    value.into_v1_many()
+    value.try_into_v1_many()
 }
 
-/// Converts a v1 value into the corresponding v2 draft value type.
+/// Attempts to convert a v1 value into the corresponding v2 draft value type.
+///
+/// Infallible [`From`] conversions also work with this helper through the
+/// standard library's blanket [`TryFrom`] implementation.
 ///
 /// # Errors
 ///
 /// Returns [`ProtocolConversionError`] when a value cannot be represented in v2.
-pub fn v1_to_v2<T>(value: T) -> Result<T::Output>
+pub fn try_v1_to_v2<T, U>(value: T) -> Result<U>
 where
-    T: IntoV2,
+    U: TryFrom<T>,
+    ProtocolConversionError: From<<U as TryFrom<T>>::Error>,
 {
-    value.into_v2()
+    U::try_from(value).map_err(ProtocolConversionError::from)
 }
+
+macro_rules! impl_from_tuple_newtype {
+    ($source:path => $target:path) => {
+        impl From<$source> for $target {
+            fn from(value: $source) -> Self {
+                $target(value.0)
+            }
+        }
+    };
+}
+
+macro_rules! impl_from_enum {
+    ($source:ty => $target:ty { $($variant:ident),+ $(,)? }) => {
+        impl From<$source> for $target {
+            fn from(value: $source) -> Self {
+                match value {
+                    $(<$source>::$variant => <$target>::$variant,)+
+                }
+            }
+        }
+    };
+}
+
+macro_rules! impl_try_from_v2_to_v1 {
+    ($source:ty => $target:ty) => {
+        impl TryFrom<$source> for $target {
+            type Error = ProtocolConversionError;
+
+            fn try_from(value: $source) -> Result<Self> {
+                value.try_to_v1()
+            }
+        }
+    };
+}
+
+macro_rules! impl_try_from_v1_to_v2 {
+    ($source:ty => $target:ty) => {
+        impl TryFrom<$source> for $target {
+            type Error = ProtocolConversionError;
+
+            fn try_from(value: $source) -> Result<Self> {
+                value.try_to_v2()
+            }
+        }
+    };
+}
+
+impl_from_tuple_newtype!(super::SessionId => crate::v1::SessionId);
+impl_from_tuple_newtype!(crate::v1::SessionId => super::SessionId);
+impl_from_tuple_newtype!(super::MessageId => crate::v1::MessageId);
+impl_from_tuple_newtype!(crate::v1::MessageId => super::MessageId);
+#[cfg(not(feature = "unstable_plan_operations"))]
+impl_try_from_v2_to_v1!(super::PlanUpdate => crate::v1::Plan);
+#[cfg(feature = "unstable_plan_operations")]
+impl_from_tuple_newtype!(super::PlanId => crate::v1::PlanId);
+#[cfg(feature = "unstable_plan_operations")]
+impl_from_tuple_newtype!(crate::v1::PlanId => super::PlanId);
+#[cfg(feature = "unstable_plan_operations")]
+impl_try_from_v2_to_v1!(super::PlanUpdate => crate::v1::PlanUpdate);
+#[cfg(feature = "unstable_plan_operations")]
+impl_try_from_v1_to_v2!(crate::v1::PlanUpdate => super::PlanUpdate);
+#[cfg(feature = "unstable_plan_operations")]
+impl_try_from_v2_to_v1!(super::PlanUpdateContent => crate::v1::PlanUpdateContent);
+#[cfg(feature = "unstable_plan_operations")]
+impl_try_from_v1_to_v2!(crate::v1::PlanUpdateContent => super::PlanUpdateContent);
+#[cfg(feature = "unstable_plan_operations")]
+impl_try_from_v2_to_v1!(super::PlanItems => crate::v1::PlanItems);
+#[cfg(feature = "unstable_plan_operations")]
+impl_try_from_v1_to_v2!(crate::v1::PlanItems => super::PlanItems);
+#[cfg(feature = "unstable_plan_operations")]
+impl_try_from_v2_to_v1!(super::PlanFile => crate::v1::PlanFile);
+#[cfg(feature = "unstable_plan_operations")]
+impl_try_from_v1_to_v2!(crate::v1::PlanFile => super::PlanFile);
+#[cfg(feature = "unstable_plan_operations")]
+impl_try_from_v2_to_v1!(super::PlanMarkdown => crate::v1::PlanMarkdown);
+#[cfg(feature = "unstable_plan_operations")]
+impl_try_from_v1_to_v2!(crate::v1::PlanMarkdown => super::PlanMarkdown);
+#[cfg(feature = "unstable_plan_operations")]
+impl_try_from_v2_to_v1!(super::PlanRemoved => crate::v1::PlanRemoved);
+#[cfg(feature = "unstable_plan_operations")]
+impl_try_from_v1_to_v2!(crate::v1::PlanRemoved => super::PlanRemoved);
+impl_try_from_v2_to_v1!(super::PlanEntry => crate::v1::PlanEntry);
+impl_try_from_v1_to_v2!(crate::v1::PlanEntry => super::PlanEntry);
+impl_try_from_v2_to_v1!(super::PlanEntryPriority => crate::v1::PlanEntryPriority);
+impl_from_enum!(crate::v1::PlanEntryPriority => super::PlanEntryPriority {
+    High,
+    Medium,
+    Low,
+});
+impl_try_from_v2_to_v1!(super::PlanEntryStatus => crate::v1::PlanEntryStatus);
+impl_from_enum!(crate::v1::PlanEntryStatus => super::PlanEntryStatus {
+    Pending,
+    InProgress,
+    Completed,
+});
+impl_try_from_v2_to_v1!(super::CancelRequestNotification => crate::v1::CancelRequestNotification);
+impl_try_from_v1_to_v2!(crate::v1::CancelRequestNotification => super::CancelRequestNotification);
+impl_try_from_v2_to_v1!(super::ProtocolLevelNotification => crate::v1::ProtocolLevelNotification);
+impl_try_from_v1_to_v2!(crate::v1::ProtocolLevelNotification => super::ProtocolLevelNotification);
+impl_try_from_v1_to_v2!(crate::v1::SessionNotification => super::UpdateSessionNotification);
+impl_try_from_v1_to_v2!(crate::v1::SessionUpdate => super::SessionUpdate);
+impl_try_from_v2_to_v1!(super::ConfigOptionUpdate => crate::v1::ConfigOptionUpdate);
+impl_try_from_v1_to_v2!(crate::v1::ConfigOptionUpdate => super::ConfigOptionUpdate);
+impl_try_from_v2_to_v1!(super::SessionInfoUpdate => crate::v1::SessionInfoUpdate);
+impl_try_from_v1_to_v2!(crate::v1::SessionInfoUpdate => super::SessionInfoUpdate);
+impl_try_from_v2_to_v1!(super::UsageUpdate => crate::v1::UsageUpdate);
+impl_try_from_v1_to_v2!(crate::v1::UsageUpdate => super::UsageUpdate);
+impl_try_from_v2_to_v1!(super::Cost => crate::v1::Cost);
+impl_try_from_v1_to_v2!(crate::v1::Cost => super::Cost);
+impl_try_from_v2_to_v1!(super::ContentChunk => crate::v1::ContentChunk);
+impl_try_from_v1_to_v2!(crate::v1::ContentChunk => super::ContentChunk);
+impl_try_from_v2_to_v1!(super::AvailableCommandsUpdate => crate::v1::AvailableCommandsUpdate);
+impl_try_from_v1_to_v2!(crate::v1::AvailableCommandsUpdate => super::AvailableCommandsUpdate);
+impl_try_from_v2_to_v1!(super::AvailableCommand => crate::v1::AvailableCommand);
+impl_try_from_v1_to_v2!(crate::v1::AvailableCommand => super::AvailableCommand);
+impl_try_from_v2_to_v1!(super::AvailableCommandInput => crate::v1::AvailableCommandInput);
+impl_try_from_v1_to_v2!(crate::v1::AvailableCommandInput => super::AvailableCommandInput);
+impl_try_from_v2_to_v1!(super::TextCommandInput => crate::v1::UnstructuredCommandInput);
+impl_try_from_v1_to_v2!(crate::v1::UnstructuredCommandInput => super::TextCommandInput);
+impl_try_from_v2_to_v1!(super::RequestPermissionRequest => crate::v1::RequestPermissionRequest);
+impl_try_from_v1_to_v2!(crate::v1::RequestPermissionRequest => super::RequestPermissionRequest);
+impl_try_from_v2_to_v1!(super::PermissionOption => crate::v1::PermissionOption);
+impl_try_from_v1_to_v2!(crate::v1::PermissionOption => super::PermissionOption);
+impl_from_tuple_newtype!(super::PermissionOptionId => crate::v1::PermissionOptionId);
+impl_from_tuple_newtype!(crate::v1::PermissionOptionId => super::PermissionOptionId);
+impl_try_from_v2_to_v1!(super::PermissionOptionKind => crate::v1::PermissionOptionKind);
+impl_from_enum!(crate::v1::PermissionOptionKind => super::PermissionOptionKind {
+    AllowOnce,
+    AllowAlways,
+    RejectOnce,
+    RejectAlways,
+});
+impl_try_from_v2_to_v1!(super::RequestPermissionResponse => crate::v1::RequestPermissionResponse);
+impl_try_from_v1_to_v2!(crate::v1::RequestPermissionResponse => super::RequestPermissionResponse);
+impl_try_from_v2_to_v1!(super::RequestPermissionOutcome => crate::v1::RequestPermissionOutcome);
+impl_try_from_v1_to_v2!(crate::v1::RequestPermissionOutcome => super::RequestPermissionOutcome);
+impl_try_from_v2_to_v1!(super::SelectedPermissionOutcome => crate::v1::SelectedPermissionOutcome);
+impl_try_from_v1_to_v2!(crate::v1::SelectedPermissionOutcome => super::SelectedPermissionOutcome);
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl_try_from_v2_to_v1!(super::ConnectMcpRequest => crate::v1::ConnectMcpRequest);
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl_try_from_v1_to_v2!(crate::v1::ConnectMcpRequest => super::ConnectMcpRequest);
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl_try_from_v2_to_v1!(super::ConnectMcpResponse => crate::v1::ConnectMcpResponse);
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl_try_from_v1_to_v2!(crate::v1::ConnectMcpResponse => super::ConnectMcpResponse);
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl_try_from_v2_to_v1!(super::MessageMcpRequest => crate::v1::MessageMcpRequest);
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl_try_from_v1_to_v2!(crate::v1::MessageMcpRequest => super::MessageMcpRequest);
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl_try_from_v2_to_v1!(super::MessageMcpNotification => crate::v1::MessageMcpNotification);
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl_try_from_v1_to_v2!(crate::v1::MessageMcpNotification => super::MessageMcpNotification);
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl_try_from_v2_to_v1!(super::MessageMcpResponse => crate::v1::MessageMcpResponse);
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl_try_from_v1_to_v2!(crate::v1::MessageMcpResponse => super::MessageMcpResponse);
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl_try_from_v2_to_v1!(super::DisconnectMcpRequest => crate::v1::DisconnectMcpRequest);
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl_try_from_v1_to_v2!(crate::v1::DisconnectMcpRequest => super::DisconnectMcpRequest);
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl_try_from_v2_to_v1!(super::DisconnectMcpResponse => crate::v1::DisconnectMcpResponse);
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl_try_from_v1_to_v2!(crate::v1::DisconnectMcpResponse => super::DisconnectMcpResponse);
+impl_try_from_v2_to_v1!(super::ClientCapabilities => crate::v1::ClientCapabilities);
+impl_try_from_v1_to_v2!(crate::v1::ClientCapabilities => super::ClientCapabilities);
+#[cfg(feature = "unstable_auth_methods")]
+impl_try_from_v2_to_v1!(super::AuthCapabilities => crate::v1::AuthCapabilities);
+#[cfg(feature = "unstable_auth_methods")]
+impl_try_from_v1_to_v2!(crate::v1::AuthCapabilities => super::AuthCapabilities);
+impl_try_from_v2_to_v1!(super::Error => crate::v1::Error);
+impl_try_from_v1_to_v2!(crate::v1::Error => super::Error);
+impl From<super::ErrorCode> for crate::v1::ErrorCode {
+    fn from(value: super::ErrorCode) -> Self {
+        i32::from(value).into()
+    }
+}
+
+impl From<crate::v1::ErrorCode> for super::ErrorCode {
+    fn from(value: crate::v1::ErrorCode) -> Self {
+        i32::from(value).into()
+    }
+}
+
+impl_try_from_v2_to_v1!(super::ExtRequest => crate::v1::ExtRequest);
+impl_try_from_v1_to_v2!(crate::v1::ExtRequest => super::ExtRequest);
+impl_try_from_v2_to_v1!(super::ExtResponse => crate::v1::ExtResponse);
+impl_try_from_v1_to_v2!(crate::v1::ExtResponse => super::ExtResponse);
+impl_try_from_v2_to_v1!(super::ExtNotification => crate::v1::ExtNotification);
+impl_try_from_v1_to_v2!(crate::v1::ExtNotification => super::ExtNotification);
+impl_try_from_v2_to_v1!(super::ToolCallUpdate => crate::v1::ToolCallUpdate);
+impl_try_from_v1_to_v2!(crate::v1::ToolCall => super::ToolCallUpdate);
+impl_try_from_v1_to_v2!(crate::v1::ToolCallUpdate => super::ToolCallUpdate);
+impl_from_tuple_newtype!(super::ToolCallId => crate::v1::ToolCallId);
+impl_from_tuple_newtype!(crate::v1::ToolCallId => super::ToolCallId);
+impl_try_from_v2_to_v1!(super::ToolKind => crate::v1::ToolKind);
+impl_from_enum!(crate::v1::ToolKind => super::ToolKind {
+    Read,
+    Edit,
+    Delete,
+    Move,
+    Search,
+    Execute,
+    Think,
+    Fetch,
+    SwitchMode,
+    Other,
+});
+impl_try_from_v2_to_v1!(super::ToolCallStatus => crate::v1::ToolCallStatus);
+impl_from_enum!(crate::v1::ToolCallStatus => super::ToolCallStatus {
+    Pending,
+    InProgress,
+    Completed,
+    Failed,
+});
+impl_try_from_v2_to_v1!(super::ToolCallContent => crate::v1::ToolCallContent);
+impl_try_from_v1_to_v2!(crate::v1::ToolCallContent => super::ToolCallContent);
+impl_try_from_v2_to_v1!(super::Content => crate::v1::Content);
+impl_try_from_v1_to_v2!(crate::v1::Content => super::Content);
+impl_try_from_v2_to_v1!(super::Diff => crate::v1::Diff);
+impl_try_from_v1_to_v2!(crate::v1::Diff => super::Diff);
+impl_try_from_v2_to_v1!(super::ToolCallLocation => crate::v1::ToolCallLocation);
+impl_try_from_v1_to_v2!(crate::v1::ToolCallLocation => super::ToolCallLocation);
+impl_try_from_v2_to_v1!(super::InitializeRequest => crate::v1::InitializeRequest);
+impl_try_from_v1_to_v2!(crate::v1::InitializeRequest => super::InitializeRequest);
+impl_try_from_v2_to_v1!(super::InitializeResponse => crate::v1::InitializeResponse);
+impl_try_from_v1_to_v2!(crate::v1::InitializeResponse => super::InitializeResponse);
+impl_try_from_v2_to_v1!(super::Implementation => crate::v1::Implementation);
+impl_try_from_v1_to_v2!(crate::v1::Implementation => super::Implementation);
+impl_try_from_v2_to_v1!(super::LoginAuthRequest => crate::v1::AuthenticateRequest);
+impl_try_from_v1_to_v2!(crate::v1::AuthenticateRequest => super::LoginAuthRequest);
+impl_try_from_v2_to_v1!(super::LoginAuthResponse => crate::v1::AuthenticateResponse);
+impl_try_from_v1_to_v2!(crate::v1::AuthenticateResponse => super::LoginAuthResponse);
+impl_try_from_v2_to_v1!(super::LogoutAuthRequest => crate::v1::LogoutRequest);
+impl_try_from_v1_to_v2!(crate::v1::LogoutRequest => super::LogoutAuthRequest);
+impl_try_from_v2_to_v1!(super::LogoutAuthResponse => crate::v1::LogoutResponse);
+impl_try_from_v1_to_v2!(crate::v1::LogoutResponse => super::LogoutAuthResponse);
+impl_try_from_v2_to_v1!(super::AgentAuthCapabilities => crate::v1::AgentAuthCapabilities);
+impl_try_from_v1_to_v2!(crate::v1::AgentAuthCapabilities => super::AgentAuthCapabilities);
+impl_from_tuple_newtype!(super::AuthMethodId => crate::v1::AuthMethodId);
+impl_from_tuple_newtype!(crate::v1::AuthMethodId => super::AuthMethodId);
+impl_try_from_v2_to_v1!(super::AuthMethod => crate::v1::AuthMethod);
+impl_try_from_v1_to_v2!(crate::v1::AuthMethod => super::AuthMethod);
+impl_try_from_v2_to_v1!(super::AuthMethodAgent => crate::v1::AuthMethodAgent);
+impl_try_from_v1_to_v2!(crate::v1::AuthMethodAgent => super::AuthMethodAgent);
+#[cfg(feature = "unstable_auth_methods")]
+impl_try_from_v2_to_v1!(super::AuthMethodEnvVar => crate::v1::AuthMethodEnvVar);
+#[cfg(feature = "unstable_auth_methods")]
+impl_try_from_v1_to_v2!(crate::v1::AuthMethodEnvVar => super::AuthMethodEnvVar);
+#[cfg(feature = "unstable_auth_methods")]
+impl_try_from_v2_to_v1!(super::AuthEnvVar => crate::v1::AuthEnvVar);
+#[cfg(feature = "unstable_auth_methods")]
+impl_try_from_v1_to_v2!(crate::v1::AuthEnvVar => super::AuthEnvVar);
+#[cfg(feature = "unstable_auth_methods")]
+impl_try_from_v2_to_v1!(super::AuthMethodTerminal => crate::v1::AuthMethodTerminal);
+#[cfg(feature = "unstable_auth_methods")]
+impl_try_from_v1_to_v2!(crate::v1::AuthMethodTerminal => super::AuthMethodTerminal);
+impl_try_from_v2_to_v1!(super::NewSessionRequest => crate::v1::NewSessionRequest);
+impl_try_from_v1_to_v2!(crate::v1::NewSessionRequest => super::NewSessionRequest);
+impl_try_from_v2_to_v1!(super::NewSessionResponse => crate::v1::NewSessionResponse);
+impl_try_from_v1_to_v2!(crate::v1::NewSessionResponse => super::NewSessionResponse);
+impl_try_from_v1_to_v2!(crate::v1::LoadSessionRequest => super::ResumeSessionRequest);
+impl_try_from_v1_to_v2!(crate::v1::LoadSessionResponse => super::ResumeSessionResponse);
+#[cfg(feature = "unstable_session_fork")]
+impl_try_from_v2_to_v1!(super::ForkSessionRequest => crate::v1::ForkSessionRequest);
+#[cfg(feature = "unstable_session_fork")]
+impl_try_from_v1_to_v2!(crate::v1::ForkSessionRequest => super::ForkSessionRequest);
+#[cfg(feature = "unstable_session_fork")]
+impl_try_from_v2_to_v1!(super::ForkSessionResponse => crate::v1::ForkSessionResponse);
+#[cfg(feature = "unstable_session_fork")]
+impl_try_from_v1_to_v2!(crate::v1::ForkSessionResponse => super::ForkSessionResponse);
+impl_try_from_v2_to_v1!(super::ResumeSessionRequest => crate::v1::ResumeSessionRequest);
+impl_try_from_v1_to_v2!(crate::v1::ResumeSessionRequest => super::ResumeSessionRequest);
+impl TryFrom<super::ResumeSessionRequest> for crate::v1::LoadSessionRequest {
+    type Error = ProtocolConversionError;
+
+    fn try_from(value: super::ResumeSessionRequest) -> Result<Self> {
+        v2_resume_session_request_into_v1_load(value)
+    }
+}
+impl_try_from_v2_to_v1!(super::ResumeSessionResponse => crate::v1::ResumeSessionResponse);
+impl_try_from_v1_to_v2!(crate::v1::ResumeSessionResponse => super::ResumeSessionResponse);
+impl_try_from_v2_to_v1!(super::CloseSessionRequest => crate::v1::CloseSessionRequest);
+impl_try_from_v1_to_v2!(crate::v1::CloseSessionRequest => super::CloseSessionRequest);
+impl_try_from_v2_to_v1!(super::CloseSessionResponse => crate::v1::CloseSessionResponse);
+impl_try_from_v1_to_v2!(crate::v1::CloseSessionResponse => super::CloseSessionResponse);
+impl_try_from_v2_to_v1!(super::DeleteSessionRequest => crate::v1::DeleteSessionRequest);
+impl_try_from_v1_to_v2!(crate::v1::DeleteSessionRequest => super::DeleteSessionRequest);
+impl_try_from_v2_to_v1!(super::DeleteSessionResponse => crate::v1::DeleteSessionResponse);
+impl_try_from_v1_to_v2!(crate::v1::DeleteSessionResponse => super::DeleteSessionResponse);
+impl_try_from_v2_to_v1!(super::ListSessionsRequest => crate::v1::ListSessionsRequest);
+impl_try_from_v1_to_v2!(crate::v1::ListSessionsRequest => super::ListSessionsRequest);
+impl_try_from_v2_to_v1!(super::ListSessionsResponse => crate::v1::ListSessionsResponse);
+impl_try_from_v1_to_v2!(crate::v1::ListSessionsResponse => super::ListSessionsResponse);
+impl_try_from_v2_to_v1!(super::SessionInfo => crate::v1::SessionInfo);
+impl_try_from_v1_to_v2!(crate::v1::SessionInfo => super::SessionInfo);
+impl_from_tuple_newtype!(super::SessionConfigId => crate::v1::SessionConfigId);
+impl_from_tuple_newtype!(crate::v1::SessionConfigId => super::SessionConfigId);
+impl_from_tuple_newtype!(super::SessionConfigValueId => crate::v1::SessionConfigValueId);
+impl_from_tuple_newtype!(crate::v1::SessionConfigValueId => super::SessionConfigValueId);
+impl_from_tuple_newtype!(super::SessionConfigGroupId => crate::v1::SessionConfigGroupId);
+impl_from_tuple_newtype!(crate::v1::SessionConfigGroupId => super::SessionConfigGroupId);
+impl_try_from_v2_to_v1!(super::SessionConfigSelectOption => crate::v1::SessionConfigSelectOption);
+impl_try_from_v1_to_v2!(crate::v1::SessionConfigSelectOption => super::SessionConfigSelectOption);
+impl_try_from_v2_to_v1!(super::SessionConfigSelectGroup => crate::v1::SessionConfigSelectGroup);
+impl_try_from_v1_to_v2!(crate::v1::SessionConfigSelectGroup => super::SessionConfigSelectGroup);
+impl_try_from_v2_to_v1!(super::SessionConfigSelectOptions => crate::v1::SessionConfigSelectOptions);
+impl_try_from_v1_to_v2!(crate::v1::SessionConfigSelectOptions => super::SessionConfigSelectOptions);
+impl_try_from_v2_to_v1!(super::SessionConfigSelect => crate::v1::SessionConfigSelect);
+impl_try_from_v1_to_v2!(crate::v1::SessionConfigSelect => super::SessionConfigSelect);
+impl_try_from_v2_to_v1!(super::SessionConfigBoolean => crate::v1::SessionConfigBoolean);
+impl_try_from_v1_to_v2!(crate::v1::SessionConfigBoolean => super::SessionConfigBoolean);
+impl_try_from_v2_to_v1!(super::SessionConfigOptionCategory => crate::v1::SessionConfigOptionCategory);
+impl_try_from_v1_to_v2!(crate::v1::SessionConfigOptionCategory => super::SessionConfigOptionCategory);
+impl_try_from_v2_to_v1!(super::SessionConfigKind => crate::v1::SessionConfigKind);
+impl_try_from_v1_to_v2!(crate::v1::SessionConfigKind => super::SessionConfigKind);
+impl_try_from_v2_to_v1!(super::SessionConfigOption => crate::v1::SessionConfigOption);
+impl_try_from_v1_to_v2!(crate::v1::SessionConfigOption => super::SessionConfigOption);
+impl_try_from_v2_to_v1!(super::SessionConfigOptionValue => crate::v1::SessionConfigOptionValue);
+impl_try_from_v1_to_v2!(crate::v1::SessionConfigOptionValue => super::SessionConfigOptionValue);
+impl_try_from_v2_to_v1!(super::SetSessionConfigOptionRequest => crate::v1::SetSessionConfigOptionRequest);
+impl_try_from_v1_to_v2!(crate::v1::SetSessionConfigOptionRequest => super::SetSessionConfigOptionRequest);
+impl_try_from_v2_to_v1!(super::SetSessionConfigOptionResponse => crate::v1::SetSessionConfigOptionResponse);
+impl_try_from_v1_to_v2!(crate::v1::SetSessionConfigOptionResponse => super::SetSessionConfigOptionResponse);
+impl_try_from_v2_to_v1!(super::McpServer => crate::v1::McpServer);
+impl_try_from_v1_to_v2!(crate::v1::McpServer => super::McpServer);
+impl_try_from_v2_to_v1!(super::McpServerHttp => crate::v1::McpServerHttp);
+impl_try_from_v1_to_v2!(crate::v1::McpServerHttp => super::McpServerHttp);
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl_from_tuple_newtype!(super::McpServerAcpId => crate::v1::McpServerAcpId);
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl_from_tuple_newtype!(crate::v1::McpServerAcpId => super::McpServerAcpId);
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl_from_tuple_newtype!(super::McpConnectionId => crate::v1::McpConnectionId);
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl_from_tuple_newtype!(crate::v1::McpConnectionId => super::McpConnectionId);
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl_try_from_v2_to_v1!(super::McpServerAcp => crate::v1::McpServerAcp);
+#[cfg(feature = "unstable_mcp_over_acp")]
+impl_try_from_v1_to_v2!(crate::v1::McpServerAcp => super::McpServerAcp);
+impl_try_from_v2_to_v1!(super::McpServerStdio => crate::v1::McpServerStdio);
+impl_try_from_v1_to_v2!(crate::v1::McpServerStdio => super::McpServerStdio);
+impl_try_from_v2_to_v1!(super::EnvVariable => crate::v1::EnvVariable);
+impl_try_from_v1_to_v2!(crate::v1::EnvVariable => super::EnvVariable);
+impl_try_from_v2_to_v1!(super::HttpHeader => crate::v1::HttpHeader);
+impl_try_from_v1_to_v2!(crate::v1::HttpHeader => super::HttpHeader);
+impl_try_from_v2_to_v1!(super::PromptRequest => crate::v1::PromptRequest);
+impl_try_from_v1_to_v2!(crate::v1::PromptRequest => super::PromptRequest);
+impl_try_from_v2_to_v1!(super::PromptResponse => crate::v1::PromptResponse);
+impl_try_from_v1_to_v2!(crate::v1::PromptResponse => super::PromptResponse);
+impl_try_from_v2_to_v1!(super::StopReason => crate::v1::StopReason);
+impl_from_enum!(crate::v1::StopReason => super::StopReason {
+    EndTurn,
+    MaxTokens,
+    MaxTurnRequests,
+    Refusal,
+    Cancelled,
+});
+#[cfg(feature = "unstable_end_turn_token_usage")]
+impl_try_from_v2_to_v1!(super::Usage => crate::v1::Usage);
+#[cfg(feature = "unstable_end_turn_token_usage")]
+impl_try_from_v1_to_v2!(crate::v1::Usage => super::Usage);
+#[cfg(feature = "unstable_llm_providers")]
+impl_try_from_v2_to_v1!(super::LlmProtocol => crate::v1::LlmProtocol);
+#[cfg(feature = "unstable_llm_providers")]
+impl_try_from_v1_to_v2!(crate::v1::LlmProtocol => super::LlmProtocol);
+#[cfg(feature = "unstable_llm_providers")]
+impl_try_from_v2_to_v1!(super::ProviderCurrentConfig => crate::v1::ProviderCurrentConfig);
+#[cfg(feature = "unstable_llm_providers")]
+impl_try_from_v1_to_v2!(crate::v1::ProviderCurrentConfig => super::ProviderCurrentConfig);
+#[cfg(feature = "unstable_llm_providers")]
+impl_from_tuple_newtype!(super::ProviderId => crate::v1::ProviderId);
+#[cfg(feature = "unstable_llm_providers")]
+impl_from_tuple_newtype!(crate::v1::ProviderId => super::ProviderId);
+#[cfg(feature = "unstable_llm_providers")]
+impl_try_from_v2_to_v1!(super::ProviderInfo => crate::v1::ProviderInfo);
+#[cfg(feature = "unstable_llm_providers")]
+impl_try_from_v1_to_v2!(crate::v1::ProviderInfo => super::ProviderInfo);
+#[cfg(feature = "unstable_llm_providers")]
+impl_try_from_v2_to_v1!(super::ListProvidersRequest => crate::v1::ListProvidersRequest);
+#[cfg(feature = "unstable_llm_providers")]
+impl_try_from_v1_to_v2!(crate::v1::ListProvidersRequest => super::ListProvidersRequest);
+#[cfg(feature = "unstable_llm_providers")]
+impl_try_from_v2_to_v1!(super::ListProvidersResponse => crate::v1::ListProvidersResponse);
+#[cfg(feature = "unstable_llm_providers")]
+impl_try_from_v1_to_v2!(crate::v1::ListProvidersResponse => super::ListProvidersResponse);
+#[cfg(feature = "unstable_llm_providers")]
+impl_try_from_v2_to_v1!(super::SetProviderRequest => crate::v1::SetProviderRequest);
+#[cfg(feature = "unstable_llm_providers")]
+impl_try_from_v1_to_v2!(crate::v1::SetProviderRequest => super::SetProviderRequest);
+#[cfg(feature = "unstable_llm_providers")]
+impl_try_from_v2_to_v1!(super::SetProviderResponse => crate::v1::SetProviderResponse);
+#[cfg(feature = "unstable_llm_providers")]
+impl_try_from_v1_to_v2!(crate::v1::SetProviderResponse => super::SetProviderResponse);
+#[cfg(feature = "unstable_llm_providers")]
+impl_try_from_v2_to_v1!(super::DisableProviderRequest => crate::v1::DisableProviderRequest);
+#[cfg(feature = "unstable_llm_providers")]
+impl_try_from_v1_to_v2!(crate::v1::DisableProviderRequest => super::DisableProviderRequest);
+#[cfg(feature = "unstable_llm_providers")]
+impl_try_from_v2_to_v1!(super::DisableProviderResponse => crate::v1::DisableProviderResponse);
+#[cfg(feature = "unstable_llm_providers")]
+impl_try_from_v1_to_v2!(crate::v1::DisableProviderResponse => super::DisableProviderResponse);
+impl_try_from_v2_to_v1!(super::AgentCapabilities => crate::v1::AgentCapabilities);
+impl_try_from_v1_to_v2!(crate::v1::AgentCapabilities => super::AgentCapabilities);
+#[cfg(feature = "unstable_llm_providers")]
+impl_try_from_v2_to_v1!(super::ProvidersCapabilities => crate::v1::ProvidersCapabilities);
+#[cfg(feature = "unstable_llm_providers")]
+impl_try_from_v1_to_v2!(crate::v1::ProvidersCapabilities => super::ProvidersCapabilities);
+impl_try_from_v2_to_v1!(super::SessionDeleteCapabilities => crate::v1::SessionDeleteCapabilities);
+impl_try_from_v1_to_v2!(crate::v1::SessionDeleteCapabilities => super::SessionDeleteCapabilities);
+impl_try_from_v2_to_v1!(super::SessionAdditionalDirectoriesCapabilities => crate::v1::SessionAdditionalDirectoriesCapabilities);
+impl_try_from_v1_to_v2!(crate::v1::SessionAdditionalDirectoriesCapabilities => super::SessionAdditionalDirectoriesCapabilities);
+#[cfg(feature = "unstable_session_fork")]
+impl_try_from_v2_to_v1!(super::SessionForkCapabilities => crate::v1::SessionForkCapabilities);
+#[cfg(feature = "unstable_session_fork")]
+impl_try_from_v1_to_v2!(crate::v1::SessionForkCapabilities => super::SessionForkCapabilities);
+impl_try_from_v2_to_v1!(super::PromptCapabilities => crate::v1::PromptCapabilities);
+impl_try_from_v1_to_v2!(crate::v1::PromptCapabilities => super::PromptCapabilities);
+impl_try_from_v2_to_v1!(super::McpCapabilities => crate::v1::McpCapabilities);
+impl_try_from_v1_to_v2!(crate::v1::McpCapabilities => super::McpCapabilities);
+impl_try_from_v2_to_v1!(super::CancelSessionNotification => crate::v1::CancelNotification);
+impl_try_from_v1_to_v2!(crate::v1::CancelNotification => super::CancelSessionNotification);
+#[cfg(feature = "unstable_nes")]
+impl_from_enum!(super::PositionEncodingKind => crate::v1::PositionEncodingKind {
+    Utf16,
+    Utf32,
+    Utf8,
+});
+#[cfg(feature = "unstable_nes")]
+impl_from_enum!(crate::v1::PositionEncodingKind => super::PositionEncodingKind {
+    Utf16,
+    Utf32,
+    Utf8,
+});
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::Position => crate::v1::Position);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::Position => super::Position);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::Range => crate::v1::Range);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::Range => super::Range);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::NesCapabilities => crate::v1::NesCapabilities);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::NesCapabilities => super::NesCapabilities);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::NesEventCapabilities => crate::v1::NesEventCapabilities);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::NesEventCapabilities => super::NesEventCapabilities);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::NesDocumentEventCapabilities => crate::v1::NesDocumentEventCapabilities);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::NesDocumentEventCapabilities => super::NesDocumentEventCapabilities);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::NesDocumentDidOpenCapabilities => crate::v1::NesDocumentDidOpenCapabilities);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::NesDocumentDidOpenCapabilities => super::NesDocumentDidOpenCapabilities);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::NesDocumentDidChangeCapabilities => crate::v1::NesDocumentDidChangeCapabilities);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::NesDocumentDidChangeCapabilities => super::NesDocumentDidChangeCapabilities);
+#[cfg(feature = "unstable_nes")]
+impl_from_enum!(super::TextDocumentSyncKind => crate::v1::TextDocumentSyncKind {
+    Full,
+    Incremental,
+});
+#[cfg(feature = "unstable_nes")]
+impl_from_enum!(crate::v1::TextDocumentSyncKind => super::TextDocumentSyncKind {
+    Full,
+    Incremental,
+});
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::NesDocumentDidCloseCapabilities => crate::v1::NesDocumentDidCloseCapabilities);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::NesDocumentDidCloseCapabilities => super::NesDocumentDidCloseCapabilities);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::NesDocumentDidSaveCapabilities => crate::v1::NesDocumentDidSaveCapabilities);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::NesDocumentDidSaveCapabilities => super::NesDocumentDidSaveCapabilities);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::NesDocumentDidFocusCapabilities => crate::v1::NesDocumentDidFocusCapabilities);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::NesDocumentDidFocusCapabilities => super::NesDocumentDidFocusCapabilities);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::NesContextCapabilities => crate::v1::NesContextCapabilities);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::NesContextCapabilities => super::NesContextCapabilities);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::NesRecentFilesCapabilities => crate::v1::NesRecentFilesCapabilities);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::NesRecentFilesCapabilities => super::NesRecentFilesCapabilities);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::NesRelatedSnippetsCapabilities => crate::v1::NesRelatedSnippetsCapabilities);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::NesRelatedSnippetsCapabilities => super::NesRelatedSnippetsCapabilities);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::NesEditHistoryCapabilities => crate::v1::NesEditHistoryCapabilities);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::NesEditHistoryCapabilities => super::NesEditHistoryCapabilities);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::NesUserActionsCapabilities => crate::v1::NesUserActionsCapabilities);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::NesUserActionsCapabilities => super::NesUserActionsCapabilities);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::NesOpenFilesCapabilities => crate::v1::NesOpenFilesCapabilities);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::NesOpenFilesCapabilities => super::NesOpenFilesCapabilities);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::NesDiagnosticsCapabilities => crate::v1::NesDiagnosticsCapabilities);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::NesDiagnosticsCapabilities => super::NesDiagnosticsCapabilities);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::ClientNesCapabilities => crate::v1::ClientNesCapabilities);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::ClientNesCapabilities => super::ClientNesCapabilities);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::NesJumpCapabilities => crate::v1::NesJumpCapabilities);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::NesJumpCapabilities => super::NesJumpCapabilities);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::NesRenameCapabilities => crate::v1::NesRenameCapabilities);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::NesRenameCapabilities => super::NesRenameCapabilities);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::NesSearchAndReplaceCapabilities => crate::v1::NesSearchAndReplaceCapabilities);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::NesSearchAndReplaceCapabilities => super::NesSearchAndReplaceCapabilities);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::DidOpenDocumentNotification => crate::v1::DidOpenDocumentNotification);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::DidOpenDocumentNotification => super::DidOpenDocumentNotification);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::DidChangeDocumentNotification => crate::v1::DidChangeDocumentNotification);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::DidChangeDocumentNotification => super::DidChangeDocumentNotification);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::TextDocumentContentChangeEvent => crate::v1::TextDocumentContentChangeEvent);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::TextDocumentContentChangeEvent => super::TextDocumentContentChangeEvent);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::DidCloseDocumentNotification => crate::v1::DidCloseDocumentNotification);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::DidCloseDocumentNotification => super::DidCloseDocumentNotification);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::DidSaveDocumentNotification => crate::v1::DidSaveDocumentNotification);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::DidSaveDocumentNotification => super::DidSaveDocumentNotification);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::DidFocusDocumentNotification => crate::v1::DidFocusDocumentNotification);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::DidFocusDocumentNotification => super::DidFocusDocumentNotification);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::StartNesRequest => crate::v1::StartNesRequest);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::StartNesRequest => super::StartNesRequest);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::WorkspaceFolder => crate::v1::WorkspaceFolder);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::WorkspaceFolder => super::WorkspaceFolder);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::NesRepository => crate::v1::NesRepository);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::NesRepository => super::NesRepository);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::StartNesResponse => crate::v1::StartNesResponse);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::StartNesResponse => super::StartNesResponse);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::CloseNesRequest => crate::v1::CloseNesRequest);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::CloseNesRequest => super::CloseNesRequest);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::CloseNesResponse => crate::v1::CloseNesResponse);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::CloseNesResponse => super::CloseNesResponse);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::NesTriggerKind => crate::v1::NesTriggerKind);
+#[cfg(feature = "unstable_nes")]
+impl_from_enum!(crate::v1::NesTriggerKind => super::NesTriggerKind {
+    Automatic,
+    Diagnostic,
+    Manual,
+});
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::SuggestNesRequest => crate::v1::SuggestNesRequest);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::SuggestNesRequest => super::SuggestNesRequest);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::NesSuggestContext => crate::v1::NesSuggestContext);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::NesSuggestContext => super::NesSuggestContext);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::NesRecentFile => crate::v1::NesRecentFile);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::NesRecentFile => super::NesRecentFile);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::NesRelatedSnippet => crate::v1::NesRelatedSnippet);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::NesRelatedSnippet => super::NesRelatedSnippet);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::NesExcerpt => crate::v1::NesExcerpt);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::NesExcerpt => super::NesExcerpt);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::NesEditHistoryEntry => crate::v1::NesEditHistoryEntry);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::NesEditHistoryEntry => super::NesEditHistoryEntry);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::NesUserAction => crate::v1::NesUserAction);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::NesUserAction => super::NesUserAction);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::NesOpenFile => crate::v1::NesOpenFile);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::NesOpenFile => super::NesOpenFile);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::NesDiagnostic => crate::v1::NesDiagnostic);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::NesDiagnostic => super::NesDiagnostic);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::NesDiagnosticSeverity => crate::v1::NesDiagnosticSeverity);
+#[cfg(feature = "unstable_nes")]
+impl_from_enum!(crate::v1::NesDiagnosticSeverity => super::NesDiagnosticSeverity {
+    Error,
+    Warning,
+    Information,
+    Hint,
+});
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::SuggestNesResponse => crate::v1::SuggestNesResponse);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::SuggestNesResponse => super::SuggestNesResponse);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::NesSuggestion => crate::v1::NesSuggestion);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::NesSuggestion => super::NesSuggestion);
+#[cfg(feature = "unstable_nes")]
+impl_from_tuple_newtype!(super::NesSuggestionId => crate::v1::NesSuggestionId);
+#[cfg(feature = "unstable_nes")]
+impl_from_tuple_newtype!(crate::v1::NesSuggestionId => super::NesSuggestionId);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::NesEditSuggestion => crate::v1::NesEditSuggestion);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::NesEditSuggestion => super::NesEditSuggestion);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::NesTextEdit => crate::v1::NesTextEdit);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::NesTextEdit => super::NesTextEdit);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::NesJumpSuggestion => crate::v1::NesJumpSuggestion);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::NesJumpSuggestion => super::NesJumpSuggestion);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::NesRenameSuggestion => crate::v1::NesRenameSuggestion);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::NesRenameSuggestion => super::NesRenameSuggestion);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::NesSearchAndReplaceSuggestion => crate::v1::NesSearchAndReplaceSuggestion);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::NesSearchAndReplaceSuggestion => super::NesSearchAndReplaceSuggestion);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::AcceptNesNotification => crate::v1::AcceptNesNotification);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::AcceptNesNotification => super::AcceptNesNotification);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::RejectNesNotification => crate::v1::RejectNesNotification);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v1_to_v2!(crate::v1::RejectNesNotification => super::RejectNesNotification);
+#[cfg(feature = "unstable_nes")]
+impl_try_from_v2_to_v1!(super::NesRejectReason => crate::v1::NesRejectReason);
+#[cfg(feature = "unstable_nes")]
+impl_from_enum!(crate::v1::NesRejectReason => super::NesRejectReason {
+    Rejected,
+    Ignored,
+    Replaced,
+    Cancelled,
+});
+#[cfg(feature = "unstable_elicitation")]
+impl_from_tuple_newtype!(super::ElicitationId => crate::v1::ElicitationId);
+#[cfg(feature = "unstable_elicitation")]
+impl_from_tuple_newtype!(crate::v1::ElicitationId => super::ElicitationId);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v2_to_v1!(super::StringFormat => crate::v1::StringFormat);
+#[cfg(feature = "unstable_elicitation")]
+impl_from_enum!(crate::v1::StringFormat => super::StringFormat {
+    Email,
+    Uri,
+    Date,
+    DateTime,
+});
+#[cfg(feature = "unstable_elicitation")]
+impl_from_enum!(super::ElicitationSchemaType => crate::v1::ElicitationSchemaType {
+    Object,
+});
+#[cfg(feature = "unstable_elicitation")]
+impl_from_enum!(crate::v1::ElicitationSchemaType => super::ElicitationSchemaType {
+    Object,
+});
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v2_to_v1!(super::EnumOption => crate::v1::EnumOption);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v1_to_v2!(crate::v1::EnumOption => super::EnumOption);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v2_to_v1!(super::StringPropertySchema => crate::v1::StringPropertySchema);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v1_to_v2!(crate::v1::StringPropertySchema => super::StringPropertySchema);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v2_to_v1!(super::NumberPropertySchema => crate::v1::NumberPropertySchema);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v1_to_v2!(crate::v1::NumberPropertySchema => super::NumberPropertySchema);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v2_to_v1!(super::IntegerPropertySchema => crate::v1::IntegerPropertySchema);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v1_to_v2!(crate::v1::IntegerPropertySchema => super::IntegerPropertySchema);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v2_to_v1!(super::BooleanPropertySchema => crate::v1::BooleanPropertySchema);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v1_to_v2!(crate::v1::BooleanPropertySchema => super::BooleanPropertySchema);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v2_to_v1!(super::StringMultiSelectItems => crate::v1::StringMultiSelectItems);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v1_to_v2!(crate::v1::StringMultiSelectItems => super::StringMultiSelectItems);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v2_to_v1!(super::OtherMultiSelectItems => crate::v1::OtherMultiSelectItems);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v1_to_v2!(crate::v1::OtherMultiSelectItems => super::OtherMultiSelectItems);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v2_to_v1!(super::TitledMultiSelectItems => crate::v1::TitledMultiSelectItems);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v1_to_v2!(crate::v1::TitledMultiSelectItems => super::TitledMultiSelectItems);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v2_to_v1!(super::MultiSelectItems => crate::v1::MultiSelectItems);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v1_to_v2!(crate::v1::MultiSelectItems => super::MultiSelectItems);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v2_to_v1!(super::MultiSelectPropertySchema => crate::v1::MultiSelectPropertySchema);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v1_to_v2!(crate::v1::MultiSelectPropertySchema => super::MultiSelectPropertySchema);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v2_to_v1!(super::ElicitationPropertySchema => crate::v1::ElicitationPropertySchema);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v1_to_v2!(crate::v1::ElicitationPropertySchema => super::ElicitationPropertySchema);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v2_to_v1!(super::OtherElicitationPropertySchema => crate::v1::OtherElicitationPropertySchema);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v1_to_v2!(crate::v1::OtherElicitationPropertySchema => super::OtherElicitationPropertySchema);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v2_to_v1!(super::ElicitationSchema => crate::v1::ElicitationSchema);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v1_to_v2!(crate::v1::ElicitationSchema => super::ElicitationSchema);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v2_to_v1!(super::ElicitationCapabilities => crate::v1::ElicitationCapabilities);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v1_to_v2!(crate::v1::ElicitationCapabilities => super::ElicitationCapabilities);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v2_to_v1!(super::ElicitationFormCapabilities => crate::v1::ElicitationFormCapabilities);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v1_to_v2!(crate::v1::ElicitationFormCapabilities => super::ElicitationFormCapabilities);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v2_to_v1!(super::ElicitationUrlCapabilities => crate::v1::ElicitationUrlCapabilities);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v1_to_v2!(crate::v1::ElicitationUrlCapabilities => super::ElicitationUrlCapabilities);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v2_to_v1!(super::ElicitationScope => crate::v1::ElicitationScope);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v1_to_v2!(crate::v1::ElicitationScope => super::ElicitationScope);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v2_to_v1!(super::ElicitationSessionScope => crate::v1::ElicitationSessionScope);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v1_to_v2!(crate::v1::ElicitationSessionScope => super::ElicitationSessionScope);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v2_to_v1!(super::ElicitationRequestScope => crate::v1::ElicitationRequestScope);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v1_to_v2!(crate::v1::ElicitationRequestScope => super::ElicitationRequestScope);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v2_to_v1!(super::CreateElicitationRequest => crate::v1::CreateElicitationRequest);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v1_to_v2!(crate::v1::CreateElicitationRequest => super::CreateElicitationRequest);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v2_to_v1!(super::ElicitationMode => crate::v1::ElicitationMode);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v1_to_v2!(crate::v1::ElicitationMode => super::ElicitationMode);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v2_to_v1!(super::OtherElicitationMode => crate::v1::OtherElicitationMode);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v1_to_v2!(crate::v1::OtherElicitationMode => super::OtherElicitationMode);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v2_to_v1!(super::ElicitationFormMode => crate::v1::ElicitationFormMode);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v1_to_v2!(crate::v1::ElicitationFormMode => super::ElicitationFormMode);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v2_to_v1!(super::ElicitationUrlMode => crate::v1::ElicitationUrlMode);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v1_to_v2!(crate::v1::ElicitationUrlMode => super::ElicitationUrlMode);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v2_to_v1!(super::CreateElicitationResponse => crate::v1::CreateElicitationResponse);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v1_to_v2!(crate::v1::CreateElicitationResponse => super::CreateElicitationResponse);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v2_to_v1!(super::ElicitationAction => crate::v1::ElicitationAction);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v1_to_v2!(crate::v1::ElicitationAction => super::ElicitationAction);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v2_to_v1!(super::OtherElicitationAction => crate::v1::OtherElicitationAction);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v1_to_v2!(crate::v1::OtherElicitationAction => super::OtherElicitationAction);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v2_to_v1!(super::ElicitationAcceptAction => crate::v1::ElicitationAcceptAction);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v1_to_v2!(crate::v1::ElicitationAcceptAction => super::ElicitationAcceptAction);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v2_to_v1!(super::ElicitationContentValue => crate::v1::ElicitationContentValue);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v1_to_v2!(crate::v1::ElicitationContentValue => super::ElicitationContentValue);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v2_to_v1!(super::CompleteElicitationNotification => crate::v1::CompleteElicitationNotification);
+#[cfg(feature = "unstable_elicitation")]
+impl_try_from_v1_to_v2!(crate::v1::CompleteElicitationNotification => super::CompleteElicitationNotification);
+impl_try_from_v2_to_v1!(super::ContentBlock => crate::v1::ContentBlock);
+impl_try_from_v1_to_v2!(crate::v1::ContentBlock => super::ContentBlock);
+impl_try_from_v2_to_v1!(super::TextContent => crate::v1::TextContent);
+impl_try_from_v1_to_v2!(crate::v1::TextContent => super::TextContent);
+impl_try_from_v2_to_v1!(super::ImageContent => crate::v1::ImageContent);
+impl_try_from_v1_to_v2!(crate::v1::ImageContent => super::ImageContent);
+impl_try_from_v2_to_v1!(super::AudioContent => crate::v1::AudioContent);
+impl_try_from_v1_to_v2!(crate::v1::AudioContent => super::AudioContent);
+impl_try_from_v2_to_v1!(super::EmbeddedResource => crate::v1::EmbeddedResource);
+impl_try_from_v1_to_v2!(crate::v1::EmbeddedResource => super::EmbeddedResource);
+impl_try_from_v2_to_v1!(super::EmbeddedResourceResource => crate::v1::EmbeddedResourceResource);
+impl_try_from_v1_to_v2!(crate::v1::EmbeddedResourceResource => super::EmbeddedResourceResource);
+impl_try_from_v2_to_v1!(super::TextResourceContents => crate::v1::TextResourceContents);
+impl_try_from_v1_to_v2!(crate::v1::TextResourceContents => super::TextResourceContents);
+impl_try_from_v2_to_v1!(super::BlobResourceContents => crate::v1::BlobResourceContents);
+impl_try_from_v1_to_v2!(crate::v1::BlobResourceContents => super::BlobResourceContents);
+impl_try_from_v2_to_v1!(super::ResourceLink => crate::v1::ResourceLink);
+impl_try_from_v1_to_v2!(crate::v1::ResourceLink => super::ResourceLink);
+impl_try_from_v2_to_v1!(super::Annotations => crate::v1::Annotations);
+impl_try_from_v1_to_v2!(crate::v1::Annotations => super::Annotations);
+impl_try_from_v2_to_v1!(super::Role => crate::v1::Role);
+impl_from_enum!(crate::v1::Role => super::Role {
+    Assistant,
+    User,
+});
 
 macro_rules! identity_conversion {
     ($($ty:ty),* $(,)?) => {
         $(
-            impl IntoV1 for $ty {
+            impl TryToV1 for $ty {
                 type Output = Self;
 
-                fn into_v1(self) -> Result<Self::Output> {
+                fn try_to_v1(self) -> Result<Self::Output> {
                     Ok(self)
                 }
             }
 
-            impl IntoV2 for $ty {
+            impl TryToV2 for $ty {
                 type Output = Self;
 
-                fn into_v2(self) -> Result<Self::Output> {
+                fn try_to_v2(self) -> Result<Self::Output> {
                     Ok(self)
                 }
             }
@@ -224,404 +1125,199 @@ identity_conversion!(
     serde_json::Value,
 );
 
-impl<T> IntoV1 for Option<T>
+impl<T> TryToV1 for Option<T>
 where
-    T: IntoV1,
+    T: TryToV1,
 {
     type Output = Option<T::Output>;
-    fn into_v1(self) -> Result<Self::Output> {
-        self.map(IntoV1::into_v1).transpose()
+    fn try_to_v1(self) -> Result<Self::Output> {
+        self.map(TryToV1::try_to_v1).transpose()
     }
 }
 
-impl<T> IntoV2 for Option<T>
+impl<T> TryToV2 for Option<T>
 where
-    T: IntoV2,
+    T: TryToV2,
 {
     type Output = Option<T::Output>;
-    fn into_v2(self) -> Result<Self::Output> {
-        self.map(IntoV2::into_v2).transpose()
+    fn try_to_v2(self) -> Result<Self::Output> {
+        self.map(TryToV2::try_to_v2).transpose()
     }
 }
 
-impl<T> IntoV1 for Vec<T>
+impl<T> TryToV1 for Vec<T>
 where
-    T: IntoV1,
+    T: TryToV1,
 {
     type Output = Vec<T::Output>;
-    fn into_v1(self) -> Result<Self::Output> {
-        self.into_iter().map(IntoV1::into_v1).collect()
+    fn try_to_v1(self) -> Result<Self::Output> {
+        self.into_iter().map(TryToV1::try_to_v1).collect()
     }
 }
 
-fn into_v1_default_on_error<T>(value: T) -> T::Output
+fn option_vec_into_v2_default<T>(value: Option<Vec<T>>) -> Result<Vec<T::Output>>
 where
-    T: IntoV1,
-    T::Output: Default,
+    T: TryToV2,
 {
-    value.into_v1().unwrap_or_default()
+    value.unwrap_or_default().try_to_v2()
 }
 
-fn into_v2_default_on_error<T>(value: T) -> T::Output
+impl<T> TryToV2 for Vec<T>
 where
-    T: IntoV2,
-    T::Output: Default,
-{
-    value.into_v2().unwrap_or_default()
-}
-
-fn into_v1_vec_skip_errors<T>(values: Vec<T>) -> Vec<T::Output>
-where
-    T: IntoV1,
-{
-    values
-        .into_iter()
-        .filter_map(|value| value.into_v1().ok())
-        .collect()
-}
-
-fn into_v2_vec_skip_errors<T>(values: Vec<T>) -> Vec<T::Output>
-where
-    T: IntoV2,
-{
-    values
-        .into_iter()
-        .filter_map(|value| value.into_v2().ok())
-        .collect()
-}
-
-fn option_vec_into_v1_skip_errors<T>(value: Option<Vec<T>>) -> Option<Vec<T::Output>>
-where
-    T: IntoV1,
-{
-    value.map(into_v1_vec_skip_errors)
-}
-
-fn option_vec_into_v2_skip_errors<T>(value: Option<Vec<T>>) -> Option<Vec<T::Output>>
-where
-    T: IntoV2,
-{
-    value.map(into_v2_vec_skip_errors)
-}
-
-fn option_vec_into_v2_default_skip_errors<T>(value: Option<Vec<T>>) -> Vec<T::Output>
-where
-    T: IntoV2,
-{
-    value.map(into_v2_vec_skip_errors).unwrap_or_default()
-}
-
-impl<T> IntoV2 for Vec<T>
-where
-    T: IntoV2,
+    T: TryToV2,
 {
     type Output = Vec<T::Output>;
-    fn into_v2(self) -> Result<Self::Output> {
-        self.into_iter().map(IntoV2::into_v2).collect()
+    fn try_to_v2(self) -> Result<Self::Output> {
+        self.into_iter().map(TryToV2::try_to_v2).collect()
     }
 }
 
-impl<K, V> IntoV1 for BTreeMap<K, V>
+impl<K, V> TryToV1 for BTreeMap<K, V>
 where
-    K: IntoV1,
+    K: TryToV1,
     K::Output: Ord,
-    V: IntoV1,
+    V: TryToV1,
 {
     type Output = BTreeMap<K::Output, V::Output>;
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         self.into_iter()
-            .map(|(key, value)| Ok((key.into_v1()?, value.into_v1()?)))
+            .map(|(key, value)| Ok((key.try_to_v1()?, value.try_to_v1()?)))
             .collect()
     }
 }
 
-impl<K, V> IntoV2 for BTreeMap<K, V>
+impl<K, V> TryToV2 for BTreeMap<K, V>
 where
-    K: IntoV2,
+    K: TryToV2,
     K::Output: Ord,
-    V: IntoV2,
+    V: TryToV2,
 {
     type Output = BTreeMap<K::Output, V::Output>;
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         self.into_iter()
-            .map(|(key, value)| Ok((key.into_v2()?, value.into_v2()?)))
+            .map(|(key, value)| Ok((key.try_to_v2()?, value.try_to_v2()?)))
             .collect()
     }
 }
 
-impl<K, V, S> IntoV1 for HashMap<K, V, S>
+impl<K, V, S> TryToV1 for HashMap<K, V, S>
 where
-    K: IntoV1,
+    K: TryToV1,
     K::Output: Eq + Hash,
-    V: IntoV1,
+    V: TryToV1,
     S: BuildHasher,
 {
     type Output = HashMap<K::Output, V::Output>;
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         self.into_iter()
-            .map(|(key, value)| Ok((key.into_v1()?, value.into_v1()?)))
+            .map(|(key, value)| Ok((key.try_to_v1()?, value.try_to_v1()?)))
             .collect()
     }
 }
 
-impl<K, V, S> IntoV2 for HashMap<K, V, S>
+impl<K, V, S> TryToV2 for HashMap<K, V, S>
 where
-    K: IntoV2,
+    K: TryToV2,
     K::Output: Eq + Hash,
-    V: IntoV2,
+    V: TryToV2,
     S: BuildHasher,
 {
     type Output = HashMap<K::Output, V::Output>;
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         self.into_iter()
-            .map(|(key, value)| Ok((key.into_v2()?, value.into_v2()?)))
+            .map(|(key, value)| Ok((key.try_to_v2()?, value.try_to_v2()?)))
             .collect()
     }
 }
 
-impl<T> IntoV1 for crate::MaybeUndefined<T>
+impl<T> TryToV1 for crate::MaybeUndefined<T>
 where
-    T: IntoV1,
+    T: TryToV1,
 {
     type Output = crate::MaybeUndefined<T::Output>;
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         Ok(match self {
             Self::Undefined => crate::MaybeUndefined::Undefined,
             Self::Null => crate::MaybeUndefined::Null,
-            Self::Value(value) => crate::MaybeUndefined::Value(value.into_v1()?),
+            Self::Value(value) => crate::MaybeUndefined::Value(value.try_to_v1()?),
         })
     }
 }
 
-impl<T> IntoV2 for crate::MaybeUndefined<T>
+impl<T> TryToV2 for crate::MaybeUndefined<T>
 where
-    T: IntoV2,
+    T: TryToV2,
 {
     type Output = crate::MaybeUndefined<T::Output>;
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         Ok(match self {
             Self::Undefined => crate::MaybeUndefined::Undefined,
             Self::Null => crate::MaybeUndefined::Null,
-            Self::Value(value) => crate::MaybeUndefined::Value(value.into_v2()?),
+            Self::Value(value) => crate::MaybeUndefined::Value(value.try_to_v2()?),
         })
     }
 }
 
-impl<Params> IntoV1 for super::Request<Params>
-where
-    Params: IntoV1,
-{
-    type Output = crate::v1::Request<Params::Output>;
-    fn into_v1(self) -> Result<Self::Output> {
-        Ok(crate::v1::Request {
-            id: self.id.into_v1()?,
-            method: self.method,
-            params: self.params.into_v1()?,
-        })
-    }
-}
-
-impl<Params> IntoV2 for crate::v1::Request<Params>
-where
-    Params: IntoV2,
-{
-    type Output = super::Request<Params::Output>;
-    fn into_v2(self) -> Result<Self::Output> {
-        Ok(super::Request {
-            id: self.id.into_v2()?,
-            method: self.method,
-            params: self.params.into_v2()?,
-        })
-    }
-}
-
-impl<Params> IntoV1 for super::Notification<Params>
-where
-    Params: IntoV1,
-{
-    type Output = crate::v1::Notification<Params::Output>;
-    fn into_v1(self) -> Result<Self::Output> {
-        Ok(crate::v1::Notification {
-            method: self.method,
-            params: self.params.into_v1()?,
-        })
-    }
-}
-
-impl<Params> IntoV2 for crate::v1::Notification<Params>
-where
-    Params: IntoV2,
-{
-    type Output = super::Notification<Params::Output>;
-    fn into_v2(self) -> Result<Self::Output> {
-        Ok(super::Notification {
-            method: self.method,
-            params: self.params.into_v2()?,
-        })
-    }
-}
-
-impl<Response> IntoV1 for super::Response<Response>
-where
-    Response: IntoV1,
-{
-    type Output = crate::v1::Response<Response::Output>;
-    fn into_v1(self) -> Result<Self::Output> {
-        Ok(match self {
-            Self::Result { id, result } => crate::v1::Response::Result {
-                id: id.into_v1()?,
-                result: result.into_v1()?,
-            },
-            Self::Error { id, error } => crate::v1::Response::Error {
-                id: id.into_v1()?,
-                error: error.into_v1()?,
-            },
-        })
-    }
-}
-
-impl<Response> IntoV2 for crate::v1::Response<Response>
-where
-    Response: IntoV2,
-{
-    type Output = super::Response<Response::Output>;
-    fn into_v2(self) -> Result<Self::Output> {
-        Ok(match self {
-            Self::Result { id, result } => super::Response::Result {
-                id: id.into_v2()?,
-                result: result.into_v2()?,
-            },
-            Self::Error { id, error } => super::Response::Error {
-                id: id.into_v2()?,
-                error: error.into_v2()?,
-            },
-        })
-    }
-}
-
-impl<Message> IntoV1 for super::JsonRpcMessage<Message>
-where
-    Message: IntoV1,
-{
-    type Output = crate::v1::JsonRpcMessage<Message::Output>;
-    fn into_v1(self) -> Result<Self::Output> {
-        Ok(crate::v1::JsonRpcMessage::wrap(
-            self.into_inner().into_v1()?,
-        ))
-    }
-}
-
-impl<Message> IntoV2 for crate::v1::JsonRpcMessage<Message>
-where
-    Message: IntoV2,
-{
-    type Output = super::JsonRpcMessage<Message::Output>;
-    fn into_v2(self) -> Result<Self::Output> {
-        Ok(super::JsonRpcMessage::wrap(self.into_inner().into_v2()?))
-    }
-}
-
-impl IntoV1Many for super::Notification<super::AgentNotification> {
-    type Output = crate::v1::Notification<crate::v1::AgentNotification>;
-
-    fn into_v1_many(self) -> Result<Vec<Self::Output>> {
-        let Self { method, params } = self;
-        let Some(params) = params else {
-            return Ok(vec![crate::v1::Notification {
-                method,
-                params: None,
-            }]);
-        };
-
-        params
-            .into_v1_many()?
-            .into_iter()
-            .map(|params| {
-                Ok(crate::v1::Notification {
-                    method: method.clone(),
-                    params: Some(params),
-                })
-            })
-            .collect()
-    }
-}
-
-impl IntoV1Many for super::JsonRpcMessage<super::Notification<super::AgentNotification>> {
-    type Output = crate::v1::JsonRpcMessage<crate::v1::Notification<crate::v1::AgentNotification>>;
-
-    fn into_v1_many(self) -> Result<Vec<Self::Output>> {
-        self.into_inner()
-            .into_v1_many()?
-            .into_iter()
-            .map(|message| Ok(crate::v1::JsonRpcMessage::wrap(message)))
-            .collect()
-    }
-}
-
-impl IntoV1Many for super::JsonRpcBatch<super::Notification<super::AgentNotification>> {
-    type Output = crate::v1::JsonRpcMessage<crate::v1::Notification<crate::v1::AgentNotification>>;
-
-    fn into_v1_many(self) -> Result<Vec<Self::Output>> {
-        let messages = self
-            .into_vec()
-            .into_iter()
-            .map(IntoV1Many::into_v1_many)
-            .collect::<Result<Vec<_>>>()?
-            .into_iter()
-            .flatten()
-            .collect();
-        Ok(messages)
-    }
-}
-
-impl IntoV1 for super::SessionId {
+impl TryToV1 for super::SessionId {
     type Output = crate::v1::SessionId;
 
-    fn into_v1(self) -> Result<Self::Output> {
-        Ok(crate::v1::SessionId(self.0.into_v1()?))
+    fn try_to_v1(self) -> Result<Self::Output> {
+        Ok(crate::v1::SessionId(self.0.try_to_v1()?))
     }
 }
 
-impl IntoV2 for crate::v1::SessionId {
+impl TryToV2 for crate::v1::SessionId {
     type Output = super::SessionId;
 
-    fn into_v2(self) -> Result<Self::Output> {
-        Ok(super::SessionId(self.0.into_v2()?))
+    fn try_to_v2(self) -> Result<Self::Output> {
+        Ok(super::SessionId(self.0.try_to_v2()?))
     }
 }
 
-impl IntoV1 for super::MessageId {
+impl TryToV1 for super::MessageId {
     type Output = crate::v1::MessageId;
 
-    fn into_v1(self) -> Result<Self::Output> {
-        Ok(crate::v1::MessageId(self.0.into_v1()?))
+    fn try_to_v1(self) -> Result<Self::Output> {
+        Ok(crate::v1::MessageId(self.0.try_to_v1()?))
     }
 }
 
-impl IntoV2 for crate::v1::MessageId {
+impl TryToV2 for crate::v1::MessageId {
     type Output = super::MessageId;
 
-    fn into_v2(self) -> Result<Self::Output> {
-        Ok(super::MessageId(self.0.into_v2()?))
+    fn try_to_v2(self) -> Result<Self::Output> {
+        Ok(super::MessageId(self.0.try_to_v2()?))
     }
 }
 
 #[cfg(not(feature = "unstable_plan_operations"))]
-impl IntoV1 for super::PlanUpdate {
+impl TryToV1 for super::PlanUpdate {
     type Output = crate::v1::Plan;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { plan, meta } = self;
         Ok(match plan {
             super::PlanUpdateContent::Items(items) => {
                 let super::PlanItems {
-                    plan_id: _,
+                    plan_id,
                     entries,
                     meta: items_meta,
                 } = items;
+                if plan_id.0.as_ref() != LEGACY_V1_PLAN_ID {
+                    return Err(unrepresentable_v2_field("PlanItems", "planId"));
+                }
+                let meta = match (meta, items_meta) {
+                    (Some(update_meta), Some(items_meta)) if update_meta != items_meta => {
+                        return Err(ProtocolConversionError::new(
+                            "v2 PlanUpdate and PlanItems metadata cannot both be represented in v1 Plan",
+                        ));
+                    }
+                    (Some(meta), _) | (_, Some(meta)) => Some(meta),
+                    (None, None) => None,
+                };
                 crate::v1::Plan {
-                    entries: into_v1_vec_skip_errors(entries),
-                    meta: meta.or(items_meta).into_v1()?,
+                    entries: entries.try_to_v1()?,
+                    meta: meta.try_to_v1()?,
                 }
             }
             super::PlanUpdateContent::Other(value) => {
@@ -632,58 +1328,58 @@ impl IntoV1 for super::PlanUpdate {
 }
 
 #[cfg(feature = "unstable_plan_operations")]
-impl IntoV1 for super::PlanId {
+impl TryToV1 for super::PlanId {
     type Output = crate::v1::PlanId;
 
-    fn into_v1(self) -> Result<Self::Output> {
-        Ok(crate::v1::PlanId(self.0.into_v1()?))
+    fn try_to_v1(self) -> Result<Self::Output> {
+        Ok(crate::v1::PlanId(self.0.try_to_v1()?))
     }
 }
 
 #[cfg(feature = "unstable_plan_operations")]
-impl IntoV2 for crate::v1::PlanId {
+impl TryToV2 for crate::v1::PlanId {
     type Output = super::PlanId;
 
-    fn into_v2(self) -> Result<Self::Output> {
-        Ok(super::PlanId(self.0.into_v2()?))
+    fn try_to_v2(self) -> Result<Self::Output> {
+        Ok(super::PlanId(self.0.try_to_v2()?))
     }
 }
 
 #[cfg(feature = "unstable_plan_operations")]
-impl IntoV1 for super::PlanUpdate {
+impl TryToV1 for super::PlanUpdate {
     type Output = crate::v1::PlanUpdate;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { plan, meta } = self;
         Ok(crate::v1::PlanUpdate {
-            plan: plan.into_v1()?,
-            meta: meta.into_v1()?,
+            plan: plan.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_plan_operations")]
-impl IntoV2 for crate::v1::PlanUpdate {
+impl TryToV2 for crate::v1::PlanUpdate {
     type Output = super::PlanUpdate;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { plan, meta } = self;
         Ok(super::PlanUpdate {
-            plan: plan.into_v2()?,
-            meta: meta.into_v2()?,
+            plan: plan.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_plan_operations")]
-impl IntoV1 for super::PlanUpdateContent {
+impl TryToV1 for super::PlanUpdateContent {
     type Output = crate::v1::PlanUpdateContent;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::Items(value) => crate::v1::PlanUpdateContent::Items(value.into_v1()?),
-            Self::File(value) => crate::v1::PlanUpdateContent::File(value.into_v1()?),
-            Self::Markdown(value) => crate::v1::PlanUpdateContent::Markdown(value.into_v1()?),
+            Self::Items(value) => crate::v1::PlanUpdateContent::Items(value.try_to_v1()?),
+            Self::File(value) => crate::v1::PlanUpdateContent::File(value.try_to_v1()?),
+            Self::Markdown(value) => crate::v1::PlanUpdateContent::Markdown(value.try_to_v1()?),
             Self::Other(value) => {
                 return Err(unknown_v2_enum_variant("PlanUpdateContent", &value.type_));
             }
@@ -692,148 +1388,148 @@ impl IntoV1 for super::PlanUpdateContent {
 }
 
 #[cfg(feature = "unstable_plan_operations")]
-impl IntoV2 for crate::v1::PlanUpdateContent {
+impl TryToV2 for crate::v1::PlanUpdateContent {
     type Output = super::PlanUpdateContent;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::Items(value) => super::PlanUpdateContent::Items(value.into_v2()?),
-            Self::File(value) => super::PlanUpdateContent::File(value.into_v2()?),
-            Self::Markdown(value) => super::PlanUpdateContent::Markdown(value.into_v2()?),
+            Self::Items(value) => super::PlanUpdateContent::Items(value.try_to_v2()?),
+            Self::File(value) => super::PlanUpdateContent::File(value.try_to_v2()?),
+            Self::Markdown(value) => super::PlanUpdateContent::Markdown(value.try_to_v2()?),
         })
     }
 }
 
 #[cfg(feature = "unstable_plan_operations")]
-impl IntoV1 for super::PlanItems {
+impl TryToV1 for super::PlanItems {
     type Output = crate::v1::PlanItems;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             plan_id,
             entries,
             meta,
         } = self;
         Ok(crate::v1::PlanItems {
-            plan_id: plan_id.into_v1()?,
-            entries: into_v1_vec_skip_errors(entries),
-            meta: meta.into_v1()?,
+            plan_id: plan_id.try_to_v1()?,
+            entries: entries.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_plan_operations")]
-impl IntoV2 for crate::v1::PlanItems {
+impl TryToV2 for crate::v1::PlanItems {
     type Output = super::PlanItems;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             plan_id,
             entries,
             meta,
         } = self;
         Ok(super::PlanItems {
-            plan_id: plan_id.into_v2()?,
-            entries: into_v2_vec_skip_errors(entries),
-            meta: meta.into_v2()?,
+            plan_id: plan_id.try_to_v2()?,
+            entries: entries.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_plan_operations")]
-impl IntoV1 for super::PlanFile {
+impl TryToV1 for super::PlanFile {
     type Output = crate::v1::PlanFile;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { plan_id, uri, meta } = self;
         Ok(crate::v1::PlanFile {
-            plan_id: plan_id.into_v1()?,
-            uri: uri.into_v1()?,
-            meta: meta.into_v1()?,
+            plan_id: plan_id.try_to_v1()?,
+            uri: uri.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_plan_operations")]
-impl IntoV2 for crate::v1::PlanFile {
+impl TryToV2 for crate::v1::PlanFile {
     type Output = super::PlanFile;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { plan_id, uri, meta } = self;
         Ok(super::PlanFile {
-            plan_id: plan_id.into_v2()?,
-            uri: uri.into_v2()?,
-            meta: meta.into_v2()?,
+            plan_id: plan_id.try_to_v2()?,
+            uri: uri.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_plan_operations")]
-impl IntoV1 for super::PlanMarkdown {
+impl TryToV1 for super::PlanMarkdown {
     type Output = crate::v1::PlanMarkdown;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             plan_id,
             content,
             meta,
         } = self;
         Ok(crate::v1::PlanMarkdown {
-            plan_id: plan_id.into_v1()?,
-            content: content.into_v1()?,
-            meta: meta.into_v1()?,
+            plan_id: plan_id.try_to_v1()?,
+            content: content.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_plan_operations")]
-impl IntoV2 for crate::v1::PlanMarkdown {
+impl TryToV2 for crate::v1::PlanMarkdown {
     type Output = super::PlanMarkdown;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             plan_id,
             content,
             meta,
         } = self;
         Ok(super::PlanMarkdown {
-            plan_id: plan_id.into_v2()?,
-            content: content.into_v2()?,
-            meta: meta.into_v2()?,
+            plan_id: plan_id.try_to_v2()?,
+            content: content.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_plan_operations")]
-impl IntoV1 for super::PlanRemoved {
+impl TryToV1 for super::PlanRemoved {
     type Output = crate::v1::PlanRemoved;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { plan_id, meta } = self;
         Ok(crate::v1::PlanRemoved {
-            plan_id: plan_id.into_v1()?,
-            meta: meta.into_v1()?,
+            plan_id: plan_id.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_plan_operations")]
-impl IntoV2 for crate::v1::PlanRemoved {
+impl TryToV2 for crate::v1::PlanRemoved {
     type Output = super::PlanRemoved;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { plan_id, meta } = self;
         Ok(super::PlanRemoved {
-            plan_id: plan_id.into_v2()?,
-            meta: meta.into_v2()?,
+            plan_id: plan_id.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::PlanEntry {
+impl TryToV1 for super::PlanEntry {
     type Output = crate::v1::PlanEntry;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             content,
             priority,
@@ -841,18 +1537,18 @@ impl IntoV1 for super::PlanEntry {
             meta,
         } = self;
         Ok(crate::v1::PlanEntry {
-            content: content.into_v1()?,
-            priority: priority.into_v1()?,
-            status: status.into_v1()?,
-            meta: meta.into_v1()?,
+            content: content.try_to_v1()?,
+            priority: priority.try_to_v1()?,
+            status: status.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::PlanEntry {
+impl TryToV2 for crate::v1::PlanEntry {
     type Output = super::PlanEntry;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             content,
             priority,
@@ -860,18 +1556,18 @@ impl IntoV2 for crate::v1::PlanEntry {
             meta,
         } = self;
         Ok(super::PlanEntry {
-            content: content.into_v2()?,
-            priority: priority.into_v2()?,
-            status: status.into_v2()?,
-            meta: meta.into_v2()?,
+            content: content.try_to_v2()?,
+            priority: priority.try_to_v2()?,
+            status: status.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::PlanEntryPriority {
+impl TryToV1 for super::PlanEntryPriority {
     type Output = crate::v1::PlanEntryPriority;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         Ok(match self {
             Self::High => crate::v1::PlanEntryPriority::High,
             Self::Medium => crate::v1::PlanEntryPriority::Medium,
@@ -883,10 +1579,10 @@ impl IntoV1 for super::PlanEntryPriority {
     }
 }
 
-impl IntoV2 for crate::v1::PlanEntryPriority {
+impl TryToV2 for crate::v1::PlanEntryPriority {
     type Output = super::PlanEntryPriority;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         Ok(match self {
             Self::High => super::PlanEntryPriority::High,
             Self::Medium => super::PlanEntryPriority::Medium,
@@ -895,10 +1591,10 @@ impl IntoV2 for crate::v1::PlanEntryPriority {
     }
 }
 
-impl IntoV1 for super::PlanEntryStatus {
+impl TryToV1 for super::PlanEntryStatus {
     type Output = crate::v1::PlanEntryStatus;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         Ok(match self {
             Self::Pending => crate::v1::PlanEntryStatus::Pending,
             Self::InProgress => crate::v1::PlanEntryStatus::InProgress,
@@ -908,10 +1604,10 @@ impl IntoV1 for super::PlanEntryStatus {
     }
 }
 
-impl IntoV2 for crate::v1::PlanEntryStatus {
+impl TryToV2 for crate::v1::PlanEntryStatus {
     type Output = super::PlanEntryStatus;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         Ok(match self {
             Self::Pending => super::PlanEntryStatus::Pending,
             Self::InProgress => super::PlanEntryStatus::InProgress,
@@ -920,67 +1616,67 @@ impl IntoV2 for crate::v1::PlanEntryStatus {
     }
 }
 
-impl IntoV1 for super::CancelRequestNotification {
+impl TryToV1 for super::CancelRequestNotification {
     type Output = crate::v1::CancelRequestNotification;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { request_id, meta } = self;
         Ok(crate::v1::CancelRequestNotification {
-            request_id: request_id.into_v1()?,
-            meta: meta.into_v1()?,
+            request_id: request_id.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::CancelRequestNotification {
+impl TryToV2 for crate::v1::CancelRequestNotification {
     type Output = super::CancelRequestNotification;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { request_id, meta } = self;
         Ok(super::CancelRequestNotification {
-            request_id: request_id.into_v2()?,
-            meta: meta.into_v2()?,
+            request_id: request_id.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::ProtocolLevelNotification {
+impl TryToV1 for super::ProtocolLevelNotification {
     type Output = crate::v1::ProtocolLevelNotification;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         Ok(match self {
             Self::CancelRequestNotification(value) => {
-                crate::v1::ProtocolLevelNotification::CancelRequestNotification(value.into_v1()?)
+                crate::v1::ProtocolLevelNotification::CancelRequestNotification(value.try_to_v1()?)
             }
         })
     }
 }
 
-impl IntoV2 for crate::v1::ProtocolLevelNotification {
+impl TryToV2 for crate::v1::ProtocolLevelNotification {
     type Output = super::ProtocolLevelNotification;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         Ok(match self {
             Self::CancelRequestNotification(value) => {
-                super::ProtocolLevelNotification::CancelRequestNotification(value.into_v2()?)
+                super::ProtocolLevelNotification::CancelRequestNotification(value.try_to_v2()?)
             }
         })
     }
 }
 
-impl IntoV1Many for super::UpdateSessionNotification {
+impl TryIntoV1Many for super::UpdateSessionNotification {
     type Output = crate::v1::SessionNotification;
 
-    fn into_v1_many(self) -> Result<Vec<Self::Output>> {
+    fn try_into_v1_many(self) -> Result<Vec<Self::Output>> {
         let Self {
             session_id,
             update,
             meta,
         } = self;
-        let session_id = session_id.into_v1()?;
-        let meta = meta.into_v1()?;
+        let session_id = session_id.try_to_v1()?;
+        let meta = meta.try_to_v1()?;
         update
-            .into_v1_many()?
+            .try_into_v1_many()?
             .into_iter()
             .map(|update| {
                 Ok(crate::v1::SessionNotification {
@@ -993,30 +1689,32 @@ impl IntoV1Many for super::UpdateSessionNotification {
     }
 }
 
-impl IntoV2 for crate::v1::SessionNotification {
+impl TryToV2 for crate::v1::SessionNotification {
     type Output = super::UpdateSessionNotification;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             session_id,
             update,
             meta,
         } = self;
         Ok(super::UpdateSessionNotification {
-            session_id: session_id.into_v2()?,
-            update: update.into_v2()?,
-            meta: meta.into_v2()?,
+            session_id: session_id.try_to_v2()?,
+            update: update.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1Many for super::SessionUpdate {
+impl TryIntoV1Many for super::SessionUpdate {
     type Output = crate::v1::SessionUpdate;
 
-    fn into_v1_many(self) -> Result<Vec<Self::Output>> {
+    fn try_into_v1_many(self) -> Result<Vec<Self::Output>> {
         Ok(match self {
             Self::UserMessageChunk(value) => {
-                vec![crate::v1::SessionUpdate::UserMessageChunk(value.into_v1()?)]
+                vec![crate::v1::SessionUpdate::UserMessageChunk(
+                    value.try_to_v1()?,
+                )]
             }
             Self::UserMessage(value) => v2_message_update_into_v1_chunks(
                 "user_message",
@@ -1027,7 +1725,7 @@ impl IntoV1Many for super::SessionUpdate {
             )?,
             Self::AgentMessageChunk(value) => {
                 vec![crate::v1::SessionUpdate::AgentMessageChunk(
-                    value.into_v1()?,
+                    value.try_to_v1()?,
                 )]
             }
             Self::AgentMessage(value) => v2_message_update_into_v1_chunks(
@@ -1039,7 +1737,7 @@ impl IntoV1Many for super::SessionUpdate {
             )?,
             Self::AgentThoughtChunk(value) => {
                 vec![crate::v1::SessionUpdate::AgentThoughtChunk(
-                    value.into_v1()?,
+                    value.try_to_v1()?,
                 )]
             }
             Self::AgentThought(value) => v2_message_update_into_v1_chunks(
@@ -1060,33 +1758,35 @@ impl IntoV1Many for super::SessionUpdate {
                 ));
             }
             Self::ToolCallUpdate(value) => {
-                vec![crate::v1::SessionUpdate::ToolCallUpdate(value.into_v1()?)]
+                vec![crate::v1::SessionUpdate::ToolCallUpdate(value.try_to_v1()?)]
             }
             #[cfg(feature = "unstable_plan_operations")]
-            Self::PlanUpdate(value) => vec![crate::v1::SessionUpdate::PlanUpdate(value.into_v1()?)],
+            Self::PlanUpdate(value) => {
+                vec![crate::v1::SessionUpdate::PlanUpdate(value.try_to_v1()?)]
+            }
             #[cfg(not(feature = "unstable_plan_operations"))]
-            Self::PlanUpdate(value) => vec![crate::v1::SessionUpdate::Plan(value.into_v1()?)],
+            Self::PlanUpdate(value) => vec![crate::v1::SessionUpdate::Plan(value.try_to_v1()?)],
             #[cfg(feature = "unstable_plan_operations")]
             Self::PlanRemoved(value) => {
-                vec![crate::v1::SessionUpdate::PlanRemoved(value.into_v1()?)]
+                vec![crate::v1::SessionUpdate::PlanRemoved(value.try_to_v1()?)]
             }
             Self::AvailableCommandsUpdate(value) => {
                 vec![crate::v1::SessionUpdate::AvailableCommandsUpdate(
-                    value.into_v1()?,
+                    value.try_to_v1()?,
                 )]
             }
             Self::ConfigOptionUpdate(value) => {
                 vec![crate::v1::SessionUpdate::ConfigOptionUpdate(
-                    value.into_v1()?,
+                    value.try_to_v1()?,
                 )]
             }
             Self::SessionInfoUpdate(value) => {
                 vec![crate::v1::SessionUpdate::SessionInfoUpdate(
-                    value.into_v1()?,
+                    value.try_to_v1()?,
                 )]
             }
             Self::UsageUpdate(value) => {
-                vec![crate::v1::SessionUpdate::UsageUpdate(value.into_v1()?)]
+                vec![crate::v1::SessionUpdate::UsageUpdate(value.try_to_v1()?)]
             }
             Self::Other(value) => {
                 return Err(unknown_v2_enum_variant(
@@ -1123,9 +1823,9 @@ fn v2_message_update_into_v1_chunks(
             )));
         }
     };
-    let message_id = message_id.into_v1()?;
+    let message_id = message_id.try_to_v1()?;
     let meta = match meta {
-        crate::MaybeUndefined::Value(meta) => Some(meta.into_v1()?),
+        crate::MaybeUndefined::Value(meta) => Some(meta.try_to_v1()?),
         crate::MaybeUndefined::Null => {
             return Err(ProtocolConversionError::new(format!(
                 "v2 SessionUpdate variant `{variant}` with null _meta cannot be represented in v1 chunks"
@@ -1138,7 +1838,7 @@ fn v2_message_update_into_v1_chunks(
         .into_iter()
         .map(|content| {
             Ok(wrap(crate::v1::ContentChunk {
-                content: content.into_v1()?,
+                content: content.try_to_v1()?,
                 message_id: Some(message_id.clone()),
                 meta: meta.clone(),
             }))
@@ -1146,35 +1846,35 @@ fn v2_message_update_into_v1_chunks(
         .collect()
 }
 
-impl IntoV2 for crate::v1::SessionUpdate {
+impl TryToV2 for crate::v1::SessionUpdate {
     type Output = super::SessionUpdate;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         Ok(match self {
             Self::UserMessageChunk(value) => {
-                super::SessionUpdate::UserMessageChunk(value.into_v2()?)
+                super::SessionUpdate::UserMessageChunk(value.try_to_v2()?)
             }
             Self::AgentMessageChunk(value) => {
-                super::SessionUpdate::AgentMessageChunk(value.into_v2()?)
+                super::SessionUpdate::AgentMessageChunk(value.try_to_v2()?)
             }
             Self::AgentThoughtChunk(value) => {
-                super::SessionUpdate::AgentThoughtChunk(value.into_v2()?)
+                super::SessionUpdate::AgentThoughtChunk(value.try_to_v2()?)
             }
-            Self::ToolCall(value) => super::SessionUpdate::ToolCallUpdate(value.into_v2()?),
-            Self::ToolCallUpdate(value) => super::SessionUpdate::ToolCallUpdate(value.into_v2()?),
+            Self::ToolCall(value) => super::SessionUpdate::ToolCallUpdate(value.try_to_v2()?),
+            Self::ToolCallUpdate(value) => super::SessionUpdate::ToolCallUpdate(value.try_to_v2()?),
             Self::Plan(value) => {
                 let crate::v1::Plan { entries, meta } = value;
                 super::SessionUpdate::PlanUpdate(super::PlanUpdate {
-                    plan: super::PlanUpdateContent::items(LEGACY_V1_PLAN_ID, entries.into_v2()?),
-                    meta: meta.into_v2()?,
+                    plan: super::PlanUpdateContent::items(LEGACY_V1_PLAN_ID, entries.try_to_v2()?),
+                    meta: meta.try_to_v2()?,
                 })
             }
             #[cfg(feature = "unstable_plan_operations")]
-            Self::PlanUpdate(value) => super::SessionUpdate::PlanUpdate(value.into_v2()?),
+            Self::PlanUpdate(value) => super::SessionUpdate::PlanUpdate(value.try_to_v2()?),
             #[cfg(feature = "unstable_plan_operations")]
-            Self::PlanRemoved(value) => super::SessionUpdate::PlanRemoved(value.into_v2()?),
+            Self::PlanRemoved(value) => super::SessionUpdate::PlanRemoved(value.try_to_v2()?),
             Self::AvailableCommandsUpdate(value) => {
-                super::SessionUpdate::AvailableCommandsUpdate(value.into_v2()?)
+                super::SessionUpdate::AvailableCommandsUpdate(value.try_to_v2()?)
             }
             Self::CurrentModeUpdate(_) => {
                 return Err(removed_v1_enum_variant(
@@ -1183,84 +1883,84 @@ impl IntoV2 for crate::v1::SessionUpdate {
                 ));
             }
             Self::ConfigOptionUpdate(value) => {
-                super::SessionUpdate::ConfigOptionUpdate(value.into_v2()?)
+                super::SessionUpdate::ConfigOptionUpdate(value.try_to_v2()?)
             }
             Self::SessionInfoUpdate(value) => {
-                super::SessionUpdate::SessionInfoUpdate(value.into_v2()?)
+                super::SessionUpdate::SessionInfoUpdate(value.try_to_v2()?)
             }
-            Self::UsageUpdate(value) => super::SessionUpdate::UsageUpdate(value.into_v2()?),
+            Self::UsageUpdate(value) => super::SessionUpdate::UsageUpdate(value.try_to_v2()?),
         })
     }
 }
 
-impl IntoV1 for super::ConfigOptionUpdate {
+impl TryToV1 for super::ConfigOptionUpdate {
     type Output = crate::v1::ConfigOptionUpdate;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             config_options,
             meta,
         } = self;
         Ok(crate::v1::ConfigOptionUpdate {
-            config_options: into_v1_vec_skip_errors(config_options),
-            meta: meta.into_v1()?,
+            config_options: config_options.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::ConfigOptionUpdate {
+impl TryToV2 for crate::v1::ConfigOptionUpdate {
     type Output = super::ConfigOptionUpdate;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             config_options,
             meta,
         } = self;
         Ok(super::ConfigOptionUpdate {
-            config_options: into_v2_vec_skip_errors(config_options),
-            meta: meta.into_v2()?,
+            config_options: config_options.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::SessionInfoUpdate {
+impl TryToV1 for super::SessionInfoUpdate {
     type Output = crate::v1::SessionInfoUpdate;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             title,
             updated_at,
             meta,
         } = self;
         Ok(crate::v1::SessionInfoUpdate {
-            title: title.into_v1()?,
-            updated_at: updated_at.into_v1()?,
+            title: title.try_to_v1()?,
+            updated_at: updated_at.try_to_v1()?,
             meta: maybe_undefined_meta_into_v1_option("SessionInfoUpdate", meta)?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::SessionInfoUpdate {
+impl TryToV2 for crate::v1::SessionInfoUpdate {
     type Output = super::SessionInfoUpdate;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             title,
             updated_at,
             meta,
         } = self;
         Ok(super::SessionInfoUpdate {
-            title: title.into_v2()?,
-            updated_at: updated_at.into_v2()?,
+            title: title.try_to_v2()?,
+            updated_at: updated_at.try_to_v2()?,
             meta: option_into_v2_maybe_undefined(meta)?,
         })
     }
 }
 
-impl IntoV1 for super::UsageUpdate {
+impl TryToV1 for super::UsageUpdate {
     type Output = crate::v1::UsageUpdate;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             used,
             size,
@@ -1268,18 +1968,18 @@ impl IntoV1 for super::UsageUpdate {
             meta,
         } = self;
         Ok(crate::v1::UsageUpdate {
-            used: used.into_v1()?,
-            size: size.into_v1()?,
-            cost: into_v1_default_on_error(cost),
-            meta: meta.into_v1()?,
+            used: used.try_to_v1()?,
+            size: size.try_to_v1()?,
+            cost: cost.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::UsageUpdate {
+impl TryToV2 for crate::v1::UsageUpdate {
     type Output = super::UsageUpdate;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             used,
             size,
@@ -1287,122 +1987,122 @@ impl IntoV2 for crate::v1::UsageUpdate {
             meta,
         } = self;
         Ok(super::UsageUpdate {
-            used: used.into_v2()?,
-            size: size.into_v2()?,
-            cost: into_v2_default_on_error(cost),
-            meta: meta.into_v2()?,
+            used: used.try_to_v2()?,
+            size: size.try_to_v2()?,
+            cost: cost.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::Cost {
+impl TryToV1 for super::Cost {
     type Output = crate::v1::Cost;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             amount,
             currency,
             meta,
         } = self;
         Ok(crate::v1::Cost {
-            amount: amount.into_v1()?,
-            currency: currency.into_v1()?,
-            meta: meta.into_v1()?,
+            amount: amount.try_to_v1()?,
+            currency: currency.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::Cost {
+impl TryToV2 for crate::v1::Cost {
     type Output = super::Cost;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             amount,
             currency,
             meta,
         } = self;
         Ok(super::Cost {
-            amount: amount.into_v2()?,
-            currency: currency.into_v2()?,
-            meta: meta.into_v2()?,
+            amount: amount.try_to_v2()?,
+            currency: currency.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::ContentChunk {
+impl TryToV1 for super::ContentChunk {
     type Output = crate::v1::ContentChunk;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             content,
             message_id,
             meta,
         } = self;
         Ok(crate::v1::ContentChunk {
-            content: content.into_v1()?,
-            message_id: Some(message_id.into_v1()?),
-            meta: meta.into_v1()?,
+            content: content.try_to_v1()?,
+            message_id: Some(message_id.try_to_v1()?),
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::ContentChunk {
+impl TryToV2 for crate::v1::ContentChunk {
     type Output = super::ContentChunk;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             content,
             message_id,
             meta,
         } = self;
         Ok(super::ContentChunk {
-            content: content.into_v2()?,
+            content: content.try_to_v2()?,
             message_id: message_id
                 .ok_or_else(|| {
                     ProtocolConversionError::new(
                         "v1 ContentChunk without messageId cannot be represented in v2",
                     )
                 })?
-                .into_v2()?,
-            meta: meta.into_v2()?,
+                .try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::AvailableCommandsUpdate {
+impl TryToV1 for super::AvailableCommandsUpdate {
     type Output = crate::v1::AvailableCommandsUpdate;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             available_commands,
             meta,
         } = self;
         Ok(crate::v1::AvailableCommandsUpdate {
-            available_commands: into_v1_vec_skip_errors(available_commands),
-            meta: meta.into_v1()?,
+            available_commands: available_commands.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::AvailableCommandsUpdate {
+impl TryToV2 for crate::v1::AvailableCommandsUpdate {
     type Output = super::AvailableCommandsUpdate;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             available_commands,
             meta,
         } = self;
         Ok(super::AvailableCommandsUpdate {
-            available_commands: into_v2_vec_skip_errors(available_commands),
-            meta: meta.into_v2()?,
+            available_commands: available_commands.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::AvailableCommand {
+impl TryToV1 for super::AvailableCommand {
     type Output = crate::v1::AvailableCommand;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             name,
             description,
@@ -1410,18 +2110,18 @@ impl IntoV1 for super::AvailableCommand {
             meta,
         } = self;
         Ok(crate::v1::AvailableCommand {
-            name: name.into_v1()?,
-            description: description.into_v1()?,
-            input: into_v1_default_on_error(input),
-            meta: meta.into_v1()?,
+            name: name.try_to_v1()?,
+            description: description.try_to_v1()?,
+            input: input.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::AvailableCommand {
+impl TryToV2 for crate::v1::AvailableCommand {
     type Output = super::AvailableCommand;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             name,
             description,
@@ -1429,20 +2129,20 @@ impl IntoV2 for crate::v1::AvailableCommand {
             meta,
         } = self;
         Ok(super::AvailableCommand {
-            name: name.into_v2()?,
-            description: description.into_v2()?,
-            input: into_v2_default_on_error(input),
-            meta: meta.into_v2()?,
+            name: name.try_to_v2()?,
+            description: description.try_to_v2()?,
+            input: input.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::AvailableCommandInput {
+impl TryToV1 for super::AvailableCommandInput {
     type Output = crate::v1::AvailableCommandInput;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::Text(value) => crate::v1::AvailableCommandInput::Unstructured(value.into_v1()?),
+            Self::Text(value) => crate::v1::AvailableCommandInput::Unstructured(value.try_to_v1()?),
             Self::Other(value) => {
                 return Err(unknown_v2_enum_variant(
                     "AvailableCommandInput",
@@ -1453,52 +2153,58 @@ impl IntoV1 for super::AvailableCommandInput {
     }
 }
 
-impl IntoV2 for crate::v1::AvailableCommandInput {
+impl TryToV2 for crate::v1::AvailableCommandInput {
     type Output = super::AvailableCommandInput;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::Unstructured(value) => super::AvailableCommandInput::Text(value.into_v2()?),
+            Self::Unstructured(value) => super::AvailableCommandInput::Text(value.try_to_v2()?),
         })
     }
 }
 
-impl IntoV1 for super::TextCommandInput {
+impl TryToV1 for super::TextCommandInput {
     type Output = crate::v1::UnstructuredCommandInput;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { hint, meta } = self;
         Ok(crate::v1::UnstructuredCommandInput {
-            hint: hint.into_v1()?,
-            meta: meta.into_v1()?,
+            hint: hint.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::UnstructuredCommandInput {
+impl TryToV2 for crate::v1::UnstructuredCommandInput {
     type Output = super::TextCommandInput;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { hint, meta } = self;
         Ok(super::TextCommandInput {
-            hint: hint.into_v2()?,
-            meta: meta.into_v2()?,
+            hint: hint.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::RequestPermissionRequest {
+impl TryToV1 for super::RequestPermissionRequest {
     type Output = crate::v1::RequestPermissionRequest;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             session_id,
-            title: _,
-            description: _,
+            title,
+            description,
             subject,
             options,
             meta,
         } = self;
+        if description.is_some() {
+            return Err(unrepresentable_v2_field(
+                "RequestPermissionRequest",
+                "description",
+            ));
+        }
         let Some(subject) = subject else {
             return Err(ProtocolConversionError::new(
                 "v2 RequestPermissionRequest without `subject` cannot be represented in v1",
@@ -1516,46 +2222,57 @@ impl IntoV1 for super::RequestPermissionRequest {
                 ));
             }
         };
+        if tool_call.title.value().map(String::as_str) != Some(title.as_str()) {
+            return Err(ProtocolConversionError::new(
+                "v2 RequestPermissionRequest.title cannot be represented in v1 unless it matches the tool-call title",
+            ));
+        }
         Ok(crate::v1::RequestPermissionRequest {
-            session_id: session_id.into_v1()?,
-            tool_call: tool_call.into_v1()?,
-            options: options.into_v1()?,
-            meta: meta.into_v1()?,
+            session_id: session_id.try_to_v1()?,
+            tool_call: tool_call.try_to_v1()?,
+            options: options.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::RequestPermissionRequest {
+impl TryToV2 for crate::v1::RequestPermissionRequest {
     type Output = super::RequestPermissionRequest;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             session_id,
             tool_call,
             options,
             meta,
         } = self;
-        let title = tool_call
+        let Some(title) = tool_call
             .fields
             .title
             .clone()
             .filter(|title| !title.is_empty())
-            .unwrap_or_else(|| "Permission requested".to_string());
+        else {
+            return Err(ProtocolConversionError::new(
+                "v1 RequestPermissionRequest without a tool-call title cannot be represented in v2",
+            ));
+        };
         Ok(super::RequestPermissionRequest {
-            session_id: session_id.into_v2()?,
+            session_id: session_id.try_to_v2()?,
             title,
             description: None,
-            subject: Some(super::RequestPermissionSubject::from(tool_call.into_v2()?)),
-            options: options.into_v2()?,
-            meta: meta.into_v2()?,
+            subject: Some(super::RequestPermissionSubject::from(
+                tool_call.try_to_v2()?,
+            )),
+            options: options.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::PermissionOption {
+impl TryToV1 for super::PermissionOption {
     type Output = crate::v1::PermissionOption;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             option_id,
             name,
@@ -1563,18 +2280,18 @@ impl IntoV1 for super::PermissionOption {
             meta,
         } = self;
         Ok(crate::v1::PermissionOption {
-            option_id: option_id.into_v1()?,
-            name: name.into_v1()?,
-            kind: kind.into_v1()?,
-            meta: meta.into_v1()?,
+            option_id: option_id.try_to_v1()?,
+            name: name.try_to_v1()?,
+            kind: kind.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::PermissionOption {
+impl TryToV2 for crate::v1::PermissionOption {
     type Output = super::PermissionOption;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             option_id,
             name,
@@ -1582,34 +2299,34 @@ impl IntoV2 for crate::v1::PermissionOption {
             meta,
         } = self;
         Ok(super::PermissionOption {
-            option_id: option_id.into_v2()?,
-            name: name.into_v2()?,
-            kind: kind.into_v2()?,
-            meta: meta.into_v2()?,
+            option_id: option_id.try_to_v2()?,
+            name: name.try_to_v2()?,
+            kind: kind.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::PermissionOptionId {
+impl TryToV1 for super::PermissionOptionId {
     type Output = crate::v1::PermissionOptionId;
 
-    fn into_v1(self) -> Result<Self::Output> {
-        Ok(crate::v1::PermissionOptionId(self.0.into_v1()?))
+    fn try_to_v1(self) -> Result<Self::Output> {
+        Ok(crate::v1::PermissionOptionId(self.0.try_to_v1()?))
     }
 }
 
-impl IntoV2 for crate::v1::PermissionOptionId {
+impl TryToV2 for crate::v1::PermissionOptionId {
     type Output = super::PermissionOptionId;
 
-    fn into_v2(self) -> Result<Self::Output> {
-        Ok(super::PermissionOptionId(self.0.into_v2()?))
+    fn try_to_v2(self) -> Result<Self::Output> {
+        Ok(super::PermissionOptionId(self.0.try_to_v2()?))
     }
 }
 
-impl IntoV1 for super::PermissionOptionKind {
+impl TryToV1 for super::PermissionOptionKind {
     type Output = crate::v1::PermissionOptionKind;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         Ok(match self {
             Self::AllowOnce => crate::v1::PermissionOptionKind::AllowOnce,
             Self::AllowAlways => crate::v1::PermissionOptionKind::AllowAlways,
@@ -1622,10 +2339,10 @@ impl IntoV1 for super::PermissionOptionKind {
     }
 }
 
-impl IntoV2 for crate::v1::PermissionOptionKind {
+impl TryToV2 for crate::v1::PermissionOptionKind {
     type Output = super::PermissionOptionKind;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         Ok(match self {
             Self::AllowOnce => super::PermissionOptionKind::AllowOnce,
             Self::AllowAlways => super::PermissionOptionKind::AllowAlways,
@@ -1635,38 +2352,38 @@ impl IntoV2 for crate::v1::PermissionOptionKind {
     }
 }
 
-impl IntoV1 for super::RequestPermissionResponse {
+impl TryToV1 for super::RequestPermissionResponse {
     type Output = crate::v1::RequestPermissionResponse;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { outcome, meta } = self;
         Ok(crate::v1::RequestPermissionResponse {
-            outcome: outcome.into_v1()?,
-            meta: meta.into_v1()?,
+            outcome: outcome.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::RequestPermissionResponse {
+impl TryToV2 for crate::v1::RequestPermissionResponse {
     type Output = super::RequestPermissionResponse;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { outcome, meta } = self;
         Ok(super::RequestPermissionResponse {
-            outcome: outcome.into_v2()?,
-            meta: meta.into_v2()?,
+            outcome: outcome.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::RequestPermissionOutcome {
+impl TryToV1 for super::RequestPermissionOutcome {
     type Output = crate::v1::RequestPermissionOutcome;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         Ok(match self {
             Self::Cancelled => crate::v1::RequestPermissionOutcome::Cancelled,
             Self::Selected(value) => {
-                crate::v1::RequestPermissionOutcome::Selected(value.into_v1()?)
+                crate::v1::RequestPermissionOutcome::Selected(value.try_to_v1()?)
             }
             Self::Other(value) => {
                 return Err(unknown_v2_enum_variant(
@@ -1678,104 +2395,104 @@ impl IntoV1 for super::RequestPermissionOutcome {
     }
 }
 
-impl IntoV2 for crate::v1::RequestPermissionOutcome {
+impl TryToV2 for crate::v1::RequestPermissionOutcome {
     type Output = super::RequestPermissionOutcome;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         Ok(match self {
             Self::Cancelled => super::RequestPermissionOutcome::Cancelled,
-            Self::Selected(value) => super::RequestPermissionOutcome::Selected(value.into_v2()?),
+            Self::Selected(value) => super::RequestPermissionOutcome::Selected(value.try_to_v2()?),
         })
     }
 }
 
-impl IntoV1 for super::SelectedPermissionOutcome {
+impl TryToV1 for super::SelectedPermissionOutcome {
     type Output = crate::v1::SelectedPermissionOutcome;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { option_id, meta } = self;
         Ok(crate::v1::SelectedPermissionOutcome {
-            option_id: option_id.into_v1()?,
-            meta: meta.into_v1()?,
+            option_id: option_id.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::SelectedPermissionOutcome {
+impl TryToV2 for crate::v1::SelectedPermissionOutcome {
     type Output = super::SelectedPermissionOutcome;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { option_id, meta } = self;
         Ok(super::SelectedPermissionOutcome {
-            option_id: option_id.into_v2()?,
-            meta: meta.into_v2()?,
+            option_id: option_id.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_mcp_over_acp")]
-impl IntoV1 for super::ConnectMcpRequest {
+impl TryToV1 for super::ConnectMcpRequest {
     type Output = crate::v1::ConnectMcpRequest;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { server_id, meta } = self;
         Ok(crate::v1::ConnectMcpRequest {
-            server_id: server_id.into_v1()?,
-            meta: meta.into_v1()?,
+            server_id: server_id.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_mcp_over_acp")]
-impl IntoV2 for crate::v1::ConnectMcpRequest {
+impl TryToV2 for crate::v1::ConnectMcpRequest {
     type Output = super::ConnectMcpRequest;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { server_id, meta } = self;
         Ok(super::ConnectMcpRequest {
-            server_id: server_id.into_v2()?,
-            meta: meta.into_v2()?,
+            server_id: server_id.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_mcp_over_acp")]
-impl IntoV1 for super::ConnectMcpResponse {
+impl TryToV1 for super::ConnectMcpResponse {
     type Output = crate::v1::ConnectMcpResponse;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             connection_id,
             meta,
         } = self;
         Ok(crate::v1::ConnectMcpResponse {
-            connection_id: connection_id.into_v1()?,
-            meta: meta.into_v1()?,
+            connection_id: connection_id.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_mcp_over_acp")]
-impl IntoV2 for crate::v1::ConnectMcpResponse {
+impl TryToV2 for crate::v1::ConnectMcpResponse {
     type Output = super::ConnectMcpResponse;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             connection_id,
             meta,
         } = self;
         Ok(super::ConnectMcpResponse {
-            connection_id: connection_id.into_v2()?,
-            meta: meta.into_v2()?,
+            connection_id: connection_id.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_mcp_over_acp")]
-impl IntoV1 for super::MessageMcpRequest {
+impl TryToV1 for super::MessageMcpRequest {
     type Output = crate::v1::MessageMcpRequest;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             connection_id,
             method,
@@ -1783,19 +2500,19 @@ impl IntoV1 for super::MessageMcpRequest {
             meta,
         } = self;
         Ok(crate::v1::MessageMcpRequest {
-            connection_id: connection_id.into_v1()?,
-            method: method.into_v1()?,
-            params: params.into_v1()?,
-            meta: meta.into_v1()?,
+            connection_id: connection_id.try_to_v1()?,
+            method: method.try_to_v1()?,
+            params: params.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_mcp_over_acp")]
-impl IntoV2 for crate::v1::MessageMcpRequest {
+impl TryToV2 for crate::v1::MessageMcpRequest {
     type Output = super::MessageMcpRequest;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             connection_id,
             method,
@@ -1803,19 +2520,19 @@ impl IntoV2 for crate::v1::MessageMcpRequest {
             meta,
         } = self;
         Ok(super::MessageMcpRequest {
-            connection_id: connection_id.into_v2()?,
-            method: method.into_v2()?,
-            params: params.into_v2()?,
-            meta: meta.into_v2()?,
+            connection_id: connection_id.try_to_v2()?,
+            method: method.try_to_v2()?,
+            params: params.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_mcp_over_acp")]
-impl IntoV1 for super::MessageMcpNotification {
+impl TryToV1 for super::MessageMcpNotification {
     type Output = crate::v1::MessageMcpNotification;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             connection_id,
             method,
@@ -1823,19 +2540,19 @@ impl IntoV1 for super::MessageMcpNotification {
             meta,
         } = self;
         Ok(crate::v1::MessageMcpNotification {
-            connection_id: connection_id.into_v1()?,
-            method: method.into_v1()?,
-            params: params.into_v1()?,
-            meta: meta.into_v1()?,
+            connection_id: connection_id.try_to_v1()?,
+            method: method.try_to_v1()?,
+            params: params.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_mcp_over_acp")]
-impl IntoV2 for crate::v1::MessageMcpNotification {
+impl TryToV2 for crate::v1::MessageMcpNotification {
     type Output = super::MessageMcpNotification;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             connection_id,
             method,
@@ -1843,94 +2560,94 @@ impl IntoV2 for crate::v1::MessageMcpNotification {
             meta,
         } = self;
         Ok(super::MessageMcpNotification {
-            connection_id: connection_id.into_v2()?,
-            method: method.into_v2()?,
-            params: params.into_v2()?,
-            meta: meta.into_v2()?,
+            connection_id: connection_id.try_to_v2()?,
+            method: method.try_to_v2()?,
+            params: params.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_mcp_over_acp")]
-impl IntoV1 for super::MessageMcpResponse {
+impl TryToV1 for super::MessageMcpResponse {
     type Output = crate::v1::MessageMcpResponse;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self(result) = self;
-        Ok(crate::v1::MessageMcpResponse::new(result.into_v1()?))
+        Ok(crate::v1::MessageMcpResponse::new(result.try_to_v1()?))
     }
 }
 
 #[cfg(feature = "unstable_mcp_over_acp")]
-impl IntoV2 for crate::v1::MessageMcpResponse {
+impl TryToV2 for crate::v1::MessageMcpResponse {
     type Output = super::MessageMcpResponse;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self(result) = self;
-        Ok(super::MessageMcpResponse::new(result.into_v2()?))
+        Ok(super::MessageMcpResponse::new(result.try_to_v2()?))
     }
 }
 
 #[cfg(feature = "unstable_mcp_over_acp")]
-impl IntoV1 for super::DisconnectMcpRequest {
+impl TryToV1 for super::DisconnectMcpRequest {
     type Output = crate::v1::DisconnectMcpRequest;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             connection_id,
             meta,
         } = self;
         Ok(crate::v1::DisconnectMcpRequest {
-            connection_id: connection_id.into_v1()?,
-            meta: meta.into_v1()?,
+            connection_id: connection_id.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_mcp_over_acp")]
-impl IntoV2 for crate::v1::DisconnectMcpRequest {
+impl TryToV2 for crate::v1::DisconnectMcpRequest {
     type Output = super::DisconnectMcpRequest;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             connection_id,
             meta,
         } = self;
         Ok(super::DisconnectMcpRequest {
-            connection_id: connection_id.into_v2()?,
-            meta: meta.into_v2()?,
+            connection_id: connection_id.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_mcp_over_acp")]
-impl IntoV1 for super::DisconnectMcpResponse {
+impl TryToV1 for super::DisconnectMcpResponse {
     type Output = crate::v1::DisconnectMcpResponse;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(crate::v1::DisconnectMcpResponse {
-            meta: meta.into_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_mcp_over_acp")]
-impl IntoV2 for crate::v1::DisconnectMcpResponse {
+impl TryToV2 for crate::v1::DisconnectMcpResponse {
     type Output = super::DisconnectMcpResponse;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(super::DisconnectMcpResponse {
-            meta: meta.into_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::ClientCapabilities {
+impl TryToV1 for super::ClientCapabilities {
     type Output = crate::v1::ClientCapabilities;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             #[cfg(feature = "unstable_auth_methods")]
             auth,
@@ -1954,28 +2671,31 @@ impl IntoV1 for super::ClientCapabilities {
             #[cfg(feature = "unstable_plan_operations")]
             plan: None,
             #[cfg(feature = "unstable_auth_methods")]
-            auth: auth.map(IntoV1::into_v1).transpose()?.unwrap_or_default(),
+            auth: auth
+                .map(TryToV1::try_to_v1)
+                .transpose()?
+                .unwrap_or_default(),
             #[cfg(feature = "unstable_elicitation")]
-            elicitation: into_v1_default_on_error(elicitation),
+            elicitation: elicitation.try_to_v1()?,
             #[cfg(feature = "unstable_nes")]
-            nes: into_v1_default_on_error(nes),
+            nes: nes.try_to_v1()?,
             #[cfg(feature = "unstable_nes")]
-            position_encodings: into_v1_vec_skip_errors(position_encodings),
-            meta: meta.into_v1()?,
+            position_encodings: position_encodings.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::ClientCapabilities {
+impl TryToV2 for crate::v1::ClientCapabilities {
     type Output = super::ClientCapabilities;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
-            fs: _,
-            terminal: _,
-            session: _,
+            fs,
+            terminal,
+            session,
             #[cfg(feature = "unstable_plan_operations")]
-                plan: _,
+            plan,
             #[cfg(feature = "unstable_auth_methods")]
             auth,
             #[cfg(feature = "unstable_elicitation")]
@@ -1986,422 +2706,247 @@ impl IntoV2 for crate::v1::ClientCapabilities {
             position_encodings,
             meta,
         } = self;
+        if fs != crate::v1::FileSystemCapabilities::default() {
+            return Err(unrepresentable_v1_field("ClientCapabilities", "fs"));
+        }
+        if terminal {
+            return Err(unrepresentable_v1_field("ClientCapabilities", "terminal"));
+        }
+        v1_client_session_capabilities_representable_in_v2(session)?;
+        #[cfg(feature = "unstable_plan_operations")]
+        if plan.is_some() {
+            return Err(unrepresentable_v1_field("ClientCapabilities", "plan"));
+        }
+
         Ok(super::ClientCapabilities {
             #[cfg(feature = "unstable_auth_methods")]
-            auth: Some(auth.into_v2()?),
+            auth: v1_client_auth_capabilities_into_v2_option(auth)?,
             #[cfg(feature = "unstable_elicitation")]
-            elicitation: into_v2_default_on_error(elicitation),
+            elicitation: elicitation.try_to_v2()?,
             #[cfg(feature = "unstable_nes")]
-            nes: into_v2_default_on_error(nes),
+            nes: nes.try_to_v2()?,
             #[cfg(feature = "unstable_nes")]
-            position_encodings: into_v2_vec_skip_errors(position_encodings),
-            meta: meta.into_v2()?,
+            position_encodings: position_encodings.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
+fn v1_client_session_capabilities_representable_in_v2(
+    session: Option<crate::v1::ClientSessionCapabilities>,
+) -> Result<()> {
+    let Some(session) = session else {
+        return Ok(());
+    };
+    let crate::v1::ClientSessionCapabilities {
+        config_options,
+        meta,
+    } = session;
+    reject_v1_marker_meta("ClientCapabilities", "session", meta.as_ref())?;
+
+    let Some(config_options) = config_options else {
+        return Ok(());
+    };
+    let crate::v1::SessionConfigOptionsCapabilities { boolean, meta } = config_options;
+    reject_v1_marker_meta("ClientCapabilities.session", "configOptions", meta.as_ref())?;
+
+    if let Some(boolean) = boolean {
+        reject_v1_marker_meta(
+            "ClientCapabilities.session.configOptions",
+            "boolean",
+            boolean.meta.as_ref(),
+        )?;
+    }
+
+    Ok(())
+}
+
 #[cfg(feature = "unstable_auth_methods")]
-impl IntoV1 for super::AuthCapabilities {
+fn v1_client_auth_capabilities_into_v2_option(
+    auth: crate::v1::AuthCapabilities,
+) -> Result<Option<super::AuthCapabilities>> {
+    let crate::v1::AuthCapabilities { terminal, meta } = auth;
+    if !terminal && meta.is_none() {
+        return Ok(None);
+    }
+    Ok(Some(super::AuthCapabilities {
+        terminal: terminal.then(super::TerminalAuthCapabilities::new),
+        meta: meta.try_to_v2()?,
+    }))
+}
+
+#[cfg(feature = "unstable_auth_methods")]
+impl TryToV1 for super::AuthCapabilities {
     type Output = crate::v1::AuthCapabilities;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { terminal, meta } = self;
+        if let Some(terminal) = &terminal {
+            reject_v2_marker_meta("AuthCapabilities", "terminal", terminal.meta.as_ref())?;
+        }
         Ok(crate::v1::AuthCapabilities {
             terminal: terminal.is_some(),
-            meta: meta.into_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_auth_methods")]
-impl IntoV2 for crate::v1::AuthCapabilities {
+impl TryToV2 for crate::v1::AuthCapabilities {
     type Output = super::AuthCapabilities;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { terminal, meta } = self;
         Ok(super::AuthCapabilities {
             terminal: terminal.then(super::TerminalAuthCapabilities::new),
-            meta: meta.into_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::AgentRequest {
-    type Output = crate::v1::AgentRequest;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        Ok(match self {
-            Self::RequestPermissionRequest(value) => {
-                crate::v1::AgentRequest::RequestPermissionRequest(value.into_v1()?)
-            }
-            #[cfg(feature = "unstable_elicitation")]
-            Self::CreateElicitationRequest(value) => {
-                crate::v1::AgentRequest::CreateElicitationRequest(value.into_v1()?)
-            }
-            #[cfg(feature = "unstable_mcp_over_acp")]
-            Self::ConnectMcpRequest(value) => {
-                crate::v1::AgentRequest::ConnectMcpRequest(value.into_v1()?)
-            }
-            #[cfg(feature = "unstable_mcp_over_acp")]
-            Self::MessageMcpRequest(value) => {
-                crate::v1::AgentRequest::MessageMcpRequest(value.into_v1()?)
-            }
-            #[cfg(feature = "unstable_mcp_over_acp")]
-            Self::DisconnectMcpRequest(value) => {
-                crate::v1::AgentRequest::DisconnectMcpRequest(value.into_v1()?)
-            }
-            Self::ExtMethodRequest(value) => {
-                crate::v1::AgentRequest::ExtMethodRequest(value.into_v1()?)
-            }
-        })
-    }
-}
-
-impl IntoV2 for crate::v1::AgentRequest {
-    type Output = super::AgentRequest;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        Ok(match self {
-            Self::WriteTextFileRequest(_) => {
-                return Err(removed_v1_enum_variant(
-                    "AgentRequest",
-                    "fs/write_text_file",
-                ));
-            }
-            Self::ReadTextFileRequest(_) => {
-                return Err(removed_v1_enum_variant("AgentRequest", "fs/read_text_file"));
-            }
-            Self::RequestPermissionRequest(value) => {
-                super::AgentRequest::RequestPermissionRequest(Box::new(value.into_v2()?))
-            }
-            Self::CreateTerminalRequest(_) => {
-                return Err(removed_v1_enum_variant("AgentRequest", "terminal/create"));
-            }
-            Self::TerminalOutputRequest(_) => {
-                return Err(removed_v1_enum_variant("AgentRequest", "terminal/output"));
-            }
-            Self::ReleaseTerminalRequest(_) => {
-                return Err(removed_v1_enum_variant("AgentRequest", "terminal/release"));
-            }
-            Self::WaitForTerminalExitRequest(_) => {
-                return Err(removed_v1_enum_variant(
-                    "AgentRequest",
-                    "terminal/wait_for_exit",
-                ));
-            }
-            Self::KillTerminalRequest(_) => {
-                return Err(removed_v1_enum_variant("AgentRequest", "terminal/kill"));
-            }
-            #[cfg(feature = "unstable_elicitation")]
-            Self::CreateElicitationRequest(value) => {
-                super::AgentRequest::CreateElicitationRequest(Box::new(value.into_v2()?))
-            }
-            #[cfg(feature = "unstable_mcp_over_acp")]
-            Self::ConnectMcpRequest(value) => {
-                super::AgentRequest::ConnectMcpRequest(Box::new(value.into_v2()?))
-            }
-            #[cfg(feature = "unstable_mcp_over_acp")]
-            Self::MessageMcpRequest(value) => {
-                super::AgentRequest::MessageMcpRequest(Box::new(value.into_v2()?))
-            }
-            #[cfg(feature = "unstable_mcp_over_acp")]
-            Self::DisconnectMcpRequest(value) => {
-                super::AgentRequest::DisconnectMcpRequest(Box::new(value.into_v2()?))
-            }
-            Self::ExtMethodRequest(value) => {
-                super::AgentRequest::ExtMethodRequest(Box::new(value.into_v2()?))
-            }
-        })
-    }
-}
-
-impl IntoV1 for super::ClientResponse {
-    type Output = crate::v1::ClientResponse;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        Ok(match self {
-            Self::RequestPermissionResponse(value) => {
-                crate::v1::ClientResponse::RequestPermissionResponse(value.into_v1()?)
-            }
-            #[cfg(feature = "unstable_elicitation")]
-            Self::CreateElicitationResponse(value) => {
-                crate::v1::ClientResponse::CreateElicitationResponse(value.into_v1()?)
-            }
-            #[cfg(feature = "unstable_mcp_over_acp")]
-            Self::ConnectMcpResponse(value) => {
-                crate::v1::ClientResponse::ConnectMcpResponse(value.into_v1()?)
-            }
-            #[cfg(feature = "unstable_mcp_over_acp")]
-            Self::MessageMcpResponse(value) => {
-                crate::v1::ClientResponse::MessageMcpResponse(value.into_v1()?)
-            }
-            #[cfg(feature = "unstable_mcp_over_acp")]
-            Self::DisconnectMcpResponse(value) => {
-                crate::v1::ClientResponse::DisconnectMcpResponse(value.into_v1()?)
-            }
-            Self::ExtMethodResponse(value) => {
-                crate::v1::ClientResponse::ExtMethodResponse(value.into_v1()?)
-            }
-        })
-    }
-}
-
-impl IntoV2 for crate::v1::ClientResponse {
-    type Output = super::ClientResponse;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        Ok(match self {
-            Self::WriteTextFileResponse(_) => {
-                return Err(removed_v1_enum_variant(
-                    "ClientResponse",
-                    "fs/write_text_file",
-                ));
-            }
-            Self::ReadTextFileResponse(_) => {
-                return Err(removed_v1_enum_variant(
-                    "ClientResponse",
-                    "fs/read_text_file",
-                ));
-            }
-            Self::RequestPermissionResponse(value) => {
-                super::ClientResponse::RequestPermissionResponse(Box::new(value.into_v2()?))
-            }
-            Self::CreateTerminalResponse(_) => {
-                return Err(removed_v1_enum_variant("ClientResponse", "terminal/create"));
-            }
-            Self::TerminalOutputResponse(_) => {
-                return Err(removed_v1_enum_variant("ClientResponse", "terminal/output"));
-            }
-            Self::ReleaseTerminalResponse(_) => {
-                return Err(removed_v1_enum_variant(
-                    "ClientResponse",
-                    "terminal/release",
-                ));
-            }
-            Self::WaitForTerminalExitResponse(_) => {
-                return Err(removed_v1_enum_variant(
-                    "ClientResponse",
-                    "terminal/wait_for_exit",
-                ));
-            }
-            Self::KillTerminalResponse(_) => {
-                return Err(removed_v1_enum_variant("ClientResponse", "terminal/kill"));
-            }
-            #[cfg(feature = "unstable_elicitation")]
-            Self::CreateElicitationResponse(value) => {
-                super::ClientResponse::CreateElicitationResponse(Box::new(value.into_v2()?))
-            }
-            #[cfg(feature = "unstable_mcp_over_acp")]
-            Self::ConnectMcpResponse(value) => {
-                super::ClientResponse::ConnectMcpResponse(Box::new(value.into_v2()?))
-            }
-            #[cfg(feature = "unstable_mcp_over_acp")]
-            Self::MessageMcpResponse(value) => {
-                super::ClientResponse::MessageMcpResponse(Box::new(value.into_v2()?))
-            }
-            #[cfg(feature = "unstable_mcp_over_acp")]
-            Self::DisconnectMcpResponse(value) => {
-                super::ClientResponse::DisconnectMcpResponse(Box::new(value.into_v2()?))
-            }
-            Self::ExtMethodResponse(value) => {
-                super::ClientResponse::ExtMethodResponse(Box::new(value.into_v2()?))
-            }
-        })
-    }
-}
-
-impl IntoV1Many for super::AgentNotification {
-    type Output = crate::v1::AgentNotification;
-
-    fn into_v1_many(self) -> Result<Vec<Self::Output>> {
-        Ok(match self {
-            Self::UpdateSessionNotification(value) => {
-                return value
-                    .into_v1_many()?
-                    .into_iter()
-                    .map(|value| Ok(crate::v1::AgentNotification::SessionNotification(value)))
-                    .collect();
-            }
-            #[cfg(feature = "unstable_elicitation")]
-            Self::CompleteElicitationNotification(value) => {
-                vec![
-                    crate::v1::AgentNotification::CompleteElicitationNotification(value.into_v1()?),
-                ]
-            }
-            #[cfg(feature = "unstable_mcp_over_acp")]
-            Self::MessageMcpNotification(value) => {
-                vec![crate::v1::AgentNotification::MessageMcpNotification(
-                    value.into_v1()?,
-                )]
-            }
-            Self::ExtNotification(value) => {
-                vec![crate::v1::AgentNotification::ExtNotification(
-                    value.into_v1()?,
-                )]
-            }
-        })
-    }
-}
-
-impl IntoV2 for crate::v1::AgentNotification {
-    type Output = super::AgentNotification;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        Ok(match self {
-            Self::SessionNotification(value) => {
-                super::AgentNotification::UpdateSessionNotification(Box::new(value.into_v2()?))
-            }
-            #[cfg(feature = "unstable_elicitation")]
-            Self::CompleteElicitationNotification(value) => {
-                super::AgentNotification::CompleteElicitationNotification(Box::new(
-                    value.into_v2()?,
-                ))
-            }
-            #[cfg(feature = "unstable_mcp_over_acp")]
-            Self::MessageMcpNotification(value) => {
-                super::AgentNotification::MessageMcpNotification(Box::new(value.into_v2()?))
-            }
-            Self::ExtNotification(value) => {
-                super::AgentNotification::ExtNotification(Box::new(value.into_v2()?))
-            }
-        })
-    }
-}
-
-impl IntoV1 for super::Error {
+impl TryToV1 for super::Error {
     type Output = crate::v1::Error;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             code,
             message,
             data,
         } = self;
         Ok(crate::v1::Error {
-            code: code.into_v1()?,
-            message: message.into_v1()?,
-            data: data.into_v1()?,
+            code: code.try_to_v1()?,
+            message: message.try_to_v1()?,
+            data: data.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::Error {
+impl TryToV2 for crate::v1::Error {
     type Output = super::Error;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             code,
             message,
             data,
         } = self;
         Ok(super::Error {
-            code: code.into_v2()?,
-            message: message.into_v2()?,
-            data: data.into_v2()?,
+            code: code.try_to_v2()?,
+            message: message.try_to_v2()?,
+            data: data.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::ErrorCode {
+impl TryToV1 for super::ErrorCode {
     type Output = crate::v1::ErrorCode;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         Ok(i32::from(self).into())
     }
 }
 
-impl IntoV2 for crate::v1::ErrorCode {
+impl TryToV2 for crate::v1::ErrorCode {
     type Output = super::ErrorCode;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         Ok(i32::from(self).into())
     }
 }
 
-impl IntoV1 for super::ExtRequest {
+impl TryToV1 for super::ExtRequest {
     type Output = crate::v1::ExtRequest;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { method, params } = self;
         Ok(crate::v1::ExtRequest {
-            method: method.into_v1()?,
-            params: params.into_v1()?,
+            method: method.try_to_v1()?,
+            params: params.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::ExtRequest {
+impl TryToV2 for crate::v1::ExtRequest {
     type Output = super::ExtRequest;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { method, params } = self;
         Ok(super::ExtRequest {
-            method: method.into_v2()?,
-            params: params.into_v2()?,
+            method: method.try_to_v2()?,
+            params: params.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::ExtResponse {
+impl TryToV1 for super::ExtResponse {
     type Output = crate::v1::ExtResponse;
 
-    fn into_v1(self) -> Result<Self::Output> {
-        Ok(crate::v1::ExtResponse(self.0.into_v1()?))
+    fn try_to_v1(self) -> Result<Self::Output> {
+        Ok(crate::v1::ExtResponse(self.0.try_to_v1()?))
     }
 }
 
-impl IntoV2 for crate::v1::ExtResponse {
+impl TryToV2 for crate::v1::ExtResponse {
     type Output = super::ExtResponse;
 
-    fn into_v2(self) -> Result<Self::Output> {
-        Ok(super::ExtResponse(self.0.into_v2()?))
+    fn try_to_v2(self) -> Result<Self::Output> {
+        Ok(super::ExtResponse(self.0.try_to_v2()?))
     }
 }
 
-impl IntoV1 for super::ExtNotification {
+impl TryToV1 for super::ExtNotification {
     type Output = crate::v1::ExtNotification;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { method, params } = self;
         Ok(crate::v1::ExtNotification {
-            method: method.into_v1()?,
-            params: params.into_v1()?,
+            method: method.try_to_v1()?,
+            params: params.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::ExtNotification {
+impl TryToV2 for crate::v1::ExtNotification {
     type Output = super::ExtNotification;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { method, params } = self;
         Ok(super::ExtNotification {
-            method: method.into_v2()?,
-            params: params.into_v2()?,
+            method: method.try_to_v2()?,
+            params: params.try_to_v2()?,
         })
     }
 }
 
-fn maybe_undefined_value_into_v1_option<T>(value: crate::MaybeUndefined<T>) -> Option<T::Output>
+fn maybe_undefined_value_into_v1_option<T>(
+    context: &str,
+    value: crate::MaybeUndefined<T>,
+) -> Result<Option<T::Output>>
 where
-    T: IntoV1,
+    T: TryToV1,
 {
     match value {
-        crate::MaybeUndefined::Value(value) => value.into_v1().ok(),
-        crate::MaybeUndefined::Null | crate::MaybeUndefined::Undefined => None,
+        crate::MaybeUndefined::Value(value) => Ok(Some(value.try_to_v1()?)),
+        crate::MaybeUndefined::Null => Err(ProtocolConversionError::new(format!(
+            "v2 {context} with null value cannot be represented in v1"
+        ))),
+        crate::MaybeUndefined::Undefined => Ok(None),
     }
 }
 
 fn maybe_undefined_vec_into_v1_option<T>(
+    context: &str,
     value: crate::MaybeUndefined<Vec<T>>,
-) -> Option<Vec<T::Output>>
+) -> Result<Option<Vec<T::Output>>>
 where
-    T: IntoV1,
+    T: TryToV1,
 {
     match value {
-        crate::MaybeUndefined::Value(value) => Some(into_v1_vec_skip_errors(value)),
-        crate::MaybeUndefined::Null => Some(Vec::new()),
-        crate::MaybeUndefined::Undefined => None,
+        crate::MaybeUndefined::Value(value) => Ok(Some(value.try_to_v1()?)),
+        crate::MaybeUndefined::Null => Err(ProtocolConversionError::new(format!(
+            "v2 {context} with null collection cannot be represented in v1"
+        ))),
+        crate::MaybeUndefined::Undefined => Ok(None),
     }
 }
 
@@ -2410,7 +2955,7 @@ fn maybe_undefined_meta_into_v1_option(
     value: crate::MaybeUndefined<super::Meta>,
 ) -> Result<Option<crate::v1::Meta>> {
     match value {
-        crate::MaybeUndefined::Value(value) => Ok(Some(value.into_v1()?)),
+        crate::MaybeUndefined::Value(value) => Ok(Some(value.try_to_v1()?)),
         crate::MaybeUndefined::Null => Err(ProtocolConversionError::new(format!(
             "v2 {context} with null _meta cannot be represented in v1"
         ))),
@@ -2420,43 +2965,41 @@ fn maybe_undefined_meta_into_v1_option(
 
 fn option_into_v2_maybe_undefined<T>(value: Option<T>) -> Result<crate::MaybeUndefined<T::Output>>
 where
-    T: IntoV2,
+    T: TryToV2,
 {
     match value {
-        Some(value) => Ok(crate::MaybeUndefined::Value(value.into_v2()?)),
+        Some(value) => Ok(crate::MaybeUndefined::Value(value.try_to_v2()?)),
         None => Ok(crate::MaybeUndefined::Undefined),
     }
 }
 
-fn option_vec_into_v2_maybe_undefined_skip_errors<T>(
+fn option_vec_into_v2_maybe_undefined<T>(
     value: Option<Vec<T>>,
-) -> crate::MaybeUndefined<Vec<T::Output>>
+) -> Result<crate::MaybeUndefined<Vec<T::Output>>>
 where
-    T: IntoV2,
+    T: TryToV2,
 {
     match value {
-        Some(value) => crate::MaybeUndefined::Value(into_v2_vec_skip_errors(value)),
-        None => crate::MaybeUndefined::Undefined,
+        Some(value) => Ok(crate::MaybeUndefined::Value(value.try_to_v2()?)),
+        None => Ok(crate::MaybeUndefined::Undefined),
     }
 }
 
-fn vec_into_v2_maybe_undefined_skip_errors<T>(
-    value: Vec<T>,
-) -> crate::MaybeUndefined<Vec<T::Output>>
+fn vec_into_v2_maybe_undefined<T>(value: Vec<T>) -> Result<crate::MaybeUndefined<Vec<T::Output>>>
 where
-    T: IntoV2,
+    T: TryToV2,
 {
     if value.is_empty() {
-        crate::MaybeUndefined::Undefined
+        Ok(crate::MaybeUndefined::Undefined)
     } else {
-        crate::MaybeUndefined::Value(into_v2_vec_skip_errors(value))
+        Ok(crate::MaybeUndefined::Value(value.try_to_v2()?))
     }
 }
 
-impl IntoV1 for super::ToolCallUpdate {
+impl TryToV1 for super::ToolCallUpdate {
     type Output = crate::v1::ToolCallUpdate;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             tool_call_id,
             title,
@@ -2469,25 +3012,34 @@ impl IntoV1 for super::ToolCallUpdate {
             meta,
         } = self;
         Ok(crate::v1::ToolCallUpdate {
-            tool_call_id: tool_call_id.into_v1()?,
+            tool_call_id: tool_call_id.try_to_v1()?,
             fields: crate::v1::ToolCallUpdateFields {
-                kind: maybe_undefined_value_into_v1_option(kind),
-                status: maybe_undefined_value_into_v1_option(status),
-                title: maybe_undefined_value_into_v1_option(title),
-                content: maybe_undefined_vec_into_v1_option(content),
-                locations: maybe_undefined_vec_into_v1_option(locations),
-                raw_input: maybe_undefined_value_into_v1_option(raw_input),
-                raw_output: maybe_undefined_value_into_v1_option(raw_output),
+                kind: maybe_undefined_value_into_v1_option("ToolCallUpdate.kind", kind)?,
+                status: maybe_undefined_value_into_v1_option("ToolCallUpdate.status", status)?,
+                title: maybe_undefined_value_into_v1_option("ToolCallUpdate.title", title)?,
+                content: maybe_undefined_vec_into_v1_option("ToolCallUpdate.content", content)?,
+                locations: maybe_undefined_vec_into_v1_option(
+                    "ToolCallUpdate.locations",
+                    locations,
+                )?,
+                raw_input: maybe_undefined_value_into_v1_option(
+                    "ToolCallUpdate.rawInput",
+                    raw_input,
+                )?,
+                raw_output: maybe_undefined_value_into_v1_option(
+                    "ToolCallUpdate.rawOutput",
+                    raw_output,
+                )?,
             },
             meta: maybe_undefined_meta_into_v1_option("ToolCallUpdate", meta)?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::ToolCall {
+impl TryToV2 for crate::v1::ToolCall {
     type Output = super::ToolCallUpdate;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             tool_call_id,
             title,
@@ -2500,20 +3052,20 @@ impl IntoV2 for crate::v1::ToolCall {
             meta,
         } = self;
         Ok(super::ToolCallUpdate {
-            tool_call_id: tool_call_id.into_v2()?,
-            title: crate::MaybeUndefined::Value(title.into_v2()?),
+            tool_call_id: tool_call_id.try_to_v2()?,
+            title: crate::MaybeUndefined::Value(title.try_to_v2()?),
             kind: if matches!(kind, crate::v1::ToolKind::Other) {
                 crate::MaybeUndefined::Undefined
             } else {
-                crate::MaybeUndefined::Value(kind.into_v2()?)
+                crate::MaybeUndefined::Value(kind.try_to_v2()?)
             },
             status: if matches!(status, crate::v1::ToolCallStatus::Pending) {
                 crate::MaybeUndefined::Undefined
             } else {
-                crate::MaybeUndefined::Value(status.into_v2()?)
+                crate::MaybeUndefined::Value(status.try_to_v2()?)
             },
-            content: vec_into_v2_maybe_undefined_skip_errors(content),
-            locations: vec_into_v2_maybe_undefined_skip_errors(locations),
+            content: vec_into_v2_maybe_undefined(content)?,
+            locations: vec_into_v2_maybe_undefined(locations)?,
             raw_input: option_into_v2_maybe_undefined(raw_input)?,
             raw_output: option_into_v2_maybe_undefined(raw_output)?,
             meta: option_into_v2_maybe_undefined(meta)?,
@@ -2521,10 +3073,10 @@ impl IntoV2 for crate::v1::ToolCall {
     }
 }
 
-impl IntoV2 for crate::v1::ToolCallUpdate {
+impl TryToV2 for crate::v1::ToolCallUpdate {
     type Output = super::ToolCallUpdate;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             tool_call_id,
             fields,
@@ -2540,12 +3092,12 @@ impl IntoV2 for crate::v1::ToolCallUpdate {
             raw_output,
         } = fields;
         Ok(super::ToolCallUpdate {
-            tool_call_id: tool_call_id.into_v2()?,
+            tool_call_id: tool_call_id.try_to_v2()?,
             kind: option_into_v2_maybe_undefined(kind)?,
             status: option_into_v2_maybe_undefined(status)?,
             title: option_into_v2_maybe_undefined(title)?,
-            content: option_vec_into_v2_maybe_undefined_skip_errors(content),
-            locations: option_vec_into_v2_maybe_undefined_skip_errors(locations),
+            content: option_vec_into_v2_maybe_undefined(content)?,
+            locations: option_vec_into_v2_maybe_undefined(locations)?,
             raw_input: option_into_v2_maybe_undefined(raw_input)?,
             raw_output: option_into_v2_maybe_undefined(raw_output)?,
             meta: option_into_v2_maybe_undefined(meta)?,
@@ -2553,26 +3105,26 @@ impl IntoV2 for crate::v1::ToolCallUpdate {
     }
 }
 
-impl IntoV1 for super::ToolCallId {
+impl TryToV1 for super::ToolCallId {
     type Output = crate::v1::ToolCallId;
 
-    fn into_v1(self) -> Result<Self::Output> {
-        Ok(crate::v1::ToolCallId(self.0.into_v1()?))
+    fn try_to_v1(self) -> Result<Self::Output> {
+        Ok(crate::v1::ToolCallId(self.0.try_to_v1()?))
     }
 }
 
-impl IntoV2 for crate::v1::ToolCallId {
+impl TryToV2 for crate::v1::ToolCallId {
     type Output = super::ToolCallId;
 
-    fn into_v2(self) -> Result<Self::Output> {
-        Ok(super::ToolCallId(self.0.into_v2()?))
+    fn try_to_v2(self) -> Result<Self::Output> {
+        Ok(super::ToolCallId(self.0.try_to_v2()?))
     }
 }
 
-impl IntoV1 for super::ToolKind {
+impl TryToV1 for super::ToolKind {
     type Output = crate::v1::ToolKind;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         Ok(match self {
             Self::Read => crate::v1::ToolKind::Read,
             Self::Edit => crate::v1::ToolKind::Edit,
@@ -2589,10 +3141,10 @@ impl IntoV1 for super::ToolKind {
     }
 }
 
-impl IntoV2 for crate::v1::ToolKind {
+impl TryToV2 for crate::v1::ToolKind {
     type Output = super::ToolKind;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         Ok(match self {
             Self::Read => super::ToolKind::Read,
             Self::Edit => super::ToolKind::Edit,
@@ -2608,10 +3160,10 @@ impl IntoV2 for crate::v1::ToolKind {
     }
 }
 
-impl IntoV1 for super::ToolCallStatus {
+impl TryToV1 for super::ToolCallStatus {
     type Output = crate::v1::ToolCallStatus;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         Ok(match self {
             Self::Pending => crate::v1::ToolCallStatus::Pending,
             Self::InProgress => crate::v1::ToolCallStatus::InProgress,
@@ -2622,10 +3174,10 @@ impl IntoV1 for super::ToolCallStatus {
     }
 }
 
-impl IntoV2 for crate::v1::ToolCallStatus {
+impl TryToV2 for crate::v1::ToolCallStatus {
     type Output = super::ToolCallStatus;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         Ok(match self {
             Self::Pending => super::ToolCallStatus::Pending,
             Self::InProgress => super::ToolCallStatus::InProgress,
@@ -2635,13 +3187,13 @@ impl IntoV2 for crate::v1::ToolCallStatus {
     }
 }
 
-impl IntoV1 for super::ToolCallContent {
+impl TryToV1 for super::ToolCallContent {
     type Output = crate::v1::ToolCallContent;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::Content(value) => crate::v1::ToolCallContent::Content(value.into_v1()?),
-            Self::Diff(value) => crate::v1::ToolCallContent::Diff(value.into_v1()?),
+            Self::Content(value) => crate::v1::ToolCallContent::Content(value.try_to_v1()?),
+            Self::Diff(value) => crate::v1::ToolCallContent::Diff(value.try_to_v1()?),
             Self::Other(value) => {
                 return Err(unknown_v2_enum_variant("ToolCallContent", &value.type_));
             }
@@ -2649,13 +3201,13 @@ impl IntoV1 for super::ToolCallContent {
     }
 }
 
-impl IntoV2 for crate::v1::ToolCallContent {
+impl TryToV2 for crate::v1::ToolCallContent {
     type Output = super::ToolCallContent;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::Content(value) => super::ToolCallContent::Content(Box::new(value.into_v2()?)),
-            Self::Diff(value) => super::ToolCallContent::Diff(value.into_v2()?),
+            Self::Content(value) => super::ToolCallContent::Content(Box::new(value.try_to_v2()?)),
+            Self::Diff(value) => super::ToolCallContent::Diff(value.try_to_v2()?),
             Self::Terminal(_) => {
                 return Err(removed_v1_enum_variant("ToolCallContent", "terminal"));
             }
@@ -2663,53 +3215,53 @@ impl IntoV2 for crate::v1::ToolCallContent {
     }
 }
 
-impl IntoV1 for super::Content {
+impl TryToV1 for super::Content {
     type Output = crate::v1::Content;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { content, meta } = self;
         Ok(crate::v1::Content {
-            content: content.into_v1()?,
-            meta: meta.into_v1()?,
+            content: content.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::Content {
+impl TryToV2 for crate::v1::Content {
     type Output = super::Content;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { content, meta } = self;
         Ok(super::Content {
-            content: content.into_v2()?,
-            meta: meta.into_v2()?,
+            content: content.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::Diff {
+impl TryToV1 for super::Diff {
     type Output = crate::v1::Diff;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         Err(ProtocolConversionError::new(
             "v2 Diff cannot be represented in v1 because v1 requires oldText/newText while v2 carries standard patch text and structured changes",
         ))
     }
 }
 
-impl IntoV2 for crate::v1::Diff {
+impl TryToV2 for crate::v1::Diff {
     type Output = super::Diff;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             path,
             old_text,
             new_text,
             meta,
         } = self;
-        let path = path.into_v2()?;
-        let old_text = old_text.into_v2()?;
-        let new_text = new_text.into_v2()?;
+        let path = path.try_to_v2()?;
+        let old_text = old_text.try_to_v2()?;
+        let new_text = new_text.try_to_v2()?;
         let change = if old_text.is_some() {
             super::DiffChange::modify(path.clone()).file_type(super::DiffFileType::Text)
         } else {
@@ -2717,7 +3269,7 @@ impl IntoV2 for crate::v1::Diff {
         };
         let diff = full_file_git_patch(&path, old_text.as_deref(), &new_text);
 
-        Ok(super::Diff::patch(diff, vec![change]).meta(meta.into_v2()?))
+        Ok(super::Diff::patch(diff, vec![change]).meta(meta.try_to_v2()?))
     }
 }
 
@@ -2743,36 +3295,36 @@ fn full_file_git_patch(path: &Path, old_text: Option<&str>, new_text: &str) -> S
     diff
 }
 
-impl IntoV1 for super::ToolCallLocation {
+impl TryToV1 for super::ToolCallLocation {
     type Output = crate::v1::ToolCallLocation;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { path, line, meta } = self;
         Ok(crate::v1::ToolCallLocation {
-            path: path.into_v1()?,
-            line: line.into_v1()?,
-            meta: meta.into_v1()?,
+            path: path.try_to_v1()?,
+            line: line.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::ToolCallLocation {
+impl TryToV2 for crate::v1::ToolCallLocation {
     type Output = super::ToolCallLocation;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { path, line, meta } = self;
         Ok(super::ToolCallLocation {
-            path: path.into_v2()?,
-            line: line.into_v2()?,
-            meta: meta.into_v2()?,
+            path: path.try_to_v2()?,
+            line: line.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::InitializeRequest {
+impl TryToV1 for super::InitializeRequest {
     type Output = crate::v1::InitializeRequest;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             protocol_version,
             capabilities,
@@ -2780,18 +3332,18 @@ impl IntoV1 for super::InitializeRequest {
             meta,
         } = self;
         Ok(crate::v1::InitializeRequest {
-            protocol_version: protocol_version.into_v1()?,
-            client_capabilities: capabilities.into_v1()?,
-            client_info: Some(info.into_v1()?),
-            meta: meta.into_v1()?,
+            protocol_version: protocol_version.try_to_v1()?,
+            client_capabilities: capabilities.try_to_v1()?,
+            client_info: Some(info.try_to_v1()?),
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::InitializeRequest {
+impl TryToV2 for crate::v1::InitializeRequest {
     type Output = super::InitializeRequest;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             protocol_version,
             client_capabilities,
@@ -2799,7 +3351,7 @@ impl IntoV2 for crate::v1::InitializeRequest {
             meta,
         } = self;
         let info = match client_info {
-            Some(client_info) => client_info.into_v2()?,
+            Some(client_info) => client_info.try_to_v2()?,
             None => {
                 return Err(ProtocolConversionError::new(
                     "v1 InitializeRequest without `clientInfo` cannot be represented in v2",
@@ -2807,18 +3359,18 @@ impl IntoV2 for crate::v1::InitializeRequest {
             }
         };
         Ok(super::InitializeRequest {
-            protocol_version: protocol_version.into_v2()?,
-            capabilities: client_capabilities.into_v2()?,
+            protocol_version: protocol_version.try_to_v2()?,
+            capabilities: client_capabilities.try_to_v2()?,
             info,
-            meta: meta.into_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::InitializeResponse {
+impl TryToV1 for super::InitializeResponse {
     type Output = crate::v1::InitializeResponse;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             protocol_version,
             capabilities: agent_capabilities,
@@ -2827,19 +3379,19 @@ impl IntoV1 for super::InitializeResponse {
             meta,
         } = self;
         Ok(crate::v1::InitializeResponse {
-            protocol_version: protocol_version.into_v1()?,
-            agent_capabilities: agent_capabilities.into_v1()?,
-            auth_methods: into_v1_vec_skip_errors(auth_methods),
-            agent_info: Some(info.into_v1()?),
-            meta: meta.into_v1()?,
+            protocol_version: protocol_version.try_to_v1()?,
+            agent_capabilities: agent_capabilities.try_to_v1()?,
+            auth_methods: auth_methods.try_to_v1()?,
+            agent_info: Some(info.try_to_v1()?),
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::InitializeResponse {
+impl TryToV2 for crate::v1::InitializeResponse {
     type Output = super::InitializeResponse;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             protocol_version,
             agent_capabilities,
@@ -2848,7 +3400,7 @@ impl IntoV2 for crate::v1::InitializeResponse {
             meta,
         } = self;
         let info = match agent_info {
-            Some(agent_info) => agent_info.into_v2()?,
+            Some(agent_info) => agent_info.try_to_v2()?,
             None => {
                 return Err(ProtocolConversionError::new(
                     "v1 InitializeResponse without `agentInfo` cannot be represented in v2",
@@ -2856,19 +3408,19 @@ impl IntoV2 for crate::v1::InitializeResponse {
             }
         };
         Ok(super::InitializeResponse {
-            protocol_version: protocol_version.into_v2()?,
-            capabilities: agent_capabilities.into_v2()?,
-            auth_methods: into_v2_vec_skip_errors(auth_methods),
+            protocol_version: protocol_version.try_to_v2()?,
+            capabilities: agent_capabilities.try_to_v2()?,
+            auth_methods: auth_methods.try_to_v2()?,
             info,
-            meta: meta.into_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::Implementation {
+impl TryToV1 for super::Implementation {
     type Output = crate::v1::Implementation;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             name,
             title,
@@ -2876,18 +3428,18 @@ impl IntoV1 for super::Implementation {
             meta,
         } = self;
         Ok(crate::v1::Implementation {
-            name: name.into_v1()?,
-            title: title.into_v1()?,
-            version: version.into_v1()?,
-            meta: meta.into_v1()?,
+            name: name.try_to_v1()?,
+            title: title.try_to_v1()?,
+            version: version.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::Implementation {
+impl TryToV2 for crate::v1::Implementation {
     type Output = super::Implementation;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             name,
             title,
@@ -2895,178 +3447,198 @@ impl IntoV2 for crate::v1::Implementation {
             meta,
         } = self;
         Ok(super::Implementation {
-            name: name.into_v2()?,
-            title: title.into_v2()?,
-            version: version.into_v2()?,
-            meta: meta.into_v2()?,
+            name: name.try_to_v2()?,
+            title: title.try_to_v2()?,
+            version: version.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::LoginAuthRequest {
+impl TryToV1 for super::LoginAuthRequest {
     type Output = crate::v1::AuthenticateRequest;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { method_id, meta } = self;
         Ok(crate::v1::AuthenticateRequest {
-            method_id: method_id.into_v1()?,
-            meta: meta.into_v1()?,
+            method_id: method_id.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::AuthenticateRequest {
+impl TryToV2 for crate::v1::AuthenticateRequest {
     type Output = super::LoginAuthRequest;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { method_id, meta } = self;
         Ok(super::LoginAuthRequest {
-            method_id: method_id.into_v2()?,
-            meta: meta.into_v2()?,
+            method_id: method_id.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::LoginAuthResponse {
+impl TryToV1 for super::LoginAuthResponse {
     type Output = crate::v1::AuthenticateResponse;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(crate::v1::AuthenticateResponse {
-            meta: meta.into_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::AuthenticateResponse {
+impl TryToV2 for crate::v1::AuthenticateResponse {
     type Output = super::LoginAuthResponse;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(super::LoginAuthResponse {
-            meta: meta.into_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::LogoutAuthRequest {
+impl TryToV1 for super::LogoutAuthRequest {
     type Output = crate::v1::LogoutRequest;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(crate::v1::LogoutRequest {
-            meta: meta.into_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::LogoutRequest {
+impl TryToV2 for crate::v1::LogoutRequest {
     type Output = super::LogoutAuthRequest;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(super::LogoutAuthRequest {
-            meta: meta.into_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::LogoutAuthResponse {
+impl TryToV1 for super::LogoutAuthResponse {
     type Output = crate::v1::LogoutResponse;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(crate::v1::LogoutResponse {
-            meta: meta.into_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::LogoutResponse {
+impl TryToV2 for crate::v1::LogoutResponse {
     type Output = super::LogoutAuthResponse;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(super::LogoutAuthResponse {
-            meta: meta.into_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::AgentAuthCapabilities {
+impl TryToV1 for super::AgentAuthCapabilities {
     type Output = crate::v1::AgentAuthCapabilities;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(crate::v1::AgentAuthCapabilities {
             logout: Some(crate::v1::LogoutCapabilities::new()),
-            meta: meta.into_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::AgentAuthCapabilities {
+fn v1_agent_auth_capabilities_into_v2_option(
+    auth: crate::v1::AgentAuthCapabilities,
+) -> Result<Option<super::AgentAuthCapabilities>> {
+    let crate::v1::AgentAuthCapabilities { logout, meta } = auth;
+    let Some(logout) = logout else {
+        if meta.is_some() {
+            return Err(unrepresentable_v1_field("AgentAuthCapabilities", "meta"));
+        }
+        return Ok(None);
+    };
+    reject_v1_marker_meta("AgentAuthCapabilities", "logout", logout.meta.as_ref())?;
+    Ok(Some(super::AgentAuthCapabilities {
+        meta: meta.try_to_v2()?,
+    }))
+}
+
+impl TryToV2 for crate::v1::AgentAuthCapabilities {
     type Output = super::AgentAuthCapabilities;
 
-    fn into_v2(self) -> Result<Self::Output> {
-        let Self { logout: _, meta } = self;
+    fn try_to_v2(self) -> Result<Self::Output> {
+        let Self { logout, meta } = self;
+        let Some(logout) = logout else {
+            return Err(unrepresentable_v1_field("AgentAuthCapabilities", "logout"));
+        };
+        reject_v1_marker_meta("AgentAuthCapabilities", "logout", logout.meta.as_ref())?;
         Ok(super::AgentAuthCapabilities {
-            meta: meta.into_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::AuthMethodId {
+impl TryToV1 for super::AuthMethodId {
     type Output = crate::v1::AuthMethodId;
 
-    fn into_v1(self) -> Result<Self::Output> {
-        Ok(crate::v1::AuthMethodId(self.0.into_v1()?))
+    fn try_to_v1(self) -> Result<Self::Output> {
+        Ok(crate::v1::AuthMethodId(self.0.try_to_v1()?))
     }
 }
 
-impl IntoV2 for crate::v1::AuthMethodId {
+impl TryToV2 for crate::v1::AuthMethodId {
     type Output = super::AuthMethodId;
 
-    fn into_v2(self) -> Result<Self::Output> {
-        Ok(super::AuthMethodId(self.0.into_v2()?))
+    fn try_to_v2(self) -> Result<Self::Output> {
+        Ok(super::AuthMethodId(self.0.try_to_v2()?))
     }
 }
 
-impl IntoV1 for super::AuthMethod {
+impl TryToV1 for super::AuthMethod {
     type Output = crate::v1::AuthMethod;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         Ok(match self {
             #[cfg(feature = "unstable_auth_methods")]
-            Self::EnvVar(value) => crate::v1::AuthMethod::EnvVar(value.into_v1()?),
+            Self::EnvVar(value) => crate::v1::AuthMethod::EnvVar(value.try_to_v1()?),
             #[cfg(feature = "unstable_auth_methods")]
-            Self::Terminal(value) => crate::v1::AuthMethod::Terminal(value.into_v1()?),
+            Self::Terminal(value) => crate::v1::AuthMethod::Terminal(value.try_to_v1()?),
             Self::Other(value) => {
                 return Err(unknown_v2_enum_variant("AuthMethod", &value.type_));
             }
-            Self::Agent(value) => crate::v1::AuthMethod::Agent(value.into_v1()?),
+            Self::Agent(value) => crate::v1::AuthMethod::Agent(value.try_to_v1()?),
         })
     }
 }
 
-impl IntoV2 for crate::v1::AuthMethod {
+impl TryToV2 for crate::v1::AuthMethod {
     type Output = super::AuthMethod;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         Ok(match self {
             #[cfg(feature = "unstable_auth_methods")]
-            Self::EnvVar(value) => super::AuthMethod::EnvVar(value.into_v2()?),
+            Self::EnvVar(value) => super::AuthMethod::EnvVar(value.try_to_v2()?),
             #[cfg(feature = "unstable_auth_methods")]
-            Self::Terminal(value) => super::AuthMethod::Terminal(value.into_v2()?),
-            Self::Agent(value) => super::AuthMethod::Agent(value.into_v2()?),
+            Self::Terminal(value) => super::AuthMethod::Terminal(value.try_to_v2()?),
+            Self::Agent(value) => super::AuthMethod::Agent(value.try_to_v2()?),
         })
     }
 }
 
-impl IntoV1 for super::AuthMethodAgent {
+impl TryToV1 for super::AuthMethodAgent {
     type Output = crate::v1::AuthMethodAgent;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             method_id,
             name,
@@ -3074,18 +3646,18 @@ impl IntoV1 for super::AuthMethodAgent {
             meta,
         } = self;
         Ok(crate::v1::AuthMethodAgent {
-            id: method_id.into_v1()?,
-            name: name.into_v1()?,
-            description: description.into_v1()?,
-            meta: meta.into_v1()?,
+            id: method_id.try_to_v1()?,
+            name: name.try_to_v1()?,
+            description: description.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::AuthMethodAgent {
+impl TryToV2 for crate::v1::AuthMethodAgent {
     type Output = super::AuthMethodAgent;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             id,
             name,
@@ -3093,19 +3665,19 @@ impl IntoV2 for crate::v1::AuthMethodAgent {
             meta,
         } = self;
         Ok(super::AuthMethodAgent {
-            method_id: id.into_v2()?,
-            name: name.into_v2()?,
-            description: description.into_v2()?,
-            meta: meta.into_v2()?,
+            method_id: id.try_to_v2()?,
+            name: name.try_to_v2()?,
+            description: description.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_auth_methods")]
-impl IntoV1 for super::AuthMethodEnvVar {
+impl TryToV1 for super::AuthMethodEnvVar {
     type Output = crate::v1::AuthMethodEnvVar;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             method_id,
             name,
@@ -3115,21 +3687,21 @@ impl IntoV1 for super::AuthMethodEnvVar {
             meta,
         } = self;
         Ok(crate::v1::AuthMethodEnvVar {
-            id: method_id.into_v1()?,
-            name: name.into_v1()?,
-            description: description.into_v1()?,
-            vars: vars.into_v1()?,
-            link: link.into_v1()?,
-            meta: meta.into_v1()?,
+            id: method_id.try_to_v1()?,
+            name: name.try_to_v1()?,
+            description: description.try_to_v1()?,
+            vars: vars.try_to_v1()?,
+            link: link.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_auth_methods")]
-impl IntoV2 for crate::v1::AuthMethodEnvVar {
+impl TryToV2 for crate::v1::AuthMethodEnvVar {
     type Output = super::AuthMethodEnvVar;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             id,
             name,
@@ -3139,21 +3711,21 @@ impl IntoV2 for crate::v1::AuthMethodEnvVar {
             meta,
         } = self;
         Ok(super::AuthMethodEnvVar {
-            method_id: id.into_v2()?,
-            name: name.into_v2()?,
-            description: description.into_v2()?,
-            vars: vars.into_v2()?,
-            link: link.into_v2()?,
-            meta: meta.into_v2()?,
+            method_id: id.try_to_v2()?,
+            name: name.try_to_v2()?,
+            description: description.try_to_v2()?,
+            vars: vars.try_to_v2()?,
+            link: link.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_auth_methods")]
-impl IntoV1 for super::AuthEnvVar {
+impl TryToV1 for super::AuthEnvVar {
     type Output = crate::v1::AuthEnvVar;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             name,
             label,
@@ -3162,20 +3734,20 @@ impl IntoV1 for super::AuthEnvVar {
             meta,
         } = self;
         Ok(crate::v1::AuthEnvVar {
-            name: name.into_v1()?,
-            label: label.into_v1()?,
-            secret: secret.into_v1()?,
-            optional: optional.into_v1()?,
-            meta: meta.into_v1()?,
+            name: name.try_to_v1()?,
+            label: label.try_to_v1()?,
+            secret: secret.try_to_v1()?,
+            optional: optional.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_auth_methods")]
-impl IntoV2 for crate::v1::AuthEnvVar {
+impl TryToV2 for crate::v1::AuthEnvVar {
     type Output = super::AuthEnvVar;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             name,
             label,
@@ -3184,20 +3756,20 @@ impl IntoV2 for crate::v1::AuthEnvVar {
             meta,
         } = self;
         Ok(super::AuthEnvVar {
-            name: name.into_v2()?,
-            label: label.into_v2()?,
-            secret: secret.into_v2()?,
-            optional: optional.into_v2()?,
-            meta: meta.into_v2()?,
+            name: name.try_to_v2()?,
+            label: label.try_to_v2()?,
+            secret: secret.try_to_v2()?,
+            optional: optional.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_auth_methods")]
-impl IntoV1 for super::AuthMethodTerminal {
+impl TryToV1 for super::AuthMethodTerminal {
     type Output = crate::v1::AuthMethodTerminal;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             method_id,
             name,
@@ -3215,7 +3787,7 @@ impl IntoV1 for super::AuthMethodTerminal {
                         "v2 AuthMethodTerminal env variable `_meta` cannot be represented in v1",
                     ));
                 }
-                Ok((name.into_v1()?, value.into_v1()?))
+                Ok((name.try_to_v1()?, value.try_to_v1()?))
             })
             .try_fold(HashMap::new(), |mut env, item| {
                 let (name, value) = item?;
@@ -3227,21 +3799,21 @@ impl IntoV1 for super::AuthMethodTerminal {
                 Ok(env)
             })?;
         Ok(crate::v1::AuthMethodTerminal {
-            id: method_id.into_v1()?,
-            name: name.into_v1()?,
-            description: description.into_v1()?,
-            args: args.into_v1()?,
+            id: method_id.try_to_v1()?,
+            name: name.try_to_v1()?,
+            description: description.try_to_v1()?,
+            args: args.try_to_v1()?,
             env,
-            meta: meta.into_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_auth_methods")]
-impl IntoV2 for crate::v1::AuthMethodTerminal {
+impl TryToV2 for crate::v1::AuthMethodTerminal {
     type Output = super::AuthMethodTerminal;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             id,
             name,
@@ -3252,24 +3824,29 @@ impl IntoV2 for crate::v1::AuthMethodTerminal {
         } = self;
         let mut env = env
             .into_iter()
-            .map(|(name, value)| Ok(super::EnvVariable::new(name.into_v2()?, value.into_v2()?)))
+            .map(|(name, value)| {
+                Ok(super::EnvVariable::new(
+                    name.try_to_v2()?,
+                    value.try_to_v2()?,
+                ))
+            })
             .collect::<Result<Vec<_>>>()?;
         env.sort_by(|left, right| left.name.cmp(&right.name));
         Ok(super::AuthMethodTerminal {
-            method_id: id.into_v2()?,
-            name: name.into_v2()?,
-            description: description.into_v2()?,
-            args: args.into_v2()?,
+            method_id: id.try_to_v2()?,
+            name: name.try_to_v2()?,
+            description: description.try_to_v2()?,
+            args: args.try_to_v2()?,
             env,
-            meta: meta.into_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::NewSessionRequest {
+impl TryToV1 for super::NewSessionRequest {
     type Output = crate::v1::NewSessionRequest;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             cwd,
             additional_directories,
@@ -3277,18 +3854,18 @@ impl IntoV1 for super::NewSessionRequest {
             meta,
         } = self;
         Ok(crate::v1::NewSessionRequest {
-            cwd: cwd.into_v1()?,
-            additional_directories: additional_directories.into_v1()?,
-            mcp_servers: mcp_servers.into_v1()?,
-            meta: meta.into_v1()?,
+            cwd: cwd.try_to_v1()?,
+            additional_directories: additional_directories.try_to_v1()?,
+            mcp_servers: mcp_servers.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::NewSessionRequest {
+impl TryToV2 for crate::v1::NewSessionRequest {
     type Output = super::NewSessionRequest;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             cwd,
             additional_directories,
@@ -3296,54 +3873,57 @@ impl IntoV2 for crate::v1::NewSessionRequest {
             meta,
         } = self;
         Ok(super::NewSessionRequest {
-            cwd: cwd.into_v2()?,
-            additional_directories: additional_directories.into_v2()?,
-            mcp_servers: mcp_servers.into_v2()?,
-            meta: meta.into_v2()?,
+            cwd: cwd.try_to_v2()?,
+            additional_directories: additional_directories.try_to_v2()?,
+            mcp_servers: mcp_servers.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::NewSessionResponse {
+impl TryToV1 for super::NewSessionResponse {
     type Output = crate::v1::NewSessionResponse;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             session_id,
             config_options,
             meta,
         } = self;
         Ok(crate::v1::NewSessionResponse {
-            session_id: session_id.into_v1()?,
+            session_id: session_id.try_to_v1()?,
             modes: None,
-            config_options: Some(into_v1_vec_skip_errors(config_options)),
-            meta: meta.into_v1()?,
+            config_options: Some(config_options.try_to_v1()?),
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::NewSessionResponse {
+impl TryToV2 for crate::v1::NewSessionResponse {
     type Output = super::NewSessionResponse;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             session_id,
-            modes: _,
+            modes,
             config_options,
             meta,
         } = self;
+        if modes.is_some() {
+            return Err(unrepresentable_v1_field("NewSessionResponse", "modes"));
+        }
         Ok(super::NewSessionResponse {
-            session_id: session_id.into_v2()?,
-            config_options: option_vec_into_v2_default_skip_errors(config_options),
-            meta: meta.into_v2()?,
+            session_id: session_id.try_to_v2()?,
+            config_options: option_vec_into_v2_default(config_options)?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::LoadSessionRequest {
+impl TryToV2 for crate::v1::LoadSessionRequest {
     type Output = super::ResumeSessionRequest;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             mcp_servers,
             cwd,
@@ -3352,28 +3932,31 @@ impl IntoV2 for crate::v1::LoadSessionRequest {
             meta,
         } = self;
         Ok(super::ResumeSessionRequest {
-            mcp_servers: mcp_servers.into_v2()?,
-            cwd: cwd.into_v2()?,
-            additional_directories: additional_directories.into_v2()?,
-            session_id: session_id.into_v2()?,
+            mcp_servers: mcp_servers.try_to_v2()?,
+            cwd: cwd.try_to_v2()?,
+            additional_directories: additional_directories.try_to_v2()?,
+            session_id: session_id.try_to_v2()?,
             replay_from: Some(super::ReplayFrom::Start(super::ReplayFromStart::new())),
-            meta: meta.into_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::LoadSessionResponse {
+impl TryToV2 for crate::v1::LoadSessionResponse {
     type Output = super::ResumeSessionResponse;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
-            modes: _,
+            modes,
             config_options,
             meta,
         } = self;
+        if modes.is_some() {
+            return Err(unrepresentable_v1_field("LoadSessionResponse", "modes"));
+        }
         Ok(super::ResumeSessionResponse {
-            config_options: option_vec_into_v2_default_skip_errors(config_options),
-            meta: meta.into_v2()?,
+            config_options: option_vec_into_v2_default(config_options)?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
@@ -3386,15 +3969,26 @@ fn v2_resume_session_request_into_v1_load(
         cwd,
         additional_directories,
         mcp_servers,
-        replay_from: _,
+        replay_from,
         meta,
     } = request;
+    match replay_from {
+        Some(super::ReplayFrom::Start(_)) => {}
+        Some(super::ReplayFrom::Other(other)) => {
+            return Err(unknown_v2_enum_variant("ReplayFrom", &other.type_));
+        }
+        None => {
+            return Err(ProtocolConversionError::new(
+                "v2 ResumeSessionRequest without `replayFrom: start` maps to v1 session/resume, not v1 session/load",
+            ));
+        }
+    }
     Ok(crate::v1::LoadSessionRequest {
-        mcp_servers: mcp_servers.into_v1()?,
-        cwd: cwd.into_v1()?,
-        additional_directories: additional_directories.into_v1()?,
-        session_id: session_id.into_v1()?,
-        meta: meta.into_v1()?,
+        mcp_servers: mcp_servers.try_to_v1()?,
+        cwd: cwd.try_to_v1()?,
+        additional_directories: additional_directories.try_to_v1()?,
+        session_id: session_id.try_to_v1()?,
+        meta: meta.try_to_v1()?,
     })
 }
 
@@ -3409,27 +4003,11 @@ fn unsupported_replay_from_for_v1_resume(
     }
 }
 
-fn v2_resume_session_request_into_v1_client_request(
-    request: super::ResumeSessionRequest,
-) -> Result<crate::v1::ClientRequest> {
-    match request.replay_from.clone() {
-        None => Ok(crate::v1::ClientRequest::ResumeSessionRequest(
-            request.into_v1()?,
-        )),
-        Some(super::ReplayFrom::Start(_)) => Ok(crate::v1::ClientRequest::LoadSessionRequest(
-            v2_resume_session_request_into_v1_load(request)?,
-        )),
-        Some(super::ReplayFrom::Other(other)) => {
-            Err(unknown_v2_enum_variant("ReplayFrom", &other.type_))
-        }
-    }
-}
-
 #[cfg(feature = "unstable_session_fork")]
-impl IntoV1 for super::ForkSessionRequest {
+impl TryToV1 for super::ForkSessionRequest {
     type Output = crate::v1::ForkSessionRequest;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             session_id,
             cwd,
@@ -3438,20 +4016,20 @@ impl IntoV1 for super::ForkSessionRequest {
             meta,
         } = self;
         Ok(crate::v1::ForkSessionRequest {
-            session_id: session_id.into_v1()?,
-            cwd: cwd.into_v1()?,
-            additional_directories: additional_directories.into_v1()?,
-            mcp_servers: mcp_servers.into_v1()?,
-            meta: meta.into_v1()?,
+            session_id: session_id.try_to_v1()?,
+            cwd: cwd.try_to_v1()?,
+            additional_directories: additional_directories.try_to_v1()?,
+            mcp_servers: mcp_servers.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_session_fork")]
-impl IntoV2 for crate::v1::ForkSessionRequest {
+impl TryToV2 for crate::v1::ForkSessionRequest {
     type Output = super::ForkSessionRequest;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             session_id,
             cwd,
@@ -3460,57 +4038,60 @@ impl IntoV2 for crate::v1::ForkSessionRequest {
             meta,
         } = self;
         Ok(super::ForkSessionRequest {
-            session_id: session_id.into_v2()?,
-            cwd: cwd.into_v2()?,
-            additional_directories: additional_directories.into_v2()?,
-            mcp_servers: mcp_servers.into_v2()?,
-            meta: meta.into_v2()?,
+            session_id: session_id.try_to_v2()?,
+            cwd: cwd.try_to_v2()?,
+            additional_directories: additional_directories.try_to_v2()?,
+            mcp_servers: mcp_servers.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_session_fork")]
-impl IntoV1 for super::ForkSessionResponse {
+impl TryToV1 for super::ForkSessionResponse {
     type Output = crate::v1::ForkSessionResponse;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             session_id,
             config_options,
             meta,
         } = self;
         Ok(crate::v1::ForkSessionResponse {
-            session_id: session_id.into_v1()?,
+            session_id: session_id.try_to_v1()?,
             modes: None,
-            config_options: Some(into_v1_vec_skip_errors(config_options)),
-            meta: meta.into_v1()?,
+            config_options: Some(config_options.try_to_v1()?),
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_session_fork")]
-impl IntoV2 for crate::v1::ForkSessionResponse {
+impl TryToV2 for crate::v1::ForkSessionResponse {
     type Output = super::ForkSessionResponse;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             session_id,
-            modes: _,
+            modes,
             config_options,
             meta,
         } = self;
+        if modes.is_some() {
+            return Err(unrepresentable_v1_field("ForkSessionResponse", "modes"));
+        }
         Ok(super::ForkSessionResponse {
-            session_id: session_id.into_v2()?,
-            config_options: option_vec_into_v2_default_skip_errors(config_options),
-            meta: meta.into_v2()?,
+            session_id: session_id.try_to_v2()?,
+            config_options: option_vec_into_v2_default(config_options)?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::ResumeSessionRequest {
+impl TryToV1 for super::ResumeSessionRequest {
     type Output = crate::v1::ResumeSessionRequest;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             session_id,
             cwd,
@@ -3523,19 +4104,19 @@ impl IntoV1 for super::ResumeSessionRequest {
             return Err(unsupported_replay_from_for_v1_resume(replay_from));
         }
         Ok(crate::v1::ResumeSessionRequest {
-            session_id: session_id.into_v1()?,
-            cwd: cwd.into_v1()?,
-            additional_directories: additional_directories.into_v1()?,
-            mcp_servers: mcp_servers.into_v1()?,
-            meta: meta.into_v1()?,
+            session_id: session_id.try_to_v1()?,
+            cwd: cwd.try_to_v1()?,
+            additional_directories: additional_directories.try_to_v1()?,
+            mcp_servers: mcp_servers.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::ResumeSessionRequest {
+impl TryToV2 for crate::v1::ResumeSessionRequest {
     type Output = super::ResumeSessionRequest;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             session_id,
             cwd,
@@ -3544,204 +4125,207 @@ impl IntoV2 for crate::v1::ResumeSessionRequest {
             meta,
         } = self;
         Ok(super::ResumeSessionRequest {
-            session_id: session_id.into_v2()?,
-            cwd: cwd.into_v2()?,
-            additional_directories: additional_directories.into_v2()?,
-            mcp_servers: mcp_servers.into_v2()?,
+            session_id: session_id.try_to_v2()?,
+            cwd: cwd.try_to_v2()?,
+            additional_directories: additional_directories.try_to_v2()?,
+            mcp_servers: mcp_servers.try_to_v2()?,
             replay_from: None,
-            meta: meta.into_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::ResumeSessionResponse {
+impl TryToV1 for super::ResumeSessionResponse {
     type Output = crate::v1::ResumeSessionResponse;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             config_options,
             meta,
         } = self;
         Ok(crate::v1::ResumeSessionResponse {
             modes: None,
-            config_options: Some(into_v1_vec_skip_errors(config_options)),
-            meta: meta.into_v1()?,
+            config_options: Some(config_options.try_to_v1()?),
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::ResumeSessionResponse {
+impl TryToV2 for crate::v1::ResumeSessionResponse {
     type Output = super::ResumeSessionResponse;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
-            modes: _,
+            modes,
             config_options,
             meta,
         } = self;
+        if modes.is_some() {
+            return Err(unrepresentable_v1_field("ResumeSessionResponse", "modes"));
+        }
         Ok(super::ResumeSessionResponse {
-            config_options: option_vec_into_v2_default_skip_errors(config_options),
-            meta: meta.into_v2()?,
+            config_options: option_vec_into_v2_default(config_options)?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::CloseSessionRequest {
+impl TryToV1 for super::CloseSessionRequest {
     type Output = crate::v1::CloseSessionRequest;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { session_id, meta } = self;
         Ok(crate::v1::CloseSessionRequest {
-            session_id: session_id.into_v1()?,
-            meta: meta.into_v1()?,
+            session_id: session_id.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::CloseSessionRequest {
+impl TryToV2 for crate::v1::CloseSessionRequest {
     type Output = super::CloseSessionRequest;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { session_id, meta } = self;
         Ok(super::CloseSessionRequest {
-            session_id: session_id.into_v2()?,
-            meta: meta.into_v2()?,
+            session_id: session_id.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::CloseSessionResponse {
+impl TryToV1 for super::CloseSessionResponse {
     type Output = crate::v1::CloseSessionResponse;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(crate::v1::CloseSessionResponse {
-            meta: meta.into_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::CloseSessionResponse {
+impl TryToV2 for crate::v1::CloseSessionResponse {
     type Output = super::CloseSessionResponse;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(super::CloseSessionResponse {
-            meta: meta.into_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::DeleteSessionRequest {
+impl TryToV1 for super::DeleteSessionRequest {
     type Output = crate::v1::DeleteSessionRequest;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { session_id, meta } = self;
         Ok(crate::v1::DeleteSessionRequest {
-            session_id: session_id.into_v1()?,
-            meta: meta.into_v1()?,
+            session_id: session_id.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::DeleteSessionRequest {
+impl TryToV2 for crate::v1::DeleteSessionRequest {
     type Output = super::DeleteSessionRequest;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { session_id, meta } = self;
         Ok(super::DeleteSessionRequest {
-            session_id: session_id.into_v2()?,
-            meta: meta.into_v2()?,
+            session_id: session_id.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::DeleteSessionResponse {
+impl TryToV1 for super::DeleteSessionResponse {
     type Output = crate::v1::DeleteSessionResponse;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(crate::v1::DeleteSessionResponse {
-            meta: meta.into_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::DeleteSessionResponse {
+impl TryToV2 for crate::v1::DeleteSessionResponse {
     type Output = super::DeleteSessionResponse;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(super::DeleteSessionResponse {
-            meta: meta.into_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::ListSessionsRequest {
+impl TryToV1 for super::ListSessionsRequest {
     type Output = crate::v1::ListSessionsRequest;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { cwd, cursor, meta } = self;
         Ok(crate::v1::ListSessionsRequest {
-            cwd: cwd.into_v1()?,
-            cursor: cursor.into_v1()?,
-            meta: meta.into_v1()?,
+            cwd: cwd.try_to_v1()?,
+            cursor: cursor.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::ListSessionsRequest {
+impl TryToV2 for crate::v1::ListSessionsRequest {
     type Output = super::ListSessionsRequest;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { cwd, cursor, meta } = self;
         Ok(super::ListSessionsRequest {
-            cwd: cwd.into_v2()?,
-            cursor: cursor.into_v2()?,
-            meta: meta.into_v2()?,
+            cwd: cwd.try_to_v2()?,
+            cursor: cursor.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::ListSessionsResponse {
+impl TryToV1 for super::ListSessionsResponse {
     type Output = crate::v1::ListSessionsResponse;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             sessions,
             next_cursor,
             meta,
         } = self;
         Ok(crate::v1::ListSessionsResponse {
-            sessions: into_v1_vec_skip_errors(sessions),
-            next_cursor: next_cursor.into_v1()?,
-            meta: meta.into_v1()?,
+            sessions: sessions.try_to_v1()?,
+            next_cursor: next_cursor.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::ListSessionsResponse {
+impl TryToV2 for crate::v1::ListSessionsResponse {
     type Output = super::ListSessionsResponse;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             sessions,
             next_cursor,
             meta,
         } = self;
         Ok(super::ListSessionsResponse {
-            sessions: into_v2_vec_skip_errors(sessions),
-            next_cursor: next_cursor.into_v2()?,
-            meta: meta.into_v2()?,
+            sessions: sessions.try_to_v2()?,
+            next_cursor: next_cursor.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::SessionInfo {
+impl TryToV1 for super::SessionInfo {
     type Output = crate::v1::SessionInfo;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             session_id,
             cwd,
@@ -3751,20 +4335,20 @@ impl IntoV1 for super::SessionInfo {
             meta,
         } = self;
         Ok(crate::v1::SessionInfo {
-            session_id: session_id.into_v1()?,
-            cwd: cwd.into_v1()?,
-            additional_directories: additional_directories.into_v1()?,
-            title: into_v1_default_on_error(title),
-            updated_at: into_v1_default_on_error(updated_at),
-            meta: meta.into_v1()?,
+            session_id: session_id.try_to_v1()?,
+            cwd: cwd.try_to_v1()?,
+            additional_directories: additional_directories.try_to_v1()?,
+            title: title.try_to_v1()?,
+            updated_at: updated_at.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::SessionInfo {
+impl TryToV2 for crate::v1::SessionInfo {
     type Output = super::SessionInfo;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             session_id,
             cwd,
@@ -3774,68 +4358,68 @@ impl IntoV2 for crate::v1::SessionInfo {
             meta,
         } = self;
         Ok(super::SessionInfo {
-            session_id: session_id.into_v2()?,
-            cwd: cwd.into_v2()?,
-            additional_directories: additional_directories.into_v2()?,
-            title: into_v2_default_on_error(title),
-            updated_at: into_v2_default_on_error(updated_at),
-            meta: meta.into_v2()?,
+            session_id: session_id.try_to_v2()?,
+            cwd: cwd.try_to_v2()?,
+            additional_directories: additional_directories.try_to_v2()?,
+            title: title.try_to_v2()?,
+            updated_at: updated_at.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::SessionConfigId {
+impl TryToV1 for super::SessionConfigId {
     type Output = crate::v1::SessionConfigId;
 
-    fn into_v1(self) -> Result<Self::Output> {
-        Ok(crate::v1::SessionConfigId(self.0.into_v1()?))
+    fn try_to_v1(self) -> Result<Self::Output> {
+        Ok(crate::v1::SessionConfigId(self.0.try_to_v1()?))
     }
 }
 
-impl IntoV2 for crate::v1::SessionConfigId {
+impl TryToV2 for crate::v1::SessionConfigId {
     type Output = super::SessionConfigId;
 
-    fn into_v2(self) -> Result<Self::Output> {
-        Ok(super::SessionConfigId(self.0.into_v2()?))
+    fn try_to_v2(self) -> Result<Self::Output> {
+        Ok(super::SessionConfigId(self.0.try_to_v2()?))
     }
 }
 
-impl IntoV1 for super::SessionConfigValueId {
+impl TryToV1 for super::SessionConfigValueId {
     type Output = crate::v1::SessionConfigValueId;
 
-    fn into_v1(self) -> Result<Self::Output> {
-        Ok(crate::v1::SessionConfigValueId(self.0.into_v1()?))
+    fn try_to_v1(self) -> Result<Self::Output> {
+        Ok(crate::v1::SessionConfigValueId(self.0.try_to_v1()?))
     }
 }
 
-impl IntoV2 for crate::v1::SessionConfigValueId {
+impl TryToV2 for crate::v1::SessionConfigValueId {
     type Output = super::SessionConfigValueId;
 
-    fn into_v2(self) -> Result<Self::Output> {
-        Ok(super::SessionConfigValueId(self.0.into_v2()?))
+    fn try_to_v2(self) -> Result<Self::Output> {
+        Ok(super::SessionConfigValueId(self.0.try_to_v2()?))
     }
 }
 
-impl IntoV1 for super::SessionConfigGroupId {
+impl TryToV1 for super::SessionConfigGroupId {
     type Output = crate::v1::SessionConfigGroupId;
 
-    fn into_v1(self) -> Result<Self::Output> {
-        Ok(crate::v1::SessionConfigGroupId(self.0.into_v1()?))
+    fn try_to_v1(self) -> Result<Self::Output> {
+        Ok(crate::v1::SessionConfigGroupId(self.0.try_to_v1()?))
     }
 }
 
-impl IntoV2 for crate::v1::SessionConfigGroupId {
+impl TryToV2 for crate::v1::SessionConfigGroupId {
     type Output = super::SessionConfigGroupId;
 
-    fn into_v2(self) -> Result<Self::Output> {
-        Ok(super::SessionConfigGroupId(self.0.into_v2()?))
+    fn try_to_v2(self) -> Result<Self::Output> {
+        Ok(super::SessionConfigGroupId(self.0.try_to_v2()?))
     }
 }
 
-impl IntoV1 for super::SessionConfigSelectOption {
+impl TryToV1 for super::SessionConfigSelectOption {
     type Output = crate::v1::SessionConfigSelectOption;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             value,
             name,
@@ -3843,18 +4427,18 @@ impl IntoV1 for super::SessionConfigSelectOption {
             meta,
         } = self;
         Ok(crate::v1::SessionConfigSelectOption {
-            value: value.into_v1()?,
-            name: name.into_v1()?,
-            description: description.into_v1()?,
-            meta: meta.into_v1()?,
+            value: value.try_to_v1()?,
+            name: name.try_to_v1()?,
+            description: description.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::SessionConfigSelectOption {
+impl TryToV2 for crate::v1::SessionConfigSelectOption {
     type Output = super::SessionConfigSelectOption;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             value,
             name,
@@ -3862,18 +4446,18 @@ impl IntoV2 for crate::v1::SessionConfigSelectOption {
             meta,
         } = self;
         Ok(super::SessionConfigSelectOption {
-            value: value.into_v2()?,
-            name: name.into_v2()?,
-            description: description.into_v2()?,
-            meta: meta.into_v2()?,
+            value: value.try_to_v2()?,
+            name: name.try_to_v2()?,
+            description: description.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::SessionConfigSelectGroup {
+impl TryToV1 for super::SessionConfigSelectGroup {
     type Output = crate::v1::SessionConfigSelectGroup;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             group_id,
             name,
@@ -3881,18 +4465,18 @@ impl IntoV1 for super::SessionConfigSelectGroup {
             meta,
         } = self;
         Ok(crate::v1::SessionConfigSelectGroup {
-            group: group_id.into_v1()?,
-            name: name.into_v1()?,
-            options: options.into_v1()?,
-            meta: meta.into_v1()?,
+            group: group_id.try_to_v1()?,
+            name: name.try_to_v1()?,
+            options: options.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::SessionConfigSelectGroup {
+impl TryToV2 for crate::v1::SessionConfigSelectGroup {
     type Output = super::SessionConfigSelectGroup;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             group,
             name,
@@ -3900,129 +4484,129 @@ impl IntoV2 for crate::v1::SessionConfigSelectGroup {
             meta,
         } = self;
         Ok(super::SessionConfigSelectGroup {
-            group_id: group.into_v2()?,
-            name: name.into_v2()?,
-            options: options.into_v2()?,
-            meta: meta.into_v2()?,
+            group_id: group.try_to_v2()?,
+            name: name.try_to_v2()?,
+            options: options.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::SessionConfigSelectOptions {
+impl TryToV1 for super::SessionConfigSelectOptions {
     type Output = crate::v1::SessionConfigSelectOptions;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         Ok(match self {
             Self::Ungrouped(value) => {
-                crate::v1::SessionConfigSelectOptions::Ungrouped(value.into_v1()?)
+                crate::v1::SessionConfigSelectOptions::Ungrouped(value.try_to_v1()?)
             }
             Self::Grouped(value) => {
-                crate::v1::SessionConfigSelectOptions::Grouped(value.into_v1()?)
+                crate::v1::SessionConfigSelectOptions::Grouped(value.try_to_v1()?)
             }
         })
     }
 }
 
-impl IntoV2 for crate::v1::SessionConfigSelectOptions {
+impl TryToV2 for crate::v1::SessionConfigSelectOptions {
     type Output = super::SessionConfigSelectOptions;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         Ok(match self {
             Self::Ungrouped(value) => {
-                super::SessionConfigSelectOptions::Ungrouped(value.into_v2()?)
+                super::SessionConfigSelectOptions::Ungrouped(value.try_to_v2()?)
             }
-            Self::Grouped(value) => super::SessionConfigSelectOptions::Grouped(value.into_v2()?),
+            Self::Grouped(value) => super::SessionConfigSelectOptions::Grouped(value.try_to_v2()?),
         })
     }
 }
 
-impl IntoV1 for super::SessionConfigSelect {
+impl TryToV1 for super::SessionConfigSelect {
     type Output = crate::v1::SessionConfigSelect;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             current_value,
             options,
         } = self;
         Ok(crate::v1::SessionConfigSelect {
-            current_value: current_value.into_v1()?,
-            options: options.into_v1()?,
+            current_value: current_value.try_to_v1()?,
+            options: options.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::SessionConfigSelect {
+impl TryToV2 for crate::v1::SessionConfigSelect {
     type Output = super::SessionConfigSelect;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             current_value,
             options,
         } = self;
         Ok(super::SessionConfigSelect {
-            current_value: current_value.into_v2()?,
-            options: options.into_v2()?,
+            current_value: current_value.try_to_v2()?,
+            options: options.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::SessionConfigBoolean {
+impl TryToV1 for super::SessionConfigBoolean {
     type Output = crate::v1::SessionConfigBoolean;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { current_value } = self;
         Ok(crate::v1::SessionConfigBoolean {
-            current_value: current_value.into_v1()?,
+            current_value: current_value.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::SessionConfigBoolean {
+impl TryToV2 for crate::v1::SessionConfigBoolean {
     type Output = super::SessionConfigBoolean;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { current_value } = self;
         Ok(super::SessionConfigBoolean {
-            current_value: current_value.into_v2()?,
+            current_value: current_value.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::SessionConfigOptionCategory {
+impl TryToV1 for super::SessionConfigOptionCategory {
     type Output = crate::v1::SessionConfigOptionCategory;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         Ok(match self {
             Self::Mode => crate::v1::SessionConfigOptionCategory::Mode,
             Self::Model => crate::v1::SessionConfigOptionCategory::Model,
             Self::ModelConfig => crate::v1::SessionConfigOptionCategory::ModelConfig,
             Self::ThoughtLevel => crate::v1::SessionConfigOptionCategory::ThoughtLevel,
-            Self::Other(value) => crate::v1::SessionConfigOptionCategory::Other(value.into_v1()?),
+            Self::Other(value) => crate::v1::SessionConfigOptionCategory::Other(value.try_to_v1()?),
         })
     }
 }
 
-impl IntoV2 for crate::v1::SessionConfigOptionCategory {
+impl TryToV2 for crate::v1::SessionConfigOptionCategory {
     type Output = super::SessionConfigOptionCategory;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         Ok(match self {
             Self::Mode => super::SessionConfigOptionCategory::Mode,
             Self::Model => super::SessionConfigOptionCategory::Model,
             Self::ModelConfig => super::SessionConfigOptionCategory::ModelConfig,
             Self::ThoughtLevel => super::SessionConfigOptionCategory::ThoughtLevel,
-            Self::Other(value) => super::SessionConfigOptionCategory::Other(value.into_v2()?),
+            Self::Other(value) => super::SessionConfigOptionCategory::Other(value.try_to_v2()?),
         })
     }
 }
 
-impl IntoV1 for super::SessionConfigKind {
+impl TryToV1 for super::SessionConfigKind {
     type Output = crate::v1::SessionConfigKind;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::Select(value) => crate::v1::SessionConfigKind::Select(value.into_v1()?),
-            Self::Boolean(value) => crate::v1::SessionConfigKind::Boolean(value.into_v1()?),
+            Self::Select(value) => crate::v1::SessionConfigKind::Select(value.try_to_v1()?),
+            Self::Boolean(value) => crate::v1::SessionConfigKind::Boolean(value.try_to_v1()?),
             Self::Other(value) => {
                 return Err(unknown_v2_enum_variant("SessionConfigKind", &value.type_));
             }
@@ -4030,21 +4614,21 @@ impl IntoV1 for super::SessionConfigKind {
     }
 }
 
-impl IntoV2 for crate::v1::SessionConfigKind {
+impl TryToV2 for crate::v1::SessionConfigKind {
     type Output = super::SessionConfigKind;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::Select(value) => super::SessionConfigKind::Select(value.into_v2()?),
-            Self::Boolean(value) => super::SessionConfigKind::Boolean(value.into_v2()?),
+            Self::Select(value) => super::SessionConfigKind::Select(value.try_to_v2()?),
+            Self::Boolean(value) => super::SessionConfigKind::Boolean(value.try_to_v2()?),
         })
     }
 }
 
-impl IntoV1 for super::SessionConfigOption {
+impl TryToV1 for super::SessionConfigOption {
     type Output = crate::v1::SessionConfigOption;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             config_id,
             name,
@@ -4054,20 +4638,20 @@ impl IntoV1 for super::SessionConfigOption {
             meta,
         } = self;
         Ok(crate::v1::SessionConfigOption {
-            id: config_id.into_v1()?,
-            name: name.into_v1()?,
-            description: description.into_v1()?,
-            category: into_v1_default_on_error(category),
-            kind: kind.into_v1()?,
-            meta: meta.into_v1()?,
+            id: config_id.try_to_v1()?,
+            name: name.try_to_v1()?,
+            description: description.try_to_v1()?,
+            category: category.try_to_v1()?,
+            kind: kind.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::SessionConfigOption {
+impl TryToV2 for crate::v1::SessionConfigOption {
     type Output = super::SessionConfigOption;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             id,
             name,
@@ -4077,26 +4661,26 @@ impl IntoV2 for crate::v1::SessionConfigOption {
             meta,
         } = self;
         Ok(super::SessionConfigOption {
-            config_id: id.into_v2()?,
-            name: name.into_v2()?,
-            description: description.into_v2()?,
-            category: into_v2_default_on_error(category),
-            kind: kind.into_v2()?,
-            meta: meta.into_v2()?,
+            config_id: id.try_to_v2()?,
+            name: name.try_to_v2()?,
+            description: description.try_to_v2()?,
+            category: category.try_to_v2()?,
+            kind: kind.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::SessionConfigOptionValue {
+impl TryToV1 for super::SessionConfigOptionValue {
     type Output = crate::v1::SessionConfigOptionValue;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         Ok(match self {
             Self::Id { value } => crate::v1::SessionConfigOptionValue::ValueId {
-                value: value.into_v1()?,
+                value: value.try_to_v1()?,
             },
             Self::Boolean { value } => crate::v1::SessionConfigOptionValue::Boolean {
-                value: value.into_v1()?,
+                value: value.try_to_v1()?,
             },
             Self::Other(value) => {
                 return Err(unknown_v2_enum_variant(
@@ -4108,25 +4692,25 @@ impl IntoV1 for super::SessionConfigOptionValue {
     }
 }
 
-impl IntoV2 for crate::v1::SessionConfigOptionValue {
+impl TryToV2 for crate::v1::SessionConfigOptionValue {
     type Output = super::SessionConfigOptionValue;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         Ok(match self {
             Self::Boolean { value } => super::SessionConfigOptionValue::Boolean {
-                value: value.into_v2()?,
+                value: value.try_to_v2()?,
             },
             Self::ValueId { value } => super::SessionConfigOptionValue::Id {
-                value: value.into_v2()?,
+                value: value.try_to_v2()?,
             },
         })
     }
 }
 
-impl IntoV1 for super::SetSessionConfigOptionRequest {
+impl TryToV1 for super::SetSessionConfigOptionRequest {
     type Output = crate::v1::SetSessionConfigOptionRequest;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             session_id,
             config_id,
@@ -4134,18 +4718,18 @@ impl IntoV1 for super::SetSessionConfigOptionRequest {
             meta,
         } = self;
         Ok(crate::v1::SetSessionConfigOptionRequest {
-            session_id: session_id.into_v1()?,
-            config_id: config_id.into_v1()?,
-            value: value.into_v1()?,
-            meta: meta.into_v1()?,
+            session_id: session_id.try_to_v1()?,
+            config_id: config_id.try_to_v1()?,
+            value: value.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::SetSessionConfigOptionRequest {
+impl TryToV2 for crate::v1::SetSessionConfigOptionRequest {
     type Output = super::SetSessionConfigOptionRequest;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             session_id,
             config_id,
@@ -4153,76 +4737,76 @@ impl IntoV2 for crate::v1::SetSessionConfigOptionRequest {
             meta,
         } = self;
         Ok(super::SetSessionConfigOptionRequest {
-            session_id: session_id.into_v2()?,
-            config_id: config_id.into_v2()?,
-            value: value.into_v2()?,
-            meta: meta.into_v2()?,
+            session_id: session_id.try_to_v2()?,
+            config_id: config_id.try_to_v2()?,
+            value: value.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::SetSessionConfigOptionResponse {
+impl TryToV1 for super::SetSessionConfigOptionResponse {
     type Output = crate::v1::SetSessionConfigOptionResponse;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             config_options,
             meta,
         } = self;
         Ok(crate::v1::SetSessionConfigOptionResponse {
-            config_options: into_v1_vec_skip_errors(config_options),
-            meta: meta.into_v1()?,
+            config_options: config_options.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::SetSessionConfigOptionResponse {
+impl TryToV2 for crate::v1::SetSessionConfigOptionResponse {
     type Output = super::SetSessionConfigOptionResponse;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             config_options,
             meta,
         } = self;
         Ok(super::SetSessionConfigOptionResponse {
-            config_options: into_v2_vec_skip_errors(config_options),
-            meta: meta.into_v2()?,
+            config_options: config_options.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::McpServer {
+impl TryToV1 for super::McpServer {
     type Output = crate::v1::McpServer;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::Http(value) => crate::v1::McpServer::Http(value.into_v1()?),
+            Self::Http(value) => crate::v1::McpServer::Http(value.try_to_v1()?),
             #[cfg(feature = "unstable_mcp_over_acp")]
-            Self::Acp(value) => crate::v1::McpServer::Acp(value.into_v1()?),
-            Self::Stdio(value) => crate::v1::McpServer::Stdio(value.into_v1()?),
+            Self::Acp(value) => crate::v1::McpServer::Acp(value.try_to_v1()?),
+            Self::Stdio(value) => crate::v1::McpServer::Stdio(value.try_to_v1()?),
             Self::Other(value) => return Err(unknown_v2_enum_variant("McpServer", &value.type_)),
         })
     }
 }
 
-impl IntoV2 for crate::v1::McpServer {
+impl TryToV2 for crate::v1::McpServer {
     type Output = super::McpServer;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::Http(value) => super::McpServer::Http(value.into_v2()?),
+            Self::Http(value) => super::McpServer::Http(value.try_to_v2()?),
             Self::Sse(_) => return Err(removed_v1_enum_variant("McpServer", "sse")),
             #[cfg(feature = "unstable_mcp_over_acp")]
-            Self::Acp(value) => super::McpServer::Acp(value.into_v2()?),
-            Self::Stdio(value) => super::McpServer::Stdio(value.into_v2()?),
+            Self::Acp(value) => super::McpServer::Acp(value.try_to_v2()?),
+            Self::Stdio(value) => super::McpServer::Stdio(value.try_to_v2()?),
         })
     }
 }
 
-impl IntoV1 for super::McpServerHttp {
+impl TryToV1 for super::McpServerHttp {
     type Output = crate::v1::McpServerHttp;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             name,
             url,
@@ -4230,18 +4814,18 @@ impl IntoV1 for super::McpServerHttp {
             meta,
         } = self;
         Ok(crate::v1::McpServerHttp {
-            name: name.into_v1()?,
-            url: url.into_v1()?,
-            headers: headers.into_v1()?,
-            meta: meta.into_v1()?,
+            name: name.try_to_v1()?,
+            url: url.try_to_v1()?,
+            headers: headers.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::McpServerHttp {
+impl TryToV2 for crate::v1::McpServerHttp {
     type Output = super::McpServerHttp;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             name,
             url,
@@ -4249,90 +4833,90 @@ impl IntoV2 for crate::v1::McpServerHttp {
             meta,
         } = self;
         Ok(super::McpServerHttp {
-            name: name.into_v2()?,
-            url: url.into_v2()?,
-            headers: headers.into_v2()?,
-            meta: meta.into_v2()?,
+            name: name.try_to_v2()?,
+            url: url.try_to_v2()?,
+            headers: headers.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_mcp_over_acp")]
-impl IntoV1 for super::McpServerAcpId {
+impl TryToV1 for super::McpServerAcpId {
     type Output = crate::v1::McpServerAcpId;
 
-    fn into_v1(self) -> Result<Self::Output> {
-        Ok(crate::v1::McpServerAcpId(self.0.into_v1()?))
+    fn try_to_v1(self) -> Result<Self::Output> {
+        Ok(crate::v1::McpServerAcpId(self.0.try_to_v1()?))
     }
 }
 
 #[cfg(feature = "unstable_mcp_over_acp")]
-impl IntoV2 for crate::v1::McpServerAcpId {
+impl TryToV2 for crate::v1::McpServerAcpId {
     type Output = super::McpServerAcpId;
 
-    fn into_v2(self) -> Result<Self::Output> {
-        Ok(super::McpServerAcpId(self.0.into_v2()?))
+    fn try_to_v2(self) -> Result<Self::Output> {
+        Ok(super::McpServerAcpId(self.0.try_to_v2()?))
     }
 }
 
 #[cfg(feature = "unstable_mcp_over_acp")]
-impl IntoV1 for super::McpConnectionId {
+impl TryToV1 for super::McpConnectionId {
     type Output = crate::v1::McpConnectionId;
 
-    fn into_v1(self) -> Result<Self::Output> {
-        Ok(crate::v1::McpConnectionId(self.0.into_v1()?))
+    fn try_to_v1(self) -> Result<Self::Output> {
+        Ok(crate::v1::McpConnectionId(self.0.try_to_v1()?))
     }
 }
 
 #[cfg(feature = "unstable_mcp_over_acp")]
-impl IntoV2 for crate::v1::McpConnectionId {
+impl TryToV2 for crate::v1::McpConnectionId {
     type Output = super::McpConnectionId;
 
-    fn into_v2(self) -> Result<Self::Output> {
-        Ok(super::McpConnectionId(self.0.into_v2()?))
+    fn try_to_v2(self) -> Result<Self::Output> {
+        Ok(super::McpConnectionId(self.0.try_to_v2()?))
     }
 }
 
 #[cfg(feature = "unstable_mcp_over_acp")]
-impl IntoV1 for super::McpServerAcp {
+impl TryToV1 for super::McpServerAcp {
     type Output = crate::v1::McpServerAcp;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             name,
             server_id,
             meta,
         } = self;
         Ok(crate::v1::McpServerAcp {
-            name: name.into_v1()?,
-            server_id: server_id.into_v1()?,
-            meta: meta.into_v1()?,
+            name: name.try_to_v1()?,
+            server_id: server_id.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_mcp_over_acp")]
-impl IntoV2 for crate::v1::McpServerAcp {
+impl TryToV2 for crate::v1::McpServerAcp {
     type Output = super::McpServerAcp;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             name,
             server_id,
             meta,
         } = self;
         Ok(super::McpServerAcp {
-            name: name.into_v2()?,
-            server_id: server_id.into_v2()?,
-            meta: meta.into_v2()?,
+            name: name.try_to_v2()?,
+            server_id: server_id.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::McpServerStdio {
+impl TryToV1 for super::McpServerStdio {
     type Output = crate::v1::McpServerStdio;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             name,
             command,
@@ -4341,19 +4925,19 @@ impl IntoV1 for super::McpServerStdio {
             meta,
         } = self;
         Ok(crate::v1::McpServerStdio {
-            name: name.into_v1()?,
-            command: command.into_v1()?,
-            args: args.into_v1()?,
-            env: env.into_v1()?,
-            meta: meta.into_v1()?,
+            name: name.try_to_v1()?,
+            command: command.try_to_v1()?,
+            args: args.try_to_v1()?,
+            env: env.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::McpServerStdio {
+impl TryToV2 for crate::v1::McpServerStdio {
     type Output = super::McpServerStdio;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             name,
             command,
@@ -4362,125 +4946,125 @@ impl IntoV2 for crate::v1::McpServerStdio {
             meta,
         } = self;
         Ok(super::McpServerStdio {
-            name: name.into_v2()?,
-            command: command.into_v2()?,
-            args: args.into_v2()?,
-            env: env.into_v2()?,
-            meta: meta.into_v2()?,
+            name: name.try_to_v2()?,
+            command: command.try_to_v2()?,
+            args: args.try_to_v2()?,
+            env: env.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::EnvVariable {
+impl TryToV1 for super::EnvVariable {
     type Output = crate::v1::EnvVariable;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { name, value, meta } = self;
         Ok(crate::v1::EnvVariable {
-            name: name.into_v1()?,
-            value: value.into_v1()?,
-            meta: meta.into_v1()?,
+            name: name.try_to_v1()?,
+            value: value.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::EnvVariable {
+impl TryToV2 for crate::v1::EnvVariable {
     type Output = super::EnvVariable;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { name, value, meta } = self;
         Ok(super::EnvVariable {
-            name: name.into_v2()?,
-            value: value.into_v2()?,
-            meta: meta.into_v2()?,
+            name: name.try_to_v2()?,
+            value: value.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::HttpHeader {
+impl TryToV1 for super::HttpHeader {
     type Output = crate::v1::HttpHeader;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { name, value, meta } = self;
         Ok(crate::v1::HttpHeader {
-            name: name.into_v1()?,
-            value: value.into_v1()?,
-            meta: meta.into_v1()?,
+            name: name.try_to_v1()?,
+            value: value.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::HttpHeader {
+impl TryToV2 for crate::v1::HttpHeader {
     type Output = super::HttpHeader;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { name, value, meta } = self;
         Ok(super::HttpHeader {
-            name: name.into_v2()?,
-            value: value.into_v2()?,
-            meta: meta.into_v2()?,
+            name: name.try_to_v2()?,
+            value: value.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::PromptRequest {
+impl TryToV1 for super::PromptRequest {
     type Output = crate::v1::PromptRequest;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             session_id,
             prompt,
             meta,
         } = self;
         Ok(crate::v1::PromptRequest {
-            session_id: session_id.into_v1()?,
-            prompt: prompt.into_v1()?,
-            meta: meta.into_v1()?,
+            session_id: session_id.try_to_v1()?,
+            prompt: prompt.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::PromptRequest {
+impl TryToV2 for crate::v1::PromptRequest {
     type Output = super::PromptRequest;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             session_id,
             prompt,
             meta,
         } = self;
         Ok(super::PromptRequest {
-            session_id: session_id.into_v2()?,
-            prompt: prompt.into_v2()?,
-            meta: meta.into_v2()?,
+            session_id: session_id.try_to_v2()?,
+            prompt: prompt.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::PromptResponse {
+impl TryToV1 for super::PromptResponse {
     type Output = crate::v1::PromptResponse;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         Err(ProtocolConversionError::new(
             "v2 PromptResponse cannot be represented in v1 because v2 reports completion with state_update session updates",
         ))
     }
 }
 
-impl IntoV2 for crate::v1::PromptResponse {
+impl TryToV2 for crate::v1::PromptResponse {
     type Output = super::PromptResponse;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         Err(ProtocolConversionError::new(
             "v1 PromptResponse cannot be represented in v2 by itself because v2 reports completion with state_update session updates",
         ))
     }
 }
 
-impl IntoV1 for super::StopReason {
+impl TryToV1 for super::StopReason {
     type Output = crate::v1::StopReason;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         Ok(match self {
             Self::EndTurn => crate::v1::StopReason::EndTurn,
             Self::MaxTokens => crate::v1::StopReason::MaxTokens,
@@ -4492,10 +5076,10 @@ impl IntoV1 for super::StopReason {
     }
 }
 
-impl IntoV2 for crate::v1::StopReason {
+impl TryToV2 for crate::v1::StopReason {
     type Output = super::StopReason;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         Ok(match self {
             Self::EndTurn => super::StopReason::EndTurn,
             Self::MaxTokens => super::StopReason::MaxTokens,
@@ -4507,10 +5091,10 @@ impl IntoV2 for crate::v1::StopReason {
 }
 
 #[cfg(feature = "unstable_end_turn_token_usage")]
-impl IntoV1 for super::Usage {
+impl TryToV1 for super::Usage {
     type Output = crate::v1::Usage;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             total_tokens,
             input_tokens,
@@ -4521,22 +5105,22 @@ impl IntoV1 for super::Usage {
             meta,
         } = self;
         Ok(crate::v1::Usage {
-            total_tokens: total_tokens.into_v1()?,
-            input_tokens: input_tokens.into_v1()?,
-            output_tokens: output_tokens.into_v1()?,
-            thought_tokens: thought_tokens.into_v1()?,
-            cached_read_tokens: cached_read_tokens.into_v1()?,
-            cached_write_tokens: cached_write_tokens.into_v1()?,
-            meta: meta.into_v1()?,
+            total_tokens: total_tokens.try_to_v1()?,
+            input_tokens: input_tokens.try_to_v1()?,
+            output_tokens: output_tokens.try_to_v1()?,
+            thought_tokens: thought_tokens.try_to_v1()?,
+            cached_read_tokens: cached_read_tokens.try_to_v1()?,
+            cached_write_tokens: cached_write_tokens.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_end_turn_token_usage")]
-impl IntoV2 for crate::v1::Usage {
+impl TryToV2 for crate::v1::Usage {
     type Output = super::Usage;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             total_tokens,
             input_tokens,
@@ -4547,108 +5131,108 @@ impl IntoV2 for crate::v1::Usage {
             meta,
         } = self;
         Ok(super::Usage {
-            total_tokens: total_tokens.into_v2()?,
-            input_tokens: input_tokens.into_v2()?,
-            output_tokens: output_tokens.into_v2()?,
-            thought_tokens: thought_tokens.into_v2()?,
-            cached_read_tokens: cached_read_tokens.into_v2()?,
-            cached_write_tokens: cached_write_tokens.into_v2()?,
-            meta: meta.into_v2()?,
+            total_tokens: total_tokens.try_to_v2()?,
+            input_tokens: input_tokens.try_to_v2()?,
+            output_tokens: output_tokens.try_to_v2()?,
+            thought_tokens: thought_tokens.try_to_v2()?,
+            cached_read_tokens: cached_read_tokens.try_to_v2()?,
+            cached_write_tokens: cached_write_tokens.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl IntoV1 for super::LlmProtocol {
+impl TryToV1 for super::LlmProtocol {
     type Output = crate::v1::LlmProtocol;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         Ok(match self {
             Self::Anthropic => crate::v1::LlmProtocol::Anthropic,
             Self::OpenAi => crate::v1::LlmProtocol::OpenAi,
             Self::Azure => crate::v1::LlmProtocol::Azure,
             Self::Vertex => crate::v1::LlmProtocol::Vertex,
             Self::Bedrock => crate::v1::LlmProtocol::Bedrock,
-            Self::Other(value) => crate::v1::LlmProtocol::Other(value.into_v1()?),
+            Self::Other(value) => crate::v1::LlmProtocol::Other(value.try_to_v1()?),
         })
     }
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl IntoV2 for crate::v1::LlmProtocol {
+impl TryToV2 for crate::v1::LlmProtocol {
     type Output = super::LlmProtocol;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         Ok(match self {
             Self::Anthropic => super::LlmProtocol::Anthropic,
             Self::OpenAi => super::LlmProtocol::OpenAi,
             Self::Azure => super::LlmProtocol::Azure,
             Self::Vertex => super::LlmProtocol::Vertex,
             Self::Bedrock => super::LlmProtocol::Bedrock,
-            Self::Other(value) => super::LlmProtocol::Other(value.into_v2()?),
+            Self::Other(value) => super::LlmProtocol::Other(value.try_to_v2()?),
         })
     }
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl IntoV1 for super::ProviderCurrentConfig {
+impl TryToV1 for super::ProviderCurrentConfig {
     type Output = crate::v1::ProviderCurrentConfig;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             api_type,
             base_url,
             meta,
         } = self;
         Ok(crate::v1::ProviderCurrentConfig {
-            api_type: api_type.into_v1()?,
-            base_url: base_url.into_v1()?,
-            meta: meta.into_v1()?,
+            api_type: api_type.try_to_v1()?,
+            base_url: base_url.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl IntoV2 for crate::v1::ProviderCurrentConfig {
+impl TryToV2 for crate::v1::ProviderCurrentConfig {
     type Output = super::ProviderCurrentConfig;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             api_type,
             base_url,
             meta,
         } = self;
         Ok(super::ProviderCurrentConfig {
-            api_type: api_type.into_v2()?,
-            base_url: base_url.into_v2()?,
-            meta: meta.into_v2()?,
+            api_type: api_type.try_to_v2()?,
+            base_url: base_url.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl IntoV1 for super::ProviderId {
+impl TryToV1 for super::ProviderId {
     type Output = crate::v1::ProviderId;
 
-    fn into_v1(self) -> Result<Self::Output> {
-        Ok(crate::v1::ProviderId(self.0.into_v1()?))
+    fn try_to_v1(self) -> Result<Self::Output> {
+        Ok(crate::v1::ProviderId(self.0.try_to_v1()?))
     }
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl IntoV2 for crate::v1::ProviderId {
+impl TryToV2 for crate::v1::ProviderId {
     type Output = super::ProviderId;
 
-    fn into_v2(self) -> Result<Self::Output> {
-        Ok(super::ProviderId(self.0.into_v2()?))
+    fn try_to_v2(self) -> Result<Self::Output> {
+        Ok(super::ProviderId(self.0.try_to_v2()?))
     }
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl IntoV1 for super::ProviderInfo {
+impl TryToV1 for super::ProviderInfo {
     type Output = crate::v1::ProviderInfo;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             provider_id,
             supported,
@@ -4657,20 +5241,20 @@ impl IntoV1 for super::ProviderInfo {
             meta,
         } = self;
         Ok(crate::v1::ProviderInfo {
-            provider_id: provider_id.into_v1()?,
-            supported: into_v1_vec_skip_errors(supported),
-            required: required.into_v1()?,
-            current: current.into_v1()?,
-            meta: meta.into_v1()?,
+            provider_id: provider_id.try_to_v1()?,
+            supported: supported.try_to_v1()?,
+            required: required.try_to_v1()?,
+            current: current.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl IntoV2 for crate::v1::ProviderInfo {
+impl TryToV2 for crate::v1::ProviderInfo {
     type Output = super::ProviderInfo;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             provider_id,
             supported,
@@ -4679,70 +5263,70 @@ impl IntoV2 for crate::v1::ProviderInfo {
             meta,
         } = self;
         Ok(super::ProviderInfo {
-            provider_id: provider_id.into_v2()?,
-            supported: into_v2_vec_skip_errors(supported),
-            required: required.into_v2()?,
-            current: current.into_v2()?,
-            meta: meta.into_v2()?,
+            provider_id: provider_id.try_to_v2()?,
+            supported: supported.try_to_v2()?,
+            required: required.try_to_v2()?,
+            current: current.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl IntoV1 for super::ListProvidersRequest {
+impl TryToV1 for super::ListProvidersRequest {
     type Output = crate::v1::ListProvidersRequest;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(crate::v1::ListProvidersRequest {
-            meta: meta.into_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl IntoV2 for crate::v1::ListProvidersRequest {
+impl TryToV2 for crate::v1::ListProvidersRequest {
     type Output = super::ListProvidersRequest;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(super::ListProvidersRequest {
-            meta: meta.into_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl IntoV1 for super::ListProvidersResponse {
+impl TryToV1 for super::ListProvidersResponse {
     type Output = crate::v1::ListProvidersResponse;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { providers, meta } = self;
         Ok(crate::v1::ListProvidersResponse {
-            providers: into_v1_vec_skip_errors(providers),
-            meta: meta.into_v1()?,
+            providers: providers.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl IntoV2 for crate::v1::ListProvidersResponse {
+impl TryToV2 for crate::v1::ListProvidersResponse {
     type Output = super::ListProvidersResponse;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { providers, meta } = self;
         Ok(super::ListProvidersResponse {
-            providers: into_v2_vec_skip_errors(providers),
-            meta: meta.into_v2()?,
+            providers: providers.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl IntoV1 for super::SetProviderRequest {
+impl TryToV1 for super::SetProviderRequest {
     type Output = crate::v1::SetProviderRequest;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             provider_id,
             api_type,
@@ -4751,20 +5335,20 @@ impl IntoV1 for super::SetProviderRequest {
             meta,
         } = self;
         Ok(crate::v1::SetProviderRequest {
-            provider_id: provider_id.into_v1()?,
-            api_type: api_type.into_v1()?,
-            base_url: base_url.into_v1()?,
-            headers: headers.into_v1()?,
-            meta: meta.into_v1()?,
+            provider_id: provider_id.try_to_v1()?,
+            api_type: api_type.try_to_v1()?,
+            base_url: base_url.try_to_v1()?,
+            headers: headers.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl IntoV2 for crate::v1::SetProviderRequest {
+impl TryToV2 for crate::v1::SetProviderRequest {
     type Output = super::SetProviderRequest;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             provider_id,
             api_type,
@@ -4773,93 +5357,93 @@ impl IntoV2 for crate::v1::SetProviderRequest {
             meta,
         } = self;
         Ok(super::SetProviderRequest {
-            provider_id: provider_id.into_v2()?,
-            api_type: api_type.into_v2()?,
-            base_url: base_url.into_v2()?,
-            headers: headers.into_v2()?,
-            meta: meta.into_v2()?,
+            provider_id: provider_id.try_to_v2()?,
+            api_type: api_type.try_to_v2()?,
+            base_url: base_url.try_to_v2()?,
+            headers: headers.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl IntoV1 for super::SetProviderResponse {
+impl TryToV1 for super::SetProviderResponse {
     type Output = crate::v1::SetProviderResponse;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(crate::v1::SetProviderResponse {
-            meta: meta.into_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl IntoV2 for crate::v1::SetProviderResponse {
+impl TryToV2 for crate::v1::SetProviderResponse {
     type Output = super::SetProviderResponse;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(super::SetProviderResponse {
-            meta: meta.into_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl IntoV1 for super::DisableProviderRequest {
+impl TryToV1 for super::DisableProviderRequest {
     type Output = crate::v1::DisableProviderRequest;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { provider_id, meta } = self;
         Ok(crate::v1::DisableProviderRequest {
-            provider_id: provider_id.into_v1()?,
-            meta: meta.into_v1()?,
+            provider_id: provider_id.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl IntoV2 for crate::v1::DisableProviderRequest {
+impl TryToV2 for crate::v1::DisableProviderRequest {
     type Output = super::DisableProviderRequest;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { provider_id, meta } = self;
         Ok(super::DisableProviderRequest {
-            provider_id: provider_id.into_v2()?,
-            meta: meta.into_v2()?,
+            provider_id: provider_id.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl IntoV1 for super::DisableProviderResponse {
+impl TryToV1 for super::DisableProviderResponse {
     type Output = crate::v1::DisableProviderResponse;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(crate::v1::DisableProviderResponse {
-            meta: meta.into_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl IntoV2 for crate::v1::DisableProviderResponse {
+impl TryToV2 for crate::v1::DisableProviderResponse {
     type Output = super::DisableProviderResponse;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(super::DisableProviderResponse {
-            meta: meta.into_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::AgentCapabilities {
+impl TryToV1 for super::AgentCapabilities {
     type Output = crate::v1::AgentCapabilities;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             session,
             auth,
@@ -4881,29 +5465,32 @@ impl IntoV1 for super::AgentCapabilities {
             prompt_capabilities,
             load_session,
             mcp_capabilities,
-        } = session.into_v1()?;
+        } = V1SessionCapabilityParts::try_from(session)?;
 
         Ok(crate::v1::AgentCapabilities {
-            load_session: load_session.into_v1()?,
+            load_session: load_session.try_to_v1()?,
             prompt_capabilities,
             mcp_capabilities,
             session_capabilities,
-            auth: auth.map(IntoV1::into_v1).transpose()?.unwrap_or_default(),
+            auth: auth
+                .map(TryToV1::try_to_v1)
+                .transpose()?
+                .unwrap_or_default(),
             #[cfg(feature = "unstable_llm_providers")]
-            providers: into_v1_default_on_error(providers),
+            providers: providers.try_to_v1()?,
             #[cfg(feature = "unstable_nes")]
-            nes: into_v1_default_on_error(nes),
+            nes: nes.try_to_v1()?,
             #[cfg(feature = "unstable_nes")]
-            position_encoding: into_v1_default_on_error(position_encoding),
-            meta: meta.into_v1()?,
+            position_encoding: position_encoding.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::AgentCapabilities {
+impl TryToV2 for crate::v1::AgentCapabilities {
     type Output = super::AgentCapabilities;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             load_session,
             prompt_capabilities,
@@ -4927,38 +5514,38 @@ impl IntoV2 for crate::v1::AgentCapabilities {
 
         Ok(super::AgentCapabilities {
             session: Some(session),
-            auth: Some(auth.into_v2()?),
+            auth: v1_agent_auth_capabilities_into_v2_option(auth)?,
             #[cfg(feature = "unstable_llm_providers")]
-            providers: into_v2_default_on_error(providers),
+            providers: providers.try_to_v2()?,
             #[cfg(feature = "unstable_nes")]
-            nes: into_v2_default_on_error(nes),
+            nes: nes.try_to_v2()?,
             #[cfg(feature = "unstable_nes")]
-            position_encoding: into_v2_default_on_error(position_encoding),
-            meta: meta.into_v2()?,
+            position_encoding: position_encoding.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl IntoV1 for super::ProvidersCapabilities {
+impl TryToV1 for super::ProvidersCapabilities {
     type Output = crate::v1::ProvidersCapabilities;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(crate::v1::ProvidersCapabilities {
-            meta: meta.into_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_llm_providers")]
-impl IntoV2 for crate::v1::ProvidersCapabilities {
+impl TryToV2 for crate::v1::ProvidersCapabilities {
     type Output = super::ProvidersCapabilities;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(super::ProvidersCapabilities {
-            meta: meta.into_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
@@ -4978,14 +5565,7 @@ pub struct V1SessionCapabilityParts {
 }
 
 impl super::SessionCapabilities {
-    /// Converts these v2 draft session capabilities into the v1 capability
-    /// fields they represent.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`ProtocolConversionError`] when any contained capability field
-    /// cannot be represented in v1.
-    pub fn into_v1(self) -> Result<V1SessionCapabilityParts> {
+    fn try_into_v1_parts(self) -> Result<V1SessionCapabilityParts> {
         let Self {
             prompt,
             mcp,
@@ -4999,17 +5579,17 @@ impl super::SessionCapabilities {
         Ok(V1SessionCapabilityParts {
             session_capabilities: crate::v1::SessionCapabilities {
                 list: Some(crate::v1::SessionListCapabilities::new()),
-                delete: into_v1_default_on_error(delete),
-                additional_directories: into_v1_default_on_error(additional_directories),
+                delete: delete.try_to_v1()?,
+                additional_directories: additional_directories.try_to_v1()?,
                 #[cfg(feature = "unstable_session_fork")]
-                fork: into_v1_default_on_error(fork),
+                fork: fork.try_to_v1()?,
                 resume: Some(crate::v1::SessionResumeCapabilities::new()),
                 close: Some(crate::v1::SessionCloseCapabilities::new()),
-                meta: meta.into_v1()?,
+                meta: meta.try_to_v1()?,
             },
-            prompt_capabilities: prompt.unwrap_or_default().into_v1()?,
+            prompt_capabilities: prompt.unwrap_or_default().try_to_v1()?,
             load_session: true,
-            mcp_capabilities: mcp.unwrap_or_default().into_v1()?,
+            mcp_capabilities: mcp.unwrap_or_default().try_to_v1()?,
         })
     }
 
@@ -5023,122 +5603,161 @@ impl super::SessionCapabilities {
     pub fn from_v1(
         session_capabilities: crate::v1::SessionCapabilities,
         prompt_capabilities: crate::v1::PromptCapabilities,
-        _load_session: bool,
+        load_session: bool,
         mcp_capabilities: crate::v1::McpCapabilities,
     ) -> Result<Self> {
+        if !load_session {
+            return Err(unrepresentable_v1_field("AgentCapabilities", "loadSession"));
+        }
         let crate::v1::SessionCapabilities {
-            list: _,
+            list,
             delete,
             additional_directories,
             #[cfg(feature = "unstable_session_fork")]
             fork,
-            resume: _,
-            close: _,
+            resume,
+            close,
             meta,
         } = session_capabilities;
 
+        let Some(list) = list else {
+            return Err(unrepresentable_v1_field("SessionCapabilities", "list"));
+        };
+        reject_v1_marker_meta("SessionCapabilities", "list", list.meta.as_ref())?;
+
+        let Some(resume) = resume else {
+            return Err(unrepresentable_v1_field("SessionCapabilities", "resume"));
+        };
+        reject_v1_marker_meta("SessionCapabilities", "resume", resume.meta.as_ref())?;
+
+        let Some(close) = close else {
+            return Err(unrepresentable_v1_field("SessionCapabilities", "close"));
+        };
+        reject_v1_marker_meta("SessionCapabilities", "close", close.meta.as_ref())?;
+
         Ok(super::SessionCapabilities {
-            prompt: Some(prompt_capabilities.into_v2()?),
-            mcp: Some(mcp_capabilities.into_v2()?),
-            delete: into_v2_default_on_error(delete),
-            additional_directories: into_v2_default_on_error(additional_directories),
+            prompt: Some(prompt_capabilities.try_to_v2()?),
+            mcp: Some(mcp_capabilities.try_to_v2()?),
+            delete: delete.try_to_v2()?,
+            additional_directories: additional_directories.try_to_v2()?,
             #[cfg(feature = "unstable_session_fork")]
-            fork: into_v2_default_on_error(fork),
-            meta: meta.into_v2()?,
+            fork: fork.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::SessionDeleteCapabilities {
+impl TryFrom<super::SessionCapabilities> for V1SessionCapabilityParts {
+    type Error = ProtocolConversionError;
+
+    fn try_from(value: super::SessionCapabilities) -> Result<Self> {
+        value.try_into_v1_parts()
+    }
+}
+
+impl TryToV1 for super::SessionDeleteCapabilities {
     type Output = crate::v1::SessionDeleteCapabilities;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(crate::v1::SessionDeleteCapabilities {
-            meta: meta.into_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::SessionDeleteCapabilities {
+impl TryToV2 for crate::v1::SessionDeleteCapabilities {
     type Output = super::SessionDeleteCapabilities;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(super::SessionDeleteCapabilities {
-            meta: meta.into_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
-impl IntoV1 for super::SessionAdditionalDirectoriesCapabilities {
+impl TryToV1 for super::SessionAdditionalDirectoriesCapabilities {
     type Output = crate::v1::SessionAdditionalDirectoriesCapabilities;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(crate::v1::SessionAdditionalDirectoriesCapabilities {
-            meta: meta.into_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::SessionAdditionalDirectoriesCapabilities {
+impl TryToV2 for crate::v1::SessionAdditionalDirectoriesCapabilities {
     type Output = super::SessionAdditionalDirectoriesCapabilities;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(super::SessionAdditionalDirectoriesCapabilities {
-            meta: meta.into_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_session_fork")]
-impl IntoV1 for super::SessionForkCapabilities {
+impl TryToV1 for super::SessionForkCapabilities {
     type Output = crate::v1::SessionForkCapabilities;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(crate::v1::SessionForkCapabilities {
-            meta: meta.into_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_session_fork")]
-impl IntoV2 for crate::v1::SessionForkCapabilities {
+impl TryToV2 for crate::v1::SessionForkCapabilities {
     type Output = super::SessionForkCapabilities;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(super::SessionForkCapabilities {
-            meta: meta.into_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::PromptCapabilities {
+impl TryToV1 for super::PromptCapabilities {
     type Output = crate::v1::PromptCapabilities;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             image,
             audio,
             embedded_context,
             meta,
         } = self;
+        if let Some(image) = &image {
+            reject_v2_marker_meta("PromptCapabilities", "image", image.meta.as_ref())?;
+        }
+        if let Some(audio) = &audio {
+            reject_v2_marker_meta("PromptCapabilities", "audio", audio.meta.as_ref())?;
+        }
+        if let Some(embedded_context) = &embedded_context {
+            reject_v2_marker_meta(
+                "PromptCapabilities",
+                "embeddedContext",
+                embedded_context.meta.as_ref(),
+            )?;
+        }
         Ok(crate::v1::PromptCapabilities {
             image: image.is_some(),
             audio: audio.is_some(),
             embedded_context: embedded_context.is_some(),
-            meta: meta.into_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::PromptCapabilities {
+impl TryToV2 for crate::v1::PromptCapabilities {
     type Output = super::PromptCapabilities;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             image,
             audio,
@@ -5149,482 +5768,95 @@ impl IntoV2 for crate::v1::PromptCapabilities {
             image: image.then(super::PromptImageCapabilities::new),
             audio: audio.then(super::PromptAudioCapabilities::new),
             embedded_context: embedded_context.then(super::PromptEmbeddedContextCapabilities::new),
-            meta: meta.into_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::McpCapabilities {
+impl TryToV1 for super::McpCapabilities {
     type Output = crate::v1::McpCapabilities;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
-            stdio: _,
+            stdio,
             http,
             #[cfg(feature = "unstable_mcp_over_acp")]
             acp,
             meta,
         } = self;
+        if let Some(stdio) = &stdio {
+            reject_v2_marker_meta("McpCapabilities", "stdio", stdio.meta.as_ref())?;
+        }
+        if let Some(http) = &http {
+            reject_v2_marker_meta("McpCapabilities", "http", http.meta.as_ref())?;
+        }
+        #[cfg(feature = "unstable_mcp_over_acp")]
+        if let Some(acp) = &acp {
+            reject_v2_marker_meta("McpCapabilities", "acp", acp.meta.as_ref())?;
+        }
         Ok(crate::v1::McpCapabilities {
             http: http.is_some(),
             sse: false,
             #[cfg(feature = "unstable_mcp_over_acp")]
             acp: acp.is_some(),
-            meta: meta.into_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::McpCapabilities {
+impl TryToV2 for crate::v1::McpCapabilities {
     type Output = super::McpCapabilities;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             http,
-            sse: _,
+            sse,
             #[cfg(feature = "unstable_mcp_over_acp")]
             acp,
             meta,
         } = self;
+        if sse {
+            return Err(unrepresentable_v1_field("McpCapabilities", "sse"));
+        }
         Ok(super::McpCapabilities {
             stdio: Some(super::McpStdioCapabilities::new()),
             http: http.then(super::McpHttpCapabilities::new),
             #[cfg(feature = "unstable_mcp_over_acp")]
             acp: acp.then(super::McpAcpCapabilities::new),
-            meta: meta.into_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::ClientRequest {
-    type Output = crate::v1::ClientRequest;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        Ok(match self {
-            Self::InitializeRequest(value) => {
-                crate::v1::ClientRequest::InitializeRequest(value.into_v1()?)
-            }
-            Self::LoginAuthRequest(value) => {
-                crate::v1::ClientRequest::AuthenticateRequest(value.into_v1()?)
-            }
-            #[cfg(feature = "unstable_llm_providers")]
-            Self::ListProvidersRequest(value) => {
-                crate::v1::ClientRequest::ListProvidersRequest(value.into_v1()?)
-            }
-            #[cfg(feature = "unstable_llm_providers")]
-            Self::SetProviderRequest(value) => {
-                crate::v1::ClientRequest::SetProviderRequest(value.into_v1()?)
-            }
-            #[cfg(feature = "unstable_llm_providers")]
-            Self::DisableProviderRequest(value) => {
-                crate::v1::ClientRequest::DisableProviderRequest(value.into_v1()?)
-            }
-            Self::LogoutAuthRequest(value) => {
-                crate::v1::ClientRequest::LogoutRequest(value.into_v1()?)
-            }
-            Self::NewSessionRequest(value) => {
-                crate::v1::ClientRequest::NewSessionRequest(value.into_v1()?)
-            }
-            Self::ListSessionsRequest(value) => {
-                crate::v1::ClientRequest::ListSessionsRequest(value.into_v1()?)
-            }
-            Self::DeleteSessionRequest(value) => {
-                crate::v1::ClientRequest::DeleteSessionRequest(value.into_v1()?)
-            }
-            #[cfg(feature = "unstable_session_fork")]
-            Self::ForkSessionRequest(value) => {
-                crate::v1::ClientRequest::ForkSessionRequest(value.into_v1()?)
-            }
-            Self::ResumeSessionRequest(value) => {
-                v2_resume_session_request_into_v1_client_request(*value)?
-            }
-            Self::CloseSessionRequest(value) => {
-                crate::v1::ClientRequest::CloseSessionRequest(value.into_v1()?)
-            }
-            Self::SetSessionConfigOptionRequest(value) => {
-                crate::v1::ClientRequest::SetSessionConfigOptionRequest(value.into_v1()?)
-            }
-            Self::PromptRequest(value) => crate::v1::ClientRequest::PromptRequest(value.into_v1()?),
-            #[cfg(feature = "unstable_nes")]
-            Self::StartNesRequest(value) => {
-                crate::v1::ClientRequest::StartNesRequest(value.into_v1()?)
-            }
-            #[cfg(feature = "unstable_nes")]
-            Self::SuggestNesRequest(value) => {
-                crate::v1::ClientRequest::SuggestNesRequest(value.into_v1()?)
-            }
-            #[cfg(feature = "unstable_nes")]
-            Self::CloseNesRequest(value) => {
-                crate::v1::ClientRequest::CloseNesRequest(value.into_v1()?)
-            }
-            #[cfg(feature = "unstable_mcp_over_acp")]
-            Self::MessageMcpRequest(value) => {
-                crate::v1::ClientRequest::MessageMcpRequest(value.into_v1()?)
-            }
-            Self::ExtMethodRequest(value) => {
-                crate::v1::ClientRequest::ExtMethodRequest(value.into_v1()?)
-            }
-        })
-    }
-}
-
-impl IntoV2 for crate::v1::ClientRequest {
-    type Output = super::ClientRequest;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        Ok(match self {
-            Self::InitializeRequest(value) => {
-                super::ClientRequest::InitializeRequest(Box::new(value.into_v2()?))
-            }
-            Self::AuthenticateRequest(value) => {
-                super::ClientRequest::LoginAuthRequest(Box::new(value.into_v2()?))
-            }
-            #[cfg(feature = "unstable_llm_providers")]
-            Self::ListProvidersRequest(value) => {
-                super::ClientRequest::ListProvidersRequest(Box::new(value.into_v2()?))
-            }
-            #[cfg(feature = "unstable_llm_providers")]
-            Self::SetProviderRequest(value) => {
-                super::ClientRequest::SetProviderRequest(Box::new(value.into_v2()?))
-            }
-            #[cfg(feature = "unstable_llm_providers")]
-            Self::DisableProviderRequest(value) => {
-                super::ClientRequest::DisableProviderRequest(Box::new(value.into_v2()?))
-            }
-            Self::LogoutRequest(value) => {
-                super::ClientRequest::LogoutAuthRequest(Box::new(value.into_v2()?))
-            }
-            Self::NewSessionRequest(value) => {
-                super::ClientRequest::NewSessionRequest(Box::new(value.into_v2()?))
-            }
-            Self::LoadSessionRequest(value) => {
-                super::ClientRequest::ResumeSessionRequest(Box::new(value.into_v2()?))
-            }
-            Self::ListSessionsRequest(value) => {
-                super::ClientRequest::ListSessionsRequest(Box::new(value.into_v2()?))
-            }
-            Self::DeleteSessionRequest(value) => {
-                super::ClientRequest::DeleteSessionRequest(Box::new(value.into_v2()?))
-            }
-            #[cfg(feature = "unstable_session_fork")]
-            Self::ForkSessionRequest(value) => {
-                super::ClientRequest::ForkSessionRequest(Box::new(value.into_v2()?))
-            }
-            Self::ResumeSessionRequest(value) => {
-                super::ClientRequest::ResumeSessionRequest(Box::new(value.into_v2()?))
-            }
-            Self::CloseSessionRequest(value) => {
-                super::ClientRequest::CloseSessionRequest(Box::new(value.into_v2()?))
-            }
-            Self::SetSessionModeRequest(_) => {
-                return Err(removed_v1_enum_variant("ClientRequest", "session/set_mode"));
-            }
-            Self::SetSessionConfigOptionRequest(value) => {
-                super::ClientRequest::SetSessionConfigOptionRequest(Box::new(value.into_v2()?))
-            }
-            Self::PromptRequest(value) => {
-                super::ClientRequest::PromptRequest(Box::new(value.into_v2()?))
-            }
-            #[cfg(feature = "unstable_nes")]
-            Self::StartNesRequest(value) => {
-                super::ClientRequest::StartNesRequest(Box::new(value.into_v2()?))
-            }
-            #[cfg(feature = "unstable_nes")]
-            Self::SuggestNesRequest(value) => {
-                super::ClientRequest::SuggestNesRequest(Box::new(value.into_v2()?))
-            }
-            #[cfg(feature = "unstable_nes")]
-            Self::CloseNesRequest(value) => {
-                super::ClientRequest::CloseNesRequest(Box::new(value.into_v2()?))
-            }
-            #[cfg(feature = "unstable_mcp_over_acp")]
-            Self::MessageMcpRequest(value) => {
-                super::ClientRequest::MessageMcpRequest(Box::new(value.into_v2()?))
-            }
-            Self::ExtMethodRequest(value) => {
-                super::ClientRequest::ExtMethodRequest(Box::new(value.into_v2()?))
-            }
-        })
-    }
-}
-
-impl IntoV1 for super::AgentResponse {
-    type Output = crate::v1::AgentResponse;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        Ok(match self {
-            Self::InitializeResponse(value) => {
-                crate::v1::AgentResponse::InitializeResponse(value.into_v1()?)
-            }
-            Self::LoginAuthResponse(value) => {
-                crate::v1::AgentResponse::AuthenticateResponse(value.into_v1()?)
-            }
-            #[cfg(feature = "unstable_llm_providers")]
-            Self::ListProvidersResponse(value) => {
-                crate::v1::AgentResponse::ListProvidersResponse(value.into_v1()?)
-            }
-            #[cfg(feature = "unstable_llm_providers")]
-            Self::SetProviderResponse(value) => {
-                crate::v1::AgentResponse::SetProviderResponse(value.into_v1()?)
-            }
-            #[cfg(feature = "unstable_llm_providers")]
-            Self::DisableProviderResponse(value) => {
-                crate::v1::AgentResponse::DisableProviderResponse(value.into_v1()?)
-            }
-            Self::LogoutAuthResponse(value) => {
-                crate::v1::AgentResponse::LogoutResponse(value.into_v1()?)
-            }
-            Self::NewSessionResponse(value) => {
-                crate::v1::AgentResponse::NewSessionResponse(value.into_v1()?)
-            }
-            Self::ListSessionsResponse(value) => {
-                crate::v1::AgentResponse::ListSessionsResponse(value.into_v1()?)
-            }
-            Self::DeleteSessionResponse(value) => {
-                crate::v1::AgentResponse::DeleteSessionResponse(value.into_v1()?)
-            }
-            #[cfg(feature = "unstable_session_fork")]
-            Self::ForkSessionResponse(value) => {
-                crate::v1::AgentResponse::ForkSessionResponse(value.into_v1()?)
-            }
-            Self::ResumeSessionResponse(value) => {
-                crate::v1::AgentResponse::ResumeSessionResponse(value.into_v1()?)
-            }
-            Self::CloseSessionResponse(value) => {
-                crate::v1::AgentResponse::CloseSessionResponse(value.into_v1()?)
-            }
-            Self::SetSessionConfigOptionResponse(value) => {
-                crate::v1::AgentResponse::SetSessionConfigOptionResponse(value.into_v1()?)
-            }
-            Self::PromptResponse(value) => {
-                crate::v1::AgentResponse::PromptResponse(value.into_v1()?)
-            }
-            #[cfg(feature = "unstable_nes")]
-            Self::StartNesResponse(value) => {
-                crate::v1::AgentResponse::StartNesResponse(value.into_v1()?)
-            }
-            #[cfg(feature = "unstable_nes")]
-            Self::SuggestNesResponse(value) => {
-                crate::v1::AgentResponse::SuggestNesResponse(value.into_v1()?)
-            }
-            #[cfg(feature = "unstable_nes")]
-            Self::CloseNesResponse(value) => {
-                crate::v1::AgentResponse::CloseNesResponse(value.into_v1()?)
-            }
-            Self::ExtMethodResponse(value) => {
-                crate::v1::AgentResponse::ExtMethodResponse(value.into_v1()?)
-            }
-            #[cfg(feature = "unstable_mcp_over_acp")]
-            Self::MessageMcpResponse(value) => {
-                crate::v1::AgentResponse::MessageMcpResponse(value.into_v1()?)
-            }
-        })
-    }
-}
-
-impl IntoV2 for crate::v1::AgentResponse {
-    type Output = super::AgentResponse;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        Ok(match self {
-            Self::InitializeResponse(value) => {
-                super::AgentResponse::InitializeResponse(Box::new(value.into_v2()?))
-            }
-            Self::AuthenticateResponse(value) => {
-                super::AgentResponse::LoginAuthResponse(Box::new(value.into_v2()?))
-            }
-            #[cfg(feature = "unstable_llm_providers")]
-            Self::ListProvidersResponse(value) => {
-                super::AgentResponse::ListProvidersResponse(Box::new(value.into_v2()?))
-            }
-            #[cfg(feature = "unstable_llm_providers")]
-            Self::SetProviderResponse(value) => {
-                super::AgentResponse::SetProviderResponse(Box::new(value.into_v2()?))
-            }
-            #[cfg(feature = "unstable_llm_providers")]
-            Self::DisableProviderResponse(value) => {
-                super::AgentResponse::DisableProviderResponse(Box::new(value.into_v2()?))
-            }
-            Self::LogoutResponse(value) => {
-                super::AgentResponse::LogoutAuthResponse(Box::new(value.into_v2()?))
-            }
-            Self::NewSessionResponse(value) => {
-                super::AgentResponse::NewSessionResponse(Box::new(value.into_v2()?))
-            }
-            Self::LoadSessionResponse(value) => {
-                super::AgentResponse::ResumeSessionResponse(Box::new(value.into_v2()?))
-            }
-            Self::ListSessionsResponse(value) => {
-                super::AgentResponse::ListSessionsResponse(Box::new(value.into_v2()?))
-            }
-            Self::DeleteSessionResponse(value) => {
-                super::AgentResponse::DeleteSessionResponse(Box::new(value.into_v2()?))
-            }
-            #[cfg(feature = "unstable_session_fork")]
-            Self::ForkSessionResponse(value) => {
-                super::AgentResponse::ForkSessionResponse(Box::new(value.into_v2()?))
-            }
-            Self::ResumeSessionResponse(value) => {
-                super::AgentResponse::ResumeSessionResponse(Box::new(value.into_v2()?))
-            }
-            Self::CloseSessionResponse(value) => {
-                super::AgentResponse::CloseSessionResponse(Box::new(value.into_v2()?))
-            }
-            Self::SetSessionModeResponse(_) => {
-                return Err(removed_v1_enum_variant("AgentResponse", "session/set_mode"));
-            }
-            Self::SetSessionConfigOptionResponse(value) => {
-                super::AgentResponse::SetSessionConfigOptionResponse(Box::new(value.into_v2()?))
-            }
-            Self::PromptResponse(value) => {
-                super::AgentResponse::PromptResponse(Box::new(value.into_v2()?))
-            }
-            #[cfg(feature = "unstable_nes")]
-            Self::StartNesResponse(value) => {
-                super::AgentResponse::StartNesResponse(Box::new(value.into_v2()?))
-            }
-            #[cfg(feature = "unstable_nes")]
-            Self::SuggestNesResponse(value) => {
-                super::AgentResponse::SuggestNesResponse(Box::new(value.into_v2()?))
-            }
-            #[cfg(feature = "unstable_nes")]
-            Self::CloseNesResponse(value) => {
-                super::AgentResponse::CloseNesResponse(Box::new(value.into_v2()?))
-            }
-            Self::ExtMethodResponse(value) => {
-                super::AgentResponse::ExtMethodResponse(Box::new(value.into_v2()?))
-            }
-            #[cfg(feature = "unstable_mcp_over_acp")]
-            Self::MessageMcpResponse(value) => {
-                super::AgentResponse::MessageMcpResponse(Box::new(value.into_v2()?))
-            }
-        })
-    }
-}
-
-impl IntoV1 for super::ClientNotification {
-    type Output = crate::v1::ClientNotification;
-
-    fn into_v1(self) -> Result<Self::Output> {
-        Ok(match self {
-            Self::CancelSessionNotification(value) => {
-                crate::v1::ClientNotification::CancelNotification(value.into_v1()?)
-            }
-            #[cfg(feature = "unstable_nes")]
-            Self::DidOpenDocumentNotification(value) => {
-                crate::v1::ClientNotification::DidOpenDocumentNotification(value.into_v1()?)
-            }
-            #[cfg(feature = "unstable_nes")]
-            Self::DidChangeDocumentNotification(value) => {
-                crate::v1::ClientNotification::DidChangeDocumentNotification(value.into_v1()?)
-            }
-            #[cfg(feature = "unstable_nes")]
-            Self::DidCloseDocumentNotification(value) => {
-                crate::v1::ClientNotification::DidCloseDocumentNotification(value.into_v1()?)
-            }
-            #[cfg(feature = "unstable_nes")]
-            Self::DidSaveDocumentNotification(value) => {
-                crate::v1::ClientNotification::DidSaveDocumentNotification(value.into_v1()?)
-            }
-            #[cfg(feature = "unstable_nes")]
-            Self::DidFocusDocumentNotification(value) => {
-                crate::v1::ClientNotification::DidFocusDocumentNotification(value.into_v1()?)
-            }
-            #[cfg(feature = "unstable_nes")]
-            Self::AcceptNesNotification(value) => {
-                crate::v1::ClientNotification::AcceptNesNotification(value.into_v1()?)
-            }
-            #[cfg(feature = "unstable_nes")]
-            Self::RejectNesNotification(value) => {
-                crate::v1::ClientNotification::RejectNesNotification(value.into_v1()?)
-            }
-            #[cfg(feature = "unstable_mcp_over_acp")]
-            Self::MessageMcpNotification(value) => {
-                crate::v1::ClientNotification::MessageMcpNotification(value.into_v1()?)
-            }
-            Self::ExtNotification(value) => {
-                crate::v1::ClientNotification::ExtNotification(value.into_v1()?)
-            }
-        })
-    }
-}
-
-impl IntoV2 for crate::v1::ClientNotification {
-    type Output = super::ClientNotification;
-
-    fn into_v2(self) -> Result<Self::Output> {
-        Ok(match self {
-            Self::CancelNotification(value) => {
-                super::ClientNotification::CancelSessionNotification(Box::new(value.into_v2()?))
-            }
-            #[cfg(feature = "unstable_nes")]
-            Self::DidOpenDocumentNotification(value) => {
-                super::ClientNotification::DidOpenDocumentNotification(Box::new(value.into_v2()?))
-            }
-            #[cfg(feature = "unstable_nes")]
-            Self::DidChangeDocumentNotification(value) => {
-                super::ClientNotification::DidChangeDocumentNotification(Box::new(value.into_v2()?))
-            }
-            #[cfg(feature = "unstable_nes")]
-            Self::DidCloseDocumentNotification(value) => {
-                super::ClientNotification::DidCloseDocumentNotification(Box::new(value.into_v2()?))
-            }
-            #[cfg(feature = "unstable_nes")]
-            Self::DidSaveDocumentNotification(value) => {
-                super::ClientNotification::DidSaveDocumentNotification(Box::new(value.into_v2()?))
-            }
-            #[cfg(feature = "unstable_nes")]
-            Self::DidFocusDocumentNotification(value) => {
-                super::ClientNotification::DidFocusDocumentNotification(Box::new(value.into_v2()?))
-            }
-            #[cfg(feature = "unstable_nes")]
-            Self::AcceptNesNotification(value) => {
-                super::ClientNotification::AcceptNesNotification(Box::new(value.into_v2()?))
-            }
-            #[cfg(feature = "unstable_nes")]
-            Self::RejectNesNotification(value) => {
-                super::ClientNotification::RejectNesNotification(Box::new(value.into_v2()?))
-            }
-            #[cfg(feature = "unstable_mcp_over_acp")]
-            Self::MessageMcpNotification(value) => {
-                super::ClientNotification::MessageMcpNotification(Box::new(value.into_v2()?))
-            }
-            Self::ExtNotification(value) => {
-                super::ClientNotification::ExtNotification(Box::new(value.into_v2()?))
-            }
-        })
-    }
-}
-
-impl IntoV1 for super::CancelSessionNotification {
+impl TryToV1 for super::CancelSessionNotification {
     type Output = crate::v1::CancelNotification;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { session_id, meta } = self;
         Ok(crate::v1::CancelNotification {
-            session_id: session_id.into_v1()?,
-            meta: meta.into_v1()?,
+            session_id: session_id.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::CancelNotification {
+impl TryToV2 for crate::v1::CancelNotification {
     type Output = super::CancelSessionNotification;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { session_id, meta } = self;
         Ok(super::CancelSessionNotification {
-            session_id: session_id.into_v2()?,
-            meta: meta.into_v2()?,
+            session_id: session_id.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::PositionEncodingKind {
+impl TryToV1 for super::PositionEncodingKind {
     type Output = crate::v1::PositionEncodingKind;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         Ok(match self {
             Self::Utf16 => crate::v1::PositionEncodingKind::Utf16,
             Self::Utf32 => crate::v1::PositionEncodingKind::Utf32,
@@ -5634,10 +5866,10 @@ impl IntoV1 for super::PositionEncodingKind {
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::PositionEncodingKind {
+impl TryToV2 for crate::v1::PositionEncodingKind {
     type Output = super::PositionEncodingKind;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         Ok(match self {
             Self::Utf16 => super::PositionEncodingKind::Utf16,
             Self::Utf32 => super::PositionEncodingKind::Utf32,
@@ -5647,136 +5879,136 @@ impl IntoV2 for crate::v1::PositionEncodingKind {
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::Position {
+impl TryToV1 for super::Position {
     type Output = crate::v1::Position;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             line,
             character,
             meta,
         } = self;
         Ok(crate::v1::Position {
-            line: line.into_v1()?,
-            character: character.into_v1()?,
-            meta: meta.into_v1()?,
+            line: line.try_to_v1()?,
+            character: character.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::Position {
+impl TryToV2 for crate::v1::Position {
     type Output = super::Position;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             line,
             character,
             meta,
         } = self;
         Ok(super::Position {
-            line: line.into_v2()?,
-            character: character.into_v2()?,
-            meta: meta.into_v2()?,
+            line: line.try_to_v2()?,
+            character: character.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::Range {
+impl TryToV1 for super::Range {
     type Output = crate::v1::Range;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { start, end, meta } = self;
         Ok(crate::v1::Range {
-            start: start.into_v1()?,
-            end: end.into_v1()?,
-            meta: meta.into_v1()?,
+            start: start.try_to_v1()?,
+            end: end.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::Range {
+impl TryToV2 for crate::v1::Range {
     type Output = super::Range;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { start, end, meta } = self;
         Ok(super::Range {
-            start: start.into_v2()?,
-            end: end.into_v2()?,
-            meta: meta.into_v2()?,
+            start: start.try_to_v2()?,
+            end: end.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::NesCapabilities {
+impl TryToV1 for super::NesCapabilities {
     type Output = crate::v1::NesCapabilities;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             events,
             context,
             meta,
         } = self;
         Ok(crate::v1::NesCapabilities {
-            events: into_v1_default_on_error(events),
-            context: into_v1_default_on_error(context),
-            meta: meta.into_v1()?,
+            events: events.try_to_v1()?,
+            context: context.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::NesCapabilities {
+impl TryToV2 for crate::v1::NesCapabilities {
     type Output = super::NesCapabilities;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             events,
             context,
             meta,
         } = self;
         Ok(super::NesCapabilities {
-            events: into_v2_default_on_error(events),
-            context: into_v2_default_on_error(context),
-            meta: meta.into_v2()?,
+            events: events.try_to_v2()?,
+            context: context.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::NesEventCapabilities {
+impl TryToV1 for super::NesEventCapabilities {
     type Output = crate::v1::NesEventCapabilities;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { document, meta } = self;
         Ok(crate::v1::NesEventCapabilities {
-            document: into_v1_default_on_error(document),
-            meta: meta.into_v1()?,
+            document: document.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::NesEventCapabilities {
+impl TryToV2 for crate::v1::NesEventCapabilities {
     type Output = super::NesEventCapabilities;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { document, meta } = self;
         Ok(super::NesEventCapabilities {
-            document: into_v2_default_on_error(document),
-            meta: meta.into_v2()?,
+            document: document.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::NesDocumentEventCapabilities {
+impl TryToV1 for super::NesDocumentEventCapabilities {
     type Output = crate::v1::NesDocumentEventCapabilities;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             did_open,
             did_change,
@@ -5786,21 +6018,21 @@ impl IntoV1 for super::NesDocumentEventCapabilities {
             meta,
         } = self;
         Ok(crate::v1::NesDocumentEventCapabilities {
-            did_open: into_v1_default_on_error(did_open),
-            did_change: into_v1_default_on_error(did_change),
-            did_close: into_v1_default_on_error(did_close),
-            did_save: into_v1_default_on_error(did_save),
-            did_focus: into_v1_default_on_error(did_focus),
-            meta: meta.into_v1()?,
+            did_open: did_open.try_to_v1()?,
+            did_change: did_change.try_to_v1()?,
+            did_close: did_close.try_to_v1()?,
+            did_save: did_save.try_to_v1()?,
+            did_focus: did_focus.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::NesDocumentEventCapabilities {
+impl TryToV2 for crate::v1::NesDocumentEventCapabilities {
     type Output = super::NesDocumentEventCapabilities;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             did_open,
             did_change,
@@ -5810,71 +6042,71 @@ impl IntoV2 for crate::v1::NesDocumentEventCapabilities {
             meta,
         } = self;
         Ok(super::NesDocumentEventCapabilities {
-            did_open: into_v2_default_on_error(did_open),
-            did_change: into_v2_default_on_error(did_change),
-            did_close: into_v2_default_on_error(did_close),
-            did_save: into_v2_default_on_error(did_save),
-            did_focus: into_v2_default_on_error(did_focus),
-            meta: meta.into_v2()?,
+            did_open: did_open.try_to_v2()?,
+            did_change: did_change.try_to_v2()?,
+            did_close: did_close.try_to_v2()?,
+            did_save: did_save.try_to_v2()?,
+            did_focus: did_focus.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::NesDocumentDidOpenCapabilities {
+impl TryToV1 for super::NesDocumentDidOpenCapabilities {
     type Output = crate::v1::NesDocumentDidOpenCapabilities;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(crate::v1::NesDocumentDidOpenCapabilities {
-            meta: meta.into_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::NesDocumentDidOpenCapabilities {
+impl TryToV2 for crate::v1::NesDocumentDidOpenCapabilities {
     type Output = super::NesDocumentDidOpenCapabilities;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(super::NesDocumentDidOpenCapabilities {
-            meta: meta.into_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::NesDocumentDidChangeCapabilities {
+impl TryToV1 for super::NesDocumentDidChangeCapabilities {
     type Output = crate::v1::NesDocumentDidChangeCapabilities;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { sync_kind, meta } = self;
         Ok(crate::v1::NesDocumentDidChangeCapabilities {
-            sync_kind: sync_kind.into_v1()?,
-            meta: meta.into_v1()?,
+            sync_kind: sync_kind.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::NesDocumentDidChangeCapabilities {
+impl TryToV2 for crate::v1::NesDocumentDidChangeCapabilities {
     type Output = super::NesDocumentDidChangeCapabilities;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { sync_kind, meta } = self;
         Ok(super::NesDocumentDidChangeCapabilities {
-            sync_kind: sync_kind.into_v2()?,
-            meta: meta.into_v2()?,
+            sync_kind: sync_kind.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::TextDocumentSyncKind {
+impl TryToV1 for super::TextDocumentSyncKind {
     type Output = crate::v1::TextDocumentSyncKind;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         Ok(match self {
             Self::Full => crate::v1::TextDocumentSyncKind::Full,
             Self::Incremental => crate::v1::TextDocumentSyncKind::Incremental,
@@ -5883,10 +6115,10 @@ impl IntoV1 for super::TextDocumentSyncKind {
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::TextDocumentSyncKind {
+impl TryToV2 for crate::v1::TextDocumentSyncKind {
     type Output = super::TextDocumentSyncKind;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         Ok(match self {
             Self::Full => super::TextDocumentSyncKind::Full,
             Self::Incremental => super::TextDocumentSyncKind::Incremental,
@@ -5895,82 +6127,82 @@ impl IntoV2 for crate::v1::TextDocumentSyncKind {
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::NesDocumentDidCloseCapabilities {
+impl TryToV1 for super::NesDocumentDidCloseCapabilities {
     type Output = crate::v1::NesDocumentDidCloseCapabilities;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(crate::v1::NesDocumentDidCloseCapabilities {
-            meta: meta.into_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::NesDocumentDidCloseCapabilities {
+impl TryToV2 for crate::v1::NesDocumentDidCloseCapabilities {
     type Output = super::NesDocumentDidCloseCapabilities;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(super::NesDocumentDidCloseCapabilities {
-            meta: meta.into_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::NesDocumentDidSaveCapabilities {
+impl TryToV1 for super::NesDocumentDidSaveCapabilities {
     type Output = crate::v1::NesDocumentDidSaveCapabilities;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(crate::v1::NesDocumentDidSaveCapabilities {
-            meta: meta.into_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::NesDocumentDidSaveCapabilities {
+impl TryToV2 for crate::v1::NesDocumentDidSaveCapabilities {
     type Output = super::NesDocumentDidSaveCapabilities;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(super::NesDocumentDidSaveCapabilities {
-            meta: meta.into_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::NesDocumentDidFocusCapabilities {
+impl TryToV1 for super::NesDocumentDidFocusCapabilities {
     type Output = crate::v1::NesDocumentDidFocusCapabilities;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(crate::v1::NesDocumentDidFocusCapabilities {
-            meta: meta.into_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::NesDocumentDidFocusCapabilities {
+impl TryToV2 for crate::v1::NesDocumentDidFocusCapabilities {
     type Output = super::NesDocumentDidFocusCapabilities;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(super::NesDocumentDidFocusCapabilities {
-            meta: meta.into_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::NesContextCapabilities {
+impl TryToV1 for super::NesContextCapabilities {
     type Output = crate::v1::NesContextCapabilities;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             recent_files,
             related_snippets,
@@ -5981,22 +6213,22 @@ impl IntoV1 for super::NesContextCapabilities {
             meta,
         } = self;
         Ok(crate::v1::NesContextCapabilities {
-            recent_files: into_v1_default_on_error(recent_files),
-            related_snippets: into_v1_default_on_error(related_snippets),
-            edit_history: into_v1_default_on_error(edit_history),
-            user_actions: into_v1_default_on_error(user_actions),
-            open_files: into_v1_default_on_error(open_files),
-            diagnostics: into_v1_default_on_error(diagnostics),
-            meta: meta.into_v1()?,
+            recent_files: recent_files.try_to_v1()?,
+            related_snippets: related_snippets.try_to_v1()?,
+            edit_history: edit_history.try_to_v1()?,
+            user_actions: user_actions.try_to_v1()?,
+            open_files: open_files.try_to_v1()?,
+            diagnostics: diagnostics.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::NesContextCapabilities {
+impl TryToV2 for crate::v1::NesContextCapabilities {
     type Output = super::NesContextCapabilities;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             recent_files,
             related_snippets,
@@ -6007,172 +6239,172 @@ impl IntoV2 for crate::v1::NesContextCapabilities {
             meta,
         } = self;
         Ok(super::NesContextCapabilities {
-            recent_files: into_v2_default_on_error(recent_files),
-            related_snippets: into_v2_default_on_error(related_snippets),
-            edit_history: into_v2_default_on_error(edit_history),
-            user_actions: into_v2_default_on_error(user_actions),
-            open_files: into_v2_default_on_error(open_files),
-            diagnostics: into_v2_default_on_error(diagnostics),
-            meta: meta.into_v2()?,
+            recent_files: recent_files.try_to_v2()?,
+            related_snippets: related_snippets.try_to_v2()?,
+            edit_history: edit_history.try_to_v2()?,
+            user_actions: user_actions.try_to_v2()?,
+            open_files: open_files.try_to_v2()?,
+            diagnostics: diagnostics.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::NesRecentFilesCapabilities {
+impl TryToV1 for super::NesRecentFilesCapabilities {
     type Output = crate::v1::NesRecentFilesCapabilities;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { max_count, meta } = self;
         Ok(crate::v1::NesRecentFilesCapabilities {
-            max_count: max_count.into_v1()?,
-            meta: meta.into_v1()?,
+            max_count: max_count.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::NesRecentFilesCapabilities {
+impl TryToV2 for crate::v1::NesRecentFilesCapabilities {
     type Output = super::NesRecentFilesCapabilities;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { max_count, meta } = self;
         Ok(super::NesRecentFilesCapabilities {
-            max_count: max_count.into_v2()?,
-            meta: meta.into_v2()?,
+            max_count: max_count.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::NesRelatedSnippetsCapabilities {
+impl TryToV1 for super::NesRelatedSnippetsCapabilities {
     type Output = crate::v1::NesRelatedSnippetsCapabilities;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(crate::v1::NesRelatedSnippetsCapabilities {
-            meta: meta.into_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::NesRelatedSnippetsCapabilities {
+impl TryToV2 for crate::v1::NesRelatedSnippetsCapabilities {
     type Output = super::NesRelatedSnippetsCapabilities;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(super::NesRelatedSnippetsCapabilities {
-            meta: meta.into_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::NesEditHistoryCapabilities {
+impl TryToV1 for super::NesEditHistoryCapabilities {
     type Output = crate::v1::NesEditHistoryCapabilities;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { max_count, meta } = self;
         Ok(crate::v1::NesEditHistoryCapabilities {
-            max_count: max_count.into_v1()?,
-            meta: meta.into_v1()?,
+            max_count: max_count.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::NesEditHistoryCapabilities {
+impl TryToV2 for crate::v1::NesEditHistoryCapabilities {
     type Output = super::NesEditHistoryCapabilities;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { max_count, meta } = self;
         Ok(super::NesEditHistoryCapabilities {
-            max_count: max_count.into_v2()?,
-            meta: meta.into_v2()?,
+            max_count: max_count.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::NesUserActionsCapabilities {
+impl TryToV1 for super::NesUserActionsCapabilities {
     type Output = crate::v1::NesUserActionsCapabilities;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { max_count, meta } = self;
         Ok(crate::v1::NesUserActionsCapabilities {
-            max_count: max_count.into_v1()?,
-            meta: meta.into_v1()?,
+            max_count: max_count.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::NesUserActionsCapabilities {
+impl TryToV2 for crate::v1::NesUserActionsCapabilities {
     type Output = super::NesUserActionsCapabilities;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { max_count, meta } = self;
         Ok(super::NesUserActionsCapabilities {
-            max_count: max_count.into_v2()?,
-            meta: meta.into_v2()?,
+            max_count: max_count.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::NesOpenFilesCapabilities {
+impl TryToV1 for super::NesOpenFilesCapabilities {
     type Output = crate::v1::NesOpenFilesCapabilities;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(crate::v1::NesOpenFilesCapabilities {
-            meta: meta.into_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::NesOpenFilesCapabilities {
+impl TryToV2 for crate::v1::NesOpenFilesCapabilities {
     type Output = super::NesOpenFilesCapabilities;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(super::NesOpenFilesCapabilities {
-            meta: meta.into_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::NesDiagnosticsCapabilities {
+impl TryToV1 for super::NesDiagnosticsCapabilities {
     type Output = crate::v1::NesDiagnosticsCapabilities;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(crate::v1::NesDiagnosticsCapabilities {
-            meta: meta.into_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::NesDiagnosticsCapabilities {
+impl TryToV2 for crate::v1::NesDiagnosticsCapabilities {
     type Output = super::NesDiagnosticsCapabilities;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(super::NesDiagnosticsCapabilities {
-            meta: meta.into_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::ClientNesCapabilities {
+impl TryToV1 for super::ClientNesCapabilities {
     type Output = crate::v1::ClientNesCapabilities;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             jump,
             rename,
@@ -6180,19 +6412,19 @@ impl IntoV1 for super::ClientNesCapabilities {
             meta,
         } = self;
         Ok(crate::v1::ClientNesCapabilities {
-            jump: into_v1_default_on_error(jump),
-            rename: into_v1_default_on_error(rename),
-            search_and_replace: into_v1_default_on_error(search_and_replace),
-            meta: meta.into_v1()?,
+            jump: jump.try_to_v1()?,
+            rename: rename.try_to_v1()?,
+            search_and_replace: search_and_replace.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::ClientNesCapabilities {
+impl TryToV2 for crate::v1::ClientNesCapabilities {
     type Output = super::ClientNesCapabilities;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             jump,
             rename,
@@ -6200,91 +6432,91 @@ impl IntoV2 for crate::v1::ClientNesCapabilities {
             meta,
         } = self;
         Ok(super::ClientNesCapabilities {
-            jump: into_v2_default_on_error(jump),
-            rename: into_v2_default_on_error(rename),
-            search_and_replace: into_v2_default_on_error(search_and_replace),
-            meta: meta.into_v2()?,
+            jump: jump.try_to_v2()?,
+            rename: rename.try_to_v2()?,
+            search_and_replace: search_and_replace.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::NesJumpCapabilities {
+impl TryToV1 for super::NesJumpCapabilities {
     type Output = crate::v1::NesJumpCapabilities;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(crate::v1::NesJumpCapabilities {
-            meta: meta.into_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::NesJumpCapabilities {
+impl TryToV2 for crate::v1::NesJumpCapabilities {
     type Output = super::NesJumpCapabilities;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(super::NesJumpCapabilities {
-            meta: meta.into_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::NesRenameCapabilities {
+impl TryToV1 for super::NesRenameCapabilities {
     type Output = crate::v1::NesRenameCapabilities;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(crate::v1::NesRenameCapabilities {
-            meta: meta.into_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::NesRenameCapabilities {
+impl TryToV2 for crate::v1::NesRenameCapabilities {
     type Output = super::NesRenameCapabilities;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(super::NesRenameCapabilities {
-            meta: meta.into_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::NesSearchAndReplaceCapabilities {
+impl TryToV1 for super::NesSearchAndReplaceCapabilities {
     type Output = crate::v1::NesSearchAndReplaceCapabilities;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(crate::v1::NesSearchAndReplaceCapabilities {
-            meta: meta.into_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::NesSearchAndReplaceCapabilities {
+impl TryToV2 for crate::v1::NesSearchAndReplaceCapabilities {
     type Output = super::NesSearchAndReplaceCapabilities;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(super::NesSearchAndReplaceCapabilities {
-            meta: meta.into_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::DidOpenDocumentNotification {
+impl TryToV1 for super::DidOpenDocumentNotification {
     type Output = crate::v1::DidOpenDocumentNotification;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             session_id,
             uri,
@@ -6294,21 +6526,21 @@ impl IntoV1 for super::DidOpenDocumentNotification {
             meta,
         } = self;
         Ok(crate::v1::DidOpenDocumentNotification {
-            session_id: session_id.into_v1()?,
-            uri: uri.into_v1()?,
-            language_id: language_id.into_v1()?,
-            version: version.into_v1()?,
-            text: text.into_v1()?,
-            meta: meta.into_v1()?,
+            session_id: session_id.try_to_v1()?,
+            uri: uri.try_to_v1()?,
+            language_id: language_id.try_to_v1()?,
+            version: version.try_to_v1()?,
+            text: text.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::DidOpenDocumentNotification {
+impl TryToV2 for crate::v1::DidOpenDocumentNotification {
     type Output = super::DidOpenDocumentNotification;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             session_id,
             uri,
@@ -6318,21 +6550,21 @@ impl IntoV2 for crate::v1::DidOpenDocumentNotification {
             meta,
         } = self;
         Ok(super::DidOpenDocumentNotification {
-            session_id: session_id.into_v2()?,
-            uri: uri.into_v2()?,
-            language_id: language_id.into_v2()?,
-            version: version.into_v2()?,
-            text: text.into_v2()?,
-            meta: meta.into_v2()?,
+            session_id: session_id.try_to_v2()?,
+            uri: uri.try_to_v2()?,
+            language_id: language_id.try_to_v2()?,
+            version: version.try_to_v2()?,
+            text: text.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::DidChangeDocumentNotification {
+impl TryToV1 for super::DidChangeDocumentNotification {
     type Output = crate::v1::DidChangeDocumentNotification;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             session_id,
             uri,
@@ -6341,20 +6573,20 @@ impl IntoV1 for super::DidChangeDocumentNotification {
             meta,
         } = self;
         Ok(crate::v1::DidChangeDocumentNotification {
-            session_id: session_id.into_v1()?,
-            uri: uri.into_v1()?,
-            version: version.into_v1()?,
-            content_changes: content_changes.into_v1()?,
-            meta: meta.into_v1()?,
+            session_id: session_id.try_to_v1()?,
+            uri: uri.try_to_v1()?,
+            version: version.try_to_v1()?,
+            content_changes: content_changes.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::DidChangeDocumentNotification {
+impl TryToV2 for crate::v1::DidChangeDocumentNotification {
     type Output = super::DidChangeDocumentNotification;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             session_id,
             uri,
@@ -6363,120 +6595,120 @@ impl IntoV2 for crate::v1::DidChangeDocumentNotification {
             meta,
         } = self;
         Ok(super::DidChangeDocumentNotification {
-            session_id: session_id.into_v2()?,
-            uri: uri.into_v2()?,
-            version: version.into_v2()?,
-            content_changes: content_changes.into_v2()?,
-            meta: meta.into_v2()?,
+            session_id: session_id.try_to_v2()?,
+            uri: uri.try_to_v2()?,
+            version: version.try_to_v2()?,
+            content_changes: content_changes.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::TextDocumentContentChangeEvent {
+impl TryToV1 for super::TextDocumentContentChangeEvent {
     type Output = crate::v1::TextDocumentContentChangeEvent;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { range, text, meta } = self;
         Ok(crate::v1::TextDocumentContentChangeEvent {
-            range: range.into_v1()?,
-            text: text.into_v1()?,
-            meta: meta.into_v1()?,
+            range: range.try_to_v1()?,
+            text: text.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::TextDocumentContentChangeEvent {
+impl TryToV2 for crate::v1::TextDocumentContentChangeEvent {
     type Output = super::TextDocumentContentChangeEvent;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { range, text, meta } = self;
         Ok(super::TextDocumentContentChangeEvent {
-            range: range.into_v2()?,
-            text: text.into_v2()?,
-            meta: meta.into_v2()?,
+            range: range.try_to_v2()?,
+            text: text.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::DidCloseDocumentNotification {
+impl TryToV1 for super::DidCloseDocumentNotification {
     type Output = crate::v1::DidCloseDocumentNotification;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             session_id,
             uri,
             meta,
         } = self;
         Ok(crate::v1::DidCloseDocumentNotification {
-            session_id: session_id.into_v1()?,
-            uri: uri.into_v1()?,
-            meta: meta.into_v1()?,
+            session_id: session_id.try_to_v1()?,
+            uri: uri.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::DidCloseDocumentNotification {
+impl TryToV2 for crate::v1::DidCloseDocumentNotification {
     type Output = super::DidCloseDocumentNotification;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             session_id,
             uri,
             meta,
         } = self;
         Ok(super::DidCloseDocumentNotification {
-            session_id: session_id.into_v2()?,
-            uri: uri.into_v2()?,
-            meta: meta.into_v2()?,
+            session_id: session_id.try_to_v2()?,
+            uri: uri.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::DidSaveDocumentNotification {
+impl TryToV1 for super::DidSaveDocumentNotification {
     type Output = crate::v1::DidSaveDocumentNotification;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             session_id,
             uri,
             meta,
         } = self;
         Ok(crate::v1::DidSaveDocumentNotification {
-            session_id: session_id.into_v1()?,
-            uri: uri.into_v1()?,
-            meta: meta.into_v1()?,
+            session_id: session_id.try_to_v1()?,
+            uri: uri.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::DidSaveDocumentNotification {
+impl TryToV2 for crate::v1::DidSaveDocumentNotification {
     type Output = super::DidSaveDocumentNotification;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             session_id,
             uri,
             meta,
         } = self;
         Ok(super::DidSaveDocumentNotification {
-            session_id: session_id.into_v2()?,
-            uri: uri.into_v2()?,
-            meta: meta.into_v2()?,
+            session_id: session_id.try_to_v2()?,
+            uri: uri.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::DidFocusDocumentNotification {
+impl TryToV1 for super::DidFocusDocumentNotification {
     type Output = crate::v1::DidFocusDocumentNotification;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             session_id,
             uri,
@@ -6486,21 +6718,21 @@ impl IntoV1 for super::DidFocusDocumentNotification {
             meta,
         } = self;
         Ok(crate::v1::DidFocusDocumentNotification {
-            session_id: session_id.into_v1()?,
-            uri: uri.into_v1()?,
-            version: version.into_v1()?,
-            position: position.into_v1()?,
-            visible_range: visible_range.into_v1()?,
-            meta: meta.into_v1()?,
+            session_id: session_id.try_to_v1()?,
+            uri: uri.try_to_v1()?,
+            version: version.try_to_v1()?,
+            position: position.try_to_v1()?,
+            visible_range: visible_range.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::DidFocusDocumentNotification {
+impl TryToV2 for crate::v1::DidFocusDocumentNotification {
     type Output = super::DidFocusDocumentNotification;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             session_id,
             uri,
@@ -6510,21 +6742,21 @@ impl IntoV2 for crate::v1::DidFocusDocumentNotification {
             meta,
         } = self;
         Ok(super::DidFocusDocumentNotification {
-            session_id: session_id.into_v2()?,
-            uri: uri.into_v2()?,
-            version: version.into_v2()?,
-            position: position.into_v2()?,
-            visible_range: visible_range.into_v2()?,
-            meta: meta.into_v2()?,
+            session_id: session_id.try_to_v2()?,
+            uri: uri.try_to_v2()?,
+            version: version.try_to_v2()?,
+            position: position.try_to_v2()?,
+            visible_range: visible_range.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::StartNesRequest {
+impl TryToV1 for super::StartNesRequest {
     type Output = crate::v1::StartNesRequest;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             workspace_uri,
             workspace_folders,
@@ -6532,19 +6764,19 @@ impl IntoV1 for super::StartNesRequest {
             meta,
         } = self;
         Ok(crate::v1::StartNesRequest {
-            workspace_uri: workspace_uri.into_v1()?,
-            workspace_folders: option_vec_into_v1_skip_errors(workspace_folders),
-            repository: into_v1_default_on_error(repository),
-            meta: meta.into_v1()?,
+            workspace_uri: workspace_uri.try_to_v1()?,
+            workspace_folders: workspace_folders.try_to_v1()?,
+            repository: repository.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::StartNesRequest {
+impl TryToV2 for crate::v1::StartNesRequest {
     type Output = super::StartNesRequest;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             workspace_uri,
             workspace_folders,
@@ -6552,47 +6784,47 @@ impl IntoV2 for crate::v1::StartNesRequest {
             meta,
         } = self;
         Ok(super::StartNesRequest {
-            workspace_uri: workspace_uri.into_v2()?,
-            workspace_folders: option_vec_into_v2_skip_errors(workspace_folders),
-            repository: into_v2_default_on_error(repository),
-            meta: meta.into_v2()?,
+            workspace_uri: workspace_uri.try_to_v2()?,
+            workspace_folders: workspace_folders.try_to_v2()?,
+            repository: repository.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::WorkspaceFolder {
+impl TryToV1 for super::WorkspaceFolder {
     type Output = crate::v1::WorkspaceFolder;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { uri, name, meta } = self;
         Ok(crate::v1::WorkspaceFolder {
-            uri: uri.into_v1()?,
-            name: name.into_v1()?,
-            meta: meta.into_v1()?,
+            uri: uri.try_to_v1()?,
+            name: name.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::WorkspaceFolder {
+impl TryToV2 for crate::v1::WorkspaceFolder {
     type Output = super::WorkspaceFolder;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { uri, name, meta } = self;
         Ok(super::WorkspaceFolder {
-            uri: uri.into_v2()?,
-            name: name.into_v2()?,
-            meta: meta.into_v2()?,
+            uri: uri.try_to_v2()?,
+            name: name.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::NesRepository {
+impl TryToV1 for super::NesRepository {
     type Output = crate::v1::NesRepository;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             name,
             owner,
@@ -6600,19 +6832,19 @@ impl IntoV1 for super::NesRepository {
             meta,
         } = self;
         Ok(crate::v1::NesRepository {
-            name: name.into_v1()?,
-            owner: owner.into_v1()?,
-            remote_url: remote_url.into_v1()?,
-            meta: meta.into_v1()?,
+            name: name.try_to_v1()?,
+            owner: owner.try_to_v1()?,
+            remote_url: remote_url.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::NesRepository {
+impl TryToV2 for crate::v1::NesRepository {
     type Output = super::NesRepository;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             name,
             owner,
@@ -6620,95 +6852,95 @@ impl IntoV2 for crate::v1::NesRepository {
             meta,
         } = self;
         Ok(super::NesRepository {
-            name: name.into_v2()?,
-            owner: owner.into_v2()?,
-            remote_url: remote_url.into_v2()?,
-            meta: meta.into_v2()?,
+            name: name.try_to_v2()?,
+            owner: owner.try_to_v2()?,
+            remote_url: remote_url.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::StartNesResponse {
+impl TryToV1 for super::StartNesResponse {
     type Output = crate::v1::StartNesResponse;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { session_id, meta } = self;
         Ok(crate::v1::StartNesResponse {
-            session_id: session_id.into_v1()?,
-            meta: meta.into_v1()?,
+            session_id: session_id.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::StartNesResponse {
+impl TryToV2 for crate::v1::StartNesResponse {
     type Output = super::StartNesResponse;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { session_id, meta } = self;
         Ok(super::StartNesResponse {
-            session_id: session_id.into_v2()?,
-            meta: meta.into_v2()?,
+            session_id: session_id.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::CloseNesRequest {
+impl TryToV1 for super::CloseNesRequest {
     type Output = crate::v1::CloseNesRequest;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { session_id, meta } = self;
         Ok(crate::v1::CloseNesRequest {
-            session_id: session_id.into_v1()?,
-            meta: meta.into_v1()?,
+            session_id: session_id.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::CloseNesRequest {
+impl TryToV2 for crate::v1::CloseNesRequest {
     type Output = super::CloseNesRequest;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { session_id, meta } = self;
         Ok(super::CloseNesRequest {
-            session_id: session_id.into_v2()?,
-            meta: meta.into_v2()?,
+            session_id: session_id.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::CloseNesResponse {
+impl TryToV1 for super::CloseNesResponse {
     type Output = crate::v1::CloseNesResponse;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(crate::v1::CloseNesResponse {
-            meta: meta.into_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::CloseNesResponse {
+impl TryToV2 for crate::v1::CloseNesResponse {
     type Output = super::CloseNesResponse;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(super::CloseNesResponse {
-            meta: meta.into_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::NesTriggerKind {
+impl TryToV1 for super::NesTriggerKind {
     type Output = crate::v1::NesTriggerKind;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         Ok(match self {
             Self::Automatic => crate::v1::NesTriggerKind::Automatic,
             Self::Diagnostic => crate::v1::NesTriggerKind::Diagnostic,
@@ -6719,10 +6951,10 @@ impl IntoV1 for super::NesTriggerKind {
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::NesTriggerKind {
+impl TryToV2 for crate::v1::NesTriggerKind {
     type Output = super::NesTriggerKind;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         Ok(match self {
             Self::Automatic => super::NesTriggerKind::Automatic,
             Self::Diagnostic => super::NesTriggerKind::Diagnostic,
@@ -6732,10 +6964,10 @@ impl IntoV2 for crate::v1::NesTriggerKind {
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::SuggestNesRequest {
+impl TryToV1 for super::SuggestNesRequest {
     type Output = crate::v1::SuggestNesRequest;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             session_id,
             uri,
@@ -6747,23 +6979,23 @@ impl IntoV1 for super::SuggestNesRequest {
             meta,
         } = self;
         Ok(crate::v1::SuggestNesRequest {
-            session_id: session_id.into_v1()?,
-            uri: uri.into_v1()?,
-            version: version.into_v1()?,
-            position: position.into_v1()?,
-            selection: into_v1_default_on_error(selection),
-            trigger_kind: trigger_kind.into_v1()?,
-            context: into_v1_default_on_error(context),
-            meta: meta.into_v1()?,
+            session_id: session_id.try_to_v1()?,
+            uri: uri.try_to_v1()?,
+            version: version.try_to_v1()?,
+            position: position.try_to_v1()?,
+            selection: selection.try_to_v1()?,
+            trigger_kind: trigger_kind.try_to_v1()?,
+            context: context.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::SuggestNesRequest {
+impl TryToV2 for crate::v1::SuggestNesRequest {
     type Output = super::SuggestNesRequest;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             session_id,
             uri,
@@ -6775,23 +7007,23 @@ impl IntoV2 for crate::v1::SuggestNesRequest {
             meta,
         } = self;
         Ok(super::SuggestNesRequest {
-            session_id: session_id.into_v2()?,
-            uri: uri.into_v2()?,
-            version: version.into_v2()?,
-            position: position.into_v2()?,
-            selection: into_v2_default_on_error(selection),
-            trigger_kind: trigger_kind.into_v2()?,
-            context: into_v2_default_on_error(context),
-            meta: meta.into_v2()?,
+            session_id: session_id.try_to_v2()?,
+            uri: uri.try_to_v2()?,
+            version: version.try_to_v2()?,
+            position: position.try_to_v2()?,
+            selection: selection.try_to_v2()?,
+            trigger_kind: trigger_kind.try_to_v2()?,
+            context: context.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::NesSuggestContext {
+impl TryToV1 for super::NesSuggestContext {
     type Output = crate::v1::NesSuggestContext;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             recent_files,
             related_snippets,
@@ -6802,22 +7034,22 @@ impl IntoV1 for super::NesSuggestContext {
             meta,
         } = self;
         Ok(crate::v1::NesSuggestContext {
-            recent_files: option_vec_into_v1_skip_errors(recent_files),
-            related_snippets: option_vec_into_v1_skip_errors(related_snippets),
-            edit_history: option_vec_into_v1_skip_errors(edit_history),
-            user_actions: option_vec_into_v1_skip_errors(user_actions),
-            open_files: option_vec_into_v1_skip_errors(open_files),
-            diagnostics: option_vec_into_v1_skip_errors(diagnostics),
-            meta: meta.into_v1()?,
+            recent_files: recent_files.try_to_v1()?,
+            related_snippets: related_snippets.try_to_v1()?,
+            edit_history: edit_history.try_to_v1()?,
+            user_actions: user_actions.try_to_v1()?,
+            open_files: open_files.try_to_v1()?,
+            diagnostics: diagnostics.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::NesSuggestContext {
+impl TryToV2 for crate::v1::NesSuggestContext {
     type Output = super::NesSuggestContext;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             recent_files,
             related_snippets,
@@ -6828,22 +7060,22 @@ impl IntoV2 for crate::v1::NesSuggestContext {
             meta,
         } = self;
         Ok(super::NesSuggestContext {
-            recent_files: option_vec_into_v2_skip_errors(recent_files),
-            related_snippets: option_vec_into_v2_skip_errors(related_snippets),
-            edit_history: option_vec_into_v2_skip_errors(edit_history),
-            user_actions: option_vec_into_v2_skip_errors(user_actions),
-            open_files: option_vec_into_v2_skip_errors(open_files),
-            diagnostics: option_vec_into_v2_skip_errors(diagnostics),
-            meta: meta.into_v2()?,
+            recent_files: recent_files.try_to_v2()?,
+            related_snippets: related_snippets.try_to_v2()?,
+            edit_history: edit_history.try_to_v2()?,
+            user_actions: user_actions.try_to_v2()?,
+            open_files: open_files.try_to_v2()?,
+            diagnostics: diagnostics.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::NesRecentFile {
+impl TryToV1 for super::NesRecentFile {
     type Output = crate::v1::NesRecentFile;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             uri,
             language_id,
@@ -6851,19 +7083,19 @@ impl IntoV1 for super::NesRecentFile {
             meta,
         } = self;
         Ok(crate::v1::NesRecentFile {
-            uri: uri.into_v1()?,
-            language_id: language_id.into_v1()?,
-            text: text.into_v1()?,
-            meta: meta.into_v1()?,
+            uri: uri.try_to_v1()?,
+            language_id: language_id.try_to_v1()?,
+            text: text.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::NesRecentFile {
+impl TryToV2 for crate::v1::NesRecentFile {
     type Output = super::NesRecentFile;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             uri,
             language_id,
@@ -6871,55 +7103,55 @@ impl IntoV2 for crate::v1::NesRecentFile {
             meta,
         } = self;
         Ok(super::NesRecentFile {
-            uri: uri.into_v2()?,
-            language_id: language_id.into_v2()?,
-            text: text.into_v2()?,
-            meta: meta.into_v2()?,
+            uri: uri.try_to_v2()?,
+            language_id: language_id.try_to_v2()?,
+            text: text.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::NesRelatedSnippet {
+impl TryToV1 for super::NesRelatedSnippet {
     type Output = crate::v1::NesRelatedSnippet;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             uri,
             excerpts,
             meta,
         } = self;
         Ok(crate::v1::NesRelatedSnippet {
-            uri: uri.into_v1()?,
-            excerpts: excerpts.into_v1()?,
-            meta: meta.into_v1()?,
+            uri: uri.try_to_v1()?,
+            excerpts: excerpts.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::NesRelatedSnippet {
+impl TryToV2 for crate::v1::NesRelatedSnippet {
     type Output = super::NesRelatedSnippet;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             uri,
             excerpts,
             meta,
         } = self;
         Ok(super::NesRelatedSnippet {
-            uri: uri.into_v2()?,
-            excerpts: excerpts.into_v2()?,
-            meta: meta.into_v2()?,
+            uri: uri.try_to_v2()?,
+            excerpts: excerpts.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::NesExcerpt {
+impl TryToV1 for super::NesExcerpt {
     type Output = crate::v1::NesExcerpt;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             start_line,
             end_line,
@@ -6927,19 +7159,19 @@ impl IntoV1 for super::NesExcerpt {
             meta,
         } = self;
         Ok(crate::v1::NesExcerpt {
-            start_line: start_line.into_v1()?,
-            end_line: end_line.into_v1()?,
-            text: text.into_v1()?,
-            meta: meta.into_v1()?,
+            start_line: start_line.try_to_v1()?,
+            end_line: end_line.try_to_v1()?,
+            text: text.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::NesExcerpt {
+impl TryToV2 for crate::v1::NesExcerpt {
     type Output = super::NesExcerpt;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             start_line,
             end_line,
@@ -6947,47 +7179,47 @@ impl IntoV2 for crate::v1::NesExcerpt {
             meta,
         } = self;
         Ok(super::NesExcerpt {
-            start_line: start_line.into_v2()?,
-            end_line: end_line.into_v2()?,
-            text: text.into_v2()?,
-            meta: meta.into_v2()?,
+            start_line: start_line.try_to_v2()?,
+            end_line: end_line.try_to_v2()?,
+            text: text.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::NesEditHistoryEntry {
+impl TryToV1 for super::NesEditHistoryEntry {
     type Output = crate::v1::NesEditHistoryEntry;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { uri, diff, meta } = self;
         Ok(crate::v1::NesEditHistoryEntry {
-            uri: uri.into_v1()?,
-            diff: diff.into_v1()?,
-            meta: meta.into_v1()?,
+            uri: uri.try_to_v1()?,
+            diff: diff.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::NesEditHistoryEntry {
+impl TryToV2 for crate::v1::NesEditHistoryEntry {
     type Output = super::NesEditHistoryEntry;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { uri, diff, meta } = self;
         Ok(super::NesEditHistoryEntry {
-            uri: uri.into_v2()?,
-            diff: diff.into_v2()?,
-            meta: meta.into_v2()?,
+            uri: uri.try_to_v2()?,
+            diff: diff.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::NesUserAction {
+impl TryToV1 for super::NesUserAction {
     type Output = crate::v1::NesUserAction;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             action,
             uri,
@@ -6996,20 +7228,20 @@ impl IntoV1 for super::NesUserAction {
             meta,
         } = self;
         Ok(crate::v1::NesUserAction {
-            action: action.into_v1()?,
-            uri: uri.into_v1()?,
-            position: position.into_v1()?,
-            timestamp_ms: timestamp_ms.into_v1()?,
-            meta: meta.into_v1()?,
+            action: action.try_to_v1()?,
+            uri: uri.try_to_v1()?,
+            position: position.try_to_v1()?,
+            timestamp_ms: timestamp_ms.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::NesUserAction {
+impl TryToV2 for crate::v1::NesUserAction {
     type Output = super::NesUserAction;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             action,
             uri,
@@ -7018,20 +7250,20 @@ impl IntoV2 for crate::v1::NesUserAction {
             meta,
         } = self;
         Ok(super::NesUserAction {
-            action: action.into_v2()?,
-            uri: uri.into_v2()?,
-            position: position.into_v2()?,
-            timestamp_ms: timestamp_ms.into_v2()?,
-            meta: meta.into_v2()?,
+            action: action.try_to_v2()?,
+            uri: uri.try_to_v2()?,
+            position: position.try_to_v2()?,
+            timestamp_ms: timestamp_ms.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::NesOpenFile {
+impl TryToV1 for super::NesOpenFile {
     type Output = crate::v1::NesOpenFile;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             uri,
             language_id,
@@ -7040,20 +7272,20 @@ impl IntoV1 for super::NesOpenFile {
             meta,
         } = self;
         Ok(crate::v1::NesOpenFile {
-            uri: uri.into_v1()?,
-            language_id: language_id.into_v1()?,
-            visible_range: into_v1_default_on_error(visible_range),
-            last_focused_ms: into_v1_default_on_error(last_focused_ms),
-            meta: meta.into_v1()?,
+            uri: uri.try_to_v1()?,
+            language_id: language_id.try_to_v1()?,
+            visible_range: visible_range.try_to_v1()?,
+            last_focused_ms: last_focused_ms.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::NesOpenFile {
+impl TryToV2 for crate::v1::NesOpenFile {
     type Output = super::NesOpenFile;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             uri,
             language_id,
@@ -7062,20 +7294,20 @@ impl IntoV2 for crate::v1::NesOpenFile {
             meta,
         } = self;
         Ok(super::NesOpenFile {
-            uri: uri.into_v2()?,
-            language_id: language_id.into_v2()?,
-            visible_range: into_v2_default_on_error(visible_range),
-            last_focused_ms: into_v2_default_on_error(last_focused_ms),
-            meta: meta.into_v2()?,
+            uri: uri.try_to_v2()?,
+            language_id: language_id.try_to_v2()?,
+            visible_range: visible_range.try_to_v2()?,
+            last_focused_ms: last_focused_ms.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::NesDiagnostic {
+impl TryToV1 for super::NesDiagnostic {
     type Output = crate::v1::NesDiagnostic;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             uri,
             range,
@@ -7084,20 +7316,20 @@ impl IntoV1 for super::NesDiagnostic {
             meta,
         } = self;
         Ok(crate::v1::NesDiagnostic {
-            uri: uri.into_v1()?,
-            range: range.into_v1()?,
-            severity: severity.into_v1()?,
-            message: message.into_v1()?,
-            meta: meta.into_v1()?,
+            uri: uri.try_to_v1()?,
+            range: range.try_to_v1()?,
+            severity: severity.try_to_v1()?,
+            message: message.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::NesDiagnostic {
+impl TryToV2 for crate::v1::NesDiagnostic {
     type Output = super::NesDiagnostic;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             uri,
             range,
@@ -7106,20 +7338,20 @@ impl IntoV2 for crate::v1::NesDiagnostic {
             meta,
         } = self;
         Ok(super::NesDiagnostic {
-            uri: uri.into_v2()?,
-            range: range.into_v2()?,
-            severity: severity.into_v2()?,
-            message: message.into_v2()?,
-            meta: meta.into_v2()?,
+            uri: uri.try_to_v2()?,
+            range: range.try_to_v2()?,
+            severity: severity.try_to_v2()?,
+            message: message.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::NesDiagnosticSeverity {
+impl TryToV1 for super::NesDiagnosticSeverity {
     type Output = crate::v1::NesDiagnosticSeverity;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         Ok(match self {
             Self::Error => crate::v1::NesDiagnosticSeverity::Error,
             Self::Warning => crate::v1::NesDiagnosticSeverity::Warning,
@@ -7133,10 +7365,10 @@ impl IntoV1 for super::NesDiagnosticSeverity {
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::NesDiagnosticSeverity {
+impl TryToV2 for crate::v1::NesDiagnosticSeverity {
     type Output = super::NesDiagnosticSeverity;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         Ok(match self {
             Self::Error => super::NesDiagnosticSeverity::Error,
             Self::Warning => super::NesDiagnosticSeverity::Warning,
@@ -7147,42 +7379,42 @@ impl IntoV2 for crate::v1::NesDiagnosticSeverity {
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::SuggestNesResponse {
+impl TryToV1 for super::SuggestNesResponse {
     type Output = crate::v1::SuggestNesResponse;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { suggestions, meta } = self;
         Ok(crate::v1::SuggestNesResponse {
-            suggestions: into_v1_vec_skip_errors(suggestions),
-            meta: meta.into_v1()?,
+            suggestions: suggestions.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::SuggestNesResponse {
+impl TryToV2 for crate::v1::SuggestNesResponse {
     type Output = super::SuggestNesResponse;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { suggestions, meta } = self;
         Ok(super::SuggestNesResponse {
-            suggestions: into_v2_vec_skip_errors(suggestions),
-            meta: meta.into_v2()?,
+            suggestions: suggestions.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::NesSuggestion {
+impl TryToV1 for super::NesSuggestion {
     type Output = crate::v1::NesSuggestion;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::Edit(value) => crate::v1::NesSuggestion::Edit(value.into_v1()?),
-            Self::Jump(value) => crate::v1::NesSuggestion::Jump(value.into_v1()?),
-            Self::Rename(value) => crate::v1::NesSuggestion::Rename(value.into_v1()?),
+            Self::Edit(value) => crate::v1::NesSuggestion::Edit(value.try_to_v1()?),
+            Self::Jump(value) => crate::v1::NesSuggestion::Jump(value.try_to_v1()?),
+            Self::Rename(value) => crate::v1::NesSuggestion::Rename(value.try_to_v1()?),
             Self::SearchAndReplace(value) => {
-                crate::v1::NesSuggestion::SearchAndReplace(value.into_v1()?)
+                crate::v1::NesSuggestion::SearchAndReplace(value.try_to_v1()?)
             }
             Self::Other(value) => {
                 return Err(unknown_v2_enum_variant("NesSuggestion", &value.kind));
@@ -7192,44 +7424,44 @@ impl IntoV1 for super::NesSuggestion {
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::NesSuggestion {
+impl TryToV2 for crate::v1::NesSuggestion {
     type Output = super::NesSuggestion;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::Edit(value) => super::NesSuggestion::Edit(value.into_v2()?),
-            Self::Jump(value) => super::NesSuggestion::Jump(value.into_v2()?),
-            Self::Rename(value) => super::NesSuggestion::Rename(value.into_v2()?),
+            Self::Edit(value) => super::NesSuggestion::Edit(value.try_to_v2()?),
+            Self::Jump(value) => super::NesSuggestion::Jump(value.try_to_v2()?),
+            Self::Rename(value) => super::NesSuggestion::Rename(value.try_to_v2()?),
             Self::SearchAndReplace(value) => {
-                super::NesSuggestion::SearchAndReplace(value.into_v2()?)
+                super::NesSuggestion::SearchAndReplace(value.try_to_v2()?)
             }
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::NesSuggestionId {
+impl TryToV1 for super::NesSuggestionId {
     type Output = crate::v1::NesSuggestionId;
 
-    fn into_v1(self) -> Result<Self::Output> {
-        Ok(crate::v1::NesSuggestionId(self.0.into_v1()?))
+    fn try_to_v1(self) -> Result<Self::Output> {
+        Ok(crate::v1::NesSuggestionId(self.0.try_to_v1()?))
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::NesSuggestionId {
+impl TryToV2 for crate::v1::NesSuggestionId {
     type Output = super::NesSuggestionId;
 
-    fn into_v2(self) -> Result<Self::Output> {
-        Ok(super::NesSuggestionId(self.0.into_v2()?))
+    fn try_to_v2(self) -> Result<Self::Output> {
+        Ok(super::NesSuggestionId(self.0.try_to_v2()?))
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::NesEditSuggestion {
+impl TryToV1 for super::NesEditSuggestion {
     type Output = crate::v1::NesEditSuggestion;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             suggestion_id,
             uri,
@@ -7238,20 +7470,20 @@ impl IntoV1 for super::NesEditSuggestion {
             meta,
         } = self;
         Ok(crate::v1::NesEditSuggestion {
-            id: suggestion_id.into_v1()?,
-            uri: uri.into_v1()?,
-            edits: edits.into_v1()?,
-            cursor_position: into_v1_default_on_error(cursor_position),
-            meta: meta.into_v1()?,
+            id: suggestion_id.try_to_v1()?,
+            uri: uri.try_to_v1()?,
+            edits: edits.try_to_v1()?,
+            cursor_position: cursor_position.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::NesEditSuggestion {
+impl TryToV2 for crate::v1::NesEditSuggestion {
     type Output = super::NesEditSuggestion;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             id,
             uri,
@@ -7260,56 +7492,56 @@ impl IntoV2 for crate::v1::NesEditSuggestion {
             meta,
         } = self;
         Ok(super::NesEditSuggestion {
-            suggestion_id: id.into_v2()?,
-            uri: uri.into_v2()?,
-            edits: edits.into_v2()?,
-            cursor_position: into_v2_default_on_error(cursor_position),
-            meta: meta.into_v2()?,
+            suggestion_id: id.try_to_v2()?,
+            uri: uri.try_to_v2()?,
+            edits: edits.try_to_v2()?,
+            cursor_position: cursor_position.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::NesTextEdit {
+impl TryToV1 for super::NesTextEdit {
     type Output = crate::v1::NesTextEdit;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             range,
             new_text,
             meta,
         } = self;
         Ok(crate::v1::NesTextEdit {
-            range: range.into_v1()?,
-            new_text: new_text.into_v1()?,
-            meta: meta.into_v1()?,
+            range: range.try_to_v1()?,
+            new_text: new_text.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::NesTextEdit {
+impl TryToV2 for crate::v1::NesTextEdit {
     type Output = super::NesTextEdit;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             range,
             new_text,
             meta,
         } = self;
         Ok(super::NesTextEdit {
-            range: range.into_v2()?,
-            new_text: new_text.into_v2()?,
-            meta: meta.into_v2()?,
+            range: range.try_to_v2()?,
+            new_text: new_text.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::NesJumpSuggestion {
+impl TryToV1 for super::NesJumpSuggestion {
     type Output = crate::v1::NesJumpSuggestion;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             suggestion_id,
             uri,
@@ -7317,19 +7549,19 @@ impl IntoV1 for super::NesJumpSuggestion {
             meta,
         } = self;
         Ok(crate::v1::NesJumpSuggestion {
-            id: suggestion_id.into_v1()?,
-            uri: uri.into_v1()?,
-            position: position.into_v1()?,
-            meta: meta.into_v1()?,
+            id: suggestion_id.try_to_v1()?,
+            uri: uri.try_to_v1()?,
+            position: position.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::NesJumpSuggestion {
+impl TryToV2 for crate::v1::NesJumpSuggestion {
     type Output = super::NesJumpSuggestion;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             id,
             uri,
@@ -7337,19 +7569,19 @@ impl IntoV2 for crate::v1::NesJumpSuggestion {
             meta,
         } = self;
         Ok(super::NesJumpSuggestion {
-            suggestion_id: id.into_v2()?,
-            uri: uri.into_v2()?,
-            position: position.into_v2()?,
-            meta: meta.into_v2()?,
+            suggestion_id: id.try_to_v2()?,
+            uri: uri.try_to_v2()?,
+            position: position.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::NesRenameSuggestion {
+impl TryToV1 for super::NesRenameSuggestion {
     type Output = crate::v1::NesRenameSuggestion;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             suggestion_id,
             uri,
@@ -7358,20 +7590,20 @@ impl IntoV1 for super::NesRenameSuggestion {
             meta,
         } = self;
         Ok(crate::v1::NesRenameSuggestion {
-            id: suggestion_id.into_v1()?,
-            uri: uri.into_v1()?,
-            position: position.into_v1()?,
-            new_name: new_name.into_v1()?,
-            meta: meta.into_v1()?,
+            id: suggestion_id.try_to_v1()?,
+            uri: uri.try_to_v1()?,
+            position: position.try_to_v1()?,
+            new_name: new_name.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::NesRenameSuggestion {
+impl TryToV2 for crate::v1::NesRenameSuggestion {
     type Output = super::NesRenameSuggestion;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             id,
             uri,
@@ -7380,20 +7612,20 @@ impl IntoV2 for crate::v1::NesRenameSuggestion {
             meta,
         } = self;
         Ok(super::NesRenameSuggestion {
-            suggestion_id: id.into_v2()?,
-            uri: uri.into_v2()?,
-            position: position.into_v2()?,
-            new_name: new_name.into_v2()?,
-            meta: meta.into_v2()?,
+            suggestion_id: id.try_to_v2()?,
+            uri: uri.try_to_v2()?,
+            position: position.try_to_v2()?,
+            new_name: new_name.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::NesSearchAndReplaceSuggestion {
+impl TryToV1 for super::NesSearchAndReplaceSuggestion {
     type Output = crate::v1::NesSearchAndReplaceSuggestion;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             suggestion_id,
             uri,
@@ -7403,21 +7635,21 @@ impl IntoV1 for super::NesSearchAndReplaceSuggestion {
             meta,
         } = self;
         Ok(crate::v1::NesSearchAndReplaceSuggestion {
-            id: suggestion_id.into_v1()?,
-            uri: uri.into_v1()?,
-            search: search.into_v1()?,
-            replace: replace.into_v1()?,
-            is_regex: is_regex.into_v1()?,
-            meta: meta.into_v1()?,
+            id: suggestion_id.try_to_v1()?,
+            uri: uri.try_to_v1()?,
+            search: search.try_to_v1()?,
+            replace: replace.try_to_v1()?,
+            is_regex: is_regex.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::NesSearchAndReplaceSuggestion {
+impl TryToV2 for crate::v1::NesSearchAndReplaceSuggestion {
     type Output = super::NesSearchAndReplaceSuggestion;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             id,
             uri,
@@ -7427,57 +7659,57 @@ impl IntoV2 for crate::v1::NesSearchAndReplaceSuggestion {
             meta,
         } = self;
         Ok(super::NesSearchAndReplaceSuggestion {
-            suggestion_id: id.into_v2()?,
-            uri: uri.into_v2()?,
-            search: search.into_v2()?,
-            replace: replace.into_v2()?,
-            is_regex: is_regex.into_v2()?,
-            meta: meta.into_v2()?,
+            suggestion_id: id.try_to_v2()?,
+            uri: uri.try_to_v2()?,
+            search: search.try_to_v2()?,
+            replace: replace.try_to_v2()?,
+            is_regex: is_regex.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::AcceptNesNotification {
+impl TryToV1 for super::AcceptNesNotification {
     type Output = crate::v1::AcceptNesNotification;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             session_id,
             suggestion_id,
             meta,
         } = self;
         Ok(crate::v1::AcceptNesNotification {
-            session_id: session_id.into_v1()?,
-            id: suggestion_id.into_v1()?,
-            meta: meta.into_v1()?,
+            session_id: session_id.try_to_v1()?,
+            id: suggestion_id.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::AcceptNesNotification {
+impl TryToV2 for crate::v1::AcceptNesNotification {
     type Output = super::AcceptNesNotification;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             session_id,
             id,
             meta,
         } = self;
         Ok(super::AcceptNesNotification {
-            session_id: session_id.into_v2()?,
-            suggestion_id: id.into_v2()?,
-            meta: meta.into_v2()?,
+            session_id: session_id.try_to_v2()?,
+            suggestion_id: id.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::RejectNesNotification {
+impl TryToV1 for super::RejectNesNotification {
     type Output = crate::v1::RejectNesNotification;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             session_id,
             suggestion_id,
@@ -7485,19 +7717,19 @@ impl IntoV1 for super::RejectNesNotification {
             meta,
         } = self;
         Ok(crate::v1::RejectNesNotification {
-            session_id: session_id.into_v1()?,
-            id: suggestion_id.into_v1()?,
-            reason: into_v1_default_on_error(reason),
-            meta: meta.into_v1()?,
+            session_id: session_id.try_to_v1()?,
+            id: suggestion_id.try_to_v1()?,
+            reason: reason.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::RejectNesNotification {
+impl TryToV2 for crate::v1::RejectNesNotification {
     type Output = super::RejectNesNotification;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             session_id,
             id,
@@ -7505,19 +7737,19 @@ impl IntoV2 for crate::v1::RejectNesNotification {
             meta,
         } = self;
         Ok(super::RejectNesNotification {
-            session_id: session_id.into_v2()?,
-            suggestion_id: id.into_v2()?,
-            reason: into_v2_default_on_error(reason),
-            meta: meta.into_v2()?,
+            session_id: session_id.try_to_v2()?,
+            suggestion_id: id.try_to_v2()?,
+            reason: reason.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV1 for super::NesRejectReason {
+impl TryToV1 for super::NesRejectReason {
     type Output = crate::v1::NesRejectReason;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         Ok(match self {
             Self::Rejected => crate::v1::NesRejectReason::Rejected,
             Self::Ignored => crate::v1::NesRejectReason::Ignored,
@@ -7529,10 +7761,10 @@ impl IntoV1 for super::NesRejectReason {
 }
 
 #[cfg(feature = "unstable_nes")]
-impl IntoV2 for crate::v1::NesRejectReason {
+impl TryToV2 for crate::v1::NesRejectReason {
     type Output = super::NesRejectReason;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         Ok(match self {
             Self::Rejected => super::NesRejectReason::Rejected,
             Self::Ignored => super::NesRejectReason::Ignored,
@@ -7543,28 +7775,28 @@ impl IntoV2 for crate::v1::NesRejectReason {
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV1 for super::ElicitationId {
+impl TryToV1 for super::ElicitationId {
     type Output = crate::v1::ElicitationId;
 
-    fn into_v1(self) -> Result<Self::Output> {
-        Ok(crate::v1::ElicitationId(self.0.into_v1()?))
+    fn try_to_v1(self) -> Result<Self::Output> {
+        Ok(crate::v1::ElicitationId(self.0.try_to_v1()?))
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::ElicitationId {
+impl TryToV2 for crate::v1::ElicitationId {
     type Output = super::ElicitationId;
 
-    fn into_v2(self) -> Result<Self::Output> {
-        Ok(super::ElicitationId(self.0.into_v2()?))
+    fn try_to_v2(self) -> Result<Self::Output> {
+        Ok(super::ElicitationId(self.0.try_to_v2()?))
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV1 for super::StringFormat {
+impl TryToV1 for super::StringFormat {
     type Output = crate::v1::StringFormat;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         Ok(match self {
             Self::Email => crate::v1::StringFormat::Email,
             Self::Uri => crate::v1::StringFormat::Uri,
@@ -7576,10 +7808,10 @@ impl IntoV1 for super::StringFormat {
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::StringFormat {
+impl TryToV2 for crate::v1::StringFormat {
     type Output = super::StringFormat;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         Ok(match self {
             Self::Email => super::StringFormat::Email,
             Self::Uri => super::StringFormat::Uri,
@@ -7590,10 +7822,10 @@ impl IntoV2 for crate::v1::StringFormat {
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV1 for super::ElicitationSchemaType {
+impl TryToV1 for super::ElicitationSchemaType {
     type Output = crate::v1::ElicitationSchemaType;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         Ok(match self {
             Self::Object => crate::v1::ElicitationSchemaType::Object,
         })
@@ -7601,10 +7833,10 @@ impl IntoV1 for super::ElicitationSchemaType {
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::ElicitationSchemaType {
+impl TryToV2 for crate::v1::ElicitationSchemaType {
     type Output = super::ElicitationSchemaType;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         Ok(match self {
             Self::Object => super::ElicitationSchemaType::Object,
         })
@@ -7612,10 +7844,10 @@ impl IntoV2 for crate::v1::ElicitationSchemaType {
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV1 for super::EnumOption {
+impl TryToV1 for super::EnumOption {
     type Output = crate::v1::EnumOption;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             value,
             title,
@@ -7623,19 +7855,19 @@ impl IntoV1 for super::EnumOption {
             meta,
         } = self;
         Ok(crate::v1::EnumOption {
-            value: value.into_v1()?,
-            title: title.into_v1()?,
-            description: description.into_v1()?,
-            meta: meta.into_v1()?,
+            value: value.try_to_v1()?,
+            title: title.try_to_v1()?,
+            description: description.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::EnumOption {
+impl TryToV2 for crate::v1::EnumOption {
     type Output = super::EnumOption;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             value,
             title,
@@ -7643,19 +7875,19 @@ impl IntoV2 for crate::v1::EnumOption {
             meta,
         } = self;
         Ok(super::EnumOption {
-            value: value.into_v2()?,
-            title: title.into_v2()?,
-            description: description.into_v2()?,
-            meta: meta.into_v2()?,
+            value: value.try_to_v2()?,
+            title: title.try_to_v2()?,
+            description: description.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV1 for super::StringPropertySchema {
+impl TryToV1 for super::StringPropertySchema {
     type Output = crate::v1::StringPropertySchema;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             title,
             description,
@@ -7669,25 +7901,25 @@ impl IntoV1 for super::StringPropertySchema {
             meta,
         } = self;
         Ok(crate::v1::StringPropertySchema {
-            title: title.into_v1()?,
-            description: description.into_v1()?,
-            min_length: min_length.into_v1()?,
-            max_length: max_length.into_v1()?,
-            pattern: pattern.into_v1()?,
-            format: format.into_v1()?,
-            default: default.into_v1()?,
-            enum_values: enum_values.into_v1()?,
-            one_of: one_of.into_v1()?,
-            meta: meta.into_v1()?,
+            title: title.try_to_v1()?,
+            description: description.try_to_v1()?,
+            min_length: min_length.try_to_v1()?,
+            max_length: max_length.try_to_v1()?,
+            pattern: pattern.try_to_v1()?,
+            format: format.try_to_v1()?,
+            default: default.try_to_v1()?,
+            enum_values: enum_values.try_to_v1()?,
+            one_of: one_of.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::StringPropertySchema {
+impl TryToV2 for crate::v1::StringPropertySchema {
     type Output = super::StringPropertySchema;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             title,
             description,
@@ -7701,25 +7933,25 @@ impl IntoV2 for crate::v1::StringPropertySchema {
             meta,
         } = self;
         Ok(super::StringPropertySchema {
-            title: title.into_v2()?,
-            description: description.into_v2()?,
-            min_length: min_length.into_v2()?,
-            max_length: max_length.into_v2()?,
-            pattern: pattern.into_v2()?,
-            format: format.into_v2()?,
-            default: default.into_v2()?,
-            enum_values: enum_values.into_v2()?,
-            one_of: one_of.into_v2()?,
-            meta: meta.into_v2()?,
+            title: title.try_to_v2()?,
+            description: description.try_to_v2()?,
+            min_length: min_length.try_to_v2()?,
+            max_length: max_length.try_to_v2()?,
+            pattern: pattern.try_to_v2()?,
+            format: format.try_to_v2()?,
+            default: default.try_to_v2()?,
+            enum_values: enum_values.try_to_v2()?,
+            one_of: one_of.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV1 for super::NumberPropertySchema {
+impl TryToV1 for super::NumberPropertySchema {
     type Output = crate::v1::NumberPropertySchema;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             title,
             description,
@@ -7729,21 +7961,21 @@ impl IntoV1 for super::NumberPropertySchema {
             meta,
         } = self;
         Ok(crate::v1::NumberPropertySchema {
-            title: title.into_v1()?,
-            description: description.into_v1()?,
-            minimum: minimum.into_v1()?,
-            maximum: maximum.into_v1()?,
-            default: default.into_v1()?,
-            meta: meta.into_v1()?,
+            title: title.try_to_v1()?,
+            description: description.try_to_v1()?,
+            minimum: minimum.try_to_v1()?,
+            maximum: maximum.try_to_v1()?,
+            default: default.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::NumberPropertySchema {
+impl TryToV2 for crate::v1::NumberPropertySchema {
     type Output = super::NumberPropertySchema;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             title,
             description,
@@ -7753,21 +7985,21 @@ impl IntoV2 for crate::v1::NumberPropertySchema {
             meta,
         } = self;
         Ok(super::NumberPropertySchema {
-            title: title.into_v2()?,
-            description: description.into_v2()?,
-            minimum: minimum.into_v2()?,
-            maximum: maximum.into_v2()?,
-            default: default.into_v2()?,
-            meta: meta.into_v2()?,
+            title: title.try_to_v2()?,
+            description: description.try_to_v2()?,
+            minimum: minimum.try_to_v2()?,
+            maximum: maximum.try_to_v2()?,
+            default: default.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV1 for super::IntegerPropertySchema {
+impl TryToV1 for super::IntegerPropertySchema {
     type Output = crate::v1::IntegerPropertySchema;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             title,
             description,
@@ -7777,21 +8009,21 @@ impl IntoV1 for super::IntegerPropertySchema {
             meta,
         } = self;
         Ok(crate::v1::IntegerPropertySchema {
-            title: title.into_v1()?,
-            description: description.into_v1()?,
-            minimum: minimum.into_v1()?,
-            maximum: maximum.into_v1()?,
-            default: default.into_v1()?,
-            meta: meta.into_v1()?,
+            title: title.try_to_v1()?,
+            description: description.try_to_v1()?,
+            minimum: minimum.try_to_v1()?,
+            maximum: maximum.try_to_v1()?,
+            default: default.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::IntegerPropertySchema {
+impl TryToV2 for crate::v1::IntegerPropertySchema {
     type Output = super::IntegerPropertySchema;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             title,
             description,
@@ -7801,21 +8033,21 @@ impl IntoV2 for crate::v1::IntegerPropertySchema {
             meta,
         } = self;
         Ok(super::IntegerPropertySchema {
-            title: title.into_v2()?,
-            description: description.into_v2()?,
-            minimum: minimum.into_v2()?,
-            maximum: maximum.into_v2()?,
-            default: default.into_v2()?,
-            meta: meta.into_v2()?,
+            title: title.try_to_v2()?,
+            description: description.try_to_v2()?,
+            minimum: minimum.try_to_v2()?,
+            maximum: maximum.try_to_v2()?,
+            default: default.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV1 for super::BooleanPropertySchema {
+impl TryToV1 for super::BooleanPropertySchema {
     type Output = crate::v1::BooleanPropertySchema;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             title,
             description,
@@ -7823,19 +8055,19 @@ impl IntoV1 for super::BooleanPropertySchema {
             meta,
         } = self;
         Ok(crate::v1::BooleanPropertySchema {
-            title: title.into_v1()?,
-            description: description.into_v1()?,
-            default: default.into_v1()?,
-            meta: meta.into_v1()?,
+            title: title.try_to_v1()?,
+            description: description.try_to_v1()?,
+            default: default.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::BooleanPropertySchema {
+impl TryToV2 for crate::v1::BooleanPropertySchema {
     type Output = super::BooleanPropertySchema;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             title,
             description,
@@ -7843,123 +8075,123 @@ impl IntoV2 for crate::v1::BooleanPropertySchema {
             meta,
         } = self;
         Ok(super::BooleanPropertySchema {
-            title: title.into_v2()?,
-            description: description.into_v2()?,
-            default: default.into_v2()?,
-            meta: meta.into_v2()?,
+            title: title.try_to_v2()?,
+            description: description.try_to_v2()?,
+            default: default.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV1 for super::StringMultiSelectItems {
+impl TryToV1 for super::StringMultiSelectItems {
     type Output = crate::v1::StringMultiSelectItems;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { values, meta } = self;
         Ok(crate::v1::StringMultiSelectItems {
-            values: values.into_v1()?,
-            meta: meta.into_v1()?,
+            values: values.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::StringMultiSelectItems {
+impl TryToV2 for crate::v1::StringMultiSelectItems {
     type Output = super::StringMultiSelectItems;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { values, meta } = self;
         Ok(super::StringMultiSelectItems {
-            values: values.into_v2()?,
-            meta: meta.into_v2()?,
+            values: values.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV1 for super::OtherMultiSelectItems {
+impl TryToV1 for super::OtherMultiSelectItems {
     type Output = crate::v1::OtherMultiSelectItems;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { type_, fields } = self;
         Ok(crate::v1::OtherMultiSelectItems {
-            type_: type_.into_v1()?,
-            fields: fields.into_v1()?,
+            type_: type_.try_to_v1()?,
+            fields: fields.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::OtherMultiSelectItems {
+impl TryToV2 for crate::v1::OtherMultiSelectItems {
     type Output = super::OtherMultiSelectItems;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { type_, fields } = self;
         Ok(super::OtherMultiSelectItems {
-            type_: type_.into_v2()?,
-            fields: fields.into_v2()?,
+            type_: type_.try_to_v2()?,
+            fields: fields.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV1 for super::TitledMultiSelectItems {
+impl TryToV1 for super::TitledMultiSelectItems {
     type Output = crate::v1::TitledMultiSelectItems;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { options, meta } = self;
         Ok(crate::v1::TitledMultiSelectItems {
-            options: options.into_v1()?,
-            meta: meta.into_v1()?,
+            options: options.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::TitledMultiSelectItems {
+impl TryToV2 for crate::v1::TitledMultiSelectItems {
     type Output = super::TitledMultiSelectItems;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { options, meta } = self;
         Ok(super::TitledMultiSelectItems {
-            options: options.into_v2()?,
-            meta: meta.into_v2()?,
+            options: options.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV1 for super::MultiSelectItems {
+impl TryToV1 for super::MultiSelectItems {
     type Output = crate::v1::MultiSelectItems;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::String(value) => crate::v1::MultiSelectItems::String(value.into_v1()?),
-            Self::Other(value) => crate::v1::MultiSelectItems::Other(value.into_v1()?),
-            Self::Titled(value) => crate::v1::MultiSelectItems::Titled(value.into_v1()?),
+            Self::String(value) => crate::v1::MultiSelectItems::String(value.try_to_v1()?),
+            Self::Other(value) => crate::v1::MultiSelectItems::Other(value.try_to_v1()?),
+            Self::Titled(value) => crate::v1::MultiSelectItems::Titled(value.try_to_v1()?),
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::MultiSelectItems {
+impl TryToV2 for crate::v1::MultiSelectItems {
     type Output = super::MultiSelectItems;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::String(value) => super::MultiSelectItems::String(value.into_v2()?),
-            Self::Other(value) => super::MultiSelectItems::Other(value.into_v2()?),
-            Self::Titled(value) => super::MultiSelectItems::Titled(value.into_v2()?),
+            Self::String(value) => super::MultiSelectItems::String(value.try_to_v2()?),
+            Self::Other(value) => super::MultiSelectItems::Other(value.try_to_v2()?),
+            Self::Titled(value) => super::MultiSelectItems::Titled(value.try_to_v2()?),
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV1 for super::MultiSelectPropertySchema {
+impl TryToV1 for super::MultiSelectPropertySchema {
     type Output = crate::v1::MultiSelectPropertySchema;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             title,
             description,
@@ -7970,22 +8202,22 @@ impl IntoV1 for super::MultiSelectPropertySchema {
             meta,
         } = self;
         Ok(crate::v1::MultiSelectPropertySchema {
-            title: title.into_v1()?,
-            description: description.into_v1()?,
-            min_items: min_items.into_v1()?,
-            max_items: max_items.into_v1()?,
-            items: items.into_v1()?,
-            default: default.into_v1()?,
-            meta: meta.into_v1()?,
+            title: title.try_to_v1()?,
+            description: description.try_to_v1()?,
+            min_items: min_items.try_to_v1()?,
+            max_items: max_items.try_to_v1()?,
+            items: items.try_to_v1()?,
+            default: default.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::MultiSelectPropertySchema {
+impl TryToV2 for crate::v1::MultiSelectPropertySchema {
     type Output = super::MultiSelectPropertySchema;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             title,
             description,
@@ -7996,80 +8228,84 @@ impl IntoV2 for crate::v1::MultiSelectPropertySchema {
             meta,
         } = self;
         Ok(super::MultiSelectPropertySchema {
-            title: title.into_v2()?,
-            description: description.into_v2()?,
-            min_items: min_items.into_v2()?,
-            max_items: max_items.into_v2()?,
-            items: items.into_v2()?,
-            default: default.into_v2()?,
-            meta: meta.into_v2()?,
+            title: title.try_to_v2()?,
+            description: description.try_to_v2()?,
+            min_items: min_items.try_to_v2()?,
+            max_items: max_items.try_to_v2()?,
+            items: items.try_to_v2()?,
+            default: default.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV1 for super::ElicitationPropertySchema {
+impl TryToV1 for super::ElicitationPropertySchema {
     type Output = crate::v1::ElicitationPropertySchema;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::String(value) => crate::v1::ElicitationPropertySchema::String(value.into_v1()?),
-            Self::Number(value) => crate::v1::ElicitationPropertySchema::Number(value.into_v1()?),
-            Self::Integer(value) => crate::v1::ElicitationPropertySchema::Integer(value.into_v1()?),
-            Self::Boolean(value) => crate::v1::ElicitationPropertySchema::Boolean(value.into_v1()?),
-            Self::Array(value) => crate::v1::ElicitationPropertySchema::Array(value.into_v1()?),
-            Self::Other(value) => crate::v1::ElicitationPropertySchema::Other(value.into_v1()?),
+            Self::String(value) => crate::v1::ElicitationPropertySchema::String(value.try_to_v1()?),
+            Self::Number(value) => crate::v1::ElicitationPropertySchema::Number(value.try_to_v1()?),
+            Self::Integer(value) => {
+                crate::v1::ElicitationPropertySchema::Integer(value.try_to_v1()?)
+            }
+            Self::Boolean(value) => {
+                crate::v1::ElicitationPropertySchema::Boolean(value.try_to_v1()?)
+            }
+            Self::Array(value) => crate::v1::ElicitationPropertySchema::Array(value.try_to_v1()?),
+            Self::Other(value) => crate::v1::ElicitationPropertySchema::Other(value.try_to_v1()?),
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::ElicitationPropertySchema {
+impl TryToV2 for crate::v1::ElicitationPropertySchema {
     type Output = super::ElicitationPropertySchema;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::String(value) => super::ElicitationPropertySchema::String(value.into_v2()?),
-            Self::Number(value) => super::ElicitationPropertySchema::Number(value.into_v2()?),
-            Self::Integer(value) => super::ElicitationPropertySchema::Integer(value.into_v2()?),
-            Self::Boolean(value) => super::ElicitationPropertySchema::Boolean(value.into_v2()?),
-            Self::Array(value) => super::ElicitationPropertySchema::Array(value.into_v2()?),
-            Self::Other(value) => super::ElicitationPropertySchema::Other(value.into_v2()?),
+            Self::String(value) => super::ElicitationPropertySchema::String(value.try_to_v2()?),
+            Self::Number(value) => super::ElicitationPropertySchema::Number(value.try_to_v2()?),
+            Self::Integer(value) => super::ElicitationPropertySchema::Integer(value.try_to_v2()?),
+            Self::Boolean(value) => super::ElicitationPropertySchema::Boolean(value.try_to_v2()?),
+            Self::Array(value) => super::ElicitationPropertySchema::Array(value.try_to_v2()?),
+            Self::Other(value) => super::ElicitationPropertySchema::Other(value.try_to_v2()?),
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV1 for super::OtherElicitationPropertySchema {
+impl TryToV1 for super::OtherElicitationPropertySchema {
     type Output = crate::v1::OtherElicitationPropertySchema;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { type_, fields } = self;
         Ok(crate::v1::OtherElicitationPropertySchema {
-            type_: type_.into_v1()?,
-            fields: fields.into_v1()?,
+            type_: type_.try_to_v1()?,
+            fields: fields.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::OtherElicitationPropertySchema {
+impl TryToV2 for crate::v1::OtherElicitationPropertySchema {
     type Output = super::OtherElicitationPropertySchema;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { type_, fields } = self;
         Ok(super::OtherElicitationPropertySchema {
-            type_: type_.into_v2()?,
-            fields: fields.into_v2()?,
+            type_: type_.try_to_v2()?,
+            fields: fields.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV1 for super::ElicitationSchema {
+impl TryToV1 for super::ElicitationSchema {
     type Output = crate::v1::ElicitationSchema;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             type_,
             title,
@@ -8079,21 +8315,21 @@ impl IntoV1 for super::ElicitationSchema {
             meta,
         } = self;
         Ok(crate::v1::ElicitationSchema {
-            type_: type_.into_v1()?,
-            title: title.into_v1()?,
-            properties: properties.into_v1()?,
-            required: required.into_v1()?,
-            description: description.into_v1()?,
-            meta: meta.into_v1()?,
+            type_: type_.try_to_v1()?,
+            title: title.try_to_v1()?,
+            properties: properties.try_to_v1()?,
+            required: required.try_to_v1()?,
+            description: description.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::ElicitationSchema {
+impl TryToV2 for crate::v1::ElicitationSchema {
     type Output = super::ElicitationSchema;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             type_,
             title,
@@ -8103,518 +8339,518 @@ impl IntoV2 for crate::v1::ElicitationSchema {
             meta,
         } = self;
         Ok(super::ElicitationSchema {
-            type_: type_.into_v2()?,
-            title: title.into_v2()?,
-            properties: properties.into_v2()?,
-            required: required.into_v2()?,
-            description: description.into_v2()?,
-            meta: meta.into_v2()?,
+            type_: type_.try_to_v2()?,
+            title: title.try_to_v2()?,
+            properties: properties.try_to_v2()?,
+            required: required.try_to_v2()?,
+            description: description.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV1 for super::ElicitationCapabilities {
+impl TryToV1 for super::ElicitationCapabilities {
     type Output = crate::v1::ElicitationCapabilities;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { form, url, meta } = self;
         Ok(crate::v1::ElicitationCapabilities {
-            form: into_v1_default_on_error(form),
-            url: into_v1_default_on_error(url),
-            meta: meta.into_v1()?,
+            form: form.try_to_v1()?,
+            url: url.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::ElicitationCapabilities {
+impl TryToV2 for crate::v1::ElicitationCapabilities {
     type Output = super::ElicitationCapabilities;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { form, url, meta } = self;
         Ok(super::ElicitationCapabilities {
-            form: into_v2_default_on_error(form),
-            url: into_v2_default_on_error(url),
-            meta: meta.into_v2()?,
+            form: form.try_to_v2()?,
+            url: url.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV1 for super::ElicitationFormCapabilities {
+impl TryToV1 for super::ElicitationFormCapabilities {
     type Output = crate::v1::ElicitationFormCapabilities;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(crate::v1::ElicitationFormCapabilities {
-            meta: meta.into_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::ElicitationFormCapabilities {
+impl TryToV2 for crate::v1::ElicitationFormCapabilities {
     type Output = super::ElicitationFormCapabilities;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(super::ElicitationFormCapabilities {
-            meta: meta.into_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV1 for super::ElicitationUrlCapabilities {
+impl TryToV1 for super::ElicitationUrlCapabilities {
     type Output = crate::v1::ElicitationUrlCapabilities;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(crate::v1::ElicitationUrlCapabilities {
-            meta: meta.into_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::ElicitationUrlCapabilities {
+impl TryToV2 for crate::v1::ElicitationUrlCapabilities {
     type Output = super::ElicitationUrlCapabilities;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(super::ElicitationUrlCapabilities {
-            meta: meta.into_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV1 for super::ElicitationScope {
+impl TryToV1 for super::ElicitationScope {
     type Output = crate::v1::ElicitationScope;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::Session(value) => crate::v1::ElicitationScope::Session(value.into_v1()?),
-            Self::Request(value) => crate::v1::ElicitationScope::Request(value.into_v1()?),
+            Self::Session(value) => crate::v1::ElicitationScope::Session(value.try_to_v1()?),
+            Self::Request(value) => crate::v1::ElicitationScope::Request(value.try_to_v1()?),
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::ElicitationScope {
+impl TryToV2 for crate::v1::ElicitationScope {
     type Output = super::ElicitationScope;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::Session(value) => super::ElicitationScope::Session(value.into_v2()?),
-            Self::Request(value) => super::ElicitationScope::Request(value.into_v2()?),
+            Self::Session(value) => super::ElicitationScope::Session(value.try_to_v2()?),
+            Self::Request(value) => super::ElicitationScope::Request(value.try_to_v2()?),
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV1 for super::ElicitationSessionScope {
+impl TryToV1 for super::ElicitationSessionScope {
     type Output = crate::v1::ElicitationSessionScope;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             session_id,
             tool_call_id,
         } = self;
         Ok(crate::v1::ElicitationSessionScope {
-            session_id: session_id.into_v1()?,
-            tool_call_id: tool_call_id.into_v1()?,
+            session_id: session_id.try_to_v1()?,
+            tool_call_id: tool_call_id.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::ElicitationSessionScope {
+impl TryToV2 for crate::v1::ElicitationSessionScope {
     type Output = super::ElicitationSessionScope;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             session_id,
             tool_call_id,
         } = self;
         Ok(super::ElicitationSessionScope {
-            session_id: session_id.into_v2()?,
-            tool_call_id: tool_call_id.into_v2()?,
+            session_id: session_id.try_to_v2()?,
+            tool_call_id: tool_call_id.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV1 for super::ElicitationRequestScope {
+impl TryToV1 for super::ElicitationRequestScope {
     type Output = crate::v1::ElicitationRequestScope;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { request_id } = self;
         Ok(crate::v1::ElicitationRequestScope {
-            request_id: request_id.into_v1()?,
+            request_id: request_id.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::ElicitationRequestScope {
+impl TryToV2 for crate::v1::ElicitationRequestScope {
     type Output = super::ElicitationRequestScope;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { request_id } = self;
         Ok(super::ElicitationRequestScope {
-            request_id: request_id.into_v2()?,
+            request_id: request_id.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV1 for super::CreateElicitationRequest {
+impl TryToV1 for super::CreateElicitationRequest {
     type Output = crate::v1::CreateElicitationRequest;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             mode,
             message,
             meta,
         } = self;
         Ok(crate::v1::CreateElicitationRequest {
-            mode: mode.into_v1()?,
-            message: message.into_v1()?,
-            meta: meta.into_v1()?,
+            mode: mode.try_to_v1()?,
+            message: message.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::CreateElicitationRequest {
+impl TryToV2 for crate::v1::CreateElicitationRequest {
     type Output = super::CreateElicitationRequest;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             mode,
             message,
             meta,
         } = self;
         Ok(super::CreateElicitationRequest {
-            mode: mode.into_v2()?,
-            message: message.into_v2()?,
-            meta: meta.into_v2()?,
+            mode: mode.try_to_v2()?,
+            message: message.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV1 for super::ElicitationMode {
+impl TryToV1 for super::ElicitationMode {
     type Output = crate::v1::ElicitationMode;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::Form(value) => crate::v1::ElicitationMode::Form(value.into_v1()?),
-            Self::Url(value) => crate::v1::ElicitationMode::Url(value.into_v1()?),
-            Self::Other(value) => crate::v1::ElicitationMode::Other(value.into_v1()?),
+            Self::Form(value) => crate::v1::ElicitationMode::Form(value.try_to_v1()?),
+            Self::Url(value) => crate::v1::ElicitationMode::Url(value.try_to_v1()?),
+            Self::Other(value) => crate::v1::ElicitationMode::Other(value.try_to_v1()?),
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::ElicitationMode {
+impl TryToV2 for crate::v1::ElicitationMode {
     type Output = super::ElicitationMode;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::Form(value) => super::ElicitationMode::Form(value.into_v2()?),
-            Self::Url(value) => super::ElicitationMode::Url(value.into_v2()?),
-            Self::Other(value) => super::ElicitationMode::Other(value.into_v2()?),
+            Self::Form(value) => super::ElicitationMode::Form(value.try_to_v2()?),
+            Self::Url(value) => super::ElicitationMode::Url(value.try_to_v2()?),
+            Self::Other(value) => super::ElicitationMode::Other(value.try_to_v2()?),
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV1 for super::OtherElicitationMode {
+impl TryToV1 for super::OtherElicitationMode {
     type Output = crate::v1::OtherElicitationMode;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             mode,
             scope,
             fields,
         } = self;
         Ok(crate::v1::OtherElicitationMode {
-            mode: mode.into_v1()?,
-            scope: scope.into_v1()?,
-            fields: fields.into_v1()?,
+            mode: mode.try_to_v1()?,
+            scope: scope.try_to_v1()?,
+            fields: fields.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::OtherElicitationMode {
+impl TryToV2 for crate::v1::OtherElicitationMode {
     type Output = super::OtherElicitationMode;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             mode,
             scope,
             fields,
         } = self;
         Ok(super::OtherElicitationMode {
-            mode: mode.into_v2()?,
-            scope: scope.into_v2()?,
-            fields: fields.into_v2()?,
+            mode: mode.try_to_v2()?,
+            scope: scope.try_to_v2()?,
+            fields: fields.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV1 for super::ElicitationFormMode {
+impl TryToV1 for super::ElicitationFormMode {
     type Output = crate::v1::ElicitationFormMode;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             scope,
             requested_schema,
         } = self;
         Ok(crate::v1::ElicitationFormMode {
-            scope: scope.into_v1()?,
-            requested_schema: requested_schema.into_v1()?,
+            scope: scope.try_to_v1()?,
+            requested_schema: requested_schema.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::ElicitationFormMode {
+impl TryToV2 for crate::v1::ElicitationFormMode {
     type Output = super::ElicitationFormMode;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             scope,
             requested_schema,
         } = self;
         Ok(super::ElicitationFormMode {
-            scope: scope.into_v2()?,
-            requested_schema: requested_schema.into_v2()?,
+            scope: scope.try_to_v2()?,
+            requested_schema: requested_schema.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV1 for super::ElicitationUrlMode {
+impl TryToV1 for super::ElicitationUrlMode {
     type Output = crate::v1::ElicitationUrlMode;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             scope,
             elicitation_id,
             url,
         } = self;
         Ok(crate::v1::ElicitationUrlMode {
-            scope: scope.into_v1()?,
-            elicitation_id: elicitation_id.into_v1()?,
-            url: url.into_v1()?,
+            scope: scope.try_to_v1()?,
+            elicitation_id: elicitation_id.try_to_v1()?,
+            url: url.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::ElicitationUrlMode {
+impl TryToV2 for crate::v1::ElicitationUrlMode {
     type Output = super::ElicitationUrlMode;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             scope,
             elicitation_id,
             url,
         } = self;
         Ok(super::ElicitationUrlMode {
-            scope: scope.into_v2()?,
-            elicitation_id: elicitation_id.into_v2()?,
-            url: url.into_v2()?,
+            scope: scope.try_to_v2()?,
+            elicitation_id: elicitation_id.try_to_v2()?,
+            url: url.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV1 for super::CreateElicitationResponse {
+impl TryToV1 for super::CreateElicitationResponse {
     type Output = crate::v1::CreateElicitationResponse;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { action, meta } = self;
         Ok(crate::v1::CreateElicitationResponse {
-            action: action.into_v1()?,
-            meta: meta.into_v1()?,
+            action: action.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::CreateElicitationResponse {
+impl TryToV2 for crate::v1::CreateElicitationResponse {
     type Output = super::CreateElicitationResponse;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { action, meta } = self;
         Ok(super::CreateElicitationResponse {
-            action: action.into_v2()?,
-            meta: meta.into_v2()?,
+            action: action.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV1 for super::ElicitationAction {
+impl TryToV1 for super::ElicitationAction {
     type Output = crate::v1::ElicitationAction;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::Accept(value) => crate::v1::ElicitationAction::Accept(value.into_v1()?),
+            Self::Accept(value) => crate::v1::ElicitationAction::Accept(value.try_to_v1()?),
             Self::Decline => crate::v1::ElicitationAction::Decline,
             Self::Cancel => crate::v1::ElicitationAction::Cancel,
-            Self::Other(value) => crate::v1::ElicitationAction::Other(value.into_v1()?),
+            Self::Other(value) => crate::v1::ElicitationAction::Other(value.try_to_v1()?),
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::ElicitationAction {
+impl TryToV2 for crate::v1::ElicitationAction {
     type Output = super::ElicitationAction;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::Accept(value) => super::ElicitationAction::Accept(value.into_v2()?),
+            Self::Accept(value) => super::ElicitationAction::Accept(value.try_to_v2()?),
             Self::Decline => super::ElicitationAction::Decline,
             Self::Cancel => super::ElicitationAction::Cancel,
-            Self::Other(value) => super::ElicitationAction::Other(value.into_v2()?),
+            Self::Other(value) => super::ElicitationAction::Other(value.try_to_v2()?),
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV1 for super::OtherElicitationAction {
+impl TryToV1 for super::OtherElicitationAction {
     type Output = crate::v1::OtherElicitationAction;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { action, fields } = self;
         Ok(crate::v1::OtherElicitationAction {
-            action: action.into_v1()?,
-            fields: fields.into_v1()?,
+            action: action.try_to_v1()?,
+            fields: fields.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::OtherElicitationAction {
+impl TryToV2 for crate::v1::OtherElicitationAction {
     type Output = super::OtherElicitationAction;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { action, fields } = self;
         Ok(super::OtherElicitationAction {
-            action: action.into_v2()?,
-            fields: fields.into_v2()?,
+            action: action.try_to_v2()?,
+            fields: fields.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV1 for super::ElicitationAcceptAction {
+impl TryToV1 for super::ElicitationAcceptAction {
     type Output = crate::v1::ElicitationAcceptAction;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self { content } = self;
         Ok(crate::v1::ElicitationAcceptAction {
-            content: content.into_v1()?,
+            content: content.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::ElicitationAcceptAction {
+impl TryToV2 for crate::v1::ElicitationAcceptAction {
     type Output = super::ElicitationAcceptAction;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self { content } = self;
         Ok(super::ElicitationAcceptAction {
-            content: content.into_v2()?,
+            content: content.try_to_v2()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV1 for super::ElicitationContentValue {
+impl TryToV1 for super::ElicitationContentValue {
     type Output = crate::v1::ElicitationContentValue;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::String(value) => crate::v1::ElicitationContentValue::String(value.into_v1()?),
-            Self::Integer(value) => crate::v1::ElicitationContentValue::Integer(value.into_v1()?),
-            Self::Number(value) => crate::v1::ElicitationContentValue::Number(value.into_v1()?),
-            Self::Boolean(value) => crate::v1::ElicitationContentValue::Boolean(value.into_v1()?),
+            Self::String(value) => crate::v1::ElicitationContentValue::String(value.try_to_v1()?),
+            Self::Integer(value) => crate::v1::ElicitationContentValue::Integer(value.try_to_v1()?),
+            Self::Number(value) => crate::v1::ElicitationContentValue::Number(value.try_to_v1()?),
+            Self::Boolean(value) => crate::v1::ElicitationContentValue::Boolean(value.try_to_v1()?),
             Self::StringArray(value) => {
-                crate::v1::ElicitationContentValue::StringArray(value.into_v1()?)
+                crate::v1::ElicitationContentValue::StringArray(value.try_to_v1()?)
             }
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::ElicitationContentValue {
+impl TryToV2 for crate::v1::ElicitationContentValue {
     type Output = super::ElicitationContentValue;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::String(value) => super::ElicitationContentValue::String(value.into_v2()?),
-            Self::Integer(value) => super::ElicitationContentValue::Integer(value.into_v2()?),
-            Self::Number(value) => super::ElicitationContentValue::Number(value.into_v2()?),
-            Self::Boolean(value) => super::ElicitationContentValue::Boolean(value.into_v2()?),
+            Self::String(value) => super::ElicitationContentValue::String(value.try_to_v2()?),
+            Self::Integer(value) => super::ElicitationContentValue::Integer(value.try_to_v2()?),
+            Self::Number(value) => super::ElicitationContentValue::Number(value.try_to_v2()?),
+            Self::Boolean(value) => super::ElicitationContentValue::Boolean(value.try_to_v2()?),
             Self::StringArray(value) => {
-                super::ElicitationContentValue::StringArray(value.into_v2()?)
+                super::ElicitationContentValue::StringArray(value.try_to_v2()?)
             }
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV1 for super::CompleteElicitationNotification {
+impl TryToV1 for super::CompleteElicitationNotification {
     type Output = crate::v1::CompleteElicitationNotification;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             elicitation_id,
             meta,
         } = self;
         Ok(crate::v1::CompleteElicitationNotification {
-            elicitation_id: elicitation_id.into_v1()?,
-            meta: meta.into_v1()?,
+            elicitation_id: elicitation_id.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
 #[cfg(feature = "unstable_elicitation")]
-impl IntoV2 for crate::v1::CompleteElicitationNotification {
+impl TryToV2 for crate::v1::CompleteElicitationNotification {
     type Output = super::CompleteElicitationNotification;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             elicitation_id,
             meta,
         } = self;
         Ok(super::CompleteElicitationNotification {
-            elicitation_id: elicitation_id.into_v2()?,
-            meta: meta.into_v2()?,
+            elicitation_id: elicitation_id.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::ContentBlock {
+impl TryToV1 for super::ContentBlock {
     type Output = crate::v1::ContentBlock;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::Text(value) => crate::v1::ContentBlock::Text(value.into_v1()?),
-            Self::Image(value) => crate::v1::ContentBlock::Image(value.into_v1()?),
-            Self::Audio(value) => crate::v1::ContentBlock::Audio(value.into_v1()?),
-            Self::ResourceLink(value) => crate::v1::ContentBlock::ResourceLink(value.into_v1()?),
-            Self::Resource(value) => crate::v1::ContentBlock::Resource(value.into_v1()?),
+            Self::Text(value) => crate::v1::ContentBlock::Text(value.try_to_v1()?),
+            Self::Image(value) => crate::v1::ContentBlock::Image(value.try_to_v1()?),
+            Self::Audio(value) => crate::v1::ContentBlock::Audio(value.try_to_v1()?),
+            Self::ResourceLink(value) => crate::v1::ContentBlock::ResourceLink(value.try_to_v1()?),
+            Self::Resource(value) => crate::v1::ContentBlock::Resource(value.try_to_v1()?),
             Self::Other(value) => {
                 return Err(unknown_v2_enum_variant("ContentBlock", &value.type_));
             }
@@ -8622,58 +8858,58 @@ impl IntoV1 for super::ContentBlock {
     }
 }
 
-impl IntoV2 for crate::v1::ContentBlock {
+impl TryToV2 for crate::v1::ContentBlock {
     type Output = super::ContentBlock;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         Ok(match self {
-            Self::Text(value) => super::ContentBlock::Text(value.into_v2()?),
-            Self::Image(value) => super::ContentBlock::Image(value.into_v2()?),
-            Self::Audio(value) => super::ContentBlock::Audio(value.into_v2()?),
-            Self::ResourceLink(value) => super::ContentBlock::ResourceLink(value.into_v2()?),
-            Self::Resource(value) => super::ContentBlock::Resource(value.into_v2()?),
+            Self::Text(value) => super::ContentBlock::Text(value.try_to_v2()?),
+            Self::Image(value) => super::ContentBlock::Image(value.try_to_v2()?),
+            Self::Audio(value) => super::ContentBlock::Audio(value.try_to_v2()?),
+            Self::ResourceLink(value) => super::ContentBlock::ResourceLink(value.try_to_v2()?),
+            Self::Resource(value) => super::ContentBlock::Resource(value.try_to_v2()?),
         })
     }
 }
 
-impl IntoV1 for super::TextContent {
+impl TryToV1 for super::TextContent {
     type Output = crate::v1::TextContent;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             annotations,
             text,
             meta,
         } = self;
         Ok(crate::v1::TextContent {
-            annotations: into_v1_default_on_error(annotations),
-            text: text.into_v1()?,
-            meta: meta.into_v1()?,
+            annotations: annotations.try_to_v1()?,
+            text: text.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::TextContent {
+impl TryToV2 for crate::v1::TextContent {
     type Output = super::TextContent;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             annotations,
             text,
             meta,
         } = self;
         Ok(super::TextContent {
-            annotations: into_v2_default_on_error(annotations),
-            text: text.into_v2()?,
-            meta: meta.into_v2()?,
+            annotations: annotations.try_to_v2()?,
+            text: text.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::ImageContent {
+impl TryToV1 for super::ImageContent {
     type Output = crate::v1::ImageContent;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             annotations,
             data,
@@ -8682,19 +8918,19 @@ impl IntoV1 for super::ImageContent {
             meta,
         } = self;
         Ok(crate::v1::ImageContent {
-            annotations: into_v1_default_on_error(annotations),
-            data: data.into_v1()?,
-            mime_type: mime_type.into_v1()?,
-            uri: uri.into_v1()?,
-            meta: meta.into_v1()?,
+            annotations: annotations.try_to_v1()?,
+            data: data.try_to_v1()?,
+            mime_type: mime_type.try_to_v1()?,
+            uri: uri.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::ImageContent {
+impl TryToV2 for crate::v1::ImageContent {
     type Output = super::ImageContent;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             annotations,
             data,
@@ -8703,19 +8939,19 @@ impl IntoV2 for crate::v1::ImageContent {
             meta,
         } = self;
         Ok(super::ImageContent {
-            annotations: into_v2_default_on_error(annotations),
-            data: data.into_v2()?,
-            mime_type: mime_type.into_v2()?,
-            uri: uri.into_v2()?,
-            meta: meta.into_v2()?,
+            annotations: annotations.try_to_v2()?,
+            data: data.try_to_v2()?,
+            mime_type: mime_type.try_to_v2()?,
+            uri: uri.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::AudioContent {
+impl TryToV1 for super::AudioContent {
     type Output = crate::v1::AudioContent;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             annotations,
             data,
@@ -8723,18 +8959,18 @@ impl IntoV1 for super::AudioContent {
             meta,
         } = self;
         Ok(crate::v1::AudioContent {
-            annotations: into_v1_default_on_error(annotations),
-            data: data.into_v1()?,
-            mime_type: mime_type.into_v1()?,
-            meta: meta.into_v1()?,
+            annotations: annotations.try_to_v1()?,
+            data: data.try_to_v1()?,
+            mime_type: mime_type.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::AudioContent {
+impl TryToV2 for crate::v1::AudioContent {
     type Output = super::AudioContent;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             annotations,
             data,
@@ -8742,82 +8978,82 @@ impl IntoV2 for crate::v1::AudioContent {
             meta,
         } = self;
         Ok(super::AudioContent {
-            annotations: into_v2_default_on_error(annotations),
-            data: data.into_v2()?,
-            mime_type: mime_type.into_v2()?,
-            meta: meta.into_v2()?,
+            annotations: annotations.try_to_v2()?,
+            data: data.try_to_v2()?,
+            mime_type: mime_type.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::EmbeddedResource {
+impl TryToV1 for super::EmbeddedResource {
     type Output = crate::v1::EmbeddedResource;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             annotations,
             resource,
             meta,
         } = self;
         Ok(crate::v1::EmbeddedResource {
-            annotations: into_v1_default_on_error(annotations),
-            resource: resource.into_v1()?,
-            meta: meta.into_v1()?,
+            annotations: annotations.try_to_v1()?,
+            resource: resource.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::EmbeddedResource {
+impl TryToV2 for crate::v1::EmbeddedResource {
     type Output = super::EmbeddedResource;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             annotations,
             resource,
             meta,
         } = self;
         Ok(super::EmbeddedResource {
-            annotations: into_v2_default_on_error(annotations),
-            resource: resource.into_v2()?,
-            meta: meta.into_v2()?,
+            annotations: annotations.try_to_v2()?,
+            resource: resource.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::EmbeddedResourceResource {
+impl TryToV1 for super::EmbeddedResourceResource {
     type Output = crate::v1::EmbeddedResourceResource;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         Ok(match self {
             Self::TextResourceContents(value) => {
-                crate::v1::EmbeddedResourceResource::TextResourceContents(value.into_v1()?)
+                crate::v1::EmbeddedResourceResource::TextResourceContents(value.try_to_v1()?)
             }
             Self::BlobResourceContents(value) => {
-                crate::v1::EmbeddedResourceResource::BlobResourceContents(value.into_v1()?)
+                crate::v1::EmbeddedResourceResource::BlobResourceContents(value.try_to_v1()?)
             }
         })
     }
 }
 
-impl IntoV2 for crate::v1::EmbeddedResourceResource {
+impl TryToV2 for crate::v1::EmbeddedResourceResource {
     type Output = super::EmbeddedResourceResource;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         Ok(match self {
             Self::TextResourceContents(value) => {
-                super::EmbeddedResourceResource::TextResourceContents(value.into_v2()?)
+                super::EmbeddedResourceResource::TextResourceContents(value.try_to_v2()?)
             }
             Self::BlobResourceContents(value) => {
-                super::EmbeddedResourceResource::BlobResourceContents(value.into_v2()?)
+                super::EmbeddedResourceResource::BlobResourceContents(value.try_to_v2()?)
             }
         })
     }
 }
 
-impl IntoV1 for super::TextResourceContents {
+impl TryToV1 for super::TextResourceContents {
     type Output = crate::v1::TextResourceContents;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             mime_type,
             text,
@@ -8825,18 +9061,18 @@ impl IntoV1 for super::TextResourceContents {
             meta,
         } = self;
         Ok(crate::v1::TextResourceContents {
-            mime_type: mime_type.into_v1()?,
-            text: text.into_v1()?,
-            uri: uri.into_v1()?,
-            meta: meta.into_v1()?,
+            mime_type: mime_type.try_to_v1()?,
+            text: text.try_to_v1()?,
+            uri: uri.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::TextResourceContents {
+impl TryToV2 for crate::v1::TextResourceContents {
     type Output = super::TextResourceContents;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             mime_type,
             text,
@@ -8844,18 +9080,18 @@ impl IntoV2 for crate::v1::TextResourceContents {
             meta,
         } = self;
         Ok(super::TextResourceContents {
-            mime_type: mime_type.into_v2()?,
-            text: text.into_v2()?,
-            uri: uri.into_v2()?,
-            meta: meta.into_v2()?,
+            mime_type: mime_type.try_to_v2()?,
+            text: text.try_to_v2()?,
+            uri: uri.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::BlobResourceContents {
+impl TryToV1 for super::BlobResourceContents {
     type Output = crate::v1::BlobResourceContents;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             blob,
             mime_type,
@@ -8863,18 +9099,18 @@ impl IntoV1 for super::BlobResourceContents {
             meta,
         } = self;
         Ok(crate::v1::BlobResourceContents {
-            blob: blob.into_v1()?,
-            mime_type: mime_type.into_v1()?,
-            uri: uri.into_v1()?,
-            meta: meta.into_v1()?,
+            blob: blob.try_to_v1()?,
+            mime_type: mime_type.try_to_v1()?,
+            uri: uri.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::BlobResourceContents {
+impl TryToV2 for crate::v1::BlobResourceContents {
     type Output = super::BlobResourceContents;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             blob,
             mime_type,
@@ -8882,18 +9118,18 @@ impl IntoV2 for crate::v1::BlobResourceContents {
             meta,
         } = self;
         Ok(super::BlobResourceContents {
-            blob: blob.into_v2()?,
-            mime_type: mime_type.into_v2()?,
-            uri: uri.into_v2()?,
-            meta: meta.into_v2()?,
+            blob: blob.try_to_v2()?,
+            mime_type: mime_type.try_to_v2()?,
+            uri: uri.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::ResourceLink {
+impl TryToV1 for super::ResourceLink {
     type Output = crate::v1::ResourceLink;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             annotations,
             description,
@@ -8913,22 +9149,22 @@ impl IntoV1 for super::ResourceLink {
         }
 
         Ok(crate::v1::ResourceLink {
-            annotations: into_v1_default_on_error(annotations),
-            description: description.into_v1()?,
-            mime_type: mime_type.into_v1()?,
-            name: name.into_v1()?,
-            size: size.into_v1()?,
-            title: title.into_v1()?,
-            uri: uri.into_v1()?,
-            meta: meta.into_v1()?,
+            annotations: annotations.try_to_v1()?,
+            description: description.try_to_v1()?,
+            mime_type: mime_type.try_to_v1()?,
+            name: name.try_to_v1()?,
+            size: size.try_to_v1()?,
+            title: title.try_to_v1()?,
+            uri: uri.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::ResourceLink {
+impl TryToV2 for crate::v1::ResourceLink {
     type Output = super::ResourceLink;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             annotations,
             description,
@@ -8940,23 +9176,23 @@ impl IntoV2 for crate::v1::ResourceLink {
             meta,
         } = self;
         Ok(super::ResourceLink {
-            annotations: into_v2_default_on_error(annotations),
-            description: description.into_v2()?,
+            annotations: annotations.try_to_v2()?,
+            description: description.try_to_v2()?,
             icons: None,
-            mime_type: mime_type.into_v2()?,
-            name: name.into_v2()?,
-            size: size.into_v2()?,
-            title: title.into_v2()?,
-            uri: uri.into_v2()?,
-            meta: meta.into_v2()?,
+            mime_type: mime_type.try_to_v2()?,
+            name: name.try_to_v2()?,
+            size: size.try_to_v2()?,
+            title: title.try_to_v2()?,
+            uri: uri.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::Annotations {
+impl TryToV1 for super::Annotations {
     type Output = crate::v1::Annotations;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             audience,
             last_modified,
@@ -8964,18 +9200,18 @@ impl IntoV1 for super::Annotations {
             meta,
         } = self;
         Ok(crate::v1::Annotations {
-            audience: option_vec_into_v1_skip_errors(audience),
-            last_modified: last_modified.into_v1()?,
-            priority: priority.into_v1()?,
-            meta: meta.into_v1()?,
+            audience: audience.try_to_v1()?,
+            last_modified: last_modified.try_to_v1()?,
+            priority: priority.try_to_v1()?,
+            meta: meta.try_to_v1()?,
         })
     }
 }
 
-impl IntoV2 for crate::v1::Annotations {
+impl TryToV2 for crate::v1::Annotations {
     type Output = super::Annotations;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             audience,
             last_modified,
@@ -8983,18 +9219,18 @@ impl IntoV2 for crate::v1::Annotations {
             meta,
         } = self;
         Ok(super::Annotations {
-            audience: option_vec_into_v2_skip_errors(audience),
-            last_modified: last_modified.into_v2()?,
-            priority: priority.into_v2()?,
-            meta: meta.into_v2()?,
+            audience: audience.try_to_v2()?,
+            last_modified: last_modified.try_to_v2()?,
+            priority: priority.try_to_v2()?,
+            meta: meta.try_to_v2()?,
         })
     }
 }
 
-impl IntoV1 for super::Role {
+impl TryToV1 for super::Role {
     type Output = crate::v1::Role;
 
-    fn into_v1(self) -> Result<Self::Output> {
+    fn try_to_v1(self) -> Result<Self::Output> {
         Ok(match self {
             Self::Assistant => crate::v1::Role::Assistant,
             Self::User => crate::v1::Role::User,
@@ -9003,10 +9239,10 @@ impl IntoV1 for super::Role {
     }
 }
 
-impl IntoV2 for crate::v1::Role {
+impl TryToV2 for crate::v1::Role {
     type Output = super::Role;
 
-    fn into_v2(self) -> Result<Self::Output> {
+    fn try_to_v2(self) -> Result<Self::Output> {
         Ok(match self {
             Self::Assistant => super::Role::Assistant,
             Self::User => super::Role::User,
@@ -9026,12 +9262,15 @@ mod tests {
     /// diverge.
     fn assert_v1_round_trip<T1, T2>(value: T1)
     where
-        T1: IntoV2<Output = T2> + Clone + std::fmt::Debug + PartialEq,
-        T2: IntoV1<Output = T1>,
+        T1: TryToV2<Output = T2> + Clone + std::fmt::Debug + PartialEq,
+        T2: TryFrom<T1>,
+        ProtocolConversionError: From<<T2 as TryFrom<T1>>::Error>,
+        T1: TryFrom<T2>,
+        ProtocolConversionError: From<<T1 as TryFrom<T2>>::Error>,
     {
         let original = value.clone();
-        let as_v2 = v1_to_v2(value).expect("v1 -> v2 conversion failed");
-        let back = v2_to_v1(as_v2).expect("v2 -> v1 conversion failed");
+        let as_v2: T2 = try_v1_to_v2(value).expect("v1 -> v2 conversion failed");
+        let back: T1 = try_v2_to_v1(as_v2).expect("v2 -> v1 conversion failed");
         assert_eq!(
             original, back,
             "value did not survive v1 -> v2 -> v1 round trip"
@@ -9041,12 +9280,15 @@ mod tests {
     /// Round-trip a v2 value through v1 and back, asserting equality.
     fn assert_v2_round_trip<T2, T1>(value: T2)
     where
-        T2: IntoV1<Output = T1> + Clone + std::fmt::Debug + PartialEq,
-        T1: IntoV2<Output = T2>,
+        T2: TryToV1<Output = T1> + Clone + std::fmt::Debug + PartialEq,
+        T1: TryFrom<T2>,
+        ProtocolConversionError: From<<T1 as TryFrom<T2>>::Error>,
+        T2: TryFrom<T1>,
+        ProtocolConversionError: From<<T2 as TryFrom<T1>>::Error>,
     {
         let original = value.clone();
-        let as_v1 = v2_to_v1(value).expect("v2 -> v1 conversion failed");
-        let back = v1_to_v2(as_v1).expect("v1 -> v2 conversion failed");
+        let as_v1: T1 = try_v2_to_v1(value).expect("v2 -> v1 conversion failed");
+        let back: T2 = try_v1_to_v2(as_v1).expect("v1 -> v2 conversion failed");
         assert_eq!(
             original, back,
             "value did not survive v2 -> v1 -> v2 round trip"
@@ -9062,18 +9304,21 @@ mod tests {
     /// Catches shape drift in both directions of the conversion.
     fn assert_json_eq_after_v1_to_v2<T1, T2>(value: T1)
     where
-        T1: IntoV2<Output = T2> + serde::Serialize + Clone,
-        T2: IntoV1<Output = T1> + serde::Serialize,
+        T1: TryToV2<Output = T2> + serde::Serialize + Clone,
+        T2: TryFrom<T1> + serde::Serialize,
+        ProtocolConversionError: From<<T2 as TryFrom<T1>>::Error>,
+        T1: TryFrom<T2> + serde::Serialize,
+        ProtocolConversionError: From<<T1 as TryFrom<T2>>::Error>,
     {
         let v1_json = serde_json::to_value(&value).expect("v1 serialize");
-        let as_v2 = v1_to_v2(value).expect("v1 -> v2 conversion");
+        let as_v2: T2 = try_v1_to_v2(value).expect("v1 -> v2 conversion");
         let v2_json = serde_json::to_value(&as_v2).expect("v2 serialize");
         assert_eq!(
             v1_json, v2_json,
             "JSON shape diverged after v1 -> v2 conversion"
         );
 
-        let back_to_v1 = v2_to_v1(as_v2).expect("v2 -> v1 conversion");
+        let back_to_v1: T1 = try_v2_to_v1(as_v2).expect("v2 -> v1 conversion");
         let v1_json_after =
             serde_json::to_value(&back_to_v1).expect("v1 serialize after round trip");
         assert_eq!(
@@ -9087,18 +9332,21 @@ mod tests {
     /// the type only exists today in v2's draft API surface).
     fn assert_json_eq_after_v2_to_v1<T2, T1>(value: T2)
     where
-        T2: IntoV1<Output = T1> + serde::Serialize + Clone,
-        T1: IntoV2<Output = T2> + serde::Serialize,
+        T2: TryToV1<Output = T1> + serde::Serialize + Clone,
+        T1: TryFrom<T2> + serde::Serialize,
+        ProtocolConversionError: From<<T1 as TryFrom<T2>>::Error>,
+        T2: TryFrom<T1> + serde::Serialize,
+        ProtocolConversionError: From<<T2 as TryFrom<T1>>::Error>,
     {
         let v2_json = serde_json::to_value(&value).expect("v2 serialize");
-        let as_v1 = v2_to_v1(value).expect("v2 -> v1 conversion");
+        let as_v1: T1 = try_v2_to_v1(value).expect("v2 -> v1 conversion");
         let v1_json = serde_json::to_value(&as_v1).expect("v1 serialize");
         assert_eq!(
             v2_json, v1_json,
             "JSON shape diverged after v2 -> v1 conversion"
         );
 
-        let back_to_v2 = v1_to_v2(as_v1).expect("v1 -> v2 conversion");
+        let back_to_v2: T2 = try_v1_to_v2(as_v1).expect("v1 -> v2 conversion");
         let v2_json_after =
             serde_json::to_value(&back_to_v2).expect("v2 serialize after round trip");
         assert_eq!(
@@ -9109,29 +9357,47 @@ mod tests {
 
     fn assert_v2_to_v1_error<T>(value: T, expected: &str)
     where
-        T: IntoV1,
-        T::Output: std::fmt::Debug,
+        T: TryToV1,
+        T::Output: TryFrom<T> + std::fmt::Debug,
+        ProtocolConversionError: From<<T::Output as TryFrom<T>>::Error>,
     {
-        let error = v2_to_v1(value).unwrap_err();
+        let error = try_v2_to_v1::<T, T::Output>(value).unwrap_err();
         assert_eq!(error.message(), expected);
     }
 
     fn assert_v2_to_v1_many_error<T>(value: T, expected: &str)
     where
-        T: IntoV1Many,
+        T: TryIntoV1Many,
         T::Output: std::fmt::Debug,
     {
-        let error = v2_to_v1_many(value).unwrap_err();
+        let error = try_v2_to_v1_many(value).unwrap_err();
         assert_eq!(error.message(), expected);
     }
 
     fn assert_v1_to_v2_error<T>(value: T, expected: &str)
     where
-        T: IntoV2,
-        T::Output: std::fmt::Debug,
+        T: TryToV2,
+        T::Output: TryFrom<T> + std::fmt::Debug,
+        ProtocolConversionError: From<<T::Output as TryFrom<T>>::Error>,
     {
-        let error = v1_to_v2(value).unwrap_err();
+        let error = try_v1_to_v2::<T, T::Output>(value).unwrap_err();
         assert_eq!(error.message(), expected);
+    }
+
+    #[test]
+    fn infallible_leaf_conversions_support_from_and_try_helpers() {
+        let v1_session: v1::SessionId = v2::SessionId::new("sess").into();
+        assert_eq!(v1_session, v1::SessionId::new("sess"));
+
+        let v2_session: v2::SessionId =
+            try_v1_to_v2(v1_session).expect("infallible v1 session id -> v2");
+        assert_eq!(v2_session, v2::SessionId::new("sess"));
+
+        let v2_status: v2::ToolCallStatus = v1::ToolCallStatus::Completed.into();
+        assert_eq!(v2_status, v2::ToolCallStatus::Completed);
+
+        let v1_code: v1::ErrorCode = v2::ErrorCode::Other(-32099).into();
+        assert_eq!(v1_code, v1::ErrorCode::Other(-32099));
     }
 
     #[test]
@@ -9168,7 +9434,7 @@ mod tests {
             v2::Implementation::new("test-client", "1.0.0"),
         );
 
-        let converted: v1::InitializeRequest = v2_to_v1(request).unwrap();
+        let converted: v1::InitializeRequest = try_v2_to_v1(request).unwrap();
 
         assert_eq!(converted.protocol_version, ProtocolVersion::V2);
         assert_eq!(
@@ -9215,7 +9481,7 @@ mod tests {
 
         assert_v1_round_trip::<v1::InitializeRequest, v2::InitializeRequest>(request.clone());
         let converted: v2::InitializeRequest =
-            v1_to_v2(request).expect("v1 -> v2 conversion failed");
+            try_v1_to_v2(request).expect("v1 -> v2 conversion failed");
         let converted_capabilities =
             serde_json::to_value(&converted.capabilities).expect("v2 serialize");
         assert_eq!(converted_capabilities.get("fs"), None);
@@ -9242,7 +9508,7 @@ mod tests {
             .agent_info(v1::Implementation::new("test-agent", "2.0.0").title("Test Agent"));
         assert_v1_round_trip::<v1::InitializeResponse, v2::InitializeResponse>(response.clone());
         let converted: v2::InitializeResponse =
-            v1_to_v2(response).expect("v1 -> v2 conversion failed");
+            try_v1_to_v2(response).expect("v1 -> v2 conversion failed");
         let converted_json = serde_json::to_value(&converted).expect("v2 serialize");
         assert_eq!(converted_json.get("agentCapabilities"), None);
         assert!(converted_json.get("capabilities").is_some());
@@ -9254,10 +9520,17 @@ mod tests {
 
     #[test]
     fn required_v2_session_methods_convert_to_v1_capability_markers() {
-        let v1_capabilities = v1::AgentCapabilities::new().load_session(true);
+        let v1_capabilities = v1::AgentCapabilities::new()
+            .load_session(true)
+            .session_capabilities(
+                v1::SessionCapabilities::new()
+                    .list(v1::SessionListCapabilities::new())
+                    .resume(v1::SessionResumeCapabilities::new())
+                    .close(v1::SessionCloseCapabilities::new()),
+            );
 
         let v2_capabilities: v2::AgentCapabilities =
-            v1_to_v2(v1_capabilities).expect("v1 -> v2 conversion");
+            try_v1_to_v2(v1_capabilities).expect("v1 -> v2 conversion");
         let session = v2_capabilities
             .session
             .as_ref()
@@ -9271,16 +9544,30 @@ mod tests {
         assert_eq!(v2_json.pointer("/session/close"), None);
 
         let v1_after: v1::AgentCapabilities =
-            v2_to_v1(v2_capabilities).expect("v2 -> v1 conversion");
+            try_v2_to_v1(v2_capabilities).expect("v2 -> v1 conversion");
         assert!(v1_after.load_session);
         assert!(v1_after.session_capabilities.list.is_some());
         assert!(v1_after.session_capabilities.resume.is_some());
         assert!(v1_after.session_capabilities.close.is_some());
+
+        assert_v1_to_v2_error(
+            v1::AgentCapabilities::new().load_session(true),
+            "v1 SessionCapabilities.list cannot be represented in v2",
+        );
+        assert_v1_to_v2_error(
+            v1::AgentCapabilities::new().session_capabilities(
+                v1::SessionCapabilities::new()
+                    .list(v1::SessionListCapabilities::new())
+                    .resume(v1::SessionResumeCapabilities::new())
+                    .close(v1::SessionCloseCapabilities::new()),
+            ),
+            "v1 AgentCapabilities.loadSession cannot be represented in v2",
+        );
     }
 
     #[test]
     fn v2_agent_capabilities_without_session_do_not_convert_to_v1() {
-        let error = v2::AgentCapabilities::new().into_v1().unwrap_err();
+        let error = v1::AgentCapabilities::try_from(v2::AgentCapabilities::new()).unwrap_err();
         assert_eq!(
             error.message(),
             "v2 AgentCapabilities without `session` cannot be represented in v1"
@@ -9293,23 +9580,24 @@ mod tests {
         let v2_json = serde_json::to_value(&v2_auth).expect("v2 serialize");
         assert_eq!(v2_json.get("logout"), None);
 
-        let v1_auth: v1::AgentAuthCapabilities = v2_to_v1(v2_auth).expect("v2 -> v1 conversion");
+        let v1_auth: v1::AgentAuthCapabilities =
+            try_v2_to_v1(v2_auth).expect("v2 -> v1 conversion");
         assert!(v1_auth.logout.is_some());
 
-        let v1_auth_without_logout = v1::AgentAuthCapabilities::new();
-        let v2_auth: v2::AgentAuthCapabilities =
-            v1_to_v2(v1_auth_without_logout).expect("v1 -> v2 conversion");
-        let v2_json = serde_json::to_value(&v2_auth).expect("v2 serialize");
-        assert_eq!(v2_json.get("logout"), None);
+        assert_v1_to_v2_error(
+            v1::AgentAuthCapabilities::new(),
+            "v1 AgentAuthCapabilities.logout cannot be represented in v2",
+        );
     }
 
     #[test]
     fn v2_session_capabilities_convert_to_v1_agent_capability_parts() {
-        let parts = v2::SessionCapabilities::new()
-            .prompt(v2::PromptCapabilities::new().image(v2::PromptImageCapabilities::new()))
-            .mcp(v2::McpCapabilities::new().http(v2::McpHttpCapabilities::new()))
-            .into_v1()
-            .expect("v2 session capabilities -> v1 parts");
+        let parts = V1SessionCapabilityParts::try_from(
+            v2::SessionCapabilities::new()
+                .prompt(v2::PromptCapabilities::new().image(v2::PromptImageCapabilities::new()))
+                .mcp(v2::McpCapabilities::new().http(v2::McpHttpCapabilities::new())),
+        )
+        .expect("v2 session capabilities -> v1 parts");
 
         assert!(parts.session_capabilities.list.is_some());
         assert!(parts.session_capabilities.resume.is_some());
@@ -9327,7 +9615,7 @@ mod tests {
             .embedded_context(true);
 
         let v2_capabilities: v2::PromptCapabilities =
-            v1_to_v2(v1_capabilities).expect("v1 -> v2 conversion");
+            try_v1_to_v2(v1_capabilities).expect("v1 -> v2 conversion");
         let v2_json = serde_json::to_value(&v2_capabilities).expect("v2 serialize");
         assert_eq!(v2_json.pointer("/image"), Some(&serde_json::json!({})));
         assert_eq!(v2_json.pointer("/audio"), Some(&serde_json::json!({})));
@@ -9337,7 +9625,7 @@ mod tests {
         );
 
         let v1_after: v1::PromptCapabilities =
-            v2_to_v1(v2_capabilities).expect("v2 -> v1 conversion");
+            try_v2_to_v1(v2_capabilities).expect("v2 -> v1 conversion");
         assert!(v1_after.image);
         assert!(v1_after.audio);
         assert!(v1_after.embedded_context);
@@ -9345,18 +9633,24 @@ mod tests {
 
     #[test]
     fn v1_mcp_capabilities_convert_to_v2_transport_objects() {
-        let v1_capabilities = v1::McpCapabilities::new().http(true).sse(true);
+        let v1_capabilities = v1::McpCapabilities::new().http(true);
 
         let v2_capabilities: v2::McpCapabilities =
-            v1_to_v2(v1_capabilities).expect("v1 -> v2 conversion");
+            try_v1_to_v2(v1_capabilities).expect("v1 -> v2 conversion");
         let v2_json = serde_json::to_value(&v2_capabilities).expect("v2 serialize");
         assert_eq!(v2_json.pointer("/stdio"), Some(&serde_json::json!({})));
         assert_eq!(v2_json.pointer("/http"), Some(&serde_json::json!({})));
         assert_eq!(v2_json.pointer("/sse"), None);
 
-        let v1_after: v1::McpCapabilities = v2_to_v1(v2_capabilities).expect("v2 -> v1 conversion");
+        let v1_after: v1::McpCapabilities =
+            try_v2_to_v1(v2_capabilities).expect("v2 -> v1 conversion");
         assert!(v1_after.http);
         assert!(!v1_after.sse);
+
+        assert_v1_to_v2_error(
+            v1::McpCapabilities::new().sse(true),
+            "v1 McpCapabilities.sse cannot be represented in v2",
+        );
     }
 
     #[cfg(feature = "unstable_mcp_over_acp")]
@@ -9365,11 +9659,12 @@ mod tests {
         let v1_capabilities = v1::McpCapabilities::new().acp(true);
 
         let v2_capabilities: v2::McpCapabilities =
-            v1_to_v2(v1_capabilities).expect("v1 -> v2 conversion");
+            try_v1_to_v2(v1_capabilities).expect("v1 -> v2 conversion");
         let v2_json = serde_json::to_value(&v2_capabilities).expect("v2 serialize");
         assert_eq!(v2_json.pointer("/acp"), Some(&serde_json::json!({})));
 
-        let v1_after: v1::McpCapabilities = v2_to_v1(v2_capabilities).expect("v2 -> v1 conversion");
+        let v1_after: v1::McpCapabilities =
+            try_v2_to_v1(v2_capabilities).expect("v2 -> v1 conversion");
         assert!(v1_after.acp);
     }
 
@@ -9379,12 +9674,12 @@ mod tests {
         let v1_capabilities = v1::AuthCapabilities::new().terminal(true);
 
         let v2_capabilities: v2::AuthCapabilities =
-            v1_to_v2(v1_capabilities).expect("v1 -> v2 conversion");
+            try_v1_to_v2(v1_capabilities).expect("v1 -> v2 conversion");
         let v2_json = serde_json::to_value(&v2_capabilities).expect("v2 serialize");
         assert_eq!(v2_json.pointer("/terminal"), Some(&serde_json::json!({})));
 
         let v1_after: v1::AuthCapabilities =
-            v2_to_v1(v2_capabilities).expect("v2 -> v1 conversion");
+            try_v2_to_v1(v2_capabilities).expect("v2 -> v1 conversion");
         assert!(v1_after.terminal);
     }
 
@@ -9396,7 +9691,8 @@ mod tests {
         env.insert("API_KEY".to_string(), "secret".to_string());
 
         let v1_method = v1::AuthMethodTerminal::new("tui-auth", "Terminal Auth").env(env);
-        let v2_method: v2::AuthMethodTerminal = v1_to_v2(v1_method).expect("v1 -> v2 conversion");
+        let v2_method: v2::AuthMethodTerminal =
+            try_v1_to_v2(v1_method).expect("v1 -> v2 conversion");
         let v2_json = serde_json::to_value(&v2_method).expect("v2 serialize");
         assert_eq!(
             v2_json.pointer("/env"),
@@ -9412,7 +9708,8 @@ mod tests {
             ]))
         );
 
-        let v1_after: v1::AuthMethodTerminal = v2_to_v1(v2_method).expect("v2 -> v1 conversion");
+        let v1_after: v1::AuthMethodTerminal =
+            try_v2_to_v1(v2_method).expect("v2 -> v1 conversion");
         assert_eq!(
             v1_after.env.get("TERM").map(String::as_str),
             Some("xterm-256color")
@@ -9438,33 +9735,17 @@ mod tests {
     }
 
     #[test]
-    fn v1_client_fs_and_terminal_capabilities_are_removed_in_v2() {
-        let v1_capabilities =
-            v1::ClientCapabilities::new()
-                .terminal(true)
-                .fs(v1::FileSystemCapabilities::new()
-                    .read_text_file(true)
-                    .write_text_file(true));
-
-        let v2_capabilities: v2::ClientCapabilities =
-            v1_to_v2(v1_capabilities).expect("v1 -> v2 conversion");
-        let v2_json = serde_json::to_value(&v2_capabilities).expect("v2 serialize");
-        assert_eq!(
-            v2_json.get("fs"),
-            None,
-            "v2 ClientCapabilities must not include filesystem capabilities"
+    fn v1_client_fs_and_terminal_capabilities_do_not_convert_to_v2() {
+        assert_v1_to_v2_error(
+            v1::ClientCapabilities::new().fs(v1::FileSystemCapabilities::new()
+                .read_text_file(true)
+                .write_text_file(true)),
+            "v1 ClientCapabilities.fs cannot be represented in v2",
         );
-        assert_eq!(
-            v2_json.get("terminal"),
-            None,
-            "v2 ClientCapabilities must not include terminal capabilities"
+        assert_v1_to_v2_error(
+            v1::ClientCapabilities::new().terminal(true),
+            "v1 ClientCapabilities.terminal cannot be represented in v2",
         );
-
-        let v1_after: v1::ClientCapabilities =
-            v2_to_v1(v2_capabilities).expect("v2 -> v1 conversion");
-        assert!(!v1_after.fs.read_text_file);
-        assert!(!v1_after.fs.write_text_file);
-        assert!(!v1_after.terminal);
     }
 
     #[test]
@@ -9472,7 +9753,7 @@ mod tests {
         let v2_capabilities = v2::ClientCapabilities::new();
 
         let v1_capabilities: v1::ClientCapabilities =
-            v2_to_v1(v2_capabilities).expect("v2 -> v1 conversion");
+            try_v2_to_v1(v2_capabilities).expect("v2 -> v1 conversion");
 
         assert!(
             v1_capabilities
@@ -9480,80 +9761,6 @@ mod tests {
                 .and_then(|session| session.config_options)
                 .and_then(|config_options| config_options.boolean)
                 .is_some()
-        );
-    }
-
-    #[test]
-    fn v1_client_fs_and_terminal_methods_do_not_convert_to_v2() {
-        assert_v1_to_v2_error(
-            v1::AgentRequest::WriteTextFileRequest(v1::WriteTextFileRequest::new(
-                "sess",
-                "/workspace/file.txt",
-                "contents",
-            )),
-            "v1 AgentRequest variant `fs/write_text_file` cannot be represented in v2",
-        );
-        assert_v1_to_v2_error(
-            v1::AgentRequest::ReadTextFileRequest(v1::ReadTextFileRequest::new(
-                "sess",
-                "/workspace/file.txt",
-            )),
-            "v1 AgentRequest variant `fs/read_text_file` cannot be represented in v2",
-        );
-        assert_v1_to_v2_error(
-            v1::AgentRequest::CreateTerminalRequest(v1::CreateTerminalRequest::new("sess", "echo")),
-            "v1 AgentRequest variant `terminal/create` cannot be represented in v2",
-        );
-        assert_v1_to_v2_error(
-            v1::AgentRequest::TerminalOutputRequest(v1::TerminalOutputRequest::new("sess", "term")),
-            "v1 AgentRequest variant `terminal/output` cannot be represented in v2",
-        );
-        assert_v1_to_v2_error(
-            v1::AgentRequest::ReleaseTerminalRequest(v1::ReleaseTerminalRequest::new(
-                "sess", "term",
-            )),
-            "v1 AgentRequest variant `terminal/release` cannot be represented in v2",
-        );
-        assert_v1_to_v2_error(
-            v1::AgentRequest::WaitForTerminalExitRequest(v1::WaitForTerminalExitRequest::new(
-                "sess", "term",
-            )),
-            "v1 AgentRequest variant `terminal/wait_for_exit` cannot be represented in v2",
-        );
-        assert_v1_to_v2_error(
-            v1::AgentRequest::KillTerminalRequest(v1::KillTerminalRequest::new("sess", "term")),
-            "v1 AgentRequest variant `terminal/kill` cannot be represented in v2",
-        );
-
-        assert_v1_to_v2_error(
-            v1::ClientResponse::WriteTextFileResponse(v1::WriteTextFileResponse::new()),
-            "v1 ClientResponse variant `fs/write_text_file` cannot be represented in v2",
-        );
-        assert_v1_to_v2_error(
-            v1::ClientResponse::ReadTextFileResponse(v1::ReadTextFileResponse::new("contents")),
-            "v1 ClientResponse variant `fs/read_text_file` cannot be represented in v2",
-        );
-        assert_v1_to_v2_error(
-            v1::ClientResponse::CreateTerminalResponse(v1::CreateTerminalResponse::new("term")),
-            "v1 ClientResponse variant `terminal/create` cannot be represented in v2",
-        );
-        assert_v1_to_v2_error(
-            v1::ClientResponse::TerminalOutputResponse(v1::TerminalOutputResponse::new("", false)),
-            "v1 ClientResponse variant `terminal/output` cannot be represented in v2",
-        );
-        assert_v1_to_v2_error(
-            v1::ClientResponse::ReleaseTerminalResponse(v1::ReleaseTerminalResponse::new()),
-            "v1 ClientResponse variant `terminal/release` cannot be represented in v2",
-        );
-        assert_v1_to_v2_error(
-            v1::ClientResponse::WaitForTerminalExitResponse(v1::WaitForTerminalExitResponse::new(
-                v1::TerminalExitStatus::new(),
-            )),
-            "v1 ClientResponse variant `terminal/wait_for_exit` cannot be represented in v2",
-        );
-        assert_v1_to_v2_error(
-            v1::ClientResponse::KillTerminalResponse(v1::KillTerminalResponse::new()),
-            "v1 ClientResponse variant `terminal/kill` cannot be represented in v2",
         );
     }
 
@@ -9590,7 +9797,7 @@ mod tests {
 
         assert_v1_round_trip::<v1::NewSessionRequest, v2::NewSessionRequest>(request.clone());
 
-        let v2_request: v2::NewSessionRequest = v1_to_v2(request).expect("v1 -> v2 conversion");
+        let v2_request: v2::NewSessionRequest = try_v1_to_v2(request).expect("v1 -> v2 conversion");
         assert_eq!(
             serde_json::to_value(&v2_request).expect("v2 serialize"),
             serde_json::json!({
@@ -9770,7 +9977,7 @@ mod tests {
     }
 
     #[test]
-    fn v1_tool_call_converts_to_v2_upsert_with_diff_and_locations() {
+    fn v1_tool_call_converts_to_v2_upsert_with_diff_and_locations_one_way() {
         let tool_call = v1::ToolCall::new("tc_1", "editing files")
             .kind(v1::ToolKind::Edit)
             .status(v1::ToolCallStatus::InProgress)
@@ -9781,7 +9988,7 @@ mod tests {
             .raw_input(serde_json::json!({"foo": "bar"}))
             .raw_output(serde_json::json!({"ok": true}));
 
-        let converted: v2::ToolCallUpdate = v1_to_v2(tool_call).expect("v1 -> v2 conversion");
+        let converted: v2::ToolCallUpdate = try_v1_to_v2(tool_call).expect("v1 -> v2 conversion");
         assert_eq!(
             serde_json::to_value(&converted).expect("v2 serialize"),
             serde_json::json!({
@@ -9820,20 +10027,9 @@ mod tests {
             })
         );
 
-        let back: v1::ToolCallUpdate = v2_to_v1(converted).expect("v2 -> v1 conversion");
-        assert_eq!(back.tool_call_id.0.as_ref(), "tc_1");
-        assert_eq!(back.fields.title.as_deref(), Some("editing files"));
-        assert_eq!(back.fields.kind, Some(v1::ToolKind::Edit));
-        assert_eq!(back.fields.status, Some(v1::ToolCallStatus::InProgress));
-        assert_eq!(back.fields.content.as_ref().map(Vec::len), Some(0));
-        assert_eq!(back.fields.locations.as_ref().map(Vec::len), Some(1));
-        assert_eq!(
-            back.fields.raw_input,
-            Some(serde_json::json!({"foo": "bar"}))
-        );
-        assert_eq!(
-            back.fields.raw_output,
-            Some(serde_json::json!({"ok": true}))
+        assert_v2_to_v1_error(
+            converted,
+            "v2 Diff cannot be represented in v1 because v1 requires oldText/newText while v2 carries standard patch text and structured changes",
         );
     }
 
@@ -9882,14 +10078,14 @@ mod tests {
             let notification = v1::SessionNotification::new("sess", update);
             let original_json = serde_json::to_value(&notification).expect("v1 serialize");
             let as_v2: v2::UpdateSessionNotification =
-                v1_to_v2(notification.clone()).expect("v1 -> v2 conversion");
+                try_v1_to_v2(notification.clone()).expect("v1 -> v2 conversion");
             let v2_json = serde_json::to_value(&as_v2).expect("v2 serialize");
             assert_eq!(
                 original_json, v2_json,
                 "JSON shape diverged after v1 -> v2 conversion"
             );
 
-            let back = v2_to_v1_many(as_v2).expect("v2 -> v1 conversion");
+            let back = try_v2_to_v1_many(as_v2).expect("v2 -> v1 conversion");
             assert_eq!(back, vec![notification]);
             let back_json = serde_json::to_value(&back[0]).expect("v1 serialize after round trip");
             assert_eq!(
@@ -9906,7 +10102,7 @@ mod tests {
             v1::SessionUpdate::ToolCall(v1::ToolCall::new("tc", "title")),
         );
         let create_v2: v2::UpdateSessionNotification =
-            v1_to_v2(create).expect("v1 -> v2 conversion");
+            try_v1_to_v2(create).expect("v1 -> v2 conversion");
         assert!(matches!(
             create_v2.update,
             v2::SessionUpdate::ToolCallUpdate(_)
@@ -9931,7 +10127,7 @@ mod tests {
             )),
         );
         let update_v2: v2::UpdateSessionNotification =
-            v1_to_v2(update).expect("v1 -> v2 conversion");
+            try_v1_to_v2(update).expect("v1 -> v2 conversion");
         assert!(matches!(
             update_v2.update,
             v2::SessionUpdate::ToolCallUpdate(_)
@@ -9954,7 +10150,7 @@ mod tests {
         let mut meta = v2::Meta::new();
         meta.insert("source".to_string(), serde_json::json!("full"));
 
-        let chunks = v2_to_v1_many(v2::SessionUpdate::UserMessage(
+        let chunks = try_v2_to_v1_many(v2::SessionUpdate::UserMessage(
             v2::UserMessage::new("msg_user")
                 .content(vec![
                     v2::ContentBlock::Text(v2::TextContent::new("hello")),
@@ -9980,7 +10176,7 @@ mod tests {
         );
 
         assert_eq!(
-            v2_to_v1_many(v2::SessionUpdate::AgentMessage(
+            try_v2_to_v1_many(v2::SessionUpdate::AgentMessage(
                 v2::AgentMessage::new("msg_agent")
                     .content(vec![v2::ContentBlock::Text(v2::TextContent::new("hello"))])
             ))
@@ -9992,7 +10188,7 @@ mod tests {
         );
 
         assert_eq!(
-            v2_to_v1_many(v2::SessionUpdate::AgentThought(
+            try_v2_to_v1_many(v2::SessionUpdate::AgentThought(
                 v2::AgentThought::new("msg_thought").content(vec![v2::ContentBlock::Text(
                     v2::TextContent::new("thinking")
                 )])
@@ -10015,7 +10211,7 @@ mod tests {
             ])),
         );
 
-        let notifications = v2_to_v1_many(notification).expect("v2 -> v1 conversion");
+        let notifications = try_v2_to_v1_many(notification).expect("v2 -> v1 conversion");
         assert_eq!(
             notifications,
             vec![
@@ -10037,65 +10233,6 @@ mod tests {
                         .message_id("msg_agent")
                     )
                 ),
-            ]
-        );
-    }
-
-    #[test]
-    fn v2_json_rpc_agent_notification_fans_out_to_v1_chunk_notifications() {
-        let message = v2::JsonRpcMessage::wrap(v2::Notification {
-            method: "session/update".into(),
-            params: Some(v2::AgentNotification::UpdateSessionNotification(Box::new(
-                v2::UpdateSessionNotification::new(
-                    "sess",
-                    v2::SessionUpdate::AgentMessage(v2::AgentMessage::new("msg_agent").content(
-                        vec![
-                            v2::ContentBlock::Text(v2::TextContent::new("hello")),
-                            v2::ContentBlock::Text(v2::TextContent::new("world")),
-                        ],
-                    )),
-                ),
-            ))),
-        });
-
-        let messages = v2_to_v1_many(message).expect("v2 -> v1 conversion");
-        let json = messages
-            .into_iter()
-            .map(|message| serde_json::to_value(message).expect("serialize v1 message"))
-            .collect::<Vec<_>>();
-        assert_eq!(
-            json,
-            vec![
-                serde_json::json!({
-                    "jsonrpc": "2.0",
-                    "method": "session/update",
-                    "params": {
-                        "sessionId": "sess",
-                        "update": {
-                            "sessionUpdate": "agent_message_chunk",
-                            "content": {
-                                "type": "text",
-                                "text": "hello"
-                            },
-                            "messageId": "msg_agent"
-                        }
-                    }
-                }),
-                serde_json::json!({
-                    "jsonrpc": "2.0",
-                    "method": "session/update",
-                    "params": {
-                        "sessionId": "sess",
-                        "update": {
-                            "sessionUpdate": "agent_message_chunk",
-                            "content": {
-                                "type": "text",
-                                "text": "world"
-                            },
-                            "messageId": "msg_agent"
-                        }
-                    }
-                }),
             ]
         );
     }
@@ -10158,7 +10295,7 @@ mod tests {
             v1::PlanEntryStatus::InProgress,
         )]));
 
-        let as_v2: v2::SessionUpdate = v1_to_v2(update.clone()).unwrap();
+        let as_v2: v2::SessionUpdate = try_v1_to_v2(update.clone()).unwrap();
         assert_eq!(
             serde_json::to_value(&as_v2).unwrap(),
             serde_json::json!({
@@ -10177,7 +10314,7 @@ mod tests {
             })
         );
 
-        let back = v2_to_v1_many(as_v2).unwrap();
+        let back = try_v2_to_v1_many(as_v2).unwrap();
         #[cfg(not(feature = "unstable_plan_operations"))]
         assert_eq!(back, vec![update]);
         #[cfg(feature = "unstable_plan_operations")]
@@ -10219,89 +10356,64 @@ mod tests {
     }
 
     #[test]
-    fn v1_session_mode_methods_do_not_convert_to_v2() {
+    fn v1_session_response_modes_do_not_convert_to_v2() {
         assert_v1_to_v2_error(
-            v1::ClientRequest::SetSessionModeRequest(v1::SetSessionModeRequest::new("sess", "ask")),
-            "v1 ClientRequest variant `session/set_mode` cannot be represented in v2",
+            v1::NewSessionResponse::new("sess").modes(v1::SessionModeState::new(
+                "ask",
+                vec![v1::SessionMode::new("ask", "Ask")],
+            )),
+            "v1 NewSessionResponse.modes cannot be represented in v2",
         );
-        assert_v1_to_v2_error(
-            v1::AgentResponse::SetSessionModeResponse(v1::SetSessionModeResponse::new()),
-            "v1 AgentResponse variant `session/set_mode` cannot be represented in v2",
-        );
-    }
-
-    #[test]
-    fn v1_session_response_modes_fall_back_to_none_in_v2() {
-        let response = v1::NewSessionResponse::new("sess").modes(v1::SessionModeState::new(
-            "ask",
-            vec![v1::SessionMode::new("ask", "Ask")],
-        ));
-
-        let as_v2: v2::NewSessionResponse = v1_to_v2(response).unwrap();
-        let back_to_v1: v1::NewSessionResponse = v2_to_v1(as_v2).unwrap();
-
-        assert!(back_to_v1.modes.is_none());
     }
 
     #[test]
     fn v1_session_response_missing_config_options_becomes_empty_v2_vec() {
         let new_response: v2::NewSessionResponse =
-            v1_to_v2(v1::NewSessionResponse::new("sess")).unwrap();
+            try_v1_to_v2(v1::NewSessionResponse::new("sess")).unwrap();
         assert!(new_response.config_options.is_empty());
 
         let load_response: v2::ResumeSessionResponse =
-            v1_to_v2(v1::LoadSessionResponse::new()).unwrap();
+            try_v1_to_v2(v1::LoadSessionResponse::new()).unwrap();
         assert!(load_response.config_options.is_empty());
 
         let resume_response: v2::ResumeSessionResponse =
-            v1_to_v2(v1::ResumeSessionResponse::new()).unwrap();
+            try_v1_to_v2(v1::ResumeSessionResponse::new()).unwrap();
         assert!(resume_response.config_options.is_empty());
 
         #[cfg(feature = "unstable_session_fork")]
         {
             let fork_response: v2::ForkSessionResponse =
-                v1_to_v2(v1::ForkSessionResponse::new("fork")).unwrap();
+                try_v1_to_v2(v1::ForkSessionResponse::new("fork")).unwrap();
             assert!(fork_response.config_options.is_empty());
         }
     }
 
     #[test]
-    fn v2_resume_replay_from_start_maps_to_v1_load_request() {
-        let v1_load = v1::ClientRequest::LoadSessionRequest(v1::LoadSessionRequest::new(
-            "sess",
-            "/workspace/project",
-        ));
-        let v2_request: v2::ClientRequest = v1_to_v2(v1_load).unwrap();
-        let v2::ClientRequest::ResumeSessionRequest(resume) = v2_request else {
-            panic!("v1 session/load should convert to v2 session/resume");
-        };
-        assert!(matches!(resume.replay_from, Some(v2::ReplayFrom::Start(_))));
-
-        let v1_request: v1::ClientRequest =
-            v2_to_v1(v2::ClientRequest::ResumeSessionRequest(resume)).unwrap();
+    fn v1_load_session_request_converts_to_v2_resume_replay_from_start() {
+        let v2_request: v2::ResumeSessionRequest =
+            try_v1_to_v2(v1::LoadSessionRequest::new("sess", "/workspace/project")).unwrap();
         assert!(matches!(
-            v1_request,
-            v1::ClientRequest::LoadSessionRequest(_)
+            v2_request.replay_from,
+            Some(v2::ReplayFrom::Start(_))
         ));
+
+        let v1_load: v1::LoadSessionRequest = try_v2_to_v1(v2_request).unwrap();
+        assert_eq!(v1_load.session_id, v1::SessionId::new("sess"));
+        assert_eq!(v1_load.cwd, PathBuf::from("/workspace/project"));
     }
 
     #[test]
     fn v2_resume_without_replay_maps_to_v1_resume_request() {
-        let v2_request = v2::ClientRequest::ResumeSessionRequest(Box::new(
-            v2::ResumeSessionRequest::new("sess", "/workspace/project"),
-        ));
-
-        let v1_request: v1::ClientRequest = v2_to_v1(v2_request).unwrap();
-        assert!(matches!(
-            v1_request,
-            v1::ClientRequest::ResumeSessionRequest(_)
-        ));
+        let v1_request: v1::ResumeSessionRequest =
+            try_v2_to_v1(v2::ResumeSessionRequest::new("sess", "/workspace/project")).unwrap();
+        assert_eq!(v1_request.session_id, v1::SessionId::new("sess"));
+        assert_eq!(v1_request.cwd, PathBuf::from("/workspace/project"));
     }
 
     #[test]
     fn v2_session_response_converts_to_v1_without_mode_state() {
         let response: v1::NewSessionResponse =
-            v2_to_v1(v2::NewSessionResponse::new("sess")).unwrap();
+            try_v2_to_v1(v2::NewSessionResponse::new("sess")).unwrap();
 
         assert!(response.modes.is_none());
         assert!(matches!(
@@ -10311,7 +10423,7 @@ mod tests {
     }
 
     #[test]
-    fn v2_tool_call_update_conversion_matches_v1_default_on_error_fields() {
+    fn v2_tool_call_update_unrepresentable_fields_do_not_convert_to_v1() {
         let update = v2::ToolCallUpdate::new("tc")
             .kind(v2::ToolKind::Unknown("_future_kind".to_string()))
             .status(v2::ToolCallStatus::Other("_paused".to_string()))
@@ -10326,15 +10438,14 @@ mod tests {
                 )),
             ]);
 
-        let converted: v1::ToolCallUpdate = v2_to_v1(update).unwrap();
-
-        assert_eq!(converted.fields.kind, None);
-        assert_eq!(converted.fields.status, None);
-        assert_eq!(converted.fields.content, Some(vec![]));
+        assert_v2_to_v1_error(
+            update,
+            "v2 ToolKind variant `_future_kind` cannot be represented in v1",
+        );
     }
 
     #[test]
-    fn v2_collection_conversion_skips_items_like_v1_vec_skip_error() {
+    fn v2_collection_conversion_fails_on_unrepresentable_items() {
         let response = v2::InitializeResponse::new(
             ProtocolVersion::V2,
             v2::Implementation::new("test-agent", "2.0.0"),
@@ -10349,12 +10460,10 @@ mod tests {
             )),
             v2::AuthMethod::Agent(v2::AuthMethodAgent::new("agent", "Agent")),
         ]);
-        let converted: v1::InitializeResponse = v2_to_v1(response).unwrap();
-        assert_eq!(converted.auth_methods.len(), 1);
-        assert!(matches!(
-            converted.auth_methods[0],
-            v1::AuthMethod::Agent(_)
-        ));
+        assert_v2_to_v1_error(
+            response,
+            "v2 AuthMethod variant `_oauth` cannot be represented in v1",
+        );
 
         let config_update = v2::ConfigOptionUpdate::new(vec![
             v2::SessionConfigOption::select(
@@ -10372,36 +10481,32 @@ mod tests {
                 )),
             ),
         ]);
-        let converted: v1::ConfigOptionUpdate = v2_to_v1(config_update).unwrap();
-        assert_eq!(converted.config_options.len(), 1);
-        assert_eq!(converted.config_options[0].id.0.as_ref(), "mode");
+        assert_v2_to_v1_error(
+            config_update,
+            "v2 SessionConfigKind variant `_slider` cannot be represented in v1",
+        );
     }
 
     #[test]
-    fn v2_default_on_error_fields_drop_unrepresentable_nested_values() {
+    fn v2_optional_fields_fail_on_unrepresentable_nested_values() {
         let command = v2::AvailableCommand::new("review", "Review changes").input(
             v2::AvailableCommandInput::Other(v2::OtherAvailableCommandInput::new(
                 "_choices",
                 BTreeMap::default(),
             )),
         );
-        let converted: v1::AvailableCommandsUpdate =
-            v2_to_v1(v2::AvailableCommandsUpdate::new(vec![command])).unwrap();
-
-        assert_eq!(converted.available_commands.len(), 1);
-        assert_eq!(converted.available_commands[0].input, None);
+        assert_v2_to_v1_error(
+            v2::AvailableCommandsUpdate::new(vec![command]),
+            "v2 AvailableCommandInput variant `_choices` cannot be represented in v1",
+        );
 
         let content = v2::TextContent::new("hello").annotations(
             v2::Annotations::new()
                 .audience(vec![v2::Role::Other("_critic".to_string()), v2::Role::User]),
         );
-        let converted: v1::TextContent = v2_to_v1(content).unwrap();
-
-        assert_eq!(
-            converted
-                .annotations
-                .and_then(|annotations| annotations.audience),
-            Some(vec![v1::Role::User])
+        assert_v2_to_v1_error(
+            content,
+            "v2 Role variant `_critic` cannot be represented in v1",
         );
     }
 
@@ -10411,7 +10516,7 @@ mod tests {
             "Describe changes",
         ));
 
-        let v2_input: v2::AvailableCommandInput = v1_to_v2(input.clone()).unwrap();
+        let v2_input: v2::AvailableCommandInput = try_v1_to_v2(input.clone()).unwrap();
         assert_eq!(
             serde_json::to_value(&v2_input).unwrap(),
             serde_json::json!({
@@ -10420,7 +10525,7 @@ mod tests {
             })
         );
 
-        let v1_input: v1::AvailableCommandInput = v2_to_v1(v2_input).unwrap();
+        let v1_input: v1::AvailableCommandInput = try_v2_to_v1(v2_input).unwrap();
         assert_eq!(v1_input, input);
         assert_eq!(
             serde_json::to_value(v1_input).unwrap(),
@@ -10431,7 +10536,7 @@ mod tests {
     }
 
     #[test]
-    fn v2_plan_entries_skip_unrepresentable_items_inside_tolerant_vectors() {
+    fn v2_plan_entries_fail_on_unrepresentable_items_inside_vectors() {
         let update = v2::PlanUpdate::new(v2::PlanUpdateContent::items(
             "main",
             vec![
@@ -10448,26 +10553,14 @@ mod tests {
             ],
         ));
 
-        #[cfg(not(feature = "unstable_plan_operations"))]
-        {
-            let converted: v1::Plan = v2_to_v1(update).unwrap();
-            assert_eq!(converted.entries.len(), 1);
-            assert_eq!(converted.entries[0].content, "keep");
-        }
-
-        #[cfg(feature = "unstable_plan_operations")]
-        {
-            let converted: v1::PlanUpdate = v2_to_v1(update).unwrap();
-            let v1::PlanUpdateContent::Items(items) = converted.plan else {
-                panic!("expected item plan update");
-            };
-            assert_eq!(items.entries.len(), 1);
-            assert_eq!(items.entries[0].content, "keep");
-        }
+        assert_v2_to_v1_error(
+            update,
+            "v2 PlanEntryPriority variant `_critical` cannot be represented in v1",
+        );
     }
 
     #[test]
-    fn v1_tool_call_update_conversion_skips_items_for_v2_vec_skip_error_fields() {
+    fn v1_tool_call_update_conversion_fails_on_unrepresentable_vec_items() {
         let update = v1::ToolCallUpdate::new(
             "tc",
             v1::ToolCallUpdateFields::new().content(vec![
@@ -10476,13 +10569,9 @@ mod tests {
             ]),
         );
 
-        let converted: v2::ToolCallUpdate = v1_to_v2(update).unwrap();
-        assert_eq!(
-            converted.content,
-            crate::MaybeUndefined::Value(vec![v2::ToolCallContent::Diff(v2::Diff::patch(
-                full_file_git_patch(&PathBuf::from("/tmp/file.txt"), None, "new"),
-                vec![v2::DiffChange::add("/tmp/file.txt").file_type(v2::DiffFileType::Text)],
-            ))])
+        assert_v1_to_v2_error(
+            update,
+            "v1 ToolCallContent variant `terminal` cannot be represented in v2",
         );
     }
 
@@ -10599,7 +10688,7 @@ mod tests {
             Vec::new(),
         );
 
-        let converted: v2::RequestPermissionRequest = v1_to_v2(titled).unwrap();
+        let converted: v2::RequestPermissionRequest = try_v1_to_v2(titled).unwrap();
         assert_eq!(converted.title, "Read file");
         let Some(v2::RequestPermissionSubject::ToolCall(subject)) = converted.subject else {
             panic!("expected tool-call permission subject");
@@ -10612,12 +10701,10 @@ mod tests {
             Vec::new(),
         );
 
-        let converted: v2::RequestPermissionRequest = v1_to_v2(fallback).unwrap();
-        assert_eq!(converted.title, "Permission requested");
-        let Some(v2::RequestPermissionSubject::ToolCall(subject)) = converted.subject else {
-            panic!("expected tool-call permission subject");
-        };
-        assert_eq!(subject.tool_call.tool_call_id.to_string(), "call_2");
+        assert_v1_to_v2_error(
+            fallback,
+            "v1 RequestPermissionRequest without a tool-call title cannot be represented in v2",
+        );
     }
 
     #[test]
@@ -10631,7 +10718,7 @@ mod tests {
 
     #[test]
     fn round_trips_v2_value_back_through_v1() {
-        // Same coverage but starting from v2, to exercise IntoV1 explicitly.
+        // Same coverage but starting from v2, to exercise v2 -> v1 conversion.
         let request = v2::PromptRequest::new(
             "sess_2",
             vec![v2::ContentBlock::Text(v2::TextContent::new("hi"))],
