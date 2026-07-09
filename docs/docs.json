@@ -196,7 +196,6 @@
           {
             "group": "Active",
             "pages": [
-              "rfds/elicitation",
               "rfds/streamable-http-websocket-transport",
               {
                 "group": "v2",
@@ -219,7 +218,7 @@
           },
           {
             "group": "Preview",
-            "pages": []
+            "pages": ["rfds/elicitation"]
           },
           {
             "group": "Completed",
