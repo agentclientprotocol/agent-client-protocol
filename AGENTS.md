@@ -47,14 +47,14 @@ This is a **protocol schema library** (not a runtime application). There are no 
 
 ### Key commands (see `package.json` scripts)
 
-| Command | Purpose |
-|---|---|
-| `npm run check` | Full CI pipeline: clippy, format check, spellcheck, tests |
-| `npm run generate` | Regenerate JSON schemas from Rust types + format |
-| `cargo test --all-features` | Run Rust unit + doc tests |
-| `cargo clippy --all-features` | Lint Rust code |
-| `npm run format:check` | Verify Prettier + rustfmt formatting |
-| `npm run format` | Auto-fix formatting |
+| Command                       | Purpose                                                   |
+| ----------------------------- | --------------------------------------------------------- |
+| `npm run check`               | Full CI pipeline: clippy, format check, spellcheck, tests |
+| `npm run generate`            | Regenerate JSON schemas from Rust types + format          |
+| `cargo test --all-features`   | Run Rust unit + doc tests                                 |
+| `cargo clippy --all-features` | Lint Rust code                                            |
+| `npm run format:check`        | Verify Prettier + rustfmt formatting                      |
+| `npm run format`              | Auto-fix formatting                                       |
 
 ### Gotchas
 
