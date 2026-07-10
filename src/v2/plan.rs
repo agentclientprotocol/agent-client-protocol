@@ -146,3 +146,120 @@ pub enum PlanEntryStatus {
     /// The task has been successfully completed.
     Completed,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    fn entry() -> PlanEntry {
+        PlanEntry::new("step", PlanEntryPriority::Medium, PlanEntryStatus::Pending)
+    }
+
+    #[test]
+    fn plan_entry_roundtrip_omits_optional_meta() {
+        let value = entry();
+        let serialized = serde_json::to_value(&value).unwrap();
+        assert_eq!(
+            serialized,
+            json!({
+                "content": "step",
+                "priority": "medium",
+                "status": "pending",
+            })
+        );
+        let parsed: PlanEntry = serde_json::from_value(serialized).unwrap();
+        assert_eq!(parsed, value);
+    }
+
+    #[test]
+    fn plan_entry_priority_and_status_use_snake_case() {
+        assert_eq!(
+            serde_json::to_value(&PlanEntryPriority::High).unwrap(),
+            json!("high"),
+        );
+        assert_eq!(
+            serde_json::to_value(&PlanEntryPriority::Low).unwrap(),
+            json!("low"),
+        );
+        assert_eq!(
+            serde_json::to_value(&PlanEntryStatus::InProgress).unwrap(),
+            json!("in_progress"),
+        );
+        assert_eq!(
+            serde_json::to_value(&PlanEntryStatus::Completed).unwrap(),
+            json!("completed"),
+        );
+
+        let parsed: PlanEntryPriority = serde_json::from_str("\"high\"").unwrap();
+        assert_eq!(parsed, PlanEntryPriority::High);
+        let parsed: PlanEntryStatus = serde_json::from_str("\"in_progress\"").unwrap();
+        assert_eq!(parsed, PlanEntryStatus::InProgress);
+    }
+
+    #[test]
+    fn plan_skips_malformed_entries_keeping_valid_ones() {
+        // Mirrors the `DefaultOnError<VecSkipError<_, SkipListener>>` pattern
+        // applied to `Plan::entries` so a single bad entry does not poison the
+        // whole plan update.
+        let input = json!({
+            "entries": [
+                {"content": "ok 1", "priority": "high", "status": "pending"},
+                {"content": "missing priority", "status": "pending"},
+                {"content": "wrong types", "priority": 7, "status": false},
+                "not even an object",
+                {"content": "ok 2", "priority": "low", "status": "completed"},
+            ]
+        });
+
+        let plan: Plan = serde_json::from_value(input).unwrap();
+        assert_eq!(plan.entries.len(), 2);
+        assert_eq!(plan.entries[0].content, "ok 1");
+        assert_eq!(plan.entries[0].priority, PlanEntryPriority::High);
+        assert_eq!(plan.entries[1].content, "ok 2");
+        assert_eq!(plan.entries[1].status, PlanEntryStatus::Completed);
+    }
+
+    #[test]
+    fn plan_collapses_outer_shape_errors_to_empty_entries() {
+        // `DefaultOnError` should swallow outer-shape failures so a producer
+        // sending the wrong type for `entries` does not break consumers.
+        // `entries` is required on the wire (no `#[serde(default)]`), so a
+        // missing key still errors; that's intentional and documented here.
+        let cases = [
+            json!({ "entries": null }),
+            json!({ "entries": "oops" }),
+            json!({ "entries": {"k": 1} }),
+            json!({ "entries": 42 }),
+        ];
+        for input in cases {
+            let plan: Plan = serde_json::from_value(input.clone()).unwrap_or_else(|e| {
+                panic!("expected Plan to deserialize from {input}: {e}");
+            });
+            assert!(
+                plan.entries.is_empty(),
+                "expected empty entries for {input}, got {:?}",
+                plan.entries
+            );
+        }
+
+        // Missing key is still an error - the field is required.
+        let err = serde_json::from_value::<Plan>(json!({})).unwrap_err();
+        assert!(
+            err.to_string().contains("entries"),
+            "expected missing-field error to mention `entries`, got: {err}"
+        );
+    }
+
+    #[test]
+    fn plan_preserves_meta_when_present() {
+        let mut meta = Meta::new();
+        meta.insert("k".to_string(), json!("v"));
+        let value = Plan::new(vec![entry()]).meta(meta.clone());
+
+        let serialized = serde_json::to_value(&value).unwrap();
+        assert_eq!(serialized["_meta"], json!({"k": "v"}));
+        let parsed: Plan = serde_json::from_value(serialized).unwrap();
+        assert_eq!(parsed.meta, Some(meta));
+    }
+}

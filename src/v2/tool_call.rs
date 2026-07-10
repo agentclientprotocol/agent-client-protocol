@@ -673,3 +673,284 @@ impl ToolCallLocation {
         self
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::v2::{ContentBlock, ErrorCode, TextContent};
+    use serde_json::json;
+
+    fn full_tool_call() -> ToolCall {
+        ToolCall::new("tc_1", "edit file")
+            .kind(ToolKind::Edit)
+            .status(ToolCallStatus::InProgress)
+            .content(vec![ToolCallContent::Diff(
+                Diff::new("/tmp/a.rs", "new").old_text("old"),
+            )])
+            .locations(vec![ToolCallLocation::new("/tmp/a.rs").line(7)])
+            .raw_input(json!({"path": "/tmp/a.rs"}))
+            .raw_output(json!({"ok": true}))
+    }
+
+    #[test]
+    fn tool_call_default_kind_and_status_are_omitted() {
+        let value = ToolCall::new("tc", "title");
+        let serialized = serde_json::to_value(&value).unwrap();
+        let obj = serialized.as_object().unwrap();
+        assert!(
+            !obj.contains_key("kind"),
+            "kind should be skipped: {serialized}"
+        );
+        assert!(
+            !obj.contains_key("status"),
+            "status should be skipped: {serialized}"
+        );
+        assert!(!obj.contains_key("content"));
+        assert!(!obj.contains_key("locations"));
+        assert!(!obj.contains_key("rawInput"));
+        assert!(!obj.contains_key("rawOutput"));
+        assert!(!obj.contains_key("_meta"));
+    }
+
+    #[test]
+    fn tool_kind_unknown_variants_decode_to_other() {
+        let kind: ToolKind = serde_json::from_str("\"future_kind\"").unwrap();
+        assert_eq!(kind, ToolKind::Other);
+        assert_eq!(
+            serde_json::to_value(ToolKind::Other).unwrap(),
+            json!("other")
+        );
+    }
+
+    #[test]
+    fn tool_call_status_pending_is_default() {
+        assert_eq!(ToolCallStatus::default(), ToolCallStatus::Pending);
+        assert_eq!(
+            serde_json::to_value(ToolCallStatus::InProgress).unwrap(),
+            json!("in_progress")
+        );
+        let parsed: ToolCallStatus = serde_json::from_str("\"completed\"").unwrap();
+        assert_eq!(parsed, ToolCallStatus::Completed);
+    }
+
+    #[test]
+    fn tool_call_roundtrip_preserves_all_fields() {
+        let value = full_tool_call();
+        let serialized = serde_json::to_value(&value).unwrap();
+        let parsed: ToolCall = serde_json::from_value(serialized).unwrap();
+        assert_eq!(parsed, value);
+    }
+
+    #[test]
+    fn tool_call_update_only_overwrites_present_fields() {
+        let mut call = full_tool_call();
+        let fields = ToolCallUpdateFields::new().status(ToolCallStatus::Completed);
+        call.update(fields);
+
+        assert_eq!(call.status, ToolCallStatus::Completed);
+        assert_eq!(call.title, "edit file");
+        assert_eq!(call.kind, ToolKind::Edit);
+        assert_eq!(call.content.len(), 1);
+        assert_eq!(call.locations.len(), 1);
+        assert_eq!(call.raw_input, Some(json!({"path": "/tmp/a.rs"})));
+    }
+
+    #[test]
+    fn tool_call_update_replaces_collections_not_extends() {
+        let mut call = full_tool_call();
+        let fields = ToolCallUpdateFields::new()
+            .content(vec![ToolCallContent::Content(Content::new(
+                ContentBlock::Text(TextContent::new("only new")),
+            ))])
+            .locations(vec![ToolCallLocation::new("/other")]);
+        call.update(fields);
+
+        assert_eq!(call.content.len(), 1);
+        match &call.content[0] {
+            ToolCallContent::Content(c) => match &c.content {
+                ContentBlock::Text(t) => assert_eq!(t.text, "only new"),
+                _ => panic!("expected text content"),
+            },
+            _ => panic!("expected Content variant after replacement"),
+        }
+        assert_eq!(call.locations.len(), 1);
+        assert_eq!(call.locations[0].path, std::path::PathBuf::from("/other"));
+    }
+
+    #[test]
+    fn tool_call_try_from_update_requires_title() {
+        let update = ToolCallUpdate::new("tc_1", ToolCallUpdateFields::new());
+        let err = ToolCall::try_from(update).unwrap_err();
+        assert_eq!(err.code, ErrorCode::InvalidParams);
+        assert_eq!(
+            err.data.as_ref().and_then(|v| v.as_str()),
+            Some("title is required for a tool call"),
+        );
+    }
+
+    #[test]
+    fn tool_call_try_from_update_fills_defaults_for_missing_optionals() {
+        let update = ToolCallUpdate::new(
+            "tc_1",
+            ToolCallUpdateFields::new()
+                .title("hello")
+                .raw_input(json!({"x": 1})),
+        );
+
+        let call = ToolCall::try_from(update).unwrap();
+        assert_eq!(call.tool_call_id, ToolCallId::new("tc_1"));
+        assert_eq!(call.title, "hello");
+        assert_eq!(call.kind, ToolKind::default());
+        assert_eq!(call.status, ToolCallStatus::default());
+        assert!(call.content.is_empty());
+        assert!(call.locations.is_empty());
+        assert_eq!(call.raw_input, Some(json!({"x": 1})));
+        assert_eq!(call.raw_output, None);
+    }
+
+    #[test]
+    fn tool_call_to_update_preserves_every_field() {
+        let call = full_tool_call();
+        let update: ToolCallUpdate = call.clone().into();
+        assert_eq!(update.tool_call_id, call.tool_call_id);
+        assert_eq!(update.fields.title.as_deref(), Some("edit file"));
+        assert_eq!(update.fields.kind, Some(ToolKind::Edit));
+        assert_eq!(update.fields.status, Some(ToolCallStatus::InProgress));
+        assert_eq!(update.fields.content.as_ref().map(Vec::len), Some(1));
+        assert_eq!(update.fields.locations.as_ref().map(Vec::len), Some(1));
+        assert_eq!(update.fields.raw_input, Some(json!({"path": "/tmp/a.rs"})));
+        assert_eq!(update.fields.raw_output, Some(json!({"ok": true})));
+
+        let rebuilt = ToolCall::try_from(update).unwrap();
+        assert_eq!(rebuilt, call);
+    }
+
+    #[test]
+    fn tool_call_update_flattens_fields_on_wire() {
+        let update = ToolCallUpdate::new(
+            "tc_1",
+            ToolCallUpdateFields::new()
+                .status(ToolCallStatus::Completed)
+                .title("done"),
+        );
+        let serialized = serde_json::to_value(&update).unwrap();
+        assert_eq!(serialized["toolCallId"], json!("tc_1"));
+        assert_eq!(serialized["status"], json!("completed"));
+        assert_eq!(serialized["title"], json!("done"));
+        assert!(
+            serialized.get("fields").is_none(),
+            "fields should be flattened"
+        );
+    }
+
+    #[test]
+    fn tool_call_content_discriminator_is_type_snake_case() {
+        let diff = ToolCallContent::Diff(Diff::new("/p", "new"));
+        let json = serde_json::to_value(&diff).unwrap();
+        assert_eq!(json["type"], json!("diff"));
+
+        let parsed: ToolCallContent = serde_json::from_value(json!({
+            "type": "content",
+            "content": {"type": "text", "text": "hi"}
+        }))
+        .unwrap();
+        match parsed {
+            ToolCallContent::Content(c) => match c.content {
+                ContentBlock::Text(t) => assert_eq!(t.text, "hi"),
+                _ => panic!("expected text"),
+            },
+            _ => panic!("expected Content variant"),
+        }
+
+        let parsed: ToolCallContent = serde_json::from_value(json!({
+            "type": "terminal",
+            "terminalId": "term_1",
+        }))
+        .unwrap();
+        match parsed {
+            ToolCallContent::Terminal(t) => assert_eq!(t.terminal_id.0.as_ref(), "term_1"),
+            _ => panic!("expected Terminal variant"),
+        }
+    }
+
+    #[test]
+    fn tool_call_skips_malformed_content_and_locations() {
+        let input = json!({
+            "toolCallId": "tc_1",
+            "title": "hi",
+            "content": [
+                {"type": "content", "content": {"type": "text", "text": "ok"}},
+                {"type": "diff", "missingPath": true},
+                "not even an object",
+                {"type": "totally_unknown_kind"},
+                {"type": "diff", "path": "/p", "newText": "n"},
+            ],
+            "locations": [
+                {"path": "/ok"},
+                {"path": 42},
+                "nope",
+            ]
+        });
+
+        let call: ToolCall = serde_json::from_value(input).unwrap();
+        assert_eq!(call.content.len(), 2);
+        match &call.content[0] {
+            ToolCallContent::Content(_) => {}
+            _ => panic!("expected text content first"),
+        }
+        match &call.content[1] {
+            ToolCallContent::Diff(d) => assert_eq!(d.new_text, "n"),
+            _ => panic!("expected diff second"),
+        }
+        assert_eq!(call.locations.len(), 1);
+        assert_eq!(call.locations[0].path, std::path::PathBuf::from("/ok"));
+    }
+
+    #[test]
+    fn tool_call_treats_outer_shape_errors_as_empty_collections() {
+        let input = json!({
+            "toolCallId": "tc_1",
+            "title": "hi",
+            "content": "oops",
+            "locations": {"k": 1}
+        });
+        let call: ToolCall = serde_json::from_value(input).unwrap();
+        assert!(call.content.is_empty());
+        assert!(call.locations.is_empty());
+    }
+
+    #[test]
+    fn tool_call_update_fields_tolerate_unknown_kind_and_status() {
+        let fields: ToolCallUpdateFields = serde_json::from_value(json!({
+            "kind": "totally_new_kind",
+            "status": "totally_new_status",
+        }))
+        .unwrap();
+        assert_eq!(fields.kind, Some(ToolKind::Other));
+        assert_eq!(fields.status, None);
+    }
+
+    #[test]
+    fn diff_new_leaves_old_text_unset() {
+        let d = Diff::new("/p", "new");
+        assert_eq!(d.old_text, None);
+        let serialized = serde_json::to_value(&d).unwrap();
+        assert!(serialized.as_object().unwrap().get("oldText").is_none());
+    }
+
+    #[test]
+    fn tool_call_content_from_content_block_wraps_in_content_variant() {
+        let block: ContentBlock = ContentBlock::Text(TextContent::new("hi"));
+        let tcc: ToolCallContent = block.into();
+        match tcc {
+            ToolCallContent::Content(_) => {}
+            _ => panic!("expected Content variant from blanket From impl"),
+        }
+
+        let from_diff: ToolCallContent = Diff::new("/p", "n").into();
+        match from_diff {
+            ToolCallContent::Diff(_) => {}
+            _ => panic!("expected Diff variant from From<Diff>"),
+        }
+    }
+}

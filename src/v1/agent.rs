@@ -6467,4 +6467,131 @@ mod test_serialization {
         let deserialized: AgentCapabilities = serde_json::from_value(json).unwrap();
         assert!(deserialized.providers.is_some());
     }
+
+    // ---------------------------------------------------------------------
+    // Logout method (stabilized in #1273).
+    //
+    // These tests lock in the stable wire contract for the logout method
+    // family: the method name, the empty-object payload shape for both the
+    // request and response, and the way capabilities are advertised on
+    // `AgentCapabilities.auth.logout`. Previously these types were gated
+    // behind `feature = "unstable_logout"` and shipped with no dedicated
+    // serialization tests, so any accidental rename to the wire tag,
+    // `_meta` field, or capabilities field would go unnoticed.
+
+    #[test]
+    fn test_logout_method_name() {
+        assert_eq!(LOGOUT_METHOD_NAME, "logout");
+        assert_eq!(AGENT_METHOD_NAMES.logout, "logout");
+        assert_eq!(
+            ClientRequest::LogoutRequest(LogoutRequest::new()).method(),
+            "logout"
+        );
+    }
+
+    #[test]
+    fn test_logout_request_serialization() {
+        // Default (no _meta) must serialize to an empty JSON object so the
+        // request stays wire-compatible with peers that only send `{}`.
+        let request = LogoutRequest::new();
+        let json = serde_json::to_value(&request).unwrap();
+        assert_eq!(json, json!({}));
+
+        let deserialized: LogoutRequest = serde_json::from_value(json).unwrap();
+        assert!(deserialized.meta.is_none());
+
+        // Attached _meta round-trips through the `_meta` (not `meta`) key.
+        let mut meta = Meta::new();
+        meta.insert("trace_id".to_string(), json!("abc-123"));
+        let request = LogoutRequest::new().meta(meta.clone());
+        let json = serde_json::to_value(&request).unwrap();
+        assert_eq!(json, json!({ "_meta": { "trace_id": "abc-123" } }));
+
+        let deserialized: LogoutRequest = serde_json::from_value(json).unwrap();
+        assert_eq!(deserialized.meta.as_ref(), Some(&meta));
+    }
+
+    #[test]
+    fn test_logout_response_serialization() {
+        // Default response is `{}` and must survive omission entirely
+        // because `AgentResponse::LogoutResponse` uses `#[serde(default)]`
+        // — a broken default here would break every logout roundtrip.
+        let response = LogoutResponse::new();
+        let json = serde_json::to_value(&response).unwrap();
+        assert_eq!(json, json!({}));
+
+        let from_default: LogoutResponse = serde_json::from_value(json!({})).unwrap();
+        assert!(from_default.meta.is_none());
+        assert_eq!(LogoutResponse::default(), from_default);
+
+        // _meta round-trips symmetrically with the request.
+        let mut meta = Meta::new();
+        meta.insert("logged_out_at".to_string(), json!("2026-01-01T00:00:00Z"));
+        let response = LogoutResponse::new().meta(meta.clone());
+        let json = serde_json::to_value(&response).unwrap();
+        assert_eq!(
+            json,
+            json!({ "_meta": { "logged_out_at": "2026-01-01T00:00:00Z" } })
+        );
+
+        let deserialized: LogoutResponse = serde_json::from_value(json).unwrap();
+        assert_eq!(deserialized.meta.as_ref(), Some(&meta));
+    }
+
+    #[test]
+    fn test_logout_capabilities_serialization() {
+        // The presence of `logout: {}` is what advertises the capability,
+        // so an empty struct must serialize to an empty object rather than
+        // being skipped entirely.
+        let caps = LogoutCapabilities::new();
+        let json = serde_json::to_value(&caps).unwrap();
+        assert_eq!(json, json!({}));
+
+        let deserialized: LogoutCapabilities = serde_json::from_value(json).unwrap();
+        assert!(deserialized.meta.is_none());
+    }
+
+    #[test]
+    fn test_agent_auth_capabilities_serialization() {
+        // No logout capability advertised -> serialized object omits the
+        // `logout` key (so peers that don't understand it are unaffected).
+        let caps = AgentAuthCapabilities::new();
+        let json = serde_json::to_value(&caps).unwrap();
+        assert_eq!(json, json!({}));
+        assert!(!json.as_object().unwrap().contains_key("logout"));
+
+        // Advertise logout -> `logout: {}` appears in the JSON payload.
+        let caps = AgentAuthCapabilities::new().logout(LogoutCapabilities::new());
+        let json = serde_json::to_value(&caps).unwrap();
+        assert_eq!(json, json!({ "logout": {} }));
+
+        let deserialized: AgentAuthCapabilities = serde_json::from_value(json).unwrap();
+        assert!(deserialized.logout.is_some());
+
+        // Explicit `logout: null` should decode identically to an omitted
+        // field so peers can serialize either form.
+        let deserialized: AgentAuthCapabilities =
+            serde_json::from_value(json!({ "logout": null })).unwrap();
+        assert!(deserialized.logout.is_none());
+    }
+
+    #[test]
+    fn test_agent_capabilities_advertises_auth_logout() {
+        // `AgentCapabilities.auth` was previously feature-gated. Now that
+        // logout is stable, `auth.logout` is how an agent advertises the
+        // logout method on the wire, so we lock in the exact JSON shape.
+        let caps = AgentCapabilities::new()
+            .auth(AgentAuthCapabilities::new().logout(LogoutCapabilities::new()));
+
+        let json = serde_json::to_value(&caps).unwrap();
+        assert_eq!(json["auth"], json!({ "logout": {} }));
+
+        let deserialized: AgentCapabilities = serde_json::from_value(json).unwrap();
+        assert!(deserialized.auth.logout.is_some());
+
+        // A capabilities payload that omits `auth` entirely must still
+        // deserialize (default-empty), so older agents keep working.
+        let deserialized: AgentCapabilities = serde_json::from_value(json!({})).unwrap();
+        assert!(deserialized.auth.logout.is_none());
+    }
 }
