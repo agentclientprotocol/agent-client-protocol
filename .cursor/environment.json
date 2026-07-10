@@ -1,5 +1,5 @@
 {
-"install": "export RUSTUP_HOME=\"$HOME/.rustup\"; export CARGO_HOME=\"$HOME/.cargo\"; export PATH=\"$CARGO_HOME/bin:$PATH\"; if ! command -v rustup >/dev/null 2>&1; then curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile minimal; fi; rustup show; cargo fetch",
-"start": "",
-"terminals": []
+    "install": "export RUSTUP_HOME=\"$HOME/.rustup\"; export CARGO_HOME=\"$HOME/.cargo\"; export PATH=\"$CARGO_HOME/bin:$PATH\"; if ! command -v rustup >/dev/null 2>&1; then curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile minimal; fi; rustup show; cargo fetch",
+  "start": "",
+  "terminals": []
 }
