@@ -33,7 +33,6 @@ Consumers should not infer wire compatibility from the crate or schema release v
 - [Schema](./schema/v1/schema.json)
 - [Agents](https://agentclientprotocol.com/overview/agents)
 - [Clients](https://agentclientprotocol.com/overview/clients)
-- **construct**: [`construct`](https://github.com/construct-worlds/construct) — ACP stdio agent server (`construct acp`) for construct daemon sessions; see [Agents](https://agentclientprotocol.com/get-started/agents)
 - Official Libraries
   - **Kotlin**: [`acp-kotlin`](https://github.com/agentclientprotocol/kotlin-sdk) - Supports JVM, other targets are in progress, see [samples](https://github.com/agentclientprotocol/kotlin-sdk/tree/master/samples/kotlin-acp-client-sample/src/main/kotlin/com/agentclientprotocol/samples)
   - **Java**: [`java-sdk`](https://github.com/agentclientprotocol/java-sdk) - See [examples](https://github.com/agentclientprotocol/java-sdk/tree/main/examples)
