@@ -370,4 +370,179 @@ mod tests {
             );
         }
     }
+
+    // ---- Error construction & builder methods ----
+
+    #[test]
+    fn error_new_sets_code_and_message_with_no_data() {
+        let err = Error::new(-12345, "something went wrong");
+        assert_eq!(i32::from(err.code), -12345);
+        assert_eq!(err.message, "something went wrong");
+        assert!(err.data.is_none());
+    }
+
+    #[test]
+    fn error_data_builder_attaches_payload() {
+        let err = Error::new(-1, "boom").data(serde_json::json!({"detail": 42}));
+        assert_eq!(err.data, Some(serde_json::json!({"detail": 42})));
+        // Passing None via IntoOption also works.
+        let err2 = Error::new(-1, "boom").data(None);
+        assert!(err2.data.is_none());
+    }
+
+    #[test]
+    fn standard_constructors_use_correct_codes_and_messages() {
+        // These constants are part of the public contract; if any of them
+        // drift, downstream JSON-RPC clients silently break.
+        for (err, expected_code) in [
+            (Error::parse_error(), -32700),
+            (Error::invalid_request(), -32600),
+            (Error::method_not_found(), -32601),
+            (Error::invalid_params(), -32602),
+            (Error::internal_error(), -32603),
+            (Error::auth_required(), -32000),
+            (Error::resource_not_found(None), -32002),
+        ] {
+            assert_eq!(i32::from(err.code), expected_code);
+            // Default message must be a non-empty string.
+            assert!(!err.message.is_empty());
+        }
+    }
+
+    #[test]
+    fn resource_not_found_with_uri_includes_uri_in_data() {
+        let err = Error::resource_not_found(Some("file:///missing.txt".to_string()));
+        assert_eq!(i32::from(err.code), -32002);
+        assert_eq!(
+            err.data,
+            Some(serde_json::json!({"uri": "file:///missing.txt"}))
+        );
+    }
+
+    #[test]
+    fn resource_not_found_without_uri_has_no_data() {
+        let err = Error::resource_not_found(None);
+        assert_eq!(i32::from(err.code), -32002);
+        assert!(err.data.is_none());
+    }
+
+    // ---- ErrorCode <-> i32 conversions ----
+
+    #[test]
+    fn error_code_other_round_trips_through_i32() {
+        // Unknown integer codes must survive a (i32 -> ErrorCode -> i32)
+        // round-trip and stay in the `Other` variant rather than being
+        // misclassified.
+        for value in [1, 42, -1, -99999, i32::MAX, i32::MIN] {
+            let code = ErrorCode::from(value);
+            assert_eq!(code, ErrorCode::Other(value));
+            assert_eq!(i32::from(code), value);
+        }
+    }
+
+    #[test]
+    fn error_code_known_values_decode_to_named_variants() {
+        assert_eq!(ErrorCode::from(-32700), ErrorCode::ParseError);
+        assert_eq!(ErrorCode::from(-32600), ErrorCode::InvalidRequest);
+        assert_eq!(ErrorCode::from(-32601), ErrorCode::MethodNotFound);
+        assert_eq!(ErrorCode::from(-32602), ErrorCode::InvalidParams);
+        assert_eq!(ErrorCode::from(-32603), ErrorCode::InternalError);
+        assert_eq!(ErrorCode::from(-32000), ErrorCode::AuthRequired);
+        assert_eq!(ErrorCode::from(-32002), ErrorCode::ResourceNotFound);
+    }
+
+    #[test]
+    fn error_code_debug_includes_numeric_value() {
+        // Debug is `<number>: <display>` so log lines retain the wire-level
+        // code alongside the human-readable name.
+        let formatted = format!("{:?}", ErrorCode::ParseError);
+        assert!(formatted.contains("-32700"));
+        assert!(formatted.contains("Parse error"));
+    }
+
+    // ---- Display ----
+
+    #[test]
+    fn display_uses_message_when_present() {
+        let err = Error::new(-1, "boom");
+        assert_eq!(err.to_string(), "boom");
+    }
+
+    #[test]
+    fn display_uses_code_when_message_empty() {
+        let err = Error::new(-32603, "");
+        assert_eq!(err.to_string(), "-32603");
+    }
+
+    #[test]
+    fn display_appends_pretty_data_when_present() {
+        let err = Error::new(-1, "boom").data(serde_json::json!({"k": "v"}));
+        let rendered = err.to_string();
+        assert!(rendered.starts_with("boom:"), "got: {rendered}");
+        // Pretty JSON includes a newline + indentation.
+        assert!(rendered.contains("\n  \"k\": \"v\""), "got: {rendered}");
+    }
+
+    // ---- From<serde_json::Error> ----
+
+    #[test]
+    fn from_serde_error_produces_invalid_params_with_message() {
+        let err: Error = serde_json::from_str::<u32>("not-json").unwrap_err().into();
+        assert_eq!(i32::from(err.code), -32602);
+        assert!(err.data.is_some(), "serde error string must be preserved");
+        let data_str = err.data.as_ref().and_then(|d| d.as_str()).unwrap();
+        assert!(!data_str.is_empty());
+    }
+
+    // ---- From<anyhow::Error> with downcast behaviour ----
+
+    #[test]
+    fn from_anyhow_error_downcasts_existing_acp_error() {
+        // When the anyhow::Error already wraps an `Error`, conversion must
+        // preserve it byte-for-byte instead of re-wrapping as an internal error.
+        let original = Error::auth_required().data(serde_json::json!({"reason": "expired"}));
+        let wrapped: anyhow::Error = original.clone().into();
+        let recovered: Error = wrapped.into();
+        assert_eq!(recovered, original);
+    }
+
+    #[test]
+    fn from_anyhow_error_wraps_other_errors_as_internal_error() {
+        // Some unrelated error (io::Error) should collapse to InternalError
+        // with the underlying error message preserved in `data`.
+        let io_err = std::io::Error::other("disk on fire");
+        let wrapped = anyhow::Error::from(io_err);
+        let err: Error = wrapped.into();
+        assert_eq!(i32::from(err.code), -32603);
+        let data_str = err.data.as_ref().and_then(|d| d.as_str()).unwrap();
+        assert!(data_str.contains("disk on fire"));
+    }
+
+    #[test]
+    fn into_internal_error_records_source_message() {
+        let io_err = std::io::Error::other("boom");
+        let err = Error::into_internal_error(&io_err);
+        assert_eq!(i32::from(err.code), -32603);
+        let data_str = err.data.as_ref().and_then(|d| d.as_str()).unwrap();
+        assert!(data_str.contains("boom"));
+    }
+
+    // ---- Serde of the Error envelope ----
+
+    #[test]
+    fn error_serialization_omits_absent_data_field() {
+        let err = Error::method_not_found();
+        let value = serde_json::to_value(&err).unwrap();
+        let object = value.as_object().unwrap();
+        assert!(!object.contains_key("data"));
+        assert_eq!(object["code"], serde_json::json!(-32601));
+    }
+
+    #[test]
+    fn error_serialization_round_trip_preserves_all_fields() {
+        let err = Error::new(-12345, "custom").data(serde_json::json!({"x": [1, 2, 3]}));
+        let value = serde_json::to_value(&err).unwrap();
+        let parsed: Error = serde_json::from_value(value).unwrap();
+        assert_eq!(parsed, err);
+    }
 }

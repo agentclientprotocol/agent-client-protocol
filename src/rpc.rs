@@ -188,6 +188,102 @@ mod tests {
     }
 
     #[test]
+    fn request_id_from_string_and_i64() {
+        // The `#[from]` derived impls let callers pass raw types directly to
+        // anything taking `impl Into<RequestId>` — e.g. `Response::new`.
+        let from_str: RequestId = "abc".to_string().into();
+        assert_eq!(from_str, RequestId::Str("abc".to_string()));
+
+        let from_int: RequestId = 42i64.into();
+        assert_eq!(from_int, RequestId::Number(42));
+    }
+
+    #[test]
+    fn response_new_builds_result_for_ok() {
+        let response: Response<i32, Value> = Response::new(7i64, Ok(123));
+        match response {
+            Response::Result { id, result } => {
+                assert_eq!(id, RequestId::Number(7));
+                assert_eq!(result, 123);
+            }
+            Response::Error { .. } => panic!("expected Result variant"),
+        }
+    }
+
+    #[test]
+    fn response_new_builds_error_for_err() {
+        let response: Response<i32, Value> = Response::new("req-1".to_string(), Err(json!("nope")));
+        match response {
+            Response::Error { id, error } => {
+                assert_eq!(id, RequestId::Str("req-1".to_string()));
+                assert_eq!(error, json!("nope"));
+            }
+            Response::Result { .. } => panic!("expected Error variant"),
+        }
+    }
+
+    #[test]
+    fn jsonrpc_message_wrap_and_into_inner_round_trip() {
+        let request = Request {
+            id: RequestId::Number(1),
+            method: "ping".into(),
+            params: Some(json!({"x": 1})),
+        };
+        let wrapped = JsonRpcMessage::wrap(request.clone());
+        let value = serde_json::to_value(&wrapped).unwrap();
+        // Always emits the `"jsonrpc": "2.0"` envelope field.
+        assert_eq!(value["jsonrpc"], "2.0");
+        assert_eq!(value["id"], json!(1));
+        assert_eq!(value["method"], "ping");
+        assert_eq!(value["params"], json!({"x": 1}));
+
+        let unwrapped = wrapped.into_inner();
+        assert_eq!(unwrapped.id, request.id);
+        assert_eq!(unwrapped.method, request.method);
+        assert_eq!(unwrapped.params, request.params);
+    }
+
+    #[test]
+    fn jsonrpc_message_rejects_wrong_jsonrpc_version() {
+        // The version is hard-coded to "2.0"; anything else must fail to
+        // deserialize so callers cannot accept JSON-RPC 1.0 or unknown
+        // protocol envelopes by mistake.
+        let value = json!({
+            "jsonrpc": "1.0",
+            "id": 1,
+            "method": "ping",
+            "params": null
+        });
+        assert!(serde_json::from_value::<JsonRpcMessage<Request<Value>>>(value).is_err());
+    }
+
+    #[test]
+    fn jsonrpc_message_requires_jsonrpc_field() {
+        let value = json!({
+            "id": 1,
+            "method": "ping"
+        });
+        assert!(serde_json::from_value::<JsonRpcMessage<Request<Value>>>(value).is_err());
+    }
+
+    #[test]
+    fn request_round_trips_with_optional_params() {
+        // Sanity-check that a request with `params: Some(...)` can be
+        // serialized and deserialized without loss; this also exercises the
+        // `JsonRpcVersion` envelope reading path.
+        let request = Request {
+            id: RequestId::Number(7),
+            method: "do/thing".into(),
+            params: Some(json!({"hello": "world"})),
+        };
+        let value = serde_json::to_value(&request).unwrap();
+        let decoded: Request<Value> = serde_json::from_value(value).unwrap();
+        assert_eq!(decoded.id, request.id);
+        assert_eq!(decoded.method, request.method);
+        assert_eq!(decoded.params, request.params);
+    }
+
+    #[test]
     fn notification_wire_format() {
         // Test client -> agent notification wire format
         let outgoing_msg = JsonRpcMessage::wrap(Notification {
