@@ -15,6 +15,7 @@ mod plan;
 #[cfg(feature = "unstable_cancel_request")]
 mod protocol_level;
 mod tool_call;
+pub mod validation_impl;
 
 pub use crate::rpc::{JsonRpcMessage, Notification, Request, RequestId};
 pub use agent::*;
@@ -34,6 +35,7 @@ pub use plan::*;
 pub use protocol_level::*;
 pub use serde_json::value::RawValue;
 pub use tool_call::*;
+pub use validation_impl::*;
 
 pub type Response<Result> = crate::rpc::Response<Result, Error>;
 

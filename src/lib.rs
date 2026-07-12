@@ -43,6 +43,7 @@ mod serde_util;
 mod v1;
 #[cfg(feature = "unstable_protocol_v2")]
 pub mod v2;
+pub mod validation;
 mod version;
 
 pub use serde_util::*;

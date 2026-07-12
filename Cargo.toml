@@ -61,11 +61,13 @@ path = "src/bin/generate.rs"
 [dependencies]
 anyhow = "1"
 derive_more = { version = "2", features = ["from", "display"] }
+regex = "1"
 schemars = { version = "1" }
 serde = { version = "1", features = ["derive", "rc"] }
 serde_json = { version = "1", features = ["raw_value"] }
 serde_with = { version = "3.20.0", features = ["json", "schemars_1"] }
 strum = { version = "0.28", features = ["derive"] }
+thiserror = "2"
 tracing = { version = "0.1", default-features = false, optional = true }
 
 [lints.rust]
