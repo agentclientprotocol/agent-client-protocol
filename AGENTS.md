@@ -37,7 +37,7 @@ Never write readme files related to the conversation unless explicitly asked to.
 
 ## Cursor Cloud specific instructions
 
-This is a **protocol schema library** (not a runtime application). There are no long-running services to start. Development consists of editing Rust source, regenerating schemas, and validating with the CI check pipeline.
+This is a **protocol schema library** (not a runtime application). There are no long-running services to start. Development consists of editing Rust source, regenerating schemas, and validating with the commands below.
 
 ### Environment prerequisites
 
@@ -58,6 +58,6 @@ This is a **protocol schema library** (not a runtime application). There are no 
 
 ### Gotchas
 
-- `cargo fmt` uses **nightly** rustfmt (Cargo.toml uses edition 2024 features). If `cargo fmt` errors about unstable features, ensure `rustup component add rustfmt --toolchain nightly` has been run — `cargo fmt` automatically uses the nightly formatter when available.
+- `cargo fmt` uses **nightly** rustfmt (Cargo.toml uses edition 2024 features). If `cargo fmt` errors about unstable features, ensure `rustup component add rustfmt --toolchain nightly` has been run.
 - After changing Rust types in `src/`, always run `npm run generate` to regenerate schema files, then verify with `git diff --exit-code` that generated files are committed.
 - The `npm run check` command is the single command to validate everything before pushing. It mirrors the CI pipeline.
