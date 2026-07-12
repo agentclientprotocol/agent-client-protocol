@@ -120,3 +120,76 @@ impl ProtocolLevelNotification {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::v1::RequestId;
+    use serde_json::json;
+
+    #[test]
+    fn cancel_request_method_name_is_dollar_namespace() {
+        // `$/cancel_request` is the protocol-level method name that all sides
+        // are expected to recognize (or safely ignore). Renaming this is a
+        // wire-format break.
+        assert_eq!(CANCEL_REQUEST_METHOD_NAME, "$/cancel_request");
+        assert_eq!(
+            PROTOCOL_LEVEL_METHOD_NAMES.cancel_request,
+            CANCEL_REQUEST_METHOD_NAME
+        );
+    }
+
+    #[test]
+    fn protocol_level_notification_method_returns_cancel_request_name() {
+        let notif = ProtocolLevelNotification::CancelRequestNotification(
+            CancelRequestNotification::new(RequestId::Number(7)),
+        );
+        assert_eq!(notif.method(), CANCEL_REQUEST_METHOD_NAME);
+    }
+
+    #[test]
+    fn cancel_request_notification_roundtrip_omits_meta_when_unset() {
+        let notif = CancelRequestNotification::new(RequestId::Str("req_1".to_string()));
+        let serialized = serde_json::to_value(&notif).unwrap();
+        assert_eq!(serialized, json!({"requestId": "req_1"}));
+
+        let parsed: CancelRequestNotification = serde_json::from_value(serialized).unwrap();
+        assert_eq!(parsed, notif);
+    }
+
+    #[test]
+    fn cancel_request_notification_preserves_meta_when_set() {
+        let mut meta = Meta::new();
+        meta.insert("trace".to_string(), json!("abc123"));
+        let notif = CancelRequestNotification::new(RequestId::Number(42)).meta(meta.clone());
+
+        let serialized = serde_json::to_value(&notif).unwrap();
+        assert_eq!(
+            serialized,
+            json!({"requestId": 42, "_meta": {"trace": "abc123"}})
+        );
+
+        let parsed: CancelRequestNotification = serde_json::from_value(serialized).unwrap();
+        assert_eq!(parsed.meta, Some(meta));
+    }
+
+    #[test]
+    fn cancel_request_accepts_all_request_id_shapes() {
+        // RequestId is untagged: null / number / string. The cancellation
+        // notification must round-trip any of them so cancellation works
+        // regardless of how the original request was issued.
+        let cases = [
+            (RequestId::Null, json!(null)),
+            (RequestId::Number(0), json!(0)),
+            (RequestId::Number(-1), json!(-1)),
+            (RequestId::Str("hex-id".to_string()), json!("hex-id")),
+        ];
+        for (id, expected_id_json) in cases {
+            let notif = CancelRequestNotification::new(id.clone());
+            let serialized = serde_json::to_value(&notif).unwrap();
+            assert_eq!(serialized["requestId"], expected_id_json, "id: {id:?}");
+            let parsed: CancelRequestNotification = serde_json::from_value(serialized).unwrap();
+            assert_eq!(parsed.request_id, id);
+        }
+    }
+}
