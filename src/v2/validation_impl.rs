@@ -7,7 +7,9 @@ use crate::validation::{
 };
 
 #[cfg(feature = "unstable_auth_methods")]
-use crate::validation::{validate_env_var_name, validate_url};
+use crate::validation::validate_env_var_name;
+#[cfg(any(feature = "unstable_auth_methods", feature = "unstable_elicitation"))]
+use crate::validation::validate_url;
 
 #[cfg(feature = "unstable_auth_methods")]
 use super::{AuthEnvVar, AuthMethodEnvVar};
