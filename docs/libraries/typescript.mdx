@@ -13,89 +13,20 @@ To get started, add the package as a dependency to your project:
 npm install @agentclientprotocol/sdk
 ```
 
-## Building an Agent
-
-If you're building an [Agent](/protocol/overview#agent), start with the
+Depending on what kind of tool you're building, you'll start with either the
 [`agent()`](https://agentclientprotocol.github.io/typescript-sdk/functions/agent.html)
-function, register handlers for the ACP methods you support, and then call
-`connect(stream)` to serve an ACP client:
-
-```typescript
-import * as acp from "@agentclientprotocol/sdk";
-import { Readable, Writable } from "node:stream";
-
-const stream = acp.ndJsonStream(
-  Writable.toWeb(process.stdout),
-  Readable.toWeb(process.stdin) as ReadableStream<Uint8Array>,
-);
-
-acp
-  .agent({ name: "example-agent" })
-  .onRequest("initialize", () => ({
-    protocolVersion: acp.PROTOCOL_VERSION,
-    agentCapabilities: { loadSession: false },
-  }))
-  .onRequest("session/new", () => ({ sessionId: crypto.randomUUID() }))
-  .onRequest("session/prompt", async (ctx) => {
-    // Stream updates back to the client while the turn runs
-    await ctx.client.notify(acp.methods.client.session.update, {
-      sessionId: ctx.params.sessionId,
-      update: {
-        sessionUpdate: "agent_message_chunk",
-        content: { type: "text", text: "Hello, client!" },
-      },
-    });
-
-    return { stopReason: "end_turn" };
-  })
-  .connect(stream);
-```
-
-Handler params are validated against the protocol schema before your handler
-runs, and errors thrown from handlers are converted to JSON-RPC errors
-automatically.
-
-## Building a Client
-
-If you're building a [Client](/protocol/overview#client), start with the
+or
 [`client()`](https://agentclientprotocol.github.io/typescript-sdk/functions/client.html)
-function, register client-side handlers such as permission requests and file
-system access, and then run your agent workflow with `connectWith(stream, ...)`:
+function to register typed handlers for the ACP methods you support and connect
+to your counterpart. The
+[library README](https://github.com/agentclientprotocol/typescript-sdk#readme)
+walks through both sides, and the
+[examples directory](https://github.com/agentclientprotocol/typescript-sdk/tree/main/src/examples)
+contains runnable implementations that can be driven from your terminal or from
+an ACP Client like [Zed](https://zed.dev), making them great starting points for
+your own integration!
 
-```typescript
-import * as acp from "@agentclientprotocol/sdk";
-
-// e.g. an ndJsonStream over a spawned agent subprocess's stdio
-const stream = acp.ndJsonStream(input, output);
-
-const result = await acp
-  .client({ name: "example-client" })
-  .onRequest(acp.methods.client.session.requestPermission, (ctx) => ({
-    outcome: {
-      outcome: "selected",
-      optionId: ctx.params.options[0].optionId,
-    },
-  }))
-  .connectWith(stream, async (ctx) => {
-    await ctx.request(acp.methods.agent.initialize, {
-      protocolVersion: acp.PROTOCOL_VERSION,
-      clientCapabilities: {},
-    });
-
-    return ctx.buildSession(process.cwd()).withSession(async (session) => {
-      session.prompt("Hello, agent!");
-
-      for (;;) {
-        const message = await session.nextUpdate();
-        if (message.kind === "stop") {
-          return message.response;
-        }
-
-        console.log(message.notification);
-      }
-    });
-  });
-```
+Browse the [TypeScript library reference](https://agentclientprotocol.github.io/typescript-sdk) for detailed API documentation.
 
 ## Deprecated classes
 
@@ -103,17 +34,10 @@ Earlier versions of the library were built around the
 [AgentSideConnection](https://agentclientprotocol.github.io/typescript-sdk/classes/AgentSideConnection.html)
 and
 [ClientSideConnection](https://agentclientprotocol.github.io/typescript-sdk/classes/ClientSideConnection.html)
-classes. These classes are now **deprecated**: prefer
-`agent({ name }).connect(stream)` and
-`client({ name }).connectWith(stream, ...)` as shown above, which register
-typed handlers and validate messages with the generated protocol schemas. The
-deprecated classes remain available for backwards compatibility, but new
-integrations should use the fluent API.
+classes. These classes are now deprecated in favor of the fluent `agent()` and
+`client()` APIs. They remain available for backwards compatibility, but new
+integrations should follow the fluent examples in the library README.
 
-## Learn more
-
-You can find example implementations of both sides in the [main repository](https://github.com/agentclientprotocol/typescript-sdk/tree/main/src/examples). These can be run from your terminal or from an ACP Client like [Zed](https://zed.dev), making them great starting points for your own integration!
-
-Browse the [TypeScript library reference](https://agentclientprotocol.github.io/typescript-sdk) for detailed API documentation.
+## Users
 
 For a complete, production-ready implementation of an ACP agent, check out [Gemini CLI](https://github.com/google-gemini/gemini-cli/tree/main/packages/cli/src/acp).
