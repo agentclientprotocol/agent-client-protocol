@@ -19,10 +19,8 @@ or
 [`client()`](https://agentclientprotocol.github.io/typescript-sdk/functions/client.html)
 function to register typed handlers for the ACP methods you support and connect
 to your counterpart. The
-[library README](https://github.com/agentclientprotocol/typescript-sdk#readme)
-walks through both sides, and the
 [examples directory](https://github.com/agentclientprotocol/typescript-sdk/tree/main/src/examples)
-contains runnable implementations that can be driven from your terminal or from
+contains runnable implementations of both sides that can be driven from your terminal or from
 an ACP Client like [Zed](https://zed.dev), making them great starting points for
 your own integration!
 
@@ -36,7 +34,8 @@ and
 [ClientSideConnection](https://agentclientprotocol.github.io/typescript-sdk/classes/ClientSideConnection.html)
 classes. These classes are now deprecated in favor of the fluent `agent()` and
 `client()` APIs. They remain available for backwards compatibility, but new
-integrations should follow the fluent examples in the library README.
+integrations should use the fluent API as shown in the
+[examples](https://github.com/agentclientprotocol/typescript-sdk/tree/main/src/examples).
 
 ## Users
 
