@@ -58,8 +58,7 @@ Add a `terminal_update` session update:
   "command": "cargo test",
   "cwd": "/workspace/project",
   "output": {
-    "data": "cnVubmluZyAxMjMgdGVzdHMNCg==",
-    "truncated": false
+    "data": "cnVubmluZyAxMjMgdGVzdHMNCg=="
   },
   "exitStatus": {
     "exitCode": 0,
@@ -79,9 +78,9 @@ The patch fields are:
 
 - `command`: the human-readable command being run. Agents **SHOULD** include it on the first update when the terminal represents a command. It is descriptive and does not ask the Client to execute anything.
 - `cwd`: the command's working directory. Every supplied path **MUST** be absolute.
-- `output`: a replacement snapshot containing required `data` and `truncated` fields. `data` is RFC 4648 base64-encoded bytes and has JSON Schema `format: "byte"`. `truncated: false` means `data` contains the complete output from the start of the terminal through the snapshot. `truncated: true` means one or more bytes from the beginning were omitted, usually because of a retention limit, and `data` contains only the retained suffix. It does not mean bytes were omitted from the end or that more output will necessarily follow. `truncated` describes completeness; it does not change replacement behavior. In both cases, the snapshot replaces all previously stored bytes for the terminal, and Clients **MUST NOT** splice an older locally stored prefix onto it. Later chunks append to the replacement.
-- `exitStatus`: a concrete object marks the terminal as exited. Its `exitCode` and `signal` fields are optional and nullable; omission and `null` are equivalent and mean that value is unavailable. Agents should use conventional platform signal names. POSIX examples include `SIGTERM`, `SIGKILL`, and `SIGINT`; other platforms may use platform-specific names. `exitStatus: null` clears a previously reported exit status.
-- `_meta`: follows the same omitted, `null`, and concrete-object patch semantics.
+- `output`: an authoritative replacement snapshot containing required `data`. `data` is RFC 4648 base64-encoded bytes and has JSON Schema `format: "byte"`. A concrete snapshot is the complete byte sequence the Agent wants the Client to retain for the terminal at that point. It replaces all previously stored bytes, and Clients **MUST NOT** merge or splice bytes from the previous snapshot into it. Later chunks append to the replacement. Optional nullable `output._meta` is scoped to that snapshot; omission and `null` are equivalent and mean no snapshot metadata was provided.
+- `exitStatus`: a concrete object marks the terminal as exited. Its `exitCode`, `signal`, and `_meta` fields are optional and nullable; omission and `null` are equivalent and mean that value was not provided. Agents should use conventional platform signal names. POSIX examples include `SIGTERM`, `SIGKILL`, and `SIGINT`; other platforms may use platform-specific names. `exitStatus._meta` is scoped to that exit information. `exitStatus: null` clears a previously reported exit status.
+- The top-level `_meta` is terminal-scoped and follows the same omitted, `null`, and concrete-object patch semantics as the other update fields.
 
 The terminal's exit status is independent of its tool call's status. Agents should update both when both states change.
 
@@ -94,8 +93,6 @@ For example, a process terminated by a POSIX termination signal can report:
   }
 }
 ```
-
-Clients **SHOULD** indicate when earlier output was omitted. A truncated snapshot is a retained byte suffix, not a serialized terminal-screen checkpoint: it may begin in the middle of a UTF-8 code point or escape sequence, and omitted bytes may have established terminal modes, cursor state, or visible content. Terminal-emulator reconstruction from a truncated snapshot is therefore best-effort. Faithful replay requires an untruncated snapshot from the beginning of the terminal stream.
 
 ### Live output chunks
 
@@ -115,7 +112,7 @@ Chunk boundaries have no text or terminal meaning. A chunk may split a UTF-8 cod
 
 JSON-RPC batch entries may be processed in any order. Agents therefore **MUST NOT** put more than one `terminal_update` or `terminal_output_chunk` for the same `terminalId` in one batch when their application order affects the result.
 
-This initial design does not add byte offsets or sequence numbers. Untruncated full replacement snapshots provide the faithful replay, correction, and resynchronization operation, while truncated snapshots provide bounded best-effort recovery and chunks provide the efficient live append operation.
+This initial design does not add byte offsets or sequence numbers. Replacement snapshots provide the replay, correction, and resynchronization operation, while chunks provide the efficient live append operation.
 
 ### Command permission subjects
 
@@ -153,10 +150,11 @@ Session replay reconstructs the same terminal display without replaying every hi
 1. Add a v2 `TerminalId` and the `terminal` `ToolCallContent` variant.
 2. Add `terminal_update` and `terminal_output_chunk` to the v2 `SessionUpdate` union.
 3. Model terminal update fields with distinct omitted, `null`, and concrete states.
-4. Mark snapshot and chunk `data` as base64 bytes with JSON Schema `format: "byte"`.
-5. Add the `command` permission subject with its required command and absolute working directory plus optional associations.
-6. Update v2 protocol documentation, migration guidance, generated schemas, and SDK tests.
-7. Keep v1 and all Client terminal execution methods unchanged.
+4. Add optional `_meta` to every new object payload; keep `TerminalId` as a scalar string.
+5. Mark snapshot and chunk `data` as base64 bytes with JSON Schema `format: "byte"`.
+6. Add the `command` permission subject with its required command and absolute working directory plus optional associations.
+7. Update v2 protocol documentation, migration guidance, generated schemas, and SDK tests.
+8. Keep v1 and all Client terminal execution methods unchanged.
 
 ### Compatibility
 
@@ -177,7 +175,7 @@ PTY output is a byte stream. It may contain invalid UTF-8, and transport chunks 
 
 ### Why have both snapshots and chunks?
 
-Repeatedly replacing the full output buffer is inefficient for live output, while an append-only stream is insufficient for replay, correction, truncation, and resynchronization. The two operations have distinct, unambiguous semantics.
+Repeatedly replacing the full output buffer is inefficient for live output, while an append-only stream is insufficient for replay, correction, and resynchronization. The two operations have distinct, unambiguous semantics.
 
 ### Why put `command` and `cwd` on the terminal update?
 

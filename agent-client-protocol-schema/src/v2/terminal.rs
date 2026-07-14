@@ -74,32 +74,44 @@ impl Terminal {
     }
 }
 
-/// A complete snapshot of bytes retained for a terminal.
+/// An authoritative replacement snapshot of terminal output bytes.
+#[serde_as]
+#[skip_serializing_none]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct TerminalOutput {
-    /// Base64-encoded terminal output bytes.
+    /// Base64-encoded replacement terminal output bytes.
     #[schemars(extend("format" = "byte"))]
     pub data: String,
-    /// Whether one or more bytes from the beginning of the terminal output
-    /// were omitted from this snapshot.
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys. This metadata is scoped to the replacement snapshot. Omitted
+    /// and `null` are equivalent and mean no snapshot metadata was provided.
     ///
-    /// `false` means [`TerminalOutput::data`] contains the complete output from
-    /// the start of the terminal through this snapshot. `true` means it contains
-    /// only a retained suffix; This flag describes snapshot
-    /// completeness and does not change its replacement semantics.
-    pub truncated: bool,
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
 }
 
 impl TerminalOutput {
-    /// Builds a terminal output snapshot.
+    /// Builds an authoritative terminal output replacement.
     #[must_use]
-    pub fn new(data: impl Into<String>, truncated: bool) -> Self {
+    pub fn new(data: impl Into<String>) -> Self {
         Self {
             data: data.into(),
-            truncated,
+            meta: None,
         }
+    }
+
+    /// Sets or clears metadata scoped to this replacement snapshot.
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
     }
 }
 
@@ -127,6 +139,17 @@ pub struct TerminalExitStatus {
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub signal: Option<String>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys. This metadata is scoped to the exit information. Omitted
+    /// and `null` are equivalent and mean no exit metadata was provided.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
 }
 
 impl TerminalExitStatus {
@@ -147,6 +170,13 @@ impl TerminalExitStatus {
     #[must_use]
     pub fn signal(mut self, signal: impl IntoOption<String>) -> Self {
         self.signal = signal.into_option();
+        self
+    }
+
+    /// Sets or clears metadata scoped to this exit information.
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
         self
     }
 }
@@ -174,7 +204,7 @@ pub struct TerminalUpdate {
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub cwd: MaybeUndefined<PathBuf>,
-    /// A complete replacement snapshot of retained terminal output.
+    /// An authoritative replacement snapshot of terminal output bytes.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
@@ -227,7 +257,7 @@ impl TerminalUpdate {
         self
     }
 
-    /// Sets, clears, or leaves unchanged the retained output snapshot.
+    /// Sets, clears, or leaves unchanged the authoritative output snapshot.
     #[must_use]
     pub fn output(mut self, output: impl IntoMaybeUndefined<TerminalOutput>) -> Self {
         self.output = output.into_maybe_undefined();
@@ -394,12 +424,12 @@ mod tests {
         let mut stored = TerminalUpdate::new("term_1")
             .command("cargo test")
             .cwd("/workspace/project")
-            .output(TerminalOutput::new("b2xk", false));
+            .output(TerminalOutput::new("b2xk"));
 
         stored.apply_update(
             TerminalUpdate::new("term_1")
                 .command(None::<String>)
-                .output(TerminalOutput::new("bmV3", true))
+                .output(TerminalOutput::new("bmV3"))
                 .exit_status(TerminalExitStatus::new().signal("SIGTERM")),
         );
 
@@ -410,7 +440,7 @@ mod tests {
         );
         assert_eq!(
             stored.output,
-            MaybeUndefined::Value(TerminalOutput::new("bmV3", true))
+            MaybeUndefined::Value(TerminalOutput::new("bmV3"))
         );
         assert_eq!(
             stored.exit_status,
@@ -437,9 +467,40 @@ mod tests {
     }
 
     #[test]
+    fn terminal_output_meta_is_optional_and_snapshot_scoped() {
+        let omitted = TerminalOutput::new("b2s=");
+        assert_eq!(
+            serde_json::to_value(&omitted).unwrap(),
+            serde_json::json!({ "data": "b2s=" })
+        );
+
+        let null: TerminalOutput = serde_json::from_value(serde_json::json!({
+            "data": "b2s=",
+            "_meta": null
+        }))
+        .unwrap();
+        assert_eq!(null, omitted);
+
+        let mut meta = Meta::new();
+        meta.insert("source".to_string(), serde_json::json!("replay"));
+        assert_eq!(
+            serde_json::to_value(TerminalOutput::new("b2s=").meta(meta)).unwrap(),
+            serde_json::json!({
+                "data": "b2s=",
+                "_meta": {
+                    "source": "replay"
+                }
+            })
+        );
+    }
+
+    #[test]
     fn terminal_output_fields_use_byte_schema_format() {
         let output = serde_json::to_value(schemars::schema_for!(TerminalOutput)).unwrap();
         assert_eq!(output["properties"]["data"]["format"], "byte");
+        assert_eq!(output["required"], serde_json::json!(["data"]));
+        assert!(output["properties"].get("_meta").is_some());
+        assert!(output["properties"].get("truncated").is_none());
 
         let chunk = serde_json::to_value(schemars::schema_for!(TerminalOutputChunk)).unwrap();
         assert_eq!(chunk["properties"]["data"]["format"], "byte");
@@ -450,12 +511,29 @@ mod tests {
         let omitted: TerminalExitStatus = serde_json::from_value(serde_json::json!({})).unwrap();
         let null: TerminalExitStatus = serde_json::from_value(serde_json::json!({
             "exitCode": null,
-            "signal": null
+            "signal": null,
+            "_meta": null
         }))
         .unwrap();
 
         assert_eq!(omitted, TerminalExitStatus::new());
         assert_eq!(null, TerminalExitStatus::new());
         assert_eq!(serde_json::to_value(null).unwrap(), serde_json::json!({}));
+    }
+
+    #[test]
+    fn terminal_exit_status_meta_is_exit_scoped() {
+        let mut meta = Meta::new();
+        meta.insert("reason".to_string(), serde_json::json!("timeout"));
+
+        assert_eq!(
+            serde_json::to_value(TerminalExitStatus::new().signal("SIGTERM").meta(meta)).unwrap(),
+            serde_json::json!({
+                "signal": "SIGTERM",
+                "_meta": {
+                    "reason": "timeout"
+                }
+            })
+        );
     }
 }

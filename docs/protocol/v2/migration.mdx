@@ -381,8 +381,7 @@ The reference contains no mutable state. The Agent reports that separately with 
   "command": "cargo test",
   "cwd": "/workspace/project",
   "output": {
-    "data": "cnVubmluZyAxMjMgdGVzdHMNCg==",
-    "truncated": false
+    "data": "cnVubmluZyAxMjMgdGVzdHMNCg=="
   },
   "exitStatus": {
     "exitCode": 0,
@@ -393,9 +392,9 @@ The reference contains no mutable state. The Agent reports that separately with 
 
 Only `terminalId` is required. `command`, `cwd`, `output`, `exitStatus`, and `_meta` are patch fields: omission leaves the stored value unchanged, `null` clears it, and a concrete value replaces it. On a first-seen terminal, omitted fields start unknown or empty. Every supplied `cwd` must be absolute.
 
-`output` is a replacement snapshot for replay, correction, or resynchronization. Its `data` and `truncated` fields are required. `data` is RFC 4648 base64-encoded bytes. `truncated: false` means the snapshot contains the complete output from the start of the terminal. `truncated: true` means one or more bytes from the beginning were omitted and the snapshot contains only the retained suffix; it does not mean the end was cut off or that more output will follow. The flag describes completeness and does not change replacement behavior: Clients must not splice an older locally stored prefix onto either snapshot. Clients should indicate an omitted prefix. Rich terminal reconstruction from a truncated suffix is best-effort because the missing bytes may have established parser or screen state.
+`output` is an authoritative replacement snapshot for replay, correction, or resynchronization. Its required `data` field is RFC 4648 base64-encoded bytes and is the complete byte sequence the Agent wants the Client to retain for the terminal at that point. A concrete snapshot replaces all previously stored bytes; Clients must not merge or splice bytes from the previous snapshot into it. Optional nullable `output._meta` is snapshot-scoped; omission and `null` both mean no snapshot metadata was provided.
 
-A concrete `exitStatus` marks the terminal as exited. Its optional nullable `exitCode` and `signal` fields use omission or `null` when unavailable. Conventional POSIX signal names include `SIGTERM`, `SIGKILL`, and `SIGINT`; other platforms may use platform-specific names. For example: `"exitStatus": { "signal": "SIGTERM" }`.
+A concrete `exitStatus` marks the terminal as exited. Its optional nullable `exitCode` and `signal` fields use omission or `null` when unavailable. Optional nullable `exitStatus._meta` is scoped to that exit information and likewise treats omission and `null` as equivalent. Conventional POSIX signal names include `SIGTERM`, `SIGKILL`, and `SIGINT`; other platforms may use platform-specific names. For example: `"exitStatus": { "signal": "SIGTERM" }`.
 
 For efficient live output, the Agent sends append updates:
 
@@ -692,7 +691,7 @@ A few schema definition names also changed without any wire-format change, which
 v2 makes the whole schema forward-compatible by convention:
 
 - **Open enums and tagged unions.** Every enum-like string accepts unknown values. Values beginning with `_` are reserved for implementation-specific extensions (e.g. `_mycompany_widget`). Unknown values _without_ a leading `_` are reserved for future ACP versions. Receivers **SHOULD** preserve unknown values when storing, replaying, proxying, or forwarding, and either render them generically or fall back safely. Do not mint non-underscore custom values.
-- **`_meta` everywhere.** As in v1, `_meta` objects carry implementation metadata. In v2's upsert-style updates, `_meta` follows the same patch semantics as other fields: omitted means unchanged, `null` clears. Chunk-level `_meta` is scoped to the chunk.
+- **`_meta` everywhere.** As in v1, `_meta` objects carry implementation metadata. In v2's upsert-style updates, top-level `_meta` follows the same patch semantics as other fields: omitted means unchanged, `null` clears. Metadata nested in a snapshot, exit-status object, content item, command permission subject, or chunk is scoped to that object; omission and `null` are equivalent.
 - **Custom methods** still use the `_` prefix, unchanged from v1.
 
 ## Transports
@@ -743,7 +742,7 @@ A standard remote transport (streamable HTTP with SSE streams, plus WebSocket) i
 2. **Three-state fields.** Model omitted vs `null` vs concrete values distinctly wherever v2 defines patch semantics. A plain nullable/optional type erases a distinction the protocol depends on.
 3. **Strict where it counts.** Reject malformed payloads for _known_ discriminator values instead of demoting them to the unknown-variant fallback. The fallback exists only for genuinely unknown values.
 4. **Preserve what you don't understand.** Round-trip `_`-prefixed extension values, unknown future variants, and `_meta` when storing, replaying, proxying, or forwarding.
-5. **Fixtures.** Cover the full prompt lifecycle, resume replay, cancellation, permission flow, message replacement and clearing, tool-call content chunks, terminal snapshot replacement, split and invalid UTF-8 bytes, truncation, exit state, command subjects, structured diffs, and JSON-RPC batches.
+5. **Fixtures.** Cover the full prompt lifecycle, resume replay, cancellation, permission flow, message replacement and clearing, tool-call content chunks, terminal snapshot replacement, split and invalid UTF-8 bytes, exit state, command subjects, structured diffs, and JSON-RPC batches.
 
 ## Supporting v1 and v2 side by side
 

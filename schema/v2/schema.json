@@ -4019,20 +4019,22 @@
       "required": ["toolCallId", "content"]
     },
     "TerminalOutput": {
-      "description": "A complete snapshot of bytes retained for a terminal.",
+      "description": "An authoritative replacement snapshot of terminal output bytes.",
       "type": "object",
       "properties": {
         "data": {
-          "description": "Base64-encoded terminal output bytes.",
+          "description": "Base64-encoded replacement terminal output bytes.",
           "type": "string",
           "format": "byte"
         },
-        "truncated": {
-          "description": "Whether one or more bytes from the beginning of the terminal output\nwere omitted from this snapshot.\n\n`false` means [`TerminalOutput::data`] contains the complete output from\nthe start of the terminal through this snapshot. `true` means it contains\nonly a retained suffix; This flag describes snapshot\ncompleteness and does not change its replacement semantics.",
-          "type": "boolean"
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys. This metadata is scoped to the replacement snapshot. Omitted\nand `null` are equivalent and mean no snapshot metadata was provided.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
         }
       },
-      "required": ["data", "truncated"]
+      "required": ["data"]
     },
     "TerminalExitStatus": {
       "description": "Exit information for an agent-owned terminal.\n\nThe presence of this object marks the terminal as exited, even when neither\nan exit code nor a signal is known.",
@@ -4049,6 +4051,12 @@
           "description": "Signal that terminated the process, when known.\n\nAgents should use the conventional platform signal name. POSIX examples\ninclude `SIGTERM`, `SIGKILL`, and `SIGINT`. Other platforms may use a\nplatform-specific name. Omitted and `null` are equivalent.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys. This metadata is scoped to the exit information. Omitted\nand `null` are equivalent and mean no exit metadata was provided.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
         }
       }
     },
@@ -4075,7 +4083,7 @@
           "x-deserialize-default-on-error": true
         },
         "output": {
-          "description": "A complete replacement snapshot of retained terminal output.",
+          "description": "An authoritative replacement snapshot of terminal output bytes.",
           "anyOf": [
             {
               "$ref": "#/$defs/TerminalOutput"

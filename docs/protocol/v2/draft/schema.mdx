@@ -7998,7 +7998,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
   Exit information. A concrete object marks the terminal as exited.
 </ResponseField>
 <ResponseField name="output" type={<><span><a href="#terminaloutput">TerminalOutput</a></span><span> | null</span></>} >
-  A complete replacement snapshot of retained terminal output.
+  An authoritative replacement snapshot of terminal output bytes.
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
   The discriminator value. Must be `"terminal_update"`.
@@ -8538,6 +8538,15 @@ an exit code nor a signal is known.
 
 **Properties:**
 
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys. This metadata is scoped to the exit information. Omitted
+and `null` are equivalent and mean no exit metadata was provided.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
 <ResponseField name="exitCode" type={"integer | null"} >
   Process exit code, when known. Omitted and `null` are equivalent.
 
@@ -8561,24 +8570,23 @@ Unique identifier for an agent-owned terminal within a session.
 
 ## <span class="font-mono">TerminalOutput</span>
 
-A complete snapshot of bytes retained for a terminal.
+An authoritative replacement snapshot of terminal output bytes.
 
 **Type:** Object
 
 **Properties:**
 
-<ResponseField name="data" type={"string"} required>
-  Base64-encoded terminal output bytes.
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys. This metadata is scoped to the replacement snapshot. Omitted
+and `null` are equivalent and mean no snapshot metadata was provided.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
 </ResponseField>
-<ResponseField name="truncated" type={"boolean"} required>
-  Whether one or more bytes from the beginning of the terminal output
-were omitted from this snapshot.
-
-`false` means `TerminalOutput::data` contains the complete output from
-the start of the terminal through this snapshot. `true` means it contains
-only a retained suffix; This flag describes snapshot
-completeness and does not change its replacement semantics.
-
+<ResponseField name="data" type={"string"} required>
+  Base64-encoded replacement terminal output bytes.
 </ResponseField>
 
 ## <span class="font-mono">TerminalOutputChunk</span>
@@ -8636,7 +8644,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
   Exit information. A concrete object marks the terminal as exited.
 </ResponseField>
 <ResponseField name="output" type={<><span><a href="#terminaloutput">TerminalOutput</a></span><span> | null</span></>} >
-  A complete replacement snapshot of retained terminal output.
+  An authoritative replacement snapshot of terminal output bytes.
 </ResponseField>
 <ResponseField name="terminalId" type={<a href="#terminalid">TerminalId</a>} required>
   Unique identifier for this terminal within the session.
