@@ -369,7 +369,9 @@ Once permission is granted (if required), the Agent **SHOULD** invoke the tool a
 }
 ```
 
-As the tool runs, the Agent **MAY** send additional updates, providing real-time feedback about tool execution progress. When the tool produces incremental content, the Agent can stream each item with `tool_call_content_chunk`:
+As the tool runs, the Agent **MAY** send additional updates, providing
+real-time feedback about tool execution progress. The Agent streams complete
+incremental content items with `tool_call_content_chunk`:
 
 ```json
 {
@@ -393,6 +395,11 @@ As the tool runs, the Agent **MAY** send additional updates, providing real-time
 ```
 
 Clients append each `tool_call_content_chunk` to the current content for that `toolCallId`. A later `tool_call_update` with `content` replaces the accumulated content.
+
+Display-only terminal bytes use `terminal_output_chunk`, not
+`tool_call_content_chunk`. See [Display-only
+Terminals](/protocol/v2/draft/tool-calls#display-only-terminals) for their
+per-terminal byte ordering and snapshot semantics.
 
 While tools execute on the Agent, they **MAY** leverage Client capabilities negotiated during initialization.
 

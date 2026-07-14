@@ -10,7 +10,7 @@ Author(s): [@benbrandt](https://github.com/benbrandt)
 
 ACP v2 should use a single `sessionUpdate: "tool_call_update"` notification for both creating and updating tool calls. The payload is an upsert keyed by `toolCallId`: if the Client has not seen the ID before, it creates a new displayed tool call; otherwise, it patches the existing tool call.
 
-ACP v2 should also add `sessionUpdate: "tool_call_content_chunk"` for streaming tool-call content. Chunks are keyed by `toolCallId` and append one `ToolCallContent` item to the current content for that tool call.
+ACP v2 should also add `sessionUpdate: "tool_call_content_chunk"` for streaming discrete tool-call content items. Chunks are keyed by `toolCallId` and append one `ToolCallContent` item to the current content for that tool call. The separate [Terminal Output](./terminal-output.mdx) RFD defines byte chunks for a referenced terminal.
 
 ## Status quo
 
@@ -79,7 +79,7 @@ Each content chunk has the following semantics:
 
 > How will things play out once this feature exists?
 
-There is a single way to update a tool call, removing lots of confusion from how v1 operated. Agents can stream long-running tool output without repeatedly resending the whole content array, while still retaining a replacement update for replay, correction, and redaction.
+There is a single way to update a tool call, removing lots of confusion from how v1 operated. Agents can stream discrete content items without repeatedly resending the whole content array, while still retaining a replacement update for replay, correction, and redaction. Terminal byte streams use their terminal-specific snapshot and chunk updates.
 
 ## Implementation details and plan
 
@@ -114,8 +114,11 @@ Tool-call updates need both operations. Omission means "I am not changing this f
 
 `tool_call_update.content` needs replacement semantics for replay, correction, and redaction. A separate chunk variant gives streaming a distinct append operation without making replacement updates ambiguous.
 
+`tool_call_content_chunk` appends a complete `ToolCallContent` item. It is not the byte-streaming operation for terminal output; terminals use `terminal_output_chunk` so arbitrary byte boundaries do not create many content items.
+
 ## Revision history
 
+- 2026-07-14: Distinguished tool-call content item chunks from terminal byte-stream chunks.
 - 2026-07-02: Updated permission requests to carry tool-call updates through an optional `subject` tagged union and to use separate `title` and `description` fields for permission-specific prompt text.
 - 2026-06-09: Added `tool_call_content_chunk` for streaming tool-call content.
 - 2026-06-08: Initial draft

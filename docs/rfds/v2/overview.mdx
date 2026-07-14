@@ -32,7 +32,8 @@ Current RFDs with active maintainer focus that are targeting the v2 release
 - [Enum Variant Extension](./enum-variant-extension.mdx)
 - [Required Session Methods](./required-session-methods.mdx)
 - [Session Resume Replay](./session-resume-replay.mdx)
-- [Client Filesystem and Terminal Surface](./client-filesystem-terminal-capabilities.mdx)
+- [Client Filesystem and Terminal Execution Surface](./client-filesystem-terminal-capabilities.mdx)
+- [Terminal Output](./terminal-output.mdx)
 - [Plan Variants](./plan-variants.mdx)
 - [Tool Call Updates](./tool-call-updates.mdx)
 - [Diff File States](./diff-file-states.mdx)
@@ -46,12 +47,13 @@ Other RFDs will progress separately and are not dependent on breaking changes (s
 
 - Remove the dedicated session modes API from v2. This includes the `modes` session response fields, `session/set_mode`, `current_mode_update`, and the `SessionMode*` types.
 - Agents should expose mode-like and model-related state through [Session Config Options](../session-config-options.mdx) instead of dedicated mode or model selector APIs.
-- Remove the v1 Client filesystem and terminal execution surface from v2. This includes `clientCapabilities.fs`, the top-level `clientCapabilities.terminal` field, `fs/*` methods, `terminal/*` methods, and terminal tool-call content. Terminal authentication remains separate under `clientCapabilities.auth.terminal`.
+- Remove the v1 Client filesystem and terminal execution surface from v2. This includes `clientCapabilities.fs`, the top-level `clientCapabilities.terminal` field, `fs/*` methods, `terminal/*` methods, and the Client-owned semantics of v1 terminal tool-call content. Terminal authentication remains separate under `clientCapabilities.auth.terminal`.
+- Add [Agent-owned, display-only terminal output](./terminal-output.mdx). Tool calls reference terminals by `terminalId`; terminal upserts carry `command`, absolute `cwd`, replay snapshots, and exit status; terminal output chunks append independently base64-encoded bytes. The display surface is baseline v2 and does not add Client execution or control methods.
 - Make [plan variants](./plan-variants.mdx) the default v2 plan shape by replacing the old `plan` session update with item-based `plan_update`.
 - Replace the v1 split between `tool_call` and `tool_call_update` with a single [tool-call update](./tool-call-updates.mdx) upsert shape keyed by `toolCallId`.
 - Add [tool-call content chunks](./tool-call-updates.mdx) so Agents can stream individual `ToolCallContent` items that append to a tool call.
 - Replace the v1 `Diff` `oldText` / `newText` shape with [diff file states](./diff-file-states.mdx): renderable `git_patch` text for text changes plus structured file operations for add, delete, modify, move, copy, and non-text changes.
-- Make [permission requests](./permission-requests.mdx) carry a required prompt `title` and optional extensible `subject` tagged union. Tool-call permissions use `subject.type: "tool_call"` with the same `ToolCallUpdate` payload shape as session updates, while subject-less permissions rely on the common prompt fields.
+- Make [permission requests](./permission-requests.mdx) carry a required prompt `title` and optional extensible `subject` tagged union. Tool-call permissions use `subject.type: "tool_call"` with the same `ToolCallUpdate` payload shape as session updates, command permissions use `subject.type: "command"` with the command, required absolute working directory, and optional display associations, and subject-less permissions rely on the common prompt fields.
 - Add [whole-message updates](./message-updates.mdx) for `user_message`, `agent_message`, and `agent_thought` alongside streamed chunks. Message updates are upserts keyed by `messageId`; their `content` arrays replace current message content, while chunks append to the current content.
 - Require [message IDs](../message-id.mdx) on streamed message chunks.
 - Follow JSON-RPC 2.0 batch request and notification behavior.
@@ -76,8 +78,6 @@ Other RFDs will progress separately and are not dependent on breaking changes (s
 
 Changes under consideration that still need to be drafted or moved to draft:
 
-- Streaming/Non-streaming consistency follow-ups:
-  - Terminal Output type for streaming terminal output from an agent
 - MCP: tool timeouts, more lifecycle methods
 
 ## Shiny future
@@ -110,6 +110,7 @@ With the needed breaking changes, as much as possible I am targeting having a co
 
 ## Revision history
 
+- 2026-07-14: Added the v2 Terminal Output RFD for Agent-owned, display-only terminal output.
 - 2026-07-02: Added the v2 Diff File States RFD for renderable git patches, structured file operations, and non-text file changes.
 - 2026-07-02: Moved the v2 RFD collection to Active.
 - 2026-07-02: Added the v2 Permission Requests RFD for required permission titles, optional structured subjects, and tool-call permission subjects.
@@ -123,7 +124,7 @@ With the needed breaking changes, as much as possible I am targeting having a co
 - 2026-06-08: Added the v2 Tool Call Updates RFD to make `tool_call_update` the single upsert-style tool-call session update.
 - 2026-06-05: Recorded the v2 capability cleanup: unified initialize capability fields, optional `session` support for NES-only agents, session-scoped `prompt` and `mcp` capabilities, object-shaped support markers, explicit `session.mcp.stdio`, removal of deprecated MCP SSE transport, and tagged MCP server transport configs.
 - 2026-06-02: Recorded the v2 decision to follow JSON-RPC 2.0 batch request and notification behavior.
-- 2026-06-02: Recorded the v2 decision to remove Client filesystem and terminal execution capabilities, methods, and terminal tool-call content.
+- 2026-06-02: Recorded the v2 decision to remove Client filesystem and terminal execution capabilities, methods, and Client-owned terminal tool-call content.
 - 2026-06-02: Added the v2 Plan Variants RFD to make item-based `plan_update` the default v2 plan shape.
 - 2026-06-01: Recorded that model selection should remain represented by session config options instead of a dedicated selector API.
 - 2026-05-28: Recorded the v2 decision to remove session modes in favor of session config options

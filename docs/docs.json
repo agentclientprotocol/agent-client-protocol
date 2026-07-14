@@ -207,6 +207,7 @@
                   "rfds/v2/required-session-methods",
                   "rfds/v2/session-resume-replay",
                   "rfds/v2/client-filesystem-terminal-capabilities",
+                  "rfds/v2/terminal-output",
                   "rfds/v2/plan-variants",
                   "rfds/v2/tool-call-updates",
                   "rfds/v2/diff-file-states",

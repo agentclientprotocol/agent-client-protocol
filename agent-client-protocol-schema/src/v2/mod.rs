@@ -25,6 +25,7 @@ mod nes;
 mod plan;
 mod protocol_level;
 pub(crate) mod schema_util;
+mod terminal;
 mod tool_call;
 
 pub use crate::rpc::{JsonRpcBatch, JsonRpcMessage, Notification, Request, RequestId};
@@ -43,6 +44,7 @@ pub use nes::*;
 pub use plan::*;
 pub use protocol_level::*;
 pub use serde_json::value::RawValue;
+pub use terminal::*;
 pub use tool_call::*;
 
 /// JSON-RPC response envelope using this protocol version's error type.

@@ -1739,6 +1739,16 @@ impl TryFrom<super::SessionUpdate> for Vec<crate::v1::SessionUpdate> {
             super::SessionUpdate::ToolCallUpdate(value) => {
                 vec![crate::v1::SessionUpdate::ToolCallUpdate(value.try_to_v1()?)]
             }
+            super::SessionUpdate::TerminalUpdate(_) => {
+                return Err(ProtocolConversionError::new(
+                    "v2 SessionUpdate variant `terminal_update` cannot be represented in v1",
+                ));
+            }
+            super::SessionUpdate::TerminalOutputChunk(_) => {
+                return Err(ProtocolConversionError::new(
+                    "v2 SessionUpdate variant `terminal_output_chunk` cannot be represented in v1",
+                ));
+            }
             #[cfg(feature = "unstable_plan_operations")]
             super::SessionUpdate::PlanUpdate(value) => {
                 vec![crate::v1::SessionUpdate::PlanUpdate(value.try_to_v1()?)]
@@ -2195,6 +2205,11 @@ impl TryToV1 for super::RequestPermissionRequest {
             super::RequestPermissionSubject::ToolCall(subject) => {
                 let super::ToolCallPermissionSubject { tool_call } = *subject;
                 tool_call
+            }
+            super::RequestPermissionSubject::Command(_) => {
+                return Err(ProtocolConversionError::new(
+                    "v2 RequestPermissionSubject variant `command` cannot be represented in v1",
+                ));
             }
             super::RequestPermissionSubject::Other(subject) => {
                 return Err(unknown_v2_enum_variant(
@@ -3175,6 +3190,11 @@ impl TryToV1 for super::ToolCallContent {
         Ok(match self {
             Self::Content(value) => crate::v1::ToolCallContent::Content(value.try_to_v1()?),
             Self::Diff(value) => crate::v1::ToolCallContent::Diff(value.try_to_v1()?),
+            Self::Terminal(_) => {
+                return Err(ProtocolConversionError::new(
+                    "v2 ToolCallContent variant `terminal` cannot be represented in v1 because v1 terminal content refers to a client-created terminal",
+                ));
+            }
             Self::Other(value) => {
                 return Err(unknown_v2_enum_variant("ToolCallContent", &value.type_));
             }
@@ -10268,6 +10288,20 @@ mod tests {
     }
 
     #[test]
+    fn v2_terminal_session_updates_do_not_convert_to_v1() {
+        assert_v2_session_update_to_v1_error(
+            v2::SessionUpdate::TerminalUpdate(v2::TerminalUpdate::new("term_1")),
+            "v2 SessionUpdate variant `terminal_update` cannot be represented in v1",
+        );
+        assert_v2_session_update_to_v1_error(
+            v2::SessionUpdate::TerminalOutputChunk(v2::TerminalOutputChunk::new(
+                "term_1", "dGVzdAo=",
+            )),
+            "v2 SessionUpdate variant `terminal_output_chunk` cannot be represented in v1",
+        );
+    }
+
+    #[test]
     fn v1_content_chunk_without_message_id_does_not_convert_to_v2() {
         assert_v1_to_v2_error(
             v1::ContentChunk::new(v1::ContentBlock::Text(v1::TextContent::new("missing"))),
@@ -10560,6 +10594,27 @@ mod tests {
         assert_v1_to_v2_error(
             update,
             "v1 ToolCallContent variant `terminal` cannot be represented in v2",
+        );
+    }
+
+    #[test]
+    fn v2_terminal_content_does_not_convert_to_v1_client_terminal_content() {
+        assert_v2_to_v1_error(
+            v2::ToolCallContent::Terminal(v2::Terminal::new("term_1")),
+            "v2 ToolCallContent variant `terminal` cannot be represented in v1 because v1 terminal content refers to a client-created terminal",
+        );
+    }
+
+    #[test]
+    fn v2_command_permission_subject_does_not_convert_to_v1() {
+        assert_v2_to_v1_error(
+            v2::RequestPermissionRequest::new("session-id", "Run cargo test?", Vec::new()).subject(
+                v2::RequestPermissionSubject::from(v2::CommandPermissionSubject::new(
+                    "cargo test",
+                    "/workspace/project",
+                )),
+            ),
+            "v2 RequestPermissionSubject variant `command` cannot be represented in v1",
         );
     }
 

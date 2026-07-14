@@ -599,6 +599,22 @@
           ]
         },
         {
+          "description": "Permission is requested before running a command.",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "command"
+            }
+          },
+          "required": ["type"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/CommandPermissionSubject"
+            }
+          ]
+        },
+        {
           "title": "other",
           "description": "Custom or future permission subject.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nClients that do not understand this subject type should preserve the raw\npayload when storing, replaying, proxying, or forwarding permission\nrequests, and otherwise display a generic permission prompt or decline it\naccording to policy.",
           "type": "object",
@@ -617,6 +633,16 @@
                   "type": {
                     "type": "string",
                     "const": "tool_call"
+                  }
+                },
+                "required": ["type"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "command"
                   }
                 },
                 "required": ["type"]
@@ -798,7 +824,7 @@
       ]
     },
     "ToolCallContent": {
-      "description": "Content produced by a tool call.\n\nTool calls can produce different types of content including\nstandard content blocks (text, images) or file diffs.\n\nSee protocol docs: [Content](https://agentclientprotocol.com/protocol/v2/tool-calls#content)",
+      "description": "Content produced by a tool call.\n\nTool calls can produce different types of content including standard\ncontent blocks (text, images), file diffs, or display-only terminals.\n\nSee protocol docs: [Content](https://agentclientprotocol.com/protocol/v2/tool-calls#content)",
       "anyOf": [
         {
           "description": "Standard content block (text, images, resources).",
@@ -833,6 +859,22 @@
           ]
         },
         {
+          "description": "A display-only reference to an agent-owned terminal.",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "terminal"
+            }
+          },
+          "required": ["type"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/Terminal"
+            }
+          ]
+        },
+        {
           "title": "other",
           "description": "Custom or future tool call content.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nReceivers that do not understand this content type should preserve the\nraw payload when storing, replaying, proxying, or forwarding tool call\noutput, and otherwise ignore it or display it generically.",
           "type": "object",
@@ -861,6 +903,16 @@
                   "type": {
                     "type": "string",
                     "const": "diff"
+                  }
+                },
+                "required": ["type"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "terminal"
                   }
                 },
                 "required": ["type"]
@@ -1736,6 +1788,31 @@
       },
       "required": ["changes"]
     },
+    "TerminalId": {
+      "description": "Unique identifier for an agent-owned terminal within a session.",
+      "type": "string"
+    },
+    "Terminal": {
+      "description": "A display-only reference to an agent-owned terminal.\n\nTerminal state and output are delivered separately through\n[`TerminalUpdate`] and [`TerminalOutputChunk`].",
+      "type": "object",
+      "properties": {
+        "terminalId": {
+          "description": "The ID of the terminal to display.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/TerminalId"
+            }
+          ]
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys. This metadata is scoped to the content reference. Omitted\nand `null` are equivalent and mean no item metadata was provided.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["terminalId"]
+    },
     "ToolCallLocation": {
       "description": "A file location being accessed or modified by a tool.\n\nEnables clients to implement \"follow-along\" features that track\nwhich files the agent is working with in real-time.\n\nSee protocol docs: [Following the Agent](https://agentclientprotocol.com/protocol/v2/tool-calls#following-the-agent)",
       "type": "object",
@@ -1774,6 +1851,51 @@
         }
       },
       "required": ["toolCall"]
+    },
+    "CommandPermissionSubject": {
+      "description": "Permission request details for a command.",
+      "type": "object",
+      "properties": {
+        "command": {
+          "description": "The command that would be run if permission is granted.",
+          "type": "string"
+        },
+        "cwd": {
+          "description": "The absolute working directory for the command.",
+          "type": "string"
+        },
+        "toolCallId": {
+          "description": "The associated tool call, when known. Omitted and `null` are equivalent.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ToolCallId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "terminalId": {
+          "description": "The associated terminal, when already known. Omitted and `null` are equivalent.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TerminalId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys. Omitted and `null` are equivalent and mean no subject metadata was provided.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["command", "cwd"]
     },
     "PermissionOption": {
       "description": "An option presented to the user when requesting permission.",
@@ -3271,6 +3393,38 @@
           ]
         },
         {
+          "description": "An agent-owned terminal has been created or updated.",
+          "type": "object",
+          "properties": {
+            "sessionUpdate": {
+              "type": "string",
+              "const": "terminal_update"
+            }
+          },
+          "required": ["sessionUpdate"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/TerminalUpdate"
+            }
+          ]
+        },
+        {
+          "description": "A chunk of bytes appended to an agent-owned terminal's output.",
+          "type": "object",
+          "properties": {
+            "sessionUpdate": {
+              "type": "string",
+              "const": "terminal_output_chunk"
+            }
+          },
+          "required": ["sessionUpdate"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/TerminalOutputChunk"
+            }
+          ]
+        },
+        {
           "description": "A content update for a plan identified by ID.\nSee protocol docs: [Agent Plan](https://agentclientprotocol.com/protocol/v2/agent-plan)",
           "type": "object",
           "properties": {
@@ -3449,6 +3603,26 @@
                   "sessionUpdate": {
                     "type": "string",
                     "const": "tool_call_update"
+                  }
+                },
+                "required": ["sessionUpdate"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "sessionUpdate": {
+                    "type": "string",
+                    "const": "terminal_update"
+                  }
+                },
+                "required": ["sessionUpdate"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "sessionUpdate": {
+                    "type": "string",
+                    "const": "terminal_output_chunk"
                   }
                 },
                 "required": ["sessionUpdate"]
@@ -3843,6 +4017,121 @@
         }
       },
       "required": ["toolCallId", "content"]
+    },
+    "TerminalOutput": {
+      "description": "A complete snapshot of bytes retained for a terminal.",
+      "type": "object",
+      "properties": {
+        "data": {
+          "description": "Base64-encoded terminal output bytes.",
+          "type": "string",
+          "format": "byte"
+        },
+        "truncated": {
+          "description": "Whether one or more bytes from the beginning of the terminal output\nwere omitted from this snapshot.\n\n`false` means [`TerminalOutput::data`] contains the complete output from\nthe start of the terminal through this snapshot. `true` means it contains\nonly a retained suffix; This flag describes snapshot\ncompleteness and does not change its replacement semantics.",
+          "type": "boolean"
+        }
+      },
+      "required": ["data", "truncated"]
+    },
+    "TerminalExitStatus": {
+      "description": "Exit information for an agent-owned terminal.\n\nThe presence of this object marks the terminal as exited, even when neither\nan exit code nor a signal is known.",
+      "type": "object",
+      "properties": {
+        "exitCode": {
+          "description": "Process exit code, when known. Omitted and `null` are equivalent.",
+          "type": ["integer", "null"],
+          "format": "uint32",
+          "minimum": 0,
+          "x-deserialize-default-on-error": true
+        },
+        "signal": {
+          "description": "Signal that terminated the process, when known.\n\nAgents should use the conventional platform signal name. POSIX examples\ninclude `SIGTERM`, `SIGKILL`, and `SIGINT`. Other platforms may use a\nplatform-specific name. Omitted and `null` are equivalent.",
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
+        }
+      }
+    },
+    "TerminalUpdate": {
+      "description": "An upsert for the stored state of an agent-owned terminal.\n\nOnly [`TerminalUpdate::terminal_id`] is required. Other fields have patch\nsemantics: omitted fields leave the stored value unchanged, `null` clears\nit, and concrete values replace it. When the terminal ID is new, omitted\nfields start unknown.",
+      "type": "object",
+      "properties": {
+        "terminalId": {
+          "description": "Unique identifier for this terminal within the session.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/TerminalId"
+            }
+          ]
+        },
+        "command": {
+          "description": "The command being run.",
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
+        },
+        "cwd": {
+          "description": "The absolute working directory of the command.",
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
+        },
+        "output": {
+          "description": "A complete replacement snapshot of retained terminal output.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TerminalOutput"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "exitStatus": {
+          "description": "Exit information. A concrete object marks the terminal as exited.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TerminalExitStatus"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted means no metadata update; `null` is an\nexplicit clear signal. Implementations MUST NOT make assumptions about values at these keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["terminalId"]
+    },
+    "TerminalOutputChunk": {
+      "description": "A chunk of bytes appended to an agent-owned terminal's output.",
+      "type": "object",
+      "properties": {
+        "terminalId": {
+          "description": "The terminal receiving these bytes.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/TerminalId"
+            }
+          ]
+        },
+        "data": {
+          "description": "Independently base64-encoded terminal output bytes.",
+          "type": "string",
+          "format": "byte"
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys. This field is chunk-scoped. Omitted and `null` are\nequivalent and mean no chunk metadata was provided.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["terminalId", "data"]
     },
     "PlanUpdateContent": {
       "description": "Updated content for a plan.",

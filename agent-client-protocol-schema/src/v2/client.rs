@@ -3,7 +3,7 @@
 //! This module defines the Client trait and all associated types for implementing
 //! a client that interacts with AI coding agents via the Agent Client Protocol (ACP).
 
-use std::{collections::BTreeMap, sync::Arc};
+use std::{collections::BTreeMap, path::PathBuf, sync::Arc};
 
 use derive_more::{Display, From};
 use schemars::{JsonSchema, Schema};
@@ -21,7 +21,8 @@ use super::{
 };
 use super::{
     ContentBlock, ExtNotification, ExtRequest, ExtResponse, Meta, PlanUpdate, SessionConfigOption,
-    SessionId, StopReason, ToolCallContentChunk, ToolCallUpdate,
+    SessionId, StopReason, TerminalId, TerminalOutputChunk, TerminalUpdate, ToolCallContentChunk,
+    ToolCallId, ToolCallUpdate,
 };
 use crate::{IntoMaybeUndefined, IntoOption, MaybeUndefined, SkipListener};
 
@@ -131,6 +132,10 @@ pub enum SessionUpdate {
     ToolCallContentChunk(ToolCallContentChunk),
     /// A tool call has been created or updated.
     ToolCallUpdate(ToolCallUpdate),
+    /// An agent-owned terminal has been created or updated.
+    TerminalUpdate(TerminalUpdate),
+    /// A chunk of bytes appended to an agent-owned terminal's output.
+    TerminalOutputChunk(TerminalOutputChunk),
     /// A content update for a plan identified by ID.
     /// See protocol docs: [Agent Plan](https://agentclientprotocol.com/protocol/agent-plan)
     PlanUpdate(PlanUpdate),
@@ -242,6 +247,8 @@ fn is_known_session_update(session_update: &str) -> bool {
             | "state_update"
             | "tool_call_content_chunk"
             | "tool_call_update"
+            | "terminal_update"
+            | "terminal_output_chunk"
             | "plan_update"
             | "available_commands_update"
             | "config_option_update"
@@ -264,6 +271,8 @@ fn other_session_update_schema(schema: &mut Schema) {
             "state_update",
             "tool_call_content_chunk",
             "tool_call_update",
+            "terminal_update",
+            "terminal_output_chunk",
             "plan_update",
             "available_commands_update",
             "config_option_update",
@@ -1361,6 +1370,8 @@ impl RequestPermissionRequest {
 pub enum RequestPermissionSubject {
     /// Permission is requested before executing a tool call.
     ToolCall(Box<ToolCallPermissionSubject>),
+    /// Permission is requested before running a command.
+    Command(CommandPermissionSubject),
     /// Custom or future permission subject.
     ///
     /// Values beginning with `_` are reserved for implementation-specific
@@ -1387,6 +1398,12 @@ impl From<ToolCallUpdate> for RequestPermissionSubject {
     }
 }
 
+impl From<CommandPermissionSubject> for RequestPermissionSubject {
+    fn from(subject: CommandPermissionSubject) -> Self {
+        Self::Command(subject)
+    }
+}
+
 /// Permission request details for a tool call.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -1401,6 +1418,74 @@ impl ToolCallPermissionSubject {
     #[must_use]
     pub fn new(tool_call: ToolCallUpdate) -> Self {
         Self { tool_call }
+    }
+}
+
+/// Permission request details for a command.
+#[serde_as]
+#[skip_serializing_none]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct CommandPermissionSubject {
+    /// The command that would be run if permission is granted.
+    pub command: String,
+    /// The absolute working directory for the command.
+    pub cwd: PathBuf,
+    /// The associated tool call, when known. Omitted and `null` are equivalent.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
+    pub tool_call_id: Option<ToolCallId>,
+    /// The associated terminal, when already known. Omitted and `null` are equivalent.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
+    pub terminal_id: Option<TerminalId>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys. Omitted and `null` are equivalent and mean no subject metadata was provided.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl CommandPermissionSubject {
+    /// Builds command permission details with the required command and working directory.
+    #[must_use]
+    pub fn new(command: impl Into<String>, cwd: impl Into<PathBuf>) -> Self {
+        Self {
+            command: command.into(),
+            cwd: cwd.into(),
+            tool_call_id: None,
+            terminal_id: None,
+            meta: None,
+        }
+    }
+
+    /// Sets or clears the associated tool-call ID.
+    #[must_use]
+    pub fn tool_call_id(mut self, tool_call_id: impl IntoOption<ToolCallId>) -> Self {
+        self.tool_call_id = tool_call_id.into_option();
+        self
+    }
+
+    /// Sets or clears the associated terminal ID.
+    #[must_use]
+    pub fn terminal_id(mut self, terminal_id: impl IntoOption<TerminalId>) -> Self {
+        self.terminal_id = terminal_id.into_option();
+        self
+    }
+
+    /// Sets or clears subject-scoped metadata.
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
     }
 }
 
@@ -1459,11 +1544,15 @@ impl<'de> Deserialize<'de> for OtherRequestPermissionSubject {
 }
 
 fn is_known_request_permission_subject_type(type_: &str) -> bool {
-    matches!(type_, "tool_call")
+    matches!(type_, "tool_call" | "command")
 }
 
 fn other_request_permission_subject_schema(schema: &mut Schema) {
-    super::schema_util::reject_known_string_discriminators(schema, "type", &["tool_call"]);
+    super::schema_util::reject_known_string_discriminators(
+        schema,
+        "type",
+        &["tool_call", "command"],
+    );
 }
 
 /// An option presented to the user when requesting permission.
@@ -2691,6 +2780,53 @@ mod tests {
     }
 
     #[test]
+    fn terminal_session_updates_use_known_discriminators() {
+        use serde_json::json;
+
+        assert_eq!(
+            serde_json::to_value(SessionUpdate::TerminalUpdate(
+                TerminalUpdate::new("term_1").command("cargo test")
+            ))
+            .unwrap(),
+            json!({
+                "sessionUpdate": "terminal_update",
+                "terminalId": "term_1",
+                "command": "cargo test"
+            })
+        );
+        assert_eq!(
+            serde_json::to_value(SessionUpdate::TerminalOutputChunk(
+                TerminalOutputChunk::new("term_1", "dGVzdAo=")
+            ))
+            .unwrap(),
+            json!({
+                "sessionUpdate": "terminal_output_chunk",
+                "terminalId": "term_1",
+                "data": "dGVzdAo="
+            })
+        );
+    }
+
+    #[test]
+    fn session_update_does_not_hide_malformed_known_terminal_variants() {
+        use serde_json::json;
+
+        assert!(
+            serde_json::from_value::<SessionUpdate>(json!({
+                "sessionUpdate": "terminal_update"
+            }))
+            .is_err()
+        );
+        assert!(
+            serde_json::from_value::<SessionUpdate>(json!({
+                "sessionUpdate": "terminal_output_chunk",
+                "terminalId": "term_1"
+            }))
+            .is_err()
+        );
+    }
+
+    #[test]
     fn test_plan_update_serialization() {
         use serde_json::json;
 
@@ -2812,6 +2948,69 @@ mod tests {
     }
 
     #[test]
+    fn request_permission_subject_command_uses_type_discriminator() {
+        use serde_json::json;
+
+        let mut meta = Meta::new();
+        meta.insert("source".to_string(), json!("shell"));
+        let subject = RequestPermissionSubject::from(
+            CommandPermissionSubject::new("cargo test", "/workspace/project")
+                .tool_call_id("call_001")
+                .terminal_id("term_1")
+                .meta(meta),
+        );
+
+        let json = serde_json::to_value(&subject).unwrap();
+        assert_eq!(
+            json,
+            json!({
+                "type": "command",
+                "command": "cargo test",
+                "cwd": "/workspace/project",
+                "toolCallId": "call_001",
+                "terminalId": "term_1",
+                "_meta": {
+                    "source": "shell"
+                }
+            })
+        );
+
+        let roundtripped: RequestPermissionSubject = serde_json::from_value(json).unwrap();
+        assert!(matches!(roundtripped, RequestPermissionSubject::Command(_)));
+    }
+
+    #[test]
+    fn command_permission_subject_treats_optional_association_nulls_as_omitted() {
+        use serde_json::json;
+
+        let subject: RequestPermissionSubject = serde_json::from_value(json!({
+            "type": "command",
+            "command": "cargo test",
+            "cwd": "/workspace/project",
+            "toolCallId": null,
+            "terminalId": null,
+            "_meta": null
+        }))
+        .unwrap();
+
+        let RequestPermissionSubject::Command(subject) = subject else {
+            panic!("expected command permission subject");
+        };
+        assert_eq!(subject.cwd, PathBuf::from("/workspace/project"));
+        assert_eq!(subject.tool_call_id, None);
+        assert_eq!(subject.terminal_id, None);
+        assert_eq!(subject.meta, None);
+        assert_eq!(
+            serde_json::to_value(RequestPermissionSubject::Command(subject)).unwrap(),
+            json!({
+                "type": "command",
+                "command": "cargo test",
+                "cwd": "/workspace/project"
+            })
+        );
+    }
+
+    #[test]
     fn request_permission_subject_preserves_unknown_variant() {
         use serde_json::json;
 
@@ -2852,6 +3051,28 @@ mod tests {
         assert!(
             serde_json::from_value::<RequestPermissionSubject>(json!({
                 "type": 1
+            }))
+            .is_err()
+        );
+        assert!(
+            serde_json::from_value::<RequestPermissionSubject>(json!({
+                "type": "command",
+                "cwd": "/workspace/project"
+            }))
+            .is_err()
+        );
+        assert!(
+            serde_json::from_value::<RequestPermissionSubject>(json!({
+                "type": "command",
+                "command": "cargo test"
+            }))
+            .is_err()
+        );
+        assert!(
+            serde_json::from_value::<RequestPermissionSubject>(json!({
+                "type": "command",
+                "command": "cargo test",
+                "cwd": null
             }))
             .is_err()
         );

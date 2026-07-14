@@ -132,7 +132,7 @@ Clients provide the interface between users and agents. They are typically code 
   post={[<a href="/protocol/v2/schema#session%2Frequest_permission">Schema</a>]}
 >
   [Request user authorization](/protocol/v2/tool-calls#requesting-permission)
-  for operations such as tool calls.
+  for operations such as tool calls and commands.
 </ResponseField>
 
 ### Notifications
@@ -144,9 +144,11 @@ Clients provide the interface between users and agents. They are typically code 
   [Send session updates](/protocol/v2/prompt-lifecycle#3-agent-reports-output)
   to inform the Client of changes (no response expected). This includes [message
   updates and chunks](/protocol/v2/content), [tool calls, updates, and content
-  chunks](/protocol/v2/tool-calls), [plans](/protocol/v2/agent-plan), [available
-  commands updates](/protocol/v2/slash-commands#advertising-commands), and
-  [config option updates](/protocol/v2/session-config-options#from-the-agent).
+  chunks](/protocol/v2/tool-calls), [display-only terminal state and output
+  chunks](/protocol/v2/tool-calls#display-only-terminals),
+  [plans](/protocol/v2/agent-plan), [available commands
+  updates](/protocol/v2/slash-commands#advertising-commands), and [config option
+  updates](/protocol/v2/session-config-options#from-the-agent).
 </ResponseField>
 
 ## Argument requirements

@@ -1,5 +1,5 @@
 ---
-title: "v2 Client Filesystem and Terminal Surface"
+title: "v2 Client Filesystem and Terminal Execution Surface"
 ---
 
 Author(s): [@benbrandt](https://github.com/benbrandt)
@@ -8,7 +8,7 @@ Author(s): [@benbrandt](https://github.com/benbrandt)
 
 > What are you proposing to change?
 
-ACP v2 will remove the standard Client filesystem and terminal execution surface. Specifically, v2 removes `clientCapabilities.fs`, the top-level `clientCapabilities.terminal` field, the Client filesystem methods, the Client terminal execution methods, and terminal tool-call content.
+ACP v2 will remove the standard Client filesystem and terminal execution surface. Specifically, v2 removes `clientCapabilities.fs`, the top-level `clientCapabilities.terminal` field, the Client filesystem methods, the Client terminal execution methods, and the inherited terminal tool-call content that refers to a Client-created terminal.
 
 This surface was intended to let Agents ask Clients to read or write files and run commands in a Client-managed terminal. In practice, it has not been widely adopted by both Clients and Agents, and many Agents are moving toward their own sandboxing and execution configuration instead.
 
@@ -53,7 +53,7 @@ Remove the following standard v2 Client methods:
 - `terminal/wait_for_exit`
 - `terminal/kill`
 
-Remove terminal tool-call content from v2 as well. Without standard Client terminal methods, a standard terminal content type would no longer have a standard producer or lifetime model. This will be replaced by a richer way for agents to report their own terminal output.
+Remove the v1 Client-owned terminal tool-call content semantics as well. Without standard Client terminal methods, that content type no longer has a standard producer or lifetime model. The separate [Terminal Output](./terminal-output.mdx) RFD defines a new Agent-owned, display-only terminal model instead.
 
 As this was always opt-in anyway, it should require minimal changes on the agent side, as they just no longer have to check these capabilities.
 
@@ -74,11 +74,11 @@ We will look at exploring configuration for Agent sandboxing and filesystem acce
 - Remove `fs` and top-level `terminal` from the v2 `ClientCapabilities` schema.
 - Remove the v2 `FileSystemCapabilities` schema type because it is no longer referenced.
 - Remove the v2 filesystem and terminal request/response structs, method-name constants, RPC enum variants, and generated method metadata.
-- Remove v2 terminal tool-call content and its terminal ID dependency.
+- Replace the inherited Client-owned terminal content with the Agent-owned display reference defined by the Terminal Output RFD.
 - Keep v1 unchanged.
 - Cross-version conversion from v1 to v2 drops `fs` and top-level `terminal`.
 - Cross-version conversion from v2 to v1 maps filesystem and terminal execution support to unsupported.
-- Cross-version conversion from v1 to v2 returns an error for removed filesystem and terminal method variants or terminal tool-call content.
+- Cross-version conversion from v1 to v2 returns an error for removed filesystem and terminal method variants or terminal tool-call content. Although v1 and v2 terminal references have the same fields, their ownership and lifetime semantics are incompatible.
 - Update v2 initialization, overview, tool-call, and schema docs so Agents do not check these v1 capability fields or call these v1 methods for v2 connections.
 
 ## Frequently asked questions
@@ -89,6 +89,11 @@ We will look at exploring configuration for Agent sandboxing and filesystem acce
 
 No. Terminal authentication is represented by `clientCapabilities.auth.terminal`, not by the top-level `clientCapabilities.terminal` execution capability. This RFD only removes the top-level terminal execution capability.
 
+### Does this remove terminal display?
+
+No. It removes Client execution and control. The [Terminal Output](./terminal-output.mdx) RFD adds a separate Agent-owned, display-only stream for command output.
+
 ## Revision history
 
-2026-06-02: Initial draft
+- 2026-07-14: Linked the Agent-owned Terminal Output replacement and clarified the incompatible ownership models.
+- 2026-06-02: Initial draft

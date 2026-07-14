@@ -1365,6 +1365,35 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 
+## <span class="font-mono">CommandPermissionSubject</span>
+
+Permission request details for a command.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys. Omitted and `null` are equivalent and mean no subject metadata was provided.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+<ResponseField name="command" type={"string"} required>
+  The command that would be run if permission is granted.
+</ResponseField>
+<ResponseField name="cwd" type={"string"} required>
+  The absolute working directory for the command.
+</ResponseField>
+<ResponseField name="terminalId" type={<><span><a href="#terminalid">TerminalId</a></span><span> | null</span></>} >
+  The associated terminal, when already known. Omitted and `null` are equivalent.
+</ResponseField>
+<ResponseField name="toolCallId" type={<><span><a href="#toolcallid">ToolCallId</a></span><span> | null</span></>} >
+  The associated tool call, when known. Omitted and `null` are equivalent.
+</ResponseField>
+
 ## <span class="font-mono">ConfigOptionUpdate</span>
 
 Session configuration options have been updated.
@@ -3155,6 +3184,38 @@ Permission is requested before executing a tool call.
 </Expandable>
 </ResponseField>
 
+<ResponseField name="command" type="object">
+Permission is requested before running a command.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys. Omitted and `null` are equivalent and mean no subject metadata was provided.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+<ResponseField name="command" type={"string"} required>
+  The command that would be run if permission is granted.
+</ResponseField>
+<ResponseField name="cwd" type={"string"} required>
+  The absolute working directory for the command.
+</ResponseField>
+<ResponseField name="terminalId" type={<><span><a href="#terminalid">TerminalId</a></span><span> | null</span></>} >
+  The associated terminal, when already known. Omitted and `null` are equivalent.
+</ResponseField>
+<ResponseField name="toolCallId" type={<><span><a href="#toolcallid">ToolCallId</a></span><span> | null</span></>} >
+  The associated tool call, when known. Omitted and `null` are equivalent.
+</ResponseField>
+<ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"command"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 <ResponseField name="other" type="object">
 Custom or future permission subject.
 
@@ -4010,6 +4071,68 @@ Enables "follow-along" features in clients.
 </Expandable>
 </ResponseField>
 
+<ResponseField name="terminal_update" type="object">
+An agent-owned terminal has been created or updated.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted means no metadata update; `null` is an
+explicit clear signal. Implementations MUST NOT make assumptions about values at these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+<ResponseField name="command" type={"string | null"} >
+  The command being run.
+</ResponseField>
+<ResponseField name="cwd" type={"string | null"} >
+  The absolute working directory of the command.
+</ResponseField>
+<ResponseField name="exitStatus" type={<><span><a href="#terminalexitstatus">TerminalExitStatus</a></span><span> | null</span></>} >
+  Exit information. A concrete object marks the terminal as exited.
+</ResponseField>
+<ResponseField name="output" type={<><span><a href="#terminaloutput">TerminalOutput</a></span><span> | null</span></>} >
+  A complete replacement snapshot of retained terminal output.
+</ResponseField>
+<ResponseField name="sessionUpdate" type={"string"} required>
+  The discriminator value. Must be `"terminal_update"`.
+</ResponseField>
+<ResponseField name="terminalId" type={<a href="#terminalid">TerminalId</a>} required>
+  Unique identifier for this terminal within the session.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="terminal_output_chunk" type="object">
+A chunk of bytes appended to an agent-owned terminal's output.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys. This field is chunk-scoped. Omitted and `null` are
+equivalent and mean no chunk metadata was provided.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+<ResponseField name="data" type={"string"} required>
+  Independently base64-encoded terminal output bytes.
+</ResponseField>
+<ResponseField name="sessionUpdate" type={"string"} required>
+  The discriminator value. Must be `"terminal_output_chunk"`.
+</ResponseField>
+<ResponseField name="terminalId" type={<a href="#terminalid">TerminalId</a>} required>
+  The terminal receiving these bytes.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 <ResponseField name="plan_update" type="object">
 A content update for a plan identified by ID.
 See protocol docs: [Agent Plan](https://agentclientprotocol.com/protocol/v2/agent-plan)
@@ -4310,6 +4433,145 @@ future ACP variants.
 
 </ResponseField>
 
+## <span class="font-mono">Terminal</span>
+
+A display-only reference to an agent-owned terminal.
+
+Terminal state and output are delivered separately through
+`TerminalUpdate` and `TerminalOutputChunk`.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys. This metadata is scoped to the content reference. Omitted
+and `null` are equivalent and mean no item metadata was provided.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+<ResponseField name="terminalId" type={<a href="#terminalid">TerminalId</a>} required>
+  The ID of the terminal to display.
+</ResponseField>
+
+## <span class="font-mono">TerminalExitStatus</span>
+
+Exit information for an agent-owned terminal.
+
+The presence of this object marks the terminal as exited, even when neither
+an exit code nor a signal is known.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="exitCode" type={"integer | null"} >
+  Process exit code, when known. Omitted and `null` are equivalent.
+
+    - Minimum: `0`
+
+</ResponseField>
+<ResponseField name="signal" type={"string | null"} >
+  Signal that terminated the process, when known.
+
+Agents should use the conventional platform signal name. POSIX examples
+include `SIGTERM`, `SIGKILL`, and `SIGINT`. Other platforms may use a
+platform-specific name. Omitted and `null` are equivalent.
+
+</ResponseField>
+
+## <span class="font-mono">TerminalId</span>
+
+Unique identifier for an agent-owned terminal within a session.
+
+**Type:** `string`
+
+## <span class="font-mono">TerminalOutput</span>
+
+A complete snapshot of bytes retained for a terminal.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="data" type={"string"} required>
+  Base64-encoded terminal output bytes.
+</ResponseField>
+<ResponseField name="truncated" type={"boolean"} required>
+  Whether one or more bytes from the beginning of the terminal output
+were omitted from this snapshot.
+
+`false` means `TerminalOutput::data` contains the complete output from
+the start of the terminal through this snapshot. `true` means it contains
+only a retained suffix; This flag describes snapshot
+completeness and does not change its replacement semantics.
+
+</ResponseField>
+
+## <span class="font-mono">TerminalOutputChunk</span>
+
+A chunk of bytes appended to an agent-owned terminal's output.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys. This field is chunk-scoped. Omitted and `null` are
+equivalent and mean no chunk metadata was provided.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+<ResponseField name="data" type={"string"} required>
+  Independently base64-encoded terminal output bytes.
+</ResponseField>
+<ResponseField name="terminalId" type={<a href="#terminalid">TerminalId</a>} required>
+  The terminal receiving these bytes.
+</ResponseField>
+
+## <span class="font-mono">TerminalUpdate</span>
+
+An upsert for the stored state of an agent-owned terminal.
+
+Only `TerminalUpdate::terminal_id` is required. Other fields have patch
+semantics: omitted fields leave the stored value unchanged, `null` clears
+it, and concrete values replace it. When the terminal ID is new, omitted
+fields start unknown.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted means no metadata update; `null` is an
+explicit clear signal. Implementations MUST NOT make assumptions about values at these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+<ResponseField name="command" type={"string | null"} >
+  The command being run.
+</ResponseField>
+<ResponseField name="cwd" type={"string | null"} >
+  The absolute working directory of the command.
+</ResponseField>
+<ResponseField name="exitStatus" type={<><span><a href="#terminalexitstatus">TerminalExitStatus</a></span><span> | null</span></>} >
+  Exit information. A concrete object marks the terminal as exited.
+</ResponseField>
+<ResponseField name="output" type={<><span><a href="#terminaloutput">TerminalOutput</a></span><span> | null</span></>} >
+  A complete replacement snapshot of retained terminal output.
+</ResponseField>
+<ResponseField name="terminalId" type={<a href="#terminalid">TerminalId</a>} required>
+  Unique identifier for this terminal within the session.
+</ResponseField>
+
 ## <span class="font-mono">TextCommandInput</span>
 
 All text that was typed after the command name is provided as input.
@@ -4383,8 +4645,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 Content produced by a tool call.
 
-Tool calls can produce different types of content including
-standard content blocks (text, images) or file diffs.
+Tool calls can produce different types of content including standard
+content blocks (text, images), file diffs, or display-only terminals.
 
 See protocol docs: [Content](https://agentclientprotocol.com/protocol/v2/tool-calls#content)
 
@@ -4441,6 +4703,30 @@ means no renderable patch text was provided.
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
   The discriminator value. Must be `"diff"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="terminal" type="object">
+A display-only reference to an agent-owned terminal.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys. This metadata is scoped to the content reference. Omitted
+and `null` are equivalent and mean no item metadata was provided.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+<ResponseField name="terminalId" type={<a href="#terminalid">TerminalId</a>} required>
+  The ID of the terminal to display.
+</ResponseField>
+<ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"terminal"`.
 </ResponseField>
 
 </Expandable>

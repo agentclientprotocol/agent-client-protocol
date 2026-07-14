@@ -11,7 +11,7 @@ If you only remember five things, remember these:
 
 1. **The `session/prompt` response no longer ends the turn.** It acknowledges acceptance. Progress and completion arrive as `state_update` notifications, and the stop reason moved there too.
 2. **Updates are upserts.** Messages, tool calls, and plans are patched by ID with uniform semantics: omitted field = unchanged, `null` = cleared, value = replaced, chunks append.
-3. **The Client file system, terminal, and session modes APIs are gone.** Use client-provided MCP servers and session config options instead.
+3. **The Client file system, terminal execution, and session modes APIs are gone.** Agent-owned terminal output is a separate display-only v2 surface; use client-provided MCP servers when the Agent needs Client-side tools.
 4. **Capabilities were reorganized.** One `capabilities` + required `info` field on both sides, session-scoped groups nested under `session`, object support markers instead of booleans, and a required baseline of session methods.
 5. **Everything is extensible now.** Enums and tagged unions accept unknown values. `_`-prefixed values are yours, the rest are reserved for future ACP versions.
 
@@ -66,6 +66,8 @@ Nothing about v2 changes the underlying JSON-RPC framing, so a single connection
 | `tool_call`                 | **Removed**. The first `tool_call_update` for a `toolCallId` creates the tool call |
 | `tool_call_update`          | Kept. Now an explicit upsert with omit/`null`/value patch semantics                |
 | -                           | **New:** `tool_call_content_chunk` for streaming individual content items          |
+| -                           | **New:** `terminal_update` for Agent-owned display terminal state and replay       |
+| -                           | **New:** `terminal_output_chunk` for appending display terminal bytes              |
 | `plan`                      | Replaced by `plan_update` with a `planId` and a `type` discriminator               |
 | `current_mode_update`       | **Removed**. Modes are config options. Use `config_option_update`                  |
 | `available_commands_update` | Kept. Command `input` now carries a required `type` discriminator                  |
@@ -184,7 +186,7 @@ This means checks like `promptCapabilities.image === true` become presence check
 - `capabilities.session` itself is **optional**, so agents that don't do session-based prompting (for example, agents that only serve specialized extension surfaces) can omit it entirely. Currently there isn't protocol support for this, but several experiments are in flight and we are making sure non-session components can be expressed via capabilities.
 - `loadSession` is gone along with `session/load` (see [Session setup](#session-setup-and-lifecycle)).
 - The individual `list`, `resume`, and `close` markers are gone: advertising `capabilities.session` at all now **requires** supporting the baseline methods `session/new`, `session/list`, `session/resume`, `session/close`, `session/prompt`, `session/cancel`, and `session/update`. Optional extras such as `session.delete`, `session.additionalDirectories`, `session.prompt`, and `session.mcp` keep their own markers.
-- The v1 Client capabilities `fs` and `terminal` are removed entirely (see [Client file system and terminals](#client-file-system-and-terminals-removed)). Stable v2 currently defines no standard Client capability fields.
+- The v1 Client capabilities `fs` and `terminal` are removed entirely (see [Client file system and terminal execution](#client-file-system-and-terminal-execution-removed)). Stable v2 currently defines no standard Client capability fields. Agent-owned terminal display is baseline behavior, not a Client execution capability.
 
 ## Authentication
 
@@ -359,9 +361,55 @@ v2 adds `tool_call_content_chunk`, which **appends** a single `ToolCallContent` 
 
 Chunks and updates compose exactly like message chunks and updates: a `tool_call_update` that includes `content` replaces the accumulated content. Later chunks append to it.
 
-### Terminal content removed
+### Agent-owned terminal display
 
-The v1 `ToolCallContent` variant `{ "type": "terminal", "terminalId": ... }` is gone along with the client terminal surface. Stable v2 tool-call content is `content` (a content block) or `diff`, plus extension variants.
+v2 retains a `terminal` `ToolCallContent` shape, but changes its ownership and meaning. It is now only a reference to a display terminal owned by the Agent:
+
+```json
+{
+  "type": "terminal",
+  "terminalId": "term_001"
+}
+```
+
+The reference contains no mutable state. The Agent reports that separately with a `terminal_update` upsert keyed by `terminalId`:
+
+```json
+{
+  "sessionUpdate": "terminal_update",
+  "terminalId": "term_001",
+  "command": "cargo test",
+  "cwd": "/workspace/project",
+  "output": {
+    "data": "cnVubmluZyAxMjMgdGVzdHMNCg==",
+    "truncated": false
+  },
+  "exitStatus": {
+    "exitCode": 0,
+    "signal": null
+  }
+}
+```
+
+Only `terminalId` is required. `command`, `cwd`, `output`, `exitStatus`, and `_meta` are patch fields: omission leaves the stored value unchanged, `null` clears it, and a concrete value replaces it. On a first-seen terminal, omitted fields start unknown or empty. Every supplied `cwd` must be absolute.
+
+`output` is a replacement snapshot for replay, correction, or resynchronization. Its `data` and `truncated` fields are required. `data` is RFC 4648 base64-encoded bytes. `truncated: false` means the snapshot contains the complete output from the start of the terminal. `truncated: true` means one or more bytes from the beginning were omitted and the snapshot contains only the retained suffix; it does not mean the end was cut off or that more output will follow. The flag describes completeness and does not change replacement behavior: Clients must not splice an older locally stored prefix onto either snapshot. Clients should indicate an omitted prefix. Rich terminal reconstruction from a truncated suffix is best-effort because the missing bytes may have established parser or screen state.
+
+A concrete `exitStatus` marks the terminal as exited. Its optional nullable `exitCode` and `signal` fields use omission or `null` when unavailable. Conventional POSIX signal names include `SIGTERM`, `SIGKILL`, and `SIGINT`; other platforms may use platform-specific names. For example: `"exitStatus": { "signal": "SIGTERM" }`.
+
+For efficient live output, the Agent sends append updates:
+
+```json
+{
+  "sessionUpdate": "terminal_output_chunk",
+  "terminalId": "term_001",
+  "data": "cGFzc2VkDQo="
+}
+```
+
+Each chunk's `data` is independently base64-encoded. Decode each chunk separately, then append the resulting bytes in received order for that terminal; do not concatenate encoded strings before decoding. Chunk boundaries may split UTF-8 code points and ANSI escape sequences, so text and terminal parsers retain state between chunks. A later `terminal_update.output` snapshot replaces all bytes accumulated so far, and subsequent chunks append to that replacement.
+
+A Client may use an isolated terminal emulator, but it only needs to provide a safe sanitized transcript fallback. The surface is display-only: it has no input, resize, interrupt, kill, wait, release, or execution semantics.
 
 ## Diff content
 
@@ -437,9 +485,23 @@ There is no mechanical mapping from v2 diffs back to `oldText`/`newText`. When m
 
 - `title` is **required**: human-readable text for the permission prompt itself. It does not update any tool call's displayed title.
 - `description` is optional supporting copy.
-- `subject` is an optional tagged union describing _what_ needs permission. Stable v2 defines `type: "tool_call"`, whose `toolCall` payload is the same `ToolCallUpdate` upsert shape used in session updates, so any fields it carries patch the referenced tool call's displayed state, exactly like a `tool_call_update` would. Requests may omit `subject` entirely for approvals that aren't about a tool call, and unknown subject types should be preserved when proxying and either rendered generically or declined by policy.
+- `subject` is an optional tagged union describing _what_ needs permission. Stable v2 defines `type: "tool_call"`, whose `toolCall` payload is the same `ToolCallUpdate` upsert shape used in session updates, and `type: "command"`, which describes an Agent-executed command. Requests may omit `subject` entirely for approvals without structured context, and unknown subject types should be preserved when proxying and either rendered generically or declined by policy.
 
 In v1, agents routinely stuffed permission prompt text into the tool call's `title`, mutating displayed tool state as a side effect. In v2, put prompt copy in `title`/`description` and let `subject.toolCall` carry only genuine tool-call state.
+
+A command permission subject is self-contained rather than a patch:
+
+```json
+{
+  "type": "command",
+  "command": "cargo test",
+  "cwd": "/workspace/project",
+  "toolCallId": "call_001",
+  "terminalId": "term_001"
+}
+```
+
+`command` and `cwd` are required, and `cwd` must be absolute. `toolCallId`, `terminalId`, and `_meta` are optional and nullable; omission and `null` are equivalent and mean the value was not provided. The IDs only associate the permission with displayed state and may be absent when permission is requested before execution. Approval authorizes the Agent to execute the command; it never asks the Client to execute it.
 
 `options` and the response shape are unchanged: options carry `optionId`, `name`, and `kind` (`allow_once`, `allow_always`, `reject_once`, `reject_always`), and the response outcome is `{ "outcome": "selected", "optionId": ... }` or `{ "outcome": "cancelled" }`. Both unions are extensible in v2, with one safety rule: an Agent that receives an outcome it does not understand **MUST NOT** treat it as approval.
 
@@ -541,15 +603,16 @@ The dedicated modes API is removed: the `modes` field on session responses, `ses
 - The stable `category` values are `mode`, `model`, `model_config`, and `thought_level`. Clients can use them for UX affordances (placement, shortcuts) and must tolerate unknown categories.
 - Clients change values with `session/set_config_option` (`sessionId`, `configId`, `value`), and the response returns the full updated `configOptions` array, since one change can affect other options. Agent-initiated changes arrive as `config_option_update` session updates, which replace the v1 `current_mode_update`.
 
-## Client file system and terminals removed
+## Client file system and terminal execution removed
 
 v2 removes the entire v1 Client-provided execution surface:
 
 - `clientCapabilities.fs` and the `fs/read_text_file` / `fs/write_text_file` methods
 - `clientCapabilities.terminal` and the `terminal/create`, `terminal/output`, `terminal/release`, `terminal/wait_for_exit`, `terminal/kill` methods
-- The `terminal` tool-call content type
 
-In practice this surface was inconsistently implemented outside of a few IDEs, and agents already needed their own file and execution handling for clients that didn't offer it. Clients that want to expose file access, unsaved editor state, or command execution to agents should do so by providing an **MCP server** to the session (via `mcpServers` on `session/new` / `session/resume`), which puts those tools on the same footing as every other tool the agent uses. Agent-side, drop the capability checks and the dual code paths. Report file changes through [diff content](#diff-content) and command output through regular tool-call content.
+In practice this surface was inconsistently implemented outside of a few IDEs, and agents already needed their own file and execution handling for clients that didn't offer it. Clients that want to expose file access, unsaved editor state, or command execution to agents should do so by providing an **MCP server** to the session (via `mcpServers` on `session/new` / `session/resume`), which puts those tools on the same footing as every other tool the Agent uses. Agent-side, drop the capability checks and the dual execution paths. Report file changes through [diff content](#diff-content); when byte-faithful command display matters, report output through the new Agent-owned terminal stream.
+
+The v2 `terminal` content reference does not restore this Client execution surface. It only anchors display state supplied by the Agent.
 
 ## MCP server configuration
 
@@ -582,7 +645,7 @@ MCP transport configuration is aligned with the current MCP transport model:
 
 The five content block types are unchanged: `text`, `image`, `audio`, `resource_link`, and `resource`. v2 realigns their fields with the latest MCP specification. Notably, `resource_link` gains an optional `icons` array (each icon has a required `src` URI plus optional `mimeType`, `sizes`, and `theme` of `light`/`dark`), and the `type` discriminator is extensible like every other v2 enum, so unknown block types no longer break deserialization for receivers that have a fallback.
 
-If you maintain a validator or generated models, v2 also tightens schema-level details that v1 left loose: base64 payloads (image/audio `data`, resource `blob`) are marked `format: "byte"`, URI fields are marked `format: "uri"`, and `annotations.priority` is bounded to the inclusive range 0–1.
+If you maintain a validator or generated models, v2 also tightens schema-level details that v1 left loose: base64 payloads (image/audio and terminal `data`, resource `blob`) are marked `format: "byte"`, URI fields are marked `format: "uri"`, and `annotations.priority` is bounded to the inclusive range 0–1.
 
 ## Slash commands
 
@@ -646,15 +709,16 @@ A standard remote transport (streamable HTTP with SSE streams, plus WebSocket) i
 4. **Prompt lifecycle.** Respond to `session/prompt` immediately with `{}` on acceptance. Emit a `user_message` acknowledgment with an agent-generated `messageId`, a `running` state update when processing starts, and an idle `state_update` carrying the stop reason when the work completes, including `cancelled` after `session/cancel`.
 5. **Message IDs.** Generate and attach a `messageId` to every message chunk and update.
 6. **Tool calls.** Stop sending `tool_call`. Send `tool_call_update` for creation and patches. Use `tool_call_content_chunk` to stream content. Respect omit/`null`/value patch semantics.
-7. **Diffs.** Replace `oldText`/`newText` with `changes` (+ `fileType`/`mimeType` where known) and provide a `git_patch` whenever feasible.
-8. **Permissions.** Put prompt copy in required `title` (+ optional `description`). Wrap tool-call context in `subject: { "type": "tool_call", "toolCall": ... }`.
-9. **Plans.** Send `plan_update` with `{ "type": "items", "planId": ..., "entries": [...] }`.
-10. **Modes.** Drop `session/set_mode`, `modes`, and `current_mode_update`. Expose the same state as config options with `category: "mode"` and emit `config_option_update`.
-11. **Replay.** Handle `replayFrom` on `session/resume`. Replay history as ordinary `session/update` notifications when asked. Remove `session/load`.
-12. **Client surface.** Remove all `fs/*` and `terminal/*` calls and terminal tool content.
-13. **MCP config.** Require and emit `type` discriminators. Drop SSE. Advertise `session.mcp.stdio` / `session.mcp.http` as appropriate.
-14. **Slash commands.** Add the `type: "text"` discriminator to command `input` specifications.
-15. **Parsing.** Make enum handling open: preserve unknown variants where a safe fallback exists, and accept batch arrays on stdio.
+7. **Terminal output.** Add `terminal` content references for Agent-owned display terminals. Send `terminal_update` for command, absolute cwd, snapshots, and exit state; send independently base64-encoded `terminal_output_chunk` values for live bytes. Do not expect Client control methods or capability negotiation.
+8. **Diffs.** Replace `oldText`/`newText` with `changes` (+ `fileType`/`mimeType` where known) and provide a `git_patch` whenever feasible.
+9. **Permissions.** Put prompt copy in required `title` (+ optional `description`). Use the `tool_call` subject for tool-call state and the `command` subject for a command, required absolute cwd, and optional tool-call/terminal associations.
+10. **Plans.** Send `plan_update` with `{ "type": "items", "planId": ..., "entries": [...] }`.
+11. **Modes.** Drop `session/set_mode`, `modes`, and `current_mode_update`. Expose the same state as config options with `category: "mode"` and emit `config_option_update`.
+12. **Replay.** Handle `replayFrom` on `session/resume`. Replay history as ordinary `session/update` notifications when asked, including terminal replacement snapshots rather than requiring every historical output chunk. Remove `session/load`.
+13. **Client surface.** Remove all `fs/*` and `terminal/*` calls. The new terminal content is Agent-owned display state, not a Client resource.
+14. **MCP config.** Require and emit `type` discriminators. Drop SSE. Advertise `session.mcp.stdio` / `session.mcp.http` as appropriate.
+15. **Slash commands.** Add the `type: "text"` discriminator to command `input` specifications.
+16. **Parsing.** Make enum handling open: preserve unknown variants where a safe fallback exists, and accept batch arrays on stdio.
 
 ## Migration checklist: Clients
 
@@ -663,14 +727,15 @@ A standard remote transport (streamable HTTP with SSE streams, plus WebSocket) i
 3. **Prompt lifecycle.** Don't treat the `session/prompt` response as turn completion. Drive UI from `state_update` (`running` / `idle` / `requires_action`), take the stop reason from the idle update, and render the user's message from the `user_message` acknowledgment (which carries its canonical `messageId`).
 4. **Messages.** Track messages by required `messageId`. Implement upsert semantics: whole-message updates replace content (or clear it with `null`/`[]`), chunks append.
 5. **Tool calls.** Create tool calls on first-seen `toolCallId` in `tool_call_update`. Apply omit/`null`/value patches. Append `tool_call_content_chunk` items. Replace accumulated content when an update carries `content`.
-6. **Diffs.** Render `patch.diff` (git patch format) when present. Drive file trees and summaries from `changes`. Handle patch-less diffs (binary, symlink, directory).
-7. **Permissions.** Render `title`/`description`. When `subject.type` is `tool_call`, apply its `toolCall` payload to the referenced tool call like any other update. Show a generic prompt for absent or unknown subjects.
-8. **Plans.** Handle `plan_update` keyed by `planId`. Each update replaces that plan's entries.
-9. **Modes.** Drop `session/set_mode` and `current_mode_update` handling. Drive mode/model UI from `configOptions` (using `category`) via `session/set_config_option` and `config_option_update`.
-10. **Resume.** Replace `session/load` with `session/resume` + `replayFrom: { "type": "start" }`, and plain reconnects with `session/resume` without `replayFrom`.
-11. **Client surface.** Remove `fs/*` and `terminal/*` implementations for v2 connections. Expose that functionality through MCP servers passed in `mcpServers` if you want agents to use it.
-12. **Cancellation.** After `session/cancel`, keep accepting updates and wait for the idle `state_update` with `stopReason: "cancelled"` as confirmation.
-13. **Parsing.** Preserve unknown enum variants, tolerate unknown `sessionUpdate` types, read command `input` as a tagged union, and accept batch arrays on stdio.
+6. **Terminal output.** Maintain Agent-owned terminal state by `terminalId`. Apply update patch and snapshot-replacement semantics; independently decode and append chunk bytes. Render them in an isolated terminal emulator or sanitized transcript, with no input or process controls.
+7. **Diffs.** Render `patch.diff` (git patch format) when present. Drive file trees and summaries from `changes`. Handle patch-less diffs (binary, symlink, directory).
+8. **Permissions.** Render `title`/`description`. Apply `tool_call` subjects like ordinary tool-call updates; render `command` subjects from their command, required absolute cwd, and optional associations. Show a generic prompt for absent or unknown subjects.
+9. **Plans.** Handle `plan_update` keyed by `planId`. Each update replaces that plan's entries.
+10. **Modes.** Drop `session/set_mode` and `current_mode_update` handling. Drive mode/model UI from `configOptions` (using `category`) via `session/set_config_option` and `config_option_update`.
+11. **Resume.** Replace `session/load` with `session/resume` + `replayFrom: { "type": "start" }`, and plain reconnects with `session/resume` without `replayFrom`.
+12. **Client surface.** Remove `fs/*` and `terminal/*` implementations for v2 connections. Expose Client-side tools through MCP servers passed in `mcpServers`; do not treat display terminals as Client resources.
+13. **Cancellation.** After `session/cancel`, keep accepting updates and wait for the idle `state_update` with `stopReason: "cancelled"` as confirmation.
+14. **Parsing.** Preserve unknown enum variants, tolerate unknown `sessionUpdate` types, read command `input` as a tagged union, and accept batch arrays on stdio.
 
 ## Migration checklist: SDKs
 
@@ -678,7 +743,7 @@ A standard remote transport (streamable HTTP with SSE streams, plus WebSocket) i
 2. **Three-state fields.** Model omitted vs `null` vs concrete values distinctly wherever v2 defines patch semantics. A plain nullable/optional type erases a distinction the protocol depends on.
 3. **Strict where it counts.** Reject malformed payloads for _known_ discriminator values instead of demoting them to the unknown-variant fallback. The fallback exists only for genuinely unknown values.
 4. **Preserve what you don't understand.** Round-trip `_`-prefixed extension values, unknown future variants, and `_meta` when storing, replaying, proxying, or forwarding.
-5. **Fixtures.** Cover the full prompt lifecycle, resume replay, cancellation, permission flow, message replacement and clearing, tool-call content chunks, structured diffs, and JSON-RPC batches.
+5. **Fixtures.** Cover the full prompt lifecycle, resume replay, cancellation, permission flow, message replacement and clearing, tool-call content chunks, terminal snapshot replacement, split and invalid UTF-8 bytes, truncation, exit state, command subjects, structured diffs, and JSON-RPC batches.
 
 ## Supporting v1 and v2 side by side
 

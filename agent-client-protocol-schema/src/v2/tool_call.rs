@@ -11,7 +11,7 @@ use schemars::{JsonSchema, Schema};
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
-use super::{ContentBlock, Meta};
+use super::{ContentBlock, Meta, Terminal};
 use crate::{IntoMaybeUndefined, IntoOption, MaybeUndefined, SkipListener};
 
 /// Represents an upsert for a tool call that the language model has requested.
@@ -341,8 +341,8 @@ pub enum ToolCallStatus {
 
 /// Content produced by a tool call.
 ///
-/// Tool calls can produce different types of content including
-/// standard content blocks (text, images) or file diffs.
+/// Tool calls can produce different types of content including standard
+/// content blocks (text, images), file diffs, or display-only terminals.
 ///
 /// See protocol docs: [Content](https://agentclientprotocol.com/protocol/tool-calls#content)
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -353,6 +353,8 @@ pub enum ToolCallContent {
     Content(Box<Content>),
     /// File modification shown as a diff.
     Diff(Diff),
+    /// A display-only reference to an agent-owned terminal.
+    Terminal(Terminal),
     /// Custom or future tool call content.
     ///
     /// Values beginning with `_` are reserved for implementation-specific
@@ -421,11 +423,15 @@ impl<'de> Deserialize<'de> for OtherToolCallContent {
 }
 
 fn is_known_tool_call_content_type(type_: &str) -> bool {
-    matches!(type_, "content" | "diff")
+    matches!(type_, "content" | "diff" | "terminal")
 }
 
 fn other_tool_call_content_schema(schema: &mut Schema) {
-    super::schema_util::reject_known_string_discriminators(schema, "type", &["content", "diff"]);
+    super::schema_util::reject_known_string_discriminators(
+        schema,
+        "type",
+        &["content", "diff", "terminal"],
+    );
 }
 
 impl<T: Into<ContentBlock>> From<T> for ToolCallContent {
@@ -437,6 +443,12 @@ impl<T: Into<ContentBlock>> From<T> for ToolCallContent {
 impl From<Diff> for ToolCallContent {
     fn from(diff: Diff) -> Self {
         ToolCallContent::Diff(diff)
+    }
+}
+
+impl From<Terminal> for ToolCallContent {
+    fn from(terminal: Terminal) -> Self {
+        ToolCallContent::Terminal(terminal)
     }
 }
 
@@ -1084,6 +1096,19 @@ mod tests {
     }
 
     #[test]
+    fn terminal_content_serializes_as_display_reference() {
+        let terminal = ToolCallContent::from(Terminal::new("term_1"));
+
+        assert_eq!(
+            serde_json::to_value(terminal).unwrap(),
+            serde_json::json!({
+                "type": "terminal",
+                "terminalId": "term_1"
+            })
+        );
+    }
+
+    #[test]
     fn diff_patch_serializes_git_patch_with_structured_changes() {
         let diff = ToolCallContent::Diff(Diff::patch(
             "diff --git /repo/config.json /repo/config.json\n",
@@ -1237,6 +1262,12 @@ mod tests {
         assert!(
             serde_json::from_value::<ToolCallContent>(serde_json::json!({
                 "type": "diff"
+            }))
+            .is_err()
+        );
+        assert!(
+            serde_json::from_value::<ToolCallContent>(serde_json::json!({
+                "type": "terminal"
             }))
             .is_err()
         );

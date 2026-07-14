@@ -8,7 +8,7 @@ Author(s): [@benbrandt](https://github.com/benbrandt)
 
 > What are you proposing to change?
 
-ACP v2 should make `session/request_permission` extensible beyond tool calls by giving every permission prompt a required `title` and optional structured `subject` context. Tool-call permissions use `subject.type: "tool_call"`, while permission requests that are not tied to a structured subject omit `subject`.
+ACP v2 should make `session/request_permission` extensible beyond tool calls by giving every permission prompt a required `title` and optional structured `subject` context. Tool-call permissions use `subject.type: "tool_call"`, command permissions use `subject.type: "command"`, and permission requests that are not tied to a structured subject omit `subject`.
 
 Permission prompt copy should live in common `title` and `description` fields rather than in subject-specific data.
 
@@ -50,6 +50,23 @@ It also tempts agents to put permission prompt text into `ToolCallUpdate.title` 
 }
 ```
 
+Command permissions carry a self-contained description of the proposed execution:
+
+```json
+{
+  "title": "Run the test suite?",
+  "subject": {
+    "type": "command",
+    "command": "cargo test",
+    "cwd": "/workspace/project",
+    "toolCallId": "call_001",
+    "terminalId": "term_001"
+  }
+}
+```
+
+For a command subject, `command` and `cwd` are required, and `cwd` **MUST** be absolute. `toolCallId`, `terminalId`, and `_meta` are optional and nullable; omission and `null` are equivalent and mean the value was not provided. The IDs associate the request with displayed state when known; they do not change that state. The command describes what the Agent wants permission to execute and never asks the Client to execute it.
+
 ```json
 {
   "title": "Continue with elevated permissions?"
@@ -64,7 +81,7 @@ Unknown future subject types should be preserved by clients that proxy, store, r
 
 > How will things play out once this feature exists?
 
-Agents can request permission for tool calls without conflating permission UI text with tool-call state. They can also request permission for operations that have no structured subject, and future structured subjects can be added without changing the common permission request fields.
+Agents can request permission for tool calls without conflating permission UI text with tool-call state. Command approvals can show the exact command and working directory without hiding them in generic tool-call input. Agents can also request permission for operations that have no structured subject, and future structured subjects can be added without changing the common permission request fields.
 
 ## Implementation details and plan
 
@@ -72,9 +89,10 @@ Agents can request permission for tool calls without conflating permission UI te
 
 1. Replace the v1-style top-level `toolCall` request field in v2 with an optional `subject` tagged union.
 2. Add the `tool_call` subject variant.
-3. Add common required `title` and optional `description` fields.
-4. Keep `options` as the required list of choices the user can select.
-5. Preserve unknown subject variants while keeping known subject payloads distinct from unknown fallback variants.
+3. Add the `command` subject variant with a required command and absolute working directory plus optional associations.
+4. Add common required `title` and optional `description` fields.
+5. Keep `options` as the required list of choices the user can select.
+6. Preserve unknown subject variants while keeping known subject payloads distinct from unknown fallback variants.
 
 ## Frequently asked questions
 
@@ -98,4 +116,5 @@ Those fields patch the displayed tool call. Permission-only prompt copy belongs 
 
 ## Revision history
 
+- 2026-07-14: Added the command permission subject for Agent-executed commands.
 - 2026-07-02: Initial draft

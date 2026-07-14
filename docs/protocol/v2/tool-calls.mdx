@@ -87,7 +87,7 @@ replaced as whole arrays; send `[]` or `null` to clear them. For `_meta`, omit
 the field to leave it unchanged or set it to `null` to clear it. Use
 `tool_call_content_chunk` when a tool produces content incrementally and the
 Client should append each item instead of replacing the whole `content`
-collection.
+collection. Display-only terminal bytes use `terminal_output_chunk` instead.
 
 ## Updating
 
@@ -226,6 +226,35 @@ The Agent **MAY** request permission from the user before proceeding with an ope
   from. Must contain at least one option.
 </ParamField>
 
+For a proposed command, the subject can describe the command directly:
+
+```json
+{
+  "title": "Run the test suite?",
+  "subject": {
+    "type": "command",
+    "command": "cargo test",
+    "cwd": "/home/user/project",
+    "toolCallId": "call_001",
+    "terminalId": "term_001"
+  },
+  "options": [
+    {
+      "optionId": "allow-once",
+      "name": "Allow once",
+      "kind": "allow_once"
+    }
+  ]
+}
+```
+
+For `type: "command"`, `command` and `cwd` are required, and `cwd` **MUST** be
+an absolute path. `toolCallId`, `terminalId`, and `_meta` are optional and
+nullable; omission and `null` are equivalent and mean the value was not
+provided. The IDs only associate the permission with displayed state and may be
+unavailable before execution starts. Selecting an allow option authorizes the
+Agent to execute the command; it does not ask the Client to execute anything.
+
 The Client responds with the user's decision:
 
 ```json
@@ -329,6 +358,97 @@ Standard [content blocks](/protocol/v2/content) like text, images, or resources:
   }
 }
 ```
+
+### Display-only Terminals
+
+A terminal content item references an Agent-owned terminal by ID:
+
+```json
+{
+  "type": "terminal",
+  "terminalId": "term_001"
+}
+```
+
+The item is only a display anchor. `terminalId` is required. Optional nullable
+`_meta` is scoped to this content item; omission and `null` both mean that no
+item metadata was provided. `terminalId` is unique within the session, remains
+stable for the terminal's lifetime, and **MUST NOT** be reused for a different
+terminal. It is independent of `toolCallId`, even when an Agent uses the same
+string for both. The reference and the terminal's session updates may arrive in
+either order, so Clients retain state for a first-seen `terminalId`.
+
+Agents create and update stored terminal state with `terminal_update`:
+
+```json
+{
+  "sessionUpdate": "terminal_update",
+  "terminalId": "term_001",
+  "command": "cargo test",
+  "cwd": "/home/user/project",
+  "output": {
+    "data": "cnVubmluZyB0ZXN0cw0K",
+    "truncated": false
+  },
+  "exitStatus": {
+    "exitCode": 0,
+    "signal": null
+  }
+}
+```
+
+`terminal_update` is an upsert keyed by required `terminalId`. Other fields are
+patches: omission leaves the previous value unchanged, `null` clears it, and a
+concrete value replaces it. On a first-seen ID, omitted fields start unknown or
+empty.
+
+- `command` describes the command being run. Agents **SHOULD** provide it on the
+  first update when applicable.
+- `cwd` is the command's working directory and **MUST** be absolute when
+  supplied.
+- `output` is a full replacement snapshot. Its required `data` is RFC 4648
+  base64-encoded bytes with JSON Schema `format: "byte"`; required `truncated`
+  reports whether one or more bytes from the beginning were omitted.
+  `truncated: false` means the snapshot contains the complete output from the
+  start of the terminal. `truncated: true` means it contains only the retained
+  suffix; it does not mean the end was cut off or that more output will follow.
+  This flag describes completeness and does not change replacement behavior;
+  Clients **MUST NOT** splice an older locally stored prefix onto the snapshot.
+- A concrete `exitStatus` marks the terminal as exited. Its optional nullable
+  `exitCode` and `signal` report known exit information; omission and `null`
+  both mean the value is unavailable. Conventional POSIX signal names include
+  `SIGTERM`, `SIGKILL`, and `SIGINT`; other platforms may use platform-specific
+  names. Terminal exit and tool call status are independent.
+- `_meta` follows the same patch semantics.
+
+For example, a process terminated by a POSIX termination signal can report
+`"exitStatus": { "signal": "SIGTERM" }`.
+
+Clients **SHOULD** indicate when earlier output was omitted. A truncated
+snapshot is a retained byte suffix, not a serialized terminal-screen
+checkpoint, so terminal-emulator reconstruction from it is best-effort. The
+omitted prefix may have established parser, cursor, mode, or visible-screen
+state. Faithful replay requires an untruncated snapshot from the beginning of
+the terminal stream.
+
+For live output, Agents send `terminal_output_chunk`:
+
+```json
+{
+  "sessionUpdate": "terminal_output_chunk",
+  "terminalId": "term_001",
+  "data": "cGFzc2VkDQo="
+}
+```
+
+`terminalId` and `data` are required. Each `data` value is an independently RFC
+4648 base64-encoded byte chunk with JSON Schema `format: "byte"`. Clients
+decode each chunk separately and append the decoded bytes in received order for
+that `terminalId`; they **MUST NOT** concatenate encoded strings before
+decoding. Chunk boundaries may split UTF-8 code points or terminal escape
+sequences, so decoders retain parser state across chunks. Optional nullable
+`_meta` is chunk-scoped; omission and `null` both mean no chunk metadata was
+provided.
 
 ### Diffs
 
