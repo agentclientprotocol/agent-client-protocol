@@ -18,15 +18,15 @@ use crate::IntoOption;
 /// A unique identifier for an active MCP-over-ACP connection.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
-#[from(Arc<str>, String, &'static str)]
+#[from(forward)]
 #[non_exhaustive]
 pub struct McpConnectionId(pub Arc<str>);
 
 impl McpConnectionId {
     /// Wraps a protocol string as a typed [`McpConnectionId`].
     #[must_use]
-    pub fn new(id: impl Into<Arc<str>>) -> Self {
-        Self(id.into())
+    pub fn new(id: impl Into<Self>) -> Self {
+        id.into()
     }
 }
 

@@ -4,14 +4,14 @@
 //! running code, or fetching data—it generates tool calls that the agent executes on its behalf.
 //!
 /// See protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/tool-calls)
-use std::{collections::BTreeMap, path::PathBuf, sync::Arc};
+use std::{collections::BTreeMap, sync::Arc};
 
 use derive_more::{Display, From};
 use schemars::{JsonSchema, Schema};
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
-use super::{ContentBlock, Meta, Terminal};
+use super::{AbsolutePath, ContentBlock, MediaType, Meta, Terminal};
 use crate::{IntoMaybeUndefined, IntoOption, MaybeUndefined, SkipListener};
 
 /// Represents an upsert for a tool call that the language model has requested.
@@ -253,15 +253,15 @@ impl ToolCallContentChunk {
 /// Unique identifier for a tool call within a session.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
-#[from(Arc<str>, String, &'static str)]
+#[from(forward)]
 #[non_exhaustive]
 pub struct ToolCallId(pub Arc<str>);
 
 impl ToolCallId {
     /// Wraps a protocol string as a typed [`ToolCallId`].
     #[must_use]
-    pub fn new(id: impl Into<Arc<str>>) -> Self {
-        Self(id.into())
+    pub fn new(id: impl Into<Self>) -> Self {
+        id.into()
     }
 }
 
@@ -657,7 +657,7 @@ pub struct DiffChange {
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
-    pub mime_type: Option<String>,
+    pub mime_type: Option<MediaType>,
     /// File operation-specific fields.
     #[serde(flatten)]
     pub operation: DiffChangeOperation,
@@ -687,25 +687,25 @@ impl DiffChange {
 
     /// Builds a file add change.
     #[must_use]
-    pub fn add(path: impl Into<PathBuf>) -> Self {
+    pub fn add(path: impl Into<AbsolutePath>) -> Self {
         Self::new(DiffChangeOperation::Add(DiffPathChange::new(path)))
     }
 
     /// Builds a file delete change.
     #[must_use]
-    pub fn delete(path: impl Into<PathBuf>) -> Self {
+    pub fn delete(path: impl Into<AbsolutePath>) -> Self {
         Self::new(DiffChangeOperation::Delete(DiffPathChange::new(path)))
     }
 
     /// Builds a file modify change.
     #[must_use]
-    pub fn modify(path: impl Into<PathBuf>) -> Self {
+    pub fn modify(path: impl Into<AbsolutePath>) -> Self {
         Self::new(DiffChangeOperation::Modify(DiffPathChange::new(path)))
     }
 
     /// Builds a file move or rename change.
     #[must_use]
-    pub fn move_file(old_path: impl Into<PathBuf>, path: impl Into<PathBuf>) -> Self {
+    pub fn move_file(old_path: impl Into<AbsolutePath>, path: impl Into<AbsolutePath>) -> Self {
         Self::new(DiffChangeOperation::Move(DiffPathPairChange::new(
             old_path, path,
         )))
@@ -713,7 +713,7 @@ impl DiffChange {
 
     /// Builds a file copy change.
     #[must_use]
-    pub fn copy(old_path: impl Into<PathBuf>, path: impl Into<PathBuf>) -> Self {
+    pub fn copy(old_path: impl Into<AbsolutePath>, path: impl Into<AbsolutePath>) -> Self {
         Self::new(DiffChangeOperation::Copy(DiffPathPairChange::new(
             old_path, path,
         )))
@@ -732,7 +732,7 @@ impl DiffChange {
     ///
     /// Omitted or `null` means the MIME type is unknown.
     #[must_use]
-    pub fn mime_type(mut self, mime_type: impl IntoOption<String>) -> Self {
+    pub fn mime_type(mut self, mime_type: impl IntoOption<MediaType>) -> Self {
         self.mime_type = mime_type.into_option();
         self
     }
@@ -779,13 +779,13 @@ pub enum DiffChangeOperation {
 #[non_exhaustive]
 pub struct DiffPathChange {
     /// Absolute path for the operation.
-    pub path: PathBuf,
+    pub path: AbsolutePath,
 }
 
 impl DiffPathChange {
     /// Builds [`DiffPathChange`] with the required fields set; optional fields start unset or empty.
     #[must_use]
-    pub fn new(path: impl Into<PathBuf>) -> Self {
+    pub fn new(path: impl Into<AbsolutePath>) -> Self {
         Self { path: path.into() }
     }
 }
@@ -796,15 +796,15 @@ impl DiffPathChange {
 #[non_exhaustive]
 pub struct DiffPathPairChange {
     /// Absolute path before the operation.
-    pub old_path: PathBuf,
+    pub old_path: AbsolutePath,
     /// Absolute path after the operation.
-    pub path: PathBuf,
+    pub path: AbsolutePath,
 }
 
 impl DiffPathPairChange {
     /// Builds [`DiffPathPairChange`] with the required fields set; optional fields start unset or empty.
     #[must_use]
-    pub fn new(old_path: impl Into<PathBuf>, path: impl Into<PathBuf>) -> Self {
+    pub fn new(old_path: impl Into<AbsolutePath>, path: impl Into<AbsolutePath>) -> Self {
         Self {
             old_path: old_path.into(),
             path: path.into(),
@@ -899,7 +899,7 @@ fn other_diff_change_schema(schema: &mut Schema) {
 #[non_exhaustive]
 pub struct ToolCallLocation {
     /// The absolute file path being accessed or modified.
-    pub path: PathBuf,
+    pub path: AbsolutePath,
     /// Optional line number within the file.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
@@ -920,7 +920,7 @@ pub struct ToolCallLocation {
 impl ToolCallLocation {
     /// Builds [`ToolCallLocation`] with the required fields set; optional fields start unset or empty.
     #[must_use]
-    pub fn new(path: impl Into<PathBuf>) -> Self {
+    pub fn new(path: impl Into<AbsolutePath>) -> Self {
         Self {
             path: path.into(),
             line: None,

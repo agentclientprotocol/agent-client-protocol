@@ -78,7 +78,7 @@ The patch fields are:
 
 - `command`: the human-readable command being run. Agents **SHOULD** include it on the first update when the terminal represents a command. It is descriptive and does not ask the Client to execute anything.
 - `cwd`: the command's working directory. Every supplied path **MUST** be absolute.
-- `output`: an authoritative replacement snapshot containing required `data`. `data` is RFC 4648 base64-encoded bytes and has JSON Schema `format: "byte"`. A concrete snapshot is the complete byte sequence the Agent wants the Client to retain for the terminal at that point. It replaces all previously stored bytes, and Clients **MUST NOT** merge or splice bytes from the previous snapshot into it. Later chunks append to the replacement. Optional nullable `output._meta` is scoped to that snapshot; omission and `null` are equivalent and mean no snapshot metadata was provided.
+- `output`: an authoritative replacement snapshot containing required `data`. `data` is RFC 4648 base64-encoded bytes and has JSON Schema `contentEncoding: "base64"`. A concrete snapshot is the complete byte sequence the Agent wants the Client to retain for the terminal at that point. It replaces all previously stored bytes, and Clients **MUST NOT** merge or splice bytes from the previous snapshot into it. Later chunks append to the replacement. Optional nullable `output._meta` is scoped to that snapshot; omission and `null` are equivalent and mean no snapshot metadata was provided.
 - `exitStatus`: a concrete object marks the terminal as exited. Its `exitCode`, `signal`, and `_meta` fields are optional and nullable; omission and `null` are equivalent and mean that value was not provided. Agents should use conventional platform signal names. POSIX examples include `SIGTERM`, `SIGKILL`, and `SIGINT`; other platforms may use platform-specific names. `exitStatus._meta` is scoped to that exit information. `exitStatus: null` clears a previously reported exit status.
 - The top-level `_meta` is terminal-scoped and follows the same omitted, `null`, and concrete-object patch semantics as the other update fields.
 
@@ -106,7 +106,7 @@ Add a `terminal_output_chunk` session update:
 }
 ```
 
-`terminalId` and `data` are required. `data` is one independently RFC 4648 base64-encoded byte chunk and has JSON Schema `format: "byte"`. Clients decode each chunk separately and append the decoded bytes in received order for that `terminalId`; they **MUST NOT** concatenate the encoded strings and decode them as one value.
+`terminalId` and `data` are required. `data` is one independently RFC 4648 base64-encoded byte chunk and has JSON Schema `contentEncoding: "base64"`. Clients decode each chunk separately and append the decoded bytes in received order for that `terminalId`; they **MUST NOT** concatenate the encoded strings and decode them as one value.
 
 Chunk boundaries have no text or terminal meaning. A chunk may split a UTF-8 code point or ANSI escape sequence, so terminal emulators and transcript decoders retain parser state between chunks. `_meta`, when present, is optional chunk-scoped metadata; omission and `null` both mean no chunk metadata was provided.
 
@@ -151,7 +151,7 @@ Session replay reconstructs the same terminal display without replaying every hi
 2. Add `terminal_update` and `terminal_output_chunk` to the v2 `SessionUpdate` union.
 3. Model terminal update fields with distinct omitted, `null`, and concrete states.
 4. Add optional `_meta` to every new object payload; keep `TerminalId` as a scalar string.
-5. Mark snapshot and chunk `data` as base64 bytes with JSON Schema `format: "byte"`.
+5. Mark snapshot and chunk `data` as base64 bytes with JSON Schema `contentEncoding: "base64"`.
 6. Add the `command` permission subject with its required command and absolute working directory plus optional associations.
 7. Update v2 protocol documentation, migration guidance, generated schemas, and SDK tests.
 8. Keep v1 and all Client terminal execution methods unchanged.

@@ -128,7 +128,7 @@ The Agent **MUST** respond with a list of sessions and optional pagination metad
       Human-readable title for the session. May be auto-generated from the first prompt.
     </ResponseField>
     <ResponseField name="updatedAt" type="string">
-      ISO 8601 timestamp of the last activity in the session.
+      RFC 3339 timestamp of the last activity in the session.
     </ResponseField>
     <ResponseField name="_meta" type="object">
       Agent-specific metadata. See [Extensibility](/protocol/v2/draft/extensibility).
@@ -182,7 +182,7 @@ All fields are optional. Only include fields that have changed; omitted fields a
 </ResponseField>
 
 <ResponseField name="updatedAt" type="string | null">
-  ISO 8601 timestamp of last activity. Set to `null` to clear.
+  RFC 3339 timestamp of last activity. Set to `null` to clear.
 </ResponseField>
 
 <ResponseField name="_meta" type="object | null">

@@ -1254,6 +1254,30 @@ impl TryToV2 for crate::v1::SessionId {
     }
 }
 
+impl TryToV1 for super::AbsolutePath {
+    type Output = PathBuf;
+
+    fn try_to_v1(self) -> Result<Self::Output> {
+        Ok(self.into_inner())
+    }
+}
+
+impl TryToV1 for super::SessionListCursor {
+    type Output = String;
+
+    fn try_to_v1(self) -> Result<Self::Output> {
+        Ok(self.0.to_string())
+    }
+}
+
+impl TryToV1 for super::MediaType {
+    type Output = String;
+
+    fn try_to_v1(self) -> Result<Self::Output> {
+        Ok(self.0.to_string())
+    }
+}
+
 impl TryToV1 for super::MessageId {
     type Output = crate::v1::MessageId;
 
@@ -3315,7 +3339,7 @@ impl TryToV2 for crate::v1::ToolCallLocation {
     fn try_to_v2(self) -> Result<Self::Output> {
         let Self { path, line, meta } = self;
         Ok(super::ToolCallLocation {
-            path: path.try_to_v2()?,
+            path: super::AbsolutePath::new(path),
             line: line.try_to_v2()?,
             meta: meta.try_to_v2()?,
         })
@@ -3900,8 +3924,11 @@ impl TryToV2 for crate::v1::NewSessionRequest {
             meta,
         } = self;
         Ok(super::NewSessionRequest {
-            cwd: cwd.try_to_v2()?,
-            additional_directories: additional_directories.try_to_v2()?,
+            cwd: super::AbsolutePath::new(cwd),
+            additional_directories: additional_directories
+                .into_iter()
+                .map(super::AbsolutePath::new)
+                .collect(),
             mcp_servers: mcp_servers.try_to_v2()?,
             meta: meta.try_to_v2()?,
         })
@@ -3960,8 +3987,11 @@ impl TryToV2 for crate::v1::LoadSessionRequest {
         } = self;
         Ok(super::ResumeSessionRequest {
             mcp_servers: mcp_servers.try_to_v2()?,
-            cwd: cwd.try_to_v2()?,
-            additional_directories: additional_directories.try_to_v2()?,
+            cwd: super::AbsolutePath::new(cwd),
+            additional_directories: additional_directories
+                .into_iter()
+                .map(super::AbsolutePath::new)
+                .collect(),
             session_id: session_id.try_to_v2()?,
             replay_from: Some(super::ReplayFrom::Start(super::ReplayFromStart::new())),
             meta: meta.try_to_v2()?,
@@ -4066,8 +4096,11 @@ impl TryToV2 for crate::v1::ForkSessionRequest {
         } = self;
         Ok(super::ForkSessionRequest {
             session_id: session_id.try_to_v2()?,
-            cwd: cwd.try_to_v2()?,
-            additional_directories: additional_directories.try_to_v2()?,
+            cwd: super::AbsolutePath::new(cwd),
+            additional_directories: additional_directories
+                .into_iter()
+                .map(super::AbsolutePath::new)
+                .collect(),
             mcp_servers: mcp_servers.try_to_v2()?,
             meta: meta.try_to_v2()?,
         })
@@ -4153,8 +4186,11 @@ impl TryToV2 for crate::v1::ResumeSessionRequest {
         } = self;
         Ok(super::ResumeSessionRequest {
             session_id: session_id.try_to_v2()?,
-            cwd: cwd.try_to_v2()?,
-            additional_directories: additional_directories.try_to_v2()?,
+            cwd: super::AbsolutePath::new(cwd),
+            additional_directories: additional_directories
+                .into_iter()
+                .map(super::AbsolutePath::new)
+                .collect(),
             mcp_servers: mcp_servers.try_to_v2()?,
             replay_from: None,
             meta: meta.try_to_v2()?,
@@ -4308,8 +4344,8 @@ impl TryToV2 for crate::v1::ListSessionsRequest {
     fn try_to_v2(self) -> Result<Self::Output> {
         let Self { cwd, cursor, meta } = self;
         Ok(super::ListSessionsRequest {
-            cwd: cwd.try_to_v2()?,
-            cursor: cursor.try_to_v2()?,
+            cwd: cwd.map(super::AbsolutePath::new),
+            cursor: cursor.map(super::SessionListCursor::new),
             meta: meta.try_to_v2()?,
         })
     }
@@ -4343,7 +4379,7 @@ impl TryToV2 for crate::v1::ListSessionsResponse {
         } = self;
         Ok(super::ListSessionsResponse {
             sessions: sessions.try_to_v2()?,
-            next_cursor: next_cursor.try_to_v2()?,
+            next_cursor: next_cursor.map(super::SessionListCursor::new),
             meta: meta.try_to_v2()?,
         })
     }
@@ -4386,8 +4422,11 @@ impl TryToV2 for crate::v1::SessionInfo {
         } = self;
         Ok(super::SessionInfo {
             session_id: session_id.try_to_v2()?,
-            cwd: cwd.try_to_v2()?,
-            additional_directories: additional_directories.try_to_v2()?,
+            cwd: super::AbsolutePath::new(cwd),
+            additional_directories: additional_directories
+                .into_iter()
+                .map(super::AbsolutePath::new)
+                .collect(),
             title: title.try_to_v2()?,
             updated_at: updated_at.try_to_v2()?,
             meta: meta.try_to_v2()?,
@@ -4974,7 +5013,7 @@ impl TryToV2 for crate::v1::McpServerStdio {
         } = self;
         Ok(super::McpServerStdio {
             name: name.try_to_v2()?,
-            command: command.try_to_v2()?,
+            command: super::AbsolutePath::new(command),
             args: args.try_to_v2()?,
             env: env.try_to_v2()?,
             meta: meta.try_to_v2()?,
@@ -8979,7 +9018,7 @@ impl TryToV2 for crate::v1::ImageContent {
         Ok(super::ImageContent {
             annotations: annotations.try_to_v2()?,
             data: data.try_to_v2()?,
-            mime_type: mime_type.try_to_v2()?,
+            mime_type: super::MediaType::new(mime_type),
             uri: uri.try_to_v2()?,
             meta: meta.try_to_v2()?,
         })
@@ -9018,7 +9057,7 @@ impl TryToV2 for crate::v1::AudioContent {
         Ok(super::AudioContent {
             annotations: annotations.try_to_v2()?,
             data: data.try_to_v2()?,
-            mime_type: mime_type.try_to_v2()?,
+            mime_type: super::MediaType::new(mime_type),
             meta: meta.try_to_v2()?,
         })
     }
@@ -9118,7 +9157,7 @@ impl TryToV2 for crate::v1::TextResourceContents {
             meta,
         } = self;
         Ok(super::TextResourceContents {
-            mime_type: mime_type.try_to_v2()?,
+            mime_type: mime_type.map(super::MediaType::new),
             text: text.try_to_v2()?,
             uri: uri.try_to_v2()?,
             meta: meta.try_to_v2()?,
@@ -9157,7 +9196,7 @@ impl TryToV2 for crate::v1::BlobResourceContents {
         } = self;
         Ok(super::BlobResourceContents {
             blob: blob.try_to_v2()?,
-            mime_type: mime_type.try_to_v2()?,
+            mime_type: mime_type.map(super::MediaType::new),
             uri: uri.try_to_v2()?,
             meta: meta.try_to_v2()?,
         })
@@ -9217,7 +9256,7 @@ impl TryToV2 for crate::v1::ResourceLink {
             annotations: annotations.try_to_v2()?,
             description: description.try_to_v2()?,
             icons: None,
-            mime_type: mime_type.try_to_v2()?,
+            mime_type: mime_type.map(super::MediaType::new),
             name: name.try_to_v2()?,
             size: size.try_to_v2()?,
             title: title.try_to_v2()?,

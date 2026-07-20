@@ -19,15 +19,15 @@ use crate::{IntoOption, SkipListener};
 /// Unique identifier for a plan within a session.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
-#[from(Arc<str>, String, &'static str)]
+#[from(forward)]
 #[non_exhaustive]
 pub struct PlanId(pub Arc<str>);
 
 impl PlanId {
     /// Wraps a protocol string as a typed [`PlanId`].
     #[must_use]
-    pub fn new(id: impl Into<Arc<str>>) -> Self {
-        Self(id.into())
+    pub fn new(id: impl Into<Self>) -> Self {
+        id.into()
     }
 }
 

@@ -32,15 +32,15 @@ pub(crate) const NES_REJECT_METHOD_NAME: &str = "nes/reject";
 /// Unique identifier for an NES suggestion.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
-#[from(Arc<str>, String, &'static str)]
+#[from(forward)]
 #[non_exhaustive]
 pub struct NesSuggestionId(pub Arc<str>);
 
 impl NesSuggestionId {
     /// Wraps a protocol string as a typed [`NesSuggestionId`].
     #[must_use]
-    pub fn new(id: impl Into<Arc<str>>) -> Self {
-        Self(id.into())
+    pub fn new(id: impl Into<Self>) -> Self {
+        id.into()
     }
 }
 /// Method name for closing an NES session.
