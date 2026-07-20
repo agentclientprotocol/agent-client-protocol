@@ -21,6 +21,10 @@ requests from clients and execute tasks using language models and tools.
 
 Authenticates the client using the specified authentication method.
 
+Agents MUST support this method when their `initialize` response advertised
+at least one valid authentication method. Clients MUST NOT call this method
+when `authMethods` was omitted or empty.
+
 Called when the agent requires authentication before allowing session creation.
 The client provides the authentication method ID that was advertised during initialization.
 
@@ -34,6 +38,10 @@ See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/v2/
 Request parameters for the `auth/login` method.
 
 Specifies which authentication method to use.
+
+Agents MUST support this method when their `initialize` response advertised
+at least one valid authentication method. Clients MUST NOT call this method
+when `authMethods` was omitted or empty.
 
 **Type:** Object
 
@@ -74,14 +82,23 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 Logs out of the current authenticated state.
 
-After a successful logout, all new sessions will require authentication.
-There is no guarantee about the behavior of already running sessions.
+Agents MUST support this method when their `initialize` response advertised
+at least one valid authentication method. Clients MUST NOT call this method
+when `authMethods` was omitted or empty.
+
+After a successful logout, authentication-gated requests require the client
+to authenticate again. There is no guarantee about the behavior of already
+running sessions.
 
 #### <span class="font-mono">LogoutAuthRequest</span>
 
 Request parameters for the `auth/logout` method.
 
 Terminates the current authenticated session.
+
+Agents MUST support this method when their `initialize` response advertised
+at least one valid authentication method. Clients MUST NOT call this method
+when `authMethods` was omitted or empty.
 
 **Type:** Object
 
@@ -182,6 +199,11 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 </ResponseField>
 <ResponseField name="authMethods" type={<a href="#authmethod">AuthMethod[]</a>} >
   Authentication methods supported by the agent.
+
+Optional. Omitted or empty means the agent does not advertise the
+authentication method surface. Supplying one or more valid methods means
+the agent MUST support both `auth/login` and `auth/logout`.
+
 </ResponseField>
 <ResponseField name="capabilities" type={<a href="#agentcapabilities">AgentCapabilities</a>} >
   Capabilities supported by the agent.
@@ -917,7 +939,11 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 ## <span class="font-mono">AgentAuthCapabilities</span>
 
-Authentication-related capabilities supported by the agent.
+Authentication-related extension capabilities supported by the agent.
+
+This object does not advertise support for `auth/login` or `auth/logout`.
+Those methods are advertised by a non-empty `authMethods` list in the
+`initialize` response.
 
 **Type:** Object
 
@@ -954,10 +980,12 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="auth" type={<><span><a href="#agentauthcapabilities">AgentAuthCapabilities</a></span><span> | null</span></>} >
-  Authentication-related capabilities supported by the agent.
+  Authentication-related extension capabilities supported by the agent.
 
 Optional. Omitted or `null` both mean the agent does not advertise any
-authentication-related extensions.
+authentication-related extensions. This field does not advertise support
+for `auth/login` or `auth/logout`; those methods are advertised by a
+non-empty `authMethods` list in the `initialize` response.
 
 </ResponseField>
 <ResponseField name="session" type={<><span><a href="#sessioncapabilities">SessionCapabilities</a></span><span> | null</span></>} >

@@ -2148,7 +2148,7 @@
           ]
         },
         "authMethods": {
-          "description": "Authentication methods supported by the agent.",
+          "description": "Authentication methods supported by the agent.\n\nOptional. Omitted or empty means the agent does not advertise the\nauthentication method surface. Supplying one or more valid methods means\nthe agent MUST support both `auth/login` and `auth/logout`.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/AuthMethod"
@@ -2217,7 +2217,7 @@
           "x-deserialize-default-on-error": true
         },
         "auth": {
-          "description": "Authentication-related capabilities supported by the agent.\n\nOptional. Omitted or `null` both mean the agent does not advertise any\nauthentication-related extensions.",
+          "description": "Authentication-related extension capabilities supported by the agent.\n\nOptional. Omitted or `null` both mean the agent does not advertise any\nauthentication-related extensions. This field does not advertise support\nfor `auth/login` or `auth/logout`; those methods are advertised by a\nnon-empty `authMethods` list in the `initialize` response.",
           "anyOf": [
             {
               "$ref": "#/$defs/AgentAuthCapabilities"
@@ -2465,7 +2465,7 @@
       }
     },
     "AgentAuthCapabilities": {
-      "description": "Authentication-related capabilities supported by the agent.",
+      "description": "Authentication-related extension capabilities supported by the agent.\n\nThis object does not advertise support for `auth/login` or `auth/logout`.\nThose methods are advertised by a non-empty `authMethods` list in the\n`initialize` response.",
       "type": "object",
       "properties": {
         "_meta": {
@@ -4616,7 +4616,7 @@
                 },
                 {
                   "title": "LoginAuthRequest",
-                  "description": "Authenticates the client using the specified authentication method.\n\nCalled when the agent requires authentication before allowing session creation.\nThe client provides the authentication method ID that was advertised during initialization.\n\nAfter successful authentication, the client can proceed to create sessions with\n`new_session` without receiving an `auth_required` error.\n\nSee protocol docs: [Initialization](https://agentclientprotocol.com/protocol/v2/initialization)",
+                  "description": "Authenticates the client using the specified authentication method.\n\nAgents MUST support this method when their `initialize` response advertised\nat least one valid authentication method. Clients MUST NOT call this method\nwhen `authMethods` was omitted or empty.\n\nCalled when the agent requires authentication before allowing session creation.\nThe client provides the authentication method ID that was advertised during initialization.\n\nAfter successful authentication, the client can proceed to create sessions with\n`new_session` without receiving an `auth_required` error.\n\nSee protocol docs: [Initialization](https://agentclientprotocol.com/protocol/v2/initialization)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/LoginAuthRequest"
@@ -4625,7 +4625,7 @@
                 },
                 {
                   "title": "LogoutAuthRequest",
-                  "description": "Logs out of the current authenticated state.\n\nAfter a successful logout, all new sessions will require authentication.\nThere is no guarantee about the behavior of already running sessions.",
+                  "description": "Logs out of the current authenticated state.\n\nAgents MUST support this method when their `initialize` response advertised\nat least one valid authentication method. Clients MUST NOT call this method\nwhen `authMethods` was omitted or empty.\n\nAfter a successful logout, authentication-gated requests require the client\nto authenticate again. There is no guarantee about the behavior of already\nrunning sessions.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/LogoutAuthRequest"
@@ -4769,7 +4769,7 @@
       }
     },
     "LoginAuthRequest": {
-      "description": "Request parameters for the `auth/login` method.\n\nSpecifies which authentication method to use.",
+      "description": "Request parameters for the `auth/login` method.\n\nSpecifies which authentication method to use.\n\nAgents MUST support this method when their `initialize` response advertised\nat least one valid authentication method. Clients MUST NOT call this method\nwhen `authMethods` was omitted or empty.",
       "type": "object",
       "properties": {
         "methodId": {
@@ -4792,7 +4792,7 @@
       "x-method": "auth/login"
     },
     "LogoutAuthRequest": {
-      "description": "Request parameters for the `auth/logout` method.\n\nTerminates the current authenticated session.",
+      "description": "Request parameters for the `auth/logout` method.\n\nTerminates the current authenticated session.\n\nAgents MUST support this method when their `initialize` response advertised\nat least one valid authentication method. Clients MUST NOT call this method\nwhen `authMethods` was omitted or empty.",
       "type": "object",
       "properties": {
         "_meta": {

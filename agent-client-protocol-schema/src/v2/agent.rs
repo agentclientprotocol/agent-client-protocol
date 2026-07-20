@@ -132,6 +132,10 @@ pub struct InitializeResponse {
     #[serde(default)]
     pub capabilities: AgentCapabilities,
     /// Authentication methods supported by the agent.
+    ///
+    /// Optional. Omitted or empty means the agent does not advertise the
+    /// authentication method surface. Supplying one or more valid methods means
+    /// the agent MUST support both `auth/login` and `auth/logout`.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
     #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -169,6 +173,9 @@ impl InitializeResponse {
     }
 
     /// Authentication methods supported by the agent.
+    ///
+    /// Supplying one or more valid methods means the agent MUST support both
+    /// `auth/login` and `auth/logout`.
     #[must_use]
     pub fn auth_methods(mut self, auth_methods: Vec<AuthMethod>) -> Self {
         self.auth_methods = auth_methods;
@@ -261,6 +268,10 @@ impl Implementation {
 /// Request parameters for the `auth/login` method.
 ///
 /// Specifies which authentication method to use.
+///
+/// Agents MUST support this method when their `initialize` response advertised
+/// at least one valid authentication method. Clients MUST NOT call this method
+/// when `authMethods` was omitted or empty.
 #[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -349,6 +360,10 @@ impl LoginAuthResponse {
 /// Request parameters for the `auth/logout` method.
 ///
 /// Terminates the current authenticated session.
+///
+/// Agents MUST support this method when their `initialize` response advertised
+/// at least one valid authentication method. Clients MUST NOT call this method
+/// when `authMethods` was omitted or empty.
 #[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -426,7 +441,11 @@ impl LogoutAuthResponse {
     }
 }
 
-/// Authentication-related capabilities supported by the agent.
+/// Authentication-related extension capabilities supported by the agent.
+///
+/// This object does not advertise support for `auth/login` or `auth/logout`.
+/// Those methods are advertised by a non-empty `authMethods` list in the
+/// `initialize` response.
 #[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -4007,10 +4026,12 @@ pub struct AgentCapabilities {
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub session: Option<SessionCapabilities>,
-    /// Authentication-related capabilities supported by the agent.
+    /// Authentication-related extension capabilities supported by the agent.
     ///
     /// Optional. Omitted or `null` both mean the agent does not advertise any
-    /// authentication-related extensions.
+    /// authentication-related extensions. This field does not advertise support
+    /// for `auth/login` or `auth/logout`; those methods are advertised by a
+    /// non-empty `authMethods` list in the `initialize` response.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
@@ -4082,7 +4103,9 @@ impl AgentCapabilities {
         self
     }
 
-    /// Authentication-related capabilities supported by the agent.
+    /// Authentication-related extension capabilities supported by the agent.
+    ///
+    /// This field does not advertise support for `auth/login` or `auth/logout`.
     #[must_use]
     pub fn auth(mut self, auth: impl IntoOption<AgentAuthCapabilities>) -> Self {
         self.auth = auth.into_option();
@@ -5147,6 +5170,10 @@ pub enum ClientRequest {
     InitializeRequest(Box<InitializeRequest>),
     /// Authenticates the client using the specified authentication method.
     ///
+    /// Agents MUST support this method when their `initialize` response advertised
+    /// at least one valid authentication method. Clients MUST NOT call this method
+    /// when `authMethods` was omitted or empty.
+    ///
     /// Called when the agent requires authentication before allowing session creation.
     /// The client provides the authentication method ID that was advertised during initialization.
     ///
@@ -5178,8 +5205,13 @@ pub enum ClientRequest {
     DisableProviderRequest(Box<DisableProviderRequest>),
     /// Logs out of the current authenticated state.
     ///
-    /// After a successful logout, all new sessions will require authentication.
-    /// There is no guarantee about the behavior of already running sessions.
+    /// Agents MUST support this method when their `initialize` response advertised
+    /// at least one valid authentication method. Clients MUST NOT call this method
+    /// when `authMethods` was omitted or empty.
+    ///
+    /// After a successful logout, authentication-gated requests require the client
+    /// to authenticate again. There is no guarantee about the behavior of already
+    /// running sessions.
     LogoutAuthRequest(Box<LogoutAuthRequest>),
     /// Creates a new conversation session with the agent.
     ///

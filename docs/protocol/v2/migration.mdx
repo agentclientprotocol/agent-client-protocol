@@ -37,7 +37,7 @@ Nothing about v2 changes the underlying JSON-RPC framing, so a single connection
 | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | `initialize`                                                                                        | Unchanged name. Params and result restructured                                                         |
 | `authenticate`                                                                                      | Renamed to `auth/login`                                                                                |
-| `logout` (gated by `agentCapabilities.auth.logout`)                                                 | Renamed to `auth/logout`. Always required, no capability                                               |
+| `logout` (gated by `agentCapabilities.auth.logout`)                                                 | Renamed to `auth/logout`. Required when `authMethods` is non-empty; no logout capability marker        |
 | `session/new`                                                                                       | `mcpServers` now optional. Response no longer includes `modes`                                         |
 | `session/load`                                                                                      | **Removed**. Use `session/resume` with `"replayFrom": { "type": "start" }`                             |
 | `session/resume`                                                                                    | Gains optional `replayFrom`. Required (no capability marker)                                           |
@@ -174,6 +174,8 @@ v1 used role-specific field names: the Client sent `clientCapabilities` and opti
 
 </CodeGroup>
 
+Both responses above have an empty `authMethods` array. In v2, omitting `authMethods` has the same availability meaning: the Agent does not advertise the authentication surface, and Clients **MUST NOT** call `auth/login` or `auth/logout`.
+
 ### Support markers are objects, not booleans
 
 In v1, capability support was a mix of booleans (`"image": true`) and objects (`"list": {}`). In v2, every support marker is an object: supplying `{}` (or an object with fields) means supported, and omitting the key or supplying `null` means unsupported.
@@ -193,7 +195,7 @@ This means checks like `promptCapabilities.image === true` become presence check
 The auth methods are grouped under an `auth/` prefix:
 
 - `authenticate` → `auth/login`. The params are unchanged (`methodId` selecting one of the advertised auth methods). The descriptor's identifier field is renamed from `id` to `methodId` to match, and its `type` discriminator is now required.
-- `logout` → `auth/logout`. In v1, logout support was opt-in via a capability marker. In v2, **every Agent must implement `auth/logout`**. There is no support marker. Agents with no authentication state simply return an empty result.
+- `logout` → `auth/logout`. In v1, logout support was opt-in via a capability marker. In v2, returning one or more valid entries in `authMethods` advertises the authentication surface, and the Agent **MUST** implement both `auth/login` and `auth/logout`. If `authMethods` is omitted or empty, Clients **MUST NOT** call either method. There is no logout support marker; `capabilities.auth` remains orthogonal and advertises only authentication-related extensions.
 
 ```json
 {
@@ -216,6 +218,8 @@ Each entry in `authMethods` now uses `methodId` instead of `id`, and carries a r
   "description": "Sign in using the agent's login flow"
 }
 ```
+
+Including this entry in an initialize response requires the Agent to support both `auth/login` and `auth/logout`.
 
 Stable v2 defines `type: "agent"`. Custom types **MUST** begin with `_`. Unknown values without a leading `_` are reserved for future ACP versions.
 
@@ -704,7 +708,7 @@ A standard remote transport (streamable HTTP with SSE streams, plus WebSocket) i
 
 1. **Initialization.** Read `params.capabilities` / `params.info`. Return `capabilities` and a required `info`. Restructure your capability object: nest prompt and MCP capabilities under `session`, convert boolean markers to `{}` objects, drop `loadSession` and the `list`/`resume`/`close` markers.
 2. **Implement the baseline.** If you advertise `session`, implement `session/new`, `session/list`, `session/resume`, `session/close`, `session/prompt`, `session/cancel`, and `session/update`.
-3. **Auth.** Rename `authenticate` → `auth/login`. Implement `auth/logout` unconditionally. Add `type` and `methodId` to your auth method descriptors.
+3. **Auth.** Rename `authenticate` → `auth/login`. If you return one or more valid `authMethods`, implement both `auth/login` and `auth/logout`; if you omit the field or return an empty array, Clients **MUST NOT** call either method. Do not add a logout support marker: `capabilities.auth` is only for authentication-related extensions. Add `type` and `methodId` to your auth method descriptors.
 4. **Prompt lifecycle.** Respond to `session/prompt` immediately with `{}` on acceptance. Emit a `user_message` acknowledgment with an agent-generated `messageId`, a `running` state update when processing starts, and an idle `state_update` carrying the stop reason when the work completes, including `cancelled` after `session/cancel`.
 5. **Message IDs.** Generate and attach a `messageId` to every message chunk and update.
 6. **Tool calls.** Stop sending `tool_call`. Send `tool_call_update` for creation and patches. Use `tool_call_content_chunk` to stream content. Respect omit/`null`/value patch semantics.

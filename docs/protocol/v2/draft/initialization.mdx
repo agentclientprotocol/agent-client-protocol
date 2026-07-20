@@ -75,6 +75,10 @@ The Agent **MUST** respond with the chosen [protocol version](#protocol-version)
 }
 ```
 
+`authMethods` is optional. Returning one or more valid entries advertises the Agent's authentication surface and means the Agent **MUST** implement both `auth/login` and `auth/logout`. If `authMethods` is omitted or empty, Clients **MUST NOT** call either method.
+
+`capabilities.auth` is separate from this method surface. It advertises authentication-related extensions and does not change the availability rules for `auth/login` or `auth/logout`.
+
 ## Protocol version
 
 The protocol versions that appear in the `initialize` requests and responses are a single integer that identifies a **MAJOR** protocol version. This version is only incremented when breaking changes are introduced.
@@ -130,7 +134,9 @@ The Agent **SHOULD** specify whether it supports the following capabilities:
 </ResponseField>
 
 <ResponseField name="auth" type="AgentAuthCapabilities Object">
-  Authentication-related capabilities supported by the Agent.
+  Authentication-related extensions supported by the Agent. This field is
+  orthogonal to `authMethods` and does not advertise the availability of
+  `auth/login` or `auth/logout`.
 </ResponseField>
 
 #### Session Capabilities
