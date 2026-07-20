@@ -1735,10 +1735,10 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 File changes produced by a tool call.
 
-`changes` identifies affected absolute paths and operations. `patch`
-optionally carries renderable patch text for clients that can show it.
-Agents SHOULD provide `patch` whenever feasible. Clients MUST handle diffs
-where `patch` is omitted or `null`.
+`changes` is authoritative for affected absolute paths and operations.
+`patch` optionally carries renderable text for some or all of those changes
+and MUST be consistent with `changes`. Agents SHOULD provide `patch` whenever
+feasible. Clients MUST handle diffs where `patch` is omitted or `null`.
 
 See protocol docs: [Content](https://agentclientprotocol.com/protocol/v2/tool-calls#content)
 
@@ -1761,7 +1761,7 @@ Clients can use this field without parsing patch text to determine affected path
 
 </ResponseField>
 <ResponseField name="patch" type={<><span><a href="#diffpatch">DiffPatch</a></span><span> | null</span></>} >
-  Renderable patch text.
+  Renderable patch text for some or all of the structured changes.
 
 Agents SHOULD provide patch text whenever feasible. Omitted or `null`
 means no renderable patch text was provided.
@@ -1937,21 +1937,21 @@ future ACP variants.
 
 ## <span class="font-mono">DiffPatch</span>
 
-Renderable patch text.
+Renderable patch text and its format.
 
 **Type:** Object
 
 **Properties:**
 
-<ResponseField name="diff" type={"string"} required>
-  Git patch text.
-</ResponseField>
 <ResponseField
   name="format"
   type={<a href="#diffpatchformat">DiffPatchFormat</a>}
   required
 >
   Patch format. The only ACP-defined value is `git_patch`.
+</ResponseField>
+<ResponseField name="text" type={"string"} required>
+  Patch text in the format named by `format`.
 </ResponseField>
 
 ## <span class="font-mono">DiffPatchFormat</span>
@@ -1961,11 +1961,15 @@ Text patch format used by `DiffPatch`.
 **Type:** Union
 
 <ResponseField name="git_patch" type="string">
-  Git patch format.
+One or more `diff --git` sections in Git's `--patch` (`-p`) text format.
+
+Paths MUST be absolute. Surrounding commit metadata and email envelopes
+MUST NOT be included.
+
 </ResponseField>
 
 <ResponseField name="other" type="string">
-Custom or future diff format.
+Custom or future patch format.
 
 Values beginning with `_` are reserved for implementation-specific
 extensions. Unknown values that do not begin with `_` are reserved for
@@ -4725,7 +4729,7 @@ Clients can use this field without parsing patch text to determine affected path
 
 </ResponseField>
 <ResponseField name="patch" type={<><span><a href="#diffpatch">DiffPatch</a></span><span> | null</span></>} >
-  Renderable patch text.
+  Renderable patch text for some or all of the structured changes.
 
 Agents SHOULD provide patch text whenever feasible. Omitted or `null`
 means no renderable patch text was provided.

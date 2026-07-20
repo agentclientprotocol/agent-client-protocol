@@ -497,10 +497,10 @@ impl Content {
 
 /// File changes produced by a tool call.
 ///
-/// `changes` identifies affected absolute paths and operations. `patch`
-/// optionally carries renderable patch text for clients that can show it.
-/// Agents SHOULD provide `patch` whenever feasible. Clients MUST handle diffs
-/// where `patch` is omitted or `null`.
+/// `changes` is authoritative for affected absolute paths and operations.
+/// `patch` optionally carries renderable text for some or all of those changes
+/// and MUST be consistent with `changes`. Agents SHOULD provide `patch` whenever
+/// feasible. Clients MUST handle diffs where `patch` is omitted or `null`.
 ///
 /// See protocol docs: [Content](https://agentclientprotocol.com/protocol/tool-calls#content)
 #[serde_as]
@@ -515,7 +515,7 @@ pub struct Diff {
     #[serde_as(deserialize_as = "VecSkipError<_, SkipListener>")]
     #[schemars(extend("x-deserialize-skip-invalid-items" = true))]
     pub changes: Vec<DiffChange>,
-    /// Renderable patch text.
+    /// Renderable patch text for some or all of the structured changes.
     ///
     /// Agents SHOULD provide patch text whenever feasible. Omitted or `null`
     /// means no renderable patch text was provided.
@@ -546,10 +546,10 @@ impl Diff {
         }
     }
 
-    /// Builds [`Diff`] with git patch text and structured file changes.
+    /// Builds [`Diff`] with Git `--patch` text and structured file changes.
     #[must_use]
-    pub fn patch(diff: impl Into<String>, changes: Vec<DiffChange>) -> Self {
-        Self::new(changes).with_patch(DiffPatch::new(diff))
+    pub fn patch(text: impl Into<String>, changes: Vec<DiffChange>) -> Self {
+        Self::new(changes).with_patch(DiffPatch::new(text))
     }
 
     /// Sets renderable patch text.
@@ -571,24 +571,24 @@ impl Diff {
     }
 }
 
-/// Renderable patch text.
+/// Renderable patch text and its format.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct DiffPatch {
     /// Patch format. The only ACP-defined value is `git_patch`.
     pub format: DiffPatchFormat,
-    /// Git patch text.
-    pub diff: String,
+    /// Patch text in the format named by `format`.
+    pub text: String,
 }
 
 impl DiffPatch {
-    /// Builds [`DiffPatch`] with git patch text.
+    /// Builds [`DiffPatch`] with Git `--patch` text.
     #[must_use]
-    pub fn new(diff: impl Into<String>) -> Self {
+    pub fn new(text: impl Into<String>) -> Self {
         Self {
             format: DiffPatchFormat::GitPatch,
-            diff: diff.into(),
+            text: text.into(),
         }
     }
 }
@@ -598,9 +598,12 @@ impl DiffPatch {
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum DiffPatchFormat {
-    /// Git patch format.
+    /// One or more `diff --git` sections in Git's `--patch` (`-p`) text format.
+    ///
+    /// Paths MUST be absolute. Surrounding commit metadata and email envelopes
+    /// MUST NOT be included.
     GitPatch,
-    /// Custom or future diff format.
+    /// Custom or future patch format.
     ///
     /// Values beginning with `_` are reserved for implementation-specific
     /// extensions. Unknown values that do not begin with `_` are reserved for
@@ -1110,8 +1113,9 @@ mod tests {
 
     #[test]
     fn diff_patch_serializes_git_patch_with_structured_changes() {
+        let patch_text = "diff --git /repo/config.json /repo/config.json\n--- /repo/config.json\n+++ /repo/config.json\n@@ -1 +1 @@\n-old\n+new\n";
         let diff = ToolCallContent::Diff(Diff::patch(
-            "diff --git /repo/config.json /repo/config.json\n",
+            patch_text,
             vec![
                 DiffChange::modify("/repo/config.json")
                     .file_type(DiffFileType::Text)
@@ -1133,10 +1137,20 @@ mod tests {
                 ],
                 "patch": {
                     "format": "git_patch",
-                    "diff": "diff --git /repo/config.json /repo/config.json\n"
+                    "text": patch_text
                 }
             })
         );
+    }
+
+    #[test]
+    fn diff_patch_requires_text() {
+        let result = serde_json::from_value::<DiffPatch>(serde_json::json!({
+            "format": "git_patch",
+            "diff": "diff --git /repo/config.json /repo/config.json\n"
+        }));
+
+        assert!(result.is_err());
     }
 
     #[test]
@@ -1190,6 +1204,7 @@ mod tests {
 
     #[test]
     fn diff_changes_skip_malformed_list_items() {
+        let patch_text = "diff --git /ok /ok\ndeleted file mode 100644\n--- /ok\n+++ /dev/null\n@@ -1 +0,0 @@\n-old\n";
         let content: ToolCallContent = serde_json::from_value(serde_json::json!({
             "type": "diff",
             "changes": [
@@ -1203,7 +1218,7 @@ mod tests {
             ],
             "patch": {
                 "format": "git_patch",
-                "diff": "diff --git /ok /ok\n"
+                "text": patch_text
             }
         }))
         .unwrap();
@@ -1212,7 +1227,7 @@ mod tests {
             panic!("expected diff content");
         };
         assert_eq!(diff.changes, vec![DiffChange::delete("/ok")]);
-        assert_eq!(diff.patch, Some(DiffPatch::new("diff --git /ok /ok\n")));
+        assert_eq!(diff.patch, Some(DiffPatch::new(patch_text)));
     }
 
     #[test]

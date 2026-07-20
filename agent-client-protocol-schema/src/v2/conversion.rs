@@ -3245,7 +3245,7 @@ impl TryToV1 for super::Diff {
 
     fn try_to_v1(self) -> Result<Self::Output> {
         Err(ProtocolConversionError::new(
-            "v2 Diff cannot be represented in v1 because v1 requires oldText/newText while v2 carries standard patch text and structured changes",
+            "v2 Diff cannot be represented in v1 because v1 requires oldText/newText while v2 carries Git --patch text and structured changes",
         ))
     }
 }
@@ -3268,9 +3268,9 @@ impl TryToV2 for crate::v1::Diff {
         } else {
             super::DiffChange::add(path.clone()).file_type(super::DiffFileType::Text)
         };
-        let diff = full_file_git_patch(&path, old_text.as_deref(), &new_text);
+        let patch_text = full_file_git_patch(&path, old_text.as_deref(), &new_text);
 
-        Ok(super::Diff::patch(diff, vec![change]).meta(meta.try_to_v2()?))
+        Ok(super::Diff::patch(patch_text, vec![change]).meta(meta.try_to_v2()?))
     }
 }
 
@@ -3288,12 +3288,12 @@ fn full_file_git_patch(path: &Path, old_text: Option<&str>, new_text: &str) -> S
         .set_original_filename(original_filename)
         .set_modified_filename(path.to_string());
 
-    let mut diff = format!("diff --git {path} {path}\n");
+    let mut patch_text = format!("diff --git {path} {path}\n");
     if old_text.is_none() {
-        diff.push_str("new file mode 100644\n");
+        patch_text.push_str("new file mode 100644\n");
     }
-    diff.push_str(&options.create_patch(old, new_text).to_string());
-    diff
+    patch_text.push_str(&options.create_patch(old, new_text).to_string());
+    patch_text
 }
 
 impl TryToV1 for super::ToolCallLocation {
@@ -10158,7 +10158,7 @@ mod tests {
                         ],
                         "patch": {
                             "format": "git_patch",
-                            "diff": "diff --git /path /path\n--- /path\n+++ /path\n@@ -1 +1 @@\n-old contents\n\\ No newline at end of file\n+new contents\n\\ No newline at end of file\n"
+                            "text": "diff --git /path /path\n--- /path\n+++ /path\n@@ -1 +1 @@\n-old contents\n\\ No newline at end of file\n+new contents\n\\ No newline at end of file\n"
                         }
                     }
                 ],
@@ -10179,7 +10179,7 @@ mod tests {
 
         assert_v2_to_v1_error(
             converted,
-            "v2 Diff cannot be represented in v1 because v1 requires oldText/newText while v2 carries standard patch text and structured changes",
+            "v2 Diff cannot be represented in v1 because v1 requires oldText/newText while v2 carries Git --patch text and structured changes",
         );
     }
 

@@ -1866,7 +1866,7 @@
       "required": ["oldPath", "path"]
     },
     "DiffPatch": {
-      "description": "Renderable patch text.",
+      "description": "Renderable patch text and its format.",
       "type": "object",
       "properties": {
         "format": {
@@ -1877,30 +1877,30 @@
             }
           ]
         },
-        "diff": {
-          "description": "Git patch text.",
+        "text": {
+          "description": "Patch text in the format named by `format`.",
           "type": "string"
         }
       },
-      "required": ["format", "diff"]
+      "required": ["format", "text"]
     },
     "DiffPatchFormat": {
       "description": "Text patch format used by [`DiffPatch`].",
       "anyOf": [
         {
-          "description": "Git patch format.",
+          "description": "One or more `diff --git` sections in Git's `--patch` (`-p`) text format.\n\nPaths MUST be absolute. Surrounding commit metadata and email envelopes\nMUST NOT be included.",
           "type": "string",
           "const": "git_patch"
         },
         {
           "title": "other",
-          "description": "Custom or future diff format.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+          "description": "Custom or future patch format.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
           "type": "string"
         }
       ]
     },
     "Diff": {
-      "description": "File changes produced by a tool call.\n\n`changes` identifies affected absolute paths and operations. `patch`\noptionally carries renderable patch text for clients that can show it.\nAgents SHOULD provide `patch` whenever feasible. Clients MUST handle diffs\nwhere `patch` is omitted or `null`.\n\nSee protocol docs: [Content](https://agentclientprotocol.com/protocol/v2/draft/tool-calls#content)",
+      "description": "File changes produced by a tool call.\n\n`changes` is authoritative for affected absolute paths and operations.\n`patch` optionally carries renderable text for some or all of those changes\nand MUST be consistent with `changes`. Agents SHOULD provide `patch` whenever\nfeasible. Clients MUST handle diffs where `patch` is omitted or `null`.\n\nSee protocol docs: [Content](https://agentclientprotocol.com/protocol/v2/draft/tool-calls#content)",
       "type": "object",
       "properties": {
         "changes": {
@@ -1912,7 +1912,7 @@
           "x-deserialize-skip-invalid-items": true
         },
         "patch": {
-          "description": "Renderable patch text.\n\nAgents SHOULD provide patch text whenever feasible. Omitted or `null`\nmeans no renderable patch text was provided.",
+          "description": "Renderable patch text for some or all of the structured changes.\n\nAgents SHOULD provide patch text whenever feasible. Omitted or `null`\nmeans no renderable patch text was provided.",
           "anyOf": [
             {
               "$ref": "#/$defs/DiffPatch"
