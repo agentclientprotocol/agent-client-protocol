@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.5.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.4.0...v1.5.0) - 2026-07-20
+
+### Added
+
+- *(unstable-v2)* add v2 semantic string types ([#1742](https://github.com/agentclientprotocol/agent-client-protocol/pull/1742))
+- *(unstable-v2)* rename diff patch payload to text ([#1730](https://github.com/agentclientprotocol/agent-client-protocol/pull/1730))
+- *(unstable-v2)* add v2 terminal output surface ([#1679](https://github.com/agentclientprotocol/agent-client-protocol/pull/1679))
+
+### Fixed
+
+- *(unstable-v2)* gate v2 auth methods on authMethods ([#1728](https://github.com/agentclientprotocol/agent-client-protocol/pull/1728))
+- *(unstable-v2)* Clean up conversion helpers ([#1640](https://github.com/agentclientprotocol/agent-client-protocol/pull/1640))
+- *(schema)* remove enum discriminators from invalid schemas ([#1612](https://github.com/agentclientprotocol/agent-client-protocol/pull/1612))
+
+### Other
+
+- *(unstable-v2)* clarify idle session semantics ([#1729](https://github.com/agentclientprotocol/agent-client-protocol/pull/1729))
+
 ## [1.4.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.3.0...v1.4.0) - 2026-07-06
 
 ### Added

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.19.1](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.19.0...schema-v1.19.1) - 2026-07-20
+
+### Fixed
+
+- *(schema)* remove enum discriminators from invalid schemas ([#1612](https://github.com/agentclientprotocol/agent-client-protocol/pull/1612))
+
 ## [1.19.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.18.0...schema-v1.19.0) - 2026-07-06
 
 ### Added
