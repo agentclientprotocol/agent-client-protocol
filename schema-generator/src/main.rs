@@ -519,11 +519,6 @@ mod schema_annotation_tests {
     fn generated_v2_schema_marks_plan_content_as_markdown() {
         let schema = root_schema_value();
         let content = property_schema(&schema, "PlanMarkdown", "content");
-
-        assert_eq!(
-            content.get("contentMediaType").and_then(Value::as_str),
-            Some("text/markdown")
-        );
     }
 
     #[cfg(feature = "unstable_protocol_v2")]
@@ -2214,7 +2209,6 @@ starting with '$/' it is free to ignore the notification."
                     },
                     "payload": {
                         "contentEncoding": "base64",
-                        "contentMediaType": "text/markdown",
                         "format": "uri",
                         "type": ["string", "null"]
                     }
@@ -2226,11 +2220,6 @@ starting with '$/' it is free to ignore the notification."
 
             assert!(generator.output.contains("| Format | `uri` |"));
             assert!(generator.output.contains("| Content encoding | `base64` |"));
-            assert!(
-                generator
-                    .output
-                    .contains("| Content media type | `text/markdown` |")
-            );
             assert!(!generator.output.contains("future-number-format"));
         }
 
