@@ -6,7 +6,7 @@ description: The ACP v2 protocol documentation and schema are published in draft
 
 import { Author } from "/snippets/author.jsx";
 
-**Published:** July 15, 2026
+**Published:** July 20, 2026
 
 Today is a day the ACP team has been working towards for months, and we are excited to share the **first Draft of version 2 of the Agent Client Protocol**.
 
@@ -22,11 +22,11 @@ Our core design goal remains to provide as much freedom as possible to both agen
 
 ### Moving beyond the turn
 
-When we launched ACP v1, most agents happily emitted events only after a user-initiated message and usually stopped once they finished generating. But these days, agents are able to work longer and even orchestrate more and more work in the background. While the ACP v1 spec didn't _prohibit_ `session/updates` from coming outside of the turn, it was a common point of confusion for implementers, who usually wanted to guarantee interaction patterns around the idea of a user-initiated turn, but it is clear that enforcing this actually prevents useful behavior. An agent could be ready to receive new input while background events are happening, but it still wants to provide real-time updates for those as well. If we stick with a turn-focused orientation for prompts, neither sad is happy.
+When we launched ACP v1, most agents happily emitted events only after a user-initiated message and usually stopped once they finished generating. But these days, agents are able to work longer and even orchestrate more and more work in the background. While the ACP v1 spec didn't _prohibit_ `session/updates` from coming outside of the turn, it was a common point of confusion for implementers, who usually wanted to guarantee interaction patterns around the idea of a user-initiated turn, but it is clear that enforcing this actually prevents useful behavior. An agent could be ready to receive new input while background events are happening, but it still wants to provide real-time updates for those as well. If we stick with a turn-focused orientation for prompts, neither side is happy.
 
 If we want to allow for queueing, steering, or receiving updates from work that isn't necessarily initiated by the user, we need to make it clearer that the prompt request/response doesn't own the entire lifecycle of work being done. Now `session/updates` can proceed freely at any point in the session, and a prompt response is the indication that the message was acknowledged by the agent, not the end of the turn. The agent will replay the user message where it inserted it, which also makes it easier for both replay and the potential for multiple clients observing the same session. The agent can indicate when it is "idle", or ready to receive new inputs, allowing the client to indicate readiness, and agents can continue to update the session state in the meantime.
 
-This is the biggest change in behavior in v2, but I think allows clients and agents to both represent new interactions and session states. You can read more about this in the [new prompt lifecycle RFD](/rfds/v2/prompt).
+You can read more about this in the [new prompt lifecycle RFD](/rfds/v2/prompt).
 
 ### Updating Messages and Streaming Tool Calls
 
