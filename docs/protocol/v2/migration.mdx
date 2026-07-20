@@ -433,13 +433,13 @@ The v1 diff shape (a single `path` with `oldText`/`newText`) could not distingui
   ],
   "patch": {
     "format": "git_patch",
-    "diff": "diff --git /home/user/project/src/config.json /home/user/project/src/config.json\n--- /home/user/project/src/config.json\n+++ /home/user/project/src/config.json\n@@ -1,3 +1,3 @@\n {\n-  \"debug\": false\n+  \"debug\": true\n }\n"
+    "text": "diff --git /home/user/project/src/config.json /home/user/project/src/config.json\n--- /home/user/project/src/config.json\n+++ /home/user/project/src/config.json\n@@ -1,3 +1,3 @@\n {\n-  \"debug\": false\n+  \"debug\": true\n }\n"
   }
 }
 ```
 
-- `changes` (required) is a list of file-level operations. `add`, `delete`, and `modify` carry a `path`. `move` and `copy` carry `oldPath` and `path`. Each change may carry an optional `fileType` (`text`, `binary`, `directory`, `symlink`) and `mimeType`. Clients can build file trees and summaries from `changes` without parsing any patch text.
-- `patch` (optional) carries renderable patch text with a `format` discriminator. Stable v2 defines `git_patch`. Agents **SHOULD** provide `patch` whenever feasible. Clients **MUST** handle diffs where `patch` is omitted or `null` (binary changes, symlink retargets, and similar cases have no useful text rendering).
+- `changes` (required) is the authoritative list of file-level operations. `add`, `delete`, and `modify` carry a `path`. `move` and `copy` carry `oldPath` and `path`. Each change may carry an optional `fileType` (`text`, `binary`, `directory`, `symlink`) and `mimeType`. Clients can build file trees and summaries from `changes` without parsing any patch text.
+- `patch` (optional) carries renderable text for some or all changes and **MUST** be consistent with `changes`. Stable v2 defines `git_patch` as one or more `diff --git` sections in Git's `--patch` (`-p`) text format. Paths **MUST** be absolute. Surrounding commit metadata and email envelopes **MUST NOT** be included. Agents **SHOULD** provide `patch` whenever feasible. Clients **MUST** handle diffs where `patch` is omitted or `null` (binary changes, symlink retargets, and similar cases have no useful text rendering).
 
 A deleted file is now simply:
 
@@ -456,7 +456,7 @@ A deleted file is now simply:
 }
 ```
 
-There is no mechanical mapping from v2 diffs back to `oldText`/`newText`. When migrating a v1 client, replace your diff rendering with a git-patch renderer driven by `patch`, using `changes` for headers, file trees, and non-text cases.
+There is no mechanical mapping from v2 diffs back to `oldText`/`newText`. When migrating a v1 client, render `patch.text` according to `patch.format`, using `changes` for headers, file trees, and non-text cases.
 
 ## Permission requests
 
@@ -715,7 +715,7 @@ A standard remote transport (streamable HTTP with SSE streams, plus WebSocket) i
 5. **Message IDs.** Generate and attach a `messageId` to every message chunk and update.
 6. **Tool calls.** Stop sending `tool_call`. Send `tool_call_update` for creation and patches. Use `tool_call_content_chunk` to stream content. Respect omit/`null`/value patch semantics.
 7. **Terminal output.** Add `terminal` content references for Agent-owned display terminals. Send `terminal_update` for command, absolute cwd, snapshots, and exit state; send independently base64-encoded `terminal_output_chunk` values for live bytes. Do not expect Client control methods or capability negotiation.
-8. **Diffs.** Replace `oldText`/`newText` with `changes` (+ `fileType`/`mimeType` where known) and provide a `git_patch` whenever feasible.
+8. **Diffs.** Replace `oldText`/`newText` with `changes` (+ `fileType`/`mimeType` where known) and provide `patch` in `git_patch` format whenever feasible.
 9. **Permissions.** Put prompt copy in required `title` (+ optional `description`). Use the `tool_call` subject for tool-call state and the `command` subject for a command, required absolute cwd, and optional tool-call/terminal associations.
 10. **Plans.** Send `plan_update` with `{ "type": "items", "planId": ..., "entries": [...] }`.
 11. **Modes.** Drop `session/set_mode`, `modes`, and `current_mode_update`. Expose the same state as config options with `category: "mode"` and emit `config_option_update`.
@@ -733,7 +733,7 @@ A standard remote transport (streamable HTTP with SSE streams, plus WebSocket) i
 4. **Messages.** Track messages by required `messageId`. Implement upsert semantics: whole-message updates replace content (or clear it with `null`/`[]`), chunks append.
 5. **Tool calls.** Create tool calls on first-seen `toolCallId` in `tool_call_update`. Apply omit/`null`/value patches. Append `tool_call_content_chunk` items. Replace accumulated content when an update carries `content`.
 6. **Terminal output.** Maintain Agent-owned terminal state by `terminalId`. Apply update patch and snapshot-replacement semantics; independently decode and append chunk bytes. Render them in an isolated terminal emulator or sanitized transcript, with no input or process controls.
-7. **Diffs.** Render `patch.diff` (git patch format) when present. Drive file trees and summaries from `changes`. Handle patch-less diffs (binary, symlink, directory).
+7. **Diffs.** Render `patch.text` when present. Drive file trees and summaries from `changes`. Handle patch-less diffs (binary, symlink, directory).
 8. **Permissions.** Render `title`/`description`. Apply `tool_call` subjects like ordinary tool-call updates; render `command` subjects from their command, required absolute cwd, and optional associations. Show a generic prompt for absent or unknown subjects.
 9. **Plans.** Handle `plan_update` keyed by `planId`. Each update replaces that plan's entries.
 10. **Modes.** Drop `session/set_mode` and `current_mode_update` handling. Drive mode/model UI from `configOptions` (using `category`) via `session/set_config_option` and `config_option_update`.

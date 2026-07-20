@@ -52,7 +52,7 @@ Other RFDs will progress separately and are not dependent on breaking changes (s
 - Make [plan variants](./plan-variants.mdx) the default v2 plan shape by replacing the old `plan` session update with item-based `plan_update`.
 - Replace the v1 split between `tool_call` and `tool_call_update` with a single [tool-call update](./tool-call-updates.mdx) upsert shape keyed by `toolCallId`.
 - Add [tool-call content chunks](./tool-call-updates.mdx) so Agents can stream individual `ToolCallContent` items that append to a tool call.
-- Replace the v1 `Diff` `oldText` / `newText` shape with [diff file states](./diff-file-states.mdx): renderable `git_patch` text for text changes plus structured file operations for add, delete, modify, move, copy, and non-text changes.
+- Replace the v1 `Diff` `oldText` / `newText` shape with [diff file states](./diff-file-states.mdx): optional Git `--patch` text (`git_patch`) plus structured file operations for add, delete, modify, move, copy, and non-text changes.
 - Make [permission requests](./permission-requests.mdx) carry a required prompt `title` and optional extensible `subject` tagged union. Tool-call permissions use `subject.type: "tool_call"` with the same `ToolCallUpdate` payload shape as session updates, command permissions use `subject.type: "command"` with the command, required absolute working directory, and optional display associations, and subject-less permissions rely on the common prompt fields.
 - Add [whole-message updates](./message-updates.mdx) for `user_message`, `agent_message`, and `agent_thought` alongside streamed chunks. Message updates are upserts keyed by `messageId`; their `content` arrays replace current message content, while chunks append to the current content.
 - Require [message IDs](../message-id.mdx) on streamed message chunks.
@@ -110,6 +110,7 @@ With the needed breaking changes, as much as possible I am targeting having a co
 
 ## Revision history
 
+- 2026-07-20: Clarified `git_patch` and renamed its payload from `diff` to `text`.
 - 2026-07-20: Clarified that `idle` means ready for a new prompt while background updates may continue; steering and queueing remain separate concerns.
 - 2026-07-20: Scoped the v2 authentication surface to Agents that return one or more valid `authMethods`; those Agents must implement both `auth/login` and `auth/logout`, while omission or an empty array means Clients must not call either method.
 - 2026-07-14: Added the v2 Terminal Output RFD for Agent-owned, display-only terminal output.

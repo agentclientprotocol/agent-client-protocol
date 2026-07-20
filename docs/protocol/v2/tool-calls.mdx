@@ -449,10 +449,10 @@ provided.
 File modifications shown as diffs. A diff always includes structured file
 changes and can optionally include renderable patch text.
 
-Clients can use `changes` to identify affected absolute paths and file
-operations without parsing patch text. When `patch` is present, clients can
-also render the patch text directly. Agents SHOULD provide `patch` whenever
-feasible. Clients MUST handle diffs where `patch` is omitted or `null`.
+`changes` is authoritative for affected absolute paths and operations. `patch`,
+when present, provides renderable text for some or all of those changes and MUST
+be consistent with `changes`. Agents SHOULD provide `patch` whenever feasible.
+Clients MUST handle diffs where `patch` is omitted or `null`.
 
 ```json
 {
@@ -467,7 +467,7 @@ feasible. Clients MUST handle diffs where `patch` is omitted or `null`.
   ],
   "patch": {
     "format": "git_patch",
-    "diff": "diff --git /home/user/project/src/config.json /home/user/project/src/config.json\n--- /home/user/project/src/config.json\n+++ /home/user/project/src/config.json\n@@ -1,3 +1,3 @@\n {\n-  \"debug\": false\n+  \"debug\": true\n }\n"
+    "text": "diff --git /home/user/project/src/config.json /home/user/project/src/config.json\n--- /home/user/project/src/config.json\n+++ /home/user/project/src/config.json\n@@ -1,3 +1,3 @@\n {\n-  \"debug\": false\n+  \"debug\": true\n }\n"
   }
 }
 ```
@@ -482,11 +482,13 @@ feasible. Clients MUST handle diffs where `patch` is omitted or `null`.
 </ParamField>
 
 <ParamField path="patch.format" type="string" required>
-  Patch format. The ACP-defined value is `git_patch`.
+  Patch format. `git_patch`, the only ACP-defined value, is one or more `diff
+  --git` sections in Git's `--patch` (`-p`) text format. Paths MUST be absolute.
+  Surrounding commit metadata and email envelopes MUST NOT be included.
 </ParamField>
 
-<ParamField path="patch.diff" type="string" required>
-  Git patch text.
+<ParamField path="patch.text" type="string" required>
+  Renderable patch text in the format named by `patch.format`.
 </ParamField>
 
 <ParamField path="changes[].operation" type="string" required>
