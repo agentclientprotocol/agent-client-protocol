@@ -26,15 +26,15 @@ use crate::SkipListener;
 /// Unique identifier for an elicitation.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
-#[from(Arc<str>, String, &'static str)]
+#[from(forward)]
 #[non_exhaustive]
 pub struct ElicitationId(pub Arc<str>);
 
 impl ElicitationId {
     /// Wraps a protocol string as a typed [`ElicitationId`].
     #[must_use]
-    pub fn new(id: impl Into<Arc<str>>) -> Self {
-        Self(id.into())
+    pub fn new(id: impl Into<Self>) -> Self {
+        id.into()
     }
 }
 
@@ -49,7 +49,7 @@ pub enum StringFormat {
     Uri,
     /// Date format (YYYY-MM-DD).
     Date,
-    /// Date-time format (ISO 8601).
+    /// Date-time format (RFC 3339).
     DateTime,
     /// Custom or future string format.
     ///

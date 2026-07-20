@@ -9,14 +9,60 @@
 //!
 //! See: [Content](https://agentclientprotocol.com/protocol/content)
 
-use std::collections::BTreeMap;
+use std::{borrow::Cow, collections::BTreeMap, sync::Arc};
 
+use derive_more::{Display, From};
 use schemars::{JsonSchema, Schema};
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
 use super::Meta;
 use crate::{IntoOption, SkipListener};
+
+/// An Internet media type identifying the format of protocol content.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
+#[serde(transparent)]
+#[from(Arc<str>, String, &str, &mut str, Box<str>, Cow<'_, str>)]
+#[non_exhaustive]
+pub struct MediaType(pub Arc<str>);
+
+impl MediaType {
+    /// Wraps a protocol string as a typed [`MediaType`].
+    #[must_use]
+    pub fn new(media_type: impl Into<Self>) -> Self {
+        media_type.into()
+    }
+}
+
+impl AsRef<str> for MediaType {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
+impl From<&String> for MediaType {
+    fn from(media_type: &String) -> Self {
+        Self(media_type.as_str().into())
+    }
+}
+
+macro_rules! impl_media_type_option_conversion {
+    ($source:ty) => {
+        impl IntoOption<MediaType> for $source {
+            fn into_option(self) -> Option<MediaType> {
+                Some(self.into())
+            }
+        }
+    };
+}
+
+impl_media_type_option_conversion!(Arc<str>);
+impl_media_type_option_conversion!(String);
+impl_media_type_option_conversion!(&str);
+impl_media_type_option_conversion!(&mut str);
+impl_media_type_option_conversion!(&String);
+impl_media_type_option_conversion!(Box<str>);
+impl_media_type_option_conversion!(Cow<'_, str>);
 
 /// Content blocks represent displayable information in the Agent Client Protocol.
 ///
@@ -211,10 +257,10 @@ impl<T: Into<String>> From<T> for ContentBlock {
 #[non_exhaustive]
 pub struct ImageContent {
     /// Base64-encoded media payload.
-    #[schemars(extend("format" = "byte"))]
+    #[schemars(extend("contentEncoding" = "base64"))]
     pub data: String,
     /// MIME type describing the encoded media payload.
-    pub mime_type: String,
+    pub mime_type: MediaType,
     /// URI associated with this resource or media payload.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
@@ -241,7 +287,7 @@ pub struct ImageContent {
 impl ImageContent {
     /// Builds [`ImageContent`] with its required content payload; optional annotations and metadata start unset.
     #[must_use]
-    pub fn new(data: impl Into<String>, mime_type: impl Into<String>) -> Self {
+    pub fn new(data: impl Into<String>, mime_type: impl Into<MediaType>) -> Self {
         Self {
             annotations: None,
             data: data.into(),
@@ -285,10 +331,10 @@ impl ImageContent {
 #[non_exhaustive]
 pub struct AudioContent {
     /// Base64-encoded media payload.
-    #[schemars(extend("format" = "byte"))]
+    #[schemars(extend("contentEncoding" = "base64"))]
     pub data: String,
     /// MIME type describing the encoded media payload.
-    pub mime_type: String,
+    pub mime_type: MediaType,
     /// Optional annotations that help clients decide how to display or route this content.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
@@ -309,7 +355,7 @@ pub struct AudioContent {
 impl AudioContent {
     /// Builds [`AudioContent`] with its required content payload; optional annotations and metadata start unset.
     #[must_use]
-    pub fn new(data: impl Into<String>, mime_type: impl Into<String>) -> Self {
+    pub fn new(data: impl Into<String>, mime_type: impl Into<MediaType>) -> Self {
         Self {
             annotations: None,
             data: data.into(),
@@ -419,7 +465,7 @@ pub struct TextResourceContents {
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
-    pub mime_type: Option<String>,
+    pub mime_type: Option<MediaType>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -446,7 +492,7 @@ impl TextResourceContents {
 
     /// Sets or clears the optional `mimeType` field.
     #[must_use]
-    pub fn mime_type(mut self, mime_type: impl IntoOption<String>) -> Self {
+    pub fn mime_type(mut self, mime_type: impl IntoOption<MediaType>) -> Self {
         self.mime_type = mime_type.into_option();
         self
     }
@@ -471,7 +517,7 @@ impl TextResourceContents {
 #[non_exhaustive]
 pub struct BlobResourceContents {
     /// Base64-encoded bytes for a binary resource payload.
-    #[schemars(extend("format" = "byte"))]
+    #[schemars(extend("contentEncoding" = "base64"))]
     pub blob: String,
     /// URI associated with this resource or media payload.
     #[schemars(url)]
@@ -480,7 +526,7 @@ pub struct BlobResourceContents {
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
-    pub mime_type: Option<String>,
+    pub mime_type: Option<MediaType>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -507,7 +553,7 @@ impl BlobResourceContents {
 
     /// Sets or clears the optional `mimeType` field.
     #[must_use]
-    pub fn mime_type(mut self, mime_type: impl IntoOption<String>) -> Self {
+    pub fn mime_type(mut self, mime_type: impl IntoOption<MediaType>) -> Self {
         self.mime_type = mime_type.into_option();
         self
     }
@@ -555,7 +601,7 @@ pub struct ResourceLink {
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
-    pub mime_type: Option<String>,
+    pub mime_type: Option<MediaType>,
     /// Optional size of the linked resource in bytes, if known.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
@@ -618,7 +664,7 @@ impl ResourceLink {
 
     /// Sets or clears the optional `mimeType` field.
     #[must_use]
-    pub fn mime_type(mut self, mime_type: impl IntoOption<String>) -> Self {
+    pub fn mime_type(mut self, mime_type: impl IntoOption<MediaType>) -> Self {
         self.mime_type = mime_type.into_option();
         self
     }
@@ -663,8 +709,12 @@ pub struct Icon {
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
-    pub mime_type: Option<String>,
-    /// Optional sizes at which the icon can be used.
+    pub mime_type: Option<MediaType>,
+    /// Optional array of strings that specify sizes at which the icon can be used.
+    /// Each string should be in `WxH` format (e.g., `"48x48"`, `"96x96"`) or
+    /// `"any"` for scalable formats like SVG.
+    ///
+    /// If not provided, the client should assume that the icon can be used at any size.
     #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
     #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default)]
@@ -690,12 +740,12 @@ impl Icon {
 
     /// Sets or clears the optional `mimeType` field.
     #[must_use]
-    pub fn mime_type(mut self, mime_type: impl IntoOption<String>) -> Self {
+    pub fn mime_type(mut self, mime_type: impl IntoOption<MediaType>) -> Self {
         self.mime_type = mime_type.into_option();
         self
     }
 
-    /// Sets or clears the optional `sizes` field.
+    /// Sets or clears the optional sizes at which the icon can be used.
     #[must_use]
     pub fn sizes(mut self, sizes: impl IntoOption<Vec<String>>) -> Self {
         self.sizes = sizes.into_option();
@@ -742,7 +792,7 @@ pub struct Annotations {
     pub audience: Option<Vec<Role>>,
     /// Timestamp indicating when the underlying resource was last modified.
     ///
-    /// Must be an ISO 8601 formatted string (e.g., "2025-01-12T15:00:58Z").
+    /// Must be an RFC 3339 formatted string (e.g., "2025-01-12T15:00:58Z").
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true, "format" = "date-time"))]
     #[serde(default)]
@@ -989,13 +1039,15 @@ mod tests {
     }
 
     #[test]
-    fn content_schema_matches_mcp_string_formats() {
+    fn content_schema_uses_standard_string_annotations() {
         let image = serde_json::to_value(schemars::schema_for!(ImageContent)).unwrap();
-        assert_eq!(image["properties"]["data"]["format"], "byte");
+        assert_eq!(image["properties"]["data"]["contentEncoding"], "base64");
+        assert!(image["properties"]["data"].get("format").is_none());
         assert_eq!(image["properties"]["uri"]["format"], "uri");
 
         let audio = serde_json::to_value(schemars::schema_for!(AudioContent)).unwrap();
-        assert_eq!(audio["properties"]["data"]["format"], "byte");
+        assert_eq!(audio["properties"]["data"]["contentEncoding"], "base64");
+        assert!(audio["properties"]["data"].get("format").is_none());
 
         let text_resource =
             serde_json::to_value(schemars::schema_for!(TextResourceContents)).unwrap();
@@ -1003,7 +1055,11 @@ mod tests {
 
         let blob_resource =
             serde_json::to_value(schemars::schema_for!(BlobResourceContents)).unwrap();
-        assert_eq!(blob_resource["properties"]["blob"]["format"], "byte");
+        assert_eq!(
+            blob_resource["properties"]["blob"]["contentEncoding"],
+            "base64"
+        );
+        assert!(blob_resource["properties"]["blob"].get("format").is_none());
         assert_eq!(blob_resource["properties"]["uri"]["format"], "uri");
 
         let resource_link = serde_json::to_value(schemars::schema_for!(ResourceLink)).unwrap();
@@ -1011,5 +1067,11 @@ mod tests {
 
         let icon = serde_json::to_value(schemars::schema_for!(Icon)).unwrap();
         assert_eq!(icon["properties"]["src"]["format"], "uri");
+        assert_eq!(icon["properties"]["sizes"]["items"]["type"], "string");
+        assert!(
+            icon["properties"]["sizes"]["items"]
+                .get("pattern")
+                .is_none()
+        );
     }
 }

@@ -3,7 +3,7 @@
 //! This module defines the Agent trait and all associated types for implementing
 //! an AI coding agent that follows the Agent Client Protocol (ACP).
 
-use std::{collections::BTreeMap, path::PathBuf, sync::Arc};
+use std::{borrow::Cow, collections::BTreeMap, sync::Arc};
 
 #[cfg(feature = "unstable_llm_providers")]
 use std::collections::HashMap;
@@ -14,7 +14,8 @@ use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
 use super::{
-    ClientCapabilities, ContentBlock, ExtNotification, ExtRequest, ExtResponse, Meta, SessionId,
+    AbsolutePath, ClientCapabilities, ContentBlock, ExtNotification, ExtRequest, ExtResponse, Meta,
+    SessionId,
 };
 #[cfg(feature = "unstable_auth_methods")]
 use crate::DefaultTrueOnError;
@@ -486,15 +487,15 @@ impl AgentAuthCapabilities {
 /// Typed identifier used for auth method values on the wire.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
-#[from(Arc<str>, String, &'static str)]
+#[from(forward)]
 #[non_exhaustive]
 pub struct AuthMethodId(pub Arc<str>);
 
 impl AuthMethodId {
     /// Wraps a protocol string as a typed [`AuthMethodId`].
     #[must_use]
-    pub fn new(id: impl Into<Arc<str>>) -> Self {
-        Self(id.into())
+    pub fn new(id: impl Into<Self>) -> Self {
+        id.into()
     }
 }
 
@@ -1108,7 +1109,7 @@ impl AuthMethodTerminal {
 #[non_exhaustive]
 pub struct NewSessionRequest {
     /// The working directory for this session. Must be an absolute path.
-    pub cwd: PathBuf,
+    pub cwd: AbsolutePath,
     /// Additional workspace roots for this session. Each path must be absolute.
     ///
     /// These expand the session's workspace scope without changing `cwd`, which
@@ -1117,7 +1118,7 @@ pub struct NewSessionRequest {
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
     #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub additional_directories: Vec<PathBuf>,
+    pub additional_directories: Vec<AbsolutePath>,
     /// List of MCP (Model Context Protocol) servers the agent should connect to.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
     #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
@@ -1138,7 +1139,7 @@ pub struct NewSessionRequest {
 impl NewSessionRequest {
     /// Builds [`NewSessionRequest`] with the required request fields set; optional fields start unset or empty.
     #[must_use]
-    pub fn new(cwd: impl Into<PathBuf>) -> Self {
+    pub fn new(cwd: impl Into<AbsolutePath>) -> Self {
         Self {
             cwd: cwd.into(),
             additional_directories: vec![],
@@ -1149,8 +1150,12 @@ impl NewSessionRequest {
 
     /// Additional workspace roots for this session. Each path must be absolute.
     #[must_use]
-    pub fn additional_directories(mut self, additional_directories: Vec<PathBuf>) -> Self {
-        self.additional_directories = additional_directories;
+    pub fn additional_directories<I, P>(mut self, additional_directories: I) -> Self
+    where
+        I: IntoIterator<Item = P>,
+        P: Into<AbsolutePath>,
+    {
+        self.additional_directories = additional_directories.into_iter().map(Into::into).collect();
         self
     }
 
@@ -1257,7 +1262,7 @@ pub struct ForkSessionRequest {
     /// The ID of the session to fork.
     pub session_id: SessionId,
     /// The working directory for this session. Must be an absolute path.
-    pub cwd: PathBuf,
+    pub cwd: AbsolutePath,
     /// Additional workspace roots to activate for this session. Each path must be absolute.
     ///
     /// When omitted or empty, no additional roots are activated. When non-empty,
@@ -1266,7 +1271,7 @@ pub struct ForkSessionRequest {
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
     #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub additional_directories: Vec<PathBuf>,
+    pub additional_directories: Vec<AbsolutePath>,
     /// List of MCP servers to connect to for this session.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
     #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
@@ -1288,7 +1293,7 @@ pub struct ForkSessionRequest {
 impl ForkSessionRequest {
     /// Builds [`ForkSessionRequest`] with the required request fields set; optional fields start unset or empty.
     #[must_use]
-    pub fn new(session_id: impl Into<SessionId>, cwd: impl Into<PathBuf>) -> Self {
+    pub fn new(session_id: impl Into<SessionId>, cwd: impl Into<AbsolutePath>) -> Self {
         Self {
             session_id: session_id.into(),
             cwd: cwd.into(),
@@ -1300,8 +1305,12 @@ impl ForkSessionRequest {
 
     /// Additional workspace roots to activate for this session. Each path must be absolute.
     #[must_use]
-    pub fn additional_directories(mut self, additional_directories: Vec<PathBuf>) -> Self {
-        self.additional_directories = additional_directories;
+    pub fn additional_directories<I, P>(mut self, additional_directories: I) -> Self
+    where
+        I: IntoIterator<Item = P>,
+        P: Into<AbsolutePath>,
+    {
+        self.additional_directories = additional_directories.into_iter().map(Into::into).collect();
         self
     }
 
@@ -1403,7 +1412,7 @@ pub struct ResumeSessionRequest {
     /// The ID of the session to resume.
     pub session_id: SessionId,
     /// The working directory for this session. Must be an absolute path.
-    pub cwd: PathBuf,
+    pub cwd: AbsolutePath,
     /// Additional workspace roots to activate for this session. Each path must be absolute.
     ///
     /// When omitted or empty, no additional roots are activated. When non-empty,
@@ -1413,7 +1422,7 @@ pub struct ResumeSessionRequest {
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
     #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub additional_directories: Vec<PathBuf>,
+    pub additional_directories: Vec<AbsolutePath>,
     /// List of MCP servers to connect to for this session.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
     #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
@@ -1445,7 +1454,7 @@ pub struct ResumeSessionRequest {
 impl ResumeSessionRequest {
     /// Builds [`ResumeSessionRequest`] with the required request fields set; optional fields start unset or empty.
     #[must_use]
-    pub fn new(session_id: impl Into<SessionId>, cwd: impl Into<PathBuf>) -> Self {
+    pub fn new(session_id: impl Into<SessionId>, cwd: impl Into<AbsolutePath>) -> Self {
         Self {
             session_id: session_id.into(),
             cwd: cwd.into(),
@@ -1458,8 +1467,12 @@ impl ResumeSessionRequest {
 
     /// Additional workspace roots to activate for this session. Each path must be absolute.
     #[must_use]
-    pub fn additional_directories(mut self, additional_directories: Vec<PathBuf>) -> Self {
-        self.additional_directories = additional_directories;
+    pub fn additional_directories<I, P>(mut self, additional_directories: I) -> Self
+    where
+        I: IntoIterator<Item = P>,
+        P: Into<AbsolutePath>,
+    {
+        self.additional_directories = additional_directories.into_iter().map(Into::into).collect();
         self
     }
 
@@ -1798,6 +1811,51 @@ impl CloseSessionResponse {
 
 // List sessions
 
+/// An opaque cursor used to paginate `session/list` results.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
+#[serde(transparent)]
+#[from(Arc<str>, String, &str, &mut str, Box<str>, Cow<'_, str>)]
+#[non_exhaustive]
+pub struct SessionListCursor(pub Arc<str>);
+
+impl SessionListCursor {
+    /// Wraps a protocol string as a typed [`SessionListCursor`].
+    #[must_use]
+    pub fn new(cursor: impl Into<Self>) -> Self {
+        cursor.into()
+    }
+}
+
+impl AsRef<str> for SessionListCursor {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
+impl From<&String> for SessionListCursor {
+    fn from(cursor: &String) -> Self {
+        Self(cursor.as_str().into())
+    }
+}
+
+macro_rules! impl_session_list_cursor_option_conversion {
+    ($source:ty) => {
+        impl IntoOption<SessionListCursor> for $source {
+            fn into_option(self) -> Option<SessionListCursor> {
+                Some(self.into())
+            }
+        }
+    };
+}
+
+impl_session_list_cursor_option_conversion!(Arc<str>);
+impl_session_list_cursor_option_conversion!(String);
+impl_session_list_cursor_option_conversion!(&str);
+impl_session_list_cursor_option_conversion!(&mut str);
+impl_session_list_cursor_option_conversion!(&String);
+impl_session_list_cursor_option_conversion!(Box<str>);
+impl_session_list_cursor_option_conversion!(Cow<'_, str>);
+
 /// Request parameters for listing existing sessions.
 #[serde_as]
 #[skip_serializing_none]
@@ -1808,10 +1866,10 @@ impl CloseSessionResponse {
 pub struct ListSessionsRequest {
     /// Filter sessions by working directory. Must be an absolute path.
     #[serde(default)]
-    pub cwd: Option<PathBuf>,
+    pub cwd: Option<AbsolutePath>,
     /// Opaque cursor token from a previous response's nextCursor field for cursor-based pagination
     #[serde(default)]
-    pub cursor: Option<String>,
+    pub cursor: Option<SessionListCursor>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -1833,14 +1891,14 @@ impl ListSessionsRequest {
 
     /// Filter sessions by working directory. Must be an absolute path.
     #[must_use]
-    pub fn cwd(mut self, cwd: impl IntoOption<PathBuf>) -> Self {
+    pub fn cwd(mut self, cwd: impl IntoOption<AbsolutePath>) -> Self {
         self.cwd = cwd.into_option();
         self
     }
 
     /// Opaque cursor token from a previous response's nextCursor field for cursor-based pagination
     #[must_use]
-    pub fn cursor(mut self, cursor: impl IntoOption<String>) -> Self {
+    pub fn cursor(mut self, cursor: impl IntoOption<SessionListCursor>) -> Self {
         self.cursor = cursor.into_option();
         self
     }
@@ -1874,7 +1932,7 @@ pub struct ListSessionsResponse {
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
-    pub next_cursor: Option<String>,
+    pub next_cursor: Option<SessionListCursor>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -1900,7 +1958,7 @@ impl ListSessionsResponse {
 
     /// Sets or clears the optional `nextCursor` field.
     #[must_use]
-    pub fn next_cursor(mut self, next_cursor: impl IntoOption<String>) -> Self {
+    pub fn next_cursor(mut self, next_cursor: impl IntoOption<SessionListCursor>) -> Self {
         self.next_cursor = next_cursor.into_option();
         self
     }
@@ -2014,7 +2072,7 @@ pub struct SessionInfo {
     /// Unique identifier for the session
     pub session_id: SessionId,
     /// The working directory for this session. Must be an absolute path.
-    pub cwd: PathBuf,
+    pub cwd: AbsolutePath,
     /// Additional workspace roots reported for this session. Each path must be absolute.
     ///
     /// When present, this is the complete ordered additional-root list reported
@@ -2023,14 +2081,14 @@ pub struct SessionInfo {
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
     #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub additional_directories: Vec<PathBuf>,
+    pub additional_directories: Vec<AbsolutePath>,
 
     /// Human-readable title for the session
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub title: Option<String>,
-    /// ISO 8601 timestamp of last activity
+    /// RFC 3339 timestamp of last activity.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true, "format" = "date-time"))]
     #[serde(default)]
@@ -2050,7 +2108,7 @@ pub struct SessionInfo {
 impl SessionInfo {
     /// Builds [`SessionInfo`] with the required fields set; optional fields start unset or empty.
     #[must_use]
-    pub fn new(session_id: impl Into<SessionId>, cwd: impl Into<PathBuf>) -> Self {
+    pub fn new(session_id: impl Into<SessionId>, cwd: impl Into<AbsolutePath>) -> Self {
         Self {
             session_id: session_id.into(),
             cwd: cwd.into(),
@@ -2063,8 +2121,12 @@ impl SessionInfo {
 
     /// Additional workspace roots reported for this session. Each path must be absolute.
     #[must_use]
-    pub fn additional_directories(mut self, additional_directories: Vec<PathBuf>) -> Self {
-        self.additional_directories = additional_directories;
+    pub fn additional_directories<I, P>(mut self, additional_directories: I) -> Self
+    where
+        I: IntoIterator<Item = P>,
+        P: Into<AbsolutePath>,
+    {
+        self.additional_directories = additional_directories.into_iter().map(Into::into).collect();
         self
     }
 
@@ -2075,7 +2137,7 @@ impl SessionInfo {
         self
     }
 
-    /// ISO 8601 timestamp of last activity
+    /// RFC 3339 timestamp of last activity.
     #[must_use]
     pub fn updated_at(mut self, updated_at: impl IntoOption<String>) -> Self {
         self.updated_at = updated_at.into_option();
@@ -2099,45 +2161,45 @@ impl SessionInfo {
 /// Unique identifier for a session configuration option.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, From, Display)]
 #[serde(transparent)]
-#[from(Arc<str>, String, &'static str)]
+#[from(forward)]
 #[non_exhaustive]
 pub struct SessionConfigId(pub Arc<str>);
 
 impl SessionConfigId {
     /// Wraps a protocol string as a typed [`SessionConfigId`].
     #[must_use]
-    pub fn new(id: impl Into<Arc<str>>) -> Self {
-        Self(id.into())
+    pub fn new(id: impl Into<Self>) -> Self {
+        id.into()
     }
 }
 
 /// Unique identifier for a session configuration option value.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, From, Display)]
 #[serde(transparent)]
-#[from(Arc<str>, String, &'static str)]
+#[from(forward)]
 #[non_exhaustive]
 pub struct SessionConfigValueId(pub Arc<str>);
 
 impl SessionConfigValueId {
     /// Wraps a protocol string as a typed [`SessionConfigValueId`].
     #[must_use]
-    pub fn new(id: impl Into<Arc<str>>) -> Self {
-        Self(id.into())
+    pub fn new(id: impl Into<Self>) -> Self {
+        id.into()
     }
 }
 
 /// Unique identifier for a session configuration option value group.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, From, Display)]
 #[serde(transparent)]
-#[from(Arc<str>, String, &'static str)]
+#[from(forward)]
 #[non_exhaustive]
 pub struct SessionConfigGroupId(pub Arc<str>);
 
 impl SessionConfigGroupId {
     /// Wraps a protocol string as a typed [`SessionConfigGroupId`].
     #[must_use]
-    pub fn new(id: impl Into<Arc<str>>) -> Self {
-        Self(id.into())
+    pub fn new(id: impl Into<Self>) -> Self {
+        id.into()
     }
 }
 
@@ -3044,7 +3106,7 @@ impl McpServerHttp {
 #[cfg(feature = "unstable_mcp_over_acp")]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
-#[from(Arc<str>, String, &'static str)]
+#[from(forward)]
 #[non_exhaustive]
 pub struct McpServerAcpId(pub Arc<str>);
 
@@ -3052,8 +3114,8 @@ pub struct McpServerAcpId(pub Arc<str>);
 impl McpServerAcpId {
     /// Wraps a protocol string as a typed [`McpServerAcpId`].
     #[must_use]
-    pub fn new(id: impl Into<Arc<str>>) -> Self {
-        Self(id.into())
+    pub fn new(id: impl Into<Self>) -> Self {
+        id.into()
     }
 }
 
@@ -3125,7 +3187,7 @@ pub struct McpServerStdio {
     /// Human-readable name identifying this MCP server.
     pub name: String,
     /// Absolute path to the MCP server executable.
-    pub command: PathBuf,
+    pub command: AbsolutePath,
     /// Command-line arguments to pass to the MCP server.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub args: Vec<String>,
@@ -3147,7 +3209,7 @@ pub struct McpServerStdio {
 impl McpServerStdio {
     /// Builds [`McpServerStdio`] with the required fields set; optional fields start unset or empty.
     #[must_use]
-    pub fn new(name: impl Into<String>, command: impl Into<PathBuf>) -> Self {
+    pub fn new(name: impl Into<String>, command: impl Into<AbsolutePath>) -> Self {
         Self {
             name: name.into(),
             command: command.into(),
@@ -3610,7 +3672,7 @@ impl ProviderCurrentConfig {
 #[cfg(feature = "unstable_llm_providers")]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
-#[from(Arc<str>, String, &'static str)]
+#[from(forward)]
 #[non_exhaustive]
 pub struct ProviderId(pub Arc<str>);
 
@@ -3618,8 +3680,8 @@ pub struct ProviderId(pub Arc<str>);
 impl ProviderId {
     /// Wraps a protocol string as a typed [`ProviderId`].
     #[must_use]
-    pub fn new(id: impl Into<Arc<str>>) -> Self {
-        Self(id.into())
+    pub fn new(id: impl Into<Self>) -> Self {
+        id.into()
     }
 }
 
@@ -5512,6 +5574,8 @@ impl ClientNotification {
 
 #[cfg(test)]
 mod test_serialization {
+    use std::path::PathBuf;
+
     use super::*;
     use serde_json::json;
 
@@ -5598,7 +5662,7 @@ mod test_serialization {
                 meta: _,
             }) => {
                 assert_eq!(name, "test-server");
-                assert_eq!(command, PathBuf::from("/usr/bin/server"));
+                assert_eq!(command, AbsolutePath::new("/usr/bin/server"));
                 assert_eq!(args, vec!["--port", "3000"]);
                 assert_eq!(env.len(), 1);
                 assert_eq!(env[0].name, "API_KEY");
@@ -6221,7 +6285,7 @@ mod test_serialization {
             }))
             .unwrap()
             .additional_directories,
-            Vec::<PathBuf>::new()
+            Vec::<AbsolutePath>::new()
         );
     }
     #[test]

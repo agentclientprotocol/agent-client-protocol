@@ -1233,7 +1233,7 @@
           "x-deserialize-skip-invalid-items": true
         },
         "lastModified": {
-          "description": "Timestamp indicating when the underlying resource was last modified.\n\nMust be an ISO 8601 formatted string (e.g., \"2025-01-12T15:00:58Z\").",
+          "description": "Timestamp indicating when the underlying resource was last modified.\n\nMust be an RFC 3339 formatted string (e.g., \"2025-01-12T15:00:58Z\").",
           "type": ["string", "null"],
           "format": "date-time",
           "x-deserialize-default-on-error": true
@@ -1303,6 +1303,10 @@
       },
       "required": ["text"]
     },
+    "MediaType": {
+      "description": "An Internet media type identifying the format of protocol content.",
+      "type": "string"
+    },
     "ImageContent": {
       "description": "An image provided to or from an LLM.",
       "type": "object",
@@ -1310,11 +1314,15 @@
         "data": {
           "description": "Base64-encoded media payload.",
           "type": "string",
-          "format": "byte"
+          "contentEncoding": "base64"
         },
         "mimeType": {
           "description": "MIME type describing the encoded media payload.",
-          "type": "string"
+          "allOf": [
+            {
+              "$ref": "#/$defs/MediaType"
+            }
+          ]
         },
         "uri": {
           "description": "URI associated with this resource or media payload.",
@@ -1350,11 +1358,15 @@
         "data": {
           "description": "Base64-encoded media payload.",
           "type": "string",
-          "format": "byte"
+          "contentEncoding": "base64"
         },
         "mimeType": {
           "description": "MIME type describing the encoded media payload.",
-          "type": "string"
+          "allOf": [
+            {
+              "$ref": "#/$defs/MediaType"
+            }
+          ]
         },
         "annotations": {
           "description": "Optional annotations that help clients decide how to display or route this content.",
@@ -1388,11 +1400,18 @@
         },
         "mimeType": {
           "description": "Optional MIME type override if the source MIME type is missing or generic.",
-          "type": ["string", "null"],
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MediaType"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "x-deserialize-default-on-error": true
         },
         "sizes": {
-          "description": "Optional sizes at which the icon can be used.",
+          "description": "Optional array of strings that specify sizes at which the icon can be used.\nEach string should be in `WxH` format (e.g., `\"48x48\"`, `\"96x96\"`) or\n`\"any\"` for scalable formats like SVG.\n\nIf not provided, the client should assume that the icon can be used at any size.",
           "type": ["array", "null"],
           "items": {
             "type": "string"
@@ -1469,7 +1488,14 @@
         },
         "mimeType": {
           "description": "MIME type describing the encoded media payload.",
-          "type": ["string", "null"],
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MediaType"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "x-deserialize-default-on-error": true
         },
         "size": {
@@ -1537,7 +1563,14 @@
         },
         "mimeType": {
           "description": "MIME type describing the encoded media payload.",
-          "type": ["string", "null"],
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MediaType"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "x-deserialize-default-on-error": true
         },
         "_meta": {
@@ -1556,7 +1589,7 @@
         "blob": {
           "description": "Base64-encoded bytes for a binary resource payload.",
           "type": "string",
-          "format": "byte"
+          "contentEncoding": "base64"
         },
         "uri": {
           "description": "URI associated with this resource or media payload.",
@@ -1565,7 +1598,14 @@
         },
         "mimeType": {
           "description": "MIME type describing the encoded media payload.",
-          "type": ["string", "null"],
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MediaType"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "x-deserialize-default-on-error": true
         },
         "_meta": {
@@ -1649,7 +1689,14 @@
         },
         "mimeType": {
           "description": "MIME type of the file contents.\n\nOmitted or `null` means the MIME type is unknown.",
-          "type": ["string", "null"],
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MediaType"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "x-deserialize-default-on-error": true
         },
         "_meta": {
@@ -1839,13 +1886,21 @@
         }
       ]
     },
+    "AbsolutePath": {
+      "description": "An absolute filesystem path used by the protocol.",
+      "type": "string"
+    },
     "DiffPathChange": {
       "description": "Operation metadata for add, delete, and modify changes.",
       "type": "object",
       "properties": {
         "path": {
           "description": "Absolute path for the operation.",
-          "type": "string"
+          "allOf": [
+            {
+              "$ref": "#/$defs/AbsolutePath"
+            }
+          ]
         }
       },
       "required": ["path"]
@@ -1856,11 +1911,19 @@
       "properties": {
         "oldPath": {
           "description": "Absolute path before the operation.",
-          "type": "string"
+          "allOf": [
+            {
+              "$ref": "#/$defs/AbsolutePath"
+            }
+          ]
         },
         "path": {
           "description": "Absolute path after the operation.",
-          "type": "string"
+          "allOf": [
+            {
+              "$ref": "#/$defs/AbsolutePath"
+            }
+          ]
         }
       },
       "required": ["oldPath", "path"]
@@ -1963,7 +2026,11 @@
       "properties": {
         "path": {
           "description": "The absolute file path being accessed or modified.",
-          "type": "string"
+          "allOf": [
+            {
+              "$ref": "#/$defs/AbsolutePath"
+            }
+          ]
         },
         "line": {
           "description": "Optional line number within the file.",
@@ -2006,7 +2073,11 @@
         },
         "cwd": {
           "description": "The absolute working directory for the command.",
-          "type": "string"
+          "allOf": [
+            {
+              "$ref": "#/$defs/AbsolutePath"
+            }
+          ]
         },
         "toolCallId": {
           "description": "The associated tool call, when known. Omitted and `null` are equivalent.",
@@ -2488,7 +2559,7 @@
           "const": "date"
         },
         {
-          "description": "Date-time format (ISO 8601).",
+          "description": "Date-time format (RFC 3339).",
           "type": "string",
           "const": "date-time"
         },
@@ -4922,7 +4993,14 @@
         },
         "nextCursor": {
           "description": "Opaque cursor token. If present, pass this in the next request's cursor parameter\nto fetch the next page. If absent, there are no more results.",
-          "type": ["string", "null"],
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SessionListCursor"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "x-deserialize-default-on-error": true
         },
         "_meta": {
@@ -4950,13 +5028,17 @@
         },
         "cwd": {
           "description": "The working directory for this session. Must be an absolute path.",
-          "type": "string"
+          "allOf": [
+            {
+              "$ref": "#/$defs/AbsolutePath"
+            }
+          ]
         },
         "additionalDirectories": {
           "description": "Additional workspace roots reported for this session. Each path must be absolute.\n\nWhen present, this is the complete ordered additional-root list reported\nby the Agent. Omitted and empty values are equivalent: the response\nreports no additional roots.",
           "type": "array",
           "items": {
-            "type": "string"
+            "$ref": "#/$defs/AbsolutePath"
           },
           "x-deserialize-default-on-error": true,
           "x-deserialize-skip-invalid-items": true
@@ -4967,7 +5049,7 @@
           "x-deserialize-default-on-error": true
         },
         "updatedAt": {
-          "description": "ISO 8601 timestamp of last activity",
+          "description": "RFC 3339 timestamp of last activity.",
           "type": ["string", "null"],
           "format": "date-time",
           "x-deserialize-default-on-error": true
@@ -4980,6 +5062,10 @@
         }
       },
       "required": ["sessionId", "cwd"]
+    },
+    "SessionListCursor": {
+      "description": "An opaque cursor used to paginate `session/list` results.",
+      "type": "string"
     },
     "DeleteSessionResponse": {
       "description": "Response from deleting a session.",
@@ -6594,7 +6680,7 @@
         "data": {
           "description": "Base64-encoded replacement terminal output bytes.",
           "type": "string",
-          "format": "byte"
+          "contentEncoding": "base64"
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys. This metadata is scoped to the replacement snapshot. Omitted\nand `null` are equivalent and mean no snapshot metadata was provided.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
@@ -6648,7 +6734,14 @@
         },
         "cwd": {
           "description": "The absolute working directory of the command.",
-          "type": ["string", "null"],
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AbsolutePath"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "x-deserialize-default-on-error": true
         },
         "output": {
@@ -6699,7 +6792,7 @@
         "data": {
           "description": "Independently base64-encoded terminal output bytes.",
           "type": "string",
-          "format": "byte"
+          "contentEncoding": "base64"
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys. This field is chunk-scoped. Omitted and `null` are\nequivalent and mean no chunk metadata was provided.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
@@ -7180,7 +7273,7 @@
           "x-deserialize-default-on-error": true
         },
         "updatedAt": {
-          "description": "ISO 8601 timestamp of last activity. Set to null to clear.",
+          "description": "RFC 3339 timestamp of last activity. Set to null to clear.",
           "type": ["string", "null"],
           "format": "date-time",
           "x-deserialize-default-on-error": true
@@ -7917,13 +8010,17 @@
       "properties": {
         "cwd": {
           "description": "The working directory for this session. Must be an absolute path.",
-          "type": "string"
+          "allOf": [
+            {
+              "$ref": "#/$defs/AbsolutePath"
+            }
+          ]
         },
         "additionalDirectories": {
           "description": "Additional workspace roots for this session. Each path must be absolute.\n\nThese expand the session's workspace scope without changing `cwd`, which\nremains the base for relative paths. When omitted or empty, no\nadditional roots are activated for the new session.",
           "type": "array",
           "items": {
-            "type": "string"
+            "$ref": "#/$defs/AbsolutePath"
           },
           "x-deserialize-default-on-error": true,
           "x-deserialize-skip-invalid-items": true
@@ -8133,7 +8230,11 @@
         },
         "command": {
           "description": "Absolute path to the MCP server executable.",
-          "type": "string"
+          "allOf": [
+            {
+              "$ref": "#/$defs/AbsolutePath"
+            }
+          ]
         },
         "args": {
           "description": "Command-line arguments to pass to the MCP server.",
@@ -8164,11 +8265,25 @@
       "properties": {
         "cwd": {
           "description": "Filter sessions by working directory. Must be an absolute path.",
-          "type": ["string", "null"]
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AbsolutePath"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "cursor": {
           "description": "Opaque cursor token from a previous response's nextCursor field for cursor-based pagination",
-          "type": ["string", "null"]
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SessionListCursor"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
@@ -8217,13 +8332,17 @@
         },
         "cwd": {
           "description": "The working directory for this session. Must be an absolute path.",
-          "type": "string"
+          "allOf": [
+            {
+              "$ref": "#/$defs/AbsolutePath"
+            }
+          ]
         },
         "additionalDirectories": {
           "description": "Additional workspace roots to activate for this session. Each path must be absolute.\n\nWhen omitted or empty, no additional roots are activated. When non-empty,\nthis is the complete resulting additional-root list for the forked\nsession.",
           "type": "array",
           "items": {
-            "type": "string"
+            "$ref": "#/$defs/AbsolutePath"
           },
           "x-deserialize-default-on-error": true,
           "x-deserialize-skip-invalid-items": true
@@ -8262,13 +8381,17 @@
         },
         "cwd": {
           "description": "The working directory for this session. Must be an absolute path.",
-          "type": "string"
+          "allOf": [
+            {
+              "$ref": "#/$defs/AbsolutePath"
+            }
+          ]
         },
         "additionalDirectories": {
           "description": "Additional workspace roots to activate for this session. Each path must be absolute.\n\nWhen omitted or empty, no additional roots are activated. When non-empty,\nthis is the complete resulting additional-root list for the resumed\nsession. It may differ from any previously used or reported list as long as\nthe request `cwd` matches the session's `cwd`.",
           "type": "array",
           "items": {
-            "type": "string"
+            "$ref": "#/$defs/AbsolutePath"
           },
           "x-deserialize-default-on-error": true,
           "x-deserialize-skip-invalid-items": true

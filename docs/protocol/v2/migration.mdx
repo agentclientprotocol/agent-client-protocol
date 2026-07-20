@@ -650,7 +650,7 @@ MCP transport configuration is aligned with the current MCP transport model:
 
 The five content block types are unchanged: `text`, `image`, `audio`, `resource_link`, and `resource`. v2 realigns their fields with the latest MCP specification. Notably, `resource_link` gains an optional `icons` array (each icon has a required `src` URI plus optional `mimeType`, `sizes`, and `theme` of `light`/`dark`), and the `type` discriminator is extensible like every other v2 enum, so unknown block types no longer break deserialization for receivers that have a fallback.
 
-If you maintain a validator or generated models, v2 also tightens schema-level details that v1 left loose: base64 payloads (image/audio and terminal `data`, resource `blob`) are marked `format: "byte"`, URI fields are marked `format: "uri"`, and `annotations.priority` is bounded to the inclusive range 0–1.
+If you maintain a validator or generated models, v2 also tightens schema-level details that v1 left loose: base64 payloads (image/audio and terminal `data`, resource `blob`) are marked with `contentEncoding: "base64"`, URI fields are marked `format: "uri"`, and `annotations.priority` is bounded to the inclusive range 0–1.
 
 ## Slash commands
 

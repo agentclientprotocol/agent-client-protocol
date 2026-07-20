@@ -1,27 +1,27 @@
 //! Agent-owned terminal output reported for display by clients.
 
-use std::{path::PathBuf, sync::Arc};
+use std::sync::Arc;
 
 use derive_more::{Display, From};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, serde_as, skip_serializing_none};
 
-use super::Meta;
+use super::{AbsolutePath, Meta};
 use crate::{IntoMaybeUndefined, IntoOption, MaybeUndefined};
 
 /// Unique identifier for an agent-owned terminal within a session.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
-#[from(Arc<str>, String, &'static str)]
+#[from(forward)]
 #[non_exhaustive]
 pub struct TerminalId(pub Arc<str>);
 
 impl TerminalId {
     /// Wraps a protocol string as a typed [`TerminalId`].
     #[must_use]
-    pub fn new(id: impl Into<Arc<str>>) -> Self {
-        Self(id.into())
+    pub fn new(id: impl Into<Self>) -> Self {
+        id.into()
     }
 }
 
@@ -82,7 +82,7 @@ impl Terminal {
 #[non_exhaustive]
 pub struct TerminalOutput {
     /// Base64-encoded replacement terminal output bytes.
-    #[schemars(extend("format" = "byte"))]
+    #[schemars(extend("contentEncoding" = "base64"))]
     pub data: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -203,7 +203,7 @@ pub struct TerminalUpdate {
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
-    pub cwd: MaybeUndefined<PathBuf>,
+    pub cwd: MaybeUndefined<AbsolutePath>,
     /// An authoritative replacement snapshot of terminal output bytes.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
@@ -252,7 +252,7 @@ impl TerminalUpdate {
 
     /// Sets, clears, or leaves unchanged the absolute working directory.
     #[must_use]
-    pub fn cwd(mut self, cwd: impl IntoMaybeUndefined<PathBuf>) -> Self {
+    pub fn cwd(mut self, cwd: impl IntoMaybeUndefined<AbsolutePath>) -> Self {
         self.cwd = cwd.into_maybe_undefined();
         self
     }
@@ -312,7 +312,7 @@ pub struct TerminalOutputChunk {
     /// The terminal receiving these bytes.
     pub terminal_id: TerminalId,
     /// Independently base64-encoded terminal output bytes.
-    #[schemars(extend("format" = "byte"))]
+    #[schemars(extend("contentEncoding" = "base64"))]
     pub data: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -348,8 +348,6 @@ impl TerminalOutputChunk {
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
-
     use super::*;
 
     #[test]
@@ -412,7 +410,7 @@ mod tests {
         assert_eq!(parsed.command, MaybeUndefined::Null);
         assert_eq!(
             parsed.cwd,
-            MaybeUndefined::Value(PathBuf::from("/workspace/project"))
+            MaybeUndefined::Value(AbsolutePath::new("/workspace/project"))
         );
         assert_eq!(parsed.output, MaybeUndefined::Undefined);
         assert_eq!(parsed.exit_status, MaybeUndefined::Undefined);
@@ -436,7 +434,7 @@ mod tests {
         assert_eq!(stored.command, MaybeUndefined::Null);
         assert_eq!(
             stored.cwd,
-            MaybeUndefined::Value(PathBuf::from("/workspace/project"))
+            MaybeUndefined::Value(AbsolutePath::new("/workspace/project"))
         );
         assert_eq!(
             stored.output,
@@ -495,15 +493,17 @@ mod tests {
     }
 
     #[test]
-    fn terminal_output_fields_use_byte_schema_format() {
+    fn terminal_output_fields_use_base64_content_encoding() {
         let output = serde_json::to_value(schemars::schema_for!(TerminalOutput)).unwrap();
-        assert_eq!(output["properties"]["data"]["format"], "byte");
+        assert_eq!(output["properties"]["data"]["contentEncoding"], "base64");
+        assert!(output["properties"]["data"].get("format").is_none());
         assert_eq!(output["required"], serde_json::json!(["data"]));
         assert!(output["properties"].get("_meta").is_some());
         assert!(output["properties"].get("truncated").is_none());
 
         let chunk = serde_json::to_value(schemars::schema_for!(TerminalOutputChunk)).unwrap();
-        assert_eq!(chunk["properties"]["data"]["format"], "byte");
+        assert_eq!(chunk["properties"]["data"]["contentEncoding"], "base64");
+        assert!(chunk["properties"]["data"].get("format").is_none());
     }
 
     #[test]

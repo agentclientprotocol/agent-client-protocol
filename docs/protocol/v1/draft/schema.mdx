@@ -1737,11 +1737,7 @@ URL-based elicitation where the client directs the user to a URL.
 
 <Expandable title="Properties">
 
-<ResponseField
-  name="elicitationId"
-  type={<a href="#elicitationid">ElicitationId</a>}
-  required
->
+<ResponseField name="elicitationId" type={<a href="#elicitationid">ElicitationId</a>} required>
   The unique identifier for this elicitation.
 </ResponseField>
 <ResponseField name="mode" type={"string"} required>
@@ -1749,6 +1745,9 @@ URL-based elicitation where the client directs the user to a URL.
 </ResponseField>
 <ResponseField name="url" type={"string"} required>
   The URL to direct the user to.
+
+    - Format: `uri`
+
 </ResponseField>
 
 </Expandable>
@@ -4281,15 +4280,14 @@ URL-based elicitation mode where the client directs the user to a URL.
 
 **Shared properties:**
 
-<ResponseField
-  name="elicitationId"
-  type={<a href="#elicitationid">ElicitationId</a>}
-  required
->
+<ResponseField name="elicitationId" type={<a href="#elicitationid">ElicitationId</a>} required>
   The unique identifier for this elicitation.
 </ResponseField>
 <ResponseField name="url" type={"string"} required>
   The URL to direct the user to.
+
+    - Format: `uri`
+
 </ResponseField>
 
 **Variants:**

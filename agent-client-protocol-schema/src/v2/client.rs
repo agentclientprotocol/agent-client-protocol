@@ -3,7 +3,7 @@
 //! This module defines the Client trait and all associated types for implementing
 //! a client that interacts with AI coding agents via the Agent Client Protocol (ACP).
 
-use std::{collections::BTreeMap, path::PathBuf, sync::Arc};
+use std::{collections::BTreeMap, sync::Arc};
 
 use derive_more::{Display, From};
 use schemars::{JsonSchema, Schema};
@@ -14,15 +14,15 @@ use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 use super::PlanRemoved;
 #[cfg(feature = "unstable_end_turn_token_usage")]
 use super::Usage;
+use super::{
+    AbsolutePath, ContentBlock, ExtNotification, ExtRequest, ExtResponse, Meta, PlanUpdate,
+    SessionConfigOption, SessionId, StopReason, TerminalId, TerminalOutputChunk, TerminalUpdate,
+    ToolCallContentChunk, ToolCallId, ToolCallUpdate,
+};
 #[cfg(feature = "unstable_elicitation")]
 use super::{
     CompleteElicitationNotification, CreateElicitationRequest, CreateElicitationResponse,
     ElicitationCapabilities,
-};
-use super::{
-    ContentBlock, ExtNotification, ExtRequest, ExtResponse, Meta, PlanUpdate, SessionConfigOption,
-    SessionId, StopReason, TerminalId, TerminalOutputChunk, TerminalUpdate, ToolCallContentChunk,
-    ToolCallId, ToolCallUpdate,
 };
 use crate::{IntoMaybeUndefined, IntoOption, MaybeUndefined, SkipListener};
 
@@ -343,7 +343,7 @@ pub struct SessionInfoUpdate {
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub title: MaybeUndefined<String>,
-    /// ISO 8601 timestamp of last activity. Set to null to clear.
+    /// RFC 3339 timestamp of last activity. Set to null to clear.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true, "format" = "date-time"))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
@@ -377,7 +377,7 @@ impl SessionInfoUpdate {
         self
     }
 
-    /// ISO 8601 timestamp of last activity. Set to null to clear.
+    /// RFC 3339 timestamp of last activity. Set to null to clear.
     #[must_use]
     pub fn updated_at(mut self, updated_at: impl IntoMaybeUndefined<String>) -> Self {
         self.updated_at = updated_at.into_maybe_undefined();
@@ -1013,15 +1013,15 @@ impl AgentThought {
 /// Unique identifier for a message within a session.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
-#[from(Arc<str>, String, &'static str)]
+#[from(forward)]
 #[non_exhaustive]
 pub struct MessageId(pub Arc<str>);
 
 impl MessageId {
     /// Wraps a protocol string as a typed [`MessageId`].
     #[must_use]
-    pub fn new(id: impl Into<Arc<str>>) -> Self {
-        Self(id.into())
+    pub fn new(id: impl Into<Self>) -> Self {
+        id.into()
     }
 }
 
@@ -1425,7 +1425,7 @@ pub struct CommandPermissionSubject {
     /// The command that would be run if permission is granted.
     pub command: String,
     /// The absolute working directory for the command.
-    pub cwd: PathBuf,
+    pub cwd: AbsolutePath,
     /// The associated tool call, when known. Omitted and `null` are equivalent.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
@@ -1451,7 +1451,7 @@ pub struct CommandPermissionSubject {
 impl CommandPermissionSubject {
     /// Builds command permission details with the required command and working directory.
     #[must_use]
-    pub fn new(command: impl Into<String>, cwd: impl Into<PathBuf>) -> Self {
+    pub fn new(command: impl Into<String>, cwd: impl Into<AbsolutePath>) -> Self {
         Self {
             command: command.into(),
             cwd: cwd.into(),
@@ -1605,15 +1605,15 @@ impl PermissionOption {
 /// Unique identifier for a permission option.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
-#[from(Arc<str>, String, &'static str)]
+#[from(forward)]
 #[non_exhaustive]
 pub struct PermissionOptionId(pub Arc<str>);
 
 impl PermissionOptionId {
     /// Wraps a protocol string as a typed [`PermissionOptionId`].
     #[must_use]
-    pub fn new(id: impl Into<Arc<str>>) -> Self {
-        Self(id.into())
+    pub fn new(id: impl Into<Self>) -> Self {
+        id.into()
     }
 }
 
@@ -2990,7 +2990,7 @@ mod tests {
         let RequestPermissionSubject::Command(subject) = subject else {
             panic!("expected command permission subject");
         };
-        assert_eq!(subject.cwd, PathBuf::from("/workspace/project"));
+        assert_eq!(subject.cwd, AbsolutePath::new("/workspace/project"));
         assert_eq!(subject.tool_call_id, None);
         assert_eq!(subject.terminal_id, None);
         assert_eq!(subject.meta, None);

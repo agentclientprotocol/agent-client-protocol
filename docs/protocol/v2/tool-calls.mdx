@@ -408,7 +408,7 @@ empty.
 - `cwd` is the command's working directory and **MUST** be absolute when
   supplied.
 - `output` is an authoritative replacement snapshot. Its required `data` is
-  RFC 4648 base64-encoded bytes with JSON Schema `format: "byte"`. A concrete
+  RFC 4648 base64-encoded bytes with JSON Schema `contentEncoding: "base64"`. A concrete
   snapshot is the complete byte sequence the Agent wants the Client to retain
   for the terminal at that point. It replaces all previously stored bytes;
   Clients **MUST NOT** merge or splice bytes from the previous snapshot into it.
@@ -436,7 +436,7 @@ For live output, Agents send `terminal_output_chunk`:
 ```
 
 `terminalId` and `data` are required. Each `data` value is an independently RFC
-4648 base64-encoded byte chunk with JSON Schema `format: "byte"`. Clients
+4648 base64-encoded byte chunk with JSON Schema `contentEncoding: "base64"`. Clients
 decode each chunk separately and append the decoded bytes in received order for
 that `terminalId`; they **MUST NOT** concatenate encoded strings before
 decoding. Chunk boundaries may split UTF-8 code points or terminal escape

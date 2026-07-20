@@ -431,6 +431,91 @@ mod schema_annotation_tests {
 
     #[cfg(feature = "unstable_protocol_v2")]
     #[test]
+    fn generated_v2_schema_uses_standard_base64_content_encoding() {
+        let schema = root_schema_value();
+
+        for (definition, property) in [
+            ("ImageContent", "data"),
+            ("AudioContent", "data"),
+            ("BlobResourceContents", "blob"),
+            ("TerminalOutput", "data"),
+            ("TerminalOutputChunk", "data"),
+        ] {
+            let property = property_schema(&schema, definition, property);
+            assert_eq!(
+                property.get("contentEncoding").and_then(Value::as_str),
+                Some("base64"),
+                "missing base64 content encoding on {definition}"
+            );
+            assert!(
+                property.get("format").is_none(),
+                "legacy byte format remains on {definition}"
+            );
+        }
+    }
+
+    #[cfg(feature = "unstable_protocol_v2")]
+    #[test]
+    fn generated_v2_schema_references_semantic_string_types() {
+        let schema = root_schema_value();
+
+        for definition in ["AbsolutePath", "SessionListCursor", "MediaType"] {
+            assert_eq!(
+                def_schema(&schema, definition)
+                    .get("type")
+                    .and_then(Value::as_str),
+                Some("string"),
+                "{definition} must remain wire-compatible with a JSON string"
+            );
+        }
+
+        for (definition, property, reference) in [
+            ("NewSessionRequest", "cwd", "AbsolutePath"),
+            ("NewSessionRequest", "additionalDirectories", "AbsolutePath"),
+            ("ResumeSessionRequest", "cwd", "AbsolutePath"),
+            (
+                "ResumeSessionRequest",
+                "additionalDirectories",
+                "AbsolutePath",
+            ),
+            ("ListSessionsRequest", "cwd", "AbsolutePath"),
+            ("SessionInfo", "cwd", "AbsolutePath"),
+            ("SessionInfo", "additionalDirectories", "AbsolutePath"),
+            ("McpServerStdio", "command", "AbsolutePath"),
+            ("CommandPermissionSubject", "cwd", "AbsolutePath"),
+            ("TerminalUpdate", "cwd", "AbsolutePath"),
+            ("DiffPathChange", "path", "AbsolutePath"),
+            ("DiffPathPairChange", "oldPath", "AbsolutePath"),
+            ("DiffPathPairChange", "path", "AbsolutePath"),
+            ("ToolCallLocation", "path", "AbsolutePath"),
+            ("ListSessionsRequest", "cursor", "SessionListCursor"),
+            ("ListSessionsResponse", "nextCursor", "SessionListCursor"),
+            ("ImageContent", "mimeType", "MediaType"),
+            ("AudioContent", "mimeType", "MediaType"),
+            ("TextResourceContents", "mimeType", "MediaType"),
+            ("BlobResourceContents", "mimeType", "MediaType"),
+            ("ResourceLink", "mimeType", "MediaType"),
+            ("Icon", "mimeType", "MediaType"),
+            ("DiffChange", "mimeType", "MediaType"),
+        ] {
+            let property = property_schema(&schema, definition, property);
+            assert!(
+                schema_contains_ref(property, &format!("#/$defs/{reference}")),
+                "missing {reference} reference on {definition}"
+            );
+        }
+
+        #[cfg(feature = "unstable")]
+        for property in ["cwd", "additionalDirectories"] {
+            assert!(schema_contains_ref(
+                property_schema(&schema, "ForkSessionRequest", property),
+                "#/$defs/AbsolutePath"
+            ));
+        }
+    }
+
+    #[cfg(feature = "unstable_protocol_v2")]
+    #[test]
     fn published_v2_schema_links_to_versioned_v2_protocol_docs() {
         let schema = schema_value_for_publication(&root_schema_value());
         let schema_json = serde_json::to_string(&schema).unwrap();
@@ -1265,6 +1350,7 @@ starting with '$/' it is free to ignore the notification."
             if let Some(v) = schema.get("pattern") {
                 constraints.push(("Pattern", format!("`{v}`")));
             }
+            Self::append_string_annotations(schema, &mut constraints);
 
             if !constraints.is_empty() {
                 writeln!(&mut self.output).unwrap();
@@ -1352,11 +1438,7 @@ starting with '$/' it is free to ignore the notification."
             if let Some(v) = schema.get("pattern") {
                 constraints.push(("Pattern", format!("`{v}`")));
             }
-            if let Some(v) = schema.get("format").and_then(|v| v.as_str())
-                && !["int32", "int64", "uint16", "uint32", "uint64", "double"].contains(&v)
-            {
-                constraints.push(("Format", format!("`{v}`")));
-            }
+            Self::append_string_annotations(schema, &mut constraints);
 
             if !constraints.is_empty() {
                 writeln!(&mut self.output).unwrap();
@@ -1388,6 +1470,35 @@ starting with '$/' it is free to ignore the notification."
                     }
                     writeln!(&mut self.output, " |").unwrap();
                 }
+            }
+        }
+
+        fn append_string_annotations(
+            schema: &Value,
+            constraints: &mut Vec<(&'static str, String)>,
+        ) {
+            if !Self::is_string_capable(schema) {
+                return;
+            }
+
+            for (keyword, label) in [
+                ("format", "Format"),
+                ("contentEncoding", "Content encoding"),
+                ("contentMediaType", "Content media type"),
+            ] {
+                if let Some(value) = schema.get(keyword).and_then(Value::as_str) {
+                    constraints.push((label, format!("`{value}`")));
+                }
+            }
+        }
+
+        fn is_string_capable(schema: &Value) -> bool {
+            match schema.get("type") {
+                Some(Value::String(schema_type)) => schema_type == "string",
+                Some(Value::Array(schema_types)) => schema_types
+                    .iter()
+                    .any(|schema_type| schema_type.as_str() == Some("string")),
+                _ => false,
             }
         }
 
@@ -2078,6 +2189,50 @@ starting with '$/' it is free to ignore the notification."
                     .contains("**Values:** `\"assistant\"`, `\"user\"`")
             );
             assert!(!generator.output.contains("<ResponseField name=\"string\""));
+        }
+
+        #[test]
+        fn document_field_renders_string_and_content_annotations() {
+            let mut generator = MarkdownGenerator::new("schema.json");
+            let definition = json!({
+                "properties": {
+                    "count": {
+                        "format": "future-number-format",
+                        "type": "number"
+                    },
+                    "payload": {
+                        "contentEncoding": "base64",
+                        "format": "uri",
+                        "type": ["string", "null"]
+                    }
+                },
+                "type": "object"
+            });
+
+            generator.document_type(4, "AnnotatedPayload", &definition);
+
+            assert!(generator.output.contains("| Format | `uri` |"));
+            assert!(generator.output.contains("| Content encoding | `base64` |"));
+            assert!(!generator.output.contains("future-number-format"));
+        }
+
+        #[test]
+        fn document_simple_type_renders_content_annotations() {
+            let mut generator = MarkdownGenerator::new("schema.json");
+            let definition = json!({
+                "contentEncoding": "base64",
+                "contentMediaType": "application/octet-stream",
+                "type": "string"
+            });
+
+            generator.document_type(4, "EncodedBytes", &definition);
+
+            assert!(generator.output.contains("| Content encoding | `base64` |"));
+            assert!(
+                generator
+                    .output
+                    .contains("| Content media type | `application/octet-stream` |")
+            );
         }
     }
 }
