@@ -110,6 +110,7 @@ With the needed breaking changes, as much as possible I am targeting having a co
 
 ## Revision history
 
+- 2026-07-20: Clarified that `idle` means ready for a new prompt while background updates may continue; steering and queueing remain separate concerns.
 - 2026-07-20: Scoped the v2 authentication surface to Agents that return one or more valid `authMethods`; those Agents must implement both `auth/login` and `auth/logout`, while omission or an empty array means Clients must not call either method.
 - 2026-07-14: Added the v2 Terminal Output RFD for Agent-owned, display-only terminal output.
 - 2026-07-02: Added the v2 Diff File States RFD for renderable git patches, structured file operations, and non-text file changes.

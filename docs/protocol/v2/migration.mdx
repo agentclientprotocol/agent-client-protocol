@@ -9,7 +9,7 @@ Migrating does not mean dropping v1. v1-only Agents and Clients will remain comm
 
 If you only remember five things, remember these:
 
-1. **The `session/prompt` response no longer ends the turn.** It acknowledges acceptance. Progress and completion arrive as `state_update` notifications, and the stop reason moved there too.
+1. **The `session/prompt` response no longer ends the turn.** It acknowledges acceptance. Foreground progress and completion arrive as `state_update` notifications, and the stop reason moved there too.
 2. **Updates are upserts.** Messages, tool calls, and plans are patched by ID with uniform semantics: omitted field = unchanged, `null` = cleared, value = replaced, chunks append.
 3. **The Client file system, terminal execution, and session modes APIs are gone.** Agent-owned terminal output is a separate display-only v2 surface; use client-provided MCP servers when the Agent needs Client-side tools.
 4. **Capabilities were reorganized.** One `capabilities` + required `info` field on both sides, session-scoped groups nested under `session`, object support markers instead of booleans, and a required baseline of session methods.
@@ -56,24 +56,24 @@ Nothing about v2 changes the underlying JSON-RPC framing, so a single connection
 
 ### `session/update` variant changes
 
-| v1 `sessionUpdate`          | v2                                                                                 |
-| --------------------------- | ---------------------------------------------------------------------------------- |
-| `user_message_chunk`        | Kept. `messageId` now required                                                     |
-| `agent_message_chunk`       | Kept. `messageId` now required                                                     |
-| `agent_thought_chunk`       | Kept. `messageId` now required                                                     |
-| -                           | **New:** `user_message`, `agent_message`, `agent_thought` whole-message upserts    |
-| -                           | **New:** `state_update` (`running`, `idle`, `requires_action`) with stop reasons   |
-| `tool_call`                 | **Removed**. The first `tool_call_update` for a `toolCallId` creates the tool call |
-| `tool_call_update`          | Kept. Now an explicit upsert with omit/`null`/value patch semantics                |
-| -                           | **New:** `tool_call_content_chunk` for streaming individual content items          |
-| -                           | **New:** `terminal_update` for Agent-owned display terminal state and replay       |
-| -                           | **New:** `terminal_output_chunk` for appending display terminal bytes              |
-| `plan`                      | Replaced by `plan_update` with a `planId` and a `type` discriminator               |
-| `current_mode_update`       | **Removed**. Modes are config options. Use `config_option_update`                  |
-| `available_commands_update` | Kept. Command `input` now carries a required `type` discriminator                  |
-| `config_option_update`      | Unchanged                                                                          |
-| `session_info_update`       | Unchanged                                                                          |
-| `usage_update`              | Unchanged                                                                          |
+| v1 `sessionUpdate`          | v2                                                                                          |
+| --------------------------- | ------------------------------------------------------------------------------------------- |
+| `user_message_chunk`        | Kept. `messageId` now required                                                              |
+| `agent_message_chunk`       | Kept. `messageId` now required                                                              |
+| `agent_thought_chunk`       | Kept. `messageId` now required                                                              |
+| -                           | **New:** `user_message`, `agent_message`, `agent_thought` whole-message upserts             |
+| -                           | **New:** foreground `state_update` (`running`, `idle`, `requires_action`) with stop reasons |
+| `tool_call`                 | **Removed**. The first `tool_call_update` for a `toolCallId` creates the tool call          |
+| `tool_call_update`          | Kept. Now an explicit upsert with omit/`null`/value patch semantics                         |
+| -                           | **New:** `tool_call_content_chunk` for streaming individual content items                   |
+| -                           | **New:** `terminal_update` for Agent-owned display terminal state and replay                |
+| -                           | **New:** `terminal_output_chunk` for appending display terminal bytes                       |
+| `plan`                      | Replaced by `plan_update` with a `planId` and a `type` discriminator                        |
+| `current_mode_update`       | **Removed**. Modes are config options. Use `config_option_update`                           |
+| `available_commands_update` | Kept. Command `input` now carries a required `type` discriminator                           |
+| `config_option_update`      | Unchanged                                                                                   |
+| `session_info_update`       | Unchanged                                                                                   |
+| `usage_update`              | Unchanged                                                                                   |
 
 ## Initialization
 
@@ -227,14 +227,14 @@ Stable v2 defines `type: "agent"`. Custom types **MUST** begin with `_`. Unknown
 
 This is the most significant semantic change in v2. Read this section even if you skim the rest. In short, everything that v1 expressed through the pending `session/prompt` request moved into `session/update` notifications:
 
-| Turn signal                 | v1                                             | v2                                                   |
-| --------------------------- | ---------------------------------------------- | ---------------------------------------------------- |
-| Prompt accepted             | Implicit                                       | `session/prompt` response (`{}`)                     |
-| User message in history     | Implicit (the request itself)                  | `user_message` update with agent-owned `messageId`   |
-| Turn in progress            | `session/prompt` still pending                 | `state_update` with `state: "running"`               |
-| Waiting on the user         | Implicit (pending permission request)          | `state_update` with `state: "requires_action"`       |
-| Turn finished + stop reason | `session/prompt` response with `stopReason`    | `state_update` with `state: "idle"` and `stopReason` |
-| Cancellation confirmed      | Prompt response with `stopReason: "cancelled"` | Idle `state_update` with `stopReason: "cancelled"`   |
+| Foreground signal       | v1                                             | v2                                                   |
+| ----------------------- | ---------------------------------------------- | ---------------------------------------------------- |
+| Prompt accepted         | Implicit                                       | `session/prompt` response (`{}`)                     |
+| User message in history | Implicit (the request itself)                  | `user_message` update with agent-owned `messageId`   |
+| Foreground work running | `session/prompt` still pending                 | `state_update` with `state: "running"`               |
+| Foreground work waiting | Implicit (pending permission request)          | `state_update` with `state: "requires_action"`       |
+| Foreground work ended   | `session/prompt` response with `stopReason`    | `state_update` with `state: "idle"` and `stopReason` |
+| Cancellation confirmed  | Prompt response with `stopReason: "cancelled"` | Idle `state_update` with `stopReason: "cancelled"`   |
 
 ### v1: the response is the turn
 
@@ -273,11 +273,11 @@ Everything else happens through `session/update` notifications:
    }
    ```
 
-2. **Running state.** When the Agent starts or resumes processing, it **MUST** send a `state_update` with `"state": "running"`.
+2. **Running state.** When foreground work starts or resumes, the Agent **MUST** send a `state_update` with `"state": "running"`.
 
 3. **Output.** Messages, thoughts, plans, and tool calls stream as before (with the changes described in the following sections).
 
-4. **Completion.** When there is no pending work, the Agent **MUST** report idle. When the idle transition completes active work, it **MUST** include the stop reason:
+4. **Completion.** When the Agent is ready to process a new prompt, it **MUST** report `idle`. When the transition ends foreground work, it **MUST** include the stop reason:
 
    ```json
    {
@@ -296,13 +296,15 @@ Everything else happens through `session/update` notifications:
 
 ### Session states
 
-`state_update` is new in v2 and carries one of three stable states (extensible like all v2 enums):
+`state_update` is new in v2 and reports foreground work using one of three stable states (extensible like all v2 enums):
 
-- `running`: the Agent is actively processing work in the session.
-- `idle`: the Agent is not currently processing work. Carries a `stopReason` when it completes active work.
-- `requires_action`: the Agent is blocked on user action. Agents **SHOULD** send this while waiting on a permission response, and another `running` update when they resume.
+- `running`: Foreground work is in progress.
+- `idle`: The Agent is ready to process a new prompt. Carries a `stopReason` when the transition ends foreground work.
+- `requires_action`: Foreground work is blocked on user action. Agents **SHOULD** send this while waiting on a permission response, and another `running` update when work resumes.
 
-The stop reasons themselves are unchanged from v1 (`end_turn`, `max_tokens`, `max_turn_requests`, `refusal`, `cancelled`). They just moved from the `session/prompt` response to the idle `state_update`.
+Background activity can continue and emit other `session/update` notifications while the Agent reports `idle`. Those notifications do not change the state.
+
+The stop reasons themselves are unchanged from v1 (`end_turn`, `max_tokens`, `max_turn_requests`, `refusal`, `cancelled`). They just moved from the `session/prompt` response to the idle `state_update` and describe why foreground work stopped.
 
 ### Cancellation
 
@@ -310,7 +312,7 @@ The stop reasons themselves are unchanged from v1 (`end_turn`, `max_tokens`, `ma
 
 ### Why this matters beyond bookkeeping
 
-Because turn progress is now expressed entirely in notifications, the same message flow works for history replay on `session/resume`, for multiple clients observing one session, and for future agent-initiated or queued work, none of which fit the v1 request/response turn model.
+Because foreground progress is now expressed entirely in notifications, the same message flow works for history replay on `session/resume`, multiple clients observing one session, and future agent-initiated or queued work.
 
 ## Messages and message IDs
 
@@ -709,7 +711,7 @@ A standard remote transport (streamable HTTP with SSE streams, plus WebSocket) i
 1. **Initialization.** Read `params.capabilities` / `params.info`. Return `capabilities` and a required `info`. Restructure your capability object: nest prompt and MCP capabilities under `session`, convert boolean markers to `{}` objects, drop `loadSession` and the `list`/`resume`/`close` markers.
 2. **Implement the baseline.** If you advertise `session`, implement `session/new`, `session/list`, `session/resume`, `session/close`, `session/prompt`, `session/cancel`, and `session/update`.
 3. **Auth.** Rename `authenticate` → `auth/login`. If you return one or more valid `authMethods`, implement both `auth/login` and `auth/logout`; if you omit the field or return an empty array, Clients **MUST NOT** call either method. Do not add a logout support marker: `capabilities.auth` is only for authentication-related extensions. Add `type` and `methodId` to your auth method descriptors.
-4. **Prompt lifecycle.** Respond to `session/prompt` immediately with `{}` on acceptance. Emit a `user_message` acknowledgment with an agent-generated `messageId`, a `running` state update when processing starts, and an idle `state_update` carrying the stop reason when the work completes, including `cancelled` after `session/cancel`.
+4. **Prompt lifecycle.** Respond to `session/prompt` immediately with `{}` on acceptance. Emit a `user_message` acknowledgment with an agent-generated `messageId`, a `running` state update when foreground work starts, and an idle `state_update` carrying the stop reason when it ends, including `cancelled` after `session/cancel`. Background updates may continue while idle.
 5. **Message IDs.** Generate and attach a `messageId` to every message chunk and update.
 6. **Tool calls.** Stop sending `tool_call`. Send `tool_call_update` for creation and patches. Use `tool_call_content_chunk` to stream content. Respect omit/`null`/value patch semantics.
 7. **Terminal output.** Add `terminal` content references for Agent-owned display terminals. Send `terminal_update` for command, absolute cwd, snapshots, and exit state; send independently base64-encoded `terminal_output_chunk` values for live bytes. Do not expect Client control methods or capability negotiation.
@@ -727,7 +729,7 @@ A standard remote transport (streamable HTTP with SSE streams, plus WebSocket) i
 
 1. **Initialization.** Send `protocolVersion: 2`, required `info`, and `capabilities` (drop `fs`/`terminal`). Read the Agent's capabilities from `result.capabilities` with presence checks instead of boolean checks.
 2. **Rely on the baseline.** When `capabilities.session` is present, use list/resume/close/prompt/cancel without probing markers. Keep checking `session.delete` and other optional extras.
-3. **Prompt lifecycle.** Don't treat the `session/prompt` response as turn completion. Drive UI from `state_update` (`running` / `idle` / `requires_action`), take the stop reason from the idle update, and render the user's message from the `user_message` acknowledgment (which carries its canonical `messageId`).
+3. **Prompt lifecycle.** Don't treat the `session/prompt` response as turn completion. Drive UI from `state_update` (`running` / `idle` / `requires_action`), take the stop reason from the idle update, and render the user's message from the `user_message` acknowledgment (which carries its canonical `messageId`). Keep accepting background updates while idle.
 4. **Messages.** Track messages by required `messageId`. Implement upsert semantics: whole-message updates replace content (or clear it with `null`/`[]`), chunks append.
 5. **Tool calls.** Create tool calls on first-seen `toolCallId` in `tool_call_update`. Apply omit/`null`/value patches. Append `tool_call_content_chunk` items. Replace accumulated content when an update carries `content`.
 6. **Terminal output.** Maintain Agent-owned terminal state by `terminalId`. Apply update patch and snapshot-replacement semantics; independently decode and append chunk bytes. Render them in an isolated terminal emulator or sanitized transcript, with no input or process controls.

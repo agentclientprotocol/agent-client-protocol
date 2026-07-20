@@ -41,7 +41,7 @@ A typical flow follows this pattern:
    - Agent → Client: `session/update` notifications for accepted messages, state updates, and progress updates
    - Agent → Client: Permission requests as needed
    - Client → Agent: `session/cancel` to interrupt processing if needed
-   - Active work completes when the Agent sends an idle `state_update` session update with a stop reason
+   - Agent → Client: An idle `state_update` when ready for a new prompt, with a stop reason when foreground work ends.
 </Step>
 </Steps>
 

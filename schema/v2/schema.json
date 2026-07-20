@@ -3065,7 +3065,7 @@
       "x-method": "session/set_config_option"
     },
     "PromptResponse": {
-      "description": "Response acknowledging that a user prompt was accepted.\n\nThis response does not indicate that the agent has finished processing.\nAgents report session state through `state_update` session updates.\n\nSee protocol docs: [Prompt Accepted](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#2-prompt-accepted)",
+      "description": "Response acknowledging that a user prompt was accepted.\n\nThis response does not indicate that the agent has finished processing.\nProcessing and completion are reported through `state_update` session updates.\n\nSee protocol docs: [Prompt Accepted](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#2-prompt-accepted)",
       "type": "object",
       "properties": {
         "_meta": {
@@ -3187,7 +3187,7 @@
               "anyOf": [
                 {
                   "title": "UpdateSessionNotification",
-                  "description": "Handles session update notifications from the agent.\n\nThis is a notification endpoint (no response expected) that receives\nreal-time updates about session progress, including message updates,\nmessage chunks, tool calls, and execution plans.\n\nNote: Clients SHOULD continue accepting tool call updates even after\nsending a `session/cancel` notification, as the agent may send final\nupdates before reporting an idle `state_update` with the cancelled\nstop reason.\n\nSee protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#3-agent-reports-output)",
+                  "description": "Handles session update notifications from the agent.\n\nThis is a notification endpoint (no response expected) that receives\nupdates about session activity, including message updates, message chunks,\ntool calls, and execution plans.\n\nNote: Clients SHOULD continue accepting tool call updates even after\nsending a `session/cancel` notification, as the agent may send final\nupdates before reporting an idle `state_update` with the cancelled\nstop reason.\n\nSee protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#3-agent-reports-output)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/UpdateSessionNotification"
@@ -3215,7 +3215,7 @@
       "x-docs-ignore": true
     },
     "UpdateSessionNotification": {
-      "description": "Notification containing a session update from the agent.\n\nUsed to stream real-time progress and results during prompt processing.\n\nSee protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#3-agent-reports-output)",
+      "description": "Notification containing a session update from the agent.\n\nAgents can send session updates at any point while the session exists.\n\nSee protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#3-agent-reports-output)",
       "type": "object",
       "properties": {
         "sessionId": {
@@ -3246,7 +3246,7 @@
       "x-method": "session/update"
     },
     "SessionUpdate": {
-      "description": "Different types of updates that can be sent during session processing.\n\nThese updates provide real-time feedback about the agent's progress.\n\nSee protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#3-agent-reports-output)",
+      "description": "Different types of updates that can be sent while a session exists.\n\nThese updates report messages, progress, and other session activity.\n\nSee protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#3-agent-reports-output)",
       "anyOf": [
         {
           "description": "A chunk of the user's message being streamed.",
@@ -3345,7 +3345,7 @@
           ]
         },
         {
-          "description": "The agent's session state has changed.\n\nAgents send this to report when work starts, completes, or pauses while\nwaiting for user action. Completion of active work is reported here instead\nof in the `session/prompt` response.",
+          "description": "The state of the agent's foreground work has changed.",
           "type": "object",
           "properties": {
             "sessionUpdate": {
@@ -3807,7 +3807,7 @@
       "required": ["messageId"]
     },
     "RunningStateUpdate": {
-      "description": "The agent is actively processing work in the session.",
+      "description": "Foreground work is in progress.",
       "type": "object",
       "properties": {
         "_meta": {
@@ -3854,11 +3854,11 @@
       ]
     },
     "IdleStateUpdate": {
-      "description": "The agent is not currently processing work in the session.",
+      "description": "The agent is ready to process a new prompt.",
       "type": "object",
       "properties": {
         "stopReason": {
-          "description": "Indicates why the agent stopped processing active session work.\n\nOptional. Omitted or `null` both mean the agent is not reporting a stop reason.\nAgents SHOULD include this when the idle transition ends active work.",
+          "description": "Indicates why foreground work stopped.\n\nOptional. Omitted or `null` both mean the agent is not reporting a stop reason.\nAgents SHOULD include this when the idle transition ends foreground work.",
           "anyOf": [
             {
               "$ref": "#/$defs/StopReason"
@@ -3878,7 +3878,7 @@
       }
     },
     "RequiresActionStateUpdate": {
-      "description": "The agent is waiting on user action before it can continue.",
+      "description": "Foreground work is blocked on user action.",
       "type": "object",
       "properties": {
         "_meta": {
@@ -3890,10 +3890,10 @@
       }
     },
     "StateUpdate": {
-      "description": "The agent's session state has changed.\n\nThis update is the mechanism for reporting session activity transitions.\nA `session/prompt` response only acknowledges that the prompt was accepted;\nagents use `state_update` notifications to report that processing has started,\nthat the session is idle, or that progress is blocked on user action.",
+      "description": "The state of the agent's foreground work has changed.\n\nBackground activity can continue and emit other `session/update` notifications\nwhile `idle`. Those notifications do not change this state.",
       "anyOf": [
         {
-          "description": "The agent is actively processing work in the session.",
+          "description": "Foreground work is in progress.",
           "type": "object",
           "properties": {
             "state": {
@@ -3909,7 +3909,7 @@
           ]
         },
         {
-          "description": "The agent is not currently processing work in the session.",
+          "description": "The agent is ready to process a new prompt.",
           "type": "object",
           "properties": {
             "state": {
@@ -3925,7 +3925,7 @@
           ]
         },
         {
-          "description": "The agent is waiting on user action before it can continue.",
+          "description": "Foreground work is blocked on user action.",
           "type": "object",
           "properties": {
             "state": {

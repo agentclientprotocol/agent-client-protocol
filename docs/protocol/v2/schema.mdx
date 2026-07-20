@@ -550,7 +550,7 @@ pieces of context from sources the agent may not have access to.
 Response acknowledging that a user prompt was accepted.
 
 This response does not indicate that the agent has finished processing.
-Agents report session state through `state_update` session updates.
+Processing and completion are reported through `state_update` session updates.
 
 See protocol docs: [Prompt Accepted](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#2-prompt-accepted)
 
@@ -849,8 +849,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 Handles session update notifications from the agent.
 
 This is a notification endpoint (no response expected) that receives
-real-time updates about session progress, including message updates,
-message chunks, tool calls, and execution plans.
+updates about session activity, including message updates, message chunks,
+tool calls, and execution plans.
 
 Note: Clients SHOULD continue accepting tool call updates even after
 sending a `session/cancel` notification, as the agent may send final
@@ -863,7 +863,7 @@ See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protoc
 
 Notification containing a session update from the agent.
 
-Used to stream real-time progress and results during prompt processing.
+Agents can send session updates at any point while the session exists.
 
 See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#3-agent-reports-output)
 
@@ -2297,7 +2297,7 @@ future ACP variants.
 
 ## <span class="font-mono">IdleStateUpdate</span>
 
-The agent is not currently processing work in the session.
+The agent is ready to process a new prompt.
 
 **Type:** Object
 
@@ -2312,10 +2312,10 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="stopReason" type={<><span><a href="#stopreason">StopReason</a></span><span> | null</span></>} >
-  Indicates why the agent stopped processing active session work.
+  Indicates why foreground work stopped.
 
 Optional. Omitted or `null` both mean the agent is not reporting a stop reason.
-Agents SHOULD include this when the idle transition ends active work.
+Agents SHOULD include this when the idle transition ends foreground work.
 
 </ResponseField>
 
@@ -3272,7 +3272,7 @@ future ACP variants.
 
 ## <span class="font-mono">RequiresActionStateUpdate</span>
 
-The agent is waiting on user action before it can continue.
+Foreground work is blocked on user action.
 
 **Type:** Object
 
@@ -3353,7 +3353,7 @@ future ACP variants.
 
 ## <span class="font-mono">RunningStateUpdate</span>
 
-The agent is actively processing work in the session.
+Foreground work is in progress.
 
 **Type:** Object
 
@@ -3823,9 +3823,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 ## <span class="font-mono">SessionUpdate</span>
 
-Different types of updates that can be sent during session processing.
+Different types of updates that can be sent while a session exists.
 
-These updates provide real-time feedback about the agent's progress.
+These updates report messages, progress, and other session activity.
 
 See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#3-agent-reports-output)
 
@@ -4012,11 +4012,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 </ResponseField>
 
 <ResponseField name="state_update" type="object">
-The agent's session state has changed.
-
-Agents send this to report when work starts, completes, or pauses while
-waiting for user action. Completion of active work is reported here instead
-of in the `session/prompt` response.
+The state of the agent's foreground work has changed.
 
 <Expandable title="Properties">
 
@@ -4319,17 +4315,15 @@ future ACP variants.
 
 ## <span class="font-mono">StateUpdate</span>
 
-The agent's session state has changed.
+The state of the agent's foreground work has changed.
 
-This update is the mechanism for reporting session activity transitions.
-A `session/prompt` response only acknowledges that the prompt was accepted;
-agents use `state_update` notifications to report that processing has started,
-that the session is idle, or that progress is blocked on user action.
+Background activity can continue and emit other `session/update` notifications
+while `idle`. Those notifications do not change this state.
 
 **Type:** Union
 
 <ResponseField name="running" type="object">
-The agent is actively processing work in the session.
+Foreground work is in progress.
 
 <Expandable title="Properties">
 
@@ -4349,7 +4343,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 </ResponseField>
 
 <ResponseField name="idle" type="object">
-The agent is not currently processing work in the session.
+The agent is ready to process a new prompt.
 
 <Expandable title="Properties">
 
@@ -4365,10 +4359,10 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
   The discriminator value. Must be `"idle"`.
 </ResponseField>
 <ResponseField name="stopReason" type={<><span><a href="#stopreason">StopReason</a></span><span> | null</span></>} >
-  Indicates why the agent stopped processing active session work.
+  Indicates why foreground work stopped.
 
 Optional. Omitted or `null` both mean the agent is not reporting a stop reason.
-Agents SHOULD include this when the idle transition ends active work.
+Agents SHOULD include this when the idle transition ends foreground work.
 
 </ResponseField>
 
@@ -4376,7 +4370,7 @@ Agents SHOULD include this when the idle transition ends active work.
 </ResponseField>
 
 <ResponseField name="requires_action" type="object">
-The agent is waiting on user action before it can continue.
+Foreground work is blocked on user action.
 
 <Expandable title="Properties">
 

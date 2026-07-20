@@ -3343,7 +3343,7 @@ impl PromptRequest {
 /// Response acknowledging that a user prompt was accepted.
 ///
 /// This response does not indicate that the agent has finished processing.
-/// Agents report session state through `state_update` session updates.
+/// Processing and completion are reported through `state_update` session updates.
 ///
 /// See protocol docs: [Prompt Accepted](https://agentclientprotocol.com/protocol/prompt-lifecycle#2-prompt-accepted)
 #[serde_as]
