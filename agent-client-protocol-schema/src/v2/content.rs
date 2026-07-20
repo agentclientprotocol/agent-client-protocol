@@ -710,7 +710,11 @@ pub struct Icon {
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub mime_type: Option<MediaType>,
-    /// Optional sizes at which the icon can be used.
+    /// Optional array of strings that specify sizes at which the icon can be used.
+    /// Each string should be in `WxH` format (e.g., `"48x48"`, `"96x96"`) or
+    /// `"any"` for scalable formats like SVG.
+    ///
+    /// If not provided, the client should assume that the icon can be used at any size.
     #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
     #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default)]
@@ -741,7 +745,7 @@ impl Icon {
         self
     }
 
-    /// Sets or clears the optional `sizes` field.
+    /// Sets or clears the optional sizes at which the icon can be used.
     #[must_use]
     pub fn sizes(mut self, sizes: impl IntoOption<Vec<String>>) -> Self {
         self.sizes = sizes.into_option();
@@ -1063,5 +1067,11 @@ mod tests {
 
         let icon = serde_json::to_value(schemars::schema_for!(Icon)).unwrap();
         assert_eq!(icon["properties"]["src"]["format"], "uri");
+        assert_eq!(icon["properties"]["sizes"]["items"]["type"], "string");
+        assert!(
+            icon["properties"]["sizes"]["items"]
+                .get("pattern")
+                .is_none()
+        );
     }
 }

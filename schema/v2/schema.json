@@ -1267,7 +1267,7 @@
           "x-deserialize-default-on-error": true
         },
         "sizes": {
-          "description": "Optional sizes at which the icon can be used.",
+          "description": "Optional array of strings that specify sizes at which the icon can be used.\nEach string should be in `WxH` format (e.g., `\"48x48\"`, `\"96x96\"`) or\n`\"any\"` for scalable formats like SVG.\n\nIf not provided, the client should assume that the icon can be used at any size.",
           "type": ["array", "null"],
           "items": {
             "type": "string"
