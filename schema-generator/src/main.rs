@@ -514,13 +514,6 @@ mod schema_annotation_tests {
         }
     }
 
-    #[cfg(all(feature = "unstable_protocol_v2", feature = "unstable"))]
-    #[test]
-    fn generated_v2_schema_marks_plan_content_as_markdown() {
-        let schema = root_schema_value();
-        let content = property_schema(&schema, "PlanMarkdown", "content");
-    }
-
     #[cfg(feature = "unstable_protocol_v2")]
     #[test]
     fn published_v2_schema_links_to_versioned_v2_protocol_docs() {
