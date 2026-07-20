@@ -32,7 +32,7 @@ The session-level context and cost proposal no longer depends on resolving these
 
 > What are you proposing to improve the situation?
 
-The current strawman is to add an optional `usage` field to the turn-completion signal. In v1, that signal is `PromptResponse`. In v2, where `session/prompt` returns when the prompt is accepted, the same `usage` object is carried on the idle `state_update` session update that ends the turn.
+The current strawman is to add an optional `usage` field to the turn-completion signal. In v1, that signal is `PromptResponse`. In v2, where `session/prompt` returns when the prompt is accepted, the same `usage` object is carried on the idle `state_update` that ends foreground work.
 
 ```json
 {

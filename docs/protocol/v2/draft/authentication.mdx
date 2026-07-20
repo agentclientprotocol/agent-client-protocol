@@ -3,7 +3,7 @@ title: "Authentication"
 description: "Authenticating with agents and logging out"
 ---
 
-ACP authentication is negotiated during [initialization](/protocol/v2/draft/initialization). Agents advertise available authentication methods in `authMethods`. Clients authenticate by calling `auth/login` and end the current authenticated state by calling `auth/logout`.
+ACP authentication is negotiated during [initialization](/protocol/v2/draft/initialization). Agents advertise available authentication methods in `authMethods`. Clients use `auth/login` and `auth/logout` only when the Agent advertises the authentication surface.
 
 <br />
 
@@ -15,19 +15,19 @@ sequenceDiagram
     Client->>Agent: initialize
     Agent-->>Client: initialize response (authMethods)
 
-    alt Agent requires authentication
+    alt Agent advertises authMethods and requires authentication
         Client->>Agent: auth/login (methodId)
         Agent-->>Client: auth/login response
     end
 
     Note over Client,Agent: Authenticated requests may proceed
 
-    alt User logs out
+    alt Agent advertises authMethods and user logs out
         Client->>Agent: auth/logout
         Agent-->>Client: auth/logout response
     end
 
-    Note over Client,Agent: New sessions require authentication again
+    Note over Client,Agent: Authentication-gated requests require authentication again
 ```
 
 <br />
@@ -35,6 +35,10 @@ sequenceDiagram
 ## Advertising Authentication
 
 Agents advertise authentication options in the `authMethods` field of the `initialize` response. Each method has a `methodId` that the Client passes back to the Agent in a later `auth/login` request.
+
+Returning one or more valid entries in `authMethods` advertises the authentication surface. An Agent that does so **MUST** implement both `auth/login` and `auth/logout`. If `authMethods` is omitted or empty, the Agent does not advertise this surface and Clients **MUST NOT** call either method.
+
+`capabilities.auth` is orthogonal to this requirement. It advertises authentication-related extensions, not the availability of the baseline `auth/login` and `auth/logout` methods.
 
 ```json highlight={8-15}
 {
@@ -54,6 +58,8 @@ Agents advertise authentication options in the `authMethods` field of the `initi
   }
 }
 ```
+
+Because this response contains a valid authentication method, the Agent must support both `auth/login` and `auth/logout`.
 
 ### Authentication method types
 
@@ -101,7 +107,7 @@ See the [draft schema](/protocol/v2/draft/schema#authmethod) for the full `AuthM
 
 ## Authenticating
 
-When an Agent requires authentication before allowing session creation, the Client calls `auth/login` with one of the advertised authentication method IDs:
+When an Agent has advertised the authentication surface and requires authentication before allowing session creation, the Client calls `auth/login` with one of the advertised authentication method IDs:
 
 ```json
 {
@@ -133,7 +139,7 @@ After successful authentication, the Client can create new sessions without rece
 
 ## Logging Out
 
-The `auth/logout` method allows Clients to end the current authenticated state.
+The `auth/logout` method allows Clients to end the current authenticated state. Clients may call it only when the Agent advertised one or more valid authentication methods during initialization; there is no separate logout capability marker.
 
 ```json
 {

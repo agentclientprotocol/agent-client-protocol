@@ -3,7 +3,7 @@ title: "Prompt Lifecycle"
 description: "How prompts, state updates, and completion fit together"
 ---
 
-A prompt starts or contributes to active work in a session. The [Agent](/protocol/v2/draft/overview#agent) may continue processing until it reports that the session is idle again, and it may emit `session/update` notifications before or after an individual prompt request has completed. Active work can involve multiple exchanges with the language model and tool invocations.
+A prompt starts or contributes to foreground work in a session. The [Agent](/protocol/v2/draft/overview#agent) may continue that work until it reports `idle`, including across multiple model exchanges and tool invocations.
 
 `session/prompt` only lasts until the Agent accepts the prompt. The Agent reports the accepted user message, running state, output, and completion through `session/update` notifications.
 
@@ -28,7 +28,7 @@ sequenceDiagram
     Agent->>Client: session/update (user_message)
     Agent->>Client: session/update (state_update: running)
 
-    loop While session is running
+    loop While foreground work is in progress
         Note right of Agent: LLM responds with<br/>content/tool calls
         Agent->>Client: session/update (plan)
         Agent->>Client: session/update (agent_message)
@@ -140,7 +140,7 @@ After accepting the prompt, the Agent **MUST** report where the user message was
 
 ### 3. Agent Reports Output
 
-When the Agent starts or resumes processing work for the session, it **MUST** send a `state_update` notification with `state: "running"`:
+When foreground work starts or resumes, the Agent **MUST** send a `state_update` notification with `state: "running"`:
 
 ```json
 {
@@ -327,7 +327,7 @@ The Agent **MAY** also report current session context and cumulative cost state 
 
 ### 4. Report Completion
 
-If there is no pending work, the Agent **MUST** report that the session is idle with a `state_update` notification. When the idle transition completes active work, the Agent **MUST** include the corresponding [`StopReason`](#stop-reasons):
+When the Agent is ready to process a new prompt, it **MUST** report `idle` with a `state_update` notification. When the transition ends foreground work, the Agent **MUST** include the corresponding [`StopReason`](#stop-reasons):
 
 ```json
 {
@@ -344,13 +344,13 @@ If there is no pending work, the Agent **MUST** report that the session is idle 
 }
 ```
 
-Agents **MAY** stop active work at any point by sending an idle `state_update` session update with the corresponding [`StopReason`](#stop-reasons).
+Agents **MAY** stop foreground work at any point by sending an idle `state_update` session update with the corresponding [`StopReason`](#stop-reasons).
 
 ### 5. Tool Invocation and Status Reporting
 
 Before proceeding with execution, the Agent **MAY** request permission from the Client via the `session/request_permission` method.
 
-While waiting for a permission response or other user action, the Agent **SHOULD** send a `state_update` notification with `state: "requires_action"`. When the Agent resumes processing, it **SHOULD** send another `state_update` notification with `state: "running"`.
+While foreground work is blocked on a permission response or other user action, the Agent **SHOULD** report `requires_action`. When work resumes, the Agent **SHOULD** report `running`.
 
 Once permission is granted (if required), the Agent **SHOULD** invoke the tool and report a status update marking the tool as `in_progress`:
 
@@ -437,11 +437,11 @@ When the tool completes, the Agent sends another update with the final status an
 
 The Agent sends the tool results back to the language model as another request.
 
-The cycle returns to [step 3](#3-agent-reports-output), continuing until the language model completes its response without requesting additional tool calls or active work is stopped by the Agent or cancelled by the Client.
+The cycle returns to [step 3](#3-agent-reports-output), continuing until the language model completes its response without requesting additional tool calls or foreground work is stopped by the Agent or cancelled by the Client.
 
 ## Stop Reasons
 
-When an Agent stops active work, it must specify the corresponding `StopReason` on an idle `state_update` session update:
+When an Agent stops foreground work, it must specify the corresponding `StopReason` on an idle `state_update` session update:
 
 <ResponseField name="end_turn">
   The Agent has no more work to perform after the language model finishes
@@ -453,7 +453,7 @@ When an Agent stops active work, it must specify the corresponding `StopReason` 
 </ResponseField>
 
 <ResponseField name="max_turn_requests">
-  The maximum number of model requests for the active work is exceeded
+  The maximum number of model requests for the foreground work is exceeded
 </ResponseField>
 
 <ResponseField name="refusal">The Agent refuses to continue</ResponseField>
@@ -464,17 +464,19 @@ Custom or future stop reasons can be used when Clients can display a generic sto
 
 ## Session States
 
-<ResponseField name="running">
-  The Agent is actively processing work in the session.
-</ResponseField>
+`state_update` reports foreground work.
+
+<ResponseField name="running">Foreground work is in progress.</ResponseField>
 
 <ResponseField name="idle">
-  The Agent is not currently processing work in the session.
+  The Agent is ready to process a new prompt.
 </ResponseField>
 
 <ResponseField name="requires_action">
-  The Agent is waiting on user action before it can continue.
+  Foreground work is blocked on user action.
 </ResponseField>
+
+Background activity **MAY** continue and emit other `session/update` notifications while the Agent reports `idle`. These notifications do not change the state.
 
 ## Cancellation
 
@@ -513,4 +515,4 @@ The Client **SHOULD** still accept tool call updates received after sending `ses
 
 ---
 
-After the Agent reports the session is idle, the Client may send another `session/prompt` to continue the conversation, building on the established session context.
+After the Agent reports `idle`, the Client may send another `session/prompt` to continue the conversation, building on the established session context.

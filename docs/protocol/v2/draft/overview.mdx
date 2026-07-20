@@ -41,7 +41,7 @@ A typical flow follows this pattern:
    - Agent → Client: `session/update` notifications for accepted messages, state updates, and progress updates
    - Agent → Client: Permission requests as needed
    - Client → Agent: `session/cancel` to interrupt processing if needed
-   - Active work completes when the Agent sends an idle `state_update` session update with a stop reason
+   - Agent → Client: An idle `state_update` when ready for a new prompt, with a stop reason when foreground work ends.
 </Step>
 </Steps>
 
@@ -50,6 +50,8 @@ A typical flow follows this pattern:
 Agents are programs that use generative AI to autonomously modify code. They typically run as subprocesses of the Client.
 
 ### Baseline Methods
+
+Some baseline methods belong to optional surfaces. An Agent that returns one or more valid entries in `authMethods` **MUST** implement both `auth/login` and `auth/logout`. If `authMethods` is omitted or empty, Clients **MUST NOT** call either method.
 
 <ResponseField
   name="initialize"

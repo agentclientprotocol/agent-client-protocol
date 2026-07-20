@@ -3379,9 +3379,14 @@ impl TryToV1 for super::InitializeResponse {
             info,
             meta,
         } = self;
+        let advertises_auth = !auth_methods.is_empty();
+        let mut agent_capabilities = agent_capabilities.try_to_v1()?;
+        if advertises_auth {
+            agent_capabilities.auth.logout = Some(crate::v1::LogoutCapabilities::new());
+        }
         Ok(crate::v1::InitializeResponse {
             protocol_version: protocol_version.try_to_v1()?,
-            agent_capabilities: agent_capabilities.try_to_v1()?,
+            agent_capabilities,
             auth_methods: auth_methods.try_to_v1()?,
             agent_info: Some(info.try_to_v1()?),
             meta: meta.try_to_v1()?,
@@ -3395,7 +3400,7 @@ impl TryToV2 for crate::v1::InitializeResponse {
     fn try_to_v2(self) -> Result<Self::Output> {
         let Self {
             protocol_version,
-            agent_capabilities,
+            mut agent_capabilities,
             auth_methods,
             agent_info,
             meta,
@@ -3408,6 +3413,29 @@ impl TryToV2 for crate::v1::InitializeResponse {
                 ));
             }
         };
+        let advertises_auth = !auth_methods.is_empty();
+        match (advertises_auth, agent_capabilities.auth.logout.take()) {
+            (true, Some(logout)) => {
+                reject_v1_marker_meta(
+                    "InitializeResponse.agentCapabilities.auth",
+                    "logout",
+                    logout.meta.as_ref(),
+                )?;
+            }
+            (true, None) => {
+                return Err(ProtocolConversionError::new(
+                    "v1 InitializeResponse with non-empty `authMethods` and no \
+                     `agentCapabilities.auth.logout` cannot be represented in v2",
+                ));
+            }
+            (false, Some(_)) => {
+                return Err(ProtocolConversionError::new(
+                    "v1 InitializeResponse with `agentCapabilities.auth.logout` and empty \
+                     `authMethods` cannot be represented in v2",
+                ));
+            }
+            (false, None) => {}
+        }
         Ok(super::InitializeResponse {
             protocol_version: protocol_version.try_to_v2()?,
             capabilities: agent_capabilities.try_to_v2()?,
@@ -3552,7 +3580,7 @@ impl TryToV1 for super::AgentAuthCapabilities {
     fn try_to_v1(self) -> Result<Self::Output> {
         let Self { meta } = self;
         Ok(crate::v1::AgentAuthCapabilities {
-            logout: Some(crate::v1::LogoutCapabilities::new()),
+            logout: None,
             meta: meta.try_to_v1()?,
         })
     }
@@ -3562,13 +3590,12 @@ fn v1_agent_auth_capabilities_into_v2_option(
     auth: crate::v1::AgentAuthCapabilities,
 ) -> Result<Option<super::AgentAuthCapabilities>> {
     let crate::v1::AgentAuthCapabilities { logout, meta } = auth;
-    let Some(logout) = logout else {
-        if meta.is_some() {
-            return Err(unrepresentable_v1_field("AgentAuthCapabilities", "meta"));
-        }
+    if logout.is_some() {
+        return Err(unrepresentable_v1_field("AgentAuthCapabilities", "logout"));
+    }
+    if meta.is_none() {
         return Ok(None);
-    };
-    reject_v1_marker_meta("AgentAuthCapabilities", "logout", logout.meta.as_ref())?;
+    }
     Ok(Some(super::AgentAuthCapabilities {
         meta: meta.try_to_v2()?,
     }))
@@ -3579,10 +3606,9 @@ impl TryToV2 for crate::v1::AgentAuthCapabilities {
 
     fn try_to_v2(self) -> Result<Self::Output> {
         let Self { logout, meta } = self;
-        let Some(logout) = logout else {
+        if logout.is_some() {
             return Err(unrepresentable_v1_field("AgentAuthCapabilities", "logout"));
-        };
-        reject_v1_marker_meta("AgentAuthCapabilities", "logout", logout.meta.as_ref())?;
+        }
         Ok(super::AgentAuthCapabilities {
             meta: meta.try_to_v2()?,
         })
@@ -9392,6 +9418,29 @@ mod tests {
         assert_eq!(error.message(), expected);
     }
 
+    fn v1_baseline_agent_capabilities() -> v1::AgentCapabilities {
+        v1::AgentCapabilities::new()
+            .load_session(true)
+            .session_capabilities(
+                v1::SessionCapabilities::new()
+                    .list(v1::SessionListCapabilities::new())
+                    .resume(v1::SessionResumeCapabilities::new())
+                    .close(v1::SessionCloseCapabilities::new()),
+            )
+    }
+
+    fn v2_baseline_agent_capabilities() -> v2::AgentCapabilities {
+        v2::AgentCapabilities::new().session(v2::SessionCapabilities::new())
+    }
+
+    fn v1_test_auth_method() -> v1::AuthMethod {
+        v1::AuthMethod::Agent(v1::AuthMethodAgent::new("agent", "Agent"))
+    }
+
+    fn v2_test_auth_method() -> v2::AuthMethod {
+        v2::AuthMethod::Agent(v2::AuthMethodAgent::new("agent", "Agent"))
+    }
+
     #[test]
     fn infallible_leaf_conversions_support_from_and_try_helpers() {
         let v1_session: v1::SessionId = v2::SessionId::new("sess").into();
@@ -9502,17 +9551,12 @@ mod tests {
 
     #[test]
     fn round_trips_initialize_response() {
-        let session_capabilities = v1::SessionCapabilities::new()
-            .list(v1::SessionListCapabilities::new())
-            .resume(v1::SessionResumeCapabilities::new())
-            .close(v1::SessionCloseCapabilities::new());
         let response = v1::InitializeResponse::new(ProtocolVersion::V1)
             .agent_capabilities(
-                v1::AgentCapabilities::new()
-                    .load_session(true)
-                    .session_capabilities(session_capabilities)
+                v1_baseline_agent_capabilities()
                     .auth(v1::AgentAuthCapabilities::new().logout(v1::LogoutCapabilities::new())),
             )
+            .auth_methods(vec![v1_test_auth_method()])
             .agent_info(v1::Implementation::new("test-agent", "2.0.0").title("Test Agent"));
         assert_v1_round_trip::<v1::InitializeResponse, v2::InitializeResponse>(response.clone());
         let converted: v2::InitializeResponse =
@@ -9583,17 +9627,116 @@ mod tests {
     }
 
     #[test]
-    fn v2_auth_logout_is_baseline_not_capability_marker() {
+    fn initialize_auth_methods_control_logout_conversion() {
+        let auth_meta =
+            serde_json::Map::from_iter([("extension".to_string(), serde_json::Value::Bool(true))]);
+        let without_auth = v2::InitializeResponse::new(
+            ProtocolVersion::V2,
+            v2::Implementation::new("test-agent", "2.0.0"),
+        )
+        .capabilities(
+            v2_baseline_agent_capabilities()
+                .auth(v2::AgentAuthCapabilities::new().meta(auth_meta.clone())),
+        );
+        let v1_without_auth: v1::InitializeResponse =
+            try_v2_to_v1(without_auth).expect("v2 without auth methods -> v1");
+        assert!(v1_without_auth.auth_methods.is_empty());
+        assert!(v1_without_auth.agent_capabilities.auth.logout.is_none());
+        assert_eq!(
+            v1_without_auth.agent_capabilities.auth.meta.as_ref(),
+            Some(&auth_meta)
+        );
+
+        let v2_without_auth: v2::InitializeResponse =
+            try_v1_to_v2(v1_without_auth).expect("v1 without auth methods -> v2");
+        assert!(v2_without_auth.auth_methods.is_empty());
+        assert_eq!(
+            v2_without_auth.capabilities.auth.and_then(|auth| auth.meta),
+            Some(auth_meta)
+        );
+
+        let with_auth = v2::InitializeResponse::new(
+            ProtocolVersion::V2,
+            v2::Implementation::new("test-agent", "2.0.0"),
+        )
+        .capabilities(v2_baseline_agent_capabilities())
+        .auth_methods(vec![v2_test_auth_method()]);
+        let v1_with_auth: v1::InitializeResponse =
+            try_v2_to_v1(with_auth).expect("v2 with auth methods -> v1");
+        assert_eq!(v1_with_auth.auth_methods.len(), 1);
+        assert!(v1_with_auth.agent_capabilities.auth.logout.is_some());
+
+        let v1_with_auth = v1::InitializeResponse::new(ProtocolVersion::V1)
+            .agent_capabilities(
+                v1_baseline_agent_capabilities()
+                    .auth(v1::AgentAuthCapabilities::new().logout(v1::LogoutCapabilities::new())),
+            )
+            .auth_methods(vec![v1_test_auth_method()])
+            .agent_info(v1::Implementation::new("test-agent", "2.0.0"));
+        let v2_with_auth: v2::InitializeResponse =
+            try_v1_to_v2(v1_with_auth).expect("v1 with auth methods -> v2");
+        assert_eq!(v2_with_auth.auth_methods.len(), 1);
+    }
+
+    #[test]
+    fn mismatched_v1_auth_methods_and_logout_marker_do_not_convert_to_v2() {
+        let methods_without_logout = v1::InitializeResponse::new(ProtocolVersion::V1)
+            .agent_capabilities(v1_baseline_agent_capabilities())
+            .auth_methods(vec![v1_test_auth_method()])
+            .agent_info(v1::Implementation::new("test-agent", "2.0.0"));
+        assert_v1_to_v2_error(
+            methods_without_logout,
+            "v1 InitializeResponse with non-empty `authMethods` and no \
+             `agentCapabilities.auth.logout` cannot be represented in v2",
+        );
+
+        let logout_without_methods = v1::InitializeResponse::new(ProtocolVersion::V1)
+            .agent_capabilities(
+                v1_baseline_agent_capabilities()
+                    .auth(v1::AgentAuthCapabilities::new().logout(v1::LogoutCapabilities::new())),
+            )
+            .agent_info(v1::Implementation::new("test-agent", "2.0.0"));
+        assert_v1_to_v2_error(
+            logout_without_methods,
+            "v1 InitializeResponse with `agentCapabilities.auth.logout` and empty \
+             `authMethods` cannot be represented in v2",
+        );
+
+        let logout_meta =
+            serde_json::Map::from_iter([("marker".to_string(), serde_json::Value::Bool(true))]);
+        let logout_marker_with_meta = v1::InitializeResponse::new(ProtocolVersion::V1)
+            .agent_capabilities(
+                v1_baseline_agent_capabilities().auth(
+                    v1::AgentAuthCapabilities::new()
+                        .logout(v1::LogoutCapabilities::new().meta(logout_meta)),
+                ),
+            )
+            .auth_methods(vec![v1_test_auth_method()])
+            .agent_info(v1::Implementation::new("test-agent", "2.0.0"));
+        assert_v1_to_v2_error(
+            logout_marker_with_meta,
+            "v1 InitializeResponse.agentCapabilities.auth.logout metadata cannot be represented \
+             in v2",
+        );
+    }
+
+    #[test]
+    fn agent_auth_capabilities_do_not_encode_logout_support() {
         let v2_auth = v2::AgentAuthCapabilities::new();
         let v2_json = serde_json::to_value(&v2_auth).expect("v2 serialize");
         assert_eq!(v2_json.get("logout"), None);
 
         let v1_auth: v1::AgentAuthCapabilities =
             try_v2_to_v1(v2_auth).expect("v2 -> v1 conversion");
-        assert!(v1_auth.logout.is_some());
+        assert!(v1_auth.logout.is_none());
+
+        let v2_auth: v2::AgentAuthCapabilities =
+            try_v1_to_v2(v1::AgentAuthCapabilities::new()).expect("v1 -> v2 conversion");
+        let v2_json = serde_json::to_value(&v2_auth).expect("v2 serialize");
+        assert_eq!(v2_json.get("logout"), None);
 
         assert_v1_to_v2_error(
-            v1::AgentAuthCapabilities::new(),
+            v1::AgentAuthCapabilities::new().logout(v1::LogoutCapabilities::new()),
             "v1 AgentAuthCapabilities.logout cannot be represented in v2",
         );
     }

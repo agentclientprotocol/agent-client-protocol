@@ -3,9 +3,11 @@ title: "Tool Calls"
 description: "How Agents report tool call execution"
 ---
 
-Tool calls represent actions that language models request Agents to perform during [active session work](/protocol/v2/prompt-lifecycle). When an LLM determines it needs to interact with external systems—like reading files, running code, or fetching data—it generates tool calls that the Agent executes on its behalf.
+Tool calls represent actions that language models request Agents to perform during a [session](/protocol/v2/prompt-lifecycle). When an LLM determines it needs to interact with external systems—like reading files, running code, or fetching data—it generates tool calls that the Agent executes on its behalf.
 
 Agents report tool calls through [`session/update`](/protocol/v2/prompt-lifecycle#3-agent-reports-output) notifications, allowing Clients to display real-time progress and results to users.
+
+Tool call updates may arrive while the Agent reports `idle`. They do not change the state.
 
 While Agents handle the actual execution, they may use Client-mediated
 interactions like [permission requests](#requesting-permission) to provide a

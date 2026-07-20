@@ -40,7 +40,7 @@ use super::{ClientNesCapabilities, PositionEncodingKind};
 
 /// Notification containing a session update from the agent.
 ///
-/// Used to stream real-time progress and results during prompt processing.
+/// Agents can send session updates at any point while the session exists.
 ///
 /// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-lifecycle#3-agent-reports-output)
 #[serde_as]
@@ -89,9 +89,9 @@ impl UpdateSessionNotification {
     }
 }
 
-/// Different types of updates that can be sent during session processing.
+/// Different types of updates that can be sent while a session exists.
 ///
-/// These updates provide real-time feedback about the agent's progress.
+/// These updates report messages, progress, and other session activity.
 ///
 /// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-lifecycle#3-agent-reports-output)
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
@@ -122,11 +122,7 @@ pub enum SessionUpdate {
     /// receives another `agent_thought` update with the same `messageId`,
     /// fields in the new update patch the previous fields for that message.
     AgentThought(AgentThought),
-    /// The agent's session state has changed.
-    ///
-    /// Agents send this to report when work starts, completes, or pauses while
-    /// waiting for user action. Completion of active work is reported here instead
-    /// of in the `session/prompt` response.
+    /// The state of the agent's foreground work has changed.
     StateUpdate(StateUpdate),
     /// A chunk of tool-call content being streamed.
     ToolCallContentChunk(ToolCallContentChunk),
@@ -459,21 +455,19 @@ impl UsageUpdate {
     }
 }
 
-/// The agent's session state has changed.
+/// The state of the agent's foreground work has changed.
 ///
-/// This update is the mechanism for reporting session activity transitions.
-/// A `session/prompt` response only acknowledges that the prompt was accepted;
-/// agents use `state_update` notifications to report that processing has started,
-/// that the session is idle, or that progress is blocked on user action.
+/// Background activity can continue and emit other `session/update` notifications
+/// while `idle`. Those notifications do not change this state.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[serde(tag = "state", rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum StateUpdate {
-    /// The agent is actively processing work in the session.
+    /// Foreground work is in progress.
     Running(RunningStateUpdate),
-    /// The agent is not currently processing work in the session.
+    /// The agent is ready to process a new prompt.
     Idle(IdleStateUpdate),
-    /// The agent is waiting on user action before it can continue.
+    /// Foreground work is blocked on user action.
     RequiresAction(RequiresActionStateUpdate),
     /// Custom or future session state.
     ///
@@ -484,7 +478,7 @@ pub enum StateUpdate {
     Other(OtherStateUpdate),
 }
 
-/// The agent is actively processing work in the session.
+/// Foreground work is in progress.
 #[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -522,17 +516,17 @@ impl RunningStateUpdate {
     }
 }
 
-/// The agent is not currently processing work in the session.
+/// The agent is ready to process a new prompt.
 #[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct IdleStateUpdate {
-    /// Indicates why the agent stopped processing active session work.
+    /// Indicates why foreground work stopped.
     ///
     /// Optional. Omitted or `null` both mean the agent is not reporting a stop reason.
-    /// Agents SHOULD include this when the idle transition ends active work.
+    /// Agents SHOULD include this when the idle transition ends foreground work.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
@@ -541,7 +535,7 @@ pub struct IdleStateUpdate {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
-    /// Token usage for completed session work.
+    /// Token usage for completed foreground work.
     ///
     /// Optional. Omitted or `null` both mean the agent is not reporting token
     /// usage for this state update.
@@ -569,7 +563,7 @@ impl IdleStateUpdate {
         Self::default()
     }
 
-    /// Indicates why the agent stopped processing active session work.
+    /// Indicates why foreground work stopped.
     #[must_use]
     pub fn stop_reason(mut self, stop_reason: impl IntoOption<StopReason>) -> Self {
         self.stop_reason = stop_reason.into_option();
@@ -580,7 +574,7 @@ impl IdleStateUpdate {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
-    /// Token usage for completed session work.
+    /// Token usage for completed foreground work.
     #[cfg(feature = "unstable_end_turn_token_usage")]
     #[must_use]
     pub fn usage(mut self, usage: impl IntoOption<Usage>) -> Self {
@@ -600,7 +594,7 @@ impl IdleStateUpdate {
     }
 }
 
-/// The agent is waiting on user action before it can continue.
+/// Foreground work is blocked on user action.
 #[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -2270,8 +2264,8 @@ pub enum AgentNotification {
     /// Handles session update notifications from the agent.
     ///
     /// This is a notification endpoint (no response expected) that receives
-    /// real-time updates about session progress, including message updates,
-    /// message chunks, tool calls, and execution plans.
+    /// updates about session activity, including message updates, message chunks,
+    /// tool calls, and execution plans.
     ///
     /// Note: Clients SHOULD continue accepting tool call updates even after
     /// sending a `session/cancel` notification, as the agent may send final
