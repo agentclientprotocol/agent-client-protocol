@@ -3,6 +3,7 @@ title: "Agent Authentication State Query"
 ---
 
 - Author(s): [@xtmq](https://github.com/xtmq)
+- Champion: [@benbrandt](https://github.com/benbrandt)
 
 ## Elevator pitch
 
@@ -239,6 +240,7 @@ To avoid locking in confusing semantics, the proposal currently keeps `auth/stat
 
 ## Revision history
 
+- 2026-07-21: Accepted as a Draft RFD
 - 2026-03-15: Remove `authMethods` from the proposal and keep aggregate auth state only (`authenticated` + optional `message`)
 - 2026-03-10: Rename `getAuthState` to `auth/status`, nest capability under `agentCapabilities.auth`
 - 2026-03-07: Address review feedback on auth state structure
