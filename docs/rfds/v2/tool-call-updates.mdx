@@ -94,7 +94,7 @@ There is a single way to update a tool call, removing lots of confusion from how
 
 When converting v1 to v2, both v1 `tool_call` and v1 `tool_call_update` should map to v2 `tool_call_update`.
 
-When converting v2 back to v1, adapters can represent a v2 update as a v1 `ToolCallUpdate`. This is lossy for some explicit clear operations because v1 update fields cannot represent every distinction between omitted and `null`. Collection clears can be represented as empty arrays, but scalar/raw-field clears may have to be omitted when targeting v1. This will be a best-effort conversion.
+When converting v2 back to v1, adapters can represent compatible v2 updates as a v1 `ToolCallUpdate`. Conversion is also lossy for some explicit clear operations because v1 update fields cannot represent every distinction between omitted and `null`. Collection clears can be represented as empty arrays, but scalar/raw-field clears may have to be omitted when targeting v1. This will be a best-effort conversion.
 
 `tool_call_content_chunk` cannot be represented by the stateless v2-to-v1 conversion helper because v1 tool-call content updates replace the whole content array rather than appending one item. A stateful bridge can choose to accumulate chunks and emit replacement arrays to v1 clients.
 

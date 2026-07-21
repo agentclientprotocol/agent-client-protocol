@@ -514,6 +514,8 @@ pub enum PlanEntryStatus {
     InProgress,
     /// The task has been successfully completed.
     Completed,
+    /// The task was cancelled before it completed.
+    Cancelled,
     /// Custom or future plan entry status.
     ///
     /// Values beginning with `_` are reserved for implementation-specific
@@ -539,6 +541,13 @@ mod tests {
         let status: PlanEntryStatus = serde_json::from_str("\"blocked\"").unwrap();
         assert_eq!(status, PlanEntryStatus::Other("blocked".to_string()));
         assert_eq!(serde_json::to_value(&status).unwrap(), "blocked");
+    }
+
+    #[test]
+    fn plan_entry_status_recognizes_cancelled_variant() {
+        let status: PlanEntryStatus = serde_json::from_str("\"cancelled\"").unwrap();
+        assert_eq!(status, PlanEntryStatus::Cancelled);
+        assert_eq!(serde_json::to_value(&status).unwrap(), "cancelled");
     }
 
     #[test]

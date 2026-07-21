@@ -2846,6 +2846,10 @@ See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/v2/ag
   The task has been successfully completed.
 </ResponseField>
 
+<ResponseField name="cancelled" type="string">
+  The task was cancelled before it completed.
+</ResponseField>
+
 <ResponseField name="other" type="string">
 Custom or future plan entry status.
 
@@ -5008,6 +5012,10 @@ See protocol docs: [Status](https://agentclientprotocol.com/protocol/v2/tool-cal
 
 <ResponseField name="failed" type="string">
   The tool call failed with an error.
+</ResponseField>
+
+<ResponseField name="cancelled" type="string">
+  The tool call was cancelled before it completed.
 </ResponseField>
 
 <ResponseField name="other" type="string">

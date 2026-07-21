@@ -1603,6 +1603,9 @@ impl TryToV1 for super::PlanEntryStatus {
             Self::Pending => crate::v1::PlanEntryStatus::Pending,
             Self::InProgress => crate::v1::PlanEntryStatus::InProgress,
             Self::Completed => crate::v1::PlanEntryStatus::Completed,
+            Self::Cancelled => {
+                return Err(unknown_v2_enum_variant("PlanEntryStatus", "cancelled"));
+            }
             Self::Other(value) => return Err(unknown_v2_enum_variant("PlanEntryStatus", &value)),
         })
     }
@@ -3189,6 +3192,9 @@ impl TryToV1 for super::ToolCallStatus {
             Self::InProgress => crate::v1::ToolCallStatus::InProgress,
             Self::Completed => crate::v1::ToolCallStatus::Completed,
             Self::Failed => crate::v1::ToolCallStatus::Failed,
+            Self::Cancelled => {
+                return Err(unknown_v2_enum_variant("ToolCallStatus", "cancelled"));
+            }
             Self::Other(value) => return Err(unknown_v2_enum_variant("ToolCallStatus", &value)),
         })
     }
@@ -10645,6 +10651,18 @@ mod tests {
         assert_v2_to_v1_error(
             update,
             "v2 ToolKind variant `_future_kind` cannot be represented in v1",
+        );
+    }
+
+    #[test]
+    fn v2_cancelled_statuses_do_not_convert_to_v1() {
+        assert_v2_to_v1_error(
+            v2::ToolCallStatus::Cancelled,
+            "v2 ToolCallStatus variant `cancelled` cannot be represented in v1",
+        );
+        assert_v2_to_v1_error(
+            v2::PlanEntryStatus::Cancelled,
+            "v2 PlanEntryStatus variant `cancelled` cannot be represented in v1",
         );
     }
 

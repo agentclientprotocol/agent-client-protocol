@@ -817,6 +817,11 @@
           "const": "failed"
         },
         {
+          "description": "The tool call was cancelled before it completed.",
+          "type": "string",
+          "const": "cancelled"
+        },
+        {
           "title": "other",
           "description": "Custom or future tool call status.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
           "type": "string"
@@ -4389,6 +4394,11 @@
           "description": "The task has been successfully completed.",
           "type": "string",
           "const": "completed"
+        },
+        {
+          "description": "The task was cancelled before it completed.",
+          "type": "string",
+          "const": "cancelled"
         },
         {
           "title": "other",

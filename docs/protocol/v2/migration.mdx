@@ -348,7 +348,7 @@ v1 had `tool_call` (create) and `tool_call_update` (modify). In practice the spl
 }
 ```
 
-The patch semantics are the same three-state model as messages: omitted fields stay unchanged, `null` explicitly clears a field, and concrete values replace. Array fields such as `content` and `locations` are replaced wholesale when present. The field set (`title`, `kind`, `status`, `content`, `locations`, `rawInput`, `rawOutput`) and the `kind`/`status` values are unchanged from v1, though the enums are now extensible.
+The patch semantics are the same three-state model as messages: omitted fields stay unchanged, `null` explicitly clears a field, and concrete values replace. Array fields such as `content` and `locations` are replaced wholesale when present. The field set (`title`, `kind`, `status`, `content`, `locations`, `rawInput`, `rawOutput`) and `kind` values are unchanged from v1. The `status` enum adds `cancelled`, and both enums are now extensible.
 
 ### Streaming tool-call content
 
@@ -550,7 +550,7 @@ The v1 `plan` update was a flat entries list with no identity and no room to gro
 
 </CodeGroup>
 
-Stable v2 defines the `items` plan type. The entry shape (`content`, `priority`, `status`, all required) is unchanged from v1, and entry priorities and statuses are now extensible enums. Each `plan_update` for a given `planId` replaces that plan's entries, and the `planId` allows multiple plans per session and future plan content types (such as markdown or file-backed plans, which remain unstable) without another breaking change.
+Stable v2 defines the `items` plan type. The entry shape (`content`, `priority`, `status`, all required) is unchanged from v1. Entry priorities and statuses are now extensible enums, and `status` adds `cancelled`. Each `plan_update` for a given `planId` replaces that plan's entries, and the `planId` allows multiple plans per session and future plan content types (such as markdown or file-backed plans, which remain unstable) without another breaking change.
 
 ## Session setup and lifecycle
 

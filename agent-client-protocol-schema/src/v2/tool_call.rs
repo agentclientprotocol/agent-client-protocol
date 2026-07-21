@@ -330,6 +330,8 @@ pub enum ToolCallStatus {
     Completed,
     /// The tool call failed with an error.
     Failed,
+    /// The tool call was cancelled before it completed.
+    Cancelled,
     /// Custom or future tool call status.
     ///
     /// Values beginning with `_` are reserved for implementation-specific
@@ -1242,6 +1244,13 @@ mod tests {
         let status: ToolCallStatus = serde_json::from_str("\"deferred\"").unwrap();
         assert_eq!(status, ToolCallStatus::Other("deferred".to_string()));
         assert_eq!(serde_json::to_value(&status).unwrap(), "deferred");
+    }
+
+    #[test]
+    fn tool_call_status_recognizes_cancelled_variant() {
+        let status: ToolCallStatus = serde_json::from_str("\"cancelled\"").unwrap();
+        assert_eq!(status, ToolCallStatus::Cancelled);
+        assert_eq!(serde_json::to_value(&status).unwrap(), "cancelled");
     }
 
     #[test]
