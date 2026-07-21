@@ -8163,6 +8163,19 @@ Helps clients choose appropriate icons and UI treatment.
   File locations affected by this tool call.
 Enables "follow-along" features in clients.
 </ResponseField>
+<ResponseField name="name" type={"string | null"} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Programmatic name of the tool being invoked.
+
+This field is optional and has patch semantics. Omission means no
+change, `null` clears the name, and a string replaces it. For a tool
+call ID the client has not seen before, omission or `null` means that no
+tool name is available.
+
+</ResponseField>
 <ResponseField name="rawInput" type={"object"} >
   Raw input parameters sent to the tool.
 </ResponseField>
@@ -9280,6 +9293,19 @@ Helps clients choose appropriate icons and UI treatment.
 <ResponseField name="locations" type={<><span><a href="#toolcalllocation">ToolCallLocation[]</a></span><span> | null</span></>} >
   File locations affected by this tool call.
 Enables "follow-along" features in clients.
+</ResponseField>
+<ResponseField name="name" type={"string | null"} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Programmatic name of the tool being invoked.
+
+This field is optional and has patch semantics. Omission means no
+change, `null` clears the name, and a string replaces it. For a tool
+call ID the client has not seen before, omission or `null` means that no
+tool name is available.
+
 </ResponseField>
 <ResponseField name="rawInput" type={"object"} >
   Raw input parameters sent to the tool.

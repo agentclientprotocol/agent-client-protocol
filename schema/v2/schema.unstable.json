@@ -809,6 +809,11 @@
             }
           ]
         },
+        "name": {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nProgrammatic name of the tool being invoked.\n\nThis field is optional and has patch semantics. Omission means no\nchange, `null` clears the name, and a string replaces it. For a tool\ncall ID the client has not seen before, omission or `null` means that no\ntool name is available.",
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
+        },
         "title": {
           "description": "Human-readable title describing what the tool is doing.",
           "type": ["string", "null"],

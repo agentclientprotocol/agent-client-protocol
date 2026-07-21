@@ -1,0 +1,187 @@
+---
+title: "Tool Call Name"
+---
+
+Author(s): [@benbrandt](https://github.com/benbrandt)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Add an optional `name` field to tool calls in ACP v1 and v2. The field carries
+the programmatic name of the invoked tool so Clients can show users which tool
+is being used, in addition to the human-readable description of what that
+invocation is doing.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+Tool calls currently provide a `title` and `kind`, but neither identifies the
+invoked tool:
+
+- `title` is human-readable UI copy for a particular invocation, such as
+  `Reading configuration file`.
+- `kind` is a coarse presentation category, such as `read` or `execute`, that
+  helps a Client choose an icon or other generic treatment.
+
+Many different tools can share the same kind, and titles may be localized or
+generated from the tool input. Clients therefore cannot reliably show whether
+an Agent used `read_file`, `grep`, `run_command`, or another tool. Inferring the
+tool from `title` or `rawInput` would be brittle and implementation-specific.
+
+This is particularly helpful in an eval context as well, where you want to track
+metrics of various tool uses.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+Add `name` to the existing tool-call shapes. It is the programmatic identifier
+by which the Agent or model addressed the tool. For example:
+
+```json
+{
+  "sessionUpdate": "tool_call",
+  "toolCallId": "call_001",
+  "name": "read_file",
+  "title": "Reading configuration file",
+  "kind": "read",
+  "status": "pending"
+}
+```
+
+The corresponding v2 report uses the same field on its upsert shape:
+
+```json
+{
+  "sessionUpdate": "tool_call_update",
+  "toolCallId": "call_001",
+  "name": "read_file",
+  "title": "Reading configuration file",
+  "kind": "read",
+  "status": "pending"
+}
+```
+
+`name` is distinct from the existing fields:
+
+- `toolCallId` identifies one invocation within a session.
+- `name` identifies the tool being invoked and can be reused by many calls.
+- `title` describes this invocation in human-readable UI copy.
+- `kind` groups the tool into a coarse presentation category.
+
+Tool names are opaque strings. ACP does not define a naming or namespacing
+scheme. An Agent reporting an MCP or function call should use the programmatic
+name by which it exposes that tool; if the Agent qualifies or rewrites names,
+it reports that resulting name. ACP assigns no behavioral or authorization
+semantics to the spelling. Clients **MAY** show it as a secondary label or in
+tool-call details while continuing to use `title` as the primary description.
+
+Agents **SHOULD** include `name` in the first report for a tool call when it is
+available, and **SHOULD NOT** change it later except to correct previously
+reported metadata.
+
+### Wire semantics
+
+The field is optional and nullable in every shape where it appears, but the
+effect of `null` follows each protocol version's existing update model:
+
+| Carrier             | Omitted                            | `null`                                                     | String value                       |
+| ------------------- | ---------------------------------- | ---------------------------------------------------------- | ---------------------------------- |
+| v1 `ToolCall`       | No name is provided                | Equivalent to omission                                     | Records the tool name              |
+| v1 `ToolCallUpdate` | Leaves the existing name unchanged | Equivalent to omission; leaves the existing name unchanged | Sets or replaces the existing name |
+| v2 `ToolCallUpdate` | Leaves the existing name unchanged | Explicitly clears the existing name                        | Sets or replaces the existing name |
+
+ACP v1 cannot explicitly clear a previously supplied tool name. For a new v2
+`toolCallId`, omission and `null` both result in a tool call with no name.
+
+Because v1 permission requests carry a `ToolCallUpdate`, and v2 tool-call
+permission subjects carry the v2 `ToolCallUpdate`, Agents can also include
+`name` when asking permission without adding another permission-specific
+field.
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+Users can see both what an invocation is doing and which tool is doing it. A
+Client might render `Reading configuration file` as the main title, `read_file`
+as a secondary label, and a read icon selected from `kind: "read"`.
+
+Agents no longer need to encode the programmatic tool name into the title or
+use an implementation-specific `_meta` key. Clients can expose tool identity
+consistently in detailed views, permission UI, logs, and debugging tools.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+1. Add optional `name` fields to v1 `ToolCall` and `ToolCallUpdateFields` behind
+   the `unstable_tool_call_name` Rust feature.
+2. Add an optional three-state `name` patch field to v2 `ToolCallUpdate` behind
+   the same feature.
+3. Include the field in v1/v2 conversion and document the unrepresentable v2
+   clear operation and the deliberately lossy bridge option.
+4. Regenerate the draft schemas and generated schema documentation.
+5. Update the hand-written draft tool-call documentation and examples.
+
+### Compatibility and conversion
+
+The proposal is additive. Peers that do not know about `name` continue to use
+`title`, `kind`, and the remaining tool-call fields. No capability is required;
+an Agent can omit `name` whenever it is unavailable or inappropriate to expose.
+
+Conversion preserves concrete names in both directions. An absent v1 name maps
+to an omitted v2 patch field. An omitted v2 field maps to an absent v1 update.
+
+A v2 `name: null` clear cannot be represented by v1, where `null` and omission
+both mean "leave unchanged" on an update. The strict stateless v2-to-v1
+conversion helper therefore reports this case as unrepresentable. A deliberately
+lossy bridge may omit the clear, leaving the previous v1 name in place.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Why use `name` instead of `toolName`?
+
+The field is already scoped to a tool-call object, so `toolName` would repeat
+that context. `name` also matches the terminology used by MCP tools and common
+function-calling APIs.
+
+### Why is there no capability?
+
+`name` is optional display metadata and does not change how a tool call is
+identified, executed, or authorized. Clients that do not recognize the field
+can ignore it without changing protocol behavior, and Agents can omit it when
+the name is unavailable or inappropriate to expose. A capability would only
+indicate whether a Client might display the hint; it would not affect the
+correctness of the interaction.
+
+### Why is this not part of `title`?
+
+`title` is user-facing copy about an invocation and may change as work
+progresses. `name` is the programmatic identity of the invoked tool. Keeping
+them separate lets Clients render either or both without parsing display text.
+
+### Why is this not part of `kind`?
+
+`kind` intentionally has a small set of presentation categories. Many tools
+can be `read`, `edit`, `execute`, or `other`; expanding `kind` into a registry
+of exact tool names would prevent Clients from using it as a stable UI hint.
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+**Put the name in `_meta`** - This works for coordinated implementations, but
+does not give interoperable Clients a standard field to display.
+
+**Derive the name from `title` or `rawInput`** - Those fields do not have a
+stable relationship to tool identity, so inference would be unreliable.
+
+**Use `toolName`** - More explicit in isolation, but redundant inside a tool
+call and inconsistent with MCP and function-call naming.
+
+## Revision history
+
+- 2026-07-21: Initial draft.

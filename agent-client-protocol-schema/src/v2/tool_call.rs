@@ -35,6 +35,21 @@ use crate::{IntoMaybeUndefined, IntoOption, MaybeUndefined, SkipListener};
 pub struct ToolCallUpdate {
     /// Unique identifier for this tool call within the session.
     pub tool_call_id: ToolCallId,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Programmatic name of the tool being invoked.
+    ///
+    /// This field is optional and has patch semantics. Omission means no
+    /// change, `null` clears the name, and a string replaces it. For a tool
+    /// call ID the client has not seen before, omission or `null` means that no
+    /// tool name is available.
+    #[cfg(feature = "unstable_tool_call_name")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
+    pub name: MaybeUndefined<String>,
     /// Human-readable title describing what the tool is doing.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
@@ -93,6 +108,8 @@ impl ToolCallUpdate {
     pub fn new(tool_call_id: impl Into<ToolCallId>) -> Self {
         Self {
             tool_call_id: tool_call_id.into(),
+            #[cfg(feature = "unstable_tool_call_name")]
+            name: MaybeUndefined::Undefined,
             title: MaybeUndefined::Undefined,
             kind: MaybeUndefined::Undefined,
             status: MaybeUndefined::Undefined,
@@ -102,6 +119,18 @@ impl ToolCallUpdate {
             raw_output: MaybeUndefined::Undefined,
             meta: MaybeUndefined::Undefined,
         }
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Programmatic name of the tool being invoked.
+    #[cfg(feature = "unstable_tool_call_name")]
+    #[must_use]
+    pub fn name(mut self, name: impl IntoMaybeUndefined<String>) -> Self {
+        self.name = name.into_maybe_undefined();
+        self
     }
 
     /// Human-readable title describing what the tool is doing.
@@ -172,6 +201,10 @@ impl ToolCallUpdate {
     /// render an explicitly cleared value.
     pub fn apply_update(&mut self, update: ToolCallUpdate) {
         debug_assert_eq!(self.tool_call_id, update.tool_call_id);
+        #[cfg(feature = "unstable_tool_call_name")]
+        if !update.name.is_undefined() {
+            self.name = update.name;
+        }
         if !update.title.is_undefined() {
             self.title = update.title;
         }
@@ -998,6 +1031,39 @@ mod tests {
         assert_eq!(deserialized.title, MaybeUndefined::Undefined);
         assert_eq!(deserialized.status, MaybeUndefined::Null);
         assert_eq!(deserialized.locations, MaybeUndefined::Value(Vec::new()));
+    }
+
+    #[cfg(feature = "unstable_tool_call_name")]
+    #[test]
+    fn tool_call_name_patch_distinguishes_omitted_null_and_value() {
+        let named = ToolCallUpdate::new("tc_1").name("read_file");
+        assert_eq!(
+            serde_json::to_value(named).unwrap(),
+            serde_json::json!({
+                "toolCallId": "tc_1",
+                "name": "read_file"
+            })
+        );
+
+        let omitted = ToolCallUpdate::new("tc_1");
+        assert_eq!(omitted.name, MaybeUndefined::Undefined);
+
+        let from_null: ToolCallUpdate = serde_json::from_value(serde_json::json!({
+            "toolCallId": "tc_1",
+            "name": null
+        }))
+        .unwrap();
+        assert_eq!(from_null.name, MaybeUndefined::Null);
+
+        let mut stored = ToolCallUpdate::new("tc_1").name("read_file");
+        stored.apply_update(ToolCallUpdate::new("tc_1"));
+        assert_eq!(stored.name, MaybeUndefined::Value("read_file".to_string()));
+
+        stored.apply_update(ToolCallUpdate::new("tc_1").name(None::<String>));
+        assert_eq!(stored.name, MaybeUndefined::Null);
+
+        stored.apply_update(ToolCallUpdate::new("tc_1").name("write_file"));
+        assert_eq!(stored.name, MaybeUndefined::Value("write_file".to_string()));
     }
 
     #[test]

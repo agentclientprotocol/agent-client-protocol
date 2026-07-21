@@ -3025,6 +3025,8 @@ impl TryToV1 for super::ToolCallUpdate {
     fn try_to_v1(self) -> Result<Self::Output> {
         let Self {
             tool_call_id,
+            #[cfg(feature = "unstable_tool_call_name")]
+            name,
             title,
             kind,
             status,
@@ -3037,6 +3039,8 @@ impl TryToV1 for super::ToolCallUpdate {
         Ok(crate::v1::ToolCallUpdate {
             tool_call_id: tool_call_id.try_to_v1()?,
             fields: crate::v1::ToolCallUpdateFields {
+                #[cfg(feature = "unstable_tool_call_name")]
+                name: maybe_undefined_value_into_v1_option("ToolCallUpdate.name", name)?,
                 kind: maybe_undefined_value_into_v1_option("ToolCallUpdate.kind", kind)?,
                 status: maybe_undefined_value_into_v1_option("ToolCallUpdate.status", status)?,
                 title: maybe_undefined_value_into_v1_option("ToolCallUpdate.title", title)?,
@@ -3066,6 +3070,8 @@ impl TryToV2 for crate::v1::ToolCall {
         let Self {
             tool_call_id,
             title,
+            #[cfg(feature = "unstable_tool_call_name")]
+            name,
             kind,
             status,
             content,
@@ -3076,6 +3082,8 @@ impl TryToV2 for crate::v1::ToolCall {
         } = self;
         Ok(super::ToolCallUpdate {
             tool_call_id: tool_call_id.try_to_v2()?,
+            #[cfg(feature = "unstable_tool_call_name")]
+            name: option_into_v2_maybe_undefined(name)?,
             title: crate::MaybeUndefined::Value(title.try_to_v2()?),
             kind: if matches!(kind, crate::v1::ToolKind::Other) {
                 crate::MaybeUndefined::Undefined
@@ -3109,6 +3117,8 @@ impl TryToV2 for crate::v1::ToolCallUpdate {
             kind,
             status,
             title,
+            #[cfg(feature = "unstable_tool_call_name")]
+            name,
             content,
             locations,
             raw_input,
@@ -3116,6 +3126,8 @@ impl TryToV2 for crate::v1::ToolCallUpdate {
         } = fields;
         Ok(super::ToolCallUpdate {
             tool_call_id: tool_call_id.try_to_v2()?,
+            #[cfg(feature = "unstable_tool_call_name")]
+            name: option_into_v2_maybe_undefined(name)?,
             kind: option_into_v2_maybe_undefined(kind)?,
             status: option_into_v2_maybe_undefined(status)?,
             title: option_into_v2_maybe_undefined(title)?,
@@ -10239,6 +10251,33 @@ mod tests {
 
         assert_v1_round_trip::<v1::ToolCallUpdate, v2::ToolCallUpdate>(update.clone());
         assert_json_eq_after_v1_to_v2::<v1::ToolCallUpdate, v2::ToolCallUpdate>(update);
+    }
+
+    #[cfg(feature = "unstable_tool_call_name")]
+    #[test]
+    fn tool_call_name_converts_between_v1_and_v2_without_losing_patch_semantics() {
+        let v1_tool_call = v1::ToolCall::new("tc", "Reading configuration").name("read_file");
+        let v2_tool_call: v2::ToolCallUpdate =
+            try_v1_to_v2(v1_tool_call).expect("v1 tool call -> v2 upsert");
+        assert_eq!(
+            v2_tool_call.name,
+            crate::MaybeUndefined::Value("read_file".to_string())
+        );
+
+        let v1_update =
+            v1::ToolCallUpdate::new("tc", v1::ToolCallUpdateFields::new().name("write_file"));
+        assert_v1_round_trip::<v1::ToolCallUpdate, v2::ToolCallUpdate>(v1_update.clone());
+        assert_json_eq_after_v1_to_v2::<v1::ToolCallUpdate, v2::ToolCallUpdate>(v1_update);
+
+        let unnamed_v1_update = v1::ToolCallUpdate::new("tc", v1::ToolCallUpdateFields::new());
+        let unnamed_v2_update: v2::ToolCallUpdate =
+            try_v1_to_v2(unnamed_v1_update).expect("v1 tool-call update -> v2 patch");
+        assert_eq!(unnamed_v2_update.name, crate::MaybeUndefined::Undefined);
+
+        assert_v2_to_v1_error(
+            v2::ToolCallUpdate::new("tc").name(None::<String>),
+            "v2 ToolCallUpdate.name with null value cannot be represented in v1",
+        );
     }
 
     #[test]

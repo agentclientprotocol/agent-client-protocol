@@ -445,6 +445,11 @@
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
+        "name": {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nUpdate the programmatic name of the tool being invoked.\n\nThis field is optional. Omitting it or sending `null` both mean that\nthe existing name is left unchanged.",
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
+        },
         "content": {
           "description": "Replace the content collection.",
           "type": ["array", "null"],
@@ -5331,6 +5336,11 @@
         "title": {
           "description": "Human-readable title describing what the tool is doing.",
           "type": "string"
+        },
+        "name": {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nProgrammatic name of the tool being invoked.\n\nThis field is optional. Omitting it or sending `null` both mean that no\ntool name is available.",
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
         },
         "kind": {
           "description": "The category of tool being invoked.\nHelps clients choose appropriate icons and UI treatment.",

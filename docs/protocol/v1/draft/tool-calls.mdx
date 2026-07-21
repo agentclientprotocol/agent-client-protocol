@@ -23,6 +23,7 @@ When the language model requests a tool invocation, the Agent **SHOULD** report 
       "sessionUpdate": "tool_call",
       "toolCallId": "call_001",
       "title": "Reading configuration file",
+      "name": "read_file",
       "kind": "read",
       "status": "pending"
     }
@@ -36,6 +37,13 @@ When the language model requests a tool invocation, the Agent **SHOULD** report 
 
 <ParamField path="title" type="string" required>
   A human-readable title describing what the tool is doing
+</ParamField>
+
+<ParamField path="name" type="string">
+  The programmatic name of the invoked tool, such as `read_file`. This
+  identifies which tool is being used; `title` describes this invocation for
+  users, while `kind` provides a coarse presentation category. If omitted or
+  `null` on the initial tool call, no name is provided.
 </ParamField>
 
 <ParamField path="kind" type="ToolKind">
@@ -104,6 +112,9 @@ Updates use the `session/update` notification with `tool_call_update`:
 ```
 
 All fields except `toolCallId` are optional in updates. Only the fields being changed need to be included.
+
+For `name`, a string sets or replaces the tool name. Omission and `null` both
+leave the existing name unchanged.
 
 ## Requesting Permission
 

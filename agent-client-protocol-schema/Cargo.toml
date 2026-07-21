@@ -31,6 +31,7 @@ unstable = [
     "unstable_plan_operations",
     "unstable_session_fork",
     "unstable_end_turn_token_usage",
+    "unstable_tool_call_name",
 ]
 # Protocol v2 is intentionally NOT part of the `unstable` umbrella.
 # It introduces a parallel `v2` module and (eventually) a different wire
@@ -44,6 +45,7 @@ unstable_nes = []
 unstable_plan_operations = []
 unstable_session_fork = []
 unstable_end_turn_token_usage = []
+unstable_tool_call_name = []
 
 # Emit `tracing::warn!` events when `VecSkipError` drops a malformed list
 # entry during deserialization. When disabled (the default), the inspector

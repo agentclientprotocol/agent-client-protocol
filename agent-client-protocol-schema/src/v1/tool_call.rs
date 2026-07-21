@@ -31,6 +31,19 @@ pub struct ToolCall {
     pub tool_call_id: ToolCallId,
     /// Human-readable title describing what the tool is doing.
     pub title: String,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Programmatic name of the tool being invoked.
+    ///
+    /// This field is optional. Omitting it or sending `null` both mean that no
+    /// tool name is available.
+    #[cfg(feature = "unstable_tool_call_name")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
+    pub name: Option<String>,
     /// The category of tool being invoked.
     /// Helps clients choose appropriate icons and UI treatment.
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -82,6 +95,8 @@ impl ToolCall {
         Self {
             tool_call_id: tool_call_id.into(),
             title: title.into(),
+            #[cfg(feature = "unstable_tool_call_name")]
+            name: None,
             kind: ToolKind::default(),
             status: ToolCallStatus::default(),
             content: Vec::default(),
@@ -90,6 +105,18 @@ impl ToolCall {
             raw_output: None,
             meta: None,
         }
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Programmatic name of the tool being invoked.
+    #[cfg(feature = "unstable_tool_call_name")]
+    #[must_use]
+    pub fn name(mut self, name: impl IntoOption<String>) -> Self {
+        self.name = name.into_option();
+        self
     }
 
     /// The category of tool being invoked.
@@ -152,6 +179,10 @@ impl ToolCall {
     pub fn update(&mut self, fields: ToolCallUpdateFields) {
         if let Some(title) = fields.title {
             self.title = title;
+        }
+        #[cfg(feature = "unstable_tool_call_name")]
+        if let Some(name) = fields.name {
+            self.name = Some(name);
         }
         if let Some(kind) = fields.kind {
             self.kind = kind;
@@ -253,6 +284,19 @@ pub struct ToolCallUpdateFields {
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub title: Option<String>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Update the programmatic name of the tool being invoked.
+    ///
+    /// This field is optional. Omitting it or sending `null` both mean that
+    /// the existing name is left unchanged.
+    #[cfg(feature = "unstable_tool_call_name")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[serde(default)]
+    pub name: Option<String>,
     /// Replace the content collection.
     #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
     #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
@@ -303,6 +347,18 @@ impl ToolCallUpdateFields {
         self
     }
 
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Update the programmatic name of the tool being invoked.
+    #[cfg(feature = "unstable_tool_call_name")]
+    #[must_use]
+    pub fn name(mut self, name: impl IntoOption<String>) -> Self {
+        self.name = name.into_option();
+        self
+    }
+
     /// Replace the content collection.
     #[must_use]
     pub fn content(mut self, content: impl IntoOption<Vec<ToolCallContent>>) -> Self {
@@ -345,6 +401,8 @@ impl TryFrom<ToolCallUpdate> for ToolCall {
                     kind,
                     status,
                     title,
+                    #[cfg(feature = "unstable_tool_call_name")]
+                    name,
                     content,
                     locations,
                     raw_input,
@@ -358,6 +416,8 @@ impl TryFrom<ToolCallUpdate> for ToolCall {
             title: title.ok_or_else(|| {
                 Error::invalid_params().data(serde_json::json!("title is required for a tool call"))
             })?,
+            #[cfg(feature = "unstable_tool_call_name")]
+            name,
             kind: kind.unwrap_or_default(),
             status: status.unwrap_or_default(),
             content: content.unwrap_or_default(),
@@ -374,6 +434,8 @@ impl From<ToolCall> for ToolCallUpdate {
         let ToolCall {
             tool_call_id,
             title,
+            #[cfg(feature = "unstable_tool_call_name")]
+            name,
             kind,
             status,
             content,
@@ -388,6 +450,8 @@ impl From<ToolCall> for ToolCallUpdate {
                 kind: Some(kind),
                 status: Some(status),
                 title: Some(title),
+                #[cfg(feature = "unstable_tool_call_name")]
+                name,
                 content: Some(content),
                 locations: Some(locations),
                 raw_input,
@@ -735,5 +799,68 @@ impl ToolCallLocation {
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
         self
+    }
+}
+
+#[cfg(all(test, feature = "unstable_tool_call_name"))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn tool_call_name_is_optional_and_null_is_equivalent_to_omission() {
+        let named = ToolCall::new("tc_1", "Reading configuration").name("read_file");
+        assert_eq!(
+            serde_json::to_value(named).unwrap(),
+            serde_json::json!({
+                "toolCallId": "tc_1",
+                "title": "Reading configuration",
+                "name": "read_file"
+            })
+        );
+
+        let unnamed = ToolCall::new("tc_1", "Reading configuration");
+        assert_eq!(unnamed.name, None);
+        assert_eq!(
+            serde_json::to_value(unnamed).unwrap(),
+            serde_json::json!({
+                "toolCallId": "tc_1",
+                "title": "Reading configuration"
+            })
+        );
+
+        let from_null: ToolCall = serde_json::from_value(serde_json::json!({
+            "toolCallId": "tc_1",
+            "title": "Reading configuration",
+            "name": null
+        }))
+        .unwrap();
+        assert_eq!(from_null.name, None);
+    }
+
+    #[test]
+    fn tool_call_name_update_replaces_a_name_but_cannot_clear_it() {
+        let mut stored = ToolCall::new("tc_1", "Reading configuration").name("read_file");
+
+        stored.update(ToolCallUpdateFields::new());
+        assert_eq!(stored.name.as_deref(), Some("read_file"));
+
+        let null_update: ToolCallUpdateFields =
+            serde_json::from_value(serde_json::json!({"name": null})).unwrap();
+        stored.update(null_update);
+        assert_eq!(stored.name.as_deref(), Some("read_file"));
+
+        stored.update(ToolCallUpdateFields::new().name("read_many_files"));
+        assert_eq!(stored.name.as_deref(), Some("read_many_files"));
+    }
+
+    #[test]
+    fn tool_call_name_survives_v1_upsert_conversion() {
+        let tool_call = ToolCall::new("tc_1", "Reading configuration").name("read_file");
+
+        let update = ToolCallUpdate::from(tool_call.clone());
+        assert_eq!(update.fields.name.as_deref(), Some("read_file"));
+
+        let rebuilt = ToolCall::try_from(update).unwrap();
+        assert_eq!(rebuilt, tool_call);
     }
 }
