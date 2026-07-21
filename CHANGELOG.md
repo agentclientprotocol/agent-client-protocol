@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.5.0...v1.6.0) - 2026-07-21
+
+### Added
+
+- *(unstable)* add tool call name ([#1752](https://github.com/agentclientprotocol/agent-client-protocol/pull/1752))
+- *(unstable-v2)* add cancelled variant to tool call and plan item ([#1750](https://github.com/agentclientprotocol/agent-client-protocol/pull/1750))
+
 ## [1.5.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.4.0...v1.5.0) - 2026-07-20
 
 ### Added

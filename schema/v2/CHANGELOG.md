@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0-alpha.2](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v2.0.0-alpha.1...schema-v2.0.0-alpha.2) - 2026-07-21
+
+### Added
+
+- *(unstable)* add tool call name ([#1752](https://github.com/agentclientprotocol/agent-client-protocol/pull/1752))
+- *(unstable-v2)* add cancelled variant to tool call and plan item ([#1750](https://github.com/agentclientprotocol/agent-client-protocol/pull/1750))
+
 ## [2.0.0-alpha.1](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v2.0.0-alpha.0...schema-v2.0.0-alpha.1) - 2026-07-20
 
 ### Added
