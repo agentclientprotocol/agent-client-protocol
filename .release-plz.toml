@@ -1,2 +1,32 @@
 [workspace]
 git_release_type = "auto"
+release_always = false
+
+[[package]]
+name = "agent-client-protocol-schema"
+changelog_path = "CHANGELOG.md"
+git_release_latest = false
+git_release_name = "Rust Crate v{{ version }}"
+git_tag_name = "v{{ version }}"
+
+[[package]]
+name = "agent-client-protocol-json-schema-v1"
+git_only = true
+git_release_name = "Schema v{{ version }}"
+git_tag_name = "schema-v{{ version }}"
+publish = false
+semver_check = false
+
+[[package]]
+name = "agent-client-protocol-json-schema-v2"
+git_only = true
+git_release_latest = false
+git_release_name = "Schema v{{ version }}"
+git_tag_name = "schema-v{{ version }}"
+publish = false
+semver_check = false
+
+[[package]]
+name = "schema-generator"
+publish = false
+release = false

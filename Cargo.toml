@@ -1,64 +1,31 @@
-[package]
-name = "agent-client-protocol-schema"
-authors = ["Zed <hi@zed.dev>"]
-version = "0.10.8"
-edition = "2024"
-license = "Apache-2.0"
-description = "A protocol for standardizing communication between code editors and AI coding agents"
-repository = "https://github.com/agentclientprotocol/agent-client-protocol"
-homepage = "https://github.com/agentclientprotocol/agent-client-protocol"
-documentation = "https://docs.rs/agent-client-protocol-schema"
-readme = "README.md"
-keywords = ["agent", "client", "protocol", "ai", "editor"]
-categories = ["development-tools", "api-bindings"]
-include = ["/src/**/*.rs", "/README.md", "/LICENSE", "/Cargo.toml"]
-
-[features]
-unstable = [
-    "unstable_auth_methods",
-    "unstable_cancel_request",
-    "unstable_session_fork",
-    "unstable_session_info_update",
-    "unstable_session_list",
-    "unstable_session_model",
-    "unstable_session_resume",
-    "unstable_session_stop",
-    "unstable_session_usage",
-    "unstable_message_id",
+[workspace]
+default-members = [
+    "agent-client-protocol-schema",
+    "schema/v1",
+    "schema/v2",
+    "schema-generator",
 ]
-unstable_auth_methods = []
-unstable_cancel_request = []
-unstable_session_fork = []
-unstable_session_info_update = []
-unstable_session_list = []
-unstable_session_model = []
-unstable_session_resume = []
-unstable_session_stop = []
-unstable_session_usage = []
-unstable_message_id = []
+members = [
+    "agent-client-protocol-schema",
+    "schema/v1",
+    "schema/v2",
+    "schema-generator",
+]
+resolver = "3"
 
-[[bin]]
-name = "generate"
-path = "src/bin/generate.rs"
+[workspace.dependencies]
+agent-client-protocol-schema = { path = "agent-client-protocol-schema", version = "1.5.0" }
 
-[dependencies]
-anyhow = "1"
-derive_more = { version = "2", features = ["from", "display"] }
-schemars = { version = "1" }
-serde = { version = "1", features = ["derive", "rc"] }
-serde_json = { version = "1", features = ["raw_value"] }
-strum = { version = "0.28", features = ["derive"] }
-
-[lints.rust]
+[workspace.lints.rust]
 future_incompatible = { level = "warn", priority = -1 }
 let-underscore = "warn"
 missing_debug_implementations = "warn"
-# missing_docs = "warn"
+missing_docs = "warn"
 nonstandard_style = { level = "warn", priority = -1 }
 rust_2018_idioms = { level = "warn", priority = -1 }
 unused = { level = "warn", priority = -1 }
 
-[lints.clippy]
+[workspace.lints.clippy]
 cargo = "warn"
 exhaustive_enums = "warn"
 exhaustive_structs = "warn"

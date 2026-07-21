@@ -1,0 +1,13 @@
+---
+title: Message IDs are stabilized
+sidebarTitle: Message IDs stabilized
+description: Announcement that optional Agent-generated message IDs are now part of the stable ACP v1 protocol.
+---
+
+**Published:** June 5, 2026
+
+The [Message ID RFD](/rfds/message-id) has moved to Completed and optional Agent-generated `messageId` fields are stabilized in ACP v1.
+
+Agents can attach opaque, unique IDs to streamed message chunks. Chunks with the same ID belong to the same message, while a changed ID marks a new message, giving Clients a reliable boundary beyond changes in chunk type.
+
+For the protocol documentation, see [Message IDs](/protocol/v1/prompt-turn#message-ids).

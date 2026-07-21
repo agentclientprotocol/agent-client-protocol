@@ -1,0 +1,190 @@
+---
+title: "v2 Terminal Output"
+---
+
+Author(s): [@benbrandt](https://github.com/benbrandt)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+ACP v2 should provide a standard way for Agents to report display-only terminal output. A tool call can reference an Agent-owned terminal by `terminalId`, while separate session updates describe that terminal, replace its stored output for replay, append live output bytes, and report its exit status.
+
+This is a presentation surface, not a Client execution API. It does not let the Client write input, resize, interrupt, kill, wait on, or release the Agent's process.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+ACP v1 terminal content refers to a terminal created and owned by the Client through `terminal/create`. That ownership model does not fit Agents that execute commands in their own sandbox and only need to report the resulting output.
+
+Several implementations therefore use the v1 terminal content shape with implementation-specific `_meta` fields for terminal creation, output, and exit. This has demonstrated demand for a rich terminal display, but it leaves capability negotiation, ownership, replay, byte handling, and update ordering outside the protocol.
+
+ACP v2 removes the Client-owned terminal execution surface. It still needs a distinct, standard model for byte-faithful command output that can be streamed live and reconstructed during session replay.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+### Ownership and identity
+
+The Agent owns every v2 display terminal and generates its `terminalId`. The ID is unique within a session, remains stable for the terminal's lifetime, and **MUST NOT** be reused for another terminal in that session.
+
+`terminalId` and `toolCallId` are separate domains. An Agent may choose the same underlying string for both, but Clients **MUST NOT** rely on that.
+
+### Tool-call terminal content
+
+Add a v2 `ToolCallContent` variant that references the terminal:
+
+```json
+{
+  "type": "terminal",
+  "terminalId": "term_001"
+}
+```
+
+The content item is only a display anchor. It does not create a Client-owned process or grant the Client any control over the Agent's process.
+
+The terminal reference and terminal session updates may arrive in either order. Clients should retain state for a first-seen `terminalId` so output is not lost while its tool-call content is being received or replayed.
+
+### Terminal state upserts
+
+Add a `terminal_update` session update:
+
+```json
+{
+  "sessionUpdate": "terminal_update",
+  "terminalId": "term_001",
+  "command": "cargo test",
+  "cwd": "/workspace/project",
+  "output": {
+    "data": "cnVubmluZyAxMjMgdGVzdHMNCg=="
+  },
+  "exitStatus": {
+    "exitCode": 0,
+    "signal": null
+  }
+}
+```
+
+`terminal_update` is an upsert keyed by its required `terminalId`. The first update for an unseen ID creates stored terminal state. Its other fields are patches:
+
+- An omitted field leaves its previous value unchanged.
+- `null` clears its previous value.
+- A concrete value replaces its previous value.
+- On a first-seen ID, omitted fields start unknown or empty.
+
+The patch fields are:
+
+- `command`: the human-readable command being run. Agents **SHOULD** include it on the first update when the terminal represents a command. It is descriptive and does not ask the Client to execute anything.
+- `cwd`: the command's working directory. Every supplied path **MUST** be absolute.
+- `output`: an authoritative replacement snapshot containing required `data`. `data` is RFC 4648 base64-encoded bytes and has JSON Schema `contentEncoding: "base64"`. A concrete snapshot is the complete byte sequence the Agent wants the Client to retain for the terminal at that point. It replaces all previously stored bytes, and Clients **MUST NOT** merge or splice bytes from the previous snapshot into it. Later chunks append to the replacement. Optional nullable `output._meta` is scoped to that snapshot; omission and `null` are equivalent and mean no snapshot metadata was provided.
+- `exitStatus`: a concrete object marks the terminal as exited. Its `exitCode`, `signal`, and `_meta` fields are optional and nullable; omission and `null` are equivalent and mean that value was not provided. Agents should use conventional platform signal names. POSIX examples include `SIGTERM`, `SIGKILL`, and `SIGINT`; other platforms may use platform-specific names. `exitStatus._meta` is scoped to that exit information. `exitStatus: null` clears a previously reported exit status.
+- The top-level `_meta` is terminal-scoped and follows the same omitted, `null`, and concrete-object patch semantics as the other update fields.
+
+The terminal's exit status is independent of its tool call's status. Agents should update both when both states change.
+
+For example, a process terminated by a POSIX termination signal can report:
+
+```json
+{
+  "exitStatus": {
+    "signal": "SIGTERM"
+  }
+}
+```
+
+### Live output chunks
+
+Add a `terminal_output_chunk` session update:
+
+```json
+{
+  "sessionUpdate": "terminal_output_chunk",
+  "terminalId": "term_001",
+  "data": "cGFzc2VkDQo="
+}
+```
+
+`terminalId` and `data` are required. `data` is one independently RFC 4648 base64-encoded byte chunk and has JSON Schema `contentEncoding: "base64"`. Clients decode each chunk separately and append the decoded bytes in received order for that `terminalId`; they **MUST NOT** concatenate the encoded strings and decode them as one value.
+
+Chunk boundaries have no text or terminal meaning. A chunk may split a UTF-8 code point or ANSI escape sequence, so terminal emulators and transcript decoders retain parser state between chunks. `_meta`, when present, is optional chunk-scoped metadata; omission and `null` both mean no chunk metadata was provided.
+
+JSON-RPC batch entries may be processed in any order. Agents therefore **MUST NOT** put more than one `terminal_update` or `terminal_output_chunk` for the same `terminalId` in one batch when their application order affects the result.
+
+This initial design does not add byte offsets or sequence numbers. Replacement snapshots provide the replay, correction, and resynchronization operation, while chunks provide the efficient live append operation.
+
+### Command permission subjects
+
+Add `type: "command"` to the v2 permission subject union:
+
+```json
+{
+  "title": "Run the test suite?",
+  "subject": {
+    "type": "command",
+    "command": "cargo test",
+    "cwd": "/workspace/project",
+    "toolCallId": "call_001",
+    "terminalId": "term_001"
+  }
+}
+```
+
+`command` and `cwd` are required, and `cwd` **MUST** be absolute. `toolCallId`, `terminalId`, and `_meta` are optional and nullable; omission and `null` are equivalent and mean the value was not provided. `toolCallId` and `terminalId` only associate the permission with displayed state, and either may be unavailable when permission is requested before execution begins.
+
+The command subject is a self-contained description of the proposed execution, not a `TerminalUpdate`. Reusing the update type would incorrectly give permission context patch semantics. A selected allow outcome authorizes the Agent to execute the command; it never asks the Client to execute it.
+
+## Shiny future
+
+> How will things play out once this feature exists?
+
+Agents can stream command output once in a byte-faithful format, and Clients can choose the presentation that fits their environment. Rich IDEs can render a terminal emulator, while simpler Clients remain interoperable with a safe transcript.
+
+Session replay reconstructs the same terminal display without replaying every historical chunk, and command permissions can show the exact command and working directory without hiding them in generic tool-call input.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+1. Add a v2 `TerminalId` and the `terminal` `ToolCallContent` variant.
+2. Add `terminal_update` and `terminal_output_chunk` to the v2 `SessionUpdate` union.
+3. Model terminal update fields with distinct omitted, `null`, and concrete states.
+4. Add optional `_meta` to every new object payload; keep `TerminalId` as a scalar string.
+5. Mark snapshot and chunk `data` as base64 bytes with JSON Schema `contentEncoding: "base64"`.
+6. Add the `command` permission subject with its required command and absolute working directory plus optional associations.
+7. Update v2 protocol documentation, migration guidance, generated schemas, and SDK tests.
+8. Keep v1 and all Client terminal execution methods unchanged.
+
+### Compatibility
+
+The identical-looking v1 and v2 terminal content shapes have different ownership and lifetime semantics. Generic conversion **MUST NOT** map them by wire shape alone:
+
+- A v1 terminal ID refers to a Client-created resource that the Agent can control through `terminal/*` methods.
+- A v2 terminal ID refers to an Agent-owned display stream with no Client control surface.
+
+Stateless v1/v2 conversion helpers should reject terminal content, v2 terminal session updates, and command permission subjects. A stateful v1-to-v2 bridge can only adapt a v1 terminal by implementing the v1 Client terminal lifecycle itself. A v2-to-v1 bridge may accumulate and sanitize terminal bytes into ordinary text content or use an implementation-specific extension, but it must not synthesize a v1 terminal resource it does not own.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Why use base64 instead of strings?
+
+PTY output is a byte stream. It may contain invalid UTF-8, and transport chunks may split a valid UTF-8 code point. Independently encoded byte chunks preserve the original stream without making JSON string boundaries semantically significant. The size overhead is acceptable for a correct baseline representation.
+
+### Why have both snapshots and chunks?
+
+Repeatedly replacing the full output buffer is inefficient for live output, while an append-only stream is insufficient for replay, correction, and resynchronization. The two operations have distinct, unambiguous semantics.
+
+### Why put `command` and `cwd` on the terminal update?
+
+They describe the terminal itself and are needed even when state arrives before its tool-call content or is replayed independently. Keeping terminal content as a small ID reference also avoids duplicating mutable state wherever the terminal is displayed.
+
+### Why is there no capability?
+
+Display-only terminal output has a small safe fallback: decode the bytes, sanitize control sequences, and render a transcript. A capability would only be necessary if the protocol required richer behavior such as terminal emulation or interactive control.
+
+## Revision history
+
+- 2026-07-14: Initial draft.

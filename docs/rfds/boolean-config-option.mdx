@@ -19,7 +19,8 @@ However, there is no native way to represent a simple boolean on/off toggle. To 
 
 - Add a `SessionConfigBoolean` struct with a `current_value: bool` field
 - Add a `Boolean(SessionConfigBoolean)` variant to the `SessionConfigKind` enum, discriminated by `"type": "boolean"`
-- Add a `SessionConfigOptionValue` enum (untagged: `String` | `Bool`) so that `SetSessionConfigOptionRequest.value` can accept both string values (for `select`) and boolean values (for `flag`)
+- Add a `SessionConfigOptionValue` internally-tagged enum so that `SetSessionConfigOptionRequest` can carry both string values (for `select`) and boolean values (for `boolean`) with an explicit `type` discriminator
+- Add a v1 `session.configOptions.boolean` client capability so Agents only send boolean config options to Clients that explicitly opt in
 - Provide convenience constructors and `From` impls for ergonomic usage
 - Update documentation and regenerate schema files
 
@@ -28,6 +29,34 @@ However, there is no native way to represent a simple boolean on/off toggle. To 
 Clients can natively render boolean config options as toggle switches or checkboxes, without any custom logic. Agents can expose options like "Brave Mode", "Produce Report", or "Read Only" in a standardized way that any ACP-compliant client understands out of the box.
 
 ## Implementation details and plan
+
+### Client capability
+
+In v1, Clients opt in by setting `session.configOptions.boolean` in `initialize`:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 0,
+  "method": "initialize",
+  "params": {
+    "protocolVersion": 1,
+    "clientCapabilities": {
+      "session": {
+        "configOptions": {
+          "boolean": {}
+        }
+      }
+    }
+  }
+}
+```
+
+Omitting `session`, `configOptions`, or `boolean` means the Client does not advertise support. `null` at any of those levels is equivalent to omission.
+
+Agents **MUST NOT** include `type: "boolean"` config options in v1 `configOptions` payloads unless the Client advertised `session.configOptions.boolean: {}`. This applies to `session/new`, `session/load`, `session/update`, and `session/set_config_option` responses. Agents that need to support older Clients should omit the boolean option or provide a `select` fallback.
+
+Protocol v2 does not add an equivalent capability field for this extension. v2 peers are boolean-aware by construction; compatibility layers that down-convert v2 client capabilities to v1 advertise `session.configOptions.boolean: {}` by default.
 
 ### Wire format: declaring a boolean option
 
@@ -65,7 +94,9 @@ In a `session/new` response (or any response containing `configOptions`):
 
 ### Wire format: setting a boolean option
 
-The `session/set_config_option` request uses a string value, consistent with `select` options:
+The `session/set_config_option` request carries a `type` discriminator alongside the `value`. The `type` field describes the _shape_ of the value, not the option kind.
+
+For boolean options, Clients send `type: "boolean"` with a boolean value:
 
 ```json
 {
@@ -75,7 +106,24 @@ The `session/set_config_option` request uses a string value, consistent with `se
   "params": {
     "sessionId": "sess_abc123",
     "configId": "brave_mode",
+    "type": "boolean",
     "value": true
+  }
+}
+```
+
+For select and other id-based options, Clients send `type: "id"` with a `SessionConfigValueId` string:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "session/set_config_option",
+  "params": {
+    "sessionId": "sess_abc123",
+    "configId": "mode",
+    "type": "id",
+    "value": "code"
   }
 }
 ```
@@ -108,30 +156,41 @@ The response returns the full set of config options with current values, as with
 }
 ```
 
-A working implementation is available at: https://github.com/fscarponi/agent-client-protocol/tree/fabrizio.scarponi/flag-config-option
-
 Key changes:
 
-1. `SessionConfigFlag` struct with `current_value: bool`
-2. `Flag` variant in `SessionConfigKind` (tagged via `"type": "flag"`)
-3. `SessionConfigOptionValue` untagged enum (`String` | `Bool`) replacing `SessionConfigValueId` in `SetSessionConfigOptionRequest.value`
-4. `From` impls ensure backward compatibility — existing code passing strings still compiles
-5. Wire-level backward compatible: existing JSON payloads with string values remain valid
+1. `SessionConfigBoolean` struct with `current_value: bool`
+2. `Boolean(SessionConfigBoolean)` variant in `SessionConfigKind` (tagged via `"type": "boolean"`)
+3. `SessionConfigOptionValue` enum using `#[serde(tag = "type")]` with an untagged `OtherSessionConfigOptionValue` fallback for future value shapes:
+   - `Id { value: SessionConfigValueId }` — matched when `type` is `"id"`
+   - `Boolean { value: bool }` — matched when `type` is `"boolean"`
+   - `Other(OtherSessionConfigOptionValue)` — preserves unrecognized typed value payloads
+4. `SessionConfigOptionValue` is flattened (`#[serde(flatten)]`) onto `SetSessionConfigOptionRequest`, producing top-level `type` and `value` fields on the wire
+5. The `value` field in `SetSessionConfigOptionRequest` is a `SessionConfigOptionValue`, flattened onto the request
+6. The v1 `ClientCapabilities.session.config_options.boolean` field path serializes as `session.configOptions.boolean`
+7. v2 requires a `type` field so future value shapes can be captured without ambiguity
 
 ### Client capabilities
 
-Per the existing protocol design, clients that receive a config option with an unrecognized `type` should ignore it. Since the agent is required to have a default value for every option, the agent can function correctly even if the client doesn't render or interact with the boolean option. No new client capability negotiation is needed.
+Clients that receive a config option with an unrecognized `type` should still ignore it. However, boolean config options also change the `session/set_config_option` request shape from the v1 string-only `value` convention to a boolean-valued payload. To avoid breaking Clients or SDKs that do not tolerate that shape, v1 Agents must treat boolean config options as capability-gated and only send them after the Client advertises `session.configOptions.boolean: {}`.
 
 ## Frequently asked questions
 
 ### What alternative approaches did you consider, and why did you settle on this one?
 
-We considered reusing the existing `select` type with a convention (e.g., options named "on"/"off"), but this would require clients to implement non-agnostic detection logic, which contradicts the goal of a standardized protocol. A dedicated `flag` type is cleaner and lets clients render the appropriate UI control without guessing.
+We considered reusing the existing `select` type with a convention (e.g., options named "on"/"off"), but this would require clients to implement non-agnostic detection logic, which contradicts the goal of a standardized protocol. A dedicated `boolean` type is cleaner and lets clients render the appropriate UI control without guessing.
 
 ### Is this a breaking change?
 
-On the wire/JSON level: no. `SessionConfigOptionValue` uses `#[serde(untagged)]`, so existing string payloads deserialize correctly. On the Rust API level: the type of `SetSessionConfigOptionRequest.value` changed, but `From` impls ensure source compatibility for users of the `new()` constructor.
+For v1 peers that do not advertise support, Agents must not send boolean config options, so the existing string-only config option behavior is preserved. v2 requires a `type` field on `session/set_config_option` so id values, boolean values, and future value shapes are distinguishable.
+
+For peers that opt in with `session.configOptions.boolean: {}`, boolean options introduce a new `type: "boolean"` setter shape with a boolean `value`.
+
+While no one would set a value of type boolean that doesn't support it, there is an issue with possible string deserialization causing the entire session/new or other response to fail deserialization. Most SDKs would process this gracefully, but if popular agents start using it, they could break existing clients.
 
 ## Revision history
 
+- 2026-07-06: Moved to Completed and stabilized boolean config options in the protocol artifacts.
+- 2026-06-30: Moved to Preview.
+- 2026-06-22: Added the v1 `session.configOptions.boolean` client capability gate so boolean config options are only sent to Clients that explicitly opt in, and made v2-to-v1 compatibility conversion advertise the capability by default
+- 2026-03-05: Updated to reflect final implementation — `flag` renamed to `boolean`, value type changed from untagged `String | Bool` enum to internally-tagged enum with `type` discriminator and untagged `ValueId` fallback, feature-gated behind `unstable_boolean_config`
 - 2026-02-24: Initial proposal

@@ -92,6 +92,8 @@ def _sanitize_svg(svg: str) -> str:
         svg,
         count=1,
     )
+    # Remove HTML/XML comments (they break MDX/JSX parsing)
+    svg = re.sub(r"<!--.*?-->", "", svg, flags=re.DOTALL)
     # Convert hyphenated attributes to camelCase for JSX
     for old, new in SVG_ATTR_REPLACEMENTS.items():
         svg = svg.replace(f"{old}=", f"{new}=")
@@ -167,13 +169,15 @@ def _render_agent_cards(agents: list[dict], icons: dict[str, str]) -> str:
         name = agent.get("name", agent_id)
         description = _escape_text(agent.get("description", ""))
         version = _escape_text(agent.get("version", "-"))
+        website = agent.get("website", "")
         repository = agent.get("repository", "")
+        href = website or repository
         icon_svg = icons.get(agent_id)
 
         lines.append("  <Card")
         lines.append(f'    title="{_escape_html(name)}"')
-        if repository:
-            lines.append(f'    href="{_escape_html(repository)}"')
+        if href:
+            lines.append(f'    href="{_escape_html(href)}"')
         if icon_svg:
             lines.append("    icon={")
             for line in icon_svg.splitlines():
@@ -183,9 +187,14 @@ def _render_agent_cards(agents: list[dict], icons: dict[str, str]) -> str:
         if description:
             lines.append(f"    {description}")
         version_text = version if version not in ("", "-") else "version unknown"
-        lines.append('    <p class="text-xs mt-3">')
-        lines.append(f"      <code>{_escape_text(version_text)}</code>")
-        lines.append("    </p>")
+        lines.append("")
+        if repository:
+            lines.append(
+                f'    **{_escape_text(version_text)}**,'
+                f' <a href="{_escape_html(repository)}"><Icon icon="github" /></a>'
+            )
+        else:
+            lines.append(f"    **{_escape_text(version_text)}**")
         lines.append("  </Card>")
 
     lines.append("</CardGroup>")

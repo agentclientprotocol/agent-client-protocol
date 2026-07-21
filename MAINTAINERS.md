@@ -2,7 +2,7 @@
 
 The current maintainers for ACP are:
 
-**Last updated:** February 19, 2026
+**Last updated:** June 1, 2026
 
 ## Lead Maintainers
 
@@ -13,11 +13,12 @@ The current maintainers for ACP are:
 
 ## Core Maintainers
 
-| Name          | GitHub                          |
-| ------------- | ------------------------------- |
-| Agus Zubiaga  | https://github.com/agu-z        |
-| Anna Zhdan    | https://github.com/anna239      |
-| Niko Matsakis | https://github.com/nikomatsakis |
+| Name             | GitHub                           |
+| ---------------- | -------------------------------- |
+| Agus Zubiaga     | https://github.com/agu-z         |
+| Anna Zhdan       | https://github.com/anna239       |
+| Niko Matsakis    | https://github.com/nikomatsakis  |
+| Vadim Briliantov | https://github.com/Ololoshechkin |
 
 ## SDK Maintainers
 
@@ -38,11 +39,13 @@ The current maintainers for ACP are:
 
 ### Python SDK
 
-| Name          | GitHub                       |
-| ------------- | ---------------------------- |
-| Chojan Shang  | https://github.com/PsiACE    |
-| Richard Chien | https://github.com/stdrc     |
-| Frost Ming    | https://github.com/frostming |
+| Name           | GitHub                       |
+| -------------- | ---------------------------- |
+| Chojan Shang   | https://github.com/PsiACE    |
+| Richard Chien  | https://github.com/stdrc     |
+| Frost Ming     | https://github.com/frostming |
+| Clément Drouin | https://github.com/Nemtecl   |
+| Michel Thomazo | https://github.com/michelTho |
 
 ### Rust SDK
 
@@ -67,7 +70,12 @@ The current maintainers for ACP are:
 
 [Working Groups and Interest Groups](https://agentclientprotocol.com/community/working-interest-groups) are not required to have maintainers (they can be managed by informal facilitators), but maintainers may be appointed on an as-needed basis.
 
-_No current working or interest groups._
+### Transports
+
+| Name         | GitHub                         |
+| ------------ | ------------------------------ |
+| Anna Zhdan   | https://github.com/anna239     |
+| Alex Hancock | https://github.com/alexhancock |
 
 ---
 

@@ -86,7 +86,7 @@ The update type mirrors `SessionInfo` but with all fields optional:
   sessionUpdate: "session_info_update",
   title?: string | null,           // Update or clear the title
   updatedAt?: string | null,        // ISO 8601 timestamp (usually agent sets this)
-  _meta?: object | null             // Custom metadata (merged with existing)
+  _meta?: object | null             // Custom metadata update signal
 }
 ```
 
@@ -220,7 +220,7 @@ Add to `SessionUpdate` oneOf:
 2. **Create documentation** in `/docs/protocol/session-metadata.mdx`:
    - Explain the notification mechanism
    - Provide examples of common patterns
-   - Document merge semantics for `_meta`
+   - Document omitted, `null`, and object semantics for `_meta`
    - Clarify relationship with `session/list`
 
 3. **Update existing docs**:
@@ -278,9 +278,9 @@ Add to `SessionUpdate` oneOf:
 
 **How do `_meta` updates work?**
 
-- **Merge semantics**: New `_meta` fields are merged with existing ones
-- To clear a specific field: `"_meta": { "fieldName": null }`
-- To clear all custom metadata: `"_meta": null`
+- Omitted `_meta` means no metadata update was supplied.
+- `"_meta": null` is an explicit clear signal.
+- `"_meta": { ... }` supplies a metadata object for clients and extensions to interpret.
 
 ### Security Considerations
 
@@ -319,7 +319,7 @@ A future RFD could add explicit request/response for this if needed.
 
 ### What if multiple updates are sent in quick succession?
 
-Clients should apply updates incrementally in order. Each notification represents a delta, not a full replacement (except for fields explicitly set to `null`).
+Clients should process updates in order and apply each field according to its field semantics.
 
 ### Should `updatedAt` be automatically set by the agent?
 
@@ -345,7 +345,7 @@ Clients SHOULD handle long titles gracefully (truncate in UI, show tooltip, etc.
 
 ### Can `_meta` have nested objects?
 
-Yes, `_meta` is an arbitrary object. Agents define its structure. The merge semantics apply recursively - nested objects are merged, not replaced entirely.
+Yes, `_meta` is an arbitrary object. Agents define its structure.
 
 ### What alternative approaches did you consider, and why did you settle on this one?
 

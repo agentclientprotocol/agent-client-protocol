@@ -14,7 +14,7 @@ Allow Agents to provide an arbitrary list of configuration selectors for a given
 
 > How do things work today and what problems does this cause? Why would we change things?
 
-Currently, we allow Agents to [specify a list of modes](https://agentclientprotocol.com/protocol/session-modes) they can run in. The state of the currently selected item is allowed to be modified by both the [Client](https://agentclientprotocol.com/protocol/session-modes#from-the-client) and the [Agent](https://agentclientprotocol.com/protocol/session-modes#from-the-agent).
+Currently, we allow Agents to [specify a list of modes](https://agentclientprotocol.com/protocol/v1/session-modes) they can run in. The state of the currently selected item is allowed to be modified by both the [Client](https://agentclientprotocol.com/protocol/v1/session-modes#from-the-client) and the [Agent](https://agentclientprotocol.com/protocol/v1/session-modes#from-the-agent).
 
 The obvious next selector was a [model selector](https://github.com/agentclientprotocol/agent-client-protocol/pull/182). However, when implementing this, it became clear that even for our current agents, it is not just as simple as "which model do you want?", but also which variant of a given model in terms of thinking parameters that might be better to express as yet another selector.
 
@@ -48,7 +48,7 @@ Since we are moving to a world in which there are multiple configuration options
 
 > Tell me more about your implementation. What is your detailed implementation plan?
 
-To start, we can implement this based on the [Session Modes](https://agentclientprotocol.com/protocol/session-modes) api.
+To start, we can implement this based on the [Session Modes](https://agentclientprotocol.com/protocol/v1/session-modes) api.
 
 Something like an `InitializeResponse` that looks like:
 
@@ -157,7 +157,7 @@ We use a list of objects for all of these, to ensure consistent ordering of both
 
 For grouping options, it needs to be explored whether or not grouped and ungrouped options can be interspersed, or if we need to restrict to one mode or the other (likely the latter).
 
-For updating the value from the client and agent, it would follow the same pattern as [session modes](https://agentclientprotocol.com/protocol/session-modes#from-the-client) but have an additional key.
+For updating the value from the client and agent, it would follow the same pattern as [session modes](https://agentclientprotocol.com/protocol/v1/session-modes#from-the-client) but have an additional key.
 
 ```json
 {

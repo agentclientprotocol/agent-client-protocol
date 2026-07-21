@@ -17,22 +17,45 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  build:
-    name: Build
+  msrv:
+    name: Minimum supported Rust version
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+
+      - name: Read MSRV from Cargo.toml
+        id: msrv
+        run: |
+          msrv="$(sed -n 's/^rust-version[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' agent-client-protocol-schema/Cargo.toml)"
+          test -n "$msrv"
+          echo "version=$msrv" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659
+        with:
+          toolchain: ${{ steps.msrv.outputs.version }}
+
+      - name: Check with MSRV
+        run: cargo check --all-targets --all-features --locked
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
 
       - name: Use Node.js
-        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: latest
           cache: "npm"
 
       - name: Setup Rust
-        uses: actions-rust-lang/setup-rust-toolchain@a0b538fa0b742a6aa35d6e2c169b4bd06d225a98
+        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659
         with:
           toolchain: nightly,stable
           components: rustfmt,clippy
@@ -44,15 +67,22 @@ jobs:
         run: npm run format:check
 
       - name: Check for typos
-        uses: crate-ci/typos@631208b7aac2daa8b707f55e7331f9112b0e062d
+        uses: crate-ci/typos@bee27e3a4fd1ea2111cf90ab89cd076c870fce14
         with:
           config: ./typos.toml
 
       - name: Lint
-        run: cargo clippy --all-features
+        run: |
+          cargo clippy
+          cargo clippy --all-targets --all-features
 
       - name: Build
         run: cargo build --all-targets --all-features
+
+      - name: Check docs.rs build
+        env:
+          RUSTDOCFLAGS: --cfg docsrs
+        run: cargo +nightly doc -p agent-client-protocol-schema --all-features --no-deps
 
       - name: Run tests
         run: cargo test --all-features
@@ -61,3 +91,70 @@ jobs:
         run: |
           npm run generate
           git diff --exit-code || (echo "Generated files are out of date. Run 'npm run generate' and commit the changes." && exit 1)
+
+  rust-changes:
+    name: Detect Rust changes
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.rust-changes.outputs.changed }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check for Rust file changes
+        id: rust-changes
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -Eq '(^|/)(Cargo\.toml|Cargo\.lock)$|\.rs$'; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  feature-powerset:
+    name: Feature powerset (${{ matrix.partition }})
+    needs: rust-changes
+    if: needs.rust-changes.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        partition: ["1/4", "2/4", "3/4", "4/4"]
+
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659
+        with:
+          toolchain: stable
+
+      - name: Install cargo-hack
+        uses: taiki-e/install-action@a6b2e2dcd845ddd7f509ce4f3ed3d922b80cc5d9
+        with:
+          tool: cargo-hack
+
+      - name: Check feature powerset
+        # `unstable` is an aggregate alias for the individual unstable_* features,
+        # so excluding it avoids duplicate combinations. Limit the powerset to
+        # feature pairs to keep CI practical; the regular CI all-features build
+        # still covers the all-on case.
+        run: cargo hack --locked check --feature-powerset --exclude-features unstable --no-dev-deps --depth 2 --partition ${{ matrix.partition }}
