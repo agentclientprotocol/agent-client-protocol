@@ -1,0 +1,280 @@
+---
+title: "Session Compaction"
+---
+
+Author(s): [@benbrandt](https://github.com/benbrandt)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Add ID-addressed `compaction_update` and `compaction_summary_chunk` session
+updates to ACP v1 and v2. Agents can report when context compaction starts,
+update that same timeline entity when it finishes, and optionally stream or
+materialize the user-displayable summary retained by the compaction.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+ACP can report current context-window utilization through `usage_update`, but
+it cannot report that an Agent is compacting its context or preserve the
+resulting boundary in session history.
+
+Agents currently have to omit compaction, use an implementation-specific
+update, or describe it through an ordinary agent message. An agent message is
+the wrong semantic shape.
+
+Agent runtimes also expose different amounts of compaction information. Some
+provide a stable lifecycle item and a user-displayable summary, while others
+expose only ordered start and completion signals, an encrypted result, or a
+summary through an optional hook.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+Add `compaction_update` and `compaction_summary_chunk` to `SessionUpdate` in
+ACP v1 and v2. The first `compaction_update` for an ID creates a compaction
+entity at that position in the session timeline. Later updates and summary
+chunks with the same ID update that entity in place.
+
+A live compaction starts with:
+
+```json
+{
+  "sessionUpdate": "compaction_update",
+  "compactionId": "cmp_001",
+  "status": "in_progress"
+}
+```
+
+If the summary is available incrementally, the Agent can append content while
+the compaction is in progress:
+
+```json
+{
+  "sessionUpdate": "compaction_summary_chunk",
+  "compactionId": "cmp_001",
+  "content": {
+    "type": "text",
+    "text": "## Retained context\n\n"
+  }
+}
+```
+
+The Agent finishes the same entity by reusing its ID. A non-streaming Agent can
+include the complete summary, while a streaming Agent can use this field as an
+authoritative final replacement:
+
+```json
+{
+  "sessionUpdate": "compaction_update",
+  "compactionId": "cmp_001",
+  "status": "completed",
+  "summary": [
+    {
+      "type": "text",
+      "text": "## Retained context\n\nThe user is updating the ACP schema..."
+    }
+  ]
+}
+```
+
+### Identity and lifecycle
+
+`compactionId` is an opaque, Agent-owned string. It is required,
+non-null, unique within the session, and never reused for another compaction.
+
+`status` is required and non-null on every update. Its initial values are:
+
+- `in_progress` - Compaction has started and has not finished.
+- `completed` - Compaction finished successfully.
+- `failed` - Compaction finished unsuccessfully.
+- `cancelled` - Compaction was cancelled before it finished.
+
+`CompactionStatus` is open in both protocol versions from its
+introduction and follows the
+[v2 enum-extension rules](/rfds/v2/enum-variant-extension). Values beginning
+with `_` are reserved for implementation-specific extensions, while other
+unknown values are reserved for future ACP statuses. Clients preserve an
+unknown string and present an opaque generic state without inferring lifecycle
+or control behavior from it.
+
+The normal transition is `in_progress` to one terminal status. An Agent may
+send a terminal status as the first update when replaying history or when its
+underlying runtime only exposes completed compactions. After emitting
+`in_progress`, the Agent must eventually put the entity into exactly one
+terminal status when that compaction ends, unless the session or connection
+ends before the update can be delivered.
+
+The first `compaction_update` fixes the entity's timeline position relative to
+other ID-addressed entities: it follows entities first seen earlier and
+precedes entities first seen later. An Agent must send that update before any
+`compaction_summary_chunk` for the ID. Later patches or chunks for any of those
+entities do not move them or split one entity around the compaction. A Client
+may render an in-progress indicator and replace it with a completed, failed, or
+cancelled presentation when the terminal update arrives.
+
+### Optional fields and patch semantics
+
+The update has three optional, nullable patch fields:
+
+- `summary` is an array of `ContentBlock` values containing the
+  unencrypted, user-displayable content produced or retained by a successful
+  compaction. It should faithfully represent the retained summary while
+  excluding internal prompt framing or instructions. Text blocks may contain
+  Markdown. It is not generic content such as `Compaction completed`.
+- `error` is a human-readable string describing why compaction failed.
+- `_meta` is reserved for extensibility and follows ACP's existing `_meta`
+  rules.
+
+For each patch field, omission leaves the stored value unchanged, `null`
+clears it, and a concrete value replaces it. On a first-seen ID, omission and
+`null` both start with no value. For `summary`, both `null` and `[]` clear the
+current content. A non-empty `summary` is only valid with `completed`, and
+`error` is only valid with `failed`.
+
+### Streaming summary content
+
+`compaction_summary_chunk` contains a required, non-null `compactionId` and one
+required, non-null `ContentBlock` in `content`. Its optional nullable `_meta`,
+when present, is scoped to that chunk; omission and `null` both mean that the
+Agent supplied no chunk metadata.
+
+Clients apply `compaction_update` and `compaction_summary_chunk` notifications
+in receive order for each `compactionId`. A chunk appends its `content` block to
+the current summary. A later `compaction_update` with a concrete `summary`
+array replaces all content accumulated from earlier updates and chunks;
+subsequent chunks append to that replacement. `summary: []` or `summary: null`
+clears the accumulated content.
+
+Agents may send summary chunks only after an `in_progress` update and before a
+terminal update. A `completed` update may omit `summary` to retain the content
+accumulated from chunks, or include the complete summary as an authoritative
+final replacement.
+
+Agents should omit `summary` when no unencrypted, user-displayable summary is
+available or when exposing it could reveal context that was not otherwise
+user-visible.
+
+### Version-specific capability
+
+For v1, add an optional `compaction` object to `ClientSessionCapabilities`:
+
+```json
+{
+  "clientCapabilities": {
+    "session": {
+      "compaction": {}
+    }
+  }
+}
+```
+
+The object appears at `clientCapabilities.session.compaction` in the v1
+`initialize` request. Omitting `session`, setting `session` to `null`, omitting
+`compaction`, or setting `compaction` to `null` all mean the Client does not
+advertise support. Supplying `{}` for `compaction` means the Client implements
+the ID, update, chunk, placement, and replay semantics in this RFD. Agents must
+only send `compaction_update` or `compaction_summary_chunk` to a v1 Client that
+advertises this capability.
+
+V2 does not add or require a capability.
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+Users can see context compaction begin and finish at the point where it
+occurred. Clients can keep one stable timeline row, optionally make the retained
+summary expandable, and accurately reconstruct historical compaction boundaries
+after reconnecting.
+
+Agents no longer need to turn an internal lifecycle event into conversational
+text. Implementations with rich provider data can expose the summary, while
+implementations with only lifecycle signals remain fully conformant.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+1. Add `compaction` to v1 `ClientSessionCapabilities` behind an unstable
+   feature; do not add a v2 capability.
+2. Add `CompactionId`, `CompactionStatus`, `CompactionUpdate`, and
+   `CompactionSummaryChunk` to both protocol versions.
+3. Add `compaction_update` and `compaction_summary_chunk` to both
+   `SessionUpdate` unions.
+4. Implement the same open status enum in both versions and preserve known and
+   unknown statuses through v1/v2 conversion.
+5. Document lifecycle, patch, placement, replay, and summary-safety semantics
+   in both protocol versions.
+6. Add serialization, v1 capability-gating, v2 unknown-update, transition,
+   update/chunk ordering, replay materialization, and conversion tests, then
+   update example Clients and Agents.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Why is the capability required in v1?
+
+Agents currently fall back to agent text because compaction can take a while
+and it is useful to tell the user what is happening. The capability lets an
+Agent send `compaction_update` when the Client supports it while preserving
+that fallback for older v1 Clients.
+
+### Does `summary` contain the Agent's complete replacement history?
+
+No. Some runtimes retain compaction output as multiple role-bearing model
+history items, potentially including developer instructions, retained user
+messages, or encrypted provider data. `summary` contains only the
+user-displayable projection of that result as content blocks, without internal
+framing or hidden instructions. It is optional because some runtimes expose no
+safe user-displayable projection.
+
+### Why is `summary` a `ContentBlock[]`?
+
+ACP Clients already process `ContentBlock` values in Agent output. Reusing that
+shape preserves multiple or non-text blocks when a runtime exposes them without
+creating another content representation. A text-only runtime sends one text
+block, and a runtime with no user-displayable summary omits the field.
+
+The array is still a summary artifact, not a sequence of ACP messages and not a
+lossless encoding of the Agent's internal replacement history.
+
+### Why can `summary` be streamed?
+
+Some runtimes produce summary text incrementally, and ACP v2 already composes
+append-only content chunks with authoritative replacement snapshots for
+messages and tool calls. Compaction follows the same pattern. Runtimes that
+only expose a completed result send one `compaction_update`, and replay always
+uses that materialized form.
+
+### Should the Client collapse earlier messages after compaction?
+
+That is a local presentation choice and is not implied by this update. The
+Client may visually mark or group the earlier portion of the transcript, but it
+must retain whatever history the surrounding session and replay contracts
+require.
+
+### How does this interact with `usage_update`?
+
+They report different facts. `compaction_update` records a lifecycle
+boundary and optional retained summary. `usage_update` reports current context
+window utilization and cost. An Agent will commonly send a lower usage value
+after compaction, but neither update substitutes for the other.
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+**Agent messages** - They are widely renderable, but they turn protocol
+activity into conversation content and cannot replace one stable entity in
+place.
+
+**Separate start and finish events** - Simple to emit, but force Clients to
+correlate events heuristically and replay transient progress instead of one
+materialized entity.
+
+## Revision history
+
+- 2026-07-22: Initial draft.
