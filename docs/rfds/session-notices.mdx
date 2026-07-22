@@ -1,0 +1,173 @@
+---
+title: "Session Notices"
+---
+
+Author(s): [@benbrandt](https://github.com/benbrandt)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Add a fire-and-forget `notice` session update to ACP v1 and v2 for advisory
+information that should be visible to the user without becoming conversation
+history or a durable protocol entity.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+Agents encounter user-relevant conditions that are not messages, tool calls, etc.
+Examples include an optional integration being unavailable, configuration
+falling back to defaults, or a model request being rerouted while work continues.
+
+ACP currently gives Agents no standard presentation event for these cases.
+They must either omit the information, use an implementation-specific update,
+or emit an agent message.
+
+These events also do not need Agent-managed identity or lifecycle. Whether a
+warning remains visible, disappears after a delay, or can be dismissed is a
+Client and user-interface decision.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+Add a `notice` variant to `SessionUpdate` in ACP v1 and v2:
+
+```json
+{
+  "sessionUpdate": "notice",
+  "severity": "warning",
+  "title": "MCP server unavailable",
+  "description": "Continuing without it."
+}
+```
+
+The fields are deliberately small:
+
+- `severity` is required and non-null. Its initial values are `info`,
+  `warning`, and `error`.
+- `title` is a required, non-null, non-empty plain-text string that can stand
+  alone in a compact presentation.
+- `description` is an optional, nullable plain-text string with additional
+  detail or guidance. Omission and `null` both mean that the Agent supplied no
+  description.
+- `_meta` is optional and nullable. Omission and `null` are equivalent and
+  mean that the Agent supplied no event metadata.
+
+`NoticeSeverity` is open in both protocol versions from its introduction and
+follows the [v2 enum-extension rules](/rfds/v2/enum-variant-extension). Values
+beginning with `_` are reserved for implementation-specific extensions, while
+other unknown values are reserved for future ACP severities. Clients preserve
+an unknown string and use a generic notice presentation without inferring
+salience, lifetime, or control behavior from it. Adding a severity does not
+require protocol negotiation.
+
+A notice has no ID, response, acknowledgement, update, or removal, and is never
+part of session replay. Repeated notices are independent events, even when their
+fields are identical.
+
+### Client presentation
+
+A Client that chooses to present notices makes them accessible to the user
+and controls their presentation. It may use a toast, banner, inline status region,
+notification center, or another surface. It may coalesce repeated notices and
+apply user preferences.
+
+Severity is a hint. For example, a Client may show `info` for a short period,
+leave `warning` visible until local dismissal, and present `error` more
+prominently. ACP does not prescribe those choices or a timeout.
+
+User dismissal is entirely local. The Client does not report dismissal to the
+Agent, and the Agent does not send a removal event. If the Agent needs to know
+whether the user saw, accepted, or acted on something, a notice is the wrong
+primitive.
+
+`error` severity still describes an advisory presentation event. It does not
+fail a JSON-RPC request, stop foreground work, change session state, or imply a
+prompt stop reason.
+
+### Delivery and history
+
+A notice is scoped to the session identified by the surrounding
+`session/update` notification.
+
+Notices are live events, not session history. After reconnecting, an Agent may
+emit a new notice if the condition is still currently relevant. That is a new
+live event rather than replay of the earlier notice, and the Client remains
+free to coalesce it.
+
+Agents must not rely on notice delivery for protocol correctness, required
+user action, authorization, task completion, or fatal-error reporting. Those
+cases belong in the relevant request, permission, elicitation, message, tool,
+or lifecycle primitive. The Agent must behave as though the notice may not have
+been received, understood, displayed, or seen by the user.
+
+### No client capability
+
+Neither protocol version adds a Client capability for notices. An Agent may
+send a notice without first negotiating support, and a Client that does not
+understand or present notices may ignore it.
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+Agents can surface operational information without pretending it is part of
+the conversation. Clients can integrate notices into their own visual language
+and accessibility model.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+1. Add `Notice` and `NoticeSeverity` types in both versions.
+2. Add the `notice` variant to both `SessionUpdate` unions without a Client
+   capability.
+3. Document the presentation, dismissal, severity, no-replay, and
+   non-conversational semantics in both protocol versions.
+4. Add serialization, unsupported-update, replay-exclusion, and v1/v2
+   conversion tests, then update example Clients and Agents.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Why is there no notice ID?
+
+The Agent never updates, resolves, or removes a notice. Identity would invite
+Clients to infer a lifecycle that the protocol does not define. Clients may use
+local identities for rendering, dismissal, or diagnostic retention.
+
+### Why does the notice not say whether it is dismissible or how long it lasts?
+
+Those are presentation choices that vary by Client surface, accessibility
+needs, severity policy, and user preferences. The Agent supplies severity;
+the Client decides whether and when the event disappears.
+
+### Should the Client report dismissal to the Agent?
+
+No. Dismissal only changes local presentation. If Agent behavior depends on a
+user decision, the Agent needs an explicit response-bearing primitive such as
+elicitation or permission, not a notice.
+
+### Why is this a `session/update` variant instead of a new `session/notice` method?
+
+`session/update` is already ACP's Agent-to-Client carrier for session-scoped
+activity. The known `notice` variant can define its live-only lifetime without
+adding another notification method. Clients that do not implement the variant
+can ignore it, while the no-replay rule prevents supporting Clients from
+treating it as durable history.
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+**Agent messages** - Universally visible, but they pollute conversation history
+and can be easily missed in the rest of the text.
+
+**Structured actions and acknowledgements** - Useful when user interaction is
+required, but those cases should use response-bearing primitives rather than
+turning notices into a second elicitation system.
+
+## Revision history
+
+- 2026-07-22: Initial draft.
