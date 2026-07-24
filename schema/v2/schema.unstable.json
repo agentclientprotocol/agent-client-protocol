@@ -593,7 +593,7 @@
                 },
                 {
                   "title": "CreateElicitationRequest",
-                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequests structured user input via a form or URL.",
+                  "description": "Requests structured user input via a form or URL.\n\nSee protocol docs: [Elicitation](https://agentclientprotocol.com/protocol/v2/draft/elicitation)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/CreateElicitationRequest"
@@ -2190,7 +2190,7 @@
       ]
     },
     "CreateElicitationRequest": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest from the agent to elicit structured user input.\n\nThe agent sends this to the client to request information from the user,\neither via a form or by directing them to a URL.\nElicitations are tied to a session (optionally a tool call) or a request.",
+      "description": "Request from the agent to elicit structured user input.\n\nThe agent sends this to the client to request information from the user,\neither via a form or by directing them to a URL.\nElicitations are tied to a session (optionally a tool call) or a request.",
       "type": "object",
       "properties": {
         "message": {
@@ -2198,7 +2198,7 @@
           "type": "string"
         },
         "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nOptional. Omitted and `null` are equivalent and mean no metadata.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -2300,7 +2300,7 @@
       "x-method": "elicitation/create"
     },
     "ElicitationSessionScope": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSession-scoped elicitation, optionally tied to a specific tool call.\n\nWhen `tool_call_id` is set, the elicitation is tied to a specific tool call.\nThis is useful when an agent receives an elicitation from an MCP server\nduring a tool call and needs to redirect it to the user.",
+      "description": "Session-scoped elicitation, optionally tied to a specific tool call.\n\nWhen `tool_call_id` is set, the elicitation is tied to a specific tool call.\nThis is useful when an agent receives an elicitation from an MCP server\nduring a tool call and needs to redirect it to the user.",
       "type": "object",
       "properties": {
         "sessionId": {
@@ -2312,7 +2312,7 @@
           ]
         },
         "toolCallId": {
-          "description": "Optional tool call within the session.",
+          "description": "Optional tool call within the session.\n\nOptional. Omitted and `null` are equivalent and mean the elicitation is scoped to the\nsession without a specific tool call.",
           "anyOf": [
             {
               "$ref": "#/$defs/ToolCallId"
@@ -2327,7 +2327,7 @@
       "required": ["sessionId"]
     },
     "ElicitationRequestScope": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest-scoped elicitation, tied to a specific JSON-RPC request outside of a session\n(e.g., during auth/configuration phases before any session is started).",
+      "description": "Request-scoped elicitation, tied to a specific JSON-RPC request outside of a session\n(e.g., during auth/configuration phases before any session is started).",
       "type": "object",
       "properties": {
         "requestId": {
@@ -2356,7 +2356,7 @@
           ]
         },
         "title": {
-          "description": "Optional title for the schema.",
+          "description": "Optional title for the schema.\n\nOptional. Omitted and `null` are equivalent and mean no title is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -2369,19 +2369,19 @@
           }
         },
         "required": {
-          "description": "List of required property names.",
+          "description": "List of required property names.\n\nOptional. Omitted and `null` are equivalent and mean no property names are required.",
           "type": ["array", "null"],
           "items": {
             "type": "string"
           }
         },
         "description": {
-          "description": "Optional description of what this schema represents.",
+          "description": "Optional description of what this schema represents.\n\nOptional. Omitted and `null` are equivalent and mean no schema description is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
         "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nOptional. Omitted and `null` are equivalent and mean no metadata.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -2593,12 +2593,12 @@
           "type": "string"
         },
         "description": {
-          "description": "Human-readable description.",
+          "description": "Human-readable description.\n\nOptional. Omitted and `null` are equivalent and mean no description is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
         "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nOptional. Omitted and `null` are equivalent and mean no metadata.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -2611,34 +2611,34 @@
       "type": "object",
       "properties": {
         "title": {
-          "description": "Optional title for the property.",
+          "description": "Optional title for the property.\n\nOptional. Omitted and `null` are equivalent and mean no title is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
         "description": {
-          "description": "Human-readable description.",
+          "description": "Human-readable description.\n\nOptional. Omitted and `null` are equivalent and mean no description is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
         "minLength": {
-          "description": "Minimum string length.",
+          "description": "Minimum string length.\n\nOptional. Omitted and `null` are equivalent and mean there is no minimum length constraint.",
           "type": ["integer", "null"],
           "format": "uint32",
           "minimum": 0
         },
         "maxLength": {
-          "description": "Maximum string length.",
+          "description": "Maximum string length.\n\nOptional. Omitted and `null` are equivalent and mean there is no maximum length constraint.",
           "type": ["integer", "null"],
           "format": "uint32",
           "minimum": 0
         },
         "pattern": {
-          "description": "Pattern the string must match.",
+          "description": "Pattern the string must match.\n\nOptional. Omitted and `null` are equivalent and mean there is no pattern constraint.",
           "type": ["string", "null"],
           "format": "regex"
         },
         "format": {
-          "description": "String format.",
+          "description": "String format.\n\nOptional. Omitted and `null` are equivalent and mean there is no format constraint.",
           "anyOf": [
             {
               "$ref": "#/$defs/StringFormat"
@@ -2649,12 +2649,12 @@
           ]
         },
         "default": {
-          "description": "Default value.",
+          "description": "Default value.\n\nOptional. Omitted and `null` are equivalent and mean no default value is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
         "enum": {
-          "description": "Enum values for untitled single-select enums.\nMust contain at least one value when present.",
+          "description": "Enum values for untitled single-select enums.\nMust contain at least one value when present.\nOptional. Omitted and `null` are equivalent and mean no untitled single-select choices are\ndeclared by `enum`.",
           "type": ["array", "null"],
           "items": {
             "type": "string"
@@ -2662,7 +2662,7 @@
           "minItems": 1
         },
         "oneOf": {
-          "description": "Titled enum options for titled single-select enums.\nMust contain at least one option when present.",
+          "description": "Titled enum options for titled single-select enums.\nMust contain at least one option when present.\nOptional. Omitted and `null` are equivalent and mean no titled single-select choices are\ndeclared by `oneOf`.",
           "type": ["array", "null"],
           "items": {
             "$ref": "#/$defs/EnumOption"
@@ -2670,7 +2670,7 @@
           "minItems": 1
         },
         "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nOptional. Omitted and `null` are equivalent and mean no metadata.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -2682,33 +2682,33 @@
       "type": "object",
       "properties": {
         "title": {
-          "description": "Optional title for the property.",
+          "description": "Optional title for the property.\n\nOptional. Omitted and `null` are equivalent and mean no title is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
         "description": {
-          "description": "Human-readable description.",
+          "description": "Human-readable description.\n\nOptional. Omitted and `null` are equivalent and mean no description is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
         "minimum": {
-          "description": "Minimum value (inclusive).",
+          "description": "Minimum value (inclusive).\n\nOptional. Omitted and `null` are equivalent and mean there is no inclusive lower bound.",
           "type": ["number", "null"],
           "format": "double"
         },
         "maximum": {
-          "description": "Maximum value (inclusive).",
+          "description": "Maximum value (inclusive).\n\nOptional. Omitted and `null` are equivalent and mean there is no inclusive upper bound.",
           "type": ["number", "null"],
           "format": "double"
         },
         "default": {
-          "description": "Default value.",
+          "description": "Default value.\n\nOptional. Omitted and `null` are equivalent and mean no default value is provided.",
           "type": ["number", "null"],
           "format": "double",
           "x-deserialize-default-on-error": true
         },
         "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nOptional. Omitted and `null` are equivalent and mean no metadata.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -2720,33 +2720,33 @@
       "type": "object",
       "properties": {
         "title": {
-          "description": "Optional title for the property.",
+          "description": "Optional title for the property.\n\nOptional. Omitted and `null` are equivalent and mean no title is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
         "description": {
-          "description": "Human-readable description.",
+          "description": "Human-readable description.\n\nOptional. Omitted and `null` are equivalent and mean no description is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
         "minimum": {
-          "description": "Minimum value (inclusive).",
+          "description": "Minimum value (inclusive).\n\nOptional. Omitted and `null` are equivalent and mean there is no inclusive lower bound.",
           "type": ["integer", "null"],
           "format": "int64"
         },
         "maximum": {
-          "description": "Maximum value (inclusive).",
+          "description": "Maximum value (inclusive).\n\nOptional. Omitted and `null` are equivalent and mean there is no inclusive upper bound.",
           "type": ["integer", "null"],
           "format": "int64"
         },
         "default": {
-          "description": "Default value.",
+          "description": "Default value.\n\nOptional. Omitted and `null` are equivalent and mean no default value is provided.",
           "type": ["integer", "null"],
           "format": "int64",
           "x-deserialize-default-on-error": true
         },
         "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nOptional. Omitted and `null` are equivalent and mean no metadata.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -2758,22 +2758,22 @@
       "type": "object",
       "properties": {
         "title": {
-          "description": "Optional title for the property.",
+          "description": "Optional title for the property.\n\nOptional. Omitted and `null` are equivalent and mean no title is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
         "description": {
-          "description": "Human-readable description.",
+          "description": "Human-readable description.\n\nOptional. Omitted and `null` are equivalent and mean no description is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
         "default": {
-          "description": "Default value.",
+          "description": "Default value.\n\nOptional. Omitted and `null` are equivalent and mean no default value is provided.",
           "type": ["boolean", "null"],
           "x-deserialize-default-on-error": true
         },
         "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nOptional. Omitted and `null` are equivalent and mean no metadata.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -2850,7 +2850,7 @@
           "minItems": 1
         },
         "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nOptional. Omitted and `null` are equivalent and mean no metadata.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -2871,7 +2871,7 @@
           "minItems": 1
         },
         "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nOptional. Omitted and `null` are equivalent and mean no metadata.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -2884,23 +2884,23 @@
       "type": "object",
       "properties": {
         "title": {
-          "description": "Optional title for the property.",
+          "description": "Optional title for the property.\n\nOptional. Omitted and `null` are equivalent and mean no title is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
         "description": {
-          "description": "Human-readable description.",
+          "description": "Human-readable description.\n\nOptional. Omitted and `null` are equivalent and mean no description is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
         "minItems": {
-          "description": "Minimum number of items to select.",
+          "description": "Minimum number of items to select.\n\nOptional. Omitted and `null` are equivalent and mean there is no minimum selection count.",
           "type": ["integer", "null"],
           "format": "uint64",
           "minimum": 0
         },
         "maxItems": {
-          "description": "Maximum number of items to select.",
+          "description": "Maximum number of items to select.\n\nOptional. Omitted and `null` are equivalent and mean there is no maximum selection count.",
           "type": ["integer", "null"],
           "format": "uint64",
           "minimum": 0
@@ -2914,7 +2914,7 @@
           ]
         },
         "default": {
-          "description": "Default selected values.",
+          "description": "Default selected values.\n\nOptional. Omitted and `null` are equivalent and mean no default selections are provided.",
           "type": ["array", "null"],
           "items": {
             "type": "string"
@@ -2923,7 +2923,7 @@
           "x-deserialize-skip-invalid-items": true
         },
         "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nOptional. Omitted and `null` are equivalent and mean no metadata.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -2932,7 +2932,7 @@
       "required": ["items"]
     },
     "ElicitationFormMode": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nForm-based elicitation mode where the client renders a form from the provided schema.",
+      "description": "Form-based elicitation mode where the client renders a form from the provided schema.",
       "type": "object",
       "properties": {
         "requestedSchema": {
@@ -2967,11 +2967,11 @@
       "required": ["requestedSchema"]
     },
     "ElicitationId": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nUnique identifier for an elicitation.",
+      "description": "Unique identifier for an elicitation.",
       "type": "string"
     },
     "ElicitationUrlMode": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nURL-based elicitation mode where the client directs the user to a URL.",
+      "description": "URL-based elicitation mode where the client directs the user to a URL.",
       "type": "object",
       "properties": {
         "elicitationId": {
@@ -5753,7 +5753,7 @@
                 },
                 {
                   "title": "CompleteElicitationNotification",
-                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNotification that a URL-based elicitation has completed.",
+                  "description": "Notification that a URL-based elicitation has completed.\n\nSee protocol docs: [Elicitation](https://agentclientprotocol.com/protocol/v2/draft/elicitation#url-completion)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/CompleteElicitationNotification"
@@ -7362,7 +7362,7 @@
       "required": ["used", "size"]
     },
     "CompleteElicitationNotification": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNotification sent by the agent when a URL-based elicitation is complete.",
+      "description": "Notification sent by the agent when a URL-based elicitation is complete.",
       "type": "object",
       "properties": {
         "elicitationId": {
@@ -7374,7 +7374,7 @@
           ]
         },
         "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nOptional. Omitted and `null` are equivalent and mean no metadata.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -7682,7 +7682,7 @@
           "x-deserialize-default-on-error": true
         },
         "elicitation": {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nElicitation capabilities supported by the client.\nDetermines which elicitation modes the agent may use.\n\nOptional. Omitted or `null` both mean the client does not advertise\nelicitation support.",
+          "description": "Elicitation capabilities supported by the client.\nDetermines which elicitation modes the agent may use.\n\nOptional. Omitted or `null` both mean the client does not advertise\nelicitation support.",
           "anyOf": [
             {
               "$ref": "#/$defs/ElicitationCapabilities"
@@ -7759,11 +7759,11 @@
       }
     },
     "ElicitationCapabilities": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nElicitation capabilities supported by the client.",
+      "description": "Elicitation capabilities supported by the client.",
       "type": "object",
       "properties": {
         "form": {
-          "description": "Whether the client supports form-based elicitation.\n\nOptional. Omitted or `null` both mean the client does not advertise support.\nSupplying `{}` means the client supports form-based elicitation.",
+          "description": "Whether the client supports form-based elicitation.\n\nOptional. Omitted and `null` are equivalent and mean form support is not advertised.\nSupplying `{}` explicitly advertises form support.",
           "anyOf": [
             {
               "$ref": "#/$defs/ElicitationFormCapabilities"
@@ -7787,7 +7787,7 @@
           "x-deserialize-default-on-error": true
         },
         "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nOptional. Omitted and `null` are equivalent and mean no metadata.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -7795,11 +7795,11 @@
       }
     },
     "ElicitationFormCapabilities": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nForm-based elicitation capabilities.\n\nSupplying `{}` means the client supports form-based elicitation.",
+      "description": "Form-based elicitation capabilities.\n\nSupplying `{}` means the client supports form-based elicitation.",
       "type": "object",
       "properties": {
         "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nOptional. Omitted and `null` are equivalent and mean no metadata.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -7807,11 +7807,11 @@
       }
     },
     "ElicitationUrlCapabilities": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nURL-based elicitation capabilities.\n\nSupplying `{}` means the client supports URL-based elicitation.",
+      "description": "URL-based elicitation capabilities.\n\nSupplying `{}` means the client supports URL-based elicitation.",
       "type": "object",
       "properties": {
         "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nOptional. Omitted and `null` are equivalent and mean no metadata.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -9394,11 +9394,11 @@
       "required": ["optionId"]
     },
     "CreateElicitationResponse": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nResponse from the client to an elicitation request.",
+      "description": "Response from the client to an elicitation request.",
       "type": "object",
       "properties": {
         "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nOptional. Omitted and `null` are equivalent and mean no metadata.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -9530,7 +9530,7 @@
       ]
     },
     "ElicitationAcceptAction": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nThe user accepted the elicitation and provided content.",
+      "description": "The user accepted the elicitation and provided content.",
       "type": "object",
       "properties": {
         "content": {

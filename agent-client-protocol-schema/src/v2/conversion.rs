@@ -891,146 +891,80 @@ impl_from_enum!(crate::v1::NesRejectReason => super::NesRejectReason {
     Replaced,
     Cancelled,
 });
-#[cfg(feature = "unstable_elicitation")]
 impl_from_tuple_newtype!(super::ElicitationId => crate::v1::ElicitationId);
-#[cfg(feature = "unstable_elicitation")]
 impl_from_tuple_newtype!(crate::v1::ElicitationId => super::ElicitationId);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v2_to_v1!(super::StringFormat => crate::v1::StringFormat);
-#[cfg(feature = "unstable_elicitation")]
 impl_from_enum!(crate::v1::StringFormat => super::StringFormat {
     Email,
     Uri,
     Date,
     DateTime,
 });
-#[cfg(feature = "unstable_elicitation")]
 impl_from_enum!(super::ElicitationSchemaType => crate::v1::ElicitationSchemaType {
     Object,
 });
-#[cfg(feature = "unstable_elicitation")]
 impl_from_enum!(crate::v1::ElicitationSchemaType => super::ElicitationSchemaType {
     Object,
 });
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v2_to_v1!(super::EnumOption => crate::v1::EnumOption);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v1_to_v2!(crate::v1::EnumOption => super::EnumOption);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v2_to_v1!(super::StringPropertySchema => crate::v1::StringPropertySchema);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v1_to_v2!(crate::v1::StringPropertySchema => super::StringPropertySchema);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v2_to_v1!(super::NumberPropertySchema => crate::v1::NumberPropertySchema);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v1_to_v2!(crate::v1::NumberPropertySchema => super::NumberPropertySchema);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v2_to_v1!(super::IntegerPropertySchema => crate::v1::IntegerPropertySchema);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v1_to_v2!(crate::v1::IntegerPropertySchema => super::IntegerPropertySchema);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v2_to_v1!(super::BooleanPropertySchema => crate::v1::BooleanPropertySchema);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v1_to_v2!(crate::v1::BooleanPropertySchema => super::BooleanPropertySchema);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v2_to_v1!(super::StringMultiSelectItems => crate::v1::StringMultiSelectItems);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v1_to_v2!(crate::v1::StringMultiSelectItems => super::StringMultiSelectItems);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v2_to_v1!(super::OtherMultiSelectItems => crate::v1::OtherMultiSelectItems);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v1_to_v2!(crate::v1::OtherMultiSelectItems => super::OtherMultiSelectItems);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v2_to_v1!(super::TitledMultiSelectItems => crate::v1::TitledMultiSelectItems);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v1_to_v2!(crate::v1::TitledMultiSelectItems => super::TitledMultiSelectItems);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v2_to_v1!(super::MultiSelectItems => crate::v1::MultiSelectItems);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v1_to_v2!(crate::v1::MultiSelectItems => super::MultiSelectItems);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v2_to_v1!(super::MultiSelectPropertySchema => crate::v1::MultiSelectPropertySchema);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v1_to_v2!(crate::v1::MultiSelectPropertySchema => super::MultiSelectPropertySchema);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v2_to_v1!(super::ElicitationPropertySchema => crate::v1::ElicitationPropertySchema);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v1_to_v2!(crate::v1::ElicitationPropertySchema => super::ElicitationPropertySchema);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v2_to_v1!(super::OtherElicitationPropertySchema => crate::v1::OtherElicitationPropertySchema);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v1_to_v2!(crate::v1::OtherElicitationPropertySchema => super::OtherElicitationPropertySchema);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v2_to_v1!(super::ElicitationSchema => crate::v1::ElicitationSchema);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v1_to_v2!(crate::v1::ElicitationSchema => super::ElicitationSchema);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v2_to_v1!(super::ElicitationCapabilities => crate::v1::ElicitationCapabilities);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v1_to_v2!(crate::v1::ElicitationCapabilities => super::ElicitationCapabilities);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v2_to_v1!(super::ElicitationFormCapabilities => crate::v1::ElicitationFormCapabilities);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v1_to_v2!(crate::v1::ElicitationFormCapabilities => super::ElicitationFormCapabilities);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v2_to_v1!(super::ElicitationUrlCapabilities => crate::v1::ElicitationUrlCapabilities);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v1_to_v2!(crate::v1::ElicitationUrlCapabilities => super::ElicitationUrlCapabilities);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v2_to_v1!(super::ElicitationScope => crate::v1::ElicitationScope);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v1_to_v2!(crate::v1::ElicitationScope => super::ElicitationScope);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v2_to_v1!(super::ElicitationSessionScope => crate::v1::ElicitationSessionScope);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v1_to_v2!(crate::v1::ElicitationSessionScope => super::ElicitationSessionScope);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v2_to_v1!(super::ElicitationRequestScope => crate::v1::ElicitationRequestScope);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v1_to_v2!(crate::v1::ElicitationRequestScope => super::ElicitationRequestScope);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v2_to_v1!(super::CreateElicitationRequest => crate::v1::CreateElicitationRequest);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v1_to_v2!(crate::v1::CreateElicitationRequest => super::CreateElicitationRequest);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v2_to_v1!(super::ElicitationMode => crate::v1::ElicitationMode);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v1_to_v2!(crate::v1::ElicitationMode => super::ElicitationMode);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v2_to_v1!(super::OtherElicitationMode => crate::v1::OtherElicitationMode);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v1_to_v2!(crate::v1::OtherElicitationMode => super::OtherElicitationMode);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v2_to_v1!(super::ElicitationFormMode => crate::v1::ElicitationFormMode);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v1_to_v2!(crate::v1::ElicitationFormMode => super::ElicitationFormMode);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v2_to_v1!(super::ElicitationUrlMode => crate::v1::ElicitationUrlMode);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v1_to_v2!(crate::v1::ElicitationUrlMode => super::ElicitationUrlMode);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v2_to_v1!(super::CreateElicitationResponse => crate::v1::CreateElicitationResponse);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v1_to_v2!(crate::v1::CreateElicitationResponse => super::CreateElicitationResponse);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v2_to_v1!(super::ElicitationAction => crate::v1::ElicitationAction);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v1_to_v2!(crate::v1::ElicitationAction => super::ElicitationAction);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v2_to_v1!(super::OtherElicitationAction => crate::v1::OtherElicitationAction);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v1_to_v2!(crate::v1::OtherElicitationAction => super::OtherElicitationAction);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v2_to_v1!(super::ElicitationAcceptAction => crate::v1::ElicitationAcceptAction);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v1_to_v2!(crate::v1::ElicitationAcceptAction => super::ElicitationAcceptAction);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v2_to_v1!(super::ElicitationContentValue => crate::v1::ElicitationContentValue);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v1_to_v2!(crate::v1::ElicitationContentValue => super::ElicitationContentValue);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v2_to_v1!(super::CompleteElicitationNotification => crate::v1::CompleteElicitationNotification);
-#[cfg(feature = "unstable_elicitation")]
 impl_try_from_v1_to_v2!(crate::v1::CompleteElicitationNotification => super::CompleteElicitationNotification);
 impl_try_from_v2_to_v1!(super::ContentBlock => crate::v1::ContentBlock);
 impl_try_from_v1_to_v2!(crate::v1::ContentBlock => super::ContentBlock);
@@ -2674,7 +2608,6 @@ impl TryToV1 for super::ClientCapabilities {
         let Self {
             #[cfg(feature = "unstable_auth_methods")]
             auth,
-            #[cfg(feature = "unstable_elicitation")]
             elicitation,
             #[cfg(feature = "unstable_nes")]
             nes,
@@ -2698,7 +2631,6 @@ impl TryToV1 for super::ClientCapabilities {
                 .map(TryToV1::try_to_v1)
                 .transpose()?
                 .unwrap_or_default(),
-            #[cfg(feature = "unstable_elicitation")]
             elicitation: elicitation.try_to_v1()?,
             #[cfg(feature = "unstable_nes")]
             nes: nes.try_to_v1()?,
@@ -2721,7 +2653,6 @@ impl TryToV2 for crate::v1::ClientCapabilities {
             plan,
             #[cfg(feature = "unstable_auth_methods")]
             auth,
-            #[cfg(feature = "unstable_elicitation")]
             elicitation,
             #[cfg(feature = "unstable_nes")]
             nes,
@@ -2744,7 +2675,6 @@ impl TryToV2 for crate::v1::ClientCapabilities {
         Ok(super::ClientCapabilities {
             #[cfg(feature = "unstable_auth_methods")]
             auth: v1_client_auth_capabilities_into_v2_option(auth)?,
-            #[cfg(feature = "unstable_elicitation")]
             elicitation: elicitation.try_to_v2()?,
             #[cfg(feature = "unstable_nes")]
             nes: nes.try_to_v2()?,
@@ -7869,7 +7799,6 @@ impl TryToV2 for crate::v1::NesRejectReason {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV1 for super::ElicitationId {
     type Output = crate::v1::ElicitationId;
 
@@ -7878,7 +7807,6 @@ impl TryToV1 for super::ElicitationId {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV2 for crate::v1::ElicitationId {
     type Output = super::ElicitationId;
 
@@ -7887,7 +7815,6 @@ impl TryToV2 for crate::v1::ElicitationId {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV1 for super::StringFormat {
     type Output = crate::v1::StringFormat;
 
@@ -7902,7 +7829,6 @@ impl TryToV1 for super::StringFormat {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV2 for crate::v1::StringFormat {
     type Output = super::StringFormat;
 
@@ -7916,7 +7842,6 @@ impl TryToV2 for crate::v1::StringFormat {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV1 for super::ElicitationSchemaType {
     type Output = crate::v1::ElicitationSchemaType;
 
@@ -7927,7 +7852,6 @@ impl TryToV1 for super::ElicitationSchemaType {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV2 for crate::v1::ElicitationSchemaType {
     type Output = super::ElicitationSchemaType;
 
@@ -7938,7 +7862,6 @@ impl TryToV2 for crate::v1::ElicitationSchemaType {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV1 for super::EnumOption {
     type Output = crate::v1::EnumOption;
 
@@ -7958,7 +7881,6 @@ impl TryToV1 for super::EnumOption {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV2 for crate::v1::EnumOption {
     type Output = super::EnumOption;
 
@@ -7978,7 +7900,6 @@ impl TryToV2 for crate::v1::EnumOption {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV1 for super::StringPropertySchema {
     type Output = crate::v1::StringPropertySchema;
 
@@ -8010,7 +7931,6 @@ impl TryToV1 for super::StringPropertySchema {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV2 for crate::v1::StringPropertySchema {
     type Output = super::StringPropertySchema;
 
@@ -8042,7 +7962,6 @@ impl TryToV2 for crate::v1::StringPropertySchema {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV1 for super::NumberPropertySchema {
     type Output = crate::v1::NumberPropertySchema;
 
@@ -8066,7 +7985,6 @@ impl TryToV1 for super::NumberPropertySchema {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV2 for crate::v1::NumberPropertySchema {
     type Output = super::NumberPropertySchema;
 
@@ -8090,7 +8008,6 @@ impl TryToV2 for crate::v1::NumberPropertySchema {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV1 for super::IntegerPropertySchema {
     type Output = crate::v1::IntegerPropertySchema;
 
@@ -8114,7 +8031,6 @@ impl TryToV1 for super::IntegerPropertySchema {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV2 for crate::v1::IntegerPropertySchema {
     type Output = super::IntegerPropertySchema;
 
@@ -8138,7 +8054,6 @@ impl TryToV2 for crate::v1::IntegerPropertySchema {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV1 for super::BooleanPropertySchema {
     type Output = crate::v1::BooleanPropertySchema;
 
@@ -8158,7 +8073,6 @@ impl TryToV1 for super::BooleanPropertySchema {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV2 for crate::v1::BooleanPropertySchema {
     type Output = super::BooleanPropertySchema;
 
@@ -8178,7 +8092,6 @@ impl TryToV2 for crate::v1::BooleanPropertySchema {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV1 for super::StringMultiSelectItems {
     type Output = crate::v1::StringMultiSelectItems;
 
@@ -8191,7 +8104,6 @@ impl TryToV1 for super::StringMultiSelectItems {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV2 for crate::v1::StringMultiSelectItems {
     type Output = super::StringMultiSelectItems;
 
@@ -8204,7 +8116,6 @@ impl TryToV2 for crate::v1::StringMultiSelectItems {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV1 for super::OtherMultiSelectItems {
     type Output = crate::v1::OtherMultiSelectItems;
 
@@ -8217,7 +8128,6 @@ impl TryToV1 for super::OtherMultiSelectItems {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV2 for crate::v1::OtherMultiSelectItems {
     type Output = super::OtherMultiSelectItems;
 
@@ -8230,7 +8140,6 @@ impl TryToV2 for crate::v1::OtherMultiSelectItems {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV1 for super::TitledMultiSelectItems {
     type Output = crate::v1::TitledMultiSelectItems;
 
@@ -8243,7 +8152,6 @@ impl TryToV1 for super::TitledMultiSelectItems {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV2 for crate::v1::TitledMultiSelectItems {
     type Output = super::TitledMultiSelectItems;
 
@@ -8256,7 +8164,6 @@ impl TryToV2 for crate::v1::TitledMultiSelectItems {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV1 for super::MultiSelectItems {
     type Output = crate::v1::MultiSelectItems;
 
@@ -8269,7 +8176,6 @@ impl TryToV1 for super::MultiSelectItems {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV2 for crate::v1::MultiSelectItems {
     type Output = super::MultiSelectItems;
 
@@ -8282,7 +8188,6 @@ impl TryToV2 for crate::v1::MultiSelectItems {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV1 for super::MultiSelectPropertySchema {
     type Output = crate::v1::MultiSelectPropertySchema;
 
@@ -8308,7 +8213,6 @@ impl TryToV1 for super::MultiSelectPropertySchema {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV2 for crate::v1::MultiSelectPropertySchema {
     type Output = super::MultiSelectPropertySchema;
 
@@ -8334,7 +8238,6 @@ impl TryToV2 for crate::v1::MultiSelectPropertySchema {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV1 for super::ElicitationPropertySchema {
     type Output = crate::v1::ElicitationPropertySchema;
 
@@ -8354,7 +8257,6 @@ impl TryToV1 for super::ElicitationPropertySchema {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV2 for crate::v1::ElicitationPropertySchema {
     type Output = super::ElicitationPropertySchema;
 
@@ -8370,7 +8272,6 @@ impl TryToV2 for crate::v1::ElicitationPropertySchema {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV1 for super::OtherElicitationPropertySchema {
     type Output = crate::v1::OtherElicitationPropertySchema;
 
@@ -8383,7 +8284,6 @@ impl TryToV1 for super::OtherElicitationPropertySchema {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV2 for crate::v1::OtherElicitationPropertySchema {
     type Output = super::OtherElicitationPropertySchema;
 
@@ -8396,7 +8296,6 @@ impl TryToV2 for crate::v1::OtherElicitationPropertySchema {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV1 for super::ElicitationSchema {
     type Output = crate::v1::ElicitationSchema;
 
@@ -8420,7 +8319,6 @@ impl TryToV1 for super::ElicitationSchema {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV2 for crate::v1::ElicitationSchema {
     type Output = super::ElicitationSchema;
 
@@ -8444,7 +8342,6 @@ impl TryToV2 for crate::v1::ElicitationSchema {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV1 for super::ElicitationCapabilities {
     type Output = crate::v1::ElicitationCapabilities;
 
@@ -8458,7 +8355,6 @@ impl TryToV1 for super::ElicitationCapabilities {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV2 for crate::v1::ElicitationCapabilities {
     type Output = super::ElicitationCapabilities;
 
@@ -8472,7 +8368,6 @@ impl TryToV2 for crate::v1::ElicitationCapabilities {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV1 for super::ElicitationFormCapabilities {
     type Output = crate::v1::ElicitationFormCapabilities;
 
@@ -8484,7 +8379,6 @@ impl TryToV1 for super::ElicitationFormCapabilities {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV2 for crate::v1::ElicitationFormCapabilities {
     type Output = super::ElicitationFormCapabilities;
 
@@ -8496,7 +8390,6 @@ impl TryToV2 for crate::v1::ElicitationFormCapabilities {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV1 for super::ElicitationUrlCapabilities {
     type Output = crate::v1::ElicitationUrlCapabilities;
 
@@ -8508,7 +8401,6 @@ impl TryToV1 for super::ElicitationUrlCapabilities {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV2 for crate::v1::ElicitationUrlCapabilities {
     type Output = super::ElicitationUrlCapabilities;
 
@@ -8520,7 +8412,6 @@ impl TryToV2 for crate::v1::ElicitationUrlCapabilities {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV1 for super::ElicitationScope {
     type Output = crate::v1::ElicitationScope;
 
@@ -8532,7 +8423,6 @@ impl TryToV1 for super::ElicitationScope {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV2 for crate::v1::ElicitationScope {
     type Output = super::ElicitationScope;
 
@@ -8544,7 +8434,6 @@ impl TryToV2 for crate::v1::ElicitationScope {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV1 for super::ElicitationSessionScope {
     type Output = crate::v1::ElicitationSessionScope;
 
@@ -8560,7 +8449,6 @@ impl TryToV1 for super::ElicitationSessionScope {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV2 for crate::v1::ElicitationSessionScope {
     type Output = super::ElicitationSessionScope;
 
@@ -8576,7 +8464,6 @@ impl TryToV2 for crate::v1::ElicitationSessionScope {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV1 for super::ElicitationRequestScope {
     type Output = crate::v1::ElicitationRequestScope;
 
@@ -8588,7 +8475,6 @@ impl TryToV1 for super::ElicitationRequestScope {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV2 for crate::v1::ElicitationRequestScope {
     type Output = super::ElicitationRequestScope;
 
@@ -8600,7 +8486,6 @@ impl TryToV2 for crate::v1::ElicitationRequestScope {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV1 for super::CreateElicitationRequest {
     type Output = crate::v1::CreateElicitationRequest;
 
@@ -8618,7 +8503,6 @@ impl TryToV1 for super::CreateElicitationRequest {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV2 for crate::v1::CreateElicitationRequest {
     type Output = super::CreateElicitationRequest;
 
@@ -8636,7 +8520,6 @@ impl TryToV2 for crate::v1::CreateElicitationRequest {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV1 for super::ElicitationMode {
     type Output = crate::v1::ElicitationMode;
 
@@ -8649,7 +8532,6 @@ impl TryToV1 for super::ElicitationMode {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV2 for crate::v1::ElicitationMode {
     type Output = super::ElicitationMode;
 
@@ -8662,7 +8544,6 @@ impl TryToV2 for crate::v1::ElicitationMode {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV1 for super::OtherElicitationMode {
     type Output = crate::v1::OtherElicitationMode;
 
@@ -8680,7 +8561,6 @@ impl TryToV1 for super::OtherElicitationMode {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV2 for crate::v1::OtherElicitationMode {
     type Output = super::OtherElicitationMode;
 
@@ -8698,7 +8578,6 @@ impl TryToV2 for crate::v1::OtherElicitationMode {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV1 for super::ElicitationFormMode {
     type Output = crate::v1::ElicitationFormMode;
 
@@ -8714,7 +8593,6 @@ impl TryToV1 for super::ElicitationFormMode {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV2 for crate::v1::ElicitationFormMode {
     type Output = super::ElicitationFormMode;
 
@@ -8730,7 +8608,6 @@ impl TryToV2 for crate::v1::ElicitationFormMode {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV1 for super::ElicitationUrlMode {
     type Output = crate::v1::ElicitationUrlMode;
 
@@ -8748,7 +8625,6 @@ impl TryToV1 for super::ElicitationUrlMode {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV2 for crate::v1::ElicitationUrlMode {
     type Output = super::ElicitationUrlMode;
 
@@ -8766,7 +8642,6 @@ impl TryToV2 for crate::v1::ElicitationUrlMode {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV1 for super::CreateElicitationResponse {
     type Output = crate::v1::CreateElicitationResponse;
 
@@ -8779,7 +8654,6 @@ impl TryToV1 for super::CreateElicitationResponse {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV2 for crate::v1::CreateElicitationResponse {
     type Output = super::CreateElicitationResponse;
 
@@ -8792,7 +8666,6 @@ impl TryToV2 for crate::v1::CreateElicitationResponse {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV1 for super::ElicitationAction {
     type Output = crate::v1::ElicitationAction;
 
@@ -8806,7 +8679,6 @@ impl TryToV1 for super::ElicitationAction {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV2 for crate::v1::ElicitationAction {
     type Output = super::ElicitationAction;
 
@@ -8820,7 +8692,6 @@ impl TryToV2 for crate::v1::ElicitationAction {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV1 for super::OtherElicitationAction {
     type Output = crate::v1::OtherElicitationAction;
 
@@ -8833,7 +8704,6 @@ impl TryToV1 for super::OtherElicitationAction {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV2 for crate::v1::OtherElicitationAction {
     type Output = super::OtherElicitationAction;
 
@@ -8846,7 +8716,6 @@ impl TryToV2 for crate::v1::OtherElicitationAction {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV1 for super::ElicitationAcceptAction {
     type Output = crate::v1::ElicitationAcceptAction;
 
@@ -8858,7 +8727,6 @@ impl TryToV1 for super::ElicitationAcceptAction {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV2 for crate::v1::ElicitationAcceptAction {
     type Output = super::ElicitationAcceptAction;
 
@@ -8870,7 +8738,6 @@ impl TryToV2 for crate::v1::ElicitationAcceptAction {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV1 for super::ElicitationContentValue {
     type Output = crate::v1::ElicitationContentValue;
 
@@ -8887,7 +8754,6 @@ impl TryToV1 for super::ElicitationContentValue {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV2 for crate::v1::ElicitationContentValue {
     type Output = super::ElicitationContentValue;
 
@@ -8904,7 +8770,6 @@ impl TryToV2 for crate::v1::ElicitationContentValue {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV1 for super::CompleteElicitationNotification {
     type Output = crate::v1::CompleteElicitationNotification;
 
@@ -8920,7 +8785,6 @@ impl TryToV1 for super::CompleteElicitationNotification {
     }
 }
 
-#[cfg(feature = "unstable_elicitation")]
 impl TryToV2 for crate::v1::CompleteElicitationNotification {
     type Output = super::CompleteElicitationNotification;
 
@@ -10037,7 +9901,6 @@ mod tests {
         assert_json_eq_after_v1_to_v2::<v1::PromptRequest, v2::PromptRequest>(request);
     }
 
-    #[cfg(feature = "unstable_elicitation")]
     #[test]
     fn round_trips_elicitation_property_schema_unknown_type() {
         let v1_schema = v1::ElicitationSchema::new().property(
@@ -10070,7 +9933,6 @@ mod tests {
         assert_v2_round_trip::<v2::ElicitationSchema, v1::ElicitationSchema>(v2_schema);
     }
 
-    #[cfg(feature = "unstable_elicitation")]
     #[test]
     fn round_trips_multi_select_items_unknown_type() {
         let v1_items = v1::MultiSelectItems::Other(v1::OtherMultiSelectItems::new(
@@ -10101,7 +9963,6 @@ mod tests {
         assert_v2_round_trip::<v2::MultiSelectItems, v1::MultiSelectItems>(v2_items);
     }
 
-    #[cfg(feature = "unstable_elicitation")]
     #[test]
     fn round_trips_elicitation_mode_unknown_type() {
         let v1_request = v1::CreateElicitationRequest::new(
@@ -10140,7 +10001,6 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "unstable_elicitation")]
     #[test]
     fn round_trips_elicitation_action_unknown_type() {
         let v1_response = v1::CreateElicitationResponse::new(v1::OtherElicitationAction::new(

@@ -115,6 +115,20 @@ Implementations can also [advertise custom capabilities](/protocol/v2/draft/exte
 Clients **MAY** include defined capability fields in `capabilities`.
 Omitted fields mean unsupported.
 
+#### Elicitation
+
+<ParamField path="elicitation" type="ElicitationCapabilities Object">
+  The Client advertises its supported `elicitation/create` modes. Omitted or
+  `null` means no modes are advertised. A present object advertises each mode
+  only through its corresponding non-null `form` or `url` field. Empty and
+  all-null objects are valid but advertise no supported modes. Unlike MCP, ACP
+  does not treat `{}` as form support.
+</ParamField>
+
+<Card icon="message-question" horizontal href="/protocol/v2/draft/elicitation">
+  Learn more about Elicitation
+</Card>
+
 ### Agent Capabilities
 
 The Agent **SHOULD** specify whether it supports the following capabilities:

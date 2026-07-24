@@ -142,7 +142,26 @@ Clients provide the interface between users and agents. They are typically code 
   operations such as tool calls and commands.
 </ResponseField>
 
+### Optional Methods
+
+<ResponseField
+  name="elicitation/create"
+  post={[<a href="/protocol/v2/draft/schema#elicitation%2Fcreate">Schema</a>]}
+>
+  [Request structured information from the user](/protocol/v2/draft/elicitation)
+  (requires the matching `elicitation` mode capability).
+</ResponseField>
+
 ### Notifications
+
+<ResponseField
+  name="elicitation/complete"
+  post={[<a href="/protocol/v2/draft/schema#elicitation%2Fcomplete">Schema</a>]}
+>
+  [Report completion of an out-of-band URL
+  interaction](/protocol/v2/draft/elicitation#url-completion) (no response
+  expected).
+</ResponseField>
 
 <ResponseField
   name="session/update"

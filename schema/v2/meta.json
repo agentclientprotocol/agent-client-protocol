@@ -15,7 +15,9 @@
   },
   "clientMethods": {
     "session_request_permission": "session/request_permission",
-    "session_update": "session/update"
+    "session_update": "session/update",
+    "elicitation_create": "elicitation/create",
+    "elicitation_complete": "elicitation/complete"
   },
   "protocolMethods": {
     "cancel_request": "$/cancel_request"

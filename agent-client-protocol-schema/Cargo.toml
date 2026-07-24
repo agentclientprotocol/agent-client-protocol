@@ -24,7 +24,6 @@ workspace = true
 [features]
 unstable = [
     "unstable_auth_methods",
-    "unstable_elicitation",
     "unstable_llm_providers",
     "unstable_mcp_over_acp",
     "unstable_nes",
@@ -38,7 +37,6 @@ unstable = [
 # version, so it must be opted into explicitly.
 unstable_protocol_v2 = ["dep:diffy"]
 unstable_auth_methods = []
-unstable_elicitation = []
 unstable_llm_providers = []
 unstable_mcp_over_acp = []
 unstable_nes = []

@@ -35,6 +35,7 @@ const VERSIONED_PROTOCOL_DOC_PATHS: &[&str] = &[
     "authentication",
     "cancellation",
     "content",
+    "elicitation",
     "error",
     "extensibility",
     "initialization",
@@ -317,10 +318,8 @@ fn replace_string_values(value: &mut serde_json::Value, from: &str, to: &str) {
 #[cfg(test)]
 mod schema_annotation_tests {
     #[cfg(feature = "unstable_protocol_v2")]
-    use super::schema_value_for_publication;
-    use super::{
-        PROTOCOL_DOC_BASE, VERSIONED_PROTOCOL_DOC_PATHS, root_schema_value, schema_crate_dir,
-    };
+    use super::{PROTOCOL_DOC_BASE, VERSIONED_PROTOCOL_DOC_PATHS, schema_value_for_publication};
+    use super::{root_schema_value, schema_crate_dir};
     use serde_json::Value;
     use std::fs;
 
@@ -529,6 +528,7 @@ mod schema_annotation_tests {
         assert!(schema_json.contains(&format!("{protocol_doc_base}/prompt-lifecycle")));
         assert!(schema_json.contains(&format!("{protocol_doc_base}/tool-calls")));
         assert!(schema_json.contains(&format!("{protocol_doc_base}/initialization")));
+        assert!(schema_json.contains(&format!("{protocol_doc_base}/elicitation")));
 
         for path in VERSIONED_PROTOCOL_DOC_PATHS {
             assert!(

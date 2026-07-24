@@ -24,7 +24,9 @@
     "terminal_output": "terminal/output",
     "terminal_release": "terminal/release",
     "terminal_wait_for_exit": "terminal/wait_for_exit",
-    "terminal_kill": "terminal/kill"
+    "terminal_kill": "terminal/kill",
+    "elicitation_create": "elicitation/create",
+    "elicitation_complete": "elicitation/complete"
   },
   "protocolMethods": {
     "cancel_request": "$/cancel_request"

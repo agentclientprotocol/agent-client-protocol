@@ -1,0 +1,194 @@
+---
+title: "Elicitation"
+description: "Requesting structured information from users"
+---
+
+Elicitation lets an Agent ask a user for structured information through the
+Client. It is based on the locked
+[MCP 2026-07-28 release-candidate elicitation specification](https://modelcontextprotocol.io/specification/draft/client/elicitation)
+and supports two modes:
+
+- **Form mode** collects non-sensitive data using a restricted JSON Schema.
+- **URL mode** opens an out-of-band interaction for sensitive or externally
+  hosted workflows such as OAuth.
+
+## User interaction requirements
+
+Clients **MUST** clearly identify the Agent requesting information, respect user
+privacy, and provide clear decline and cancel controls. For form mode, Clients
+**MUST** let users review and modify responses before sending them. For URL
+mode, Clients **MUST** display the target host and obtain consent before
+navigating to it. Clients **SHOULD** present the request's `message` so users
+understand what is requested and why.
+
+## Checking support
+
+Clients advertise elicitation support in `capabilities.elicitation` during
+[initialization](/protocol/v2/draft/initialization#client-capabilities).
+
+```json
+{
+  "capabilities": {
+    "elicitation": {
+      "form": {},
+      "url": {}
+    }
+  }
+}
+```
+
+Capability objects have the following semantics:
+
+- An omitted or `null` top-level `elicitation` field means elicitation is
+  unsupported.
+- Form support exists only when `form` is explicitly present and non-null. URL
+  support exists only when `url` is explicitly present and non-null.
+- An omitted or `null` mode field means that mode is not advertised.
+- A present capability object may advertise zero, one, or both modes. `{}` and
+  `{"form":null,"url":null}` advertise no supported modes.
+
+This deliberately differs from the MCP 2026-07-28 release candidate, where an
+empty elicitation capability retains the original form-only meaning. ACP
+requires each supported mode to be explicit.
+
+Agents **MUST NOT** request a mode the Client has not advertised. Agents
+**SHOULD** provide a graceful fallback when the required mode is unavailable.
+
+## Creating an elicitation
+
+The Agent sends an `elicitation/create` request directly over the ACP
+connection. This adapts the MCP 2026-07-28 data model. ACP also requires `mode` explicitly; it does
+not apply MCP's omitted-mode form default.
+
+Scope is represented with flattened fields:
+
+- `sessionId` for a session-scoped request. It can also include `toolCallId` to
+  associate the request with a tool call in that session.
+- `requestId` for a request-scoped interaction outside a session.
+
+Agents **MUST** bind each elicitation and related state to the receiving Client
+connection and, when authentication exists, the verified user identity. A
+`sessionId` alone or an unverified Client-provided identity is not sufficient.
+
+### Form mode
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 43,
+  "method": "elicitation/create",
+  "params": {
+    "sessionId": "sess_abc123",
+    "mode": "form",
+    "message": "How should I approach this refactoring?",
+    "requestedSchema": {
+      "type": "object",
+      "properties": {
+        "strategy": {
+          "type": "string",
+          "enum": ["conservative", "balanced", "aggressive"]
+        }
+      },
+      "required": ["strategy"]
+    }
+  }
+}
+```
+
+Form schemas are flat objects whose properties use the supported primitive and
+enum schemas. Clients **SHOULD** validate submitted values before responding,
+and Agents **SHOULD** validate them again.
+
+Clients that support schema defaults **SHOULD** pre-populate form fields with
+their declared default values.
+
+Form mode **MUST NOT** be used to request secrets or credentials that grant
+access or authorize transactions, such as passwords, API keys, access or
+refresh tokens, private keys, recovery codes, or payment credentials. Ordinary
+profile information such as a name, email address, or username is not
+categorically prohibited. Agents **MUST** use URL mode for sensitive
+interactions. If the Client does not support URL mode, the Agent **MUST NOT**
+fall back to form mode; it must use another safe flow or fail the operation.
+
+### URL mode
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 44,
+  "method": "elicitation/create",
+  "params": {
+    "requestId": 12,
+    "mode": "url",
+    "elicitationId": "github-oauth-001",
+    "url": "https://agent.example.com/connect?elicitationId=github-oauth-001",
+    "message": "Please authorize access to your repositories."
+  }
+}
+```
+
+An `accept` response means the user consented to open the URL. It does not mean
+the external interaction completed.
+
+URL mode is not a substitute for authorizing the Client's access to the Agent.
+Agents **MUST NOT** send credentials or tokens obtained through URL mode back
+over ACP or place them in Client or model context.
+
+## Responses
+
+The Client responds with one of three actions:
+
+- `accept`: the user submitted or consented to the interaction.
+- `decline`: the user explicitly declined.
+- `cancel`: the user dismissed the interaction without choosing.
+
+The `content` field is optional on `accept`; receivers treat omission and `null`
+equivalently. It is only meaningful for `accept`; receivers ignore it for
+`decline` and `cancel`. For an accepted form elicitation, `content` **SHOULD**
+conform to the requested schema. For an accepted URL elicitation, clients
+normally omit `content` because the interaction happens out of band.
+
+Agents **MUST NOT** assume an elicitation succeeds. They **MUST** handle
+`decline`, `cancel`, and failures by safely falling back, retrying, or failing
+the originating operation as appropriate.
+
+### URL completion
+
+Unlike MCP 2026-07-28, ACP retains an `elicitationId` and completion
+notification for its direct request flow. The Agent **MUST** keep each
+`elicitationId` unique among outstanding URL elicitations on that Agent-Client
+connection, and the Client **MUST** treat it as opaque. The Agent **MAY** send
+`elicitation/complete` after the external interaction finishes. It **MUST**
+send that notification only to the same Client that received the original
+request and include the original `elicitationId`. Clients **MUST** ignore
+unknown or already-completed IDs.
+
+Requests using a mode the Client has not advertised produce JSON-RPC `-32602`
+(Invalid params).
+
+## URL security
+
+Agents and Clients implementing URL mode **MUST** follow these requirements:
+
+These requirements adapt MCP's
+[Safe URL Handling](https://modelcontextprotocol.io/specification/draft/client/elicitation#safe-url-handling)
+rules to ACP.
+
+- Agents **MUST NOT** put credentials, personal data, or pre-authenticated
+  access in the URL and **SHOULD** use HTTPS outside development.
+- Agents **SHOULD NOT** include URLs intended to be clickable in any field of a
+  form-mode request.
+- Clients **MUST NOT** prefetch the URL or open it without explicit user
+  consent. They **MUST** show the full URL before asking for consent.
+- Clients **MUST** open the URL in a secure context that prevents the Client or
+  Agent's language model from inspecting the page or user input.
+- Clients **SHOULD** highlight the domain and warn about suspicious or
+  ambiguous URLs, including Punycode domains.
+- Clients **SHOULD NOT** render a URL as clickable in any elicitation field
+  except the `url` field of a URL-mode request, subject to the restrictions
+  above.
+- The Agent **MUST** verify that the authenticated user who started the
+  elicitation is the same user who completes the external interaction.
+
+See the [schema reference](/protocol/v2/draft/schema#elicitation%2Fcreate) for
+the complete request and response types.

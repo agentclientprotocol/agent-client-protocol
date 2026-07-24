@@ -1545,17 +1545,11 @@ and control access to resources.
 <a id="elicitation-complete"></a>
 ### <span class="font-mono">elicitation/complete</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 Notification that a URL-based elicitation has completed.
 
+See protocol docs: [Elicitation](https://agentclientprotocol.com/protocol/v2/draft/elicitation#url-completion)
+
 #### <span class="font-mono">CompleteElicitationNotification</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Notification sent by the agent when a URL-based elicitation is complete.
 
@@ -1568,6 +1562,8 @@ Notification sent by the agent when a URL-based elicitation is complete.
 metadata to their interactions. Implementations MUST NOT make assumptions about values at
 these keys.
 
+Optional. Omitted and `null` are equivalent and mean no metadata.
+
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
@@ -1578,17 +1574,11 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 <a id="elicitation-create"></a>
 ### <span class="font-mono">elicitation/create</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 Requests structured user input via a form or URL.
 
+See protocol docs: [Elicitation](https://agentclientprotocol.com/protocol/v2/draft/elicitation)
+
 #### <span class="font-mono">CreateElicitationRequest</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Request from the agent to elicit structured user input.
 
@@ -1604,6 +1594,8 @@ Elicitations are tied to a session (optionally a tool call) or a request.
   The _meta property is reserved by ACP to allow clients and agents to attach additional
 metadata to their interactions. Implementations MUST NOT make assumptions about values at
 these keys.
+
+Optional. Omitted and `null` are equivalent and mean no metadata.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
@@ -1681,10 +1673,6 @@ future ACP variants.
 
 #### <span class="font-mono">CreateElicitationResponse</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 Response from the client to an elicitation request.
 
 **Type:** Union
@@ -1695,6 +1683,8 @@ Response from the client to an elicitation request.
   The _meta property is reserved by ACP to allow clients and agents to attach additional
 metadata to their interactions. Implementations MUST NOT make assumptions about values at
 these keys.
+
+Optional. Omitted and `null` are equivalent and mean no metadata.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
@@ -2872,17 +2862,28 @@ Schema for boolean properties in an elicitation form.
 metadata to their interactions. Implementations MUST NOT make assumptions about values at
 these keys.
 
+Optional. Omitted and `null` are equivalent and mean no metadata.
+
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
 <ResponseField name="default" type={"boolean | null"} >
   Default value.
+
+Optional. Omitted and `null` are equivalent and mean no default value is provided.
+
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
   Human-readable description.
+
+Optional. Omitted and `null` are equivalent and mean no description is provided.
+
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
   Optional title for the property.
+
+Optional. Omitted and `null` are equivalent and mean no title is provided.
+
 </ResponseField>
 
 ## <span class="font-mono">ClientCapabilities</span>
@@ -2920,11 +2921,7 @@ authentication-method extensions.
 
 </ResponseField>
 <ResponseField name="elicitation" type={<><span><a href="#elicitationcapabilities">ElicitationCapabilities</a></span><span> | null</span></>} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Elicitation capabilities supported by the client.
+  Elicitation capabilities supported by the client.
 Determines which elicitation modes the agent may use.
 
 Optional. Omitted or `null` both mean the client does not advertise
@@ -3642,10 +3639,6 @@ Operation metadata for move and copy changes.
 
 ## <span class="font-mono">ElicitationAcceptAction</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 The user accepted the elicitation and provided content.
 
 **Type:** Object
@@ -3658,10 +3651,6 @@ The user accepted the elicitation and provided content.
 
 ## <span class="font-mono">ElicitationCapabilities</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 Elicitation capabilities supported by the client.
 
 **Type:** Object
@@ -3673,14 +3662,16 @@ Elicitation capabilities supported by the client.
 metadata to their interactions. Implementations MUST NOT make assumptions about values at
 these keys.
 
+Optional. Omitted and `null` are equivalent and mean no metadata.
+
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
 <ResponseField name="form" type={<><span><a href="#elicitationformcapabilities">ElicitationFormCapabilities</a></span><span> | null</span></>} >
   Whether the client supports form-based elicitation.
 
-Optional. Omitted or `null` both mean the client does not advertise support.
-Supplying `\{\}` means the client supports form-based elicitation.
+Optional. Omitted and `null` are equivalent and mean form support is not advertised.
+Supplying `\{\}` explicitly advertises form support.
 
 </ResponseField>
 <ResponseField name="url" type={<><span><a href="#elicitationurlcapabilities">ElicitationUrlCapabilities</a></span><span> | null</span></>} >
@@ -3719,10 +3710,6 @@ Allowed wire representations for `ElicitationContentValue`.
 
 ## <span class="font-mono">ElicitationFormCapabilities</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 Form-based elicitation capabilities.
 
 Supplying `\{\}` means the client supports form-based elicitation.
@@ -3736,15 +3723,13 @@ Supplying `\{\}` means the client supports form-based elicitation.
 metadata to their interactions. Implementations MUST NOT make assumptions about values at
 these keys.
 
+Optional. Omitted and `null` are equivalent and mean no metadata.
+
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
 
 ## <span class="font-mono">ElicitationFormMode</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Form-based elicitation mode where the client renders a form from the provided schema.
 
@@ -3767,25 +3752,15 @@ Tied to a session, optionally to a specific tool call within that session.
 
 <Expandable title="Properties">
 
-<ResponseField
-  name="sessionId"
-  type={<a href="#sessionid">SessionId</a>}
-  required
->
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
   The session this elicitation is tied to.
 </ResponseField>
-<ResponseField
-  name="toolCallId"
-  type={
-    <>
-      <span>
-        <a href="#toolcallid">ToolCallId</a>
-      </span>
-      <span> | null</span>
-    </>
-  }
->
+<ResponseField name="toolCallId" type={<><span><a href="#toolcallid">ToolCallId</a></span><span> | null</span></>} >
   Optional tool call within the session.
+
+Optional. Omitted and `null` are equivalent and mean the elicitation is scoped to the
+session without a specific tool call.
+
 </ResponseField>
 
 </Expandable>
@@ -3809,10 +3784,6 @@ Tied to a specific JSON-RPC request outside of a session
 </ResponseField>
 
 ## <span class="font-mono">ElicitationId</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Unique identifier for an elicitation.
 
@@ -3838,24 +3809,39 @@ String property (or single-select enum when `enum`/`oneOf` is set).
 metadata to their interactions. Implementations MUST NOT make assumptions about values at
 these keys.
 
+Optional. Omitted and `null` are equivalent and mean no metadata.
+
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
 <ResponseField name="default" type={"string | null"} >
   Default value.
+
+Optional. Omitted and `null` are equivalent and mean no default value is provided.
+
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
   Human-readable description.
+
+Optional. Omitted and `null` are equivalent and mean no description is provided.
+
 </ResponseField>
 <ResponseField name="enum" type={<><span><><span>"string"</span><span>[]</span></></span><span> | null</span></>} >
   Enum values for untitled single-select enums.
 Must contain at least one value when present.
+Optional. Omitted and `null` are equivalent and mean no untitled single-select choices are
+declared by `enum`.
 </ResponseField>
 <ResponseField name="format" type={<><span><a href="#stringformat">StringFormat</a></span><span> | null</span></>} >
   String format.
+
+Optional. Omitted and `null` are equivalent and mean there is no format constraint.
+
 </ResponseField>
 <ResponseField name="maxLength" type={"integer | null"} >
   Maximum string length.
+
+Optional. Omitted and `null` are equivalent and mean there is no maximum length constraint.
 
     - Minimum: `0`
 
@@ -3863,21 +3849,30 @@ Must contain at least one value when present.
 <ResponseField name="minLength" type={"integer | null"} >
   Minimum string length.
 
+Optional. Omitted and `null` are equivalent and mean there is no minimum length constraint.
+
     - Minimum: `0`
 
 </ResponseField>
 <ResponseField name="oneOf" type={<><span><a href="#enumoption">EnumOption[]</a></span><span> | null</span></>} >
   Titled enum options for titled single-select enums.
 Must contain at least one option when present.
+Optional. Omitted and `null` are equivalent and mean no titled single-select choices are
+declared by `oneOf`.
 </ResponseField>
 <ResponseField name="pattern" type={"string | null"} >
   Pattern the string must match.
+
+Optional. Omitted and `null` are equivalent and mean there is no pattern constraint.
 
     - Format: `regex`
 
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
   Optional title for the property.
+
+Optional. Omitted and `null` are equivalent and mean no title is provided.
+
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
   The discriminator value. Must be `"string"`.
@@ -3896,23 +3891,40 @@ Number (floating-point) property.
 metadata to their interactions. Implementations MUST NOT make assumptions about values at
 these keys.
 
+Optional. Omitted and `null` are equivalent and mean no metadata.
+
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
 <ResponseField name="default" type={"number | null"} >
   Default value.
+
+Optional. Omitted and `null` are equivalent and mean no default value is provided.
+
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
   Human-readable description.
+
+Optional. Omitted and `null` are equivalent and mean no description is provided.
+
 </ResponseField>
 <ResponseField name="maximum" type={"number | null"} >
   Maximum value (inclusive).
+
+Optional. Omitted and `null` are equivalent and mean there is no inclusive upper bound.
+
 </ResponseField>
 <ResponseField name="minimum" type={"number | null"} >
   Minimum value (inclusive).
+
+Optional. Omitted and `null` are equivalent and mean there is no inclusive lower bound.
+
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
   Optional title for the property.
+
+Optional. Omitted and `null` are equivalent and mean no title is provided.
+
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
   The discriminator value. Must be `"number"`.
@@ -3931,23 +3943,40 @@ Integer property.
 metadata to their interactions. Implementations MUST NOT make assumptions about values at
 these keys.
 
+Optional. Omitted and `null` are equivalent and mean no metadata.
+
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
 <ResponseField name="default" type={"integer | null"} >
   Default value.
+
+Optional. Omitted and `null` are equivalent and mean no default value is provided.
+
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
   Human-readable description.
+
+Optional. Omitted and `null` are equivalent and mean no description is provided.
+
 </ResponseField>
 <ResponseField name="maximum" type={"integer | null"} >
   Maximum value (inclusive).
+
+Optional. Omitted and `null` are equivalent and mean there is no inclusive upper bound.
+
 </ResponseField>
 <ResponseField name="minimum" type={"integer | null"} >
   Minimum value (inclusive).
+
+Optional. Omitted and `null` are equivalent and mean there is no inclusive lower bound.
+
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
   Optional title for the property.
+
+Optional. Omitted and `null` are equivalent and mean no title is provided.
+
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
   The discriminator value. Must be `"integer"`.
@@ -3966,17 +3995,28 @@ Boolean property.
 metadata to their interactions. Implementations MUST NOT make assumptions about values at
 these keys.
 
+Optional. Omitted and `null` are equivalent and mean no metadata.
+
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
 <ResponseField name="default" type={"boolean | null"} >
   Default value.
+
+Optional. Omitted and `null` are equivalent and mean no default value is provided.
+
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
   Human-readable description.
+
+Optional. Omitted and `null` are equivalent and mean no description is provided.
+
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
   Optional title for the property.
+
+Optional. Omitted and `null` are equivalent and mean no title is provided.
+
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
   The discriminator value. Must be `"boolean"`.
@@ -3995,14 +4035,22 @@ Multi-select array property.
 metadata to their interactions. Implementations MUST NOT make assumptions about values at
 these keys.
 
+Optional. Omitted and `null` are equivalent and mean no metadata.
+
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
 <ResponseField name="default" type={<><span><><span>"string"</span><span>[]</span></></span><span> | null</span></>} >
   Default selected values.
+
+Optional. Omitted and `null` are equivalent and mean no default selections are provided.
+
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
   Human-readable description.
+
+Optional. Omitted and `null` are equivalent and mean no description is provided.
+
 </ResponseField>
 <ResponseField name="items" type={<a href="#multiselectitems">MultiSelectItems</a>} required>
   The items definition describing allowed values.
@@ -4010,17 +4058,24 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 <ResponseField name="maxItems" type={"integer | null"} >
   Maximum number of items to select.
 
+Optional. Omitted and `null` are equivalent and mean there is no maximum selection count.
+
     - Minimum: `0`
 
 </ResponseField>
 <ResponseField name="minItems" type={"integer | null"} >
   Minimum number of items to select.
 
+Optional. Omitted and `null` are equivalent and mean there is no minimum selection count.
+
     - Minimum: `0`
 
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
   Optional title for the property.
+
+Optional. Omitted and `null` are equivalent and mean no title is provided.
+
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
   The discriminator value. Must be `"array"`.
@@ -4056,10 +4111,6 @@ future ACP variants.
 
 ## <span class="font-mono">ElicitationRequestScope</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 Request-scoped elicitation, tied to a specific JSON-RPC request outside of a session
 (e.g., during auth/configuration phases before any session is started).
 
@@ -4091,11 +4142,16 @@ as required by the elicitation specification.
 metadata to their interactions. Implementations MUST NOT make assumptions about values at
 these keys.
 
+Optional. Omitted and `null` are equivalent and mean no metadata.
+
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
   Optional description of what this schema represents.
+
+Optional. Omitted and `null` are equivalent and mean no schema description is provided.
+
 </ResponseField>
 <ResponseField name="properties" type={"object"} >
   Property definitions (must be primitive types).
@@ -4105,9 +4161,15 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="required" type={<><span><><span>"string"</span><span>[]</span></></span><span> | null</span></>} >
   List of required property names.
+
+Optional. Omitted and `null` are equivalent and mean no property names are required.
+
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
   Optional title for the schema.
+
+Optional. Omitted and `null` are equivalent and mean no title is provided.
+
 </ResponseField>
 <ResponseField name="type" type={<a href="#elicitationschematype">ElicitationSchemaType</a>} >
   Type discriminator. Always `"object"`.
@@ -4128,10 +4190,6 @@ Type discriminator for elicitation schemas.
 
 ## <span class="font-mono">ElicitationSessionScope</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 Session-scoped elicitation, optionally tied to a specific tool call.
 
 When `tool_call_id` is set, the elicitation is tied to a specific tool call.
@@ -4142,32 +4200,18 @@ during a tool call and needs to redirect it to the user.
 
 **Properties:**
 
-<ResponseField
-  name="sessionId"
-  type={<a href="#sessionid">SessionId</a>}
-  required
->
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
   The session this elicitation is tied to.
 </ResponseField>
-<ResponseField
-  name="toolCallId"
-  type={
-    <>
-      <span>
-        <a href="#toolcallid">ToolCallId</a>
-      </span>
-      <span> | null</span>
-    </>
-  }
->
+<ResponseField name="toolCallId" type={<><span><a href="#toolcallid">ToolCallId</a></span><span> | null</span></>} >
   Optional tool call within the session.
+
+Optional. Omitted and `null` are equivalent and mean the elicitation is scoped to the
+session without a specific tool call.
+
 </ResponseField>
 
 ## <span class="font-mono">ElicitationUrlCapabilities</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 URL-based elicitation capabilities.
 
@@ -4182,15 +4226,13 @@ Supplying `\{\}` means the client supports URL-based elicitation.
 metadata to their interactions. Implementations MUST NOT make assumptions about values at
 these keys.
 
+Optional. Omitted and `null` are equivalent and mean no metadata.
+
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
 
 ## <span class="font-mono">ElicitationUrlMode</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 URL-based elicitation mode where the client directs the user to a URL.
 
@@ -4215,25 +4257,15 @@ Tied to a session, optionally to a specific tool call within that session.
 
 <Expandable title="Properties">
 
-<ResponseField
-  name="sessionId"
-  type={<a href="#sessionid">SessionId</a>}
-  required
->
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
   The session this elicitation is tied to.
 </ResponseField>
-<ResponseField
-  name="toolCallId"
-  type={
-    <>
-      <span>
-        <a href="#toolcallid">ToolCallId</a>
-      </span>
-      <span> | null</span>
-    </>
-  }
->
+<ResponseField name="toolCallId" type={<><span><a href="#toolcallid">ToolCallId</a></span><span> | null</span></>} >
   Optional tool call within the session.
+
+Optional. Omitted and `null` are equivalent and mean the elicitation is scoped to the
+session without a specific tool call.
+
 </ResponseField>
 
 </Expandable>
@@ -4359,6 +4391,8 @@ A titled enum option with a const value, human-readable title, and optional desc
 metadata to their interactions. Implementations MUST NOT make assumptions about values at
 these keys.
 
+Optional. Omitted and `null` are equivalent and mean no metadata.
+
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
@@ -4367,6 +4401,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
   Human-readable description.
+
+Optional. Omitted and `null` are equivalent and mean no description is provided.
+
 </ResponseField>
 <ResponseField name="title" type={"string"} required>
   Human-readable title for this option.
@@ -4688,23 +4725,40 @@ Schema for integer properties in an elicitation form.
 metadata to their interactions. Implementations MUST NOT make assumptions about values at
 these keys.
 
+Optional. Omitted and `null` are equivalent and mean no metadata.
+
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
 <ResponseField name="default" type={"integer | null"} >
   Default value.
+
+Optional. Omitted and `null` are equivalent and mean no default value is provided.
+
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
   Human-readable description.
+
+Optional. Omitted and `null` are equivalent and mean no description is provided.
+
 </ResponseField>
 <ResponseField name="maximum" type={"integer | null"} >
   Maximum value (inclusive).
+
+Optional. Omitted and `null` are equivalent and mean there is no inclusive upper bound.
+
 </ResponseField>
 <ResponseField name="minimum" type={"integer | null"} >
   Minimum value (inclusive).
+
+Optional. Omitted and `null` are equivalent and mean there is no inclusive lower bound.
+
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
   Optional title for the property.
+
+Optional. Omitted and `null` are equivalent and mean no title is provided.
+
 </ResponseField>
 
 ## <span class="font-mono">LlmProtocol</span>
@@ -5139,6 +5193,8 @@ Multi-select string items with plain string values.
 metadata to their interactions. Implementations MUST NOT make assumptions about values at
 these keys.
 
+Optional. Omitted and `null` are equivalent and mean no metadata.
+
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
@@ -5179,6 +5235,8 @@ Titled multi-select items with human-readable labels.
 metadata to their interactions. Implementations MUST NOT make assumptions about values at
 these keys.
 
+Optional. Omitted and `null` are equivalent and mean no metadata.
+
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
@@ -5202,14 +5260,22 @@ Schema for multi-select (array) properties in an elicitation form.
 metadata to their interactions. Implementations MUST NOT make assumptions about values at
 these keys.
 
+Optional. Omitted and `null` are equivalent and mean no metadata.
+
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
 <ResponseField name="default" type={<><span><><span>"string"</span><span>[]</span></></span><span> | null</span></>} >
   Default selected values.
+
+Optional. Omitted and `null` are equivalent and mean no default selections are provided.
+
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
   Human-readable description.
+
+Optional. Omitted and `null` are equivalent and mean no description is provided.
+
 </ResponseField>
 <ResponseField name="items" type={<a href="#multiselectitems">MultiSelectItems</a>} required>
   The items definition describing allowed values.
@@ -5217,17 +5283,24 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 <ResponseField name="maxItems" type={"integer | null"} >
   Maximum number of items to select.
 
+Optional. Omitted and `null` are equivalent and mean there is no maximum selection count.
+
     - Minimum: `0`
 
 </ResponseField>
 <ResponseField name="minItems" type={"integer | null"} >
   Minimum number of items to select.
 
+Optional. Omitted and `null` are equivalent and mean there is no minimum selection count.
+
     - Minimum: `0`
 
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
   Optional title for the property.
+
+Optional. Omitted and `null` are equivalent and mean no title is provided.
+
 </ResponseField>
 
 ## <span class="font-mono">NesCapabilities</span>
@@ -6315,23 +6388,40 @@ Schema for number (floating-point) properties in an elicitation form.
 metadata to their interactions. Implementations MUST NOT make assumptions about values at
 these keys.
 
+Optional. Omitted and `null` are equivalent and mean no metadata.
+
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
 <ResponseField name="default" type={"number | null"} >
   Default value.
+
+Optional. Omitted and `null` are equivalent and mean no default value is provided.
+
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
   Human-readable description.
+
+Optional. Omitted and `null` are equivalent and mean no description is provided.
+
 </ResponseField>
 <ResponseField name="maximum" type={"number | null"} >
   Maximum value (inclusive).
+
+Optional. Omitted and `null` are equivalent and mean there is no inclusive upper bound.
+
 </ResponseField>
 <ResponseField name="minimum" type={"number | null"} >
   Minimum value (inclusive).
+
+Optional. Omitted and `null` are equivalent and mean there is no inclusive lower bound.
+
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
   Optional title for the property.
+
+Optional. Omitted and `null` are equivalent and mean no title is provided.
+
 </ResponseField>
 
 ## <span class="font-mono">PermissionOption</span>
@@ -8645,6 +8735,8 @@ String item schema for multi-select enum properties.
 metadata to their interactions. Implementations MUST NOT make assumptions about values at
 these keys.
 
+Optional. Omitted and `null` are equivalent and mean no metadata.
+
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
@@ -8668,24 +8760,39 @@ with `"type": "string"`.
 metadata to their interactions. Implementations MUST NOT make assumptions about values at
 these keys.
 
+Optional. Omitted and `null` are equivalent and mean no metadata.
+
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
 <ResponseField name="default" type={"string | null"} >
   Default value.
+
+Optional. Omitted and `null` are equivalent and mean no default value is provided.
+
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
   Human-readable description.
+
+Optional. Omitted and `null` are equivalent and mean no description is provided.
+
 </ResponseField>
 <ResponseField name="enum" type={<><span><><span>"string"</span><span>[]</span></></span><span> | null</span></>} >
   Enum values for untitled single-select enums.
 Must contain at least one value when present.
+Optional. Omitted and `null` are equivalent and mean no untitled single-select choices are
+declared by `enum`.
 </ResponseField>
 <ResponseField name="format" type={<><span><a href="#stringformat">StringFormat</a></span><span> | null</span></>} >
   String format.
+
+Optional. Omitted and `null` are equivalent and mean there is no format constraint.
+
 </ResponseField>
 <ResponseField name="maxLength" type={"integer | null"} >
   Maximum string length.
+
+Optional. Omitted and `null` are equivalent and mean there is no maximum length constraint.
 
     - Minimum: `0`
 
@@ -8693,21 +8800,30 @@ Must contain at least one value when present.
 <ResponseField name="minLength" type={"integer | null"} >
   Minimum string length.
 
+Optional. Omitted and `null` are equivalent and mean there is no minimum length constraint.
+
     - Minimum: `0`
 
 </ResponseField>
 <ResponseField name="oneOf" type={<><span><a href="#enumoption">EnumOption[]</a></span><span> | null</span></>} >
   Titled enum options for titled single-select enums.
 Must contain at least one option when present.
+Optional. Omitted and `null` are equivalent and mean no titled single-select choices are
+declared by `oneOf`.
 </ResponseField>
 <ResponseField name="pattern" type={"string | null"} >
   Pattern the string must match.
+
+Optional. Omitted and `null` are equivalent and mean there is no pattern constraint.
 
     - Format: `regex`
 
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
   Optional title for the property.
+
+Optional. Omitted and `null` are equivalent and mean no title is provided.
+
 </ResponseField>
 
 ## <span class="font-mono">Terminal</span>
@@ -9010,6 +9126,8 @@ Items definition for titled multi-select enum properties.
   The _meta property is reserved by ACP to allow clients and agents to attach additional
 metadata to their interactions. Implementations MUST NOT make assumptions about values at
 these keys.
+
+Optional. Omitted and `null` are equivalent and mean no metadata.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 

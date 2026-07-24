@@ -140,6 +140,20 @@ The Client **SHOULD** specify whether it supports the following capabilities:
   Learn more about Terminals
 </Card>
 
+#### Elicitation
+
+<ParamField path="elicitation" type="ElicitationCapabilities Object">
+  The Client advertises its supported `elicitation/create` modes. Omitted or
+  `null` means no modes are advertised. A present object advertises each mode
+  only through its corresponding non-null `form` or `url` field. Empty and
+  all-null objects are valid but advertise no supported modes. Unlike MCP, ACP
+  does not treat `{}` as form support.
+</ParamField>
+
+<Card icon="message-question" horizontal href="/protocol/v1/draft/elicitation">
+  Learn more about Elicitation
+</Card>
+
 #### Boolean Config Options
 
 <ParamField

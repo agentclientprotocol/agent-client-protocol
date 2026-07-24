@@ -76,6 +76,7 @@
                   "protocol/v1/prompt-turn",
                   "protocol/v1/content",
                   "protocol/v1/tool-calls",
+                  "protocol/v1/elicitation",
                   "protocol/v1/file-system",
                   "protocol/v1/cancellation",
                   "protocol/v1/terminals",
@@ -99,6 +100,7 @@
                       "protocol/v1/draft/prompt-turn",
                       "protocol/v1/draft/content",
                       "protocol/v1/draft/tool-calls",
+                      "protocol/v1/draft/elicitation",
                       "protocol/v1/draft/file-system",
                       "protocol/v1/draft/cancellation",
                       "protocol/v1/draft/terminals",
@@ -128,6 +130,7 @@
                   "protocol/v2/prompt-lifecycle",
                   "protocol/v2/content",
                   "protocol/v2/tool-calls",
+                  "protocol/v2/elicitation",
                   "protocol/v2/cancellation",
                   "protocol/v2/agent-plan",
                   "protocol/v2/session-config-options",
@@ -148,6 +151,7 @@
                       "protocol/v2/draft/prompt-lifecycle",
                       "protocol/v2/draft/content",
                       "protocol/v2/draft/tool-calls",
+                      "protocol/v2/draft/elicitation",
                       "protocol/v2/draft/cancellation",
                       "protocol/v2/draft/agent-plan",
                       "protocol/v2/draft/session-config-options",
@@ -221,7 +225,7 @@
           },
           {
             "group": "Preview",
-            "pages": ["rfds/elicitation"]
+            "pages": []
           },
           {
             "group": "Completed",
@@ -242,7 +246,8 @@
               "rfds/model-config-category",
               "rfds/rust-sdk-v1",
               "rfds/request-cancellation",
-              "rfds/boolean-config-option"
+              "rfds/boolean-config-option",
+              "rfds/elicitation"
             ]
           }
         ]
@@ -268,6 +273,7 @@
           {
             "group": "Announcements",
             "pages": [
+              "announcements/elicitation-stabilized",
               "announcements/acp-v2-draft",
               "announcements/boolean-config-option-stabilized",
               "announcements/request-cancellation-stabilized",

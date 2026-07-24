@@ -19,7 +19,6 @@ use super::{
     SessionConfigOption, SessionId, StopReason, TerminalId, TerminalOutputChunk, TerminalUpdate,
     ToolCallContentChunk, ToolCallId, ToolCallUpdate,
 };
-#[cfg(feature = "unstable_elicitation")]
 use super::{
     CompleteElicitationNotification, CreateElicitationRequest, CreateElicitationResponse,
     ElicitationCapabilities,
@@ -1859,16 +1858,11 @@ pub struct ClientCapabilities {
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub auth: Option<AuthCapabilities>,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Elicitation capabilities supported by the client.
     /// Determines which elicitation modes the agent may use.
     ///
     /// Optional. Omitted or `null` both mean the client does not advertise
     /// elicitation support.
-    #[cfg(feature = "unstable_elicitation")]
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
@@ -1930,13 +1924,8 @@ impl ClientCapabilities {
         self
     }
 
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Elicitation capabilities supported by the client.
     /// Determines which elicitation modes the agent may use.
-    #[cfg(feature = "unstable_elicitation")]
     #[must_use]
     pub fn elicitation(mut self, elicitation: impl IntoOption<ElicitationCapabilities>) -> Self {
         self.elicitation = elicitation.into_option();
@@ -2108,10 +2097,8 @@ pub struct ClientMethodNames {
     #[cfg(feature = "unstable_mcp_over_acp")]
     pub mcp_disconnect: &'static str,
     /// Method for elicitation.
-    #[cfg(feature = "unstable_elicitation")]
     pub elicitation_create: &'static str,
     /// Notification for elicitation completion.
-    #[cfg(feature = "unstable_elicitation")]
     pub elicitation_complete: &'static str,
 }
 
@@ -2125,9 +2112,7 @@ pub const CLIENT_METHOD_NAMES: ClientMethodNames = ClientMethodNames {
     mcp_message: MCP_MESSAGE_METHOD_NAME,
     #[cfg(feature = "unstable_mcp_over_acp")]
     mcp_disconnect: MCP_DISCONNECT_METHOD_NAME,
-    #[cfg(feature = "unstable_elicitation")]
     elicitation_create: ELICITATION_CREATE_METHOD_NAME,
-    #[cfg(feature = "unstable_elicitation")]
     elicitation_complete: ELICITATION_COMPLETE_NOTIFICATION,
 };
 
@@ -2136,10 +2121,8 @@ pub(crate) const SESSION_UPDATE_NOTIFICATION: &str = "session/update";
 /// Method name for requesting user permission.
 pub(crate) const SESSION_REQUEST_PERMISSION_METHOD_NAME: &str = "session/request_permission";
 /// Method name for elicitation.
-#[cfg(feature = "unstable_elicitation")]
 pub(crate) const ELICITATION_CREATE_METHOD_NAME: &str = "elicitation/create";
 /// Notification name for elicitation completion.
-#[cfg(feature = "unstable_elicitation")]
 pub(crate) const ELICITATION_COMPLETE_NOTIFICATION: &str = "elicitation/complete";
 
 /// All possible requests that an agent can send to a client.
@@ -2164,12 +2147,9 @@ pub enum AgentRequest {
     ///
     /// See protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/tool-calls#requesting-permission)
     RequestPermissionRequest(Box<RequestPermissionRequest>),
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Requests structured user input via a form or URL.
-    #[cfg(feature = "unstable_elicitation")]
+    ///
+    /// See protocol docs: [Elicitation](https://agentclientprotocol.com/protocol/elicitation)
     CreateElicitationRequest(Box<CreateElicitationRequest>),
     /// **UNSTABLE**
     ///
@@ -2208,7 +2188,6 @@ impl AgentRequest {
     pub fn method(&self) -> &str {
         match self {
             Self::RequestPermissionRequest(_) => CLIENT_METHOD_NAMES.session_request_permission,
-            #[cfg(feature = "unstable_elicitation")]
             Self::CreateElicitationRequest(_) => CLIENT_METHOD_NAMES.elicitation_create,
             #[cfg(feature = "unstable_mcp_over_acp")]
             Self::ConnectMcpRequest(_) => CLIENT_METHOD_NAMES.mcp_connect,
@@ -2235,7 +2214,6 @@ pub enum ClientResponse {
     /// Successful result returned for a `session/request_permission` request.
     RequestPermissionResponse(Box<RequestPermissionResponse>),
     /// Successful result returned for a `elicitation/create` request.
-    #[cfg(feature = "unstable_elicitation")]
     CreateElicitationResponse(Box<CreateElicitationResponse>),
     /// Successful result returned for a `mcp/connect` request.
     #[cfg(feature = "unstable_mcp_over_acp")]
@@ -2274,12 +2252,9 @@ pub enum AgentNotification {
     ///
     /// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-lifecycle#3-agent-reports-output)
     UpdateSessionNotification(Box<UpdateSessionNotification>),
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Notification that a URL-based elicitation has completed.
-    #[cfg(feature = "unstable_elicitation")]
+    ///
+    /// See protocol docs: [Elicitation](https://agentclientprotocol.com/protocol/elicitation#url-completion)
     CompleteElicitationNotification(Box<CompleteElicitationNotification>),
     /// **UNSTABLE**
     ///
@@ -2304,7 +2279,6 @@ impl AgentNotification {
     pub fn method(&self) -> &str {
         match self {
             Self::UpdateSessionNotification(_) => CLIENT_METHOD_NAMES.session_update,
-            #[cfg(feature = "unstable_elicitation")]
             Self::CompleteElicitationNotification(_) => CLIENT_METHOD_NAMES.elicitation_complete,
             #[cfg(feature = "unstable_mcp_over_acp")]
             Self::MessageMcpNotification(_) => CLIENT_METHOD_NAMES.mcp_message,
@@ -2316,6 +2290,111 @@ impl AgentNotification {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_elicitation_capability_semantics() {
+        use serde_json::json;
+
+        let unsupported: ClientCapabilities = serde_json::from_value(json!({})).unwrap();
+        assert!(unsupported.elicitation.is_none());
+
+        let null: ClientCapabilities =
+            serde_json::from_value(json!({ "elicitation": null })).unwrap();
+        assert!(null.elicitation.is_none());
+
+        let malformed: ClientCapabilities =
+            serde_json::from_value(json!({ "elicitation": false })).unwrap();
+        assert!(malformed.elicitation.is_none());
+
+        let empty: ClientCapabilities =
+            serde_json::from_value(json!({ "elicitation": {} })).unwrap();
+        let empty = empty.elicitation.expect("present capability");
+        assert!(!empty.supports_form());
+        assert!(!empty.supports_url());
+
+        let form_only: ClientCapabilities = serde_json::from_value(json!({
+            "elicitation": { "form": {} }
+        }))
+        .unwrap();
+        let form_only = form_only.elicitation.expect("advertised capability");
+        assert!(form_only.supports_form());
+        assert!(!form_only.supports_url());
+
+        let url_only: ClientCapabilities = serde_json::from_value(json!({
+            "elicitation": { "url": {} }
+        }))
+        .unwrap();
+        let url_only = url_only.elicitation.expect("advertised capability");
+        assert!(!url_only.supports_form());
+        assert!(url_only.supports_url());
+
+        let both: ClientCapabilities = serde_json::from_value(json!({
+            "elicitation": { "form": {}, "url": {} }
+        }))
+        .unwrap();
+        let both = both.elicitation.expect("advertised capability");
+        assert!(both.supports_form());
+        assert!(both.supports_url());
+    }
+
+    #[test]
+    fn test_elicitation_method_routing_and_envelopes() {
+        use serde_json::json;
+
+        assert_eq!(CLIENT_METHOD_NAMES.elicitation_create, "elicitation/create");
+        assert_eq!(
+            CLIENT_METHOD_NAMES.elicitation_complete,
+            "elicitation/complete"
+        );
+
+        let request =
+            AgentRequest::CreateElicitationRequest(Box::new(CreateElicitationRequest::new(
+                crate::v2::ElicitationFormMode::new(
+                    crate::v2::ElicitationSessionScope::new("sess_1"),
+                    crate::v2::ElicitationSchema::new(),
+                ),
+                "Choose a value",
+            )));
+        assert_eq!(request.method(), "elicitation/create");
+        let method = Arc::from(request.method());
+        let request = crate::v2::JsonRpcMessage::wrap(crate::v2::Request {
+            id: crate::v2::RequestId::Number(7),
+            method,
+            params: Some(request),
+        });
+        assert_eq!(
+            serde_json::to_value(request).unwrap(),
+            json!({
+                "jsonrpc": "2.0",
+                "id": 7,
+                "method": "elicitation/create",
+                "params": {
+                    "mode": "form",
+                    "sessionId": "sess_1",
+                    "message": "Choose a value",
+                    "requestedSchema": { "type": "object", "properties": {} }
+                }
+            })
+        );
+
+        let notification = AgentNotification::CompleteElicitationNotification(Box::new(
+            CompleteElicitationNotification::new("elic_1"),
+        ));
+        assert_eq!(notification.method(), "elicitation/complete");
+        let method = Arc::from(notification.method());
+        let notification = crate::v2::JsonRpcMessage::wrap(crate::v2::Notification {
+            method,
+            params: Some(notification),
+        });
+        assert_eq!(
+            serde_json::to_value(notification).unwrap(),
+            json!({
+                "jsonrpc": "2.0",
+                "method": "elicitation/complete",
+                "params": { "elicitationId": "elic_1" }
+            })
+        );
+    }
 
     #[cfg(feature = "unstable_auth_methods")]
     #[test]
