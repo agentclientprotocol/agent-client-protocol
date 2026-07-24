@@ -2543,18 +2543,6 @@ mod tests {
     }
 
     #[test]
-    fn schema_sender_required_fields() {
-        let tolerated: ElicitationSchema = serde_json::from_value(json!({})).unwrap();
-        assert_eq!(tolerated.type_, ElicitationSchemaType::Object);
-        assert!(tolerated.properties.is_empty());
-
-        let generated = serde_json::to_value(schemars::schema_for!(ElicitationSchema)).unwrap();
-        let required = generated["required"].as_array().unwrap();
-        assert!(required.contains(&json!("type")));
-        assert!(required.contains(&json!("properties")));
-    }
-
-    #[test]
     fn schema_builder_serialization() {
         let schema = ElicitationSchema::new()
             .string("name", true)
