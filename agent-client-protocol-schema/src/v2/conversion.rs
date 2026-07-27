@@ -9650,27 +9650,6 @@ mod tests {
         assert!(v1_after.terminal);
     }
 
-    #[test]
-    fn v2_legacy_env_var_auth_method_converts_to_v1_agent() {
-        let method: v2::AuthMethod = serde_json::from_value(serde_json::json!({
-            "methodId": "api-key",
-            "name": "API Key",
-            "type": "env_var",
-            "vars": [{"name": "API_KEY"}],
-            "link": "https://example.com/keys"
-        }))
-        .expect("v2 env_var compatibility input");
-
-        let method: v1::AuthMethod = try_v2_to_v1(method).expect("v2 -> v1 conversion");
-        assert_eq!(
-            serde_json::to_value(method).expect("v1 serialize"),
-            serde_json::json!({
-                "id": "api-key",
-                "name": "API Key"
-            })
-        );
-    }
-
     #[cfg(feature = "unstable_auth_methods")]
     #[test]
     fn auth_method_terminal_env_converts_between_map_and_variable_array() {

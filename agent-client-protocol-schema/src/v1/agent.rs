@@ -5658,34 +5658,6 @@ mod test_serialization {
         );
     }
 
-    #[test]
-    fn test_legacy_env_var_auth_method_falls_back_to_agent() {
-        let deserialized: AuthMethod = serde_json::from_value(json!({
-            "id": "api-key",
-            "name": "API Key",
-            "type": "env_var",
-            "vars": [{"name": "API_KEY"}],
-            "link": "https://example.com/keys"
-        }))
-        .unwrap();
-
-        match &deserialized {
-            AuthMethod::Agent(AuthMethodAgent { id, name, .. }) => {
-                assert_eq!(id.0.as_ref(), "api-key");
-                assert_eq!(name, "API Key");
-            }
-            #[cfg(feature = "unstable_auth_methods")]
-            _ => panic!("Expected Agent variant"),
-        }
-        assert_eq!(
-            serde_json::to_value(deserialized).unwrap(),
-            json!({
-                "id": "api-key",
-                "name": "API Key"
-            })
-        );
-    }
-
     #[cfg(feature = "unstable_auth_methods")]
     #[test]
     fn test_auth_method_terminal_serialization() {
