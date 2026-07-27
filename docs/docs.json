@@ -190,7 +190,6 @@
               "rfds/proxy-chains",
               "rfds/mcp-over-acp",
               "rfds/end-turn-token-usage",
-              "rfds/auth-methods",
               "rfds/diff-delete",
               "rfds/next-edit-suggestions",
               "rfds/custom-llm-endpoint",
@@ -225,7 +224,7 @@
           },
           {
             "group": "Preview",
-            "pages": []
+            "pages": ["rfds/auth-methods"]
           },
           {
             "group": "Completed",

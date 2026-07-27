@@ -3395,7 +3395,7 @@
       "description": "Describes an available authentication method.\n\nThe `type` field acts as the discriminator in the serialized JSON form.",
       "anyOf": [
         {
-          "description": "Agent handles authentication itself.\n\nThe `type` discriminator value is `agent`.",
+          "description": "Agent handles authentication itself through `auth/login`.\n\nThe `type` discriminator value is `agent`.",
           "type": "object",
           "properties": {
             "type": {
@@ -3467,7 +3467,7 @@
       "type": "string"
     },
     "AuthMethodAgent": {
-      "description": "Agent handles authentication itself.\n\nThe `type` discriminator value is `agent`.",
+      "description": "Agent handles authentication itself through `auth/login`.\n\nThe `type` discriminator value is `agent`.",
       "type": "object",
       "properties": {
         "methodId": {
@@ -5590,7 +5590,7 @@
                 },
                 {
                   "title": "LoginAuthRequest",
-                  "description": "Authenticates the client using the specified authentication method.\n\nAgents MUST support this method when their `initialize` response advertised\nat least one valid authentication method. Clients MUST NOT call this method\nwhen `authMethods` was omitted or empty.\n\nCalled when the agent requires authentication before allowing session creation.\nThe client provides the authentication method ID that was advertised during initialization.\n\nAfter successful authentication, the client can proceed to create sessions with\n`new_session` without receiving an `auth_required` error.\n\nSee protocol docs: [Initialization](https://agentclientprotocol.com/protocol/v2/initialization)",
+                  "description": "Authenticates the client using the specified authentication method.\n\nAgents MUST support this method when their `initialize` response advertised\nat least one valid authentication method. Clients MUST call this method only\nwith a method whose type defines a protocol-driven login flow, and MUST NOT\ncall it when `authMethods` was omitted or empty.\n\nCalled when the agent requires authentication before allowing session creation.\nThe client provides the authentication method ID that was advertised during initialization.\n\nAfter successful authentication, the client can proceed to create sessions with\n`new_session` without receiving an `auth_required` error.\n\nSee protocol docs: [Initialization](https://agentclientprotocol.com/protocol/v2/initialization)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/LoginAuthRequest"
@@ -5599,7 +5599,7 @@
                 },
                 {
                   "title": "LogoutAuthRequest",
-                  "description": "Logs out of the current authenticated state.\n\nAgents MUST support this method when their `initialize` response advertised\nat least one valid authentication method. Clients MUST NOT call this method\nwhen `authMethods` was omitted or empty.\n\nAfter a successful logout, authentication-gated requests require the client\nto authenticate again. There is no guarantee about the behavior of already\nrunning sessions.",
+                  "description": "Logs out of the current authenticated state.\n\nAgents MUST support this method when their `initialize` response advertised\nat least one valid authentication method. Clients MUST NOT call this method\nwhen `authMethods` was omitted or empty.\n\nAfter a successful logout, authentication-gated requests require the\nclient to complete an advertised authentication flow again. There is no\nguarantee about the behavior of already running sessions.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/LogoutAuthRequest"
@@ -6017,7 +6017,7 @@
       "required": ["name", "url"]
     },
     "EnvVariable": {
-      "description": "An environment variable to set when launching an MCP server.",
+      "description": "An environment variable to set when launching a process.",
       "type": "object",
       "properties": {
         "name": {

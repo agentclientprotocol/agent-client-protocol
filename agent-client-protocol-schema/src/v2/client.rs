@@ -1983,7 +1983,9 @@ pub struct AuthCapabilities {
     /// Whether the client supports `terminal` authentication methods.
     ///
     /// Optional. Omitted or `null` both mean the client does not advertise support.
-    /// Supplying `{}` means the agent may include `terminal` entries in its authentication methods.
+    /// The client should supply `{}` only when it can reproduce the configured
+    /// agent invocation in an interactive terminal. Supplying `{}` means the
+    /// agent may include `terminal` entries in its authentication methods.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
@@ -2011,7 +2013,10 @@ impl AuthCapabilities {
     /// Whether the client supports `terminal` authentication methods.
     ///
     /// Omitted or `null` both mean the client does not advertise support.
-    /// Supplying `{}` means the agent may include `AuthMethod::Terminal` entries in its authentication methods.
+    /// The client should supply `{}` only when it can reproduce the configured
+    /// agent invocation in an interactive terminal. Supplying `{}` means the
+    /// agent may include `AuthMethod::Terminal` entries in its authentication
+    /// methods.
     #[must_use]
     pub fn terminal(mut self, terminal: impl IntoOption<TerminalAuthCapabilities>) -> Self {
         self.terminal = terminal.into_option();
@@ -2036,7 +2041,9 @@ impl AuthCapabilities {
 ///
 /// Capabilities for terminal authentication methods.
 ///
-/// Supplying `{}` means the client supports terminal authentication methods.
+/// Supplying `{}` means the client can reproduce the configured agent
+/// invocation in an interactive terminal and supports terminal authentication
+/// methods.
 #[cfg(feature = "unstable_auth_methods")]
 #[serde_as]
 #[skip_serializing_none]

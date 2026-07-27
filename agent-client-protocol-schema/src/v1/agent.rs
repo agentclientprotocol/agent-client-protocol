@@ -13,8 +13,6 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
-#[cfg(feature = "unstable_auth_methods")]
-use crate::DefaultTrueOnError;
 use crate::{IntoOption, ProtocolVersion, SkipListener};
 
 use super::{
@@ -570,17 +568,11 @@ pub enum AuthMethod {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
-    /// User provides a key that the client passes to the agent as an environment variable.
-    #[cfg(feature = "unstable_auth_methods")]
-    EnvVar(AuthMethodEnvVar),
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// Client runs an interactive terminal for the user to authenticate via a TUI.
+    /// Client runs the configured agent program as a separate interactive
+    /// process, without passing this method to `authenticate`.
     #[cfg(feature = "unstable_auth_methods")]
     Terminal(AuthMethodTerminal),
-    /// Agent handles authentication itself.
+    /// Agent handles authentication itself through `authenticate`.
     ///
     /// This is the default when no `type` is specified.
     #[serde(untagged)]
@@ -594,8 +586,6 @@ impl AuthMethod {
         match self {
             Self::Agent(a) => &a.id,
             #[cfg(feature = "unstable_auth_methods")]
-            Self::EnvVar(e) => &e.id,
-            #[cfg(feature = "unstable_auth_methods")]
             Self::Terminal(t) => &t.id,
         }
     }
@@ -606,8 +596,6 @@ impl AuthMethod {
         match self {
             Self::Agent(a) => &a.name,
             #[cfg(feature = "unstable_auth_methods")]
-            Self::EnvVar(e) => &e.name,
-            #[cfg(feature = "unstable_auth_methods")]
             Self::Terminal(t) => &t.name,
         }
     }
@@ -617,8 +605,6 @@ impl AuthMethod {
     pub fn description(&self) -> Option<&str> {
         match self {
             Self::Agent(a) => a.description.as_deref(),
-            #[cfg(feature = "unstable_auth_methods")]
-            Self::EnvVar(e) => e.description.as_deref(),
             #[cfg(feature = "unstable_auth_methods")]
             Self::Terminal(t) => t.description.as_deref(),
         }
@@ -634,14 +620,12 @@ impl AuthMethod {
         match self {
             Self::Agent(a) => a.meta.as_ref(),
             #[cfg(feature = "unstable_auth_methods")]
-            Self::EnvVar(e) => e.meta.as_ref(),
-            #[cfg(feature = "unstable_auth_methods")]
             Self::Terminal(t) => t.meta.as_ref(),
         }
     }
 }
 
-/// Agent handles authentication itself.
+/// Agent handles authentication itself through `authenticate`.
 ///
 /// This is the default authentication method type.
 #[serde_as]
@@ -706,211 +690,13 @@ impl AuthMethodAgent {
 ///
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
-/// Environment variable authentication method.
-///
-/// The user provides credentials that the client passes to the agent as environment variables.
-#[cfg(feature = "unstable_auth_methods")]
-#[serde_as]
-#[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-#[non_exhaustive]
-pub struct AuthMethodEnvVar {
-    /// Unique identifier for this authentication method.
-    pub id: AuthMethodId,
-    /// Human-readable name of the authentication method.
-    pub name: String,
-    /// Optional description providing more details about this authentication method.
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
-    #[serde(default)]
-    pub description: Option<String>,
-    /// The environment variables the client should set.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
-    pub vars: Vec<AuthEnvVar>,
-    /// Optional link to a page where the user can obtain their credentials.
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
-    #[serde(default)]
-    pub link: Option<String>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
-    #[serde(default)]
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
-}
-
-#[cfg(feature = "unstable_auth_methods")]
-impl AuthMethodEnvVar {
-    /// Builds [`AuthMethodEnvVar`] with the required fields set; optional fields start unset or empty.
-    #[must_use]
-    pub fn new(
-        id: impl Into<AuthMethodId>,
-        name: impl Into<String>,
-        vars: Vec<AuthEnvVar>,
-    ) -> Self {
-        Self {
-            id: id.into(),
-            name: name.into(),
-            description: None,
-            vars,
-            link: None,
-            meta: None,
-        }
-    }
-
-    /// Optional link to a page where the user can obtain their credentials.
-    #[must_use]
-    pub fn link(mut self, link: impl IntoOption<String>) -> Self {
-        self.link = link.into_option();
-        self
-    }
-
-    /// Optional description providing more details about this authentication method.
-    #[must_use]
-    pub fn description(mut self, description: impl IntoOption<String>) -> Self {
-        self.description = description.into_option();
-        self
-    }
-
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[must_use]
-    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
-        self.meta = meta.into_option();
-        self
-    }
-}
-
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
-/// Describes a single environment variable for an [`AuthMethodEnvVar`] authentication method.
-#[cfg(feature = "unstable_auth_methods")]
-#[serde_as]
-#[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-#[non_exhaustive]
-pub struct AuthEnvVar {
-    /// The environment variable name (e.g. `"OPENAI_API_KEY"`).
-    pub name: String,
-    /// Human-readable label for this variable, displayed in client UI.
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
-    #[serde(default)]
-    pub label: Option<String>,
-    /// Whether this value is a secret (e.g. API key, token).
-    /// Clients should use a password-style input for secret vars.
-    ///
-    /// Defaults to `true`.
-    #[serde_as(deserialize_as = "DefaultTrueOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
-    #[serde(default = "default_true", skip_serializing_if = "is_true")]
-    #[schemars(extend("default" = true))]
-    pub secret: bool,
-    /// Whether this variable is optional.
-    ///
-    /// Defaults to `false`.
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
-    #[serde(default, skip_serializing_if = "is_false")]
-    #[schemars(extend("default" = false))]
-    pub optional: bool,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
-    #[serde(default)]
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
-}
-
-#[cfg(feature = "unstable_auth_methods")]
-fn default_true() -> bool {
-    true
-}
-
-#[cfg(feature = "unstable_auth_methods")]
-#[expect(clippy::trivially_copy_pass_by_ref)]
-fn is_true(v: &bool) -> bool {
-    *v
-}
-
-#[cfg(feature = "unstable_auth_methods")]
-#[expect(clippy::trivially_copy_pass_by_ref)]
-fn is_false(v: &bool) -> bool {
-    !*v
-}
-
-#[cfg(feature = "unstable_auth_methods")]
-impl AuthEnvVar {
-    /// Creates an auth environment variable prompt with `secret` enabled and `optional` disabled.
-    #[must_use]
-    pub fn new(name: impl Into<String>) -> Self {
-        Self {
-            name: name.into(),
-            label: None,
-            secret: true,
-            optional: false,
-            meta: None,
-        }
-    }
-
-    /// Human-readable label for this variable, displayed in client UI.
-    #[must_use]
-    pub fn label(mut self, label: impl IntoOption<String>) -> Self {
-        self.label = label.into_option();
-        self
-    }
-
-    /// Whether this value is a secret (e.g. API key, token).
-    /// Clients should use a password-style input for secret vars.
-    #[must_use]
-    pub fn secret(mut self, secret: bool) -> Self {
-        self.secret = secret;
-        self
-    }
-
-    /// Whether this variable is optional.
-    #[must_use]
-    pub fn optional(mut self, optional: bool) -> Self {
-        self.optional = optional;
-        self
-    }
-
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[must_use]
-    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
-        self.meta = meta.into_option();
-        self
-    }
-}
-
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Terminal-based authentication method.
 ///
-/// The client runs an interactive terminal for the user to authenticate via a TUI.
+/// The client runs the configured agent program as a separate interactive
+/// process for the user to authenticate via a TUI. Agents MUST advertise this
+/// method only when the client enabled its terminal authentication capability.
+/// A zero exit status signals success; any other termination signals failure.
+/// The client MUST NOT pass this method to `authenticate`.
 #[cfg(feature = "unstable_auth_methods")]
 #[serde_as]
 #[skip_serializing_none]
@@ -927,12 +713,13 @@ pub struct AuthMethodTerminal {
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
     pub description: Option<String>,
-    /// Additional arguments to pass when running the agent binary for terminal auth.
+    /// Additional arguments to append to the configured agent invocation for terminal auth.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
     #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub args: Vec<String>,
-    /// Additional environment variables to set when running the agent binary for terminal auth.
+    /// Additional environment variables to set on the configured agent invocation for terminal auth.
+    /// These values override same-named variables in the base launch configuration.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
@@ -964,14 +751,15 @@ impl AuthMethodTerminal {
         }
     }
 
-    /// Additional arguments to pass when running the agent binary for terminal auth.
+    /// Additional arguments to append to the configured agent invocation for terminal auth.
     #[must_use]
     pub fn args(mut self, args: Vec<String>) -> Self {
         self.args = args;
         self
     }
 
-    /// Additional environment variables to set when running the agent binary for terminal auth.
+    /// Additional environment variables to set on the configured agent invocation for terminal auth.
+    /// These values override same-named variables in the base launch configuration.
     #[must_use]
     pub fn env(mut self, env: HashMap<String, String>) -> Self {
         self.env = env;
@@ -4939,7 +4727,8 @@ pub enum ClientRequest {
     /// Authenticates the client using the specified authentication method.
     ///
     /// Called when the agent requires authentication before allowing session creation.
-    /// The client provides the authentication method ID that was advertised during initialization.
+    /// The client provides an authentication method ID that was advertised during
+    /// initialization and whose type defines the `authenticate` flow.
     ///
     /// After successful authentication, the client can proceed to create sessions with
     /// `new_session` without receiving an `auth_required` error.
@@ -5869,137 +5658,32 @@ mod test_serialization {
         );
     }
 
-    #[cfg(feature = "unstable_auth_methods")]
     #[test]
-    fn test_auth_method_env_var_serialization() {
-        let method = AuthMethod::EnvVar(AuthMethodEnvVar::new(
-            "api-key",
-            "API Key",
-            vec![AuthEnvVar::new("API_KEY")],
-        ));
+    fn test_legacy_env_var_auth_method_falls_back_to_agent() {
+        let deserialized: AuthMethod = serde_json::from_value(json!({
+            "id": "api-key",
+            "name": "API Key",
+            "type": "env_var",
+            "vars": [{"name": "API_KEY"}],
+            "link": "https://example.com/keys"
+        }))
+        .unwrap();
 
-        let json = serde_json::to_value(&method).unwrap();
-        assert_eq!(
-            json,
-            json!({
-                "id": "api-key",
-                "name": "API Key",
-                "type": "env_var",
-                "vars": [{"name": "API_KEY"}]
-            })
-        );
-        // secret defaults to true and should be omitted; optional defaults to false and should be omitted
-        assert!(!json["vars"][0].as_object().unwrap().contains_key("secret"));
-        assert!(
-            !json["vars"][0]
-                .as_object()
-                .unwrap()
-                .contains_key("optional")
-        );
-
-        let deserialized: AuthMethod = serde_json::from_value(json).unwrap();
-        match deserialized {
-            AuthMethod::EnvVar(AuthMethodEnvVar {
-                id,
-                name: method_name,
-                vars,
-                link,
-                ..
-            }) => {
+        match &deserialized {
+            AuthMethod::Agent(AuthMethodAgent { id, name, .. }) => {
                 assert_eq!(id.0.as_ref(), "api-key");
-                assert_eq!(method_name, "API Key");
-                assert_eq!(vars.len(), 1);
-                assert_eq!(vars[0].name, "API_KEY");
-                assert!(vars[0].secret);
-                assert!(!vars[0].optional);
-                assert!(link.is_none());
+                assert_eq!(name, "API Key");
             }
-            _ => panic!("Expected EnvVar variant"),
+            #[cfg(feature = "unstable_auth_methods")]
+            _ => panic!("Expected Agent variant"),
         }
-    }
-
-    #[cfg(feature = "unstable_auth_methods")]
-    #[test]
-    fn test_auth_method_env_var_with_link_serialization() {
-        let method = AuthMethod::EnvVar(
-            AuthMethodEnvVar::new("api-key", "API Key", vec![AuthEnvVar::new("API_KEY")])
-                .link("https://example.com/keys"),
-        );
-
-        let json = serde_json::to_value(&method).unwrap();
         assert_eq!(
-            json,
+            serde_json::to_value(deserialized).unwrap(),
             json!({
                 "id": "api-key",
-                "name": "API Key",
-                "type": "env_var",
-                "vars": [{"name": "API_KEY"}],
-                "link": "https://example.com/keys"
+                "name": "API Key"
             })
         );
-
-        let deserialized: AuthMethod = serde_json::from_value(json).unwrap();
-        match deserialized {
-            AuthMethod::EnvVar(AuthMethodEnvVar { link, .. }) => {
-                assert_eq!(link.as_deref(), Some("https://example.com/keys"));
-            }
-            _ => panic!("Expected EnvVar variant"),
-        }
-    }
-
-    #[cfg(feature = "unstable_auth_methods")]
-    #[test]
-    fn test_auth_method_env_var_multiple_vars() {
-        let method = AuthMethod::EnvVar(AuthMethodEnvVar::new(
-            "azure-openai",
-            "Azure OpenAI",
-            vec![
-                AuthEnvVar::new("AZURE_OPENAI_API_KEY").label("API Key"),
-                AuthEnvVar::new("AZURE_OPENAI_ENDPOINT")
-                    .label("Endpoint URL")
-                    .secret(false),
-                AuthEnvVar::new("AZURE_OPENAI_API_VERSION")
-                    .label("API Version")
-                    .secret(false)
-                    .optional(true),
-            ],
-        ));
-
-        let json = serde_json::to_value(&method).unwrap();
-        assert_eq!(
-            json,
-            json!({
-                "id": "azure-openai",
-                "name": "Azure OpenAI",
-                "type": "env_var",
-                "vars": [
-                    {"name": "AZURE_OPENAI_API_KEY", "label": "API Key"},
-                    {"name": "AZURE_OPENAI_ENDPOINT", "label": "Endpoint URL", "secret": false},
-                    {"name": "AZURE_OPENAI_API_VERSION", "label": "API Version", "secret": false, "optional": true}
-                ]
-            })
-        );
-
-        let deserialized: AuthMethod = serde_json::from_value(json).unwrap();
-        match deserialized {
-            AuthMethod::EnvVar(AuthMethodEnvVar { vars, .. }) => {
-                assert_eq!(vars.len(), 3);
-                // First var: secret (default true), not optional (default false)
-                assert_eq!(vars[0].name, "AZURE_OPENAI_API_KEY");
-                assert_eq!(vars[0].label.as_deref(), Some("API Key"));
-                assert!(vars[0].secret);
-                assert!(!vars[0].optional);
-                // Second var: not a secret, not optional
-                assert_eq!(vars[1].name, "AZURE_OPENAI_ENDPOINT");
-                assert!(!vars[1].secret);
-                assert!(!vars[1].optional);
-                // Third var: not a secret, optional
-                assert_eq!(vars[2].name, "AZURE_OPENAI_API_VERSION");
-                assert!(!vars[2].secret);
-                assert!(vars[2].optional);
-            }
-            _ => panic!("Expected EnvVar variant"),
-        }
     }
 
     #[cfg(feature = "unstable_auth_methods")]

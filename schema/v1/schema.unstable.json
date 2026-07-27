@@ -3381,23 +3381,7 @@
       "description": "Describes an available authentication method.\n\nThe `type` field acts as the discriminator in the serialized JSON form.\nWhen no `type` is present, the method is treated as `agent`.",
       "anyOf": [
         {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nUser provides a key that the client passes to the agent as an environment variable.",
-          "type": "object",
-          "properties": {
-            "type": {
-              "type": "string",
-              "const": "env_var"
-            }
-          },
-          "required": ["type"],
-          "allOf": [
-            {
-              "$ref": "#/$defs/AuthMethodEnvVar"
-            }
-          ]
-        },
-        {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nClient runs an interactive terminal for the user to authenticate via a TUI.",
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nClient runs the configured agent program as a separate interactive\nprocess, without passing this method to `authenticate`.",
           "type": "object",
           "properties": {
             "type": {
@@ -3414,7 +3398,7 @@
         },
         {
           "title": "agent",
-          "description": "Agent handles authentication itself.\n\nThis is the default when no `type` is specified.",
+          "description": "Agent handles authentication itself through `authenticate`.\n\nThis is the default when no `type` is specified.",
           "allOf": [
             {
               "$ref": "#/$defs/AuthMethodAgent"
@@ -3427,86 +3411,8 @@
       "description": "Typed identifier used for auth method values on the wire.",
       "type": "string"
     },
-    "AuthEnvVar": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nDescribes a single environment variable for an [`AuthMethodEnvVar`] authentication method.",
-      "type": "object",
-      "properties": {
-        "name": {
-          "description": "The environment variable name (e.g. `\"OPENAI_API_KEY\"`).",
-          "type": "string"
-        },
-        "label": {
-          "description": "Human-readable label for this variable, displayed in client UI.",
-          "type": ["string", "null"],
-          "x-deserialize-default-on-error": true
-        },
-        "secret": {
-          "description": "Whether this value is a secret (e.g. API key, token).\nClients should use a password-style input for secret vars.\n\nDefaults to `true`.",
-          "type": "boolean",
-          "x-deserialize-default-on-error": true,
-          "default": true
-        },
-        "optional": {
-          "description": "Whether this variable is optional.\n\nDefaults to `false`.",
-          "type": "boolean",
-          "x-deserialize-default-on-error": true,
-          "default": false
-        },
-        "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"],
-          "x-deserialize-default-on-error": true,
-          "additionalProperties": true
-        }
-      },
-      "required": ["name"]
-    },
-    "AuthMethodEnvVar": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nEnvironment variable authentication method.\n\nThe user provides credentials that the client passes to the agent as environment variables.",
-      "type": "object",
-      "properties": {
-        "id": {
-          "description": "Unique identifier for this authentication method.",
-          "allOf": [
-            {
-              "$ref": "#/$defs/AuthMethodId"
-            }
-          ]
-        },
-        "name": {
-          "description": "Human-readable name of the authentication method.",
-          "type": "string"
-        },
-        "description": {
-          "description": "Optional description providing more details about this authentication method.",
-          "type": ["string", "null"],
-          "x-deserialize-default-on-error": true
-        },
-        "vars": {
-          "description": "The environment variables the client should set.",
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/AuthEnvVar"
-          },
-          "x-deserialize-default-on-error": true,
-          "x-deserialize-skip-invalid-items": true
-        },
-        "link": {
-          "description": "Optional link to a page where the user can obtain their credentials.",
-          "type": ["string", "null"],
-          "x-deserialize-default-on-error": true
-        },
-        "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"],
-          "x-deserialize-default-on-error": true,
-          "additionalProperties": true
-        }
-      },
-      "required": ["id", "name", "vars"]
-    },
     "AuthMethodTerminal": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nTerminal-based authentication method.\n\nThe client runs an interactive terminal for the user to authenticate via a TUI.",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nTerminal-based authentication method.\n\nThe client runs the configured agent program as a separate interactive\nprocess for the user to authenticate via a TUI. Agents MUST advertise this\nmethod only when the client enabled its terminal authentication capability.\nA zero exit status signals success; any other termination signals failure.\nThe client MUST NOT pass this method to `authenticate`.",
       "type": "object",
       "properties": {
         "id": {
@@ -3527,7 +3433,7 @@
           "x-deserialize-default-on-error": true
         },
         "args": {
-          "description": "Additional arguments to pass when running the agent binary for terminal auth.",
+          "description": "Additional arguments to append to the configured agent invocation for terminal auth.",
           "type": "array",
           "items": {
             "type": "string"
@@ -3536,7 +3442,7 @@
           "x-deserialize-skip-invalid-items": true
         },
         "env": {
-          "description": "Additional environment variables to set when running the agent binary for terminal auth.",
+          "description": "Additional environment variables to set on the configured agent invocation for terminal auth.\nThese values override same-named variables in the base launch configuration.",
           "type": "object",
           "x-deserialize-default-on-error": true,
           "additionalProperties": {
@@ -3553,7 +3459,7 @@
       "required": ["id", "name"]
     },
     "AuthMethodAgent": {
-      "description": "Agent handles authentication itself.\n\nThis is the default authentication method type.",
+      "description": "Agent handles authentication itself through `authenticate`.\n\nThis is the default authentication method type.",
       "type": "object",
       "properties": {
         "id": {
@@ -5974,7 +5880,7 @@
                 },
                 {
                   "title": "AuthenticateRequest",
-                  "description": "Authenticates the client using the specified authentication method.\n\nCalled when the agent requires authentication before allowing session creation.\nThe client provides the authentication method ID that was advertised during initialization.\n\nAfter successful authentication, the client can proceed to create sessions with\n`new_session` without receiving an `auth_required` error.\n\nSee protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)",
+                  "description": "Authenticates the client using the specified authentication method.\n\nCalled when the agent requires authentication before allowing session creation.\nThe client provides an authentication method ID that was advertised during\ninitialization and whose type defines the `authenticate` flow.\n\nAfter successful authentication, the client can proceed to create sessions with\n`new_session` without receiving an `auth_required` error.\n\nSee protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/AuthenticateRequest"
@@ -6418,7 +6324,7 @@
       "type": "object",
       "properties": {
         "terminal": {
-          "description": "Whether the client supports `terminal` authentication methods.\n\nWhen `true`, the agent may include `terminal` entries in its authentication methods.",
+          "description": "Whether the client supports `terminal` authentication methods.\n\nThe client should set this to `true` only when it can reproduce the\nconfigured agent invocation in an interactive terminal. When `true`, the\nagent may include `terminal` entries in its authentication methods.",
           "type": "boolean",
           "default": false,
           "x-deserialize-default-on-error": true

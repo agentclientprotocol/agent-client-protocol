@@ -20,7 +20,8 @@ requests from clients and execute tasks using language models and tools.
 Authenticates the client using the specified authentication method.
 
 Called when the agent requires authentication before allowing session creation.
-The client provides the authentication method ID that was advertised during initialization.
+The client provides an authentication method ID that was advertised during
+initialization and whose type defines the `authenticate` flow.
 
 After successful authentication, the client can proceed to create sessions with
 `new_session` without receiving an `auth_required` error.
@@ -1807,7 +1808,7 @@ Describes an available authentication method.
 The `type` field acts as the discriminator in the serialized JSON form.
 When no `type` is present, the method is treated as `agent`.
 
-Agent handles authentication itself.
+Agent handles authentication itself through `authenticate`.
 
 This is the default when no `type` is specified.
 
@@ -1835,7 +1836,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
 
 ## <span class="font-mono">AuthMethodAgent</span>
 
-Agent handles authentication itself.
+Agent handles authentication itself through `authenticate`.
 
 This is the default authentication method type.
 

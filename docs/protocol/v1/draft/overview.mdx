@@ -20,7 +20,9 @@ A typical flow follows this pattern:
 <Step title="Initialization Phase">
 
 - Client → Agent: `initialize` to establish connection
-- Client → Agent: `authenticate` if required by the Agent
+- Client: completes an advertised authentication flow if required; for example,
+  `authenticate` for an Agent-handled method or launch and reconnect for a
+  terminal method
 
 </Step>
 

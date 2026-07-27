@@ -2699,7 +2699,7 @@
       "anyOf": [
         {
           "title": "agent",
-          "description": "Agent handles authentication itself.\n\nThis is the default when no `type` is specified.",
+          "description": "Agent handles authentication itself through `authenticate`.\n\nThis is the default when no `type` is specified.",
           "allOf": [
             {
               "$ref": "#/$defs/AuthMethodAgent"
@@ -2709,7 +2709,7 @@
       ]
     },
     "AuthMethodAgent": {
-      "description": "Agent handles authentication itself.\n\nThis is the default authentication method type.",
+      "description": "Agent handles authentication itself through `authenticate`.\n\nThis is the default authentication method type.",
       "type": "object",
       "properties": {
         "id": {
@@ -4236,7 +4236,7 @@
                 },
                 {
                   "title": "AuthenticateRequest",
-                  "description": "Authenticates the client using the specified authentication method.\n\nCalled when the agent requires authentication before allowing session creation.\nThe client provides the authentication method ID that was advertised during initialization.\n\nAfter successful authentication, the client can proceed to create sessions with\n`new_session` without receiving an `auth_required` error.\n\nSee protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)",
+                  "description": "Authenticates the client using the specified authentication method.\n\nCalled when the agent requires authentication before allowing session creation.\nThe client provides an authentication method ID that was advertised during\ninitialization and whose type defines the `authenticate` flow.\n\nAfter successful authentication, the client can proceed to create sessions with\n`new_session` without receiving an `auth_required` error.\n\nSee protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/AuthenticateRequest"

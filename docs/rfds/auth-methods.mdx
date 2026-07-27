@@ -1,5 +1,5 @@
 ---
-title: "Authentication Methods"
+title: "Terminal Authentication"
 ---
 
 Author(s): [anna239](https://github.com/anna239)
@@ -8,137 +8,104 @@ Author(s): [anna239](https://github.com/anna239)
 
 > What are you proposing to change?
 
-I suggest adding more information about auth methods that agent supports, which will allow clients to draw more appropriate UI.
+Add a typed terminal authentication method so a Client can run the configured
+Agent program interactively for login, then reconnect to the Agent after the
+login flow succeeds.
 
 ## Status quo
 
 > How do things work today and what problems does this cause? Why would we change things?
 
-Agents have different ways of authenticating users: env vars with api keys, running a command like `<agent_name> login`, some just open a browser and use oauth.
-[AuthMethod](https://agentclientprotocol.com/protocol/v1/schema#authmethod) does not really tell the client what should be done to authenticate. This means we can't show the user a control for entering key if an agent supports auth through env var.
-
-Very few agents can authenticate fully on their own without user input, so agents with ACP auth support are limited in the methods they can offer, or require manual setup before being run as an ACP agent.
+Agents use several authentication flows. Some can handle login over ACP, while
+others require users to interact with the Agent's terminal UI. The baseline
+`agent` authentication method does not tell a Client that it must launch an
+interactive program, so users may need to leave the Client and complete setup
+manually.
 
 ## What we propose to do about it
 
 > What are you proposing to improve the situation?
 
-We can add addition types of AuthMethods, to provide clients with additional information so they can assist in the login process.
+Add a `terminal` authentication method. A supporting Client launches the same
+configured Agent program in an interactive terminal, adding arguments and
+environment variables supplied by the Agent. After the terminal flow succeeds,
+the Client reconnects and reinitializes the ACP Agent.
+
+Terminal authentication is an out-of-band process. The Client does not pass a
+terminal method to v1 `authenticate` or v2 `auth/login`.
 
 ## Shiny future
 
-> How will things will play out once this feature exists?
+> How will things play out once this feature exists?
 
-It will be easier for end-users to start using an agent from inside the IDE as auth process will be more straightforward
+Users can complete an Agent's interactive login flow without leaving their
+Client. Agents describe how to enter that flow without knowing the
+Client-specific path or command used to launch them.
 
 ## Implementation details and plan
 
 > Tell me more about your implementation. What is your detailed implementation plan?
 
-I suggest adding following auth types:
+### Terminal authentication method
 
-### Auth method types
+The `terminal` discriminator identifies a terminal authentication method. The
+descriptor includes:
 
-1. Agent auth
+- `args` (optional, default `[]`): additional arguments for the configured Agent
+  program.
+- `env` (optional, default empty): additional environment variables for the
+  terminal process. Descriptor values override same-named variables in the base
+  launch configuration. In v2, every `env` entry **MUST** have a unique `name`.
 
-Same as what there is now – agent handles the auth itself. This is the default type when no `type` is provided, preserving backward compatibility.
+The identifier and `env` wire shapes differ between protocol versions.
 
-```json
+<CodeGroup>
+
+```json v1
 {
-  "id": "123",
-  "name": "Agent",
-  "description": "Authenticate through agent"
-}
-```
-
-An explicit `"type": "agent"` is also accepted but not required.
-
-2. Env variable
-
-The user provides credentials that the client passes to the agent as environment variables. Requires `"type": "env_var"`.
-
-The `vars` field is an array of `AuthEnvVar` objects, each describing a single environment variable. This supports services that require multiple credentials (e.g. Azure OpenAI needs both an API key and an endpoint URL).
-
-Simple single-key example:
-
-```json
-{
-  "id": "openai",
-  "name": "OpenAI API Key",
-  "type": "env_var",
-  "vars": [{ "name": "OPENAI_API_KEY" }],
-  "link": "https://platform.openai.com/api-keys"
-}
-```
-
-Multiple variables with metadata:
-
-```json
-{
-  "id": "azure-openai",
-  "name": "Azure OpenAI",
-  "type": "env_var",
-  "vars": [
-    { "name": "AZURE_OPENAI_API_KEY", "label": "API Key" },
-    {
-      "name": "AZURE_OPENAI_ENDPOINT",
-      "label": "Endpoint URL",
-      "secret": false
-    },
-    {
-      "name": "AZURE_OPENAI_API_VERSION",
-      "label": "API Version",
-      "secret": false,
-      "optional": true
-    }
-  ],
-  "link": "https://portal.azure.com"
-}
-```
-
-Fields on `AuthMethodEnvVar`:
-
-- `vars` (required): Array of `AuthEnvVar` objects.
-- `link` (optional): URL where the user can obtain their credentials.
-
-Fields on `AuthEnvVar`:
-
-- `name` (required): The environment variable name (e.g. `"OPENAI_API_KEY"`).
-- `label` (optional): Human-readable label for this variable, displayed in client UI.
-- `secret` (optional, default `true`): Whether this value is a secret. Clients should use a password-style input for secret vars and a plain text input otherwise.
-- `optional` (optional, default `false`): Whether this variable is optional.
-
-Since environment variables need to be supplied when the agent process starts, the client can check if it already passed such variables to the process, in which case the user can click on the button and the agent will read the already available values.
-
-Otherwise, when the user clicks the button, the client could restart the agent process with the desired environment variables, and then automatically send the authenticate message with the correct id to sign in for the user.
-
-3. Terminal Auth
-
-This requires the client to be able to run an interactive terminal for the user to login via a TUI. Requires `"type": "terminal"`.
-
-```json
-{
-  "id": "123",
-  "name": "Run in terminal",
-  "description": "Setup Label",
+  "id": "agent-login",
+  "name": "Log in from the terminal",
+  "description": "Open the Agent's interactive login flow",
   "type": "terminal",
-  "args": ["--setup"],
-  "env": { "VAR1": "value1", "VAR2": "value2" }
+  "args": ["--login"],
+  "env": {
+    "ACP_INTERACTIVE_LOGIN": "1"
+  }
 }
 ```
 
-- `args` (optional, default `[]`): Additional arguments to pass when running the agent binary.
-- `env` (optional, default `{}`): Additional environment variables to set.
+```json v2
+{
+  "methodId": "agent-login",
+  "name": "Log in from the terminal",
+  "description": "Open the Agent's interactive login flow",
+  "type": "terminal",
+  "args": ["--login"],
+  "env": [
+    {
+      "name": "ACP_INTERACTIVE_LOGIN",
+      "value": "1"
+    }
+  ]
+}
+```
 
-The `command` cannot be specified, the client will invoke the exact same binary with the exact same setup. The agent can supply additional arguments and environment variables as necessary. These will be supplied in **addition** to any args/env supplied by default when the server is started. So agents will need to have a way to kickoff their interactive login flow even if normal acp commands/arguments are supplied as well.
+</CodeGroup>
 
-This is so that the agent doesn't need to know about the environment it is running in. It can't know the absolute path necessarily, and shouldn't be able to supply other commands or programs to minimize security issues.
+The descriptor cannot specify a command. The Client constructs the terminal
+invocation from the same configured Agent program and base launch configuration
+used for the ACP connection, then appends `args` and applies `env`. This keeps
+the descriptor independent of Client-specific installation paths and prevents
+the Agent from selecting an unrelated program.
 
-### Client capabilities
+### Client capability
 
-Because `terminal` auth methods require specific client-side support, clients must opt in via `AuthCapabilities` on `ClientCapabilities` during initialization:
+Clients opt in because terminal authentication requires Client-side process and
+terminal support.
 
-```json
+<CodeGroup>
+
+```json v1
 {
   "clientCapabilities": {
     "auth": {
@@ -148,25 +115,85 @@ Because `terminal` auth methods require specific client-side support, clients mu
 }
 ```
 
-- `auth.terminal` (default `false`): When `true`, the agent may include `terminal` entries in its authentication methods.
+```json v2
+{
+  "capabilities": {
+    "auth": {
+      "terminal": {}
+    }
+  }
+}
+```
 
-The `env_var` type does not require a capability opt-in since any client can set environment variables when starting a process, we are just providing additional context for the environment variable.
+</CodeGroup>
+
+A Client advertises this capability only when it can reproduce the configured
+Agent invocation in an interactive terminal. In particular, a Client connected
+to an Agent over a remote transport must omit the capability unless it can
+launch that same Agent program in the Agent's execution environment.
+
+An Agent may advertise a `terminal` authentication method only when the Client
+advertised the corresponding capability.
+
+### Login flow
+
+1. The Client initializes the ACP connection and receives a `terminal`
+   authentication method.
+2. When the user selects it, the Client launches a separate interactive process
+   using the configured Agent program and base launch configuration, plus the
+   descriptor's `args` and `env`.
+3. The Client presents the terminal to the user and waits for the process to
+   exit. Exit status zero signals success; a non-zero status, termination
+   without an exit status, or cancellation signals failure.
+4. On success, the Client reconnects and reinitializes the ACP Agent, then
+   retries the operation that required authentication.
+
+Agents **SHOULD** provide arguments that enter a login-only flow and exit after
+the flow completes. ACP does not define an output pattern or other in-band
+success signal. Clients may recognize implementation-specific signals as an
+extension, but Agents cannot require that behavior for interoperability.
+
+The Client **MUST NOT** pass the terminal method to v1 `authenticate` or v2
+`auth/login`: the interactive terminal process is not the ACP connection.
+
+In v2, advertising any authentication method requires the Agent to implement
+both `auth/login` and `auth/logout`, preserving the baseline authentication
+surface rule. The standard `agent` type uses `auth/login`; `terminal` does not,
+so Clients never pass a terminal method ID to that endpoint.
 
 ## Frequently asked questions
 
 > What questions have arisen over the course of authoring this document or during subsequent discussions?
 
-### What alternative approaches did you consider, and why did you settle on this one?
+### What alternative approaches did you consider?
 
-An alternative approach would be to include this information to an agent's declaration making it more static, see [Registry RFD](https://github.com/agentclientprotocol/agent-client-protocol/pull/289)
+The proposal originally included an `env_var` method that asked the Client to
+collect credentials and restart the Agent with new environment variables. That
+model assumes the Client owns the Agent process and does not generalize to
+remote transports. Agents using this former experimental method should replace
+it with `agent` or `terminal` authentication.
 
-There is also an alternative to adding a separate `elicitation` capability, which is to create a separate auth type for this. Then the client can decide themselves if they support it or not.
+Authentication setup could also be included in an Agent's registry declaration,
+making it static rather than negotiated. See the [Registry
+RFD](https://github.com/agentclientprotocol/agent-client-protocol/pull/289).
+
+Structured credential collection could instead use an elicitation flow. That
+keeps user input inside the Agent's protocol-driven authentication logic rather
+than giving the Client special knowledge of environment variables.
 
 ## Revision history
 
-There was a part about elicitations https://github.com/agentclientprotocol/agent-client-protocol/blob/939ef116a1b14016e4e3808b8764237250afa253/docs/rfds/auth.mdx removed it for now, will move to a separate rfd
+The original authentication RFD also discussed elicitation. That material was
+removed and moved to a separate proposal.
 
-- 2026-03-09: Remove auth_methods from Error type
-- 2026-03-03: Changed `env_var` from single `varName` to structured `vars` array of `AuthEnvVar` objects; simplified field name from `varName` to `name`
-- 2026-02-27: Updated to reflect current implementation
-- 2026-01-14: Updates based on Core Maintainer discussion
+- 2026-07-27: Removed the remaining unstable `env_var` types and made the Rust
+  SDK decode legacy descriptors as `agent` in both protocol versions.
+- 2026-07-24: Moved terminal authentication to Preview, defined it as an
+  out-of-band launch and reconnect flow, removed `env_var` from v2, and retained
+  the unstable v1 variant for compatibility.
+- 2026-03-09: Removed `auth_methods` from the Error type.
+- 2026-03-03: Changed `env_var` from a single `varName` to a structured `vars`
+  array of `AuthEnvVar` objects and simplified the field name from `varName` to
+  `name`.
+- 2026-02-27: Updated the proposal to reflect the implementation.
+- 2026-01-14: Incorporated Core Maintainer feedback.

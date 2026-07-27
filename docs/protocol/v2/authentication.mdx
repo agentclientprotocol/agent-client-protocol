@@ -3,7 +3,7 @@ title: "Authentication"
 description: "Authenticating with agents and logging out"
 ---
 
-ACP authentication is negotiated during [initialization](/protocol/v2/initialization). Agents advertise available authentication methods in `authMethods`. Clients use `auth/login` and `auth/logout` only when the Agent advertises the authentication surface.
+ACP authentication is negotiated during [initialization](/protocol/v2/initialization). Agents advertise available authentication methods in `authMethods`. A non-empty list makes `auth/login` and `auth/logout` available, while each authentication method type defines whether the Client invokes `auth/login`.
 
 <br />
 
@@ -15,7 +15,7 @@ sequenceDiagram
     Client->>Agent: initialize
     Agent-->>Client: initialize response (authMethods)
 
-    alt Agent advertises authMethods and requires authentication
+    alt Agent advertises a protocol-driven login method
         Client->>Agent: auth/login (methodId)
         Agent-->>Client: auth/login response
     end
@@ -34,7 +34,7 @@ sequenceDiagram
 
 ## Advertising Authentication
 
-Agents advertise authentication options in the `authMethods` field of the `initialize` response. Each method has a `methodId` that the Client passes back to the Agent in a later `auth/login` request.
+Agents advertise authentication options in the `authMethods` field of the `initialize` response. Each method has a `methodId`. The Client passes that ID to `auth/login` only when the method's type defines a protocol-driven login flow.
 
 Returning one or more valid entries in `authMethods` advertises the authentication surface. An Agent that does so **MUST** implement both `auth/login` and `auth/logout`. If `authMethods` is omitted or empty, the Agent does not advertise this surface and Clients **MUST NOT** call either method.
 
@@ -59,11 +59,11 @@ Returning one or more valid entries in `authMethods` advertises the authenticati
 }
 ```
 
-Because this response contains a valid authentication method, the Agent must support both `auth/login` and `auth/logout`.
+Because this response contains an `agent` authentication method, the Agent must support both `auth/login` and `auth/logout`.
 
 ### Authentication Method Types
 
-The standard authentication method type is `agent`, where the Agent handles authentication itself. Every authentication method must include a `type` discriminator:
+The standard authentication method type is `agent`, where the Agent handles authentication through `auth/login`. Every authentication method must include a `type` discriminator:
 
 ```json
 {
@@ -80,7 +80,7 @@ See the [schema](/protocol/v2/schema#authmethod) for the full stable `AuthMethod
 
 ## Authenticating
 
-When an Agent has advertised the authentication surface and requires authentication before allowing session creation, the Client calls `auth/login` with one of the advertised authentication method IDs:
+When an Agent requires authentication and the selected method's type defines a protocol-driven login flow, the Client calls `auth/login` with that advertised method's ID:
 
 ```json
 {
@@ -94,8 +94,8 @@ When an Agent has advertised the authentication surface and requires authenticat
 ```
 
 <ParamField path="methodId" type="string" required>
-  The ID of the authentication method to use. This value must match one of the
-  methods advertised in the `initialize` response.
+  The ID of an advertised authentication method whose type defines the
+  `auth/login` flow.
 </ParamField>
 
 On success, the Agent returns an empty result:
@@ -133,7 +133,7 @@ On success, the Agent returns an empty result:
 }
 ```
 
-After a successful `auth/logout`, new sessions that require authentication will require the Client to call `auth/login` again.
+After a successful `auth/logout`, authentication-gated requests will require the user to complete one of the advertised authentication flows again.
 
 ## Active Sessions
 

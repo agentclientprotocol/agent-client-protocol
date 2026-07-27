@@ -22,8 +22,9 @@ requests from clients and execute tasks using language models and tools.
 Authenticates the client using the specified authentication method.
 
 Agents MUST support this method when their `initialize` response advertised
-at least one valid authentication method. Clients MUST NOT call this method
-when `authMethods` was omitted or empty.
+at least one valid authentication method. Clients MUST call this method only
+with a method whose type defines a protocol-driven login flow, and MUST NOT
+call it when `authMethods` was omitted or empty.
 
 Called when the agent requires authentication before allowing session creation.
 The client provides the authentication method ID that was advertised during initialization.
@@ -86,9 +87,9 @@ Agents MUST support this method when their `initialize` response advertised
 at least one valid authentication method. Clients MUST NOT call this method
 when `authMethods` was omitted or empty.
 
-After a successful logout, authentication-gated requests require the client
-to authenticate again. There is no guarantee about the behavior of already
-running sessions.
+After a successful logout, authentication-gated requests require the
+client to complete an advertised authentication flow again. There is no
+guarantee about the behavior of already running sessions.
 
 #### <span class="font-mono">LogoutAuthRequest</span>
 
@@ -1363,7 +1364,7 @@ The `type` field acts as the discriminator in the serialized JSON form.
 **Type:** Union
 
 <ResponseField name="agent" type="object">
-Agent handles authentication itself.
+Agent handles authentication itself through `auth/login`.
 
 The `type` discriminator value is `agent`.
 
@@ -1437,7 +1438,7 @@ future ACP variants.
 
 ## <span class="font-mono">AuthMethodAgent</span>
 
-Agent handles authentication itself.
+Agent handles authentication itself through `auth/login`.
 
 The `type` discriminator value is `agent`.
 
@@ -3106,7 +3107,7 @@ Optional. Omitted and `null` are equivalent and mean no description is provided.
 
 ## <span class="font-mono">EnvVariable</span>
 
-An environment variable to set when launching an MCP server.
+An environment variable to set when launching a process.
 
 **Type:** Object
 

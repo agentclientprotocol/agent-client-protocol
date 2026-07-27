@@ -2090,7 +2090,9 @@ impl BooleanConfigOptionCapabilities {
 pub struct AuthCapabilities {
     /// Whether the client supports `terminal` authentication methods.
     ///
-    /// When `true`, the agent may include `terminal` entries in its authentication methods.
+    /// The client should set this to `true` only when it can reproduce the
+    /// configured agent invocation in an interactive terminal. When `true`, the
+    /// agent may include `terminal` entries in its authentication methods.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[schemars(extend("x-deserialize-default-on-error" = true))]
     #[serde(default)]
@@ -2117,8 +2119,10 @@ impl AuthCapabilities {
 
     /// Whether the client supports `terminal` authentication methods.
     ///
-    /// When `true`, the agent may include `AuthMethod::Terminal`
-    /// entries in its authentication methods.
+    /// The client should set this to `true` only when it can reproduce the
+    /// configured agent invocation in an interactive terminal. When `true`, the
+    /// agent may include `AuthMethod::Terminal` entries in its authentication
+    /// methods.
     #[must_use]
     pub fn terminal(mut self, terminal: bool) -> Self {
         self.terminal = terminal;

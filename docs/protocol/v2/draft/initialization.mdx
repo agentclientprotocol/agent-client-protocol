@@ -34,7 +34,11 @@ Before a Session can be created, Clients **MUST** initialize the connection by c
   "method": "initialize",
   "params": {
     "protocolVersion": 2,
-    "capabilities": {},
+    "capabilities": {
+      "auth": {
+        "terminal": {}
+      }
+    },
     "info": {
       "name": "my-client",
       "title": "My Client",
@@ -114,6 +118,18 @@ Implementations can also [advertise custom capabilities](/protocol/v2/draft/exte
 
 Clients **MAY** include defined capability fields in `capabilities`.
 Omitted fields mean unsupported.
+
+#### Terminal Authentication
+
+<ParamField path="auth.terminal" type="TerminalAuthCapabilities Object">
+  The Client can reproduce the configured Agent invocation in an interactive
+  terminal. Omitted or `null` means unsupported. Supplying `{}` means the Agent
+  may advertise `type: "terminal"` authentication methods.
+</ParamField>
+
+<Card icon="terminal" horizontal href="/protocol/v2/draft/authentication">
+  Learn more about Terminal Authentication
+</Card>
 
 #### Elicitation
 

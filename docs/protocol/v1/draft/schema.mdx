@@ -20,7 +20,8 @@ requests from clients and execute tasks using language models and tools.
 Authenticates the client using the specified authentication method.
 
 Called when the agent requires authentication before allowing session creation.
-The client provides the authentication method ID that was advertised during initialization.
+The client provides an authentication method ID that was advertised during
+initialization and whose type defines the `authenticate` flow.
 
 After successful authentication, the client can proceed to create sessions with
 `new_session` without receiving an `auth_required` error.
@@ -2828,53 +2829,11 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 <ResponseField name="terminal" type={"boolean"} >
   Whether the client supports `terminal` authentication methods.
 
-When `true`, the agent may include `terminal` entries in its authentication methods.
+The client should set this to `true` only when it can reproduce the
+configured agent invocation in an interactive terminal. When `true`, the
+agent may include `terminal` entries in its authentication methods.
 
     - Default: `false`
-
-</ResponseField>
-
-## <span class="font-mono">AuthEnvVar</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Describes a single environment variable for an `AuthMethodEnvVar` authentication method.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="label" type={"string | null"} >
-  Human-readable label for this variable, displayed in client UI.
-</ResponseField>
-<ResponseField name="name" type={"string"} required>
-  The environment variable name (e.g. `"OPENAI_API_KEY"`).
-</ResponseField>
-<ResponseField name="optional" type={"boolean"} >
-  Whether this variable is optional.
-
-Defaults to `false`.
-
-    - Default: `false`
-
-</ResponseField>
-<ResponseField name="secret" type={"boolean"} >
-  Whether this value is a secret (e.g. API key, token).
-Clients should use a password-style input for secret vars.
-
-Defaults to `true`.
-
-    - Default: `true`
 
 </ResponseField>
 
@@ -2887,51 +2846,13 @@ When no `type` is present, the method is treated as `agent`.
 
 **Type:** Union
 
-<ResponseField name="env_var" type="object">
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-User provides a key that the client passes to the agent as an environment variable.
-
-<Expandable title="Properties">
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="description" type={"string | null"} >
-  Optional description providing more details about this authentication method.
-</ResponseField>
-<ResponseField name="id" type={<a href="#authmethodid">AuthMethodId</a>} required>
-  Unique identifier for this authentication method.
-</ResponseField>
-<ResponseField name="link" type={"string | null"} >
-  Optional link to a page where the user can obtain their credentials.
-</ResponseField>
-<ResponseField name="name" type={"string"} required>
-  Human-readable name of the authentication method.
-</ResponseField>
-<ResponseField name="type" type={"string"} required>
-  The discriminator value. Must be `"env_var"`.
-</ResponseField>
-<ResponseField name="vars" type={<a href="#authenvvar">AuthEnvVar[]</a>} required>
-  The environment variables the client should set.
-</ResponseField>
-
-</Expandable>
-</ResponseField>
-
 <ResponseField name="terminal" type="object">
 **UNSTABLE**
 
 This capability is not part of the spec yet, and may be removed or changed at any point.
 
-Client runs an interactive terminal for the user to authenticate via a TUI.
+Client runs the configured agent program as a separate interactive
+process, without passing this method to `authenticate`.
 
 <Expandable title="Properties">
 
@@ -2944,13 +2865,14 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </ResponseField>
 <ResponseField name="args" type={<><span>"string"</span><span>[]</span></>} >
-  Additional arguments to pass when running the agent binary for terminal auth.
+  Additional arguments to append to the configured agent invocation for terminal auth.
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
   Optional description providing more details about this authentication method.
 </ResponseField>
 <ResponseField name="env" type={"object"} >
-  Additional environment variables to set when running the agent binary for terminal auth.
+  Additional environment variables to set on the configured agent invocation for terminal auth.
+These values override same-named variables in the base launch configuration.
 </ResponseField>
 <ResponseField name="id" type={<a href="#authmethodid">AuthMethodId</a>} required>
   Unique identifier for this authentication method.
@@ -2966,7 +2888,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 </ResponseField>
 
 <ResponseField name="agent">
-Agent handles authentication itself.
+Agent handles authentication itself through `authenticate`.
 
 This is the default when no `type` is specified.
 
@@ -2995,7 +2917,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 ## <span class="font-mono">AuthMethodAgent</span>
 
-Agent handles authentication itself.
+Agent handles authentication itself through `authenticate`.
 
 This is the default authentication method type.
 
@@ -3021,44 +2943,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
   Human-readable name of the authentication method.
 </ResponseField>
 
-## <span class="font-mono">AuthMethodEnvVar</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Environment variable authentication method.
-
-The user provides credentials that the client passes to the agent as environment variables.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="description" type={"string | null"} >
-  Optional description providing more details about this authentication method.
-</ResponseField>
-<ResponseField name="id" type={<a href="#authmethodid">AuthMethodId</a>} required>
-  Unique identifier for this authentication method.
-</ResponseField>
-<ResponseField name="link" type={"string | null"} >
-  Optional link to a page where the user can obtain their credentials.
-</ResponseField>
-<ResponseField name="name" type={"string"} required>
-  Human-readable name of the authentication method.
-</ResponseField>
-<ResponseField name="vars" type={<a href="#authenvvar">AuthEnvVar[]</a>} required>
-  The environment variables the client should set.
-</ResponseField>
-
 ## <span class="font-mono">AuthMethodId</span>
 
 Typed identifier used for auth method values on the wire.
@@ -3073,7 +2957,11 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 Terminal-based authentication method.
 
-The client runs an interactive terminal for the user to authenticate via a TUI.
+The client runs the configured agent program as a separate interactive
+process for the user to authenticate via a TUI. Agents MUST advertise this
+method only when the client enabled its terminal authentication capability.
+A zero exit status signals success; any other termination signals failure.
+The client MUST NOT pass this method to `authenticate`.
 
 **Type:** Object
 
@@ -3088,13 +2976,14 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </ResponseField>
 <ResponseField name="args" type={<><span>"string"</span><span>[]</span></>} >
-  Additional arguments to pass when running the agent binary for terminal auth.
+  Additional arguments to append to the configured agent invocation for terminal auth.
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
   Optional description providing more details about this authentication method.
 </ResponseField>
 <ResponseField name="env" type={"object"} >
-  Additional environment variables to set when running the agent binary for terminal auth.
+  Additional environment variables to set on the configured agent invocation for terminal auth.
+These values override same-named variables in the base launch configuration.
 </ResponseField>
 <ResponseField name="id" type={<a href="#authmethodid">AuthMethodId</a>} required>
   Unique identifier for this authentication method.

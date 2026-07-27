@@ -36,6 +36,9 @@ They **SHOULD** also provide a name and version to the Agent.
   "params": {
     "protocolVersion": 1,
     "clientCapabilities": {
+      "auth": {
+        "terminal": true
+      },
       "fs": {
         "readTextFile": true,
         "writeTextFile": true
@@ -114,6 +117,18 @@ Implementations can also [advertise custom capabilities](/protocol/v1/draft/exte
 ### Client Capabilities
 
 The Client **SHOULD** specify whether it supports the following capabilities:
+
+#### Terminal Authentication
+
+<ParamField path="auth.terminal" type="boolean">
+  The Client can reproduce the configured Agent invocation in an interactive
+  terminal. When `true`, the Agent may advertise `type: "terminal"`
+  authentication methods.
+</ParamField>
+
+<Card icon="terminal" horizontal href="/protocol/v1/draft/authentication">
+  Learn more about Terminal Authentication
+</Card>
 
 #### File System
 
