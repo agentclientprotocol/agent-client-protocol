@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.7.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.6.0...v1.7.0) - 2026-07-27
+
+### Added
+
+- *(schema)* stabilize elicitation ([#1779](https://github.com/agentclientprotocol/agent-client-protocol/pull/1779))
+
+### Other
+
+- *(rfd)* Move terminal auth to preview ([#1796](https://github.com/agentclientprotocol/agent-client-protocol/pull/1796))
+
 ## [1.6.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.5.0...v1.6.0) - 2026-07-21
 
 ### Added
