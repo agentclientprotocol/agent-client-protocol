@@ -94,9 +94,9 @@ However, once all of this work is in place, it should be much easier to make add
 
 ### v2 + v1 Schema publishing
 
-I have created a [draft of the v2 schema](https://github.com/agentclientprotocol/agent-client-protocol/pull/1099), which is currently a direct duplicate of v1.
+I created the initial [draft of the v2 schema](https://github.com/agentclientprotocol/agent-client-protocol/pull/1099) as a direct duplicate of v1. The side-by-side Rust types still make the schema differences explicit as v2 evolves.
 
-This also has the necessary conversion types that are needed for Rust at least to convert between the two. But this has a nice side-effect of a clear diff of how the schema will change and also what conversion is necessary. So the plan is to start proposing draft RFDs with the relevant schema changes where possible for approval.
+The Rust schema does not provide cross-version conversion. Even initialize-request normalization depends on SDK routing policy, while many v2 lifecycle and update semantics require state that a schema-level conversion cannot supply. SDKs supporting both versions should expose explicit versioned implementations or build a purpose-specific adapter at their runtime boundary.
 
 Once we have more pieces in place, we can start publishing both schemas to assist SDK developers to start figuring out how to support this. **This should be done in an opt-in, off by default, clearly labeled unstable way for SDK consumers**. There will likely be bumps as we figure out the necessary plumbing and we shouldn't be shipping v2 in production without feature flags prior to a more stable release as we align all of the necessary pieces.
 

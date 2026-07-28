@@ -163,7 +163,7 @@ The identical-looking v1 and v2 terminal content shapes have different ownership
 - A v1 terminal ID refers to a Client-created resource that the Agent can control through `terminal/*` methods.
 - A v2 terminal ID refers to an Agent-owned display stream with no Client control surface.
 
-Stateless v1/v2 conversion helpers should reject terminal content, v2 terminal session updates, and command permission subjects. A stateful v1-to-v2 bridge can only adapt a v1 terminal by implementing the v1 Client terminal lifecycle itself. A v2-to-v1 bridge may accumulate and sanitize terminal bytes into ordinary text content or use an implementation-specific extension, but it must not synthesize a v1 terminal resource it does not own.
+A cross-version adapter must reject terminal content, v2 terminal session updates, and command permission subjects unless it implements the required stateful behavior itself. A v1-to-v2 bridge can only adapt a v1 terminal by implementing the v1 Client terminal lifecycle. A v2-to-v1 bridge may accumulate and sanitize terminal bytes into ordinary text content or use an implementation-specific extension, but it must not synthesize a v1 terminal resource it does not own.
 
 ## Frequently asked questions
 

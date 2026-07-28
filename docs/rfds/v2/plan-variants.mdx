@@ -84,7 +84,7 @@ Clients that only understand item-based plans can still preserve or display unkn
 4. Remove `SessionUpdate::Plan` from the v2 schema and make `SessionUpdate::PlanUpdate` the default plan variant.
 5. Keep the removed `sessionUpdate: "plan"` discriminator rejected so it cannot be accepted as an unknown v2 update.
 6. Require `id` on unknown `PlanUpdateContent` fallback payloads.
-7. Update v1/v2 conversion helpers so v1 `plan` maps to v2 `plan_update` with `id: "main"`.
+7. Document that adapters may map the v1 `plan` update to v2 `plan_update` with `id: "main"`.
 8. Regenerate v2 schema docs so the default v2 surface shows only the item-based tagged plan shape.
 
 ## Frequently asked questions

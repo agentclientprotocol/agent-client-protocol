@@ -121,8 +121,8 @@ consistently in detailed views, permission UI, logs, and debugging tools.
    the `unstable_tool_call_name` Rust feature.
 2. Add an optional three-state `name` patch field to v2 `ToolCallUpdate` behind
    the same feature.
-3. Include the field in v1/v2 conversion and document the unrepresentable v2
-   clear operation and the deliberately lossy bridge option.
+3. Document how cross-version adapters preserve the field and why the v2 clear
+   operation is not representable in v1.
 4. Regenerate the draft schemas and generated schema documentation.
 5. Update the hand-written draft tool-call documentation and examples.
 
@@ -132,13 +132,14 @@ The proposal is additive. Peers that do not know about `name` continue to use
 `title`, `kind`, and the remaining tool-call fields. No capability is required;
 an Agent can omit `name` whenever it is unavailable or inappropriate to expose.
 
-Conversion preserves concrete names in both directions. An absent v1 name maps
-to an omitted v2 patch field. An omitted v2 field maps to an absent v1 update.
+Cross-version adapters can preserve concrete names in both directions. An
+absent v1 name maps to an omitted v2 patch field. An omitted v2 field maps to an
+absent v1 update.
 
 A v2 `name: null` clear cannot be represented by v1, where `null` and omission
-both mean "leave unchanged" on an update. The strict stateless v2-to-v1
-conversion helper therefore reports this case as unrepresentable. A deliberately
-lossy bridge may omit the clear, leaving the previous v1 name in place.
+both mean "leave unchanged" on an update. A strict adapter must report this case
+as unrepresentable. A deliberately lossy bridge may omit the clear, leaving the
+previous v1 name in place.
 
 ## Frequently asked questions
 

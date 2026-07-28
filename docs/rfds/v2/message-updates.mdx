@@ -137,7 +137,7 @@ The upsert shape also leaves room for future message-level fields, such as annot
 2. Require `messageId` on whole-message updates and chunks.
 3. Represent `content` and `_meta` as three-state patch fields so omitted, `null`, and concrete values can be distinguished.
 4. Document ordering semantics between whole-message updates and chunks in the protocol docs.
-5. Convert content-bearing whole-message updates to v1 by fanning out one v1 chunk per content block. This is equivalent only when the v1 side has not already received content for that `messageId`; v1 has no way to replace earlier chunks. Patch-only updates, `content: null`, `content: []`, and `_meta: null` cannot be represented by v1 chunks and should fail conversion rather than silently dropping the update.
+5. A stateful adapter may convert a content-bearing whole-message update to v1 by fanning out one v1 chunk per content block only when it knows the v1 side has not already received content for that `messageId`; v1 has no way to replace earlier chunks. Patch-only updates, `content: null`, `content: []`, and `_meta: null` cannot be represented by v1 chunks and must not be silently dropped.
 
 ## Frequently asked questions
 
