@@ -1,0 +1,241 @@
+---
+title: "Session Input Options"
+---
+
+Author(s): [@chazcb](https://github.com/chazcb)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Allow Agents to declare what input options they accept for `session/new` and `session/load` requests. This enables Clients to build dynamic configuration UIs, showing users exactly what options are available and their types.
+
+Input schemas are advertised in `InitializeResult` capabilities, using the **restricted JSON Schema 2020-12 subset** aligned with [MCP elicitation](https://spec.modelcontextprotocol.io/specification/draft/server/elicitation/).
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+1. **No way to discover session creation options** - Agents may want to accept additional options on `session/new` or `session/load` (like initial model, system prompt, subagents, etc.), but there's no standard way to expose these to clients. Teams currently work around this by passing config in `_meta`, which is not portable, requires hardcoded client knowledge, and isn't discoverable.
+
+2. **No standard way to pass session config** - Even if clients knew what options an agent accepts, there's no designated field on `session/new` or `session/load` to pass them - only `_meta` workarounds.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+Add a `configSchema` field to `InitializeResponse` that declares what options an Agent accepts for session creation and loading. Each schema is a JSON Schema object describing the expected `configOptions` for that method.
+
+This approach:
+
+- Lets clients show config UI before "New Session" - best UX, no waiting
+- Gives agents config with the session request - can use for initialization
+- Keeps session lifecycle clean - no intermediate states
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "protocolVersion": 1,
+    "agentCapabilities": { ... },
+    "agentInfo": { ... },
+    "configSchema": {
+      "session/new": {
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "description": "Model to use for this session",
+            "oneOf": [
+              { "const": "claude-sonnet-4-20250514", "title": "Sonnet 4" },
+              { "const": "claude-opus-4-20250514", "title": "Opus 4" },
+              { "const": "claude-haiku", "title": "Haiku" }
+            ],
+            "default": "claude-sonnet-4-20250514"
+          },
+          "systemPrompt": {
+            "type": "string",
+            "title": "System Prompt",
+            "description": "Custom system prompt to guide the agent's behavior"
+          },
+          "maxTokens": {
+            "type": "number",
+            "title": "Max Tokens",
+            "description": "Maximum tokens per response",
+            "default": 4096
+          },
+          "enableTools": {
+            "type": "boolean",
+            "title": "Enable Tools",
+            "description": "Allow the agent to use tools",
+            "default": true
+          }
+        }
+      },
+      "session/load": {
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "description": "Model to use when resuming (can differ from original)",
+            "oneOf": [
+              { "const": "claude-sonnet-4-20250514", "title": "Sonnet 4" },
+              { "const": "claude-opus-4-20250514", "title": "Opus 4" },
+              { "const": "claude-haiku", "title": "Haiku" }
+            ]
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Clients pass config options via `configOptions` on `NewSessionRequest` and `LoadSessionRequest`:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "session/new",
+  "params": {
+    ...
+    "configOptions": {
+      "model": "claude-sonnet-4-20250514",
+      "systemPrompt": "You are a helpful coding assistant.",
+      "maxTokens": 4096,
+      "enableTools": true
+    }
+  }
+}
+```
+
+## Implementation details
+
+Config schemas use the **restricted JSON Schema subset** defined by [MCP elicitation](https://spec.modelcontextprotocol.io/specification/draft/server/elicitation/). Clients can reuse their MCP form-rendering infrastructure for ACP session options.
+
+### TypeScript definition
+
+```typescript
+interface InitializeResponse {
+  protocolVersion: number;
+  agentCapabilities: AgentCapabilities;
+  agentInfo: AgentInfo;
+  configSchema?: {
+    "session/new"?: JSONSchema;
+    "session/load"?: JSONSchema;
+  };
+}
+
+// This RFD adds configOptions to the existing request types
+interface NewSessionRequest {
+  // ... existing fields ...
+  configOptions?: Record<string, unknown>;
+}
+
+interface LoadSessionRequest {
+  // ... existing fields ...
+  configOptions?: Record<string, unknown>;
+}
+```
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Why not just use elicitation?
+
+See [Alternatives Considered](#alternatives-considered) below for a detailed comparison. In short: elicitation happens _after_ session creation, but for session config the agent needs values _before_ creating the session. Init-time discovery also allows clients to show config UI before the user even clicks "New Session".
+
+### How does this relate to MCP elicitation?
+
+Same JSON Schema format, different **timing**: MCP elicitation is on-demand (server requests info when needed), while this proposal provides upfront discovery at initialization.
+
+### How does this relate to Session Config Options?
+
+| Aspect             | Input Options (this RFD)      | Runtime Options (existing RFD)         |
+| ------------------ | ----------------------------- | -------------------------------------- |
+| When discovered    | At initialization             | At session creation                    |
+| Schema format      | JSON Schema subset            | Custom (could adopt JSON Schema later) |
+| Purpose            | Set initial configuration     | Change configuration mid-session       |
+| Examples           | Initial model, system prompt  | Switch modes, change model mid-session |
+| Has `currentValue` | No (options declared upfront) | Yes (reflects current state)           |
+| Update method      | N/A (set once at creation)    | `session/set_config_option`            |
+
+### Are input options required?
+
+Agents MUST accept requests with no `configOptions` at all - clients may not support config UIs.
+
+However, if a client _does_ provide `configOptions`, it must conform to the declared schema including any `required` fields. This allows agents to enforce that certain options are provided together (e.g., if you specify a custom model, you must also specify an API key).
+
+### What about protocol-defined fields like `cwd` and `mcpServers`?
+
+The ACP protocol already defines some fields on `NewSessionRequest` and `LoadSessionRequest` (such as `cwd` and `mcpServers`). This RFD does not aim to address whether these existing protocol fields should be migrated to `configOptions` or remain as top-level fields.
+
+For now, this proposal focuses solely on enabling agents to declare _additional_ agent-specific options beyond what the protocol already defines.
+
+## Alternatives Considered
+
+### Alternative A: Use In-Session Elicitation
+
+Use the elicitation mechanism from [MCP Elicitation](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/376) as-is. Agent sends `elicitation/create` after session creation but before meaningful work begins.
+
+**Flow:**
+
+1. Client calls `session/new`
+2. Agent returns session ID
+3. Agent sends `elicitation/create` with config schema
+4. Client shows form, user fills it
+5. Agent receives config, session is ready for prompts
+
+**Pros:**
+
+- No new protocol additions - reuses elicitation
+- Consistent with MCP patterns
+- Dynamic - config options can vary per `session/new` or `session/load` call, not bound to the connection
+
+**Cons:**
+
+- **Client cannot show config UI until session exists** - Creates awkward UX flows where clients must create a session just to discover if there are config options to show.
+- Session exists in "pending config" state - semantically awkward
+- **Agent initialization complexity** - Agent cannot directly use config for session initialization (model selection, system prompt setup, etc.) since the session is already created. A workaround is to create a lightweight session that hands off to a configured backend session, but this adds complexity for agent developers and requires the ability to mint session IDs upfront.
+
+**Why not chosen:** This approach works for mid-session information gathering but doesn't solve the initialization use case well.
+
+---
+
+### Alternative B: Extend Elicitation for Pre-Session Use
+
+Extend elicitation to support elicitation _during_ the `session/new` or `session/load` flow, before the session ID is returned.
+
+**Flow:**
+
+1. Client calls `session/new`
+2. Agent sends `elicitation/create` (while `session/new` is pending)
+3. Client shows form, user fills it
+4. Client responds to elicitation
+5. Agent uses config values, creates session, returns session ID
+
+**Pros:**
+
+- Reuses elicitation infrastructure
+- Agent receives config before session creation - can use for initialization decisions
+- Single mechanism for all elicitation needs
+
+**Cons:**
+
+- **Client still cannot show config UI before user clicks "New Session"** - Same UX limitation as Alternative A.
+- **Correlation problem** - Without a session ID, client doesn't know which pending `session/new` request the elicitation belongs to. Requires protocol additions (e.g., `relatedRequestId`) to link them.
+- **Unclear lifecycle semantics** - `session/new` "hangs" waiting for user input. What are the timeout/cancellation semantics?
+
+**Why not chosen:** Solves the agent initialization problem but still has the core UX limitation. Adds protocol complexity to solve the correlation problem.
+
+## Revision history
+
+- 2025-02-04: Adopted MCP elicitation JSON Schema format; documented elicitation alternatives in "Alternatives Considered" section
+- 2025-01-27: Restructured document; renamed schema section to "Session Config Schema"; aligned with Session Config Options using `value`/`name` pattern; removed `hint` field; renamed `inputOptions` to `configOptions` with method-name keys (`session/new`, `session/load`)
+- 2025-01-26: Added `hint` and `defaultValue` optional fields to schema
+- 2025-01-22: Initial draft
