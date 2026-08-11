@@ -92,6 +92,7 @@ These mobile-first tools bring ACP and related coding-agent workflows to phones 
 - [Happy](https://happy.engineering/) ([GitHub](https://github.com/slopus/happy)) (iOS, Android, Web)
 - [Mobvibe](https://github.com/Eric-Song-Nop/mobvibe) (iOS, Android, Web)
 - [Shellular](https://shellular.dev) ([GitHub](https://github.com/shellular-org)) (iOS, Android, [Web](https://app.shellular.dev))
+- [VACP](https://play.google.com/store/apps/details?id=com.intellexie.vacp) (Android) — voice control for AI coding agents (OpenCode, KiloCode, and any ACP-compatible agent over TCP)
 
 ## Messaging
 
@@ -126,6 +127,7 @@ These frameworks add ACP support through dedicated integrations or adapters:
 
 These connectors bridge ACP into other environments and transport layers:
 
+- [acp_rpc_bridge](https://github.com/Intellexie/acp_rpc_bridge) — terminal binary that bridges stdio-based agents to HTTP, giving non-network agents network capability; supports ACP and Pi RPC protocols with ACP Streamable HTTP and OpenCode REST API endpoints
 - [ACP to AG-UI](https://github.com/namanrajpal/acp-to-agui) — bridges any ACP agent to web frontends via [AG-UI](https://docs.ag-ui.com) events over SSE; works with CopilotKit, AG-UI HttpAgent, or custom UIs (Web)
 - [AgentRQ](https://github.com/agentrq/acp-gateway) — bridges stdio-based ACP agents to the AgentRQ - Human-in-the-loop task collaboration service using MCP server.
 - [Aptove Bridge](https://github.com/aptove/bridge) — bridges stdio-based ACP agents to the Aptove mobile client over WebSocket
