@@ -8,7 +8,7 @@
 use std::{collections::BTreeMap, sync::Arc};
 
 use derive_more::{Display, From};
-use schemars::JsonSchema;
+#[cfg(feature = "schemars")]
 use schemars::Schema;
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
@@ -17,7 +17,8 @@ use super::Meta;
 use crate::{IntoOption, SkipListener};
 
 /// Unique identifier for a plan within a session.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
 #[from(forward)]
 #[non_exhaustive]
@@ -34,7 +35,8 @@ impl PlanId {
 /// A content update for a plan identified by ID.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct PlanUpdate {
@@ -46,7 +48,7 @@ pub struct PlanUpdate {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -72,7 +74,8 @@ impl PlanUpdate {
 }
 
 /// Updated content for a plan.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "type", rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum PlanUpdateContent {
@@ -106,9 +109,10 @@ pub enum PlanUpdateContent {
 }
 
 /// Custom or future plan update content payload.
-#[derive(Debug, Clone, Serialize, JsonSchema, PartialEq, Eq)]
-#[schemars(inline)]
-#[schemars(transform = other_plan_update_content_schema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(inline))]
+#[cfg_attr(feature = "schemars", schemars(transform = other_plan_update_content_schema))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct OtherPlanUpdateContent {
@@ -181,6 +185,7 @@ fn is_known_plan_update_content_type(type_: &str) -> bool {
     KNOWN_PLAN_UPDATE_CONTENT_TYPES.contains(&type_)
 }
 
+#[cfg(feature = "schemars")]
 fn other_plan_update_content_schema(schema: &mut Schema) {
     super::schema_util::reject_known_string_discriminators(
         schema,
@@ -216,7 +221,8 @@ impl PlanUpdateContent {
 /// A plan represented as structured entries.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct PlanItems {
@@ -227,7 +233,7 @@ pub struct PlanItems {
     /// When updating an item-based plan, the agent must send a complete list of all entries
     /// with their current status. The client replaces that plan with each update.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     pub entries: Vec<PlanEntry>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -235,7 +241,7 @@ pub struct PlanItems {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -272,14 +278,15 @@ impl PlanItems {
 #[cfg(feature = "unstable_plan_operations")]
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct PlanFile {
     /// The plan ID to update.
     pub plan_id: PlanId,
     /// The URI of the file containing the plan.
-    #[schemars(url)]
+    #[cfg_attr(feature = "schemars", schemars(url))]
     pub uri: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -287,7 +294,7 @@ pub struct PlanFile {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -325,7 +332,8 @@ impl PlanFile {
 #[cfg(feature = "unstable_plan_operations")]
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct PlanMarkdown {
@@ -339,7 +347,7 @@ pub struct PlanMarkdown {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -377,7 +385,8 @@ impl PlanMarkdown {
 #[cfg(feature = "unstable_plan_operations")]
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct PlanRemoved {
@@ -389,7 +398,7 @@ pub struct PlanRemoved {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -425,7 +434,8 @@ impl PlanRemoved {
 /// See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/agent-plan#plan-entries)
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct PlanEntry {
@@ -442,7 +452,7 @@ pub struct PlanEntry {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -481,7 +491,8 @@ impl PlanEntry {
 /// Used to indicate the relative importance or urgency of different
 /// tasks in the execution plan.
 /// See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/agent-plan#plan-entries)
-#[derive(Deserialize, Serialize, JsonSchema, Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum PlanEntryPriority {
@@ -504,7 +515,8 @@ pub enum PlanEntryPriority {
 ///
 /// Tracks the lifecycle of each task from planning through completion.
 /// See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/agent-plan#plan-entries)
-#[derive(Deserialize, Serialize, JsonSchema, Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum PlanEntryStatus {

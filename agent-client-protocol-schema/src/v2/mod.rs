@@ -21,6 +21,7 @@ mod mcp;
 mod nes;
 mod plan;
 mod protocol_level;
+#[cfg(feature = "schemars")]
 pub(crate) mod schema_util;
 mod terminal;
 mod tool_call;
@@ -46,7 +47,6 @@ pub use tool_call::*;
 /// JSON-RPC response envelope using this protocol version's error type.
 pub type Response<Result> = crate::rpc::Response<Result, Error>;
 
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::{
     borrow::Cow,
@@ -56,7 +56,8 @@ use std::{
 };
 
 /// An absolute filesystem path used by the protocol.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, From)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, From)]
 #[serde(transparent)]
 #[from(forward)]
 #[non_exhaustive]
@@ -136,7 +137,8 @@ impl<T: ?Sized + AsRef<OsStr>> crate::IntoMaybeUndefined<AbsolutePath> for &T {
 /// allowing multiple independent interactions with the same agent.
 ///
 /// See protocol docs: [Session ID](https://agentclientprotocol.com/protocol/session-setup#session-id)
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
 #[from(forward)]
 #[non_exhaustive]

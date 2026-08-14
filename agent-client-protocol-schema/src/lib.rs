@@ -10,8 +10,8 @@
 //! (programs that use generative AI to autonomously modify code).
 //!
 //! This crate is **only** the schema: the request, response, and
-//! notification types, plus serde plumbing and JSON Schema generation. For
-//! the runtime pieces (transport, connection setup, the `Agent` / `Client`
+//! notification types, plus serde plumbing and optional JSON Schema generation.
+//! For the runtime pieces (transport, connection setup, the `Agent` / `Client`
 //! traits, etc.) use the higher-level [`agent-client-protocol`] crate, which
 //! builds on top of these types.
 //!
@@ -28,6 +28,13 @@
 //! - Aggregated routing enums: [`v1::AgentRequest`], [`v1::AgentResponse`],
 //!   [`v1::AgentNotification`], and the matching client-side trio used by SDK
 //!   crates to dispatch incoming JSON-RPC messages.
+//!
+//! ## Cargo features
+//!
+//! The `schemars` feature implements `schemars::JsonSchema` for the protocol
+//! types. It is enabled by default to preserve the existing default API.
+//! Consumers that only need serialization can disable default features to omit
+//! the dependency and those trait implementations.
 //!
 //! ## Versioning
 //!
@@ -51,7 +58,18 @@ pub use version::*;
 
 #[cfg(test)]
 mod serde_json_feature_tests {
+    #[cfg(feature = "schemars")]
+    use schemars::JsonSchema;
     use serde_json::Value;
+
+    #[cfg(feature = "schemars")]
+    #[test]
+    fn protocol_types_implement_json_schema_when_enabled() {
+        fn assert_json_schema<T: JsonSchema>() {}
+
+        assert_json_schema::<crate::ProtocolVersion>();
+        assert_json_schema::<crate::v1::InitializeRequest>();
+    }
 
     #[test]
     fn serde_json_values_preserve_object_key_order() {

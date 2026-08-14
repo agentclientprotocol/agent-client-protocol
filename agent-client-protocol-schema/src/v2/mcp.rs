@@ -3,7 +3,6 @@
 use std::sync::Arc;
 
 use derive_more::{Display, From};
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::value::RawValue;
 use serde_with::{DefaultOnError, serde_as, skip_serializing_none};
@@ -16,7 +15,8 @@ use crate::IntoOption;
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
 /// A unique identifier for an active MCP-over-ACP connection.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
 #[from(forward)]
 #[non_exhaustive]
@@ -37,9 +37,10 @@ impl McpConnectionId {
 /// Request parameters for `mcp/connect`.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-#[schemars(extend("x-side" = "client", "x-method" = MCP_CONNECT_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "client", "x-method" = MCP_CONNECT_METHOD_NAME)))]
 #[non_exhaustive]
 pub struct ConnectMcpRequest {
     /// The ACP MCP server ID that was provided by the component declaring the MCP server.
@@ -50,7 +51,7 @@ pub struct ConnectMcpRequest {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -85,9 +86,10 @@ impl ConnectMcpRequest {
 /// Response to `mcp/connect`.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-#[schemars(extend("x-side" = "client", "x-method" = MCP_CONNECT_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "client", "x-method" = MCP_CONNECT_METHOD_NAME)))]
 #[non_exhaustive]
 pub struct ConnectMcpResponse {
     /// The unique identifier for this MCP-over-ACP connection.
@@ -98,7 +100,7 @@ pub struct ConnectMcpResponse {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -133,9 +135,10 @@ impl ConnectMcpResponse {
 /// Request parameters for `mcp/message`.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-#[schemars(extend("x-side" = "both", "x-method" = MCP_MESSAGE_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "both", "x-method" = MCP_MESSAGE_METHOD_NAME)))]
 #[non_exhaustive]
 pub struct MessageMcpRequest {
     /// The MCP-over-ACP connection this message is sent on.
@@ -153,7 +156,7 @@ pub struct MessageMcpRequest {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -205,9 +208,10 @@ impl MessageMcpRequest {
 /// envelope has no `id`.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-#[schemars(extend("x-side" = "both", "x-method" = MCP_MESSAGE_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "both", "x-method" = MCP_MESSAGE_METHOD_NAME)))]
 #[non_exhaustive]
 pub struct MessageMcpNotification {
     /// The MCP-over-ACP connection this message is sent on.
@@ -218,7 +222,7 @@ pub struct MessageMcpNotification {
     ///
     /// If omitted or set to `null`, the inner MCP message has no params.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub params: Option<serde_json::Map<String, serde_json::Value>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -227,7 +231,7 @@ pub struct MessageMcpNotification {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -276,11 +280,14 @@ impl MessageMcpNotification {
 /// Response to `mcp/message`.
 ///
 /// This is the inner MCP response result payload. Any JSON value is valid.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, From)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, From)]
 #[serde(transparent)]
-#[schemars(extend("x-side" = "both", "x-method" = MCP_MESSAGE_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "both", "x-method" = MCP_MESSAGE_METHOD_NAME)))]
 #[non_exhaustive]
-pub struct MessageMcpResponse(#[schemars(with = "serde_json::Value")] pub Arc<RawValue>);
+pub struct MessageMcpResponse(
+    #[cfg_attr(feature = "schemars", schemars(with = "serde_json::Value"))] pub Arc<RawValue>,
+);
 
 impl MessageMcpResponse {
     /// Builds [`MessageMcpResponse`] with the required response fields set; optional fields start unset or empty.
@@ -297,9 +304,10 @@ impl MessageMcpResponse {
 /// Request parameters for `mcp/disconnect`.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-#[schemars(extend("x-side" = "client", "x-method" = MCP_DISCONNECT_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "client", "x-method" = MCP_DISCONNECT_METHOD_NAME)))]
 #[non_exhaustive]
 pub struct DisconnectMcpRequest {
     /// The MCP-over-ACP connection to close.
@@ -310,7 +318,7 @@ pub struct DisconnectMcpRequest {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -345,9 +353,10 @@ impl DisconnectMcpRequest {
 /// Response to `mcp/disconnect`.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-#[schemars(extend("x-side" = "client", "x-method" = MCP_DISCONNECT_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "client", "x-method" = MCP_DISCONNECT_METHOD_NAME)))]
 #[non_exhaustive]
 pub struct DisconnectMcpResponse {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -356,7 +365,7 @@ pub struct DisconnectMcpResponse {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,

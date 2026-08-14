@@ -74,6 +74,7 @@ jobs:
       - name: Lint
         run: |
           cargo clippy
+          cargo clippy -p agent-client-protocol-schema --all-targets --no-default-features --features unstable,unstable_protocol_v2,tracing
           cargo clippy --all-targets --all-features
 
       - name: Build

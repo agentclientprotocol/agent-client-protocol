@@ -3,7 +3,6 @@
 use std::sync::Arc;
 
 use derive_more::{Display, From};
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, serde_as, skip_serializing_none};
 
@@ -11,7 +10,8 @@ use super::{AbsolutePath, Meta};
 use crate::{IntoMaybeUndefined, IntoOption, MaybeUndefined};
 
 /// Unique identifier for an agent-owned terminal within a session.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
 #[from(forward)]
 #[non_exhaustive]
@@ -37,7 +37,8 @@ impl IntoOption<TerminalId> for &str {
 /// [`TerminalUpdate`] and [`TerminalOutputChunk`].
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct Terminal {
@@ -50,7 +51,7 @@ pub struct Terminal {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -77,12 +78,13 @@ impl Terminal {
 /// An authoritative replacement snapshot of terminal output bytes.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct TerminalOutput {
     /// Base64-encoded replacement terminal output bytes.
-    #[schemars(extend("contentEncoding" = "base64"))]
+    #[cfg_attr(feature = "schemars", schemars(extend("contentEncoding" = "base64")))]
     pub data: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -91,7 +93,7 @@ pub struct TerminalOutput {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -121,13 +123,14 @@ impl TerminalOutput {
 /// an exit code nor a signal is known.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct TerminalExitStatus {
     /// Process exit code, when known. Omitted and `null` are equivalent.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub exit_code: Option<u32>,
     /// Signal that terminated the process, when known.
@@ -136,7 +139,7 @@ pub struct TerminalExitStatus {
     /// include `SIGTERM`, `SIGKILL`, and `SIGINT`. Other platforms may use a
     /// platform-specific name. Omitted and `null` are equivalent.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub signal: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -146,7 +149,7 @@ pub struct TerminalExitStatus {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -188,7 +191,8 @@ impl TerminalExitStatus {
 /// it, and concrete values replace it. When the terminal ID is new, omitted
 /// fields start unknown.
 #[serde_as]
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct TerminalUpdate {
@@ -196,22 +200,22 @@ pub struct TerminalUpdate {
     pub terminal_id: TerminalId,
     /// The command being run.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub command: MaybeUndefined<String>,
     /// The absolute working directory of the command.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub cwd: MaybeUndefined<AbsolutePath>,
     /// An authoritative replacement snapshot of terminal output bytes.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub output: MaybeUndefined<TerminalOutput>,
     /// Exit information. A concrete object marks the terminal as exited.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub exit_status: MaybeUndefined<TerminalExitStatus>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -220,7 +224,7 @@ pub struct TerminalUpdate {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(
         rename = "_meta",
         default,
@@ -305,14 +309,15 @@ impl TerminalUpdate {
 /// A chunk of bytes appended to an agent-owned terminal's output.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct TerminalOutputChunk {
     /// The terminal receiving these bytes.
     pub terminal_id: TerminalId,
     /// Independently base64-encoded terminal output bytes.
-    #[schemars(extend("contentEncoding" = "base64"))]
+    #[cfg_attr(feature = "schemars", schemars(extend("contentEncoding" = "base64")))]
     pub data: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -321,7 +326,7 @@ pub struct TerminalOutputChunk {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -492,6 +497,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "schemars")]
     #[test]
     fn terminal_output_fields_use_base64_content_encoding() {
         let output = serde_json::to_value(schemars::schema_for!(TerminalOutput)).unwrap();

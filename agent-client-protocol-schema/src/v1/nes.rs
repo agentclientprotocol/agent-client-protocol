@@ -7,7 +7,6 @@
 use std::sync::Arc;
 
 use derive_more::{Display, From};
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
@@ -39,7 +38,8 @@ pub(crate) const DOCUMENT_DID_SAVE_METHOD_NAME: &str = "document/didSave";
 pub(crate) const DOCUMENT_DID_FOCUS_METHOD_NAME: &str = "document/didFocus";
 
 /// Unique identifier for a next edit suggestion.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
 #[from(Arc<str>, String, &'static str)]
 #[non_exhaustive]
@@ -58,7 +58,8 @@ impl NesSuggestionId {
 /// The encoding used for character offsets in positions.
 ///
 /// Follows the same conventions as LSP 3.17. The default is UTF-16.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum PositionEncodingKind {
     /// Character offsets count UTF-16 code units. This is the default.
@@ -77,7 +78,8 @@ pub enum PositionEncodingKind {
 /// The meaning of `character` depends on the negotiated position encoding.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct Position {
@@ -91,7 +93,7 @@ pub struct Position {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -123,7 +125,8 @@ impl Position {
 /// A range in a text document, expressed as start and end positions.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct Range {
@@ -137,7 +140,7 @@ pub struct Range {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -171,18 +174,19 @@ impl Range {
 /// NES capabilities advertised by the agent during initialization.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesCapabilities {
     /// Events the agent wants to receive.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub events: Option<NesEventCapabilities>,
     /// Context the agent wants attached to each suggestion request.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub context: Option<NesContextCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -191,7 +195,7 @@ pub struct NesCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -233,13 +237,14 @@ impl NesCapabilities {
 /// Event capabilities the agent can consume.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesEventCapabilities {
     /// Document event capabilities.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub document: Option<NesDocumentEventCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -248,7 +253,7 @@ pub struct NesEventCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -283,33 +288,34 @@ impl NesEventCapabilities {
 /// Document event capabilities the agent wants to receive.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesDocumentEventCapabilities {
     /// Whether the agent wants `document/didOpen` events.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub did_open: Option<NesDocumentDidOpenCapabilities>,
     /// Whether the agent wants `document/didChange` events, and the sync kind.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub did_change: Option<NesDocumentDidChangeCapabilities>,
     /// Whether the agent wants `document/didClose` events.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub did_close: Option<NesDocumentDidCloseCapabilities>,
     /// Whether the agent wants `document/didSave` events.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub did_save: Option<NesDocumentDidSaveCapabilities>,
     /// Whether the agent wants `document/didFocus` events.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub did_focus: Option<NesDocumentDidFocusCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -318,7 +324,7 @@ pub struct NesDocumentEventCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -390,7 +396,8 @@ impl NesDocumentEventCapabilities {
 /// Marker for `document/didOpen` capability support.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesDocumentDidOpenCapabilities {
@@ -400,7 +407,7 @@ pub struct NesDocumentDidOpenCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -417,7 +424,8 @@ impl NesDocumentDidOpenCapabilities {
 /// Capabilities for `document/didChange` events.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesDocumentDidChangeCapabilities {
@@ -429,7 +437,7 @@ pub struct NesDocumentDidChangeCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -458,7 +466,8 @@ impl NesDocumentDidChangeCapabilities {
 }
 
 /// How the agent wants document changes delivered.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum TextDocumentSyncKind {
     /// Client sends the entire file content on each change.
@@ -472,7 +481,8 @@ pub enum TextDocumentSyncKind {
 /// Marker for `document/didClose` capability support.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesDocumentDidCloseCapabilities {
@@ -482,7 +492,7 @@ pub struct NesDocumentDidCloseCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -499,7 +509,8 @@ impl NesDocumentDidCloseCapabilities {
 /// Marker for `document/didSave` capability support.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesDocumentDidSaveCapabilities {
@@ -509,7 +520,7 @@ pub struct NesDocumentDidSaveCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -526,7 +537,8 @@ impl NesDocumentDidSaveCapabilities {
 /// Marker for `document/didFocus` capability support.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesDocumentDidFocusCapabilities {
@@ -536,7 +548,7 @@ pub struct NesDocumentDidFocusCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -553,38 +565,39 @@ impl NesDocumentDidFocusCapabilities {
 /// Context capabilities the agent wants attached to each suggestion request.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesContextCapabilities {
     /// Whether the agent wants recent files context.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub recent_files: Option<NesRecentFilesCapabilities>,
     /// Whether the agent wants related snippets context.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub related_snippets: Option<NesRelatedSnippetsCapabilities>,
     /// Whether the agent wants edit history context.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub edit_history: Option<NesEditHistoryCapabilities>,
     /// Whether the agent wants user actions context.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub user_actions: Option<NesUserActionsCapabilities>,
     /// Whether the agent wants open files context.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub open_files: Option<NesOpenFilesCapabilities>,
     /// Whether the agent wants diagnostics context.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub diagnostics: Option<NesDiagnosticsCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -593,7 +606,7 @@ pub struct NesContextCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -675,13 +688,14 @@ impl NesContextCapabilities {
 /// Capabilities for recent files context.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesRecentFilesCapabilities {
     /// Maximum number of recent files the agent can use.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub max_count: Option<u32>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -690,7 +704,7 @@ pub struct NesRecentFilesCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -707,7 +721,8 @@ impl NesRecentFilesCapabilities {
 /// Capabilities for related snippets context.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesRelatedSnippetsCapabilities {
@@ -717,7 +732,7 @@ pub struct NesRelatedSnippetsCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -734,13 +749,14 @@ impl NesRelatedSnippetsCapabilities {
 /// Capabilities for edit history context.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesEditHistoryCapabilities {
     /// Maximum number of edit history entries the agent can use.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub max_count: Option<u32>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -749,7 +765,7 @@ pub struct NesEditHistoryCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -766,13 +782,14 @@ impl NesEditHistoryCapabilities {
 /// Capabilities for user actions context.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesUserActionsCapabilities {
     /// Maximum number of user actions the agent can use.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub max_count: Option<u32>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -781,7 +798,7 @@ pub struct NesUserActionsCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -798,7 +815,8 @@ impl NesUserActionsCapabilities {
 /// Capabilities for open files context.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesOpenFilesCapabilities {
@@ -808,7 +826,7 @@ pub struct NesOpenFilesCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -825,7 +843,8 @@ impl NesOpenFilesCapabilities {
 /// Capabilities for diagnostics context.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesDiagnosticsCapabilities {
@@ -835,7 +854,7 @@ pub struct NesDiagnosticsCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -854,23 +873,24 @@ impl NesDiagnosticsCapabilities {
 /// NES capabilities advertised by the client during initialization.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ClientNesCapabilities {
     /// Whether the client supports the `jump` suggestion kind.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub jump: Option<NesJumpCapabilities>,
     /// Whether the client supports the `rename` suggestion kind.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub rename: Option<NesRenameCapabilities>,
     /// Whether the client supports the `searchAndReplace` suggestion kind.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub search_and_replace: Option<NesSearchAndReplaceCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -879,7 +899,7 @@ pub struct ClientNesCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -931,7 +951,8 @@ impl ClientNesCapabilities {
 /// Marker for jump suggestion support.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesJumpCapabilities {
@@ -941,7 +962,7 @@ pub struct NesJumpCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -958,7 +979,8 @@ impl NesJumpCapabilities {
 /// Marker for rename suggestion support.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesRenameCapabilities {
@@ -968,7 +990,7 @@ pub struct NesRenameCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -985,7 +1007,8 @@ impl NesRenameCapabilities {
 /// Marker for search and replace suggestion support.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesSearchAndReplaceCapabilities {
@@ -995,7 +1018,7 @@ pub struct NesSearchAndReplaceCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -1014,8 +1037,9 @@ impl NesSearchAndReplaceCapabilities {
 /// Notification sent when a file is opened in the editor.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = DOCUMENT_DID_OPEN_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = DOCUMENT_DID_OPEN_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct DidOpenDocumentNotification {
@@ -1035,7 +1059,7 @@ pub struct DidOpenDocumentNotification {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -1076,8 +1100,9 @@ impl DidOpenDocumentNotification {
 /// Notification sent when a file is edited.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = DOCUMENT_DID_CHANGE_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = DOCUMENT_DID_CHANGE_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct DidChangeDocumentNotification {
@@ -1089,7 +1114,7 @@ pub struct DidChangeDocumentNotification {
     pub version: i64,
     /// The content changes.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     pub content_changes: Vec<TextDocumentContentChangeEvent>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -1097,7 +1122,7 @@ pub struct DidChangeDocumentNotification {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -1139,7 +1164,8 @@ impl DidChangeDocumentNotification {
 /// When `range` is `Some`, `text` replaces the given range.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct TextDocumentContentChangeEvent {
@@ -1154,7 +1180,7 @@ pub struct TextDocumentContentChangeEvent {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -1196,8 +1222,9 @@ impl TextDocumentContentChangeEvent {
 /// Notification sent when a file is closed.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = DOCUMENT_DID_CLOSE_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = DOCUMENT_DID_CLOSE_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct DidCloseDocumentNotification {
@@ -1211,7 +1238,7 @@ pub struct DidCloseDocumentNotification {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -1243,8 +1270,9 @@ impl DidCloseDocumentNotification {
 /// Notification sent when a file is saved.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = DOCUMENT_DID_SAVE_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = DOCUMENT_DID_SAVE_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct DidSaveDocumentNotification {
@@ -1258,7 +1286,7 @@ pub struct DidSaveDocumentNotification {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -1290,8 +1318,9 @@ impl DidSaveDocumentNotification {
 /// Notification sent when a file becomes the active editor tab.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = DOCUMENT_DID_FOCUS_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = DOCUMENT_DID_FOCUS_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct DidFocusDocumentNotification {
@@ -1311,7 +1340,7 @@ pub struct DidFocusDocumentNotification {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -1354,14 +1383,15 @@ impl DidFocusDocumentNotification {
 /// Request to start an NES session.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = NES_START_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = NES_START_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct StartNesRequest {
     /// The root URI of the workspace.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub workspace_uri: Option<String>,
     /// The workspace folders.
@@ -1369,7 +1399,7 @@ pub struct StartNesRequest {
     pub workspace_folders: Option<Vec<WorkspaceFolder>>,
     /// Repository metadata, if the workspace is a git repository.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub repository: Option<NesRepository>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1378,7 +1408,7 @@ pub struct StartNesRequest {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -1441,7 +1471,8 @@ impl Default for StartNesRequest {
 /// A workspace folder.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct WorkspaceFolder {
@@ -1455,7 +1486,7 @@ pub struct WorkspaceFolder {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -1487,7 +1518,8 @@ impl WorkspaceFolder {
 /// Repository metadata for an NES session.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesRepository {
@@ -1503,7 +1535,7 @@ pub struct NesRepository {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -1540,8 +1572,9 @@ impl NesRepository {
 /// Response to `nes/start`.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = NES_START_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = NES_START_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct StartNesResponse {
@@ -1553,7 +1586,7 @@ pub struct StartNesResponse {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -1589,8 +1622,9 @@ impl StartNesResponse {
 /// and then free up any resources associated with the session.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = NES_CLOSE_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = NES_CLOSE_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct CloseNesRequest {
@@ -1602,7 +1636,7 @@ pub struct CloseNesRequest {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -1633,8 +1667,9 @@ impl CloseNesRequest {
 /// Response from closing an NES session.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = NES_CLOSE_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = NES_CLOSE_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct CloseNesResponse {
@@ -1644,7 +1679,7 @@ pub struct CloseNesResponse {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -1672,7 +1707,8 @@ impl CloseNesResponse {
 // NES suggest request
 
 /// What triggered the suggestion request.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum NesTriggerKind {
     /// Triggered by user typing or cursor movement.
@@ -1689,8 +1725,9 @@ pub enum NesTriggerKind {
 /// Request for a code suggestion.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = NES_SUGGEST_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = NES_SUGGEST_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SuggestNesRequest {
@@ -1716,7 +1753,7 @@ pub struct SuggestNesRequest {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -1773,7 +1810,8 @@ impl SuggestNesRequest {
 /// Context attached to a suggestion request.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesSuggestContext {
@@ -1801,7 +1839,7 @@ pub struct NesSuggestContext {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -1874,7 +1912,8 @@ impl NesSuggestContext {
 /// A recently accessed file.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesRecentFile {
@@ -1890,7 +1929,7 @@ pub struct NesRecentFile {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -1927,7 +1966,8 @@ impl NesRecentFile {
 /// A related code snippet from a file.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesRelatedSnippet {
@@ -1941,7 +1981,7 @@ pub struct NesRelatedSnippet {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -1973,7 +2013,8 @@ impl NesRelatedSnippet {
 /// A code excerpt from a file.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesExcerpt {
@@ -1989,7 +2030,7 @@ pub struct NesExcerpt {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -2022,7 +2063,8 @@ impl NesExcerpt {
 /// An entry in the edit history.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesEditHistoryEntry {
@@ -2036,7 +2078,7 @@ pub struct NesEditHistoryEntry {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -2068,7 +2110,8 @@ impl NesEditHistoryEntry {
 /// A user action (typing, cursor movement, etc.).
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesUserAction {
@@ -2086,7 +2129,7 @@ pub struct NesUserAction {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -2125,7 +2168,8 @@ impl NesUserAction {
 /// An open file in the editor.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesOpenFile {
@@ -2135,12 +2179,12 @@ pub struct NesOpenFile {
     pub language_id: String,
     /// The visible range in the editor, if any.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub visible_range: Option<Range>,
     /// Timestamp in milliseconds since epoch of when the file was last focused.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub last_focused_ms: Option<u64>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -2149,7 +2193,7 @@ pub struct NesOpenFile {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -2197,7 +2241,8 @@ impl NesOpenFile {
 /// A diagnostic (error, warning, etc.).
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesDiagnostic {
@@ -2215,7 +2260,7 @@ pub struct NesDiagnostic {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -2252,7 +2297,8 @@ impl NesDiagnostic {
 }
 
 /// Severity of a diagnostic.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum NesDiagnosticSeverity {
     /// An error.
@@ -2274,8 +2320,9 @@ pub enum NesDiagnosticSeverity {
 /// Response to `nes/suggest`.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = NES_SUGGEST_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = NES_SUGGEST_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SuggestNesResponse {
@@ -2287,7 +2334,7 @@ pub struct SuggestNesResponse {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -2316,9 +2363,10 @@ impl SuggestNesResponse {
 }
 
 /// A suggestion returned by the agent.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "kind", rename_all = "camelCase")]
-#[schemars(extend("discriminator" = {"propertyName": "kind"}))]
+#[cfg_attr(feature = "schemars", schemars(extend("discriminator" = {"propertyName": "kind"})))]
 #[non_exhaustive]
 pub enum NesSuggestion {
     /// A text edit suggestion.
@@ -2334,7 +2382,8 @@ pub enum NesSuggestion {
 /// A text edit suggestion.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesEditSuggestion {
@@ -2346,7 +2395,7 @@ pub struct NesEditSuggestion {
     pub edits: Vec<NesTextEdit>,
     /// Optional suggested cursor position after applying edits.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub cursor_position: Option<Position>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -2355,7 +2404,7 @@ pub struct NesEditSuggestion {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -2400,7 +2449,8 @@ impl NesEditSuggestion {
 /// A text edit within a suggestion.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesTextEdit {
@@ -2414,7 +2464,7 @@ pub struct NesTextEdit {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -2446,7 +2496,8 @@ impl NesTextEdit {
 /// A jump-to-location suggestion.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesJumpSuggestion {
@@ -2462,7 +2513,7 @@ pub struct NesJumpSuggestion {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -2495,7 +2546,8 @@ impl NesJumpSuggestion {
 /// A rename symbol suggestion.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesRenameSuggestion {
@@ -2513,7 +2565,7 @@ pub struct NesRenameSuggestion {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -2552,7 +2604,8 @@ impl NesRenameSuggestion {
 /// A search-and-replace suggestion.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NesSearchAndReplaceSuggestion {
@@ -2573,7 +2626,7 @@ pub struct NesSearchAndReplaceSuggestion {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -2622,8 +2675,9 @@ impl NesSearchAndReplaceSuggestion {
 /// Notification sent when a suggestion is accepted.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = NES_ACCEPT_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = NES_ACCEPT_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct AcceptNesNotification {
@@ -2637,7 +2691,7 @@ pub struct AcceptNesNotification {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -2669,8 +2723,9 @@ impl AcceptNesNotification {
 /// Notification sent when a suggestion is rejected.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = NES_REJECT_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = NES_REJECT_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct RejectNesNotification {
@@ -2680,7 +2735,7 @@ pub struct RejectNesNotification {
     pub id: NesSuggestionId,
     /// The reason for rejection.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub reason: Option<NesRejectReason>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -2689,7 +2744,7 @@ pub struct RejectNesNotification {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -2727,7 +2782,8 @@ impl RejectNesNotification {
 }
 
 /// The reason a suggestion was rejected.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum NesRejectReason {
     /// The user explicitly dismissed the suggestion.

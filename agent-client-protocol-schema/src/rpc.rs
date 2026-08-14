@@ -6,7 +6,6 @@
 use std::sync::Arc;
 
 use derive_more::{Display, From};
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
@@ -19,19 +18,9 @@ use serde_with::skip_serializing_none;
 /// \[1\] The use of Null as a value for the id member in a Request object is discouraged, because this specification uses a value of Null for Responses with an unknown id. Also, because JSON-RPC 1.0 uses an id value of Null for Notifications this could cause confusion in handling.
 ///
 /// \[2\] Fractional parts may be problematic, since many decimal fractions cannot be represented exactly as binary fractions.
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(
-    Debug,
-    PartialEq,
-    Clone,
-    Hash,
-    Eq,
-    Deserialize,
-    Serialize,
-    PartialOrd,
-    Ord,
-    Display,
-    JsonSchema,
-    From,
+    Debug, PartialEq, Clone, Hash, Eq, Deserialize, Serialize, PartialOrd, Ord, Display, From,
 )]
 #[serde(untagged)]
 #[allow(
@@ -50,12 +39,13 @@ pub enum RequestId {
 }
 
 /// A JSON-RPC request object.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[allow(
     clippy::exhaustive_structs,
     reason = "This comes from the JSON-RPC specification itself"
 )]
-#[schemars(rename = "{Params}", extend("x-docs-ignore" = true))]
+#[cfg_attr(feature = "schemars", schemars(rename = "{Params}", extend("x-docs-ignore" = true)))]
 #[skip_serializing_none]
 pub struct Request<Params> {
     /// The request id used to correlate the matching response.
@@ -67,13 +57,14 @@ pub struct Request<Params> {
 }
 
 /// A JSON-RPC response object.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[allow(
     clippy::exhaustive_enums,
     reason = "This comes from the JSON-RPC specification itself"
 )]
 #[serde(untagged)]
-#[schemars(rename = "{Result}", extend("x-docs-ignore" = true))]
+#[cfg_attr(feature = "schemars", schemars(rename = "{Result}", extend("x-docs-ignore" = true)))]
 pub enum Response<Result, Error> {
     /// A successful JSON-RPC response.
     Result {
@@ -109,12 +100,13 @@ impl<R, E> Response<R, E> {
 }
 
 /// A JSON-RPC notification object.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[allow(
     clippy::exhaustive_structs,
     reason = "This comes from the JSON-RPC specification itself"
 )]
-#[schemars(rename = "{Params}", extend("x-docs-ignore" = true))]
+#[cfg_attr(feature = "schemars", schemars(rename = "{Params}", extend("x-docs-ignore" = true)))]
 #[skip_serializing_none]
 pub struct Notification<Params> {
     /// The notification method name.
@@ -123,8 +115,9 @@ pub struct Notification<Params> {
     pub params: Option<Params>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[schemars(inline)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schemars", schemars(inline))]
 enum JsonRpcVersion {
     #[serde(rename = "2.0")]
     V2,
@@ -134,8 +127,9 @@ enum JsonRpcVersion {
 /// [required by JSON-RPC 2.0 Specification][1].
 ///
 /// [1]: https://www.jsonrpc.org/specification#compatibility
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[schemars(inline)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schemars", schemars(inline))]
 pub struct JsonRpcMessage<M> {
     jsonrpc: JsonRpcVersion,
     #[serde(flatten)]
@@ -174,14 +168,17 @@ pub struct EmptyJsonRpcBatch;
 impl std::error::Error for EmptyJsonRpcBatch {}
 
 /// A non-empty JSON-RPC 2.0 batch message.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonSchema)]
-#[schemars(inline)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "schemars", schemars(inline))]
 #[serde(transparent)]
 #[allow(
     clippy::exhaustive_structs,
     reason = "This comes from the JSON-RPC specification itself"
 )]
-pub struct JsonRpcBatch<M>(#[schemars(length(min = 1))] Vec<JsonRpcMessage<M>>);
+pub struct JsonRpcBatch<M>(
+    #[cfg_attr(feature = "schemars", schemars(length(min = 1)))] Vec<JsonRpcMessage<M>>,
+);
 
 impl<M> JsonRpcBatch<M> {
     /// Creates a non-empty JSON-RPC batch.

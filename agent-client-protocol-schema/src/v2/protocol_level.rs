@@ -1,4 +1,3 @@
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, serde_as, skip_serializing_none};
 
@@ -10,8 +9,9 @@ use crate::IntoOption;
 /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/cancellation)
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "protocol", "x-method" = CANCEL_REQUEST_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "protocol", "x-method" = CANCEL_REQUEST_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct CancelRequestNotification {
@@ -23,7 +23,7 @@ pub struct CancelRequestNotification {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -82,9 +82,10 @@ pub(crate) const CANCEL_REQUEST_METHOD_NAME: &str = "$/cancel_request";
 /// notifications starting with '$/' it is free to ignore the notification.
 ///
 /// Notifications do not expect a response.
-#[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(untagged)]
-#[schemars(inline)]
+#[cfg_attr(feature = "schemars", schemars(inline))]
 #[non_exhaustive]
 pub enum ProtocolLevelNotification {
     /// Cancels an ongoing request.

@@ -1,24 +1,13 @@
 use derive_more::{Display, From};
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// Protocol version identifier.
 ///
 /// This version is only bumped for breaking changes.
 /// Non-breaking changes should be introduced via capabilities.
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(
-    Debug,
-    Clone,
-    Copy,
-    Serialize,
-    Deserialize,
-    JsonSchema,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    From,
-    Display,
+    Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, From, Display,
 )]
 pub struct ProtocolVersion(u16);
 

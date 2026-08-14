@@ -7,7 +7,8 @@
 use std::{collections::BTreeMap, sync::Arc};
 
 use derive_more::{Display, From};
-use schemars::{JsonSchema, Schema};
+#[cfg(feature = "schemars")]
+use schemars::Schema;
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
@@ -29,7 +30,8 @@ use crate::{IntoMaybeUndefined, IntoOption, MaybeUndefined, SkipListener};
 /// See protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/tool-calls)
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ToolCallUpdate {
@@ -47,44 +49,44 @@ pub struct ToolCallUpdate {
     /// tool name is available.
     #[cfg(feature = "unstable_tool_call_name")]
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub name: MaybeUndefined<String>,
     /// Human-readable title describing what the tool is doing.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub title: MaybeUndefined<String>,
     /// The category of tool being invoked.
     /// Helps clients choose appropriate icons and UI treatment.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub kind: MaybeUndefined<ToolKind>,
     /// Current execution status of the tool call.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub status: MaybeUndefined<ToolCallStatus>,
     /// Content produced by the tool call.
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<VecSkipError<_, SkipListener>>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub content: MaybeUndefined<Vec<ToolCallContent>>,
     /// File locations affected by this tool call.
     /// Enables "follow-along" features in clients.
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<VecSkipError<_, SkipListener>>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub locations: MaybeUndefined<Vec<ToolCallLocation>>,
     /// Raw input parameters sent to the tool.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub raw_input: MaybeUndefined<serde_json::Value>,
     /// Raw output returned by the tool.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub raw_output: MaybeUndefined<serde_json::Value>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -93,7 +95,7 @@ pub struct ToolCallUpdate {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(
         rename = "_meta",
         default,
@@ -240,7 +242,8 @@ impl ToolCallUpdate {
 /// collection instead.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ToolCallContentChunk {
@@ -254,7 +257,7 @@ pub struct ToolCallContentChunk {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -284,7 +287,8 @@ impl ToolCallContentChunk {
 }
 
 /// Unique identifier for a tool call within a session.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
 #[from(forward)]
 #[non_exhaustive]
@@ -310,7 +314,8 @@ impl IntoOption<ToolCallId> for &str {
 /// display tool execution progress.
 ///
 /// See protocol docs: [Creating](https://agentclientprotocol.com/protocol/tool-calls#creating)
-#[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum ToolKind {
@@ -349,7 +354,8 @@ pub enum ToolKind {
 /// Tool calls progress through different statuses during their lifecycle.
 ///
 /// See protocol docs: [Status](https://agentclientprotocol.com/protocol/tool-calls#status)
-#[derive(Clone, Debug, Default, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum ToolCallStatus {
@@ -380,7 +386,8 @@ pub enum ToolCallStatus {
 /// content blocks (text, images), file diffs, or display-only terminals.
 ///
 /// See protocol docs: [Content](https://agentclientprotocol.com/protocol/tool-calls#content)
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum ToolCallContent {
@@ -404,9 +411,10 @@ pub enum ToolCallContent {
 }
 
 /// Custom or future tool call content payload.
-#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
-#[schemars(inline)]
-#[schemars(transform = other_tool_call_content_schema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[cfg_attr(feature = "schemars", schemars(inline))]
+#[cfg_attr(feature = "schemars", schemars(transform = other_tool_call_content_schema))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct OtherToolCallContent {
@@ -461,6 +469,7 @@ fn is_known_tool_call_content_type(type_: &str) -> bool {
     matches!(type_, "content" | "diff" | "terminal")
 }
 
+#[cfg(feature = "schemars")]
 fn other_tool_call_content_schema(schema: &mut Schema) {
     super::schema_util::reject_known_string_discriminators(
         schema,
@@ -490,7 +499,8 @@ impl From<Terminal> for ToolCallContent {
 /// Standard content block (text, images, resources).
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct Content {
@@ -502,7 +512,7 @@ pub struct Content {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -540,7 +550,8 @@ impl Content {
 /// See protocol docs: [Content](https://agentclientprotocol.com/protocol/tool-calls#content)
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct Diff {
@@ -548,14 +559,14 @@ pub struct Diff {
     ///
     /// Clients can use this field without parsing patch text to determine affected paths.
     #[serde_as(deserialize_as = "VecSkipError<_, SkipListener>")]
-    #[schemars(extend("x-deserialize-skip-invalid-items" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-skip-invalid-items" = true)))]
     pub changes: Vec<DiffChange>,
     /// Renderable patch text for some or all of the structured changes.
     ///
     /// Agents SHOULD provide patch text whenever feasible. Omitted or `null`
     /// means no renderable patch text was provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub patch: Option<DiffPatch>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -564,7 +575,7 @@ pub struct Diff {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -607,7 +618,8 @@ impl Diff {
 }
 
 /// Renderable patch text and its format.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct DiffPatch {
@@ -629,7 +641,8 @@ impl DiffPatch {
 }
 
 /// Text patch format used by [`DiffPatch`].
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum DiffPatchFormat {
@@ -648,7 +661,8 @@ pub enum DiffPatchFormat {
 }
 
 /// Kind of file content represented by a diff change.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum DiffFileType {
@@ -675,7 +689,8 @@ pub enum DiffFileType {
 /// operations without parsing the text patch.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct DiffChange {
@@ -683,14 +698,14 @@ pub struct DiffChange {
     ///
     /// Omitted or `null` means the content kind is unknown.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub file_type: Option<DiffFileType>,
     /// MIME type of the file contents.
     ///
     /// Omitted or `null` means the MIME type is unknown.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub mime_type: Option<MediaType>,
     /// File operation-specific fields.
@@ -702,7 +717,7 @@ pub struct DiffChange {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -785,7 +800,8 @@ impl DiffChange {
 }
 
 /// File operation for a [`DiffChange`].
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "operation", rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum DiffChangeOperation {
@@ -809,7 +825,8 @@ pub enum DiffChangeOperation {
 }
 
 /// Operation metadata for add, delete, and modify changes.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct DiffPathChange {
@@ -826,7 +843,8 @@ impl DiffPathChange {
 }
 
 /// Operation metadata for move and copy changes.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct DiffPathPairChange {
@@ -848,9 +866,10 @@ impl DiffPathPairChange {
 }
 
 /// Custom or future file operation payload.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonSchema)]
-#[schemars(inline)]
-#[schemars(transform = other_diff_change_schema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "schemars", schemars(inline))]
+#[cfg_attr(feature = "schemars", schemars(transform = other_diff_change_schema))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct OtherDiffChange {
@@ -913,6 +932,7 @@ fn is_known_diff_change_operation(operation: &str) -> bool {
     matches!(operation, "add" | "delete" | "modify" | "move" | "copy")
 }
 
+#[cfg(feature = "schemars")]
 fn other_diff_change_schema(schema: &mut Schema) {
     super::schema_util::reject_known_string_discriminators(
         schema,
@@ -929,7 +949,8 @@ fn other_diff_change_schema(schema: &mut Schema) {
 /// See protocol docs: [Following the Agent](https://agentclientprotocol.com/protocol/tool-calls#following-the-agent)
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ToolCallLocation {
@@ -937,7 +958,7 @@ pub struct ToolCallLocation {
     pub path: AbsolutePath,
     /// Optional line number within the file.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub line: Option<u32>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -946,7 +967,7 @@ pub struct ToolCallLocation {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,

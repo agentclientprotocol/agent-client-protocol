@@ -15,7 +15,7 @@ unstable = ["agent-client-protocol-schema/unstable"]
 unstable_protocol_v2 = ["agent-client-protocol-schema/unstable_protocol_v2"]
 
 [dependencies]
-agent-client-protocol-schema = { workspace = true }
+agent-client-protocol-schema = { workspace = true, features = ["schemars"] }
 schemars = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }

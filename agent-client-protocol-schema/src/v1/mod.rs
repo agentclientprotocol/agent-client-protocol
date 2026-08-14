@@ -34,7 +34,6 @@ pub use tool_call::*;
 /// JSON-RPC response envelope using this protocol version's error type.
 pub type Response<Result> = crate::rpc::Response<Result, Error>;
 
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -44,7 +43,8 @@ use std::sync::Arc;
 /// allowing multiple independent interactions with the same agent.
 ///
 /// See protocol docs: [Session ID](https://agentclientprotocol.com/protocol/session-setup#session-id)
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
 #[from(Arc<str>, String, &'static str)]
 #[non_exhaustive]

@@ -9,7 +9,8 @@ use std::{borrow::Cow, collections::BTreeMap, sync::Arc};
 use std::collections::HashMap;
 
 use derive_more::{Display, From};
-use schemars::{JsonSchema, Schema};
+#[cfg(feature = "schemars")]
+use schemars::Schema;
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
@@ -49,8 +50,9 @@ use super::{
 /// See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = INITIALIZE_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = INITIALIZE_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct InitializeRequest {
@@ -60,7 +62,7 @@ pub struct InitializeRequest {
     pub info: Implementation,
     /// Capabilities supported by the client.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub capabilities: ClientCapabilities,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -69,7 +71,7 @@ pub struct InitializeRequest {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -113,8 +115,9 @@ impl InitializeRequest {
 /// See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = INITIALIZE_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = INITIALIZE_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct InitializeResponse {
@@ -127,7 +130,7 @@ pub struct InitializeResponse {
     pub info: Implementation,
     /// Capabilities supported by the agent.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub capabilities: AgentCapabilities,
     /// Authentication methods supported by the agent.
@@ -136,7 +139,7 @@ pub struct InitializeResponse {
     /// authentication method surface. Supplying one or more valid methods means
     /// the agent MUST support both `auth/login` and `auth/logout`.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub auth_methods: Vec<AuthMethod>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -145,7 +148,7 @@ pub struct InitializeResponse {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -198,7 +201,8 @@ impl InitializeResponse {
 /// title for UI representation.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct Implementation {
@@ -210,7 +214,7 @@ pub struct Implementation {
     ///
     /// If not provided, the name should be used for display.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub title: Option<String>,
     /// Version of the implementation. Can be displayed to the user or used
@@ -222,7 +226,7 @@ pub struct Implementation {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -273,8 +277,9 @@ impl Implementation {
 /// when `authMethods` was omitted or empty.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = AUTH_LOGIN_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = AUTH_LOGIN_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct LoginAuthRequest {
@@ -287,7 +292,7 @@ pub struct LoginAuthRequest {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -318,8 +323,9 @@ impl LoginAuthRequest {
 /// Response to the `auth/login` method.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = AUTH_LOGIN_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = AUTH_LOGIN_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct LoginAuthResponse {
@@ -329,7 +335,7 @@ pub struct LoginAuthResponse {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -365,8 +371,9 @@ impl LoginAuthResponse {
 /// when `authMethods` was omitted or empty.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = AUTH_LOGOUT_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = AUTH_LOGOUT_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct LogoutAuthRequest {
@@ -376,7 +383,7 @@ pub struct LogoutAuthRequest {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -404,8 +411,9 @@ impl LogoutAuthRequest {
 /// Response to the `auth/logout` method.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = AUTH_LOGOUT_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = AUTH_LOGOUT_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct LogoutAuthResponse {
@@ -415,7 +423,7 @@ pub struct LogoutAuthResponse {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -447,7 +455,8 @@ impl LogoutAuthResponse {
 /// `initialize` response.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct AgentAuthCapabilities {
@@ -457,7 +466,7 @@ pub struct AgentAuthCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -483,7 +492,8 @@ impl AgentAuthCapabilities {
 }
 
 /// Typed identifier used for auth method values on the wire.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
 #[from(forward)]
 #[non_exhaustive]
@@ -500,7 +510,8 @@ impl AuthMethodId {
 /// Describes an available authentication method.
 ///
 /// The `type` field acts as the discriminator in the serialized JSON form.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "type", rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum AuthMethod {
@@ -582,9 +593,10 @@ impl AuthMethod {
 /// Custom or future authentication method payload.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, JsonSchema, PartialEq, Eq)]
-#[schemars(inline)]
-#[schemars(transform = other_auth_method_schema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(inline))]
+#[cfg_attr(feature = "schemars", schemars(transform = other_auth_method_schema))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct OtherAuthMethod {
@@ -601,7 +613,7 @@ pub struct OtherAuthMethod {
     pub name: String,
     /// Optional description providing more details about this authentication method.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub description: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -610,7 +622,7 @@ pub struct OtherAuthMethod {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -709,6 +721,7 @@ fn is_known_auth_method_type(type_: &str) -> bool {
     }
 }
 
+#[cfg(feature = "schemars")]
 fn other_auth_method_schema(schema: &mut Schema) {
     super::schema_util::reject_known_string_discriminators(
         schema,
@@ -726,7 +739,8 @@ fn other_auth_method_schema(schema: &mut Schema) {
 /// The `type` discriminator value is `agent`.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct AuthMethodAgent {
@@ -736,7 +750,7 @@ pub struct AuthMethodAgent {
     pub name: String,
     /// Optional description providing more details about this authentication method.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub description: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -745,7 +759,7 @@ pub struct AuthMethodAgent {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -796,7 +810,8 @@ impl AuthMethodAgent {
 #[cfg(feature = "unstable_auth_methods")]
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct AuthMethodTerminal {
@@ -806,19 +821,19 @@ pub struct AuthMethodTerminal {
     pub name: String,
     /// Optional description providing more details about this authentication method.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub description: Option<String>,
     /// Additional arguments to append to the configured agent invocation for terminal auth.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub args: Vec<String>,
     /// Additional environment variables to set on the configured agent invocation for terminal auth.
     /// Names MUST be unique. These values override same-named variables in the
     /// base launch configuration.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub env: Vec<EnvVariable>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -827,7 +842,7 @@ pub struct AuthMethodTerminal {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -890,8 +905,9 @@ impl AuthMethodTerminal {
 /// See protocol docs: [Creating a Session](https://agentclientprotocol.com/protocol/session-setup#creating-a-session)
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = SESSION_NEW_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_NEW_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NewSessionRequest {
@@ -903,12 +919,12 @@ pub struct NewSessionRequest {
     /// remains the base for relative paths. When omitted or empty, no
     /// additional roots are activated for the new session.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<AbsolutePath>,
     /// List of MCP (Model Context Protocol) servers the agent should connect to.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mcp_servers: Vec<McpServer>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -917,7 +933,7 @@ pub struct NewSessionRequest {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -970,8 +986,9 @@ impl NewSessionRequest {
 /// See protocol docs: [Creating a Session](https://agentclientprotocol.com/protocol/session-setup#creating-a-session)
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = SESSION_NEW_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_NEW_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NewSessionResponse {
@@ -981,7 +998,7 @@ pub struct NewSessionResponse {
     pub session_id: SessionId,
     /// Initial session configuration options.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub config_options: Vec<SessionConfigOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -990,7 +1007,7 @@ pub struct NewSessionResponse {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -1041,8 +1058,9 @@ impl NewSessionResponse {
 #[cfg(feature = "unstable_session_fork")]
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = SESSION_FORK_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_FORK_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ForkSessionRequest {
@@ -1056,12 +1074,12 @@ pub struct ForkSessionRequest {
     /// this is the complete resulting additional-root list for the forked
     /// session.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<AbsolutePath>,
     /// List of MCP servers to connect to for this session.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mcp_servers: Vec<McpServer>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1070,7 +1088,7 @@ pub struct ForkSessionRequest {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -1128,8 +1146,9 @@ impl ForkSessionRequest {
 #[cfg(feature = "unstable_session_fork")]
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = SESSION_FORK_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_FORK_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ForkSessionResponse {
@@ -1137,7 +1156,7 @@ pub struct ForkSessionResponse {
     pub session_id: SessionId,
     /// Initial session configuration options.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub config_options: Vec<SessionConfigOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1146,7 +1165,7 @@ pub struct ForkSessionResponse {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -1191,8 +1210,9 @@ impl ForkSessionResponse {
 /// history according to `replayFrom`.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = SESSION_RESUME_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_RESUME_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ResumeSessionRequest {
@@ -1207,12 +1227,12 @@ pub struct ResumeSessionRequest {
     /// session. It may differ from any previously used or reported list as long as
     /// the request `cwd` matches the session's `cwd`.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<AbsolutePath>,
     /// List of MCP servers to connect to for this session.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mcp_servers: Vec<McpServer>,
     /// Inclusive cursor describing where conversation replay should begin.
@@ -1223,7 +1243,7 @@ pub struct ResumeSessionRequest {
     /// `{ "type": "start" }` means the Agent should replay the whole
     /// conversation before responding.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub replay_from: Option<ReplayFrom>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1232,7 +1252,7 @@ pub struct ResumeSessionRequest {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -1298,7 +1318,8 @@ impl ResumeSessionRequest {
 /// Inclusive cursor describing where replayed session history should begin.
 ///
 /// Replay includes the position identified by the cursor.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "type", rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum ReplayFrom {
@@ -1326,7 +1347,8 @@ impl From<ReplayFromStart> for ReplayFrom {
 /// Inclusive replay cursor requesting replay from the start of the conversation.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ReplayFromStart {
@@ -1336,7 +1358,7 @@ pub struct ReplayFromStart {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -1364,9 +1386,10 @@ impl ReplayFromStart {
 /// Custom or future replay cursor payload.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, JsonSchema, PartialEq, Eq)]
-#[schemars(inline)]
-#[schemars(transform = other_replay_from_schema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(inline))]
+#[cfg_attr(feature = "schemars", schemars(transform = other_replay_from_schema))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct OtherReplayFrom {
@@ -1383,7 +1406,7 @@ pub struct OtherReplayFrom {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -1452,6 +1475,7 @@ fn is_known_replay_from_type(type_: &str) -> bool {
     matches!(type_, "start")
 }
 
+#[cfg(feature = "schemars")]
 fn other_replay_from_schema(schema: &mut Schema) {
     super::schema_util::reject_known_string_discriminators(schema, "type", &["start"]);
 }
@@ -1459,14 +1483,15 @@ fn other_replay_from_schema(schema: &mut Schema) {
 /// Response from resuming an existing session.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = SESSION_RESUME_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_RESUME_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ResumeSessionResponse {
     /// Initial session configuration options.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub config_options: Vec<SessionConfigOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1475,7 +1500,7 @@ pub struct ResumeSessionResponse {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -1516,8 +1541,9 @@ impl ResumeSessionResponse {
 /// with the session.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = SESSION_CLOSE_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_CLOSE_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct CloseSessionRequest {
@@ -1529,7 +1555,7 @@ pub struct CloseSessionRequest {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -1560,8 +1586,9 @@ impl CloseSessionRequest {
 /// Response from closing a session.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = SESSION_CLOSE_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_CLOSE_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct CloseSessionResponse {
@@ -1571,7 +1598,7 @@ pub struct CloseSessionResponse {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -1599,7 +1626,8 @@ impl CloseSessionResponse {
 // List sessions
 
 /// An opaque cursor used to paginate `session/list` results.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
 #[from(Arc<str>, String, &str, &mut str, Box<str>, Cow<'_, str>)]
 #[non_exhaustive]
@@ -1646,8 +1674,9 @@ impl_session_list_cursor_option_conversion!(Cow<'_, str>);
 /// Request parameters for listing existing sessions.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = SESSION_LIST_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_LIST_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ListSessionsRequest {
@@ -1663,7 +1692,7 @@ pub struct ListSessionsRequest {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -1705,19 +1734,20 @@ impl ListSessionsRequest {
 /// Response from listing sessions.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = SESSION_LIST_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_LIST_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ListSessionsResponse {
     /// Array of session information objects.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     pub sessions: Vec<SessionInfo>,
     /// Opaque cursor token. If present, pass this in the next request's cursor parameter
     /// to fetch the next page. If absent, there are no more results.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub next_cursor: Option<SessionListCursor>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1726,7 +1756,7 @@ pub struct ListSessionsResponse {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -1769,8 +1799,9 @@ impl ListSessionsResponse {
 /// Only available if the Agent supports the `session.delete` capability.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = SESSION_DELETE_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_DELETE_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct DeleteSessionRequest {
@@ -1782,7 +1813,7 @@ pub struct DeleteSessionRequest {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -1813,8 +1844,9 @@ impl DeleteSessionRequest {
 /// Response from deleting a session.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = SESSION_DELETE_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_DELETE_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct DeleteSessionResponse {
@@ -1824,7 +1856,7 @@ pub struct DeleteSessionResponse {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -1852,7 +1884,8 @@ impl DeleteSessionResponse {
 /// Information about a session returned by session/list
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SessionInfo {
@@ -1866,18 +1899,18 @@ pub struct SessionInfo {
     /// by the Agent. Omitted and empty values are equivalent: the response
     /// reports no additional roots.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<AbsolutePath>,
 
     /// Human-readable title for the session
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub title: Option<String>,
     /// RFC 3339 timestamp of last activity.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "format" = "date-time"))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "format" = "date-time")))]
     #[serde(default)]
     pub updated_at: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1886,7 +1919,7 @@ pub struct SessionInfo {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -1946,7 +1979,8 @@ impl SessionInfo {
 // Session config options
 
 /// Unique identifier for a session configuration option.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, From, Display)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, From, Display)]
 #[serde(transparent)]
 #[from(forward)]
 #[non_exhaustive]
@@ -1961,7 +1995,8 @@ impl SessionConfigId {
 }
 
 /// Unique identifier for a session configuration option value.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, From, Display)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, From, Display)]
 #[serde(transparent)]
 #[from(forward)]
 #[non_exhaustive]
@@ -1976,7 +2011,8 @@ impl SessionConfigValueId {
 }
 
 /// Unique identifier for a session configuration option value group.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, From, Display)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, From, Display)]
 #[serde(transparent)]
 #[from(forward)]
 #[non_exhaustive]
@@ -1993,7 +2029,8 @@ impl SessionConfigGroupId {
 /// A possible value for a session configuration option.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SessionConfigSelectOption {
@@ -2003,7 +2040,7 @@ pub struct SessionConfigSelectOption {
     pub name: String,
     /// Optional description for this option value.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub description: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -2012,7 +2049,7 @@ pub struct SessionConfigSelectOption {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -2052,7 +2089,8 @@ impl SessionConfigSelectOption {
 /// A group of possible values for a session configuration option.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SessionConfigSelectGroup {
@@ -2062,7 +2100,7 @@ pub struct SessionConfigSelectGroup {
     pub name: String,
     /// The set of option values in this group.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     pub options: Vec<SessionConfigSelectOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -2070,7 +2108,7 @@ pub struct SessionConfigSelectGroup {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -2105,7 +2143,8 @@ impl SessionConfigSelectGroup {
 }
 
 /// Possible values for a session configuration option.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(untagged)]
 #[non_exhaustive]
 pub enum SessionConfigSelectOptions {
@@ -2129,7 +2168,8 @@ impl From<Vec<SessionConfigSelectGroup>> for SessionConfigSelectOptions {
 
 /// A single-value selector (dropdown) session configuration option payload.
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SessionConfigSelect {
@@ -2155,7 +2195,8 @@ impl SessionConfigSelect {
 
 /// A boolean on/off toggle session configuration option payload.
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SessionConfigBoolean {
@@ -2180,7 +2221,8 @@ impl SessionConfigBoolean {
 ///
 /// Category names beginning with `_` are free for custom use, like other ACP extension methods.
 /// Category names that do not begin with `_` are reserved for the ACP spec.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum SessionConfigOptionCategory {
@@ -2202,7 +2244,8 @@ pub enum SessionConfigOptionCategory {
 }
 
 /// Type-specific session configuration option payload.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "type", rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum SessionConfigKind {
@@ -2224,9 +2267,10 @@ pub enum SessionConfigKind {
 }
 
 /// Custom or future session configuration option payload.
-#[derive(Debug, Clone, Serialize, JsonSchema, PartialEq, Eq)]
-#[schemars(inline)]
-#[schemars(transform = other_session_config_kind_schema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(inline))]
+#[cfg_attr(feature = "schemars", schemars(transform = other_session_config_kind_schema))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct OtherSessionConfigKind {
@@ -2282,6 +2326,7 @@ fn is_known_session_config_kind_type(type_: &str) -> bool {
     matches!(type_, "select" | "boolean")
 }
 
+#[cfg(feature = "schemars")]
 fn other_session_config_kind_schema(schema: &mut Schema) {
     super::schema_util::reject_known_string_discriminators(schema, "type", &["select", "boolean"]);
 }
@@ -2289,7 +2334,8 @@ fn other_session_config_kind_schema(schema: &mut Schema) {
 /// A session configuration option selector and its current state.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SessionConfigOption {
@@ -2299,12 +2345,12 @@ pub struct SessionConfigOption {
     pub name: String,
     /// Optional description for the Client to display to the user.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub description: Option<String>,
     /// Optional semantic category for this option (UX only).
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub category: Option<SessionConfigOptionCategory>,
     /// Type-specific fields for this configuration option.
@@ -2316,7 +2362,7 @@ pub struct SessionConfigOption {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -2403,7 +2449,8 @@ impl SessionConfigOption {
 /// kind. For example every option kind that picks from a list of ids
 /// (`select`, `radio`, …) would use [`Id`](Self::Id), while a future freeform
 /// text option would get its own variant.
-#[derive(Debug, Clone, Serialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(tag = "type", rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum SessionConfigOptionValue {
@@ -2427,9 +2474,10 @@ pub enum SessionConfigOptionValue {
 }
 
 /// Custom or future session configuration option value payload.
-#[derive(Debug, Clone, Serialize, JsonSchema, PartialEq, Eq)]
-#[schemars(inline)]
-#[schemars(transform = other_session_config_option_value_schema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(inline))]
+#[cfg_attr(feature = "schemars", schemars(transform = other_session_config_option_value_schema))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct OtherSessionConfigOptionValue {
@@ -2544,6 +2592,7 @@ fn is_known_session_config_option_value_type(type_: &str) -> bool {
     matches!(type_, "id" | "boolean")
 }
 
+#[cfg(feature = "schemars")]
 fn other_session_config_option_value_schema(schema: &mut Schema) {
     super::schema_util::reject_known_string_discriminators(schema, "type", &["id", "boolean"]);
 }
@@ -2604,8 +2653,9 @@ impl From<&str> for SessionConfigOptionValue {
 /// Request parameters for setting a session configuration option.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = SESSION_SET_CONFIG_OPTION_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_SET_CONFIG_OPTION_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SetSessionConfigOptionRequest {
@@ -2624,7 +2674,7 @@ pub struct SetSessionConfigOptionRequest {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -2661,14 +2711,15 @@ impl SetSessionConfigOptionRequest {
 /// Response to `session/set_config_option` method.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = SESSION_SET_CONFIG_OPTION_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_SET_CONFIG_OPTION_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SetSessionConfigOptionResponse {
     /// The full set of configuration options and their current values.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     pub config_options: Vec<SessionConfigOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -2676,7 +2727,7 @@ pub struct SetSessionConfigOptionResponse {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -2712,7 +2763,8 @@ impl SetSessionConfigOptionResponse {
 /// processing prompts.
 ///
 /// See protocol docs: [MCP Servers](https://agentclientprotocol.com/protocol/session-setup#mcp-servers)
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "type", rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum McpServer {
@@ -2748,9 +2800,10 @@ pub enum McpServer {
 }
 
 /// Custom or future MCP server transport payload.
-#[derive(Debug, Clone, Serialize, JsonSchema, PartialEq, Eq)]
-#[schemars(inline)]
-#[schemars(transform = other_mcp_server_schema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(inline))]
+#[cfg_attr(feature = "schemars", schemars(transform = other_mcp_server_schema))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct OtherMcpServer {
@@ -2810,6 +2863,7 @@ fn is_known_mcp_server_type(type_: &str) -> bool {
     }
 }
 
+#[cfg(feature = "schemars")]
 fn other_mcp_server_schema(schema: &mut Schema) {
     super::schema_util::reject_known_string_discriminators(
         schema,
@@ -2826,14 +2880,15 @@ fn other_mcp_server_schema(schema: &mut Schema) {
 /// HTTP transport configuration for MCP.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct McpServerHttp {
     /// Human-readable name identifying this MCP server.
     pub name: String,
     /// URL to the MCP server.
-    #[schemars(url)]
+    #[cfg_attr(feature = "schemars", schemars(url))]
     pub url: String,
     /// HTTP headers to set when making requests to the MCP server.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -2844,7 +2899,7 @@ pub struct McpServerHttp {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -2891,7 +2946,8 @@ impl McpServerHttp {
 /// used by `mcp/connect` to route connection requests back to the component that declared the
 /// server.
 #[cfg(feature = "unstable_mcp_over_acp")]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
 #[from(forward)]
 #[non_exhaustive]
@@ -2917,7 +2973,8 @@ impl McpServerAcpId {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg(feature = "unstable_mcp_over_acp")]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct McpServerAcp {
@@ -2934,7 +2991,7 @@ pub struct McpServerAcp {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -2967,7 +3024,8 @@ impl McpServerAcp {
 /// Stdio transport configuration for MCP.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct McpServerStdio {
@@ -2987,7 +3045,7 @@ pub struct McpServerStdio {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -3035,7 +3093,8 @@ impl McpServerStdio {
 /// An environment variable to set when launching a process.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct EnvVariable {
@@ -3049,7 +3108,7 @@ pub struct EnvVariable {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -3081,7 +3140,8 @@ impl EnvVariable {
 /// An HTTP header to set when making requests to the MCP server.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct HttpHeader {
@@ -3095,7 +3155,7 @@ pub struct HttpHeader {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -3133,8 +3193,9 @@ impl HttpHeader {
 /// See protocol docs: [User Message](https://agentclientprotocol.com/protocol/prompt-lifecycle#1-user-message)
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
-#[schemars(extend("x-side" = "agent", "x-method" = SESSION_PROMPT_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_PROMPT_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct PromptRequest {
@@ -3160,7 +3221,7 @@ pub struct PromptRequest {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -3197,8 +3258,9 @@ impl PromptRequest {
 /// See protocol docs: [Prompt Accepted](https://agentclientprotocol.com/protocol/prompt-lifecycle#2-prompt-accepted)
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = SESSION_PROMPT_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_PROMPT_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct PromptResponse {
@@ -3208,7 +3270,7 @@ pub struct PromptResponse {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -3236,7 +3298,8 @@ impl PromptResponse {
 /// Reasons why an agent stops active session work.
 ///
 /// See protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/prompt-lifecycle#stop-reasons)
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum StopReason {
@@ -3274,7 +3337,8 @@ pub enum StopReason {
 #[cfg(feature = "unstable_end_turn_token_usage")]
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct Usage {
@@ -3286,17 +3350,17 @@ pub struct Usage {
     pub output_tokens: u64,
     /// Total thought/reasoning tokens
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub thought_tokens: Option<u64>,
     /// Total cache read tokens.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub cached_read_tokens: Option<u64>,
     /// Total cache write tokens.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub cached_write_tokens: Option<u64>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -3305,7 +3369,7 @@ pub struct Usage {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -3373,7 +3437,8 @@ impl Usage {
 /// Protocol names beginning with `_` are free for custom use, like other ACP extension methods.
 /// Protocol names that do not begin with `_` are reserved for the ACP spec.
 #[cfg(feature = "unstable_llm_providers")]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 #[expect(clippy::doc_markdown)]
@@ -3406,14 +3471,15 @@ pub enum LlmProtocol {
 #[cfg(feature = "unstable_llm_providers")]
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ProviderCurrentConfig {
     /// Protocol currently used by this provider.
     pub api_type: LlmProtocol,
     /// Base URL currently used by this provider.
-    #[schemars(url)]
+    #[cfg_attr(feature = "schemars", schemars(url))]
     pub base_url: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -3421,7 +3487,7 @@ pub struct ProviderCurrentConfig {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -3457,7 +3523,8 @@ impl ProviderCurrentConfig {
 ///
 /// Unique identifier for a configurable LLM provider.
 #[cfg(feature = "unstable_llm_providers")]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
 #[from(forward)]
 #[non_exhaustive]
@@ -3480,7 +3547,8 @@ impl ProviderId {
 #[cfg(feature = "unstable_llm_providers")]
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ProviderInfo {
@@ -3488,7 +3556,7 @@ pub struct ProviderInfo {
     pub provider_id: ProviderId,
     /// Supported protocol types for this provider.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     pub supported: Vec<LlmProtocol>,
     /// Whether this provider is mandatory and cannot be disabled via `providers/disable`.
     /// If true, clients must not call `providers/disable` for this provider ID.
@@ -3503,7 +3571,7 @@ pub struct ProviderInfo {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -3548,8 +3616,9 @@ impl ProviderInfo {
 #[cfg(feature = "unstable_llm_providers")]
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = PROVIDERS_LIST_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = PROVIDERS_LIST_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ListProvidersRequest {
@@ -3559,7 +3628,7 @@ pub struct ListProvidersRequest {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -3593,8 +3662,9 @@ impl ListProvidersRequest {
 #[cfg(feature = "unstable_llm_providers")]
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = PROVIDERS_LIST_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = PROVIDERS_LIST_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ListProvidersResponse {
@@ -3606,7 +3676,7 @@ pub struct ListProvidersResponse {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -3645,8 +3715,9 @@ impl ListProvidersResponse {
 #[cfg(feature = "unstable_llm_providers")]
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Clone, Debug, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = PROVIDERS_SET_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = PROVIDERS_SET_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SetProviderRequest {
@@ -3655,7 +3726,7 @@ pub struct SetProviderRequest {
     /// Protocol type for this provider.
     pub api_type: LlmProtocol,
     /// Base URL for requests sent through this provider.
-    #[schemars(url)]
+    #[cfg_attr(feature = "schemars", schemars(url))]
     pub base_url: String,
     /// Full headers map for this provider.
     /// May include authorization, routing, or other integration-specific headers.
@@ -3667,7 +3738,7 @@ pub struct SetProviderRequest {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -3719,8 +3790,9 @@ impl SetProviderRequest {
 #[cfg(feature = "unstable_llm_providers")]
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = PROVIDERS_SET_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = PROVIDERS_SET_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SetProviderResponse {
@@ -3730,7 +3802,7 @@ pub struct SetProviderResponse {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -3764,8 +3836,9 @@ impl SetProviderResponse {
 #[cfg(feature = "unstable_llm_providers")]
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = PROVIDERS_DISABLE_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = PROVIDERS_DISABLE_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct DisableProviderRequest {
@@ -3777,7 +3850,7 @@ pub struct DisableProviderRequest {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -3814,8 +3887,9 @@ impl DisableProviderRequest {
 #[cfg(feature = "unstable_llm_providers")]
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = PROVIDERS_DISABLE_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = PROVIDERS_DISABLE_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct DisableProviderResponse {
@@ -3825,7 +3899,7 @@ pub struct DisableProviderResponse {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -3861,7 +3935,8 @@ impl DisableProviderResponse {
 /// See protocol docs: [Agent Capabilities](https://agentclientprotocol.com/protocol/initialization#agent-capabilities)
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct AgentCapabilities {
@@ -3872,7 +3947,7 @@ pub struct AgentCapabilities {
     /// baseline session methods: `session/new`, `session/prompt`,
     /// `session/cancel`, and `session/update`.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub session: Option<SessionCapabilities>,
     /// Authentication-related extension capabilities supported by the agent.
@@ -3882,7 +3957,7 @@ pub struct AgentCapabilities {
     /// for `auth/login` or `auth/logout`; those methods are advertised by a
     /// non-empty `authMethods` list in the `initialize` response.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub auth: Option<AgentAuthCapabilities>,
     /// **UNSTABLE**
@@ -3895,7 +3970,7 @@ pub struct AgentCapabilities {
     /// Supplying `{}` means the agent supports provider configuration methods.
     #[cfg(feature = "unstable_llm_providers")]
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub providers: Option<ProvidersCapabilities>,
     /// **UNSTABLE**
@@ -3908,7 +3983,7 @@ pub struct AgentCapabilities {
     /// for NES methods.
     #[cfg(feature = "unstable_nes")]
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub nes: Option<NesCapabilities>,
     /// **UNSTABLE**
@@ -3918,7 +3993,7 @@ pub struct AgentCapabilities {
     /// The position encoding selected by the agent from the client's supported encodings.
     #[cfg(feature = "unstable_nes")]
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub position_encoding: Option<PositionEncodingKind>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -3927,7 +4002,7 @@ pub struct AgentCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -4020,7 +4095,8 @@ impl AgentCapabilities {
 #[cfg(feature = "unstable_llm_providers")]
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct ProvidersCapabilities {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -4029,7 +4105,7 @@ pub struct ProvidersCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -4068,7 +4144,8 @@ impl ProvidersCapabilities {
 /// See protocol docs: [Session Capabilities](https://agentclientprotocol.com/protocol/initialization#session-capabilities)
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SessionCapabilities {
@@ -4078,7 +4155,7 @@ pub struct SessionCapabilities {
     /// prompt extensions beyond the baseline text and resource-link content
     /// required by `session/prompt`.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub prompt: Option<PromptCapabilities>,
     /// MCP capabilities supported by the agent for session lifecycle requests.
@@ -4086,7 +4163,7 @@ pub struct SessionCapabilities {
     /// Optional. Omitted or `null` both mean the agent does not advertise MCP
     /// server transport support for sessions.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub mcp: Option<McpCapabilities>,
     /// Whether the agent supports `session/delete`.
@@ -4094,7 +4171,7 @@ pub struct SessionCapabilities {
     /// Optional. Omitted or `null` both mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports deleting sessions from `session/list`.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub delete: Option<SessionDeleteCapabilities>,
     /// Whether the agent supports `additionalDirectories` on supported session lifecycle requests.
@@ -4106,7 +4183,7 @@ pub struct SessionCapabilities {
     /// Agents may return `SessionInfo.additionalDirectories` to report the
     /// complete ordered additional-root list associated with a listed session.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub additional_directories: Option<SessionAdditionalDirectoriesCapabilities>,
     /// **UNSTABLE**
@@ -4119,7 +4196,7 @@ pub struct SessionCapabilities {
     /// Supplying `{}` means the agent supports forking sessions.
     #[cfg(feature = "unstable_session_fork")]
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub fork: Option<SessionForkCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -4128,7 +4205,7 @@ pub struct SessionCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -4217,7 +4294,8 @@ impl SessionCapabilities {
 /// Supplying `{}` means the agent supports deleting sessions from `session/list`.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct SessionDeleteCapabilities {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -4226,7 +4304,7 @@ pub struct SessionDeleteCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -4259,7 +4337,8 @@ impl SessionDeleteCapabilities {
 /// complete ordered additional-root list associated with a listed session.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct SessionAdditionalDirectoriesCapabilities {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -4268,7 +4347,7 @@ pub struct SessionAdditionalDirectoriesCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -4303,7 +4382,8 @@ impl SessionAdditionalDirectoriesCapabilities {
 #[cfg(feature = "unstable_session_fork")]
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct SessionForkCapabilities {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -4312,7 +4392,7 @@ pub struct SessionForkCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -4352,7 +4432,8 @@ impl SessionForkCapabilities {
 /// See protocol docs: [Prompt Capabilities](https://agentclientprotocol.com/protocol/initialization#prompt-capabilities)
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct PromptCapabilities {
@@ -4361,7 +4442,7 @@ pub struct PromptCapabilities {
     /// Optional. Omitted or `null` both mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports image content in prompts.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub image: Option<PromptImageCapabilities>,
     /// Agent supports [`ContentBlock::Audio`].
@@ -4369,7 +4450,7 @@ pub struct PromptCapabilities {
     /// Optional. Omitted or `null` both mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports audio content in prompts.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub audio: Option<PromptAudioCapabilities>,
     /// Agent supports embedded context in `session/prompt` requests.
@@ -4380,7 +4461,7 @@ pub struct PromptCapabilities {
     /// Optional. Omitted or `null` both mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports embedded context in prompts.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub embedded_context: Option<PromptEmbeddedContextCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -4389,7 +4470,7 @@ pub struct PromptCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -4455,7 +4536,8 @@ impl PromptCapabilities {
 /// Supplying `{}` means the agent supports image content in prompts.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct PromptImageCapabilities {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -4464,7 +4546,7 @@ pub struct PromptImageCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -4494,7 +4576,8 @@ impl PromptImageCapabilities {
 /// Supplying `{}` means the agent supports audio content in prompts.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct PromptAudioCapabilities {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -4503,7 +4586,7 @@ pub struct PromptAudioCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -4533,7 +4616,8 @@ impl PromptAudioCapabilities {
 /// Supplying `{}` means the agent supports embedded context in prompts.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct PromptEmbeddedContextCapabilities {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -4542,7 +4626,7 @@ pub struct PromptEmbeddedContextCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -4570,7 +4654,8 @@ impl PromptEmbeddedContextCapabilities {
 /// MCP capabilities supported by the agent for session lifecycle requests.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct McpCapabilities {
@@ -4579,7 +4664,7 @@ pub struct McpCapabilities {
     /// Optional. Omitted or `null` both mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports stdio MCP server transports.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub stdio: Option<McpStdioCapabilities>,
     /// Agent supports [`McpServer::Http`].
@@ -4587,7 +4672,7 @@ pub struct McpCapabilities {
     /// Optional. Omitted or `null` both mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports HTTP MCP server transports.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub http: Option<McpHttpCapabilities>,
     /// **UNSTABLE**
@@ -4600,7 +4685,7 @@ pub struct McpCapabilities {
     /// Supplying `{}` means the agent supports ACP MCP server transports.
     #[cfg(feature = "unstable_mcp_over_acp")]
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub acp: Option<McpAcpCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -4609,7 +4694,7 @@ pub struct McpCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -4674,7 +4759,8 @@ impl McpCapabilities {
 /// Supplying `{}` means the agent supports stdio MCP server transports.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct McpStdioCapabilities {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -4683,7 +4769,7 @@ pub struct McpStdioCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -4713,7 +4799,8 @@ impl McpStdioCapabilities {
 /// Supplying `{}` means the agent supports HTTP MCP server transports.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct McpHttpCapabilities {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -4722,7 +4809,7 @@ pub struct McpHttpCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -4757,7 +4844,8 @@ impl McpHttpCapabilities {
 #[cfg(feature = "unstable_mcp_over_acp")]
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct McpAcpCapabilities {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -4766,7 +4854,7 @@ pub struct McpAcpCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -4797,8 +4885,9 @@ impl McpAcpCapabilities {
 /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-lifecycle#cancellation)
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "agent", "x-method" = SESSION_CANCEL_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_CANCEL_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct CancelSessionNotification {
@@ -4810,7 +4899,7 @@ pub struct CancelSessionNotification {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -5001,9 +5090,10 @@ pub(crate) const AUTH_LOGOUT_METHOD_NAME: &str = "auth/logout";
 /// to use this directly.
 ///
 /// This enum encompasses all method calls from client to agent.
-#[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(untagged)]
-#[schemars(inline)]
+#[cfg_attr(feature = "schemars", schemars(inline))]
 #[non_exhaustive]
 pub enum ClientRequest {
     /// Establishes the connection with a client and negotiates protocol capabilities.
@@ -5204,9 +5294,10 @@ impl ClientRequest {
 /// to use this directly - the responses are handled automatically by the connection.
 ///
 /// These are responses to the corresponding `ClientRequest` variants.
-#[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(untagged)]
-#[schemars(inline)]
+#[cfg_attr(feature = "schemars", schemars(inline))]
 #[non_exhaustive]
 pub enum AgentResponse {
     /// Successful result returned for a `initialize` request.
@@ -5263,9 +5354,10 @@ pub enum AgentResponse {
 /// to use this directly.
 ///
 /// Notifications do not expect a response.
-#[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(untagged)]
-#[schemars(inline)]
+#[cfg_attr(feature = "schemars", schemars(inline))]
 #[non_exhaustive]
 pub enum ClientNotification {
     /// Cancels ongoing operations for a session.
@@ -5602,6 +5694,7 @@ mod test_serialization {
         }
     }
 
+    #[cfg(feature = "schemars")]
     #[test]
     fn mcp_server_http_schema_marks_url_as_uri() {
         let schema = serde_json::to_value(schemars::schema_for!(McpServerHttp)).unwrap();

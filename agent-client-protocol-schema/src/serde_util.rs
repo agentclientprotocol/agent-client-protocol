@@ -20,7 +20,6 @@ use std::{
     sync::Arc,
 };
 
-use schemars::JsonSchema;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_with::{DeserializeAs, de::DeserializeAsWrap};
 
@@ -307,8 +306,9 @@ impl IntoOption<serde_json::Value> for Cow<'_, str> {
 ///     a: MaybeUndefined<i32>,
 /// }
 /// ```
-#[derive(Copy, Clone, Default, PartialEq, PartialOrd, Eq, Ord, Debug, Hash, JsonSchema)]
-#[schemars(with = "Option<Option<T>>", inline)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Copy, Clone, Default, PartialEq, PartialOrd, Eq, Ord, Debug, Hash)]
+#[cfg_attr(feature = "schemars", schemars(with = "Option<Option<T>>", inline))]
 #[expect(clippy::exhaustive_enums)]
 pub enum MaybeUndefined<T> {
     /// The field was not present.

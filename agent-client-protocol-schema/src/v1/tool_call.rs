@@ -7,7 +7,6 @@
 use std::{path::PathBuf, sync::Arc};
 
 use derive_more::{Display, From};
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
@@ -23,7 +22,8 @@ use super::{ContentBlock, Error, Meta, TerminalId};
 /// See protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/tool-calls)
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ToolCall {
@@ -41,39 +41,39 @@ pub struct ToolCall {
     /// tool name is available.
     #[cfg(feature = "unstable_tool_call_name")]
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub name: Option<String>,
     /// The category of tool being invoked.
     /// Helps clients choose appropriate icons and UI treatment.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default, skip_serializing_if = "ToolKind::is_default")]
     pub kind: ToolKind,
     /// Current execution status of the tool call.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default, skip_serializing_if = "ToolCallStatus::is_default")]
     pub status: ToolCallStatus,
     /// Content produced by the tool call.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub content: Vec<ToolCallContent>,
     /// File locations affected by this tool call.
     /// Enables "follow-along" features in clients.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub locations: Vec<ToolCallLocation>,
     /// Raw input parameters sent to the tool.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub raw_input: Option<serde_json::Value>,
     /// Raw output returned by the tool.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub raw_output: Option<serde_json::Value>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -82,7 +82,7 @@ pub struct ToolCall {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -213,7 +213,8 @@ impl ToolCall {
 /// See protocol docs: [Updating](https://agentclientprotocol.com/protocol/tool-calls#updating)
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ToolCallUpdate {
@@ -228,7 +229,7 @@ pub struct ToolCallUpdate {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -265,23 +266,24 @@ impl ToolCallUpdate {
 /// See protocol docs: [Updating](https://agentclientprotocol.com/protocol/tool-calls#updating)
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ToolCallUpdateFields {
     /// Update the tool kind.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub kind: Option<ToolKind>,
     /// Update the execution status.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub status: Option<ToolCallStatus>,
     /// Update the human-readable title.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub title: Option<String>,
     /// **UNSTABLE**
@@ -294,27 +296,27 @@ pub struct ToolCallUpdateFields {
     /// the existing name is left unchanged.
     #[cfg(feature = "unstable_tool_call_name")]
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub name: Option<String>,
     /// Replace the content collection.
     #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default)]
     pub content: Option<Vec<ToolCallContent>>,
     /// Replace the locations collection.
     #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default)]
     pub locations: Option<Vec<ToolCallLocation>>,
     /// Update the raw input.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub raw_input: Option<serde_json::Value>,
     /// Update the raw output.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub raw_output: Option<serde_json::Value>,
 }
@@ -463,7 +465,8 @@ impl From<ToolCall> for ToolCallUpdate {
 }
 
 /// Unique identifier for a tool call within a session.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
 #[from(Arc<str>, String, &'static str)]
 #[non_exhaustive]
@@ -489,7 +492,8 @@ impl IntoOption<ToolCallId> for &str {
 /// display tool execution progress.
 ///
 /// See protocol docs: [Creating](https://agentclientprotocol.com/protocol/tool-calls#creating)
-#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum ToolKind {
@@ -529,7 +533,8 @@ impl ToolKind {
 /// Tool calls progress through different statuses during their lifecycle.
 ///
 /// See protocol docs: [Status](https://agentclientprotocol.com/protocol/tool-calls#status)
-#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum ToolCallStatus {
@@ -558,9 +563,10 @@ impl ToolCallStatus {
 /// standard content blocks (text, images) or file diffs.
 ///
 /// See protocol docs: [Content](https://agentclientprotocol.com/protocol/tool-calls#content)
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
-#[schemars(extend("discriminator" = {"propertyName": "type"}))]
+#[cfg_attr(feature = "schemars", schemars(extend("discriminator" = {"propertyName": "type"})))]
 #[non_exhaustive]
 #[expect(clippy::large_enum_variant)]
 pub enum ToolCallContent {
@@ -591,7 +597,8 @@ impl From<Diff> for ToolCallContent {
 /// Standard content block (text, images, resources).
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct Content {
@@ -603,7 +610,7 @@ pub struct Content {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -638,7 +645,8 @@ impl Content {
 /// See protocol docs: [Terminal](https://agentclientprotocol.com/protocol/terminals)
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct Terminal {
@@ -650,7 +658,7 @@ pub struct Terminal {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -685,7 +693,8 @@ impl Terminal {
 /// See protocol docs: [Content](https://agentclientprotocol.com/protocol/tool-calls#content)
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct Diff {
@@ -693,7 +702,7 @@ pub struct Diff {
     pub path: PathBuf,
     /// The original content (None for new files).
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub old_text: Option<String>,
     /// The new content after modification.
@@ -704,7 +713,7 @@ pub struct Diff {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -749,7 +758,8 @@ impl Diff {
 /// See protocol docs: [Following the Agent](https://agentclientprotocol.com/protocol/tool-calls#following-the-agent)
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ToolCallLocation {
@@ -757,7 +767,7 @@ pub struct ToolCallLocation {
     pub path: PathBuf,
     /// Optional line number within the file.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub line: Option<u32>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -766,7 +776,7 @@ pub struct ToolCallLocation {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,

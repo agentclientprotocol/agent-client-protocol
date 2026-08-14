@@ -12,7 +12,8 @@
 
 use std::{fmt::Display, str};
 
-use schemars::{JsonSchema, Schema};
+#[cfg(feature = "schemars")]
+use schemars::Schema;
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, serde_as, skip_serializing_none};
 
@@ -29,7 +30,8 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 /// See protocol docs: [JSON-RPC Error Object](https://www.jsonrpc.org/specification#error_object)
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct Error {
     /// A number indicating the error type that occurred.
@@ -41,7 +43,7 @@ pub struct Error {
     /// Optional primitive or structured value that contains additional information about the error.
     /// This may include debugging information or context-specific details.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub data: Option<serde_json::Value>,
 }
@@ -138,52 +140,53 @@ impl Error {
 ///
 /// These codes follow the JSON-RPC 2.0 specification for standard errors
 /// and use the reserved range (-32000 to -32099) for protocol-specific errors.
-#[derive(Clone, Copy, Deserialize, Eq, JsonSchema, PartialEq, Serialize, strum::Display)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Clone, Copy, Deserialize, Eq, PartialEq, Serialize, strum::Display)]
 #[cfg_attr(test, derive(strum::EnumIter))]
 #[serde(from = "i32", into = "i32")]
-#[schemars(!from, !into)]
+#[cfg_attr(feature = "schemars", schemars(!from, !into))]
 #[non_exhaustive]
 pub enum ErrorCode {
     // Standard errors
     /// Invalid JSON was received by the server.
     /// An error occurred on the server while parsing the JSON text.
-    #[schemars(transform = error_code_transform)]
+    #[cfg_attr(feature = "schemars", schemars(transform = error_code_transform))]
     #[strum(to_string = "Parse error")]
     ParseError, // -32700
     /// The JSON sent is not a valid Request object.
-    #[schemars(transform = error_code_transform)]
+    #[cfg_attr(feature = "schemars", schemars(transform = error_code_transform))]
     #[strum(to_string = "Invalid request")]
     InvalidRequest, // -32600
     /// The method does not exist or is not available.
-    #[schemars(transform = error_code_transform)]
+    #[cfg_attr(feature = "schemars", schemars(transform = error_code_transform))]
     #[strum(to_string = "Method not found")]
     MethodNotFound, // -32601
     /// Invalid method parameter(s).
-    #[schemars(transform = error_code_transform)]
+    #[cfg_attr(feature = "schemars", schemars(transform = error_code_transform))]
     #[strum(to_string = "Invalid params")]
     InvalidParams, // -32602
     /// Internal JSON-RPC error.
     /// Reserved for implementation-defined server errors.
-    #[schemars(transform = error_code_transform)]
+    #[cfg_attr(feature = "schemars", schemars(transform = error_code_transform))]
     #[strum(to_string = "Internal error")]
     InternalError, // -32603
     /// Execution of the method was aborted either due to a cancellation request from the caller or
     /// because of resource constraints or shutdown.
-    #[schemars(transform = error_code_transform)]
+    #[cfg_attr(feature = "schemars", schemars(transform = error_code_transform))]
     #[strum(to_string = "Request cancelled")]
     RequestCancelled, // -32800
 
     // Custom errors
     /// Authentication is required before this operation can be performed.
-    #[schemars(transform = error_code_transform)]
+    #[cfg_attr(feature = "schemars", schemars(transform = error_code_transform))]
     #[strum(to_string = "Authentication required")]
     AuthRequired, // -32000
     /// A given resource, such as a file, was not found.
-    #[schemars(transform = error_code_transform)]
+    #[cfg_attr(feature = "schemars", schemars(transform = error_code_transform))]
     #[strum(to_string = "Resource not found")]
     ResourceNotFound, // -32002
     /// Other undefined error code.
-    #[schemars(untagged)]
+    #[cfg_attr(feature = "schemars", schemars(untagged))]
     #[strum(to_string = "Unknown error")]
     Other(i32),
 }
@@ -226,6 +229,7 @@ impl std::fmt::Debug for ErrorCode {
     }
 }
 
+#[cfg(feature = "schemars")]
 fn error_code_transform(schema: &mut Schema) {
     let name = schema
         .get("const")
@@ -326,7 +330,8 @@ mod tests {
 
     #[test]
     fn serialize_error_code_equality() {
-        // Make sure this doesn't panic
+        // Make sure schema generation doesn't panic when enabled.
+        #[cfg(feature = "schemars")]
         let _schema = schemars::schema_for!(ErrorCode);
         for error in ErrorCode::iter() {
             assert_eq!(

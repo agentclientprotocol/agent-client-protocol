@@ -6,20 +6,21 @@
 use std::{collections::BTreeMap, sync::Arc};
 
 use derive_more::{Display, From};
-use schemars::{JsonSchema, Schema};
+#[cfg(feature = "schemars")]
+use schemars::Schema;
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
 use crate::IntoOption;
 use crate::SkipListener;
 
-use super::{
-    ELICITATION_COMPLETE_NOTIFICATION, ELICITATION_CREATE_METHOD_NAME, Meta, RequestId, SessionId,
-    ToolCallId,
-};
+#[cfg(feature = "schemars")]
+use super::{ELICITATION_COMPLETE_NOTIFICATION, ELICITATION_CREATE_METHOD_NAME};
+use super::{Meta, RequestId, SessionId, ToolCallId};
 
 /// Unique identifier for an elicitation.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash, Display, From)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
 #[from(Arc<str>, String, &'static str)]
 #[non_exhaustive]
@@ -34,7 +35,8 @@ impl ElicitationId {
 }
 
 /// String format types for string properties in elicitation schemas.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum StringFormat {
@@ -49,7 +51,8 @@ pub enum StringFormat {
 }
 
 /// Type discriminator for elicitation schemas.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema, Default)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum ElicitationSchemaType {
@@ -61,7 +64,8 @@ pub enum ElicitationSchemaType {
 /// A titled enum option with a const value, human-readable title, and optional description.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct EnumOption {
     /// The constant value for this option.
@@ -73,7 +77,7 @@ pub struct EnumOption {
     ///
     /// Optional. Omitted and `null` are equivalent and mean no description is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub description: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -84,7 +88,7 @@ pub struct EnumOption {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -129,7 +133,8 @@ impl EnumOption {
 /// with `"type": "string"`.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct StringPropertySchema {
@@ -137,14 +142,14 @@ pub struct StringPropertySchema {
     ///
     /// Optional. Omitted and `null` are equivalent and mean no title is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub title: Option<String>,
     /// Human-readable description.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no description is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub description: Option<String>,
     /// Minimum string length.
@@ -171,7 +176,7 @@ pub struct StringPropertySchema {
     ///
     /// Optional. Omitted and `null` are equivalent and mean no default value is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub default: Option<String>,
     /// Enum values for untitled single-select enums.
@@ -194,7 +199,7 @@ pub struct StringPropertySchema {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -323,7 +328,8 @@ impl StringPropertySchema {
 /// Schema for number (floating-point) properties in an elicitation form.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NumberPropertySchema {
@@ -331,14 +337,14 @@ pub struct NumberPropertySchema {
     ///
     /// Optional. Omitted and `null` are equivalent and mean no title is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub title: Option<String>,
     /// Human-readable description.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no description is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub description: Option<String>,
     /// Minimum value (inclusive).
@@ -355,7 +361,7 @@ pub struct NumberPropertySchema {
     ///
     /// Optional. Omitted and `null` are equivalent and mean no default value is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub default: Option<f64>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -366,7 +372,7 @@ pub struct NumberPropertySchema {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -431,7 +437,8 @@ impl NumberPropertySchema {
 /// Schema for integer properties in an elicitation form.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct IntegerPropertySchema {
@@ -439,14 +446,14 @@ pub struct IntegerPropertySchema {
     ///
     /// Optional. Omitted and `null` are equivalent and mean no title is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub title: Option<String>,
     /// Human-readable description.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no description is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub description: Option<String>,
     /// Minimum value (inclusive).
@@ -463,7 +470,7 @@ pub struct IntegerPropertySchema {
     ///
     /// Optional. Omitted and `null` are equivalent and mean no default value is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub default: Option<i64>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -474,7 +481,7 @@ pub struct IntegerPropertySchema {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -539,7 +546,8 @@ impl IntegerPropertySchema {
 /// Schema for boolean properties in an elicitation form.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct BooleanPropertySchema {
@@ -547,21 +555,21 @@ pub struct BooleanPropertySchema {
     ///
     /// Optional. Omitted and `null` are equivalent and mean no title is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub title: Option<String>,
     /// Human-readable description.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no description is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub description: Option<String>,
     /// Default value.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no default value is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub default: Option<bool>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -572,7 +580,7 @@ pub struct BooleanPropertySchema {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -623,7 +631,8 @@ impl BooleanPropertySchema {
 /// String item schema for multi-select enum properties.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct StringMultiSelectItems {
     /// Allowed enum values.
@@ -637,7 +646,7 @@ pub struct StringMultiSelectItems {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -667,7 +676,8 @@ impl StringMultiSelectItems {
 /// Items definition for titled multi-select enum properties.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct TitledMultiSelectItems {
     /// Titled enum options.
@@ -681,7 +691,7 @@ pub struct TitledMultiSelectItems {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -716,9 +726,10 @@ impl TitledMultiSelectItems {
 /// This preserves unknown item `type` values and the rest of the `items`
 /// payload for clients that store, replay, proxy, or forward elicitation
 /// requests.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonSchema)]
-#[schemars(inline)]
-#[schemars(transform = other_multi_select_items_schema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "schemars", schemars(inline))]
+#[cfg_attr(feature = "schemars", schemars(transform = other_multi_select_items_schema))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct OtherMultiSelectItems {
@@ -775,6 +786,7 @@ fn is_known_multi_select_item_type(type_: &str) -> bool {
     KNOWN_MULTI_SELECT_ITEM_TYPES.contains(&type_)
 }
 
+#[cfg(feature = "schemars")]
 fn other_multi_select_items_schema(schema: &mut Schema) {
     schema.insert(
         "not".into(),
@@ -796,7 +808,8 @@ fn other_multi_select_items_schema(schema: &mut Schema) {
 }
 
 /// Items for a multi-select (array) property schema.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum MultiSelectItems {
@@ -813,7 +826,8 @@ pub enum MultiSelectItems {
 /// Schema for multi-select (array) properties in an elicitation form.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct MultiSelectPropertySchema {
@@ -821,14 +835,14 @@ pub struct MultiSelectPropertySchema {
     ///
     /// Optional. Omitted and `null` are equivalent and mean no title is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub title: Option<String>,
     /// Human-readable description.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no description is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub description: Option<String>,
     /// Minimum number of items to select.
@@ -847,7 +861,7 @@ pub struct MultiSelectPropertySchema {
     ///
     /// Optional. Omitted and `null` are equivalent and mean no default selections are provided.
     #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
-    #[schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default)]
     pub default: Option<Vec<String>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -858,7 +872,7 @@ pub struct MultiSelectPropertySchema {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -947,7 +961,8 @@ impl MultiSelectPropertySchema {
 /// Each variant corresponds to a JSON Schema `"type"` value.
 /// Single-select enums use the `String` variant with `enum` or `oneOf` set.
 /// Multi-select enums use the `Array` variant.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum ElicitationPropertySchema {
@@ -979,9 +994,10 @@ pub enum ElicitationPropertySchema {
 /// This preserves the unknown `type` discriminator and the rest of the property
 /// schema object for clients that store, replay, proxy, or forward elicitation
 /// requests.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonSchema)]
-#[schemars(inline)]
-#[schemars(transform = other_elicitation_property_schema_schema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "schemars", schemars(inline))]
+#[cfg_attr(feature = "schemars", schemars(transform = other_elicitation_property_schema_schema))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct OtherElicitationPropertySchema {
@@ -1039,6 +1055,7 @@ fn is_known_elicitation_property_schema_type(type_: &str) -> bool {
     KNOWN_ELICITATION_PROPERTY_SCHEMA_TYPES.contains(&type_)
 }
 
+#[cfg(feature = "schemars")]
 fn other_elicitation_property_schema_schema(schema: &mut Schema) {
     let known_value_schemas: Vec<_> = KNOWN_ELICITATION_PROPERTY_SCHEMA_TYPES
         .iter()
@@ -1104,20 +1121,21 @@ fn default_object_type() -> ElicitationSchemaType {
 /// as required by the elicitation specification.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ElicitationSchema {
     /// Type discriminator. Always `"object"`.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(rename = "type", default = "default_object_type")]
     pub type_: ElicitationSchemaType,
     /// Optional title for the schema.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no title is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub title: Option<String>,
     /// Property definitions (must be primitive types).
@@ -1132,7 +1150,7 @@ pub struct ElicitationSchema {
     ///
     /// Optional. Omitted and `null` are equivalent and mean no schema description is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub description: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1143,7 +1161,7 @@ pub struct ElicitationSchema {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -1281,7 +1299,8 @@ impl ElicitationSchema {
 /// Elicitation capabilities supported by the client.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ElicitationCapabilities {
@@ -1290,7 +1309,7 @@ pub struct ElicitationCapabilities {
     /// Optional. Omitted and `null` are equivalent and mean form support is not advertised.
     /// Supplying `{}` explicitly advertises form support.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub form: Option<ElicitationFormCapabilities>,
     /// Whether the client supports URL-based elicitation.
@@ -1298,7 +1317,7 @@ pub struct ElicitationCapabilities {
     /// Optional. Omitted or `null` both mean the client does not advertise support.
     /// Supplying `{}` means the client supports URL-based elicitation.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub url: Option<ElicitationUrlCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1309,7 +1328,7 @@ pub struct ElicitationCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -1377,7 +1396,8 @@ impl ElicitationCapabilities {
 /// Supplying `{}` means the client supports form-based elicitation.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ElicitationFormCapabilities {
@@ -1389,7 +1409,7 @@ pub struct ElicitationFormCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -1421,7 +1441,8 @@ impl ElicitationFormCapabilities {
 /// Supplying `{}` means the client supports URL-based elicitation.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ElicitationUrlCapabilities {
@@ -1433,7 +1454,7 @@ pub struct ElicitationUrlCapabilities {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -1461,7 +1482,8 @@ impl ElicitationUrlCapabilities {
 }
 
 /// The scope of an elicitation request, determining what context it's tied to.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(untagged)]
 #[non_exhaustive]
 pub enum ElicitationScope {
@@ -1479,7 +1501,8 @@ pub enum ElicitationScope {
 /// during a tool call and needs to redirect it to the user.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ElicitationSessionScope {
@@ -1490,7 +1513,7 @@ pub struct ElicitationSessionScope {
     /// Optional. Omitted and `null` are equivalent and mean the elicitation is scoped to the
     /// session without a specific tool call.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub tool_call_id: Option<ToolCallId>,
 }
@@ -1515,7 +1538,8 @@ impl ElicitationSessionScope {
 
 /// Request-scoped elicitation, tied to a specific JSON-RPC request outside of a session
 /// (e.g., during auth/configuration phases before any session is started).
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ElicitationRequestScope {
@@ -1552,8 +1576,9 @@ impl From<ElicitationRequestScope> for ElicitationScope {
 /// Elicitations are tied to a session (optionally a tool call) or a request.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
-#[schemars(extend("x-side" = "client", "x-method" = ELICITATION_CREATE_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "client", "x-method" = ELICITATION_CREATE_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct CreateElicitationRequest {
@@ -1570,7 +1595,7 @@ pub struct CreateElicitationRequest {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -1608,7 +1633,8 @@ impl CreateElicitationRequest {
 }
 
 /// The mode of elicitation, determining how user input is collected.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "mode", rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum ElicitationMode {
@@ -1634,9 +1660,10 @@ pub enum ElicitationMode {
 /// This preserves the unknown `mode` discriminator and the rest of the mode
 /// object for clients that store, replay, proxy, or forward elicitation
 /// requests.
-#[derive(Debug, Clone, Serialize, JsonSchema, PartialEq)]
-#[schemars(inline)]
-#[schemars(transform = other_elicitation_mode_schema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[cfg_attr(feature = "schemars", schemars(inline))]
+#[cfg_attr(feature = "schemars", schemars(transform = other_elicitation_mode_schema))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct OtherElicitationMode {
@@ -1717,6 +1744,7 @@ fn remove_elicitation_scope_fields(fields: &mut BTreeMap<String, serde_json::Val
     fields.remove("requestId");
 }
 
+#[cfg(feature = "schemars")]
 fn other_elicitation_mode_schema(schema: &mut Schema) {
     let known_value_schemas: Vec<_> = KNOWN_ELICITATION_MODES
         .iter()
@@ -1773,7 +1801,8 @@ impl ElicitationMode {
 }
 
 /// Form-based elicitation mode where the client renders a form from the provided schema.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ElicitationFormMode {
@@ -1796,7 +1825,8 @@ impl ElicitationFormMode {
 }
 
 /// URL-based elicitation mode where the client directs the user to a URL.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ElicitationUrlMode {
@@ -1806,7 +1836,7 @@ pub struct ElicitationUrlMode {
     /// The unique identifier for this elicitation.
     pub elicitation_id: ElicitationId,
     /// The URL to direct the user to.
-    #[schemars(extend("format" = "uri"))]
+    #[cfg_attr(feature = "schemars", schemars(extend("format" = "uri")))]
     pub url: String,
 }
 
@@ -1829,8 +1859,9 @@ impl ElicitationUrlMode {
 /// Response from the client to an elicitation request.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
-#[schemars(extend("x-side" = "client", "x-method" = ELICITATION_CREATE_METHOD_NAME))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "client", "x-method" = ELICITATION_CREATE_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct CreateElicitationResponse {
@@ -1845,7 +1876,7 @@ pub struct CreateElicitationResponse {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
@@ -1876,7 +1907,8 @@ impl CreateElicitationResponse {
 }
 
 /// The user's action in response to an elicitation.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "action", rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum ElicitationAction {
@@ -1904,9 +1936,10 @@ pub enum ElicitationAction {
 /// This preserves the unknown `action` discriminator and the rest of the
 /// response object for agents that store, replay, proxy, or forward elicitation
 /// responses.
-#[derive(Debug, Clone, Serialize, JsonSchema, PartialEq)]
-#[schemars(inline)]
-#[schemars(transform = other_elicitation_action_schema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[cfg_attr(feature = "schemars", schemars(inline))]
+#[cfg_attr(feature = "schemars", schemars(transform = other_elicitation_action_schema))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct OtherElicitationAction {
@@ -1962,6 +1995,7 @@ fn is_known_elicitation_action(action: &str) -> bool {
     KNOWN_ELICITATION_ACTIONS.contains(&action)
 }
 
+#[cfg(feature = "schemars")]
 fn other_elicitation_action_schema(schema: &mut Schema) {
     let known_value_schemas: Vec<_> = KNOWN_ELICITATION_ACTIONS
         .iter()
@@ -2002,7 +2036,8 @@ impl From<OtherElicitationAction> for ElicitationAction {
 /// The user accepted the elicitation and provided content.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ElicitationAcceptAction {
@@ -2030,7 +2065,8 @@ impl ElicitationAcceptAction {
 }
 
 /// Allowed wire representations for [`ElicitationContentValue`].
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(untagged)]
 #[non_exhaustive]
 pub enum ElicitationContentValue {
@@ -2103,8 +2139,9 @@ impl Default for ElicitationAcceptAction {
 /// Notification sent by the agent when a URL-based elicitation is complete.
 #[serde_as]
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[schemars(extend("x-side" = "client", "x-method" = ELICITATION_COMPLETE_NOTIFICATION))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "client", "x-method" = ELICITATION_COMPLETE_NOTIFICATION)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct CompleteElicitationNotification {
@@ -2118,7 +2155,7 @@ pub struct CompleteElicitationNotification {
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[schemars(extend("x-deserialize-default-on-error" = true))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,

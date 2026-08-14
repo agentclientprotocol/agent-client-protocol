@@ -1,6 +1,5 @@
 //! Extension types and constants for protocol extensibility.
 use derive_more::From;
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::value::RawValue;
 use std::sync::Arc;
@@ -19,7 +18,8 @@ pub type Meta = serde_json::Map<String, serde_json::Value>;
 /// protocol compatibility.
 ///
 /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 #[non_exhaustive]
 pub struct ExtRequest {
@@ -29,7 +29,7 @@ pub struct ExtRequest {
     #[serde(skip)] // this is used for routing, but when serializing we only want the params
     pub method: Arc<str>,
     /// Raw JSON parameters for this extension message.
-    #[schemars(with = "serde_json::Value")]
+    #[cfg_attr(feature = "schemars", schemars(with = "serde_json::Value"))]
     pub params: Arc<RawValue>,
 }
 
@@ -49,10 +49,13 @@ impl ExtRequest {
 /// protocol compatibility.
 ///
 /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, From)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, From)]
 #[serde(transparent)]
 #[non_exhaustive]
-pub struct ExtResponse(#[schemars(with = "serde_json::Value")] pub Arc<RawValue>);
+pub struct ExtResponse(
+    #[cfg_attr(feature = "schemars", schemars(with = "serde_json::Value"))] pub Arc<RawValue>,
+);
 
 impl ExtResponse {
     /// Builds [`ExtResponse`] with the required response fields set; optional fields start unset or empty.
@@ -67,7 +70,8 @@ impl ExtResponse {
 /// while maintaining protocol compatibility.
 ///
 /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 #[non_exhaustive]
 pub struct ExtNotification {
@@ -77,7 +81,7 @@ pub struct ExtNotification {
     #[serde(skip)] // this is used for routing, but when serializing we only want the params
     pub method: Arc<str>,
     /// Raw JSON parameters for this extension message.
-    #[schemars(with = "serde_json::Value")]
+    #[cfg_attr(feature = "schemars", schemars(with = "serde_json::Value"))]
     pub params: Arc<RawValue>,
 }
 
