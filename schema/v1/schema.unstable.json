@@ -5186,6 +5186,22 @@
           ]
         },
         {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAdvisory information for the user that is not part of session history.\n\nNo Client capability is required. Clients that do not understand or\npresent notices may ignore them.",
+          "type": "object",
+          "properties": {
+            "sessionUpdate": {
+              "type": "string",
+              "const": "notice"
+            }
+          },
+          "required": ["sessionUpdate"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/Notice"
+            }
+          ]
+        },
+        {
           "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA context compaction has been created or updated.\n\nAgents MUST only send this update when the Client advertised\n[`ClientSessionCapabilities::compaction`].",
           "type": "object",
           "properties": {
@@ -5819,6 +5835,62 @@
         }
       },
       "required": ["used", "size"]
+    },
+    "NoticeSeverity": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSeverity hint for a session notice.",
+      "anyOf": [
+        {
+          "description": "Informational notice.",
+          "type": "string",
+          "const": "info"
+        },
+        {
+          "description": "Warning notice.",
+          "type": "string",
+          "const": "warning"
+        },
+        {
+          "description": "Error notice.",
+          "type": "string",
+          "const": "error"
+        },
+        {
+          "title": "other",
+          "description": "Custom or future notice severity.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Other unknown values are reserved for future ACP severities.",
+          "type": "string"
+        }
+      ]
+    },
+    "Notice": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nFire-and-forget advisory information for the user.\n\nNotices are live events rather than session history. Agents must not rely on\na notice being received, displayed, or seen by the user.\nNo Client capability is required, and unsupported Clients may ignore notices.\n\nSee RFD: [Session Notices](https://agentclientprotocol.com/rfds/session-notices)",
+      "type": "object",
+      "properties": {
+        "severity": {
+          "description": "Presentation severity hint.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/NoticeSeverity"
+            }
+          ]
+        },
+        "title": {
+          "description": "Required non-empty plain-text title that can stand alone.",
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "description": "Optional plain-text detail or guidance.\n\nOmitted and `null` are equivalent and mean no description was supplied.",
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
+        },
+        "_meta": {
+          "description": "Metadata scoped to this notice.\n\nOmitted and `null` are equivalent and mean no metadata was supplied.",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["severity", "title"]
     },
     "CompactionId": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nUnique identifier for a context compaction within a session.",

@@ -35,7 +35,7 @@ A typical flow follows this pattern:
 
 <Step title="Prompt Turn">
    - Client → Agent: `session/prompt` to send user message
-   - Agent → Client: `session/update` notifications for progress updates
+   - Agent → Client: `session/update` notifications for progress updates and advisory notices
    - Agent → Client: File operations or permission requests as needed
    - Client → Agent: `session/cancel` to interrupt processing if needed
    - Turn ends and the Agent sends the `session/prompt` response with a stop reason
@@ -218,7 +218,8 @@ Clients provide the interface between users and agents. They are typically code 
   calls and updates](/protocol/v1/draft/tool-calls) -
   [Plans](/protocol/v1/draft/agent-plan) - [Available commands
   updates](/protocol/v1/draft/slash-commands#advertising-commands) - [Mode
-  changes](/protocol/v1/draft/session-modes#from-the-agent)
+  changes](/protocol/v1/draft/session-modes#from-the-agent) - [Advisory
+  notices](/protocol/v1/draft/prompt-turn#session-notices)
 </ResponseField>
 
 ## Argument requirements

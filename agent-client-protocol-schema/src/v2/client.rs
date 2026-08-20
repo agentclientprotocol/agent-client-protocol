@@ -156,6 +156,16 @@ pub enum SessionUpdate {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
+    /// Advisory information for the user that is not part of session history.
+    ///
+    /// No Client capability is required. Clients that do not understand or
+    /// present notices may ignore them.
+    #[cfg(feature = "unstable_session_notices")]
+    Notice(Notice),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
     /// A context compaction has been created or updated.
     #[cfg(feature = "unstable_session_compaction")]
     CompactionUpdate(CompactionUpdate),
@@ -177,6 +187,99 @@ pub enum SessionUpdate {
     /// history, and otherwise ignore it or display it generically.
     #[serde(untagged)]
     Other(OtherSessionUpdate),
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Severity hint for a session notice.
+#[cfg(feature = "unstable_session_notices")]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum NoticeSeverity {
+    /// Informational notice.
+    Info,
+    /// Warning notice.
+    Warning,
+    /// Error notice.
+    Error,
+    /// Custom or future notice severity.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Other unknown values are reserved for future ACP severities.
+    #[serde(untagged)]
+    Other(String),
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Fire-and-forget advisory information for the user.
+///
+/// Notices are live events rather than session history. Agents must not rely on
+/// a notice being received, displayed, or seen by the user.
+/// No Client capability is required, and unsupported Clients may ignore notices.
+///
+/// See RFD: [Session Notices](https://agentclientprotocol.com/rfds/session-notices)
+#[cfg(feature = "unstable_session_notices")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct Notice {
+    /// Presentation severity hint.
+    pub severity: NoticeSeverity,
+    /// Required non-empty plain-text title that can stand alone.
+    #[cfg_attr(feature = "schemars", schemars(length(min = 1)))]
+    pub title: String,
+    /// Optional plain-text detail or guidance.
+    ///
+    /// Omitted and `null` are equivalent and mean no description was supplied.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub description: Option<String>,
+    /// Metadata scoped to this notice.
+    ///
+    /// Omitted and `null` are equivalent and mean no metadata was supplied.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default, rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_notices")]
+impl Notice {
+    /// Builds a notice with the required fields set and optional fields omitted.
+    #[must_use]
+    pub fn new(severity: NoticeSeverity, title: impl Into<String>) -> Self {
+        Self {
+            severity,
+            title: title.into(),
+            description: None,
+            meta: None,
+        }
+    }
+
+    /// Sets or clears the optional description.
+    #[must_use]
+    pub fn description(mut self, description: impl IntoOption<String>) -> Self {
+        self.description = description.into_option();
+        self
+    }
+
+    /// Sets or clears notice-scoped metadata.
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
 }
 
 /// **UNSTABLE**
@@ -420,6 +523,10 @@ impl<'de> Deserialize<'de> for OtherSessionUpdate {
 }
 
 fn is_known_session_update(session_update: &str) -> bool {
+    #[cfg(feature = "unstable_session_notices")]
+    if session_update == "notice" {
+        return true;
+    }
     #[cfg(feature = "unstable_session_compaction")]
     if matches!(
         session_update,
@@ -476,6 +583,8 @@ fn other_session_update_schema(schema: &mut Schema) {
             #[cfg(feature = "unstable_plan_operations")]
             "plan_removed",
             "usage_update",
+            #[cfg(feature = "unstable_session_notices")]
+            "notice",
             #[cfg(feature = "unstable_session_compaction")]
             "compaction_update",
             #[cfg(feature = "unstable_session_compaction")]
@@ -2521,6 +2630,115 @@ impl AgentNotification {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(feature = "unstable_session_notices")]
+    #[test]
+    fn notice_preserves_wire_shape_nullable_fields_and_open_severity() {
+        use serde_json::json;
+
+        let mut meta = Meta::new();
+        meta.insert("source".into(), json!("fallback"));
+        let v2_notice = SessionUpdate::Notice(
+            Notice::new(NoticeSeverity::Error, "Provider degraded")
+                .description("Requests may take longer than usual.")
+                .meta(meta.clone()),
+        );
+        let expected = json!({
+            "sessionUpdate": "notice",
+            "severity": "error",
+            "title": "Provider degraded",
+            "description": "Requests may take longer than usual.",
+            "_meta": { "source": "fallback" }
+        });
+        assert_eq!(serde_json::to_value(&v2_notice).unwrap(), expected);
+
+        let v1_notice = crate::v1::SessionUpdate::Notice(
+            crate::v1::Notice::new(crate::v1::NoticeSeverity::Error, "Provider degraded")
+                .description("Requests may take longer than usual.")
+                .meta(meta),
+        );
+        assert_eq!(
+            serde_json::to_value(v2_notice).unwrap(),
+            serde_json::to_value(v1_notice).unwrap()
+        );
+
+        let SessionUpdate::Notice(notice) = serde_json::from_value(json!({
+            "sessionUpdate": "notice",
+            "severity": "critical",
+            "title": "Provider degraded",
+            "description": null,
+            "_meta": null
+        }))
+        .unwrap() else {
+            panic!("expected notice");
+        };
+
+        assert_eq!(
+            notice.severity,
+            NoticeSeverity::Other("critical".to_string())
+        );
+        assert_eq!(notice.description, None);
+        assert_eq!(notice.meta, None);
+        assert_eq!(
+            serde_json::to_value(SessionUpdate::Notice(notice)).unwrap(),
+            json!({
+                "sessionUpdate": "notice",
+                "severity": "critical",
+                "title": "Provider degraded"
+            })
+        );
+    }
+
+    #[cfg(feature = "unstable_session_notices")]
+    #[test]
+    fn malformed_known_notice_is_not_hidden_as_unknown() {
+        use serde_json::json;
+
+        for malformed in [
+            json!({
+                "sessionUpdate": "notice",
+                "severity": "warning"
+            }),
+            json!({
+                "sessionUpdate": "notice",
+                "severity": "warning",
+                "title": null
+            }),
+            json!({
+                "sessionUpdate": "notice",
+                "title": "MCP server unavailable"
+            }),
+            json!({
+                "sessionUpdate": "notice",
+                "severity": null,
+                "title": "MCP server unavailable"
+            }),
+        ] {
+            assert!(serde_json::from_value::<SessionUpdate>(malformed).is_err());
+        }
+    }
+
+    #[cfg(not(feature = "unstable_session_notices"))]
+    #[test]
+    fn unsupported_notice_is_preserved_as_an_unknown_update() {
+        use serde_json::json;
+
+        let SessionUpdate::Other(notice) = serde_json::from_value(json!({
+            "sessionUpdate": "notice",
+            "severity": "warning",
+            "title": "MCP server unavailable"
+        }))
+        .unwrap() else {
+            panic!("expected unknown session update");
+        };
+
+        assert_eq!(notice.session_update, "notice");
+        assert_eq!(notice.fields.get("severity"), Some(&json!("warning")));
+        assert_eq!(
+            notice.fields.get("title"),
+            Some(&json!("MCP server unavailable"))
+        );
+    }
 
     #[cfg(feature = "unstable_session_compaction")]
     #[test]

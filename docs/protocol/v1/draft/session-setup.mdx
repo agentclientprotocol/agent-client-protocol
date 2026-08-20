@@ -133,7 +133,7 @@ To load an existing session, Clients **MUST** call the `session/load` method wit
 }
 ```
 
-The Agent **MUST** replay the entire conversation to the Client in the form of `session/update` notifications (like `session/prompt`).
+The Agent **MUST** replay the entire conversation to the Client in the form of `session/update` notifications (like `session/prompt`). Live-only `notice` updates are not conversation history and **SHOULD NOT** be replayed. If the underlying condition is still relevant after loading finishes, the Agent may emit a new notice as a new live event.
 
 For example, a user message from the conversation history:
 

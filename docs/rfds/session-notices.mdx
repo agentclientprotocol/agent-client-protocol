@@ -63,9 +63,9 @@ an unknown string and use a generic notice presentation without inferring
 salience, lifetime, or control behavior from it. Adding a severity does not
 require protocol negotiation.
 
-A notice has no ID, response, acknowledgement, update, or removal, and is never
-part of session replay. Repeated notices are independent events, even when their
-fields are identical.
+A notice has no ID, response, acknowledgement, update, or removal, and
+**SHOULD NOT** be included in session replay. Repeated notices are independent
+events, even when their fields are identical.
 
 ### Client presentation
 
@@ -109,6 +109,14 @@ Neither protocol version adds a Client capability for notices. An Agent may
 send a notice without first negotiating support, and a Client that does not
 understand or present notices may ignore it.
 
+The versions reach that outcome through their existing compatibility models.
+ACP v1 keeps its closed `SessionUpdate` union, so a typed v1 decoder without
+notice support may reject and drop the individual notification; it must not
+fail the surrounding session. ACP v2 preserves the payload through its unknown
+session-update fallback, after which the Client may ignore or generically
+present it. This implementation does not broaden v1's stable union solely to
+introduce v2-style forwarding behavior.
+
 ## Shiny future
 
 > How will things will play out once this feature exists?
@@ -121,13 +129,20 @@ and accessibility model.
 
 > Tell me more about your implementation. What is your detailed implementation plan?
 
-1. Add `Notice` and `NoticeSeverity` types in both versions.
+1. Add `Notice` and `NoticeSeverity` types in both versions behind the
+   `unstable_session_notices` Rust feature.
 2. Add the `notice` variant to both `SessionUpdate` unions without a Client
    capability.
-3. Document the presentation, dismissal, severity, no-replay, and
+3. Document the presentation, dismissal, severity, replay semantics, and
    non-conversational semantics in both protocol versions.
-4. Add serialization, unsupported-update, replay-exclusion, and v1/v2
-   conversion tests, then update example Clients and Agents.
+4. Add schema tests for serialization, nullable-field semantics, open severity,
+   version-specific unsupported-update behavior, malformed known-update
+   handling, and cross-version wire parity. The schema crate intentionally
+   provides no built-in v1/v2 conversion layer.
+
+The recommendation against replay is part of the protocol contract rather
+than something the schema crate can enforce. Runtime SDKs and example Agents
+and Clients can adopt notices separately after consuming the schema surface.
 
 ## Frequently asked questions
 
@@ -156,8 +171,8 @@ elicitation or permission, not a notice.
 `session/update` is already ACP's Agent-to-Client carrier for session-scoped
 activity. The known `notice` variant can define its live-only lifetime without
 adding another notification method. Clients that do not implement the variant
-can ignore it, while the no-replay rule prevents supporting Clients from
-treating it as durable history.
+can ignore it, while the replay guidance makes clear that supporting Clients
+should not treat it as durable history.
 
 ### What alternative approaches did you consider, and why did you settle on this one?
 
@@ -170,4 +185,7 @@ turning notices into a second elicitation system.
 
 ## Revision history
 
+- 2026-08-20: Updated the implementation plan for the schema-only architecture,
+  which keeps v1 and v2 types separate, documents replay guidance normatively,
+  and leaves runtime and example adoption to downstream SDKs.
 - 2026-07-22: Initial draft.

@@ -6372,6 +6372,76 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 </ResponseField>
 
+## <span class="font-mono">Notice</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Fire-and-forget advisory information for the user.
+
+Notices are live events rather than session history. Agents must not rely on
+a notice being received, displayed, or seen by the user.
+No Client capability is required, and unsupported Clients may ignore notices.
+
+See RFD: [Session Notices](https://agentclientprotocol.com/rfds/session-notices)
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  Metadata scoped to this notice.
+
+Omitted and `null` are equivalent and mean no metadata was supplied.
+
+</ResponseField>
+<ResponseField name="description" type={"string | null"} >
+  Optional plain-text detail or guidance.
+
+Omitted and `null` are equivalent and mean no description was supplied.
+
+</ResponseField>
+<ResponseField name="severity" type={<a href="#noticeseverity">NoticeSeverity</a>} required>
+  Presentation severity hint.
+</ResponseField>
+<ResponseField name="title" type={"string"} required>
+  Required non-empty plain-text title that can stand alone.
+
+    - Min length: `1`
+
+</ResponseField>
+
+## <span class="font-mono">NoticeSeverity</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Severity hint for a session notice.
+
+**Type:** Union
+
+<ResponseField name="info" type="string">
+  Informational notice.
+</ResponseField>
+
+<ResponseField name="warning" type="string">
+  Warning notice.
+</ResponseField>
+
+<ResponseField name="error" type="string">
+  Error notice.
+</ResponseField>
+
+<ResponseField name="other" type="string">
+Custom or future notice severity.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Other unknown values are reserved for future ACP severities.
+
+</ResponseField>
+
 ## <span class="font-mono">NumberPropertySchema</span>
 
 Schema for number (floating-point) properties in an elicitation form.
@@ -8505,6 +8575,46 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
   Tokens currently in context.
 
     - Minimum: `0`
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="notice" type="object">
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Advisory information for the user that is not part of session history.
+
+No Client capability is required. Clients that do not understand or
+present notices may ignore them.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  Metadata scoped to this notice.
+
+Omitted and `null` are equivalent and mean no metadata was supplied.
+
+</ResponseField>
+<ResponseField name="description" type={"string | null"} >
+  Optional plain-text detail or guidance.
+
+Omitted and `null` are equivalent and mean no description was supplied.
+
+</ResponseField>
+<ResponseField name="sessionUpdate" type={"string"} required>
+  The discriminator value. Must be `"notice"`.
+</ResponseField>
+<ResponseField name="severity" type={<a href="#noticeseverity">NoticeSeverity</a>} required>
+  Presentation severity hint.
+</ResponseField>
+<ResponseField name="title" type={"string"} required>
+  Required non-empty plain-text title that can stand alone.
+
+    - Min length: `1`
 
 </ResponseField>
 

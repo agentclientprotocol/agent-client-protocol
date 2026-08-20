@@ -185,6 +185,54 @@ If the model requested tool calls, these are also reported immediately:
 }
 ```
 
+#### Session Notices
+
+At any point while a session exists, including outside prompt processing, the
+Agent **MAY** send a live advisory notice:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "notice",
+      "severity": "warning",
+      "title": "MCP server unavailable",
+      "description": "Continuing without it."
+    }
+  }
+}
+```
+
+`severity` is required and initially supports `info`, `warning`, and `error`.
+It is an open string enum: values beginning with `_` are reserved for
+implementation-specific extensions, while other unknown values are reserved
+for future ACP severities. Clients preserve unknown values and use a generic
+notice presentation without inferring additional behavior from them.
+
+`title` is required, non-null, non-empty plain text suitable for a compact
+presentation. `description` is optional, nullable plain text with supporting
+detail.
+
+Clients may ignore them, and Agents must behave as though a
+notice may not have been received, displayed, or seen. A notice must not carry
+information required for protocol correctness, authorization, user action,
+task completion, or fatal-error reporting.
+
+Clients own presentation and dismissal. They may use a toast, banner, inline
+status region, notification center, or another accessible surface, and may
+coalesce repeated notices. Severity is only a presentation hint; even `error`
+does not fail a request, stop foreground work, change session state, or imply a
+prompt stop reason. Dismissal is local and produces no acknowledgement or
+removal event.
+
+Notices have no ID or Agent-managed lifecycle. Each occurrence is an
+independent live event, not conversation history, and **SHOULD NOT** be included
+in session replay. If a condition remains relevant after reconnecting, the
+Agent may emit a new notice.
+
 #### Session Compaction
 
 The Agent **MUST NOT** send `compaction_update` or

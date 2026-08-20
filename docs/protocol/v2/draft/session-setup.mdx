@@ -148,6 +148,10 @@ conversation to the Client in the form of `session/update` notifications before
 responding. User, agent, and thought messages can each be replayed as message
 updates with full `content` arrays or as chunks.
 
+Live-only `notice` updates are not conversation history and **SHOULD NOT** be
+replayed. If the underlying condition is still relevant after resuming
+finishes, the Agent may emit a new notice as a new live event.
+
 For example, a user message from the conversation history:
 
 ```json
