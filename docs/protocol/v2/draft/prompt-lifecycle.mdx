@@ -300,6 +300,41 @@ If the model requested tool calls, these are also reported immediately:
 }
 ```
 
+#### Session Compaction
+
+The Agent **MAY** report context compaction as one stable, ID-addressed timeline
+entity. It first sends `compaction_update` and may then append retained summary
+content with `compaction_summary_chunk` before sending one terminal update for
+the same `compactionId`:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "compaction_update",
+      "compactionId": "cmp_001",
+      "status": "in_progress"
+    }
+  }
+}
+```
+
+The first update fixes the entity's timeline position. Agents send summary
+chunks only between an `in_progress` update and its terminal update. Known
+terminal statuses are `completed`, `failed`, and `cancelled`; receivers
+preserve unknown status strings as opaque future or implementation-specific
+values.
+
+`summary`, `error`, and `_meta` on `compaction_update` are nullable patch
+fields: omission leaves the current value unchanged, `null` clears it, and a
+concrete value replaces it. Summary chunks append one `ContentBlock`; a later
+concrete `summary` replaces all accumulated content. Agents expose only an
+unencrypted, user-displayable summary and omit it when none can be disclosed
+safely.
+
 #### Session Usage Updates
 
 The Agent **MAY** also report current session context and cumulative cost state with a `usage_update`:

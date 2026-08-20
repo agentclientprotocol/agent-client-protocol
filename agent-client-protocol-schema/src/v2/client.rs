@@ -152,6 +152,20 @@ pub enum SessionUpdate {
     SessionInfoUpdate(SessionInfoUpdate),
     /// Context window and cost update for the session.
     UsageUpdate(UsageUpdate),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// A context compaction has been created or updated.
+    #[cfg(feature = "unstable_session_compaction")]
+    CompactionUpdate(CompactionUpdate),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// A content block appended to a context compaction's retained summary.
+    #[cfg(feature = "unstable_session_compaction")]
+    CompactionSummaryChunk(CompactionSummaryChunk),
     /// Custom or future session update.
     ///
     /// Values beginning with `_` are reserved for implementation-specific
@@ -163,6 +177,181 @@ pub enum SessionUpdate {
     /// history, and otherwise ignore it or display it generically.
     #[serde(untagged)]
     Other(OtherSessionUpdate),
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Unique identifier for a context compaction within a session.
+#[cfg(feature = "unstable_session_compaction")]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Display, From)]
+#[serde(transparent)]
+#[from(forward)]
+#[non_exhaustive]
+pub struct CompactionId(pub Arc<str>);
+
+#[cfg(feature = "unstable_session_compaction")]
+impl CompactionId {
+    /// Wraps a protocol string as a typed [`CompactionId`].
+    #[must_use]
+    pub fn new(id: impl Into<Self>) -> Self {
+        id.into()
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Lifecycle state of a context compaction.
+#[cfg(feature = "unstable_session_compaction")]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum CompactionStatus {
+    /// Compaction has started and has not finished.
+    InProgress,
+    /// Compaction finished successfully.
+    Completed,
+    /// Compaction finished unsuccessfully.
+    Failed,
+    /// Compaction was cancelled before it finished.
+    Cancelled,
+    /// Custom or future compaction status.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Other unknown values are reserved for future ACP statuses.
+    #[serde(untagged)]
+    Other(String),
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// A context compaction upsert. The first update fixes the compaction's
+/// timeline position. Later updates with the same ID patch that entity in place.
+///
+/// `summary`, `error`, and `_meta` have patch semantics: omission leaves the
+/// stored value unchanged, `null` clears it, and a concrete value replaces it.
+/// `summary: []` also clears the retained summary. A non-empty summary is only
+/// valid with `completed`; `error` is only valid with `failed`.
+#[cfg(feature = "unstable_session_compaction")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct CompactionUpdate {
+    /// The Agent-owned ID of this compaction, unique within the session.
+    pub compaction_id: CompactionId,
+    /// Current lifecycle status.
+    pub status: CompactionStatus,
+    /// Complete replacement user-displayable summary retained by the compaction.
+    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<VecSkipError<_, SkipListener>>>")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
+    #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
+    pub summary: MaybeUndefined<Vec<ContentBlock>>,
+    /// Human-readable description of why the compaction failed.
+    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
+    pub error: MaybeUndefined<String>,
+    /// Extensible metadata patch for this compaction.
+    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(
+        rename = "_meta",
+        default,
+        skip_serializing_if = "MaybeUndefined::is_undefined"
+    )]
+    pub meta: MaybeUndefined<Meta>,
+}
+
+#[cfg(feature = "unstable_session_compaction")]
+impl CompactionUpdate {
+    /// Builds a compaction update with optional patch fields omitted.
+    #[must_use]
+    pub fn new(compaction_id: impl Into<CompactionId>, status: CompactionStatus) -> Self {
+        Self {
+            compaction_id: compaction_id.into(),
+            status,
+            summary: MaybeUndefined::Undefined,
+            error: MaybeUndefined::Undefined,
+            meta: MaybeUndefined::Undefined,
+        }
+    }
+
+    /// Sets, clears, or omits the complete retained summary patch.
+    #[must_use]
+    pub fn summary(mut self, summary: impl IntoMaybeUndefined<Vec<ContentBlock>>) -> Self {
+        self.summary = summary.into_maybe_undefined();
+        self
+    }
+
+    /// Sets, clears, or omits the failure description patch.
+    #[must_use]
+    pub fn error(mut self, error: impl IntoMaybeUndefined<String>) -> Self {
+        self.error = error.into_maybe_undefined();
+        self
+    }
+
+    /// Sets, clears, or omits the metadata patch.
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoMaybeUndefined<Meta>) -> Self {
+        self.meta = meta.into_maybe_undefined();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// A content block appended to the retained summary of an in-progress
+/// compaction. Agents send chunks only after an `in_progress` update and before
+/// the terminal update for the same ID.
+#[cfg(feature = "unstable_session_compaction")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct CompactionSummaryChunk {
+    /// ID of the compaction whose summary receives this content.
+    pub compaction_id: CompactionId,
+    /// One content block to append.
+    pub content: ContentBlock,
+    /// Metadata scoped to this chunk. Omission and `null` both mean absent.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default, rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_compaction")]
+impl CompactionSummaryChunk {
+    /// Builds a summary chunk without metadata.
+    #[must_use]
+    pub fn new(compaction_id: impl Into<CompactionId>, content: ContentBlock) -> Self {
+        Self {
+            compaction_id: compaction_id.into(),
+            content,
+            meta: None,
+        }
+    }
+
+    /// Sets or clears chunk-scoped metadata.
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
 }
 
 /// Custom or future session update payload.
@@ -231,6 +420,13 @@ impl<'de> Deserialize<'de> for OtherSessionUpdate {
 }
 
 fn is_known_session_update(session_update: &str) -> bool {
+    #[cfg(feature = "unstable_session_compaction")]
+    if matches!(
+        session_update,
+        "compaction_update" | "compaction_summary_chunk"
+    ) {
+        return true;
+    }
     #[cfg(feature = "unstable_plan_operations")]
     if session_update == "plan_removed" {
         return true;
@@ -280,6 +476,10 @@ fn other_session_update_schema(schema: &mut Schema) {
             #[cfg(feature = "unstable_plan_operations")]
             "plan_removed",
             "usage_update",
+            #[cfg(feature = "unstable_session_compaction")]
+            "compaction_update",
+            #[cfg(feature = "unstable_session_compaction")]
+            "compaction_summary_chunk",
         ],
     );
 }
@@ -2321,6 +2521,61 @@ impl AgentNotification {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(feature = "unstable_session_compaction")]
+    #[test]
+    fn compaction_updates_preserve_patch_and_open_status_semantics() {
+        use serde_json::json;
+
+        assert_eq!(
+            serde_json::to_value(SessionUpdate::CompactionUpdate(
+                CompactionUpdate::new("cmp_001", CompactionStatus::Completed).summary(vec![
+                    ContentBlock::Text(crate::v2::TextContent::new("retained")),
+                ]),
+            ))
+            .unwrap(),
+            json!({
+                "sessionUpdate": "compaction_update",
+                "compactionId": "cmp_001",
+                "status": "completed",
+                "summary": [{ "type": "text", "text": "retained" }]
+            })
+        );
+
+        let SessionUpdate::CompactionUpdate(update) = serde_json::from_value(json!({
+            "sessionUpdate": "compaction_update",
+            "compactionId": "cmp_001",
+            "status": "paused",
+            "summary": null
+        }))
+        .unwrap() else {
+            panic!("expected compaction update");
+        };
+        assert_eq!(update.status, CompactionStatus::Other("paused".into()));
+        assert!(update.summary.is_null());
+        assert!(update.error.is_undefined());
+    }
+
+    #[cfg(feature = "unstable_session_compaction")]
+    #[test]
+    fn malformed_known_compaction_update_is_not_hidden_as_unknown() {
+        use serde_json::json;
+
+        assert!(
+            serde_json::from_value::<SessionUpdate>(json!({
+                "sessionUpdate": "compaction_update",
+                "status": "completed"
+            }))
+            .is_err()
+        );
+        assert!(
+            serde_json::from_value::<SessionUpdate>(json!({
+                "sessionUpdate": "compaction_summary_chunk",
+                "compactionId": "cmp_001"
+            }))
+            .is_err()
+        );
+    }
 
     #[test]
     fn test_elicitation_capability_semantics() {

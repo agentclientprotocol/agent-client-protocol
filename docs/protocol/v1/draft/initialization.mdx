@@ -188,6 +188,16 @@ The Client **SHOULD** specify whether it supports the following capabilities:
   Learn more about Session Config Options
 </Card>
 
+#### Session Compaction
+
+<ParamField path="session.compaction" type="CompactionCapabilities Object">
+  The Client supports ID-addressed `compaction_update` and
+  `compaction_summary_chunk` session updates, including their lifecycle,
+  placement, patch, and replay semantics. Omitted or `null` at either level
+  means unsupported. Supplying `{}` advertises the complete contract. Agents
+  must not send these updates to a v1 Client that does not advertise it.
+</ParamField>
+
 ### Agent Capabilities
 
 The Agent **SHOULD** specify whether it supports the following capabilities:
