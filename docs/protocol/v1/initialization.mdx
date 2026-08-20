@@ -115,6 +115,18 @@ Implementations can also [advertise custom capabilities](/protocol/v1/extensibil
 
 The Client **SHOULD** specify whether it supports the following capabilities:
 
+#### Terminal Authentication
+
+<ParamField path="auth.terminal" type="boolean">
+  The Client can reproduce the configured Agent invocation in an interactive
+  terminal. When `true`, the Agent may advertise `type: "terminal"`
+  authentication methods.
+</ParamField>
+
+<Card icon="terminal" horizontal href="/protocol/v1/authentication">
+  Learn more about Terminal Authentication
+</Card>
+
 #### File System
 
 <ParamField path="readTextFile" type="boolean">

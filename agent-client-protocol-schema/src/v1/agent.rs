@@ -5,7 +5,6 @@
 
 use std::{path::PathBuf, sync::Arc};
 
-#[cfg(any(feature = "unstable_auth_methods", feature = "unstable_llm_providers"))]
 use std::collections::HashMap;
 
 use derive_more::{Display, From};
@@ -574,13 +573,8 @@ impl AuthMethodId {
 #[serde(tag = "type", rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum AuthMethod {
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Client runs the configured agent program as a separate interactive
     /// process, without passing this method to `authenticate`.
-    #[cfg(feature = "unstable_auth_methods")]
     Terminal(AuthMethodTerminal),
     /// Agent handles authentication itself through `authenticate`.
     ///
@@ -595,7 +589,6 @@ impl AuthMethod {
     pub fn id(&self) -> &AuthMethodId {
         match self {
             Self::Agent(a) => &a.id,
-            #[cfg(feature = "unstable_auth_methods")]
             Self::Terminal(t) => &t.id,
         }
     }
@@ -605,7 +598,6 @@ impl AuthMethod {
     pub fn name(&self) -> &str {
         match self {
             Self::Agent(a) => &a.name,
-            #[cfg(feature = "unstable_auth_methods")]
             Self::Terminal(t) => &t.name,
         }
     }
@@ -615,7 +607,6 @@ impl AuthMethod {
     pub fn description(&self) -> Option<&str> {
         match self {
             Self::Agent(a) => a.description.as_deref(),
-            #[cfg(feature = "unstable_auth_methods")]
             Self::Terminal(t) => t.description.as_deref(),
         }
     }
@@ -629,7 +620,6 @@ impl AuthMethod {
     pub fn meta(&self) -> Option<&Meta> {
         match self {
             Self::Agent(a) => a.meta.as_ref(),
-            #[cfg(feature = "unstable_auth_methods")]
             Self::Terminal(t) => t.meta.as_ref(),
         }
     }
@@ -697,10 +687,6 @@ impl AuthMethodAgent {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Terminal-based authentication method.
 ///
 /// The client runs the configured agent program as a separate interactive
@@ -708,7 +694,6 @@ impl AuthMethodAgent {
 /// method only when the client enabled its terminal authentication capability.
 /// A zero exit status signals success; any other termination signals failure.
 /// The client MUST NOT pass this method to `authenticate`.
-#[cfg(feature = "unstable_auth_methods")]
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -748,7 +733,6 @@ pub struct AuthMethodTerminal {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_auth_methods")]
 impl AuthMethodTerminal {
     /// Builds [`AuthMethodTerminal`] with the required fields set; optional fields start unset or empty.
     #[must_use]
@@ -5622,7 +5606,6 @@ mod test_serialization {
                 assert_eq!(id.0.as_ref(), "default-auth");
                 assert_eq!(name, "Default Auth");
             }
-            #[cfg(feature = "unstable_auth_methods")]
             _ => panic!("Expected Agent variant"),
         }
     }
@@ -5741,7 +5724,6 @@ mod test_serialization {
         );
     }
 
-    #[cfg(feature = "unstable_auth_methods")]
     #[test]
     fn test_auth_method_terminal_serialization() {
         let method = AuthMethod::Terminal(AuthMethodTerminal::new("tui-auth", "Terminal Auth"));
@@ -5769,7 +5751,6 @@ mod test_serialization {
         }
     }
 
-    #[cfg(feature = "unstable_auth_methods")]
     #[test]
     fn test_auth_method_terminal_with_args_and_env_serialization() {
         use std::collections::HashMap;

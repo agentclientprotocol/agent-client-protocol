@@ -1795,14 +1795,9 @@ pub struct ClientCapabilities {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub plan: Option<PlanCapabilities>,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Authentication capabilities supported by the client.
     /// Determines which authentication method types the agent may include
     /// in its `InitializeResponse`.
-    #[cfg(feature = "unstable_auth_methods")]
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -1896,14 +1891,9 @@ impl ClientCapabilities {
         self
     }
 
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Authentication capabilities supported by the client.
     /// Determines which authentication method types the agent may include
     /// in its `InitializeResponse`.
-    #[cfg(feature = "unstable_auth_methods")]
     #[must_use]
     pub fn auth(mut self, auth: AuthCapabilities) -> Self {
         self.auth = auth;
@@ -2111,16 +2101,11 @@ impl BooleanConfigOptionCapabilities {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Authentication capabilities supported by the client.
 ///
 /// Advertised during initialization to inform the agent which authentication
 /// method types the client can handle. This governs opt-in types that require
 /// additional client-side support.
-#[cfg(feature = "unstable_auth_methods")]
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -2149,7 +2134,6 @@ pub struct AuthCapabilities {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_auth_methods")]
 impl AuthCapabilities {
     /// Builds an empty [`AuthCapabilities`]; use builder methods to advertise supported sub-capabilities.
     #[must_use]
@@ -2715,7 +2699,6 @@ mod tests {
         .unwrap();
         assert_eq!(capabilities.fs, FileSystemCapabilities::default());
 
-        #[cfg(feature = "unstable_auth_methods")]
         {
             let capabilities: ClientCapabilities = serde_json::from_value(json!({
                 "auth": false

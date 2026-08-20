@@ -28,7 +28,6 @@ default = ["schemars"]
 # omit the dependency and those impls with `default-features = false`.
 schemars = ["dep:schemars", "serde_with/schemars_1"]
 unstable = [
-    "unstable_auth_methods",
     "unstable_llm_providers",
     "unstable_mcp_over_acp",
     "unstable_nes",
@@ -41,7 +40,6 @@ unstable = [
 # It introduces a parallel `v2` module with a different wire version, so it
 # must be opted into explicitly.
 unstable_protocol_v2 = []
-unstable_auth_methods = []
 unstable_llm_providers = []
 unstable_mcp_over_acp = []
 unstable_nes = []

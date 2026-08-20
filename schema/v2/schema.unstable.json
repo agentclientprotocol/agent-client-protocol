@@ -4193,7 +4193,7 @@
       "description": "Describes an available authentication method.\n\nThe `type` field acts as the discriminator in the serialized JSON form.",
       "anyOf": [
         {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nClient runs the configured agent program as a separate interactive\nprocess, without passing this method to `auth/login`.",
+          "description": "Client runs the configured agent program as a separate interactive\nprocess, without passing this method to `auth/login`.",
           "type": "object",
           "properties": {
             "type": {
@@ -4312,7 +4312,7 @@
       "required": ["name", "value"]
     },
     "AuthMethodTerminal": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nTerminal-based authentication method.\n\nThe client runs the configured agent program as a separate interactive\nprocess for the user to authenticate via a TUI. Agents MUST advertise this\nmethod only when the client enabled its terminal authentication capability.\nA zero exit status signals success; any other termination signals failure.\nThe client MUST NOT pass this method to `auth/login`.",
+      "description": "Terminal-based authentication method.\n\nThe client runs the configured agent program as a separate interactive\nprocess for the user to authenticate via a TUI. Agents MUST advertise this\nmethod only when the client enabled its terminal authentication capability.\nA zero exit status signals success; any other termination signals failure.\nThe client MUST NOT pass this method to `auth/login`.",
       "type": "object",
       "properties": {
         "methodId": {
@@ -7565,7 +7565,7 @@
       "type": "object",
       "properties": {
         "auth": {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAuthentication capabilities supported by the client.\nDetermines which authentication method types the agent may include\nin its `InitializeResponse`.\n\nOptional. Omitted or `null` both mean the client does not advertise any\nauthentication-method extensions.",
+          "description": "Authentication capabilities supported by the client.\nDetermines which authentication method types the agent may include\nin its `InitializeResponse`.\n\nOptional. Omitted or `null` both mean the client does not advertise any\nauthentication-method extensions.",
           "anyOf": [
             {
               "$ref": "#/$defs/AuthCapabilities"
@@ -7618,7 +7618,7 @@
       }
     },
     "AuthCapabilities": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAuthentication capabilities supported by the client.\n\nAdvertised during initialization to inform the agent which authentication\nmethod types the client can handle. This governs opt-in types that require\nadditional client-side support.",
+      "description": "Authentication capabilities supported by the client.\n\nAdvertised during initialization to inform the agent which authentication\nmethod types the client can handle. This governs opt-in types that require\nadditional client-side support.",
       "type": "object",
       "properties": {
         "terminal": {
@@ -7642,7 +7642,7 @@
       }
     },
     "TerminalAuthCapabilities": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapabilities for terminal authentication methods.\n\nSupplying `{}` means the client can reproduce the configured agent\ninvocation in an interactive terminal and supports terminal authentication\nmethods.",
+      "description": "Capabilities for terminal authentication methods.\n\nSupplying `{}` means the client can reproduce the configured agent\ninvocation in an interactive terminal and supports terminal authentication\nmethods.",
       "type": "object",
       "properties": {
         "_meta": {

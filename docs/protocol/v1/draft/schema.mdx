@@ -2804,10 +2804,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 ## <span class="font-mono">AuthCapabilities</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 Authentication capabilities supported by the client.
 
 Advertised during initialization to inform the agent which authentication
@@ -2847,10 +2843,6 @@ When no `type` is present, the method is treated as `agent`.
 **Type:** Union
 
 <ResponseField name="terminal" type="object">
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 Client runs the configured agent program as a separate interactive
 process, without passing this method to `authenticate`.
 
@@ -2950,10 +2942,6 @@ Typed identifier used for auth method values on the wire.
 **Type:** `string`
 
 ## <span class="font-mono">AuthMethodTerminal</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Terminal-based authentication method.
 
@@ -3164,11 +3152,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </ResponseField>
 <ResponseField name="auth" type={<a href="#authcapabilities">AuthCapabilities</a>} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Authentication capabilities supported by the client.
+  Authentication capabilities supported by the client.
 Determines which authentication method types the agent may include
 in its `InitializeResponse`.
 

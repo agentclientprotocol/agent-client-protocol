@@ -1884,17 +1884,12 @@ impl SelectedPermissionOutcome {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ClientCapabilities {
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Authentication capabilities supported by the client.
     /// Determines which authentication method types the agent may include
     /// in its `InitializeResponse`.
     ///
     /// Optional. Omitted or `null` both mean the client does not advertise any
     /// authentication-method extensions.
-    #[cfg(feature = "unstable_auth_methods")]
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -1951,14 +1946,9 @@ impl ClientCapabilities {
         Self::default()
     }
 
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Authentication capabilities supported by the client.
     /// Determines which authentication method types the agent may include
     /// in its `InitializeResponse`.
-    #[cfg(feature = "unstable_auth_methods")]
     #[must_use]
     pub fn auth(mut self, auth: impl IntoOption<AuthCapabilities>) -> Self {
         self.auth = auth.into_option();
@@ -2005,16 +1995,11 @@ impl ClientCapabilities {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Authentication capabilities supported by the client.
 ///
 /// Advertised during initialization to inform the agent which authentication
 /// method types the client can handle. This governs opt-in types that require
 /// additional client-side support.
-#[cfg(feature = "unstable_auth_methods")]
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -2044,7 +2029,6 @@ pub struct AuthCapabilities {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_auth_methods")]
 impl AuthCapabilities {
     /// Builds an empty [`AuthCapabilities`]; use builder methods to advertise supported sub-capabilities.
     #[must_use]
@@ -2077,16 +2061,11 @@ impl AuthCapabilities {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Capabilities for terminal authentication methods.
 ///
 /// Supplying `{}` means the client can reproduce the configured agent
 /// invocation in an interactive terminal and supports terminal authentication
 /// methods.
-#[cfg(feature = "unstable_auth_methods")]
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -2105,7 +2084,6 @@ pub struct TerminalAuthCapabilities {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_auth_methods")]
 impl TerminalAuthCapabilities {
     /// Builds an empty [`TerminalAuthCapabilities`]; use builder methods to advertise supported sub-capabilities.
     #[must_use]
@@ -2449,7 +2427,6 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "unstable_auth_methods")]
     #[test]
     fn test_client_capabilities_auth_defaults_on_malformed_value() {
         use serde_json::json;
@@ -3444,7 +3421,6 @@ mod tests {
         assert_eq!(request_with_null_params.params, None);
     }
 
-    #[cfg(feature = "unstable_auth_methods")]
     #[test]
     fn test_auth_capabilities_serialize_terminal_support_as_object() {
         use serde_json::json;

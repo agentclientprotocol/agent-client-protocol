@@ -226,11 +226,12 @@
           },
           {
             "group": "Preview",
-            "pages": ["rfds/auth-methods"]
+            "pages": []
           },
           {
             "group": "Completed",
             "pages": [
+              "rfds/auth-methods",
               "rfds/introduce-rfd-process",
               "rfds/session-config-options",
               "rfds/acp-agent-registry",

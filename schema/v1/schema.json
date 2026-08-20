@@ -2698,6 +2698,22 @@
       "description": "Describes an available authentication method.\n\nThe `type` field acts as the discriminator in the serialized JSON form.\nWhen no `type` is present, the method is treated as `agent`.",
       "anyOf": [
         {
+          "description": "Client runs the configured agent program as a separate interactive\nprocess, without passing this method to `authenticate`.",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "terminal"
+            }
+          },
+          "required": ["type"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/AuthMethodTerminal"
+            }
+          ]
+        },
+        {
           "title": "agent",
           "description": "Agent handles authentication itself through `authenticate`.\n\nThis is the default when no `type` is specified.",
           "allOf": [
@@ -2707,6 +2723,57 @@
           ]
         }
       ]
+    },
+    "AuthMethodId": {
+      "description": "Typed identifier used for auth method values on the wire.",
+      "type": "string"
+    },
+    "AuthMethodTerminal": {
+      "description": "Terminal-based authentication method.\n\nThe client runs the configured agent program as a separate interactive\nprocess for the user to authenticate via a TUI. Agents MUST advertise this\nmethod only when the client enabled its terminal authentication capability.\nA zero exit status signals success; any other termination signals failure.\nThe client MUST NOT pass this method to `authenticate`.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Unique identifier for this authentication method.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/AuthMethodId"
+            }
+          ]
+        },
+        "name": {
+          "description": "Human-readable name of the authentication method.",
+          "type": "string"
+        },
+        "description": {
+          "description": "Optional description providing more details about this authentication method.",
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
+        },
+        "args": {
+          "description": "Additional arguments to append to the configured agent invocation for terminal auth.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
+        },
+        "env": {
+          "description": "Additional environment variables to set on the configured agent invocation for terminal auth.\nThese values override same-named variables in the base launch configuration.",
+          "type": "object",
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["id", "name"]
     },
     "AuthMethodAgent": {
       "description": "Agent handles authentication itself through `authenticate`.\n\nThis is the default authentication method type.",
@@ -2737,10 +2804,6 @@
         }
       },
       "required": ["id", "name"]
-    },
-    "AuthMethodId": {
-      "description": "Typed identifier used for auth method values on the wire.",
-      "type": "string"
     },
     "Implementation": {
       "description": "Metadata about the implementation of the client or agent.\nDescribes the name and version of an ACP implementation, with an optional\ntitle for UI representation.",
@@ -4373,7 +4436,10 @@
               "readTextFile": false,
               "writeTextFile": false
             },
-            "terminal": false
+            "terminal": false,
+            "auth": {
+              "terminal": false
+            }
           },
           "allOf": [
             {
@@ -4438,6 +4504,18 @@
             }
           ],
           "x-deserialize-default-on-error": true
+        },
+        "auth": {
+          "description": "Authentication capabilities supported by the client.\nDetermines which authentication method types the agent may include\nin its `InitializeResponse`.",
+          "x-deserialize-default-on-error": true,
+          "default": {
+            "terminal": false
+          },
+          "allOf": [
+            {
+              "$ref": "#/$defs/AuthCapabilities"
+            }
+          ]
         },
         "elicitation": {
           "description": "Elicitation capabilities supported by the client.\nDetermines which elicitation modes the agent may use.\n\nOptional. Omitted or `null` both mean the client does not advertise\nelicitation support.",
@@ -4535,6 +4613,24 @@
       "description": "Capabilities for boolean session configuration options.\n\nSupplying `{}` means the client supports boolean session configuration options.",
       "type": "object",
       "properties": {
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
+    },
+    "AuthCapabilities": {
+      "description": "Authentication capabilities supported by the client.\n\nAdvertised during initialization to inform the agent which authentication\nmethod types the client can handle. This governs opt-in types that require\nadditional client-side support.",
+      "type": "object",
+      "properties": {
+        "terminal": {
+          "description": "Whether the client supports `terminal` authentication methods.\n\nThe client should set this to `true` only when it can reproduce the\nconfigured agent invocation in an interactive terminal. When `true`, the\nagent may include `terminal` entries in its authentication methods.",
+          "type": "boolean",
+          "default": false,
+          "x-deserialize-default-on-error": true
+        },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"],
