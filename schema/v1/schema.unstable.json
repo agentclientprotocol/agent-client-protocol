@@ -2320,29 +2320,29 @@
                   ]
                 },
                 {
-                  "title": "ListProvidersResponse",
-                  "description": "Successful result returned for a `providers/list` request.",
+                  "title": "ListApiProvidersResponse",
+                  "description": "Successful result returned for a `providers/list_api` request.",
                   "allOf": [
                     {
-                      "$ref": "#/$defs/ListProvidersResponse"
+                      "$ref": "#/$defs/ListApiProvidersResponse"
                     }
                   ]
                 },
                 {
-                  "title": "SetProviderResponse",
-                  "description": "Successful result returned for a `providers/set` request.",
+                  "title": "ConfigureProvidersResponse",
+                  "description": "Successful result returned for a `providers/configure` request.",
                   "allOf": [
                     {
-                      "$ref": "#/$defs/SetProviderResponse"
+                      "$ref": "#/$defs/ConfigureProvidersResponse"
                     }
                   ]
                 },
                 {
-                  "title": "DisableProviderResponse",
-                  "description": "Successful result returned for a `providers/disable` request.",
+                  "title": "RestoreProvidersResponse",
+                  "description": "Successful result returned for a `providers/restore` request.",
                   "allOf": [
                     {
-                      "$ref": "#/$defs/DisableProviderResponse"
+                      "$ref": "#/$defs/RestoreProvidersResponse"
                     }
                   ]
                 },
@@ -3528,8 +3528,8 @@
       "x-side": "agent",
       "x-method": "authenticate"
     },
-    "ListProvidersResponse": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nResponse to `providers/list`.",
+    "ListApiProvidersResponse": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nResponse to `providers/list_api`.",
       "type": "object",
       "properties": {
         "providers": {
@@ -3548,32 +3548,23 @@
       },
       "required": ["providers"],
       "x-side": "agent",
-      "x-method": "providers/list"
+      "x-method": "providers/list_api"
     },
     "ProviderInfo": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nInformation about a configurable LLM provider.",
       "type": "object",
       "properties": {
-        "providerId": {
-          "description": "Provider identifier, for example \"main\" or \"openai\".",
+        "apiType": {
+          "description": "LLM protocol.",
           "allOf": [
             {
-              "$ref": "#/$defs/ProviderId"
+              "$ref": "#/$defs/LlmProtocol"
             }
           ]
         },
-        "supported": {
-          "description": "Supported protocol types for this provider.",
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/LlmProtocol"
-          },
-          "x-deserialize-default-on-error": true,
-          "x-deserialize-skip-invalid-items": true
-        },
-        "required": {
-          "description": "Whether this provider is mandatory and cannot be disabled via `providers/disable`.\nIf true, clients must not call `providers/disable` for this provider ID.",
-          "type": "boolean"
+        "presentableName": {
+          "description": "Name of the provider to be shown in UI.",
+          "type": "string"
         },
         "current": {
           "description": "Current effective non-secret routing config.\nNull or omitted means provider is disabled.",
@@ -3593,11 +3584,7 @@
           "additionalProperties": true
         }
       },
-      "required": ["providerId", "supported", "required"]
-    },
-    "ProviderId": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nUnique identifier for a configurable LLM provider.",
-      "type": "string"
+      "required": ["apiType", "presentableName"]
     },
     "LlmProtocol": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nWell-known API protocol identifiers for LLM providers.\n\nAgents and clients MUST handle unknown protocol identifiers gracefully.\n\nProtocol names beginning with `_` are free for custom use, like other ACP extension methods.\nProtocol names that do not begin with `_` are reserved for the ACP spec.",
@@ -3638,13 +3625,9 @@
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCurrent effective non-secret routing configuration for a provider.",
       "type": "object",
       "properties": {
-        "apiType": {
-          "description": "Protocol currently used by this provider.",
-          "allOf": [
-            {
-              "$ref": "#/$defs/LlmProtocol"
-            }
-          ]
+        "presentableName": {
+          "description": "Name of the provider to be shown in UI.",
+          "type": "string"
         },
         "baseUrl": {
           "description": "Base URL currently used by this provider.",
@@ -3657,10 +3640,10 @@
           "additionalProperties": true
         }
       },
-      "required": ["apiType", "baseUrl"]
+      "required": ["presentableName", "baseUrl"]
     },
-    "SetProviderResponse": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nResponse to `providers/set`.",
+    "ConfigureProvidersResponse": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nResponse to `providers/configure`.",
       "type": "object",
       "properties": {
         "_meta": {
@@ -3671,10 +3654,10 @@
         }
       },
       "x-side": "agent",
-      "x-method": "providers/set"
+      "x-method": "providers/configure"
     },
-    "DisableProviderResponse": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nResponse to `providers/disable`.",
+    "RestoreProvidersResponse": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nResponse to `providers/restore`.",
       "type": "object",
       "properties": {
         "_meta": {
@@ -3685,7 +3668,7 @@
         }
       },
       "x-side": "agent",
-      "x-method": "providers/disable"
+      "x-method": "providers/restore"
     },
     "LogoutResponse": {
       "description": "Response to the `logout` method.",
@@ -6098,29 +6081,29 @@
                   ]
                 },
                 {
-                  "title": "ListProvidersRequest",
-                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nLists providers that can be configured by the client.",
+                  "title": "ListApiProvidersRequest",
+                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nLists the provider APIs supported by the agent.",
                   "allOf": [
                     {
-                      "$ref": "#/$defs/ListProvidersRequest"
+                      "$ref": "#/$defs/ListApiProvidersRequest"
                     }
                   ]
                 },
                 {
-                  "title": "SetProviderRequest",
-                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nReplaces the configuration for a provider.",
+                  "title": "ConfigureProvidersRequest",
+                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nConfigures a set of providers keyed by API protocol.",
                   "allOf": [
                     {
-                      "$ref": "#/$defs/SetProviderRequest"
+                      "$ref": "#/$defs/ConfigureProvidersRequest"
                     }
                   ]
                 },
                 {
-                  "title": "DisableProviderRequest",
-                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nDisables a provider.",
+                  "title": "RestoreProvidersRequest",
+                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRestores a set of providers to the agent's default configuration.",
                   "allOf": [
                     {
-                      "$ref": "#/$defs/DisableProviderRequest"
+                      "$ref": "#/$defs/RestoreProvidersRequest"
                     }
                   ]
                 },
@@ -6730,8 +6713,8 @@
       "x-side": "agent",
       "x-method": "authenticate"
     },
-    "ListProvidersRequest": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for `providers/list`.",
+    "ListApiProvidersRequest": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for `providers/list_api`.",
       "type": "object",
       "properties": {
         "_meta": {
@@ -6742,34 +6725,52 @@
         }
       },
       "x-side": "agent",
-      "x-method": "providers/list"
+      "x-method": "providers/list_api"
     },
-    "SetProviderRequest": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for `providers/set`.\n\nReplaces the full configuration for one provider ID.",
+    "ConfigureProvidersRequest": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for `providers/configure`.\n\nOverrides (updates) the configuration for a set of providers keyed by API protocol.",
       "type": "object",
       "properties": {
-        "providerId": {
-          "description": "Provider ID to configure.",
-          "allOf": [
-            {
-              "$ref": "#/$defs/ProviderId"
-            }
-          ]
+        "providerConfigurations": {
+          "description": "Configuration updates to apply, one per API protocol.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ProviderConfigUpdate"
+          }
         },
-        "apiType": {
-          "description": "Protocol type for this provider.",
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["providerConfigurations"],
+      "x-side": "agent",
+      "x-method": "providers/configure"
+    },
+    "ProviderConfigUpdate": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nConfiguration update for a single provider, keyed by API protocol.",
+      "type": "object",
+      "properties": {
+        "apiProtocol": {
+          "description": "LLM protocol to configure.",
           "allOf": [
             {
               "$ref": "#/$defs/LlmProtocol"
             }
           ]
         },
+        "presentableName": {
+          "description": "Name of the provider to be shown in UI.",
+          "type": "string"
+        },
         "baseUrl": {
           "description": "Base URL for requests sent through this provider.",
           "type": "string"
         },
         "headers": {
-          "description": "Full headers map for this provider.\nMay include authorization, routing, or other integration-specific headers.",
+          "description": "Full headers map for this provider.\nMay include authorization, routing, or other integration-specific headers.\nOmitting this field is equivalent to an empty map (no headers).",
           "type": "object",
           "additionalProperties": {
             "type": "string"
@@ -6782,21 +6783,18 @@
           "additionalProperties": true
         }
       },
-      "required": ["providerId", "apiType", "baseUrl"],
-      "x-side": "agent",
-      "x-method": "providers/set"
+      "required": ["apiProtocol", "presentableName", "baseUrl"]
     },
-    "DisableProviderRequest": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for `providers/disable`.",
+    "RestoreProvidersRequest": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for `providers/restore`.\n\nRestores the listed API protocols to the agent's default provider configuration.",
       "type": "object",
       "properties": {
-        "providerId": {
-          "description": "Provider ID to disable.",
-          "allOf": [
-            {
-              "$ref": "#/$defs/ProviderId"
-            }
-          ]
+        "apiProtocols": {
+          "description": "List of API protocols to restore to default providers.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/LlmProtocol"
+          }
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -6805,9 +6803,9 @@
           "additionalProperties": true
         }
       },
-      "required": ["providerId"],
+      "required": ["apiProtocols"],
       "x-side": "agent",
-      "x-method": "providers/disable"
+      "x-method": "providers/restore"
     },
     "LogoutRequest": {
       "description": "Request parameters for the logout method.\n\nTerminates the current authenticated session.",

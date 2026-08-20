@@ -3,9 +3,9 @@
   "agentMethods": {
     "initialize": "initialize",
     "authenticate": "authenticate",
-    "providers_list": "providers/list",
-    "providers_set": "providers/set",
-    "providers_disable": "providers/disable",
+    "providers_list_api": "providers/list_api",
+    "providers_configure": "providers/configure",
+    "providers_restore": "providers/restore",
     "session_new": "session/new",
     "session_load": "session/load",
     "session_set_mode": "session/set_mode",

@@ -6799,7 +6799,10 @@ mod test_serialization {
         assert_eq!(update.presentable_name, "Corporate OpenAI gateway");
         assert_eq!(update.base_url, "https://api.openai.com/v1");
         assert_eq!(update.headers.len(), 1);
-        assert_eq!(update.headers.get("Authorization").unwrap(), "Bearer sk-test");
+        assert_eq!(
+            update.headers.get("Authorization").unwrap(),
+            "Bearer sk-test"
+        );
     }
 
     #[cfg(feature = "unstable_llm_providers")]
