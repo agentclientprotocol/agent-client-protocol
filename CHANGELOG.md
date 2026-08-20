@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.7.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.6.0...v1.7.0) - 2026-08-20
+
+### Added
+
+- *(unstable)* add session compaction updates ([#2002](https://github.com/agentclientprotocol/agent-client-protocol/pull/2002))
+- *(schema)* stabilize terminal authentication ([#2000](https://github.com/agentclientprotocol/agent-client-protocol/pull/2000))
+- *(rust)* make schemars optional ([#1939](https://github.com/agentclientprotocol/agent-client-protocol/pull/1939))
+- *(schema)* stabilize elicitation ([#1779](https://github.com/agentclientprotocol/agent-client-protocol/pull/1779))
+
+### Other
+
+- *(unstable-v2)* remove conversion helpers ([#1809](https://github.com/agentclientprotocol/agent-client-protocol/pull/1809))
+- *(rfd)* Move terminal auth to preview ([#1796](https://github.com/agentclientprotocol/agent-client-protocol/pull/1796))
+
 ## [1.6.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.5.0...v1.6.0) - 2026-07-21
 
 ### Added
