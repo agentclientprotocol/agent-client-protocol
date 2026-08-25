@@ -18,7 +18,7 @@
     "generate:json-schema": "cargo run -p schema-generator",
     "generate:json-schema:unstable": "cargo run -p schema-generator --features unstable",
     "generate:json-schema:v2": "cargo run -p schema-generator --features unstable_protocol_v2",
-    "generate:json-schema:v2-unstable": "cargo run -p schema-generator --features unstable,unstable_protocol_v2,unstable_session_inject",
+    "generate:json-schema:v2-unstable": "cargo run -p schema-generator --features unstable,unstable_protocol_v2",
     "generate": "npm run generate:json-schema && npm run generate:json-schema:unstable && npm run generate:json-schema:v2 && npm run generate:json-schema:v2-unstable && npm run format",
     "format": "prettier --write --log-level warn . && cargo fmt",
     "format:check": "prettier --check . && cargo fmt -- --check",

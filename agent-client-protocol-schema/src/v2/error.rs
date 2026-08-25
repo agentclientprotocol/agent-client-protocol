@@ -127,11 +127,42 @@ impl Error {
         }
     }
 
-    /// A pending session injection cannot be revoked or replaced in its current state.
+    /// A steer was rejected because the session has no running turn.
     #[cfg(feature = "unstable_session_inject")]
     #[must_use]
-    pub fn inject_precondition_failed() -> Self {
-        ErrorCode::InjectPreconditionFailed.into()
+    pub fn inject_no_running_turn() -> Self {
+        Self::from(ErrorCode::InjectPreconditionFailed)
+            .data(serde_json::json!({ "reason": "no_running_turn" }))
+    }
+
+    /// A pending injected message was delivered before it could be revoked or replaced.
+    #[cfg(feature = "unstable_session_inject")]
+    #[must_use]
+    pub fn inject_already_delivered(message_id: impl Into<super::MessageId>) -> Self {
+        Self::from(ErrorCode::InjectPreconditionFailed).data(serde_json::json!({
+            "reason": "already_delivered",
+            "messageId": message_id.into(),
+        }))
+    }
+
+    /// Pending injected-message replacement is not supported.
+    #[cfg(feature = "unstable_session_inject")]
+    #[must_use]
+    pub fn inject_replace_not_supported(message_id: impl Into<super::MessageId>) -> Self {
+        Self::from(ErrorCode::InjectPreconditionFailed).data(serde_json::json!({
+            "reason": "replace_not_supported",
+            "messageId": message_id.into(),
+        }))
+    }
+
+    /// The injected message ID is unknown for the requested session.
+    #[cfg(feature = "unstable_session_inject")]
+    #[must_use]
+    pub fn inject_unknown_message_id(message_id: impl Into<super::MessageId>) -> Self {
+        Self::from(ErrorCode::ResourceNotFound).data(serde_json::json!({
+            "reason": "unknown_message_id",
+            "messageId": message_id.into(),
+        }))
     }
 
     /// Converts a standard error into an internal JSON-RPC error.
@@ -367,5 +398,51 @@ mod tests {
                 serde_json::from_value(serde_json::to_value(error).unwrap()).unwrap()
             );
         }
+    }
+
+    #[cfg(feature = "unstable_session_inject")]
+    #[test]
+    fn session_inject_errors_include_required_data() {
+        assert_eq!(
+            serde_json::to_value(Error::inject_no_running_turn()).unwrap(),
+            serde_json::json!({
+                "code": -32010,
+                "message": "Inject precondition failed",
+                "data": { "reason": "no_running_turn" },
+            })
+        );
+        assert_eq!(
+            serde_json::to_value(Error::inject_already_delivered("message-1")).unwrap(),
+            serde_json::json!({
+                "code": -32010,
+                "message": "Inject precondition failed",
+                "data": {
+                    "reason": "already_delivered",
+                    "messageId": "message-1",
+                },
+            })
+        );
+        assert_eq!(
+            serde_json::to_value(Error::inject_replace_not_supported("message-1")).unwrap(),
+            serde_json::json!({
+                "code": -32010,
+                "message": "Inject precondition failed",
+                "data": {
+                    "reason": "replace_not_supported",
+                    "messageId": "message-1",
+                },
+            })
+        );
+        assert_eq!(
+            serde_json::to_value(Error::inject_unknown_message_id("message-1")).unwrap(),
+            serde_json::json!({
+                "code": -32002,
+                "message": "Resource not found",
+                "data": {
+                    "reason": "unknown_message_id",
+                    "messageId": "message-1",
+                },
+            })
+        );
     }
 }

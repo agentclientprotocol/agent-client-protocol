@@ -14,7 +14,6 @@ workspace = true
 unstable = ["agent-client-protocol-schema/unstable"]
 unstable_protocol_v2 = ["agent-client-protocol-schema/unstable_protocol_v2"]
 unstable_session_inject = [
-    "unstable",
     "unstable_protocol_v2",
     "agent-client-protocol-schema/unstable_session_inject",
 ]
