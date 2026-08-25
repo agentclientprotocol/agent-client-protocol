@@ -4437,10 +4437,6 @@
             }
           ]
         },
-        "presentableName": {
-          "description": "Name of the provider to be shown in UI.",
-          "type": "string"
-        },
         "current": {
           "description": "Current effective non-secret routing config.\nNull or omitted means provider is disabled.",
           "anyOf": [
@@ -4459,7 +4455,7 @@
           "additionalProperties": true
         }
       },
-      "required": ["apiType", "presentableName"]
+      "required": ["apiType"]
     },
     "LlmProtocol": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nWell-known API protocol identifiers for LLM providers.\n\nAgents and clients MUST handle unknown protocol identifiers gracefully.\n\nProtocol names beginning with `_` are free for custom use, like other ACP extension methods.\nProtocol names that do not begin with `_` are reserved for the ACP spec.",
@@ -7598,7 +7594,7 @@
                 },
                 {
                   "title": "RestoreProvidersRequest",
-                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRestores a set of providers to the agent's default configuration.",
+                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRestores providers to the agent's default configuration.\nWhen no API protocols are specified, restores all providers.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/RestoreProvidersRequest"
@@ -8117,11 +8113,11 @@
       "required": ["apiProtocol", "presentableName", "baseUrl"]
     },
     "RestoreProvidersRequest": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for `providers/restore`.\n\nRestores the listed API protocols to the agent's default provider configuration.",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for `providers/restore`.\n\nRestores the listed API protocols to the agent's default provider configuration.\nWhen no API protocols are specified, restores all providers.",
       "type": "object",
       "properties": {
         "apiProtocols": {
-          "description": "List of API protocols to restore to default providers.",
+          "description": "List of API protocols to restore to default providers.\nWhen omitted or empty, all providers are restored.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/LlmProtocol"
@@ -8134,7 +8130,6 @@
           "additionalProperties": true
         }
       },
-      "required": ["apiProtocols"],
       "x-side": "agent",
       "x-method": "providers/restore"
     },

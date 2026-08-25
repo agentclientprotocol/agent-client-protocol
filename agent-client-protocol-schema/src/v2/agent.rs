@@ -3504,8 +3504,6 @@ impl ProviderCurrentConfig {
 pub struct ProviderInfo {
     /// LLM protocol.
     pub api_type: LlmProtocol,
-    /// Name of the provider to be shown in UI.
-    pub presentable_name: String,
     /// Current effective non-secret routing config.
     /// Null or omitted means provider is disabled.
     #[serde(default)]
@@ -3526,14 +3524,9 @@ pub struct ProviderInfo {
 impl ProviderInfo {
     /// Builds [`ProviderInfo`] with the required fields set; optional fields start unset or empty.
     #[must_use]
-    pub fn new(
-        api_type: LlmProtocol,
-        presentable_name: impl Into<String>,
-        current: impl IntoOption<ProviderCurrentConfig>,
-    ) -> Self {
+    pub fn new(api_type: LlmProtocol, current: impl IntoOption<ProviderCurrentConfig>) -> Self {
         Self {
             api_type,
-            presentable_name: presentable_name.into(),
             current: current.into_option(),
             meta: None,
         }
@@ -3829,16 +3822,19 @@ impl ConfigureProvidersResponse {
 /// Request parameters for `providers/restore`.
 ///
 /// Restores the listed API protocols to the agent's default provider configuration.
+/// When no API protocols are specified, restores all providers.
 #[cfg(feature = "unstable_llm_providers")]
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = PROVIDERS_RESTORE_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct RestoreProvidersRequest {
     /// List of API protocols to restore to default providers.
+    /// When omitted or empty, all providers are restored.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub api_protocols: Vec<LlmProtocol>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -3856,11 +3852,16 @@ pub struct RestoreProvidersRequest {
 impl RestoreProvidersRequest {
     /// Builds [`RestoreProvidersRequest`] with the required request fields set; optional fields start unset or empty.
     #[must_use]
-    pub fn new(api_protocols: Vec<LlmProtocol>) -> Self {
-        Self {
-            api_protocols,
-            meta: None,
-        }
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// List of API protocols to restore to default providers.
+    /// When omitted or empty, all providers are restored.
+    #[must_use]
+    pub fn api_protocols(mut self, api_protocols: Vec<LlmProtocol>) -> Self {
+        self.api_protocols = api_protocols;
+        self
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -5136,7 +5137,8 @@ pub enum ClientRequest {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
-    /// Restores a set of providers to the agent's default configuration.
+    /// Restores providers to the agent's default configuration.
+    /// When no API protocols are specified, restores all providers.
     #[cfg(feature = "unstable_llm_providers")]
     RestoreProvidersRequest(Box<RestoreProvidersRequest>),
     /// Logs out of the current authenticated state.
@@ -6663,7 +6665,6 @@ mod test_serialization {
     fn test_provider_info_with_current_config() {
         let info = ProviderInfo::new(
             LlmProtocol::Anthropic,
-            "Anthropic",
             Some(ProviderCurrentConfig::new(
                 "Local Anthropic proxy",
                 "http://localhost/anthropic",
@@ -6675,7 +6676,6 @@ mod test_serialization {
             json,
             json!({
                 "apiType": "anthropic",
-                "presentableName": "Anthropic",
                 "current": {
                     "presentableName": "Local Anthropic proxy",
                     "baseUrl": "http://localhost/anthropic"
@@ -6685,7 +6685,6 @@ mod test_serialization {
 
         let deserialized: ProviderInfo = serde_json::from_value(json).unwrap();
         assert_eq!(deserialized.api_type, LlmProtocol::Anthropic);
-        assert_eq!(deserialized.presentable_name, "Anthropic");
         assert!(deserialized.current.is_some());
         assert_eq!(
             deserialized.current.as_ref().unwrap().presentable_name,
@@ -6696,20 +6695,18 @@ mod test_serialization {
     #[cfg(feature = "unstable_llm_providers")]
     #[test]
     fn test_provider_info_disabled() {
-        let info = ProviderInfo::new(LlmProtocol::OpenAi, "OpenAI", None::<ProviderCurrentConfig>);
+        let info = ProviderInfo::new(LlmProtocol::OpenAi, None::<ProviderCurrentConfig>);
 
         let json = serde_json::to_value(&info).unwrap();
         assert_eq!(
             json,
             json!({
-                "apiType": "openai",
-                "presentableName": "OpenAI"
+                "apiType": "openai"
             })
         );
 
         let deserialized: ProviderInfo = serde_json::from_value(json).unwrap();
         assert_eq!(deserialized.api_type, LlmProtocol::OpenAi);
-        assert_eq!(deserialized.presentable_name, "OpenAI");
         assert!(deserialized.current.is_none());
     }
 
@@ -6718,8 +6715,7 @@ mod test_serialization {
     fn test_provider_info_missing_current_defaults_to_none() {
         // current is optional; omitting it should decode as None
         let json = json!({
-            "apiType": "anthropic",
-            "presentableName": "Anthropic"
+            "apiType": "anthropic"
         });
         let deserialized: ProviderInfo = serde_json::from_value(json).unwrap();
         assert!(deserialized.current.is_none());
@@ -6733,7 +6729,6 @@ mod test_serialization {
         // regardless of which form the peer chose to send.
         let json = json!({
             "apiType": "anthropic",
-            "presentableName": "Anthropic",
             "current": null
         });
         let deserialized: ProviderInfo = serde_json::from_value(json).unwrap();
@@ -6745,7 +6740,6 @@ mod test_serialization {
     fn test_list_api_providers_response_serialization() {
         let response = ListApiProvidersResponse::new(vec![ProviderInfo::new(
             LlmProtocol::Anthropic,
-            "Anthropic",
             Some(ProviderCurrentConfig::new(
                 "Anthropic",
                 "https://api.anthropic.com",
@@ -6822,13 +6816,29 @@ mod test_serialization {
     #[cfg(feature = "unstable_llm_providers")]
     #[test]
     fn test_restore_providers_request_serialization() {
-        let request = RestoreProvidersRequest::new(vec![LlmProtocol::OpenAi]);
+        let request = RestoreProvidersRequest::new().api_protocols(vec![LlmProtocol::OpenAi]);
 
         let json = serde_json::to_value(&request).unwrap();
         assert_eq!(json, json!({ "apiProtocols": ["openai"] }));
 
         let deserialized: RestoreProvidersRequest = serde_json::from_value(json).unwrap();
         assert_eq!(deserialized.api_protocols, vec![LlmProtocol::OpenAi]);
+    }
+
+    #[cfg(feature = "unstable_llm_providers")]
+    #[test]
+    fn test_restore_all_providers_request_serialization() {
+        let request = RestoreProvidersRequest::new();
+
+        let json = serde_json::to_value(&request).unwrap();
+        assert_eq!(json, json!({}));
+
+        let deserialized: RestoreProvidersRequest = serde_json::from_value(json).unwrap();
+        assert!(deserialized.api_protocols.is_empty());
+        assert!(
+            serde_json::from_value::<RestoreProvidersRequest>(json!({ "apiProtocols": null }))
+                .is_err()
+        );
     }
 
     #[cfg(feature = "unstable_llm_providers")]

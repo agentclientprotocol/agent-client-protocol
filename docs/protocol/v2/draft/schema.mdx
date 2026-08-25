@@ -860,7 +860,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 This capability is not part of the spec yet, and may be removed or changed at any point.
 
-Restores a set of providers to the agent's default configuration.
+Restores providers to the agent's default configuration.
+When no API protocols are specified, restores all providers.
 
 #### <span class="font-mono">RestoreProvidersRequest</span>
 
@@ -871,6 +872,7 @@ This capability is not part of the spec yet, and may be removed or changed at an
 Request parameters for `providers/restore`.
 
 Restores the listed API protocols to the agent's default provider configuration.
+When no API protocols are specified, restores all providers.
 
 **Type:** Object
 
@@ -884,8 +886,9 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
-<ResponseField name="apiProtocols" type={<a href="#llmprotocol">LlmProtocol[]</a>} required>
+<ResponseField name="apiProtocols" type={<a href="#llmprotocol">LlmProtocol[]</a>} >
   List of API protocols to restore to default providers.
+When omitted or empty, all providers are restored.
 </ResponseField>
 
 #### <span class="font-mono">RestoreProvidersResponse</span>
@@ -7170,9 +7173,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 <ResponseField name="current" type={<><span><a href="#providercurrentconfig">ProviderCurrentConfig</a></span><span> | null</span></>} >
   Current effective non-secret routing config.
 Null or omitted means provider is disabled.
-</ResponseField>
-<ResponseField name="presentableName" type={"string"} required>
-  Name of the provider to be shown in UI.
 </ResponseField>
 
 ## <span class="font-mono">ProvidersCapabilities</span>
