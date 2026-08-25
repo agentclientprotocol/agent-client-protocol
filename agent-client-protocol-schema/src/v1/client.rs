@@ -166,6 +166,20 @@ pub enum SessionUpdate {
     /// [`ClientSessionCapabilities::compaction`].
     #[cfg(feature = "unstable_session_compaction")]
     CompactionSummaryChunk(CompactionSummaryChunk),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Notification that the session spawned a subagent.
+    #[cfg(feature = "unstable_subagents")]
+    SubagentSpawned(SubagentSpawnedUpdate),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Notification that a subagent reached a terminal state.
+    #[cfg(feature = "unstable_subagents")]
+    SubagentStateUpdate(SubagentStateUpdate),
 }
 
 /// **UNSTABLE**
@@ -437,20 +451,6 @@ impl CompactionSummaryChunk {
         self.meta = meta.into_option();
         self
     }
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// Notification that the session spawned a subagent.
-    #[cfg(feature = "unstable_subagents")]
-    SubagentSpawned(SubagentSpawnedUpdate),
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// Notification that a subagent reached a terminal state.
-    #[cfg(feature = "unstable_subagents")]
-    SubagentStateUpdate(SubagentStateUpdate),
 }
 
 /// **UNSTABLE**
@@ -642,6 +642,8 @@ pub enum SubagentState {
     Failed,
     /// The subagent was cancelled.
     Cancelled,
+    /// The Agent lost the child runtime and cannot determine its task outcome.
+    Disconnected,
 }
 
 /// The current mode of the session has changed
@@ -3397,6 +3399,19 @@ mod tests {
                 "sessionUpdate": "subagent_state_update",
                 "subagentSessionId": "sess_child_1",
                 "state": "completed"
+            })
+        );
+
+        let disconnected = SessionUpdate::SubagentStateUpdate(SubagentStateUpdate::new(
+            "sess_child_2",
+            SubagentState::Disconnected,
+        ));
+        assert_eq!(
+            serde_json::to_value(disconnected).unwrap(),
+            json!({
+                "sessionUpdate": "subagent_state_update",
+                "subagentSessionId": "sess_child_2",
+                "state": "disconnected"
             })
         );
     }

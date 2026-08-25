@@ -193,13 +193,55 @@ sending a `subagent_state_update` on its immediate parent session:
 ```
 
 `subagentSessionId` and `state` are required and non-nullable. `state` is one
-of `completed`, `failed`, or `cancelled`. The initial `subagent_spawned` update
-implicitly places the child in the `running` state, so a separate running
-update is unnecessary.
+of `completed`, `failed`, `cancelled`, or `disconnected`. The initial
+`subagent_spawned` update implicitly places the child in the `running` state,
+so a separate running update is unnecessary.
+
+`disconnected` means the Agent can no longer associate the announced child
+with a live runtime and therefore does not know its task outcome. It is a
+terminal state for the exposed ACP child, not a claim that the delegated task
+failed or was cancelled. An Agent **MUST NOT** report `failed` or `cancelled`
+solely because a connection ended or a child runtime could not be restored.
 
 The terminal lifecycle update **MUST** be sent after all child
 `session/update` notifications. A Client may then retain the child for display
 or discard its transient state.
+
+### Reconnection and replay
+
+The Client reconnects only the parent session. It **MUST NOT** call
+`session/load` or `session/resume` with a subagent session ID. This RFD does not
+define restoration of child runtimes: loading or resuming a parent restores
+only the parent runtime.
+
+The authoritative flow for reconstructing the child tree is:
+
+1. The Client calls `session/load` with the parent session ID.
+2. The Agent examines persisted child history. Every `subagent_spawned` update
+   without a corresponding terminal lifecycle update identifies an orphaned
+   child.
+3. The Agent terminates each orphan with a `subagent_state_update` whose state
+   is `disconnected`. For nested orphans, descendants are terminated before
+   their parents, and every terminal update is sent on the immediate parent
+   session.
+4. The Agent replays the parent and child history in its original order,
+   preserving the child session IDs. Each synthesized `disconnected` update is
+   sent after all persisted updates for that child.
+5. The Client reconstructs the session tree from `subagent_spawned` updates and
+   treats `disconnected` as terminal. Replayed child IDs are historical display
+   identifiers and cannot be loaded or resumed independently.
+
+An implementation may persist synthesized terminal updates. Repeated loads
+**MUST** produce the same terminal result, **MUST NOT** revive an orphan, and
+**MUST NOT** report it as `failed` or `cancelled` merely because its runtime was
+not restored.
+
+`session/resume` does not replay or reconstruct child history. The Agent
+**MUST NOT** send a standalone child terminal update during resume because the
+Client may not have received the corresponding `subagent_spawned` update. A
+Client that retained UI state from the interrupted connection may locally show
+unterminated children as connection-incomplete. If it needs the authoritative
+child tree and terminal states, it uses `session/load` instead.
 
 ### Restricted session methods
 
@@ -271,7 +313,8 @@ summarizing their output in the parent session.
 4. Update example Clients to keep a session tree and route updates by session
    ID.
 5. Update example Agents to announce a child before its first update and to
-   emit exactly one terminal lifecycle update.
+   emit exactly one terminal lifecycle update, including `disconnected` for
+   orphaned children that cannot be restored after reconnection.
 6. Validate the design in at least one Agent with native subagents and one
    Client with concurrent-session UI before stabilization.
 
@@ -347,4 +390,6 @@ important difference from a user-facing session.
 
 ## Revision history
 
+- 2026-08-25: Defined child reconnection, replay, orphan, and disconnected
+  lifecycle semantics.
 - 2026-08-19: Initial draft.

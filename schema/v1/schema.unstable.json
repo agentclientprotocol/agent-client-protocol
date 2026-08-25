@@ -6127,6 +6127,11 @@
           "description": "The subagent was cancelled.",
           "type": "string",
           "const": "cancelled"
+        },
+        {
+          "description": "The Agent lost the child runtime and cannot determine its task outcome.",
+          "type": "string",
+          "const": "disconnected"
         }
       ]
     },
