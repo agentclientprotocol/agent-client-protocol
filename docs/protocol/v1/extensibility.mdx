@@ -132,3 +132,25 @@ Implementations **SHOULD** use the `_meta` field in capability objects to advert
 ```
 
 This allows implementations to negotiate custom features during initialization without breaking compatibility with standard Clients and Agents.
+
+The same pattern covers capability keys that a newer protocol version drafts. A key the negotiated version does not define, such as a `sessionCapabilities` entry that only exists in a v2 draft, is not a v1 capability. Tolerant clients ignore unknown keys, but clients that validate strictly reject the whole `initialize` response when they hit such a key, and the connection dies before the first turn runs. Advertise version-drafted keys under `_meta` while negotiating with an older protocol version, and promote them into the registered capability object once the version that defines them lands:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 0,
+  "result": {
+    "protocolVersion": 1,
+    "agentCapabilities": {
+      "sessionCapabilities": {
+        "list": {},
+        "resume": {},
+        "close": {},
+        "_meta": {
+          "fork": {}
+        }
+      }
+    }
+  }
+}
+```
