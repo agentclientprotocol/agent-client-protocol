@@ -1,0 +1,190 @@
+---
+title: "Tool Interception"
+---
+
+Author(s): [@xeophon](https://github.com/xeophon)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+ACP should let a Client synchronously inspect a tool call at two optional
+checkpoints:
+
+- immediately before the Agent executes it; and
+- after execution, but before the result becomes visible to the model.
+
+At either checkpoint, the Client can allow the original value, replace it, or
+stop the current work. This enables policy enforcement, evaluation, replay, and
+other Client-owned mediation without a separate integration for every Agent.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+ACP tool-call updates are Agent-to-Client notifications. They describe what is
+happening, but the Agent does not wait for a response, so a Client cannot use
+them to prevent execution or replace a result before the next model request.
+
+`session/request_permission` is an awaited request before execution, but it is
+designed to collect a user's choice from a fixed set of options. Its response
+can approve or deny the proposed operation; it cannot return a replacement
+tool result, and it has no post-execution checkpoint.
+
+Agents that want to support Client-owned tool policy therefore need a native
+hook or plugin. Every ACP adapter repeats the same work: translate its Agent's
+tool input and result, invoke policy, apply the decision, correlate the native
+call with the ACP tool call, and fail safely when mediation is unavailable.
+The duplicated integration is difficult to keep behaviorally consistent.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+Define an experimental, awaited Agent-to-Client request for tool interception.
+The initial extension can use the reserved method name
+`_agentclientprotocol.com/tool/intercept` while its semantics are exercised.
+
+Clients advertise the phases they implement in `ClientCapabilities._meta`:
+
+```json
+{
+  "agentclientprotocol.com": {
+    "toolInterception": {
+      "before": true,
+      "after": true
+    }
+  }
+}
+```
+
+An Agent sends the request only for advertised phases and waits for the
+response before crossing that phase's boundary. A candidate request shape is:
+
+```json
+{
+  "sessionId": "sess_123",
+  "phase": "after",
+  "toolCall": {
+    "toolCallId": "call_123",
+    "name": "read_file",
+    "rawInput": { "path": "/workspace/README.md" },
+    "status": "completed",
+    "content": [
+      {
+        "type": "content",
+        "content": { "type": "text", "text": "original contents" }
+      }
+    ]
+  }
+}
+```
+
+The response has one of three actions:
+
+- `allow`: cross the checkpoint unchanged;
+- `replace`: do not execute the tool in the `before` phase, or discard its
+  original result in the `after` phase, and use the supplied replacement result;
+- `stop`: stop current session work before the original input or result reaches
+  the next boundary.
+
+For example:
+
+```json
+{
+  "action": "replace",
+  "result": {
+    "status": "completed",
+    "content": [
+      {
+        "type": "content",
+        "content": { "type": "text", "text": "policy-approved contents" }
+      }
+    ]
+  }
+}
+```
+
+The request should reuse ACP's tool-call identifiers and typed content wherever
+possible. The exact patch and replacement shapes remain part of the RFD dialog,
+especially across the different v1 and v2 tool-call update models.
+
+Advertising a phase is a control-plane promise. If the request times out,
+returns an error, or produces an invalid decision, the Agent must not cross
+that checkpoint. This prevents an unavailable policy Client from silently
+becoming an allow decision.
+
+Standard `session/update` notifications remain unchanged. Agents continue to
+report the effective call and result through those notifications so ordinary
+Clients and existing tool-call UIs still work.
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+An evaluation runner or enterprise policy Client advertises the two phases once.
+Any supporting ACP Agent pauses before every tool execution and before every
+result is committed to model history, applies the Client's decision, and emits
+its normal ACP updates. The Client no longer needs Agent-specific credentials,
+workspace plugins, wrapper scripts, or local HTTP callbacks.
+
+Adapters can implement the extension at their closest synchronous native hook.
+Agents that only expose one suitable boundary advertise only that phase. Agents
+without either boundary remain valid ACP Agents and simply omit the capability.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+1. Agree on the phase boundaries, capability shape, decision semantics, and v1
+   and v2 tool-call payloads in this RFD.
+2. Add feature-gated extension types and SDK helpers without making the method a
+   stable core protocol method.
+3. Exercise the extension in several Agents with different native tool APIs,
+   including text, structured, image, error, parallel, and pre-replaced results.
+4. Move the extension into the core protocol only after implementations show
+   that the same semantics work across Agents.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Why is `session/request_permission` not enough?
+
+Permission requests answer whether an operation may proceed. Interception also
+needs to replace the value that proceeds, and it needs an awaited checkpoint
+after tool execution. Adding hidden replacement semantics to a permission
+option would conflate user approval with programmatic mediation.
+
+### Why must the `after` request happen before the next model request?
+
+Once the original result has entered model history, replacing it is only a
+future correction. The model may already have acted on data the Client intended
+to redact or rewrite. The checkpoint therefore has to be inside the Agent's
+tool loop, before the result is committed.
+
+### Does `before` replacement change tool input?
+
+No. `replace` at the `before` checkpoint skips execution and supplies a
+synthetic result. Mutating input and then executing a different operation has
+different safety and audit semantics and should be considered separately.
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+**Tool-call notifications** are already universal but are one-way and therefore
+cannot enforce a boundary.
+
+**Permission request metadata** can prototype pre-execution decisions, but it
+does not provide post-result replacement and makes the feature depend on a
+user-approval API.
+
+**Agent-specific hooks and plugins** work today, but duplicate transport,
+correlation, failure, and content-conversion logic in every integration.
+
+**A Client-hosted MCP policy tool** lets the model or Agent ask for a decision,
+but it does not guarantee that every tool call is checked or that the Agent
+waits before committing a result.
+
+## Revision history
+
+- 2026-08-30: Initial proposal.
