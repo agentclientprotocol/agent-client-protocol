@@ -6136,7 +6136,7 @@
       ]
     },
     "SubagentStateUpdate": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNotification that a subagent reached a terminal state.",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNotification that a subagent reached a terminal state.\n\nSent on the immediate parent session after all child session updates and\nafter every pending permission or elicitation request issued for the child\nhas resolved.",
       "type": "object",
       "properties": {
         "subagentSessionId": {

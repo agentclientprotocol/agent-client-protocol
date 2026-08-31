@@ -204,8 +204,39 @@ failed or was cancelled. An Agent **MUST NOT** report `failed` or `cancelled`
 solely because a connection ended or a child runtime could not be restored.
 
 The terminal lifecycle update **MUST** be sent after all child
-`session/update` notifications. A Client may then retain the child for display
-or discard its transient state.
+`session/update` notifications and after every pending Agent-to-Client request
+for the child has resolved, as defined in
+[Pending permission and elicitation requests](#pending-permission-and-elicitation-requests).
+A Client may then retain the child for display or discard its transient state.
+
+### Unknown outcomes on a live connection
+
+Two failures can leave an announced child without a terminal lifecycle update
+outside of the `session/load` flow below:
+
+- the ACP connection ends while the child is still running; or
+- the parent `session/prompt` request returns — with any stop reason or with an
+  error — before the child's terminal update was received. Under the
+  [v1 scope rule](#scope-in-acp-v1) this is an Agent bug, but Clients still
+  need a defined outcome.
+
+In both cases the Client **MUST** immediately place the child and its announced
+descendants in a local `disconnected` state: the task outcome is unknown. The
+Client **MUST NOT** present such a child as `failed` or `cancelled`, **MUST
+NOT** continue presenting it as running, and **MUST NOT** wait indefinitely for
+a terminal update.
+
+This local state is presentational only. The Client **MUST NOT** emit a wire
+message to report it: `session/update` flows only from Agent to Client, and no
+Client-to-Agent notification exists for subagent state.
+
+Because the Client synthesized this state rather than receiving it, it is
+provisional. History replayed by a subsequent `session/load` of the parent,
+including `disconnected` updates synthesized by the orphan-recovery flow below,
+is authoritative and replaces it. If a late `subagent_state_update` for the
+child nevertheless arrives on a still-live connection, the Client **MAY**
+accept it in place of the local state, but **MUST NOT** return the child to a
+running presentation.
 
 ### Reconnection and replay
 
@@ -239,9 +270,11 @@ not restored.
 `session/resume` does not replay or reconstruct child history. The Agent
 **MUST NOT** send a standalone child terminal update during resume because the
 Client may not have received the corresponding `subagent_spawned` update. A
-Client that retained UI state from the interrupted connection may locally show
-unterminated children as connection-incomplete. If it needs the authoritative
-child tree and terminal states, it uses `session/load` instead.
+Client that retained UI state from the interrupted connection keeps showing
+unterminated children in the local `disconnected` state defined in
+[Unknown outcomes on a live connection](#unknown-outcomes-on-a-live-connection).
+If it needs the authoritative child tree and terminal states, it uses
+`session/load` instead.
 
 ### Restricted session methods
 
@@ -281,6 +314,43 @@ A child failure does not automatically fail or cancel its parent. The parent
 Agent decides whether to recover, delegate the work again, or report the
 failure in its own output.
 
+### Pending permission and elicitation requests
+
+A child, or one of its descendants, can own pending Agent-to-Client requests
+such as `session/request_permission` and `elicitation/create` when the child or
+an ancestor is cancelled or closed.
+
+Every such request **MUST** resolve before the child's terminal
+`subagent_state_update`. The Agent **MUST NOT** send the terminal update while
+a request it issued for that child or its descendants is still outstanding.
+Resolution is either a Client response — including the `cancelled` permission
+outcome or the `cancel` elicitation action — or
+[request cancellation](/protocol/v1/cancellation) by the Agent, which still
+completes the request with a response or a `-32800` error.
+
+Mirroring [prompt-turn cancellation](/protocol/v1/prompt-turn#cancellation),
+when the Client sends `session/cancel` or calls `session/close` for a child, or
+for a parent whose cancellation cascades to the child, it **MUST** respond to
+pending `session/request_permission` requests for the child and its descendants
+with the `cancelled` outcome and **SHOULD** respond to pending
+`elicitation/create` requests with the `cancel` action.
+
+Responses travel from Client to Agent while the terminal update travels from
+Agent to Client, so the two can cross on the wire:
+
+- If the Client receives the terminal `subagent_state_update` while it still
+  holds an unanswered permission or elicitation request for that child or its
+  descendants, it **MUST** resolve the request immediately with the `cancelled`
+  outcome or the `cancel` action and release the interactive control. The
+  request remains attributed to the terminated child's history: a terminal
+  child **MUST NOT** retain a live control, and the control **MUST NOT** move
+  to the parent or any other session.
+- If the Agent receives a permission or elicitation response for a child that
+  it has started terminating, the response still resolves the request, but the
+  Agent **MUST** treat it as if it were `cancelled`: it **MUST NOT** start new
+  child activity based on it and **MUST NOT** send child `session/update`
+  notifications after the terminal update.
+
 ### Scope in ACP v1
 
 ACP v1 ties `session/update` closely to an active prompt turn. To avoid adding a
@@ -310,12 +380,19 @@ summarizing their output in the parent session.
 2. Add `SubagentSessionCapabilities`, `SubagentSpawned`, and
    `SubagentStateUpdate` schema types.
 3. Add the two variants to `SessionUpdate` and regenerate all SDK schemas.
-4. Update example Clients to keep a session tree and route updates by session
+4. Ship SDK releases that carry the draft `subagents` capability and update
+   types — or at minimum preserve them when deserializing and re-serializing —
+   before adapter rollout. SDKs that strip the draft fields force temporary
+   out-of-band negotiation bridges such as `_meta`-scoped capability flags.
+   Such bridges are compatibility shims, not an alternative protocol, and are
+   retired once SDK support ships. SDK preservation of the draft fields is an
+   explicit prerequisite for the validation step below.
+5. Update example Clients to keep a session tree and route updates by session
    ID.
-5. Update example Agents to announce a child before its first update and to
+6. Update example Agents to announce a child before its first update and to
    emit exactly one terminal lifecycle update, including `disconnected` for
    orphaned children that cannot be restored after reconnection.
-6. Validate the design in at least one Agent with native subagents and one
+7. Validate the design in at least one Agent with native subagents and one
    Client with concurrent-session UI before stabilization.
 
 ## Frequently asked questions
@@ -365,6 +442,16 @@ part of the baseline would exclude those implementations and blur ownership of
 the delegated task. A future RFD can add an explicit per-child `prompt` or
 `steer` capability if interoperable semantics emerge.
 
+### Why is the field named `task` rather than `description`?
+
+Early draft implementations of this proposal used a `description` field.
+Adapters have since converged on `task`: it names the work delegated to the
+child rather than describing the child itself, which keeps it distinct from
+`name`. `task` is the only canonical field in this RFD. An implementation that
+shipped against an early draft may temporarily accept `description` as an
+input fallback while migrating, but it emits `task`, and Clients are not
+required to understand `description`.
+
 ### Is `session/fork` sufficient for subagents?
 
 No. Forking is initiated by the Client and creates a normal session derived
@@ -390,6 +477,11 @@ important difference from a user-facing session.
 
 ## Revision history
 
+- 2026-08-31: Defined the Client-local `disconnected` state for unknown
+  outcomes on a live connection, required pending permission and elicitation
+  requests to resolve before the terminal lifecycle update with defined race
+  handling, and made SDK preservation of the draft fields an explicit rollout
+  prerequisite.
 - 2026-08-25: Defined child reconnection, replay, orphan, and disconnected
   lifecycle semantics.
 - 2026-08-19: Initial draft.

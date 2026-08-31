@@ -585,6 +585,10 @@ impl SubagentSessionCapabilities {
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
 /// Notification that a subagent reached a terminal state.
+///
+/// Sent on the immediate parent session after all child session updates and
+/// after every pending permission or elicitation request issued for the child
+/// has resolved.
 #[cfg(feature = "unstable_subagents")]
 #[serde_as]
 #[skip_serializing_none]
