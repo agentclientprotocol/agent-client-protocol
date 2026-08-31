@@ -186,6 +186,20 @@
           {
             "group": "Draft",
             "pages": [
+              {
+                "group": "ACP Remote",
+                "expanded": true,
+                "root": "rfds/remote/overview",
+                "pages": [
+                  "rfds/remote/security-and-identity",
+                  "rfds/remote/reliable-transport",
+                  "rfds/remote/multi-client-sessions",
+                  "rfds/remote/host-services",
+                  "rfds/remote/ahp-parity",
+                  "rfds/remote/rust-client",
+                  "rfds/remote/conformance"
+                ]
+              },
               "rfds/session-fork",
               "rfds/proxy-chains",
               "rfds/mcp-over-acp",

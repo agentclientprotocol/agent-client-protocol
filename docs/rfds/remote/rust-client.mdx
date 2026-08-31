@@ -1,0 +1,395 @@
+---
+title: "ACP Remote Rust Client Architecture"
+---
+
+Author(s): ACP Remote working draft
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Extend the official ACP Rust SDK with a logical remote client that remains
+usable across physical HTTP/SSE or WebSocket connection loss. The client owns
+authenticated connection setup, cursor checkpoints, idempotent operations,
+session attachments, replay-to-live cutover, bounded event delivery, and
+observable recovery state.
+
+This work belongs in the separate
+[`agentclientprotocol/rust-sdk`](https://github.com/agentclientprotocol/rust-sdk)
+repository. The protocol repository intentionally contains the Rust schema and
+generator, not the runtime SDK. Reintroducing a second runtime here would split
+the implementation and is not proposed.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+The Rust SDK's `agent-client-protocol-http` crate provides Streamable HTTP/SSE
+and WebSocket transports. Its current abstraction connects an ACP `Channel` to
+one physical transport. In the HTTP client, ending any connection-scoped or
+session-scoped SSE stream ends the channel. The client does not persist a
+durable client instance, delivery cursor, resume credential, or idempotency
+record. The existing server similarly places agent and session routing state
+under one connection.
+
+That is a useful implementation of the current transport RFD but cannot make
+the following transparent or safe:
+
+- reconnecting after a response or event is lost;
+- retrying a mutating request without duplicating its effect;
+- moving an attachment to another serving node;
+- rotating credentials without losing delivery progress;
+- attaching several authenticated clients to one durable session;
+- recovering pending permission, elicitation, or client-tool interactions;
+- isolating a slow application consumer from the network reader.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+Add a remote layer above the existing JSON-RPC connection and below the typed
+ACP client API. A physical transport is replaceable; logical client and session
+state survive it.
+
+The SDK negotiates exactly one remote wire profile, `acp.remote.v2`. Its API
+surface follows the capability dependency graph:
+
+- `capabilities.remote.core` is required for `RemoteClient` and supplies
+  endpoint authentication, ordered delivery, replay, acknowledgement,
+  `operationId`, limits, and common errors;
+- `capabilities.remote.sharedSessions` depends on `core` and enables
+  attachments, shared revisions, durable interactions, claims, and
+  compare-and-set operations; and
+- `capabilities.remote.hostServices` depends on `core` and enables the
+  independently advertised Host-service clients.
+
+The SDK MUST reject an invalid capability combination and MUST NOT silently
+downgrade `acp.remote.v2` to best-effort semantics.
+
+### Public concepts
+
+The exact Rust names are provisional, but the API should expose these concepts:
+
+```rust
+pub struct RemoteClient<C, S> { /* connector + durable store */ }
+pub struct RemoteClientBuilder<C, S> { /* policy and handlers */ }
+pub struct RemoteSession { /* durable attachment */ }
+
+pub trait RemoteConnector {
+    async fn connect(&self, attempt: ConnectAttempt) -> Result<RemoteWire, ConnectError>;
+}
+
+pub trait RemoteStateStore {
+    async fn load(&self, endpoint: &EndpointIdentity) -> Result<Option<SavedRemoteState>, StoreError>;
+    async fn compare_and_set(&self, update: StateUpdate) -> Result<(), StoreError>;
+}
+
+pub trait CredentialProvider {
+    async fn credential(&self, challenge: Option<&AuthChallenge>) -> Result<Credential, AuthError>;
+    async fn invalidate(&self, rejected: &CredentialFingerprint);
+}
+```
+
+`RemoteConnector` has HTTP/SSE and WebSocket implementations. Tests use an
+in-memory deterministic connector and the fault proxy from the conformance RFD.
+`RemoteStateStore` has a memory implementation and an opt-in persistent
+implementation. Applications handling sensitive data control storage,
+encryption, and lifetime.
+
+### Layering
+
+```text
+typed Agent/Client API
+        |
+logical sessions and attachments
+        |
+operation journal + delivery reducer
+        |
+reconnect supervisor + authentication
+        |
+HTTP/POST + one SSE stream | WebSocket
+```
+
+The wire adapter MUST NOT contain session ownership policy. It reads and writes
+complete remote delivery records. The reducer validates cursor order,
+deduplicates, and atomically applies canonical domain events before exposing
+typed JSON-RPC projections. The attachment layer handles authorization views
+and session-scoped domain state.
+
+### Builder inputs
+
+The builder requires:
+
+- An absolute HTTPS or WSS endpoint URL. Plain HTTP/WS is rejected except when
+  an explicit development-only policy permits loopback.
+- A credential provider.
+- A stable client-instance store or an explicit ephemeral-client choice.
+- A bounded reconnect policy with exponential backoff, jitter, and server retry
+  hints.
+- Queue, record, batch, snapshot, and decompressed-size limits.
+- Handlers for replay gaps, authorization loss, session termination, and
+  uncertain outcomes.
+
+It may accept:
+
+- A preferred transport, with an explicit fallback policy.
+- A durable state store.
+- TLS roots or mutual-TLS identity.
+- Heartbeat and idle-timeout bounds.
+- Observability callbacks that receive redacted structured events.
+
+No API accepts bearer or refresh tokens, resume credentials, or generic secrets
+in endpoint query parameters or WebSocket subprotocol values. The sole browser
+exception is the purpose-built, single-use, endpoint-bound WebSocket ticket
+defined by the security RFD; the builder exposes that ticket exchange as a
+separate credential flow and never accepts an arbitrary subprotocol secret.
+
+### State machine
+
+The client reports these states rather than hiding an unbounded retry loop:
+
+```text
+idle
+  -> connecting
+  -> authenticating
+  -> initializing
+  -> adopting attachments
+  -> replaying
+  -> online
+  -> degraded
+  -> backing_off
+  -> connecting
+
+any state -> authorization_required | terminal
+```
+
+Each transition includes a reason, attempt number, and safe retry time. Tokens,
+resume credentials, cookies, and full server error bodies are redacted.
+
+A graceful application shutdown detaches or closes only what the caller asks it
+to close. Dropping the physical connection MUST NOT implicitly terminate a
+durable session.
+
+### Durable local state
+
+The store tracks only the minimum needed for recovery:
+
+- Canonical endpoint, `authorityId`, and authenticated-principal fingerprints.
+- Stable client-instance identifier.
+- Logical `connectionId`, active decimal-string physical `generation`, and
+  current `serverEpoch` and `authorizationContextId`.
+- The pending new-connection bootstrap proof, then rotating resume and
+  generation-binding credentials, in protected storage.
+- One last durably applied/acknowledged connection cursor plus the attachment
+  identifiers and subscriptions recovered through that logical connection.
+- Session epoch/version, attachment revision, interaction revisions, claim
+  fencing tokens, and resource/entity revisions as domain state.
+- Pending `operationId` values, canonical request hashes, and known outcomes.
+- Optional authorized snapshot material chosen by the application.
+
+For each ordinary delivery, the store MUST atomically reduce the canonical
+domain event into every subscribed session/chat/resource projection and persist
+the new connection cursor before the SDK sends an acknowledgement. A received
+or volatile queued record is not ACK-eligible. A bounded SnapshotSet chunk is
+the sole staging exception: after verifying its content hash, the SDK may
+atomically persist the chunk, manifest binding, and cursor before ACK, but it
+MUST NOT expose any SnapshotSet view as current until every component is
+verified and the whole set is adopted atomically. If either transaction fails,
+the cursor does not advance and replay supplies the record again.
+
+Attachment revision, session version, interaction revision, and resource
+revision are domain state changed only by their canonical `sourceEventId`;
+they are never inferred from or incremented with a connection cursor. A replay
+may deliver the same domain revision under a different connection-delivery
+wrapper.
+
+On restart, the client safely requests from the last committed connection
+cursor; duplicate delivery is expected and deduplicated. Memory-only mode does
+not claim crash-resume continuity: after process loss it starts a new logical
+connection and obtains authorized snapshots rather than resuming from an ACK it
+did not durably retain.
+
+An omitted optional persistent-store configuration means memory-only recovery.
+It is not equivalent to `null`: the public builder should not use nullable
+configuration for this choice. Callers select `memory_state()` or
+`persistent_state(store)` explicitly.
+
+### Outbound operation journal
+
+Every retryable mutation is prepared before transmission with:
+
+- a stable `operationId`;
+- the negotiated client instance;
+- a canonical request digest;
+- creation time and deduplication deadline;
+- current status: prepared, sent, outcome known, or outcome unknown.
+
+The journal never blindly retries an operation after the server's advertised
+deduplication window. It asks for operation status when supported or surfaces an
+`operation_outcome_unknown` result that requires caller policy. Reusing `operationId`
+with a different canonical payload is a local error before network I/O.
+
+The API distinguishes acceptance from completion. For example, a prompt method
+returns a receipt after the server confirms the idempotent operation, while
+session events expose the eventual user-message upsert and activity lifecycle.
+
+### Delivery reader and application backpressure
+
+The network reader validates and durably reduces records independently of UI
+work, within configured bounds. Only after that transaction commits may it ACK
+the connection cursor. Public UI consumers observe bounded, revisioned
+snapshots plus optional coalesced change hints. If a UI consumer lags, the SDK
+discards only its hints and sends a newer authorized snapshot; it does not
+pause connection acknowledgement or omit canonical state.
+
+An application that must consume every event independently—for example, an
+audit sink—uses a separate logical connection with its own cursor,
+acknowledgement window, retention responsibility, and backpressure. Two such
+consumers MUST NOT share one ACK position. The SDK MUST NOT use an unbounded
+channel, silently drop authoritative state, or let a slow UI stall unrelated
+attachments.
+
+### Reconnect algorithm
+
+1. Stop sending new mutations when liveness is uncertain.
+2. Allow the in-flight transport to settle only until its bounded deadline.
+3. Obtain a current endpoint credential.
+4. Open a new connection and perform version/capability negotiation.
+5. Validate server identity and epoch.
+6. Present the logical connection ID, prior generation, stored authorization
+   context, rotating resume credential, and single last acknowledged connection
+   `afterCursor`.
+7. Process replay or an explicit snapshot-gap response to an atomic high-water
+   cursor.
+8. Reconcile pending operations by `operationId`.
+9. Publish `online` and resume queued caller work.
+10. Persist the newly rotated resume credential before retiring the old one.
+
+If authorization or the view set changed, the client accepts no replay from the
+old logical connection. It establishes a fresh one, atomically adopts its newly
+authorized SnapshotSet, and discards cached fields absent from that view. If the
+server epoch changed and replay continuity cannot be proven, the client uses
+snapshot recovery; it never assumes cursor continuity from a numeric value
+alone.
+
+### HTTP/SSE binding
+
+The v2 client uses one connection-level SSE stream rather than one stream per
+session. After the raw initialization exchange, it POSTs complete Client Remote
+Frames carrying the logical connection ID and active generation, and receives
+all server Remote Frames on the ordered SSE stream. SSE `id` equals the ACP
+delivery cursor's textual wire form. Reconnect sends the protocol cursor in the
+resume request; it MAY also send `Last-Event-ID` as an adapter optimization.
+The protocol field is authoritative so behavior matches WebSocket.
+
+Cookies use the configured cookie jar for routing affinity. They are never
+reported as proof of identity and correctness cannot require returning to the
+same process.
+
+### WebSocket binding
+
+The WebSocket connector performs endpoint authentication before ACP
+initialization. Native Clients place endpoint credentials in the authenticated
+handshake and never in the subprotocol string. A browser API that cannot set an
+Authorization header may offer only the security RFD's purpose-built,
+single-use ticket as the constrained second subprotocol value; the server
+selects only the ACP protocol value and never echoes the ticket. Each text
+message contains one complete remote record. Ping/pong maintains transport
+liveness; the negotiated ACP heartbeat confirms application progress.
+
+After reconnect, WebSocket uses the same adoption, cursor, replay, and operation
+reconciliation path as HTTP/SSE.
+
+### Multi-client API
+
+`RemoteSession` represents one attachment, not ownership of the durable
+session. Its methods expose the granted role/scopes and require expected
+revision or controller fencing where the protocol requires it. APIs distinguish:
+
+- `detach()` from privileged `terminate_session()`;
+- `cancel_activity(activity_id)` from whole-session cancellation;
+- `observe()` from authorized mutation;
+- `claim_interaction()` from compare-and-set `resolve_interaction()`.
+
+Permission and elicitation handlers consume durable pending-interaction
+objects. The SDK does not dispatch one JSON-RPC reverse request to every local
+handler and race their responses.
+
+### Compatibility surface
+
+The existing `HttpClient` remains a best-effort compatibility transport for v1
+and current v2 drafts. Its name and behavior MUST NOT imply durable recovery.
+The new logical remote client may use the same low-level adapters, but it is
+enabled only when the server negotiates `acp.remote.v2` and
+`capabilities.remote.core`.
+
+Stdio remains unchanged. A local adapter may implement the remote record layer
+for testing or proxying, but local ACP does not require persistence, endpoint
+OAuth, or reconnection.
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+Rust applications can keep one stable client object while networks and serving
+nodes change underneath it. Callers receive typed recovery and conflict states
+instead of a generic connection error, and the same code can choose SSE or
+WebSocket without changing session semantics.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+Implementation is staged in the Rust SDK repository:
+
+1. Extract a complete-record HTTP/SSE and WebSocket adapter interface from
+   `agent-client-protocol-http` without changing its compatibility API.
+2. Add the remote record, cursor, acknowledgement, and typed remote-error types
+   generated from the protocol schema.
+3. Implement the deterministic reducer and in-memory state store.
+4. Add the operation journal and status reconciliation.
+5. Add authentication, reconnect supervision, and credential rotation.
+6. Add durable session attachments and pending interactions.
+7. Add an opt-in encrypted persistent-store integration behind a separate
+   feature; do not select an application storage backend implicitly.
+8. Run the shared fault suite against SSE and WebSocket clients and servers.
+
+Protocol schema changes land in this repository first. Runtime commits reference
+the matching schema version and MUST NOT invent provisional `_meta` keys for
+cursor, identity, operation, or authorization semantics.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Why not reconnect inside the existing `HttpClient`?
+
+Reopening a socket is the small part of recovery. Correct reconnect requires
+persisted identity, version renegotiation, session adoption, replay, pending
+operation reconciliation, authorization changes, and application backpressure.
+Hiding that inside a stateless wire adapter would create unsafe automatic
+retries and different semantics between SSE and WebSocket.
+
+### Does the SDK promise exactly-once callbacks to application code?
+
+Only when the application transactionally records its own side effect with the
+ACP cursor. Otherwise callbacks may repeat after a crash. The SDK guarantees
+ordered, deduplicated state within its store and idempotent committed protocol
+mutations within the server's declared window.
+
+### Why require a state-store abstraction?
+
+Desktop, server, browser-adjacent, and embedded clients have different security
+and persistence needs. The protocol needs durable recovery semantics without
+forcing one database, keychain, or encryption library into the core SDK.
+
+### Can the client switch from SSE to WebSocket during recovery?
+
+Yes, when both bindings were advertised under the one negotiated
+`acp.remote.v2` profile and endpoint policy permits it. The logical resume
+request, cursor, operation journal, and authorization checks are
+transport-independent.
+
+## Revision history
+
+- 2026-08-27: Initial working draft.

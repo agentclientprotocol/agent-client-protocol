@@ -5,6 +5,20 @@ title: "Streamable HTTP & WebSocket Transport"
 - Author(s): [alexhancock](https://github.com/alexhancock), [jh-block](https://github.com/jh-block)
 - Champion: [anna239](https://github.com/anna239)
 
+<Warning>
+  This RFD defines the current best-effort v1 transport mechanics. Its v2
+  reliability roadmap, per-session stream topology, and connection-owned session
+  lifecycle are being reconsidered by the [ACP Remote
+  drafts](./remote/overview.mdx). Those drafts add authenticated identity,
+  connection-independent attachments, ordered replay, retry-safe mutations, and
+  multi-client arbitration. Implementations must not describe the current
+  framing alone as the ACP Remote v2 profile. For that profile, this document's
+  references to a nonexistent `initialized` message, rejection of JSON-RPC
+  batches, per-session streams, and destruction of Sessions on WebSocket close
+  or connection DELETE are superseded and non-normative; the Remote drafts'
+  lifecycle and reliability rules control.
+</Warning>
+
 ## Elevator pitch
 
 > What are you proposing to change?
@@ -404,8 +418,11 @@ Yes. A client may call `session/new` multiple times within a single `Acp-Connect
 
 ### How does this interact with authentication?
 
-[ACP authentication](/protocol/v2/authentication) is orthogonal and layered on
-top via HTTP headers, query parameters, or WebSocket subprotocols.
+[ACP Agent authentication](/protocol/v2/authentication) is distinct from remote
+endpoint authentication. The proposed [Remote Security and Identity
+RFD](./remote/security-and-identity.mdx) requires authenticated HTTPS/WSS before
+ACP initialization. Generic bearer or refresh tokens must not be placed in URL
+query parameters or WebSocket subprotocol values.
 `Acp-Connection-Id` and `Acp-Session-Id` are transport-level identifiers, not
 auth tokens.
 

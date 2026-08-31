@@ -1,0 +1,738 @@
+---
+title: "ACP Remote Host Services"
+---
+
+Author(s): ACP Remote working draft
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+ACP should grow an optional host-services layer for remote and multi-client
+deployments. The layer lets one ACP authority expose discoverable agents,
+models, sessions, conversations, resources, terminals, review artifacts,
+customizations, automations, and telemetry without replacing ACP's existing
+agent-to-client interaction model.
+
+The proposal has two parts:
+
+1. an extensible resource, subscription, snapshot, and event substrate for
+   durable observable state; and
+2. typed services for operations whose validation, authorization, side effects,
+   or lifecycle deserve a domain-specific contract.
+
+This is deliberately not a mechanical port of Agent Host Protocol (AHP)
+channels or reducers. ACP keeps typed requests such as `session/new` and
+typed updates such as `session/update`. The generic substrate supplies common
+identity, discovery, replay, and observation semantics around those concepts.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+ACP is primarily a point-to-point protocol between one Client and one Agent.
+Its strongest concepts are already useful remotely:
+
+- capability negotiation during `initialize`;
+- Agent-owned sessions and the `session/new`, `session/list`, `session/resume`,
+  `session/close`, `session/prompt`, and `session/cancel` lifecycle;
+- typed `session/update` values for messages, plans, tool calls, diffs,
+  terminals, configuration, usage, and notices;
+- bidirectional requests for permissions, elicitation, MCP, and, in v1,
+  Client-provided filesystem and terminal operations;
+- stable message and tool-call identifiers; and
+- extensible tagged unions and `_meta`.
+
+Those concepts do not yet form a complete host/control-plane contract. A
+remote deployment still needs to answer questions such as:
+
+- Which agents and models are available at this endpoint?
+- Which durable sessions exist, and how does a second Client observe one?
+- How are multiple chats, queued prompts, drafts, and concurrent steering
+  represented?
+- How does a Client subscribe to current state without replaying every update?
+- Which resources can be read, watched, edited, or served in the reverse
+  direction?
+- How are terminal output, changesets, annotations, automation runs, and
+  telemetry recovered after reconnect?
+- Which state is shared by all collaborators, private to a principal, or local
+  to one connection?
+
+The remote transport and session replay drafts solve portions of delivery and
+session restoration, but they do not define a general observable host model.
+AHP fills much of this space, but adopting AHP as a second protocol would make
+ACP applications implement two overlapping session, message, tool, resource,
+and capability systems.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+### Design principles
+
+1. **ACP remains the agent protocol.** Existing ACP methods and update types
+   remain the canonical way to start prompts, stream model output, request
+   permission, elicit input, and report tool execution.
+2. **Host services are optional capabilities above one remote profile.** A
+   local stdio Agent need not implement a catalog, subscriptions,
+   collaboration, or automation. A remote peer negotiates exactly the
+   `acp.remote.v2` profile; it does not negotiate separate core, shared, or
+   Host profiles.
+3. **Resources identify observable state; services perform behavior.** A
+   resource can be snapshotted and subscribed to. Starting a turn, writing a
+   file, claiming a terminal, or approving a tool remains a typed request.
+4. **Resource URIs and ACP paths remain distinct.** New `resourceUri`,
+   `workspaceUri`, and content-reference URI fields are absolute URIs. Existing
+   ACP v2 `path` and `cwd` fields remain absolute platform path strings; this
+   RFD does not reinterpret them as `file:` URIs. A negotiated workspace
+   mapping relates the two namespaces.
+5. **The wire format does not require shared reducers.** A server may use
+   reducers internally, but Clients only need the specified snapshot and event
+   application rules. This permits thin, non-JavaScript Clients and lets ACP
+   evolve domain state independently.
+6. **Mutations are reliable RPC operations.** Every side-effecting remote
+   request carries the canonical `operationId` field and returns a typed
+   accepted, rejected, pending, or completed result. A notification is not
+   used when losing the mutation would leave an ambiguous outcome.
+7. **Authorization is evaluated per operation and resource.** A subscription
+   proves neither permission to mutate nor permission to see every view of the
+   same resource.
+8. **Shared and private state are explicit.** State declares whether it is
+   authority-wide, session-shared, principal-private, or connection-local.
+   Read markers, drafts, credential state, and personal review decisions must
+   not accidentally become global.
+9. **Durability is composable.** Host services use the ACP Remote connection
+   epoch, cursors, replay, acknowledgements, and snapshot fallback defined by
+   the remote reliability RFDs instead of inventing service-specific reconnect
+   rules.
+
+### One profile and a capability dependency graph
+
+ACP Remote has one profile identifier: `acp.remote.v2`. The profile guarantees
+the core delivery and security behavior; optional functionality is negotiated
+through capabilities rather than by inventing profile suffixes.
+
+| Capability set                       | Dependency                 | Contract                                                                                                                                                                                                                         |
+| ------------------------------------ | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `capabilities.remote.core`           | `acp.remote.v2`            | Required for the profile. Endpoint authentication, logical connection identity, ordered delivery, replay/snapshot recovery, acknowledgement, `operationId` deduplication, limits, and common errors are an indivisible baseline. |
+| `capabilities.remote.sharedSessions` | `capabilities.remote.core` | Adds authenticated session attachments, canonical `sessionVersion`, durable pending interactions, claims, compare-and-set mutation, arbitration, and private/shared projections.                                                 |
+| `capabilities.remote.hostServices`   | `capabilities.remote.core` | Adds the resource substrate and independently advertised catalog, workspace, terminal, artifact, customization, automation, and telemetry services in this RFD.                                                                  |
+
+An implementation MUST NOT advertise `sharedSessions` or `hostServices` without
+`core`. The two optional capability sets are independent: for example, a Host
+may expose a catalog or workspace without supporting collaborative sessions.
+The three markers are capability sets, not three conformance profiles.
+Subfeatures inside `hostServices` remain independently advertised; claiming
+full AHP parity requires both optional sets and every Host subfeature.
+
+The Host subfeature registry for this RFD is exact. Each field below is an
+optional support marker under `capabilities.remote.hostServices`; omission or
+`null` means unsupported, following the existing ACP v2 support-marker rule.
+Future subfeatures require a registry addition rather than an ad hoc nested
+name.
+
+| Host subcapability path                           | Contract included in the group                                                                                                               |
+| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `capabilities.remote.hostServices.catalogs`       | Authority, Agent/provider/model, and live Session catalogs; configuration resolution and completion.                                         |
+| `capabilities.remote.hostServices.resources`      | Resource discovery/get/subscribe/unsubscribe, content references, symmetric operations, permission grants, and watches.                      |
+| `capabilities.remote.hostServices.workspaces`     | Absolute workspace URI-to-path mappings, membership, protected-primary rules, and conditional workspace mutation.                            |
+| `capabilities.remote.hostServices.terminals`      | Interactive terminal resources, fenced input/claims, scrollback, command detection, and lifecycle.                                           |
+| `capabilities.remote.hostServices.artifacts`      | Durable changesets, review operations and decisions, annotations, and their authorized views.                                                |
+| `capabilities.remote.hostServices.customizations` | Agents, plugins, skills, prompts, rules, hooks, virtual resources, and enablement state.                                                     |
+| `capabilities.remote.hostServices.mcp`            | MCP server discovery/lifecycle, the constrained MCP-over-ACP surface, and MCP App routing subject to a matching Client rendering capability. |
+| `capabilities.remote.hostServices.automations`    | Automation definitions, trigger discovery, scheduling, runs, cancellation, and retained history.                                             |
+| `capabilities.remote.hostServices.telemetry`      | Advertised OTLP log, trace, and metric streams with filters, correlation, and explicit durability.                                           |
+
+Core owns delivery/recovery SnapshotSets, capability negotiation, common
+progress, and common errors. `sharedSessions` owns Session-event subscriptions,
+attachments, multi-chat, and collaboration. In particular, neither generic
+resource subscription nor multi-chat is implied merely by advertising the
+`hostServices` parent marker. Full `acp.remote.v2.host` conformance requires
+`core`, `sharedSessions`, `capabilities.remote.sharedSessions.multiChat`,
+`capabilities.remote.sharedSessions.multiChat.fork`,
+`capabilities.remote.sharedSessions.multiChat.sideChat`, `hostServices`, and all
+nine markers above.
+
+### The host resource substrate
+
+An initialized `acp.remote.v2` endpoint may advertise
+`capabilities.remote.hostServices.resources`. The capability publishes supported
+resource kinds, URI templates, snapshot/event schema versions, supported
+views, and retention limits.
+
+A resource descriptor contains at least:
+
+| Field           | Meaning                                                                          |
+| --------------- | -------------------------------------------------------------------------------- |
+| `resourceUri`   | Absolute, stable resource URI.                                                   |
+| `kind`          | Extensible kind such as `session`, `chat`, `terminal`, or `automation_run`.      |
+| `schemaVersion` | Version of the resource's snapshot and event payloads.                           |
+| `revision`      | Current resource revision, independent of transport message IDs.                 |
+| `stateClass`    | Authorization/state scope: `authority`, `session`, `principal`, or `connection`. |
+| `durability`    | Recovery class: `durable`, `connection_lifetime`, or `ephemeral`.                |
+| `operations`    | Operations presently available to the authenticated principal.                   |
+| `views`         | Optional named or parameterized projections.                                     |
+| `retention`     | Optional lower bounds and limits for snapshot, event replay, and history.        |
+| `_meta`         | Extension metadata under ACP's normal propagation rules.                         |
+
+`stateClass` and `durability` are orthogonal. `stateClass` decides whose view
+may contain the state. `durable` resources can be reconstructed after a logical
+connection ends, subject to authorization and advertised retention;
+`connection_lifetime` resources survive physical-generation replacement only
+while their logical connection remains resumable; and `ephemeral` resources
+offer no replay or reconstruction guarantee. A descriptor cannot use a value
+outside these registries.
+
+The initial common surface uses ACP's two-segment method convention:
+
+- `resource/discover`: discover descriptors and URI templates, with cursor
+  pagination;
+- `resource/get`: obtain a revisioned snapshot, optionally through a view;
+- `resource/subscribe`: atomically obtain a snapshot and a replay/live
+  boundary;
+- `resource/unsubscribe`: release a subscription; and
+- `resource/update`: deliver a typed projection for a subscribed resource.
+
+Names are presented for discussion; generated Rust method and type names will
+follow the repository's `noun/verb` naming rules if this RFD proceeds to
+schema work.
+
+`resource/subscribe` accepts an absolute `resourceUri`, an optional view, an
+optional opaque `afterEventCursor`, and delivery preferences. The cursor is a
+resource-domain cursor, not a connection delivery cursor; Clients compare it
+only for equality and pass it back unchanged.
+
+The result always contains a `subscriptionId`, the authorized descriptor, and
+one required, non-null `initialState` tagged union:
+
+- `snapshot` contains the authorized snapshot, its `resourceRevision`, and the
+  `throughEventCursor` of the same atomic cut;
+- `replay` contains the accepted `afterEventCursor` and a
+  `throughEventCursor`; retained events strictly after the former through the
+  latter follow before live delivery; or
+- `live_only` contains a `throughEventCursor` and is valid only when the
+  descriptor declares `durability: "ephemeral"`; only later events are
+  observable.
+
+For a stateful resource, omission of `afterEventCursor` selects `snapshot`. If
+it is supplied, the Host may return `replay` when the cursor is retained or an
+explicit `snapshot` fallback when it is not; the tag makes fallback visible.
+There is no nullable or omitted snapshot that a Client must guess how to
+interpret. The subscribe response is an ordering barrier: no projected event
+strictly after `throughEventCursor` may overtake the response, and a `replay`
+branch reaches that boundary before live events begin.
+
+### One canonical domain event, several projections
+
+The Host commits a state change exactly once as a canonical domain event. Its
+`sourceEventId` is stable across retention, replay, and every authorized
+projection. A domain event contains its authority and domain scope, event type
+and payload, affected entity/resource revisions, optional originating
+`operationId`, optional authorized actor provenance, and durability class.
+
+The same event may be projected as:
+
+- an existing typed `session/update` for ACP session consumers;
+- a default-chat or multi-chat view for conversation consumers; and
+- a `resource/update` for a generic resource subscription.
+
+Every durable projection carries the same `sourceEventId`. These projections
+are views of one committed event, not independently committed changes, and a
+Client that consumes overlapping views deduplicates domain state by
+`sourceEventId`.
+
+The Reliable Remote Transport wraps each projection in a connection delivery
+record with its own server epoch, sequence, connection cursor, and optional
+`operationId`. Connection cursors order and acknowledge delivery; they are not
+resource revisions or domain event identities. The connection wrapper may
+differ when the same source event is replayed to different logical
+connections, while `sourceEventId` and domain revisions remain unchanged.
+
+Every `resource/update` therefore contains subscription identity,
+`resourceUri`, `sourceEventId`, revision before and after the event, a
+domain-specific event type and payload, optional authorized provenance, and an
+explicit durability classification. It does not contain or invent a second
+connection cursor inside the JSON-RPC payload.
+
+Events are one of three application shapes:
+
+- **replace**: replace the resource or a named top-level field;
+- **patch**: apply a schema-defined, idempotent patch; or
+- **append**: append an item carrying its own stable identifier.
+
+Domain schemas must define exact application and duplicate rules. There is no
+untyped JSON Patch escape hatch and no generic client `dispatchAction` method.
+Typed service requests make invalid transitions, authorization failures, and
+conflicts machine-readable.
+
+Stateless streams, such as live telemetry, use the same subscription discovery
+surface but advertise `durability: "ephemeral"`; Clients can then distinguish
+intentional loss from a replayable stream.
+
+### Authority, principal, client, session, chat, and activity identity
+
+The host layer uses distinct identities:
+
+- an **authority ID** identifies the server-side state domain and survives a
+  process restart or load-balancer hop;
+- a **server epoch** scopes connection-delivery cursor continuity; changing it
+  does not by itself change canonical Session or resource identity;
+- a **principal ID** is derived from authenticated identity and is never
+  supplied as an unverified claim by the Client;
+- a **client instance ID** distinguishes concurrent devices or application
+  instances for one principal;
+- a **connection ID** identifies one negotiated logical connection, which may
+  span successively fenced physical transport generations;
+- a **session ID** keeps ACP's Agent-owned session identity;
+- an optional **chat ID** identifies a conversation inside a session; and
+- an **activity ID** identifies one accepted Agent execution. A conversational
+  turn is an activity subtype and durable projection, not a second wire
+  identity.
+
+Resource URIs are stable identifiers, while these typed IDs remain available
+in existing ACP request and update shapes. Canonical Session events are scoped
+by `(authorityId, sessionId, sessionEpoch)` and use `sessionVersion`; resource
+events are scoped by `(authorityId, resourceUri)` and their resource revision.
+Those domain identities can survive a delivery `serverEpoch` change. SDKs key
+resource caches by authority plus resource URI, never by a URI alone.
+
+### Agent, provider, and model catalog
+
+The first host resource is an authority catalog. It complements, rather than
+replaces, the public ACP Agent Registry.
+
+The catalog exposes live endpoint-specific entries for:
+
+- available Agent implementations and providers;
+- display information, descriptions, icons, and trusted-content policy;
+- available model IDs, provider IDs, names, context and output limits,
+  modality support, policy state, and configuration schemas;
+- Agent operations and capabilities, including multi-chat, forking, side
+  chats, working-directory behavior, tools, resources, and automations;
+- OAuth protected-resource metadata and required authorization scopes; and
+- endpoint configuration, completion triggers, terminal command conventions,
+  and supported host resource templates.
+
+`initialize` returns enough catalog metadata to bootstrap a simple Client. A
+Client needing live changes subscribes to the catalog resource. Selecting an
+Agent or model continues to use ACP session configuration and prompt fields;
+the catalog does not add a competing selection mechanism.
+
+### Sessions, chats, turns, and history
+
+ACP session lifecycle methods remain authoritative. Host services add:
+
+- revisioned, subscribable session summaries and session state;
+- asynchronous creation progress and typed failure state when creation cannot
+  complete inside one RPC;
+- active principal/client presence with server-defined, advertised expiry;
+- working-directory membership and protected-primary-directory rules;
+- explicit shared versus principal-private summary fields;
+- paginated durable history and retained-event cursors; and
+- optional multiple chats under one session.
+
+For compatibility, every session has a default chat. Existing
+`session/prompt`, `session/cancel`, and `session/update` target that chat when
+no `chatId` is present. The multi-chat capability adds typed chat operations
+and optional `chatId` fields; it does not require existing one-chat Agents to
+change their internal model.
+
+The chat service supports:
+
+- create and close with an explicit client-requested `operationId` and
+  server-issued chat IDs;
+- selection of a default chat;
+- full, read-only, or hidden interactivity;
+- forks through a stable completed turn;
+- side chats with a context snapshot but no copied visible transcript;
+- tool-created worker chats with links in both chat origin and tool result;
+- per-chat subsets of session working directories;
+- bounded transcript attachments across sessions; and
+- advisory ancestry that is validated against missing-parent and cycle abuse.
+
+Turn state includes the accepted user message, stable message IDs, ordered
+response content, status, timestamps, usage, active tool calls, input-needed
+state, completion/cancellation/error reason, and resumability. History paging
+loads immutable completed turns; it does not mutate or renumber earlier
+messages.
+
+The current ACP prompt lifecycle remains the behavioral API. The host state is
+its durable projection:
+
+- accepting `session/prompt` creates an activity, returns its `activityId`, and
+  projects a conversational turn keyed by that same ID;
+- `session/update` continues to stream messages, thoughts, plans, tool calls,
+  usage, terminals, and notices;
+- each durable update and its session, chat, and resource projections carry
+  one shared `sourceEventId` from the canonical domain event;
+- `session/cancel` identifies the target active `activityId`; and
+- a resumable error may be continued by a typed activity-resume operation with
+  an `operationId` and expected activity revision.
+
+### Steering, queued messages, and drafts
+
+These are separate concepts and must not be inferred from repeated
+`session/prompt` calls:
+
+- **steering** targets the currently active `activityId` and has an explicit
+  accepted, rejected, or too-late result;
+- **queued messages** have stable IDs, FIFO order, and compare-and-swap reorder
+  semantics; and
+- **drafts** are principal-private by default. A Client may explicitly create
+  a collaborative shared draft resource.
+
+Servers advertise whether they support steering, queueing, shared drafts, and
+cross-client editing. Authorization and an optional controller lease determine
+who may cancel or steer an activity. Every shared mutation carries `operationId` and
+the applicable expected `sessionVersion`, chat version, queue revision, or
+draft revision. A stale compare-and-set fails with the common
+`revision_conflict` error carrying the relevant domain detail and authorized
+current `sessionVersion` or other revision.
+
+### Tools, permissions, and elicitation
+
+ACP's v2 tool-call upsert, content-chunk, permission, and elicitation models are
+the starting point. Host services add durable discovery and collaboration:
+
+- a session tool registry containing Agent, Client-contributed, and MCP tools;
+- contributor principal/client identity and a fencing token for Client-owned
+  execution;
+- streaming, awaiting-confirmation, running, authentication-required,
+  awaiting-result-confirmation, completed, failed, and cancelled states;
+- partial/final input, structured output, content references, edit previews,
+  terminals, and worker-chat results;
+- typed confirmation options and risk/safety decisions;
+- a session-level `inputNeeded` projection so a Client can discover required
+  interaction without subscribing to every chat; and
+- deterministic behavior when the owning Client disconnects or returns a late
+  result after its lease expires.
+
+Local or non-shared ACP elicitation may remain a direct Agent-to-Client request.
+Under `capabilities.remote.sharedSessions`, however, permission, elicitation,
+Client-tool execution, resource authorization, tool confirmation, and result
+confirmation are always durable pending interactions—even if only one Client
+is currently eligible to answer.
+
+Every shared responder first acquires or renews a durable claim by
+compare-and-set. Resolving the interaction requires `interactionId`, a claim
+fencing token, `expectedInteractionRevision`, and `operationId`. Claim,
+release, answer, decline, cancel, expiry, and completion are canonical domain
+events. A disconnect cannot strand the interaction, and “first packet wins” is
+never the arbitration rule. Form and URL modes, validation, tool-call
+association, and sensitive-data guidance continue to follow the ACP
+elicitation RFD. Collaborative form editing uses field-level revisions in the
+same durable interaction rather than connection-local drafts.
+
+### Content references and resource operations
+
+`ContentRef` provides a common way to move large or reusable content without
+embedding it in every update. Its new `resourceUri` field is an absolute URI;
+it may also contain media type, size, integrity digest, revision/ETag,
+byte-range support, and a short-lived nonce or authorization context.
+
+### Workspace URI-to-path mapping
+
+Host resources and existing ACP v2 paths use related but different namespaces.
+A session exposes an authorized workspace mapping with at least:
+
+| Field             | Meaning                                                                                                      |
+| ----------------- | ------------------------------------------------------------------------------------------------------------ |
+| `workspaceId`     | Stable typed identifier used by session configuration.                                                       |
+| `workspaceUri`    | Absolute URI naming the workspace as a Host resource.                                                        |
+| `pathRoot`        | Absolute platform path string used by existing ACP v2 `path` and `cwd` fields inside that Agent environment. |
+| `resourceUriRoot` | Optional absolute URI prefix for addressable workspace content when it differs from `workspaceUri`.          |
+
+For example, `workspaceUri` may be
+`https://agents.example.com/workspaces/ws_7`, while `pathRoot` is
+`/workspace/project`. The existing ACP path `/workspace/project/src/main.rs`
+remains a path string. Its mapped Host resource may be
+`https://agents.example.com/workspaces/ws_7/files/src/main.rs`; Clients MUST
+NOT infer that URI by string concatenation unless the mapping explicitly
+advertises the rule. On Windows, an existing ACP path may be
+`C:\workspace\project\src\main.rs` while its `resourceUri` remains an
+absolute URI.
+
+All path strings carried by ACP remain absolute. Relative values such as
+`src/main.rs` are invalid. All new URI fields are absolute and independently
+validated; a `file:` URI is not substituted into a v2 field whose schema says
+it contains a path.
+
+The typed resource service supports capability-gated operations in either
+direction:
+
+- read metadata or a bounded byte range;
+- write through create, replace, append, or range operations;
+- list with pagination;
+- resolve metadata and canonical URI without silently following unsafe links;
+- create containers;
+- copy, move, and delete;
+- request, inspect, and revoke a permission grant; and
+- create a recursive or non-recursive watch with include/exclude filters.
+
+Conditional writes use revisions or ETags. Large transfers use bounded chunks,
+range reads, integrity verification, or an authorized external transfer URL.
+The protocol defines URI normalization, traversal, symlink, case-sensitivity,
+and sandbox expectations for resources, plus absolute-path and workspace-root
+containment rules for existing ACP paths.
+
+A watch is a resource with a snapshot boundary and added, updated, moved, and
+deleted events. Overflow is explicit and forces a fresh snapshot; it never
+silently drops changes.
+
+### Terminals
+
+ACP v2's Agent-owned, display-only terminal output remains the baseline. An
+optional interactive-terminal service adds:
+
+- create, dispose, claim, release, resize, input, signal, clear, and title
+  operations;
+- a stable terminal resource with command, `workspaceId`, existing absolute
+  `cwd` path string, optional mapped `resourceUri`, owner/claim, status, exit
+  information, and bounded scrollback;
+- sequenced binary output chunks and command-detection records; and
+- associations with session, chat, activity, and tool call.
+
+Terminal input is a side effect. It carries `operationId`, terminal revision,
+and claim fencing token so reconnect cannot duplicate keystrokes. Servers
+report the common `operation_outcome_unknown` error if they cannot prove
+whether an input operation executed.
+
+### Changesets and annotations
+
+ACP diff and tool-call content remain the streaming presentation formats. A
+changeset service adds durable review state:
+
+- status, source turn/tool, file additions/deletions/moves/copies/changes, and
+  original/modified content references;
+- whole-changeset, file, and range review decisions;
+- server-declared operations with confirmation requirements, status, errors,
+  and optional follow-up content or external navigation; and
+- optimistic concurrency for clearing or editing a changeset.
+
+Review decisions are principal-scoped unless explicitly published as a shared
+team decision.
+
+An annotation service stores an absolute `resourceUri` and optional text range,
+session/chat/activity provenance, author principal, created/modified timestamps,
+resolved state, Markdown/text entries, and metadata. It supports typed create,
+update, resolve, and delete operations and a subscribable session annotation
+index.
+
+### Customizations, MCP, and MCP Apps
+
+The customization catalog models Agents, skills, prompts, rules, hooks,
+plugins, and MCP servers as typed resources. It supports:
+
+- load/error state;
+- global, workspace, session, and principal enablement;
+- nested containers and child enablement;
+- Client-published virtual resources with nonce and explicit lifetime;
+- writable-directory and invocation restrictions; and
+- typed update/remove operations with authorization and revision checks.
+
+ACP's native MCP configuration and MCP-over-ACP proposal remain the transport
+and invocation mechanisms. Host services add MCP server discovery, start/stop,
+authentication-required/error state, and associated resource/tool catalogs.
+
+MCP Apps are advertised as a Client capability. A Host only advertises an App
+view when the Client can sandbox and render it. MCP tool and resource messages
+may traverse ACP, while the App's `ui/*` iframe protocol remains between the
+Client and the view rather than becoming a second ACP state protocol.
+
+### Automations and runs
+
+An optional automation service provides durable host-owned scheduling without
+placing credentials in definitions.
+
+An automation contains a title, enabled flag, initial ACP message, session
+template, triggers, supported operations, revision, and metadata. The portable
+schedule trigger uses five-field cron plus an IANA time zone and defines
+day-field, daylight-saving, minimum-interval, and misfire semantics. Hosts may
+advertise additional event-trigger definitions with schemas.
+
+Manual execution carries `operationId`. Each occurrence creates at most one
+run resource containing trigger provenance, lifecycle, linked sessions,
+primary session, timestamps, failure, and cancellation state. Run history is
+bounded and pageable. The Host revalidates authentication, authorization,
+workspace access, model availability, and customization policy at execution
+time; tokens and grants are never copied into an automation definition.
+
+### Telemetry, progress, and errors
+
+Hosts may advertise OTLP/JSON log, trace, and metric streams. Each stream says
+whether it is ephemeral or retained and supports filters such as minimum log
+severity. Standard correlation attributes include authority, principal when
+permitted, session, chat, activity, JSON-RPC request, `operationId`, tool-call,
+terminal, automation, and run IDs.
+
+Long operations use a stable progress token and monotonic completed/total
+values. Completion, failure, and cancellation are terminal progress events.
+
+All service requests use ACP's common error envelope extended with:
+
+- a stable machine-readable code;
+- structured details;
+- retryability and optional retry delay;
+- conflicting current revision where applicable;
+- missing authentication resource or required authorization operation; and
+- correlation IDs and `operationId`.
+
+Rejected optimistic changes are responses or durable result events, not
+human-only rejection strings.
+
+### Field presence and nullability
+
+All fields introduced by this RFD are required and non-null unless the table
+below marks them optional. For a new optional field, omission has the stated
+meaning and explicit `null` is invalid. Empty strings are invalid for IDs,
+URIs, paths, revisions, cursors, and fencing tokens. Existing embedded ACP v2
+payloads, including their `_meta` fields, retain the presence and nullability
+rules of their defining RFDs.
+
+| Shape and field                                                                                             | Presence                                  | Is `null` valid? | Omission meaning                                                                                                                  |
+| ----------------------------------------------------------------------------------------------------------- | ----------------------------------------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `capabilities.remote.core`                                                                                  | Required when `acp.remote.v2` is selected | No               | Profile negotiation is invalid.                                                                                                   |
+| `capabilities.remote.sharedSessions`                                                                        | Optional                                  | Yes              | Omission or `null` means shared attachments and durable interactions are unsupported.                                             |
+| `capabilities.remote.sharedSessions.multiChat`, `.multiChat.fork`, and `.multiChat.sideChat`                | Optional                                  | Yes              | Omission or `null` means that multi-chat feature is unsupported.                                                                  |
+| `capabilities.remote.hostServices`                                                                          | Optional                                  | Yes              | Omission or `null` means Host services are unsupported.                                                                           |
+| The nine registered support-marker fields inside `capabilities.remote.hostServices`                         | Optional                                  | Yes              | Omission or `null` means that Host service group is unsupported.                                                                  |
+| Descriptor `resourceUri`, `kind`, `schemaVersion`, `revision`, `stateClass`, `durability`, and `operations` | Required                                  | No               | Invalid descriptor. `operations` may be empty.                                                                                    |
+| Descriptor `views`                                                                                          | Optional                                  | No               | Only the default view is available.                                                                                               |
+| Descriptor `retention`                                                                                      | Optional                                  | No               | No retention lower bound is promised beyond negotiated `capabilities.remote.core`.                                                |
+| `resource/discover` request `cursor`                                                                        | Optional                                  | No               | Begin the first page.                                                                                                             |
+| `resource/discover` result `nextCursor`                                                                     | Optional                                  | No               | There is no next page.                                                                                                            |
+| `resource/get` request `view` and `atRevision`                                                              | Optional                                  | No               | Use the default authorized view and current revision.                                                                             |
+| `resource/subscribe` request `view`, `afterEventCursor`, and `delivery`                                     | Optional                                  | No               | Use the default view, request a current snapshot, and use server delivery defaults.                                               |
+| `resource/subscribe` result `subscriptionId`, descriptor, and `initialState`                                | Required                                  | No               | Invalid response. `initialState` is exactly one `snapshot`, `replay`, or eligible `live_only` variant.                            |
+| `snapshot` variant snapshot, `resourceRevision`, and `throughEventCursor`                                   | Required in that variant                  | No               | Invalid atomic snapshot boundary.                                                                                                 |
+| `replay` variant `afterEventCursor` and `throughEventCursor`                                                | Required in that variant                  | No               | Invalid retained replay boundary.                                                                                                 |
+| `live_only` variant `throughEventCursor`                                                                    | Required in that variant                  | No               | Invalid live boundary; the variant is forbidden unless descriptor durability is `ephemeral`.                                      |
+| `sourceEventId`, event type/payload, durability, scope, and affected revisions on a domain event/projection | Required                                  | No               | Invalid event or projection.                                                                                                      |
+| Domain event/projection `operationId`                                                                       | Optional                                  | No               | The event was not caused by a Client mutation or the association is unavailable.                                                  |
+| Actor principal, participant, and Client-instance provenance                                                | Optional                                  | No               | The value is unavailable or redacted for this authorized view.                                                                    |
+| Workspace `workspaceId`, `workspaceUri`, and `pathRoot`                                                     | Required                                  | No               | Invalid workspace mapping.                                                                                                        |
+| Workspace `resourceUriRoot`                                                                                 | Optional                                  | No               | No URI derivation rule is advertised; use explicit resource descriptors.                                                          |
+| `ContentRef.resourceUri`                                                                                    | Required                                  | No               | Invalid content reference.                                                                                                        |
+| Content size, media type, digest, revision/ETag, byte-range support, and nonce/authorization context        | Optional                                  | No               | The sender makes no assertion or offers no such transfer feature.                                                                 |
+| Interactive terminal mapped `resourceUri`                                                                   | Optional                                  | No               | Only `workspaceId` plus the existing absolute `cwd` path identifies the location.                                                 |
+| `operationId` on every side-effecting request                                                               | Required                                  | No               | Invalid remote mutation.                                                                                                          |
+| Expected revision on a mutation that permits unconditional write                                            | Optional                                  | No               | No compare-and-set precondition; shared-interaction resolution is not in this category and always requires its expected revision. |
+| Error recovery data and actor-visible correlation fields                                                    | Optional                                  | No               | Unavailable or redacted.                                                                                                          |
+
+Every service-specific schema added after this RFD MUST extend this table before
+schema generation if it introduces another optional or nullable field.
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+A local editor can continue to launch a single stdio Agent and use ordinary
+ACP. A remote collaborative Client can connect to an ACP Host, authenticate,
+discover the available Agents, subscribe to its session catalog, resume a
+session, and observe the same typed messages and tools as a local Client.
+
+Another authorized Client can join without taking over the first Client's
+identity. It receives an atomic snapshot and replay boundary, sees shared turn
+state, and can act only within its role. Private drafts and read markers remain
+private. If either Client disconnects, durable events and idempotent mutations
+resolve the gap without guessing whether a prompt, terminal input, or approval
+was applied.
+
+Host implementers can introduce a new resource kind without redesigning
+transport and replay, while important behavior remains governed by typed ACP
+services. AHP gateways can map their state into these resources, but native ACP
+implementations do not need AHP reducers or AHP channel URIs.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+### Phase 0: remote correctness prerequisites
+
+- Complete the HTTP/WebSocket connection profile, authenticated principal
+  model, logical-connection identity, physical generation, delivery
+  `serverEpoch`, replay cursor, acknowledgement, idempotency, and authorization
+  RFDs.
+- Define conformance tests for disconnect boundaries, duplicate operations,
+  stale revisions, slow consumers, and snapshot/live ordering.
+- Negotiate the single `acp.remote.v2` profile and
+  `capabilities.remote.core`; do not advertise `sharedSessions` until its
+  complete durable-interaction contract is present, or `hostServices` without
+  its `core` dependency. Advertise only Host subfeature markers whose complete
+  contracts are present.
+
+### Phase 1: host and conversation core
+
+- Add resource discovery, get, subscribe, unsubscribe, and update envelopes.
+- Add the authority Agent/model catalog and live session catalog.
+- Project existing ACP sessions and `session/update` streams into revisioned
+  session, chat, and turn resources.
+- Add multi-chat, fork, side-chat, turn history, steering, queue, shared/private
+  draft, and aggregate input-needed capabilities.
+- Extend the Rust SDK with a lossless resource store and typed subscription
+  handles; application broadcast lag must force automatic resnapshot rather
+  than silent permanent desynchronization.
+
+### Phase 2: workspace services
+
+- Add content references and symmetric resource operations.
+- Add watches with overflow/resnapshot behavior.
+- Extend display terminals with the optional interactive service.
+- Add durable changesets, review operations, and annotations.
+
+### Phase 3: extensibility and operations
+
+- Add customization catalogs and MCP lifecycle/state.
+- Add MCP Apps capability routing.
+- Add automation definitions, trigger discovery, executions, and run history.
+- Add telemetry streams, progress resources, common errors, and audit events.
+
+Each phase ships generated schemas and Rust conformance fixtures before being
+declared stable. Resource kinds and capability objects remain independently
+negotiable so implementations can adopt phases incrementally.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Why not adopt AHP unchanged?
+
+AHP solves many useful host-state problems, but it introduces a parallel chat,
+message, tool, elicitation, resource, capability, and error model. ACP already
+has strong typed equivalents for the core agent interaction. Reusing a small
+resource/subscription substrate while extending ACP services avoids duplicate
+application models and lets ACP fix remote delivery and authorization gaps.
+
+### Why not make every mutation a generic state action?
+
+Generic actions are compact, but they hide method-specific authorization,
+idempotency, validation, retry, and error semantics. A file write, prompt,
+terminal input, tool approval, and automation update have materially different
+risks. Typed requests make those contracts visible and generate better SDKs.
+
+### Does every Agent have to persist resources?
+
+No. Capabilities distinguish unsupported, ephemeral, connection-lifetime, and
+durable resources. A simple local Agent may expose only the existing session
+surface.
+
+### Is a chat the same as an ACP session?
+
+Not necessarily. Existing Agents may continue to model one session as one
+conversation. Hosts that support multiple related conversations can advertise
+the multi-chat capability and retain the existing session as their shared
+workspace/configuration boundary.
+
+### Does this require ACP v3?
+
+Most services can be additive. A major version is justified only if ACP adopts
+new mandatory identities, changes existing request result timing, makes
+`operationId` mandatory on existing mutations, or changes `session/update`
+ordering/replay guarantees in a way v2 peers cannot safely ignore. The schema
+work should first attempt capability-gated additions and isolate unavoidable
+breaks in a small v3 core.
+
+## Revision history
+
+- 2026-08-27: Initial working draft based on the ACP v2 RFD set and AHP `main`
+  at commit `b4016c0e02dd61393de268fa5e5f1a554d0ca611`.

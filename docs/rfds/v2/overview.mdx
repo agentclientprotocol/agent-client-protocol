@@ -43,6 +43,25 @@ Current RFDs with active maintainer focus that are targeting the v2 release
 
 Other RFDs will progress separately and are not dependent on breaking changes (specifically the new prompt lifecycle) and can land in either or both v1 and v2.
 
+### ACP Remote working drafts
+
+The [ACP Remote overview](../remote/overview.mdx) proposes completing the
+remote correctness foundation in v2 while v2 remains experimental. Its
+companion drafts cover [endpoint security](../remote/security-and-identity.mdx),
+[reliable HTTP/WebSocket delivery](../remote/reliable-transport.mdx),
+[multi-client sessions](../remote/multi-client-sessions.mdx),
+[host services](../remote/host-services.mdx),
+[AHP parity](../remote/ahp-parity.mdx), the
+[Rust client architecture](../remote/rust-client.mdx), and
+[fault conformance](../remote/conformance.mdx).
+
+These drafts are not yet accepted v2 changes. Before v2 moves to Preview, the
+working group should decide whether durable delivery identifiers, retry-safe
+mutation identities, connection-independent attachments, and the distinction
+between detach and session termination are v2 requirements. If v2 is frozen
+without those breaking foundations, they form the minimum justified ACP v3
+boundary.
+
 ### v2 Changes
 
 - Remove the dedicated session modes API from v2. This includes the `modes` session response fields, `session/set_mode`, `current_mode_update`, and the `SessionMode*` types.

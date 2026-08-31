@@ -1,0 +1,11 @@
+[package]
+name = "snake"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+crossterm = "0.28"
+rand = "0.9"
+
+[dev-dependencies]
+proptest = "1.6"

@@ -1,0 +1,635 @@
+---
+title: "AHP Parity for ACP Remote"
+---
+
+Author(s): ACP Remote working draft
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+ACP Remote should cover the useful functionality of Microsoft's Agent Host
+Protocol (AHP) natively, without requiring an ACP application to implement AHP
+as a second overlapping protocol.
+
+This RFD is the exhaustive parity ledger. It pins the comparison to AHP
+`main` commit
+[`b4016c0e02dd61393de268fa5e5f1a554d0ca611`](https://github.com/microsoft/agent-host-protocol/tree/b4016c0e02dd61393de268fa5e5f1a554d0ca611),
+maps every canonical method, notification, channel, state/action family,
+capability, version rule, and error family to an ACP target, and records AHP
+ambiguities that ACP should resolve rather than copy.
+
+Parity means that an application can implement the same user-visible host,
+session, conversation, workspace, tool, collaboration, customization,
+automation, and observability behavior using ACP concepts. It does not require
+wire compatibility with AHP or adoption of AHP's shared-reducer architecture.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+ACP already overlaps AHP in important areas: initialization, sessions,
+messages and thoughts, tools and permissions, elicitation, configuration,
+MCP, filesystem calls, terminal output, diffs, replay proposals, and remote
+transport proposals. AHP adds a broad Host-facing synchronized-state layer,
+including resource subscriptions, multiple Clients, multiple chats, resource
+watches, interactive terminals, changeset review, annotations, customizations,
+telemetry, and automations.
+
+Without an explicit ledger, ACP could add remote transport while still leaving
+applications dependent on AHP for the control plane. Conversely, copying all
+AHP actions would duplicate mature ACP concepts and inherit correctness and
+security gaps.
+
+### Audit baseline
+
+The authoritative inputs are:
+
+- the pinned [AHP source tree](https://github.com/microsoft/agent-host-protocol/tree/b4016c0e02dd61393de268fa5e5f1a554d0ca611);
+- the canonical [JSON-RPC message maps](https://github.com/microsoft/agent-host-protocol/blob/b4016c0e02dd61393de268fa5e5f1a554d0ca611/types/common/messages.ts);
+- the canonical [action registry](https://github.com/microsoft/agent-host-protocol/blob/b4016c0e02dd61393de268fa5e5f1a554d0ca611/types/common/actions.ts);
+- the [protocol overview](https://microsoft.github.io/agent-host-protocol/specification/overview.html),
+  [transport](https://microsoft.github.io/agent-host-protocol/specification/transport.html),
+  [lifecycle](https://microsoft.github.io/agent-host-protocol/specification/lifecycle.html),
+  [subscriptions](https://microsoft.github.io/agent-host-protocol/specification/subscriptions.html),
+  [authentication](https://microsoft.github.io/agent-host-protocol/specification/authentication.html),
+  and [versioning](https://microsoft.github.io/agent-host-protocol/specification/versioning.html);
+- every channel specification linked in the channel matrix below; and
+- the official [state](https://microsoft.github.io/agent-host-protocol/guide/state-model.html),
+  [action](https://microsoft.github.io/agent-host-protocol/guide/actions.html),
+  and [reconciliation](https://microsoft.github.io/agent-host-protocol/guide/reconciliation.html)
+  guides.
+
+The latest published AHP release at the time of this audit is v0.8.0, while the
+pinned source declares protocol 1.0.0 and its
+[changelog](https://github.com/microsoft/agent-host-protocol/blob/b4016c0e02dd61393de268fa5e5f1a554d0ca611/CHANGELOG.md)
+still labels 1.0.0 unreleased. Automations, automation runs, durable error
+response parts, and turn resume are therefore included for `main` parity but
+must be treated as an unstable external target.
+
+### Status legend
+
+| Status       | Meaning                                                                             |
+| ------------ | ----------------------------------------------------------------------------------- |
+| **Existing** | Current ACP v1 or v2 has a substantially equivalent native concept.                 |
+| **Partial**  | ACP has an overlapping concept but lacks material AHP semantics.                    |
+| **Missing**  | The audited ACP baseline has no native equivalent.                                  |
+| **Proposed** | The ACP target is specified by the Host Services RFD or a companion ACP Remote RFD. |
+
+A cell such as **Partial → Proposed** records both the current baseline and the
+planned parity disposition. “Existing” never means wire-identical.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+Adopt the ACP-native Host Services model in
+[ACP Remote Host Services](./host-services.mdx), together with the remote
+transport, authentication/authorization, reliable delivery, and Rust SDK
+work. The matrices below are normative scope requirements for claiming AHP
+functional parity.
+
+ACP has one remote profile, `acp.remote.v2`. Its dependency graph has
+`capabilities.remote.core` as the required root; both
+`capabilities.remote.sharedSessions` and `capabilities.remote.hostServices`
+depend on `core` and are otherwise independent. These are negotiated capability
+sets, not separate wire profiles. Individual Host services remain
+subcapabilities of `hostServices`. Full AHP parity requires both optional sets
+and every Host subcapability in this ledger.
+
+The full-parity Host set is exactly
+`capabilities.remote.hostServices.catalogs`,
+`capabilities.remote.hostServices.resources`,
+`capabilities.remote.hostServices.workspaces`,
+`capabilities.remote.hostServices.terminals`,
+`capabilities.remote.hostServices.artifacts`,
+`capabilities.remote.hostServices.customizations`,
+`capabilities.remote.hostServices.mcp`,
+`capabilities.remote.hostServices.automations`, and
+`capabilities.remote.hostServices.telemetry`. Omission or `null` of one of
+these v2 support markers means that group is unsupported. Core owns
+connection delivery and recovery SnapshotSets; `sharedSessions` owns
+Session-event subscriptions and multi-chat collaboration through
+`capabilities.remote.sharedSessions.multiChat`,
+`capabilities.remote.sharedSessions.multiChat.fork`, and
+`capabilities.remote.sharedSessions.multiChat.sideChat`; the generic
+`resource/*` discovery and subscription surface belongs to the `resources`
+Host group. Omission or `null` of a multi-chat support marker means unsupported;
+full AHP parity requires all three.
+
+## Canonical request-method matrix
+
+The pinned AHP `CommandMap` contains 30 Client-to-Host request methods.
+
+| AHP method                         | AHP requirement                                                                            | ACP status                        | ACP native target                                                                                                                                                                                                                          |
+| ---------------------------------- | ------------------------------------------------------------------------------------------ | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `initialize`                       | First-message version, identity, locale, initial-subscription, and capability negotiation. | **Existing / Partial → Proposed** | Keep ACP `initialize`; add authority, principal/client-instance, host-resource, remote reliability, locale, and initial-subscription capabilities.                                                                                         |
+| `ping`                             | Connection-level liveness request, valid even outside subscriptions.                       | **Missing → Proposed**            | Standard ACP Remote application ping in addition to HTTP/WS keepalive.                                                                                                                                                                     |
+| `reconnect`                        | Re-establish by client ID, last server sequence, and subscription set; replay or snapshot. | **Partial → Proposed**            | Logical connection ID, physical generation, delivery `serverEpoch`, authenticated resume token, opaque connection cursor, atomic replay/SnapshotSet result, explicit missing views, and high-water mark.                                   |
+| `subscribe`                        | Subscribe to stateful or stateless URI; optional snapshot view and delivery latency.       | **Missing → Proposed**            | `resource/subscribe` under `hostServices.resources`, with absolute `resourceUri`, view, opaque `afterEventCursor`, delivery policy, authorized descriptor, tagged snapshot/replay/live-only initial state, and ordering barrier.           |
+| `createSession`                    | Client-selected URI, provider/config/workspaces, asynchronous ready/failure and progress.  | **Partial → Proposed**            | Preserve `session/new`; add `operationId`, async progress, selected catalog entry, revisioned session resource, and server-issued canonical URI.                                                                                           |
+| `disposeSession`                   | Dispose session and dependent chats.                                                       | **Existing / Partial → Proposed** | Preserve `session/close` and `session/delete`; specify shared-host authorization, cascade, tombstone, and idempotency.                                                                                                                     |
+| `createChat`                       | Create default/fork/side/worker chat inside a session.                                     | **Missing → Proposed**            | Optional typed multi-chat service; existing sessions retain a default chat.                                                                                                                                                                |
+| `disposeChat`                      | Present in canonical AHP types despite contradictory prose.                                | **Missing → Proposed**            | Explicit idempotent `chat/close` with retention/tombstone policy; avoid implicit lifetime ambiguity.                                                                                                                                       |
+| `createTerminal`                   | Create a terminal channel and initial claim.                                               | **Partial → Proposed**            | Extend ACP v2 display terminals with optional interactive `terminal/new`, server-issued ID/URI, existing absolute `cwd` path, workspace mapping, and lease.                                                                                |
+| `disposeTerminal`                  | Dispose terminal state/process.                                                            | **Partial → Proposed**            | Typed idempotent terminal disposal with authorization and final output boundary.                                                                                                                                                           |
+| `createResourceWatch`              | Create filtered recursive/non-recursive resource watch and returned channel.               | **Missing → Proposed**            | Typed watch creation returning a subscribable watch resource with snapshot boundary and overflow recovery.                                                                                                                                 |
+| `listSessions`                     | Cursor-paginated durable session summaries.                                                | **Existing / Partial → Proposed** | Preserve `session/list`; add authority pagination stability, shared/private fields, URI, revision, and live catalog subscription.                                                                                                          |
+| `resourceRead`                     | Symmetric UTF-8/base64 resource read.                                                      | **Partial → Proposed**            | Capability-gated symmetric read with absolute URI, byte ranges, bounded payload, revision, media type, and integrity.                                                                                                                      |
+| `resourceWrite`                    | Truncate/append/insert, create-only, and conditional ETag write.                           | **Partial → Proposed**            | Typed idempotent create/replace/append/range write with revision/ETag and sandbox policy.                                                                                                                                                  |
+| `resourceList`                     | List a resource container.                                                                 | **Missing → Proposed**            | Paginated typed listing with canonical absolute child URIs.                                                                                                                                                                                |
+| `resourceCopy`                     | Copy a resource.                                                                           | **Missing → Proposed**            | Idempotent copy with source revision and destination preconditions.                                                                                                                                                                        |
+| `resourceDelete`                   | Delete a resource.                                                                         | **Partial → Proposed**            | Idempotent typed deletion with recursive policy, precondition, tombstone, and authorization.                                                                                                                                               |
+| `resourceMove`                     | Move/rename a resource.                                                                    | **Missing → Proposed**            | Idempotent move with source/destination preconditions and explicit cross-authority restrictions.                                                                                                                                           |
+| `resourceResolve`                  | Stat, canonical/real path, symlink, MIME, timestamps, and ETag.                            | **Missing → Proposed**            | Metadata resolution with canonical URI and explicit symlink-follow policy.                                                                                                                                                                 |
+| `resourceMkdir`                    | Recursive container creation.                                                              | **Missing → Proposed**            | Idempotent container creation at an absolute URI.                                                                                                                                                                                          |
+| `resourceRequest`                  | Ask the receiver for a resource permission grant.                                          | **Partial → Proposed**            | Extend ACP permissions to resource operations with grant scope, duration, inspect/revoke, and machine-readable denial.                                                                                                                     |
+| `fetchTurns`                       | Page older turns into chat state by cursor.                                                | **Partial → Proposed**            | Immutable paginated turn-history query; do not mutate prior IDs or rely on replaying transient chunks.                                                                                                                                     |
+| `authenticate`                     | Push bearer token for RFC 9728 protected resource metadata.                                | **Partial → Proposed**            | Cover the authentication outcome through RFC 9728 endpoint OAuth before `initialize`; ACP carries no access token in JSON-RPC. Existing `auth/login`/`auth/logout` remains separate Agent/upstream authentication and is not this mapping. |
+| `resolveSessionConfig`             | Resolve full dynamic configuration schema/defaults before creation.                        | **Partial → Proposed**            | Extend session config options with catalog-selected, pre-create schema resolution.                                                                                                                                                         |
+| `sessionConfigCompletions`         | Dynamically complete values for one configuration option.                                  | **Missing → Proposed**            | Typed configuration-value completion request with schema revision and UTF-16/text rules where applicable.                                                                                                                                  |
+| `completions`                      | Message-input completions with trigger characters, attachments, and UTF-16 cursor.         | **Partial → Proposed**            | Reuse slash commands and completion discovery; add general trigger, attachment context, and stable UTF-16 cursor contract.                                                                                                                 |
+| `invokeChangesetOperation`         | Invoke a server-declared changeset/file/range operation.                                   | **Missing → Proposed**            | Typed changeset operation RPC with `operationId`, expected revision, confirmation, progress, result content, and external-navigation result.                                                                                               |
+| `listAutomationTriggerDefinitions` | Discover host-specific event trigger schemas.                                              | **Missing → Proposed**            | Automation trigger catalog resource and paginated schema query.                                                                                                                                                                            |
+| `runAutomation`                    | Idempotent manual run returning a durable run URI.                                         | **Missing → Proposed**            | Map AHP's request identity to canonical ACP `operationId` and return a durable run resource.                                                                                                                                               |
+| `fetchAutomationRuns`              | Page retained runs for an automation.                                                      | **Missing → Proposed**            | Immutable cursor-paginated run history with advertised retention.                                                                                                                                                                          |
+
+### Reverse request methods
+
+AHP's server command map permits the Host to call the Client for the following
+methods. Every direction is part of parity, not just Client-to-Host access.
+
+| AHP reverse method    | ACP status             | ACP native target                                                                                                      |
+| --------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `resourceRead`        | **Partial → Proposed** | Preserve ACP's bidirectional JSON-RPC and v1 Client filesystem use case through negotiated virtual-resource providers. |
+| `resourceWrite`       | **Partial → Proposed** | Same shape and permission semantics in either direction; no ambient Client filesystem access.                          |
+| `resourceList`        | **Missing → Proposed** | Reverse virtual-container listing.                                                                                     |
+| `resourceCopy`        | **Missing → Proposed** | Reverse copy only when provider advertises it.                                                                         |
+| `resourceDelete`      | **Missing → Proposed** | Reverse delete with Client policy/consent.                                                                             |
+| `resourceMove`        | **Missing → Proposed** | Reverse move with preconditions.                                                                                       |
+| `resourceResolve`     | **Missing → Proposed** | Reverse metadata/canonicalization.                                                                                     |
+| `resourceMkdir`       | **Missing → Proposed** | Reverse container creation.                                                                                            |
+| `resourceRequest`     | **Partial → Proposed** | Either peer may request a scoped grant; authenticated principal and provider remain distinct.                          |
+| `createResourceWatch` | **Missing → Proposed** | Either peer may expose a watch provider with explicit lifetime and replay/overflow policy.                             |
+
+## Notification matrix
+
+The canonical maps contain two Client notifications and nine Host
+notifications.
+
+| AHP notification             | Direction and semantics                                                              | ACP status             | ACP native target                                                                                                                                                           |
+| ---------------------------- | ------------------------------------------------------------------------------------ | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `unsubscribe`                | Client releases a subscription without awaiting a response.                          | **Missing → Proposed** | Prefer idempotent request when confirmation matters; notification form may be an optimization with server expiry.                                                           |
+| `dispatchAction`             | Client optimistically sends an unacknowledged generic state action with `clientSeq`. | **Missing**            | Deliberately do not copy. Use typed, idempotent RPC mutations and durable result events.                                                                                    |
+| `action`                     | Host broadcasts accepted/rejected globally sequenced action envelope.                | **Partial → Proposed** | One canonical domain event projected through `session/update`, chat views, or `resource/update`, retaining one `sourceEventId`; rejection remains a typed operation result. |
+| `root/sessionAdded`          | Ephemeral session-catalog insertion.                                                 | **Missing → Proposed** | Durable session-catalog resource event.                                                                                                                                     |
+| `root/sessionRemoved`        | Ephemeral session-catalog removal.                                                   | **Missing → Proposed** | Durable removal/tombstone event.                                                                                                                                            |
+| `root/sessionSummaryChanged` | Ephemeral summary replacement/update.                                                | **Partial → Proposed** | Revisioned catalog upsert with shared/principal view separation.                                                                                                            |
+| `root/progress`              | Tokenized monotonic operation progress.                                              | **Partial → Proposed** | Common ACP progress event/result correlated to JSON-RPC request ID and `operationId`.                                                                                       |
+| `auth/required`              | Ephemeral OAuth required/expired notification for a protected resource.              | **Partial → Proposed** | Redacted connection auth-required state followed by endpoint OAuth and authenticated reconnect/resume; no access token is sent in ACP JSON-RPC or shared state.             |
+| `otlp/exportLogs`            | Stateless OTLP/JSON log export.                                                      | **Missing → Proposed** | Capability-advertised telemetry subscription with retention classification and filters.                                                                                     |
+| `otlp/exportTraces`          | Stateless OTLP/JSON trace export.                                                    | **Missing → Proposed** | Same.                                                                                                                                                                       |
+| `otlp/exportMetrics`         | Stateless OTLP/JSON metric export.                                                   | **Missing → Proposed** | Same.                                                                                                                                                                       |
+
+Root session notifications, auth notifications, and telemetry are not replayed
+by AHP. ACP should make catalog changes durable, auth state queryable on the
+connection, and telemetry loss explicit.
+
+## MCP side-channel method matrix
+
+AHP's `mcp://` channel carries upstream MCP JSON-RPC verbatim after the MCP
+server has already initialized. The served union is capability-controlled.
+The pinned [AHP MCP channel
+specification](https://github.com/microsoft/agent-host-protocol/blob/b4016c0e02dd61393de268fa5e5f1a554d0ca611/docs/specification/mcp-channel.md)
+defines this current surface:
+
+| AHP MCP capability | Methods/notifications                                                                                            | ACP status             | ACP native target                                                                          |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------ |
+| `serverTools`      | `tools/list`, `tools/call`, optional `notifications/tools/list_changed`.                                         | **Partial → Proposed** | MCP-over-ACP routed connection plus Host tool projection; advertise exact allowed surface. |
+| `serverResources`  | `resources/list`, `resources/templates/list`, `resources/read`, optional `notifications/resources/list_changed`. | **Partial → Proposed** | MCP-over-ACP plus ACP resource references; do not duplicate MCP payload schemas.           |
+| `logging`          | `logging/setLevel` and `notifications/message` as listed by AHP.                                                 | **Partial → Proposed** | Forward according to upstream MCP direction; expose Host telemetry separately.             |
+| `sampling`         | `sampling/createMessage`.                                                                                        | **Partial → Proposed** | Capability-gated MCP-over-ACP reverse request.                                             |
+
+ACP must also match AHP's negative rules: no second MCP
+`initialize`/`initialized`, only advertised methods are served, unknown methods
+return `-32601`, and channel availability follows MCP customization runtime
+state. The MCP App `ui/*` iframe protocol stays outside both ACP and AHP.
+
+## Channel and state matrix
+
+| AHP channel/resource            | AHP state and lifecycle                                                                                                                                            | ACP status             | ACP native target                                                                                                                           |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ahp-root://`                   | Agent/provider catalog, active-session count, terminal catalog, root config, metadata; session catalog queried separately.                                         | **Partial → Proposed** | Authority catalog and session-catalog resources bootstrapped by `initialize`; no special singleton URI is required.                         |
+| `ahp-session:/<id>`             | Session creation state, chat summaries/default, tools, active Clients, working directories, input-needed, customizations, MCP state, changesets, config, metadata. | **Partial → Proposed** | Revisioned ACP session resource around existing lifecycle/update methods, with explicit principal/client presence and private/shared views. |
+| `ahp-chat:/<id>`                | Chat summary, visible/paged turns, active turn, steering, queue, draft, activity, workspaces, metadata.                                                            | **Partial → Proposed** | Default chat projection for every ACP session plus optional multi-chat service.                                                             |
+| `ahp-terminal:/<id>`            | PTY state, claim, output/commands, cwd, status/exit, scrollback.                                                                                                   | **Partial → Proposed** | ACP v2 display terminal plus optional interactive terminal resource and fenced operations.                                                  |
+| `ahp-changeset:/<id>`           | Computing/ready/error, files, content, review, server-declared operations.                                                                                         | **Partial → Proposed** | Durable changeset/review service built on ACP diff/tool content.                                                                            |
+| `ahp-session:/<id>/annotations` | Session annotation index and entries.                                                                                                                              | **Missing → Proposed** | Annotation service with absolute targets, authorship, timestamps, private/shared review scope.                                              |
+| `ahp-resource-watch:/<id>`      | Filtered resource change batches and subscription-tied lifetime.                                                                                                   | **Missing → Proposed** | Watch resource with snapshot/replay boundary and explicit overflow/resnapshot.                                                              |
+| `ahp-otlp:` URI or template     | Stateless logs, traces, or metrics.                                                                                                                                | **Missing → Proposed** | Typed telemetry streams with advertised durability and correlation.                                                                         |
+| `mcp://...`                     | Opaque, customization-owned constrained MCP sidechannel.                                                                                                           | **Partial → Proposed** | MCP-over-ACP routed connection associated with customization and exact capability set.                                                      |
+| `ahp-automations://`            | Durable automation definition catalog. Unreleased 1.0.                                                                                                             | **Missing → Proposed** | Automation catalog resource.                                                                                                                |
+| `ahp-automation:/<id>`          | Stable automation identity; not subscribable in AHP.                                                                                                               | **Missing → Proposed** | Stable automation URI and descriptor; ACP may make it directly retrievable/subscribable.                                                    |
+| `ahp-automation-run:/<id>`      | One pending/running/terminal execution and linked sessions. Unreleased 1.0.                                                                                        | **Missing → Proposed** | Durable automation-run resource.                                                                                                            |
+
+All ACP protocol values representing these resources or files use absolute
+URIs. SDK caches are scoped by authority plus URI to avoid AHP's documented
+multi-host URI collision concern.
+
+## Complete state/action-family matrix
+
+The pinned AHP action enum contains 96 discriminants. Every discriminant is
+accounted for below by family.
+
+| AHP state/action family        | Included AHP actions                                                                                                                                                                                                                                            | ACP status             | ACP native target                                                                                                                   |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Root catalog                   | `root/agentsChanged`, `root/activeSessionsChanged`, `root/terminalsChanged`, `root/configChanged`.                                                                                                                                                              | **Partial → Proposed** | Catalog snapshot plus typed revisioned upsert/remove/count/config events.                                                           |
+| Session creation and chats     | `session/ready`, `session/creationFailed`, `session/chatAdded`, `session/chatRemoved`, `session/chatUpdated`, `session/defaultChatChanged`, `session/titleChanged`.                                                                                             | **Partial → Proposed** | Existing session lifecycle plus async progress and optional multi-chat catalog.                                                     |
+| Session tools and Clients      | `session/serverToolsChanged`, `session/activeClientSet`, `session/activeClientRemoved`.                                                                                                                                                                         | **Partial → Proposed** | Session tool registry and authenticated presence; Client-contributed tools use ownership lease/fence.                               |
+| Session working directories    | `session/workingDirectorySet`, `session/workingDirectoryRemoved`, `session/workingDirectoryReplaced`.                                                                                                                                                           | **Partial → Proposed** | Absolute workspace URI set/remove/CAS-replace with protected-primary rules.                                                         |
+| Session input-needed           | `session/inputNeededSet`, `session/inputNeededRemoved`.                                                                                                                                                                                                         | **Missing → Proposed** | Derived subscribable index of chat input, permission, Client execution, and authentication needs.                                   |
+| Session customizations and MCP | `session/customizationsChanged`, `session/customizationToggled`, `session/customizationUpdated`, `session/customizationRemoved`, `session/mcpServerStateChanged`, `session/mcpServerStartRequested`, `session/mcpServerStopRequested`.                          | **Partial → Proposed** | Typed customization resources and MCP lifecycle RPCs/events.                                                                        |
+| Session metadata               | `session/isReadChanged`, `session/isArchivedChanged`, `session/activityChanged`, `session/changesetsChanged`, `session/configChanged`, `session/metaChanged`.                                                                                                   | **Partial → Proposed** | Separate shared session fields from principal-private read/archive state; revisioned config, activity, changeset index, metadata.   |
+| Chat turn stream               | `chat/turnStarted`, `chat/delta`, `chat/responsePart`, `chat/turnComplete`, `chat/turnCancelled`, `chat/error`, `chat/turnResume`, `chat/usage`, `chat/reasoning`, `chat/activityChanged`.                                                                      | **Partial → Proposed** | Preserve ACP prompt lifecycle and message/thought/usage updates; persist stable turn projection with typed completion/error/resume. |
+| Chat tool calls                | `chat/toolCallStart`, `chat/toolCallDelta`, `chat/toolCallReady`, `chat/toolCallConfirmed`, `chat/toolCallComplete`, `chat/toolCallResultConfirmed`, `chat/toolCallContentChanged`, `chat/toolCallAuthRequired`, `chat/toolCallAuthResolved`.                   | **Partial → Proposed** | Extend ACP v2 tool upsert/content with full confirmation, result-confirmation, auth, ownership, and terminal states.                |
+| Chat workspaces                | `chat/workingDirectorySet`, `chat/workingDirectoryRemoved`.                                                                                                                                                                                                     | **Missing → Proposed** | Optional per-chat subset of session workspace URIs.                                                                                 |
+| Chat coordination              | `chat/pendingMessageSet`, `chat/pendingMessageRemoved`, `chat/queuedMessagesReordered`, `chat/draftChanged`.                                                                                                                                                    | **Missing → Proposed** | Typed steering, queue, reorder CAS, principal-private drafts, and explicit collaborative drafts.                                    |
+| Chat elicitation               | `chat/inputRequested`, `chat/inputAnswerChanged`, `chat/inputCompleted`.                                                                                                                                                                                        | **Partial → Proposed** | Preserve ACP form/URL elicitation; add durable/shared input resource only when collaboration is negotiated.                         |
+| Chat history                   | `chat/truncated`, `chat/turnsLoaded`.                                                                                                                                                                                                                           | **Partial → Proposed** | Typed truncation/redaction plus immutable cursor-paginated turn query.                                                              |
+| Changesets                     | `changeset/statusChanged`, `changeset/fileSet`, `changeset/fileRemoved`, `changeset/filesReviewChanged`, `changeset/contentChanged`, `changeset/operationsChanged`, `changeset/operationStatusChanged`, `changeset/cleared`.                                    | **Partial → Proposed** | Durable changeset state, principal-scoped review, content refs, and typed operations.                                               |
+| Annotations                    | `annotations/set`, `annotations/updated`, `annotations/removed`, `annotations/entrySet`, `annotations/entryRemoved`.                                                                                                                                            | **Missing → Proposed** | Annotation index/entry operations with author, timestamps, revision, and absolute target URI.                                       |
+| Terminals                      | `terminal/data`, `terminal/input`, `terminal/resized`, `terminal/claimed`, `terminal/titleChanged`, `terminal/cwdChanged`, `terminal/exited`, `terminal/cleared`, `terminal/commandDetectionAvailable`, `terminal/commandExecuted`, `terminal/commandFinished`. | **Partial → Proposed** | Display terminal baseline plus optional interactive PTY with replayable output and fenced side effects.                             |
+| Resource watches               | `resourceWatch/changed`.                                                                                                                                                                                                                                        | **Missing → Proposed** | Added/updated/moved/deleted events, replay cursor, overflow indication, and resnapshot.                                             |
+| Automation definitions         | `automation/createRequested`, `automation/updateRequested`, `automation/set`, `automation/removed`.                                                                                                                                                             | **Missing → Proposed** | Typed create/update/delete RPCs and revisioned automation catalog events.                                                           |
+| Automation runs                | `automationRun/lifecycleChanged`, `automationRun/sessionSet`, `automationRun/sessionRemoved`, `automationRun/primarySessionChanged`, `automationRun/cancelRequested`.                                                                                           | **Missing → Proposed** | Durable run lifecycle, linked-session set, primary session, and idempotent cancellation.                                            |
+
+### Message, response-part, attachment, and tool-result parity
+
+| AHP requirement                                                                                                                  | ACP status             | ACP native target                                                                                                                      |
+| -------------------------------------------------------------------------------------------------------------------------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Message origins: user, agent, tool, automation, system notification.                                                             | **Partial → Proposed** | Extend ACP message provenance while preserving unknown variants.                                                                       |
+| Per-message model/config and custom Agent selection.                                                                             | **Partial → Proposed** | Catalog-backed typed prompt selection; session config remains the default.                                                             |
+| Markdown create/append, reasoning create/append, content reference, system notice, input request, durable resumable error parts. | **Partial → Proposed** | ACP v2 whole-message/chunk updates plus durable typed part IDs and error/input parts.                                                  |
+| Simple opaque, embedded base64/MIME, remote resource, annotation, selected resource, and bounded chat-transcript attachments.    | **Partial → Proposed** | Extend ACP `ContentBlock` and attachment references with stable IDs, absolute URIs, ranges, integrity, and bounded transcript pinning. |
+| Tool results containing text, embedded resource, content ref, file edit, terminal, and subagent chat.                            | **Partial → Proposed** | Extend ACP tool-call content union while keeping unknown variants forward-compatible.                                                  |
+| Producer timestamps, duration, and usage.                                                                                        | **Partial → Proposed** | Existing usage plus turn timestamps/duration and clock-source guidance.                                                                |
+| Completion trigger characters and UTF-16 cursor offsets.                                                                         | **Partial → Proposed** | General completion capability with one specified cursor encoding.                                                                      |
+| Cross-session bounded transcript attachment with optional ending turn.                                                           | **Missing → Proposed** | Authorized content reference that snapshots a bounded immutable transcript range.                                                      |
+
+## Lifecycle, replay, and multi-client requirements
+
+| AHP requirement                                                                        | ACP status                        | ACP native target                                                                                                                                                                       |
+| -------------------------------------------------------------------------------------- | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `initialize` is first; unsupported exact SemVer returns supported versions and closes. | **Partial → Proposed**            | Exact negotiated protocol/capability profile with defined HTTP/WS close behavior.                                                                                                       |
+| Server-authoritative immutable snapshots plus shared pure reducers.                    | **Missing → Proposed**            | Server-authoritative revisioned snapshots/events; shared reducer implementation is not required.                                                                                        |
+| Optimistic local action queue and rebase over foreign actions.                         | **Missing → Proposed**            | Typed mutations may update UI optimistically using expected revision; server returns structured accept/conflict and durable event.                                                      |
+| Global monotonic `serverSeq` and origin `{clientId, clientSeq}`.                       | **Missing → Proposed**            | One canonical domain event with `sourceEventId`, domain revisions, authorized provenance, and optional `operationId`, projected through a separate ordered connection-delivery wrapper. |
+| Replay retained server actions or snapshot when gap is too old.                        | **Partial → Proposed**            | Atomic resume with high-watermark, missing/unauthorized resources, replay-retention metadata, and snapshot fallback.                                                                    |
+| Notifications and stateless channels are never replayed.                               | **Partial → Proposed**            | Every stream advertises durable or ephemeral; catalog/auth correctness does not depend on ephemeral notification.                                                                       |
+| Optional subscription coalescing preserving reduced state.                             | **Missing → Proposed**            | Only schema-declared coalescible events may coalesce; append/rejection/origin semantics remain lossless.                                                                                |
+| Chat snapshot tail and older-turn cursor.                                              | **Partial → Proposed**            | Named chat view plus immutable history query.                                                                                                                                           |
+| One active turn per chat.                                                              | **Existing / Partial → Proposed** | Preserve baseline; capability may later advertise controlled concurrency.                                                                                                               |
+| Any Client can normally cancel, steer, confirm, or answer.                             | **Missing**                       | Deliberately improve: authenticated roles; `operationId`; controller authorization; and durable claim plus compare-and-set for every shared pending interaction.                        |
+| First valid tool confirmation wins; conflicts reject.                                  | **Partial → Proposed**            | Durable claim, expected interaction revision, and common `revision_conflict` with an interaction-specific detail.                                                                       |
+| Active Clients contribute tools/customizations and expire after grace.                 | **Missing → Proposed**            | Authenticated presence with advertised TTL; contributed capabilities use leases and fencing tokens.                                                                                     |
+| Client-owned tool may only be completed by contributor.                                | **Missing → Proposed**            | Principal/client owner plus unforgeable execution lease; specified failover and late-result rejection.                                                                                  |
+| Multi-host SDK aggregates events and scopes identity by host plus URI.                 | **Missing → Proposed**            | Rust authority registry, stable per-authority client instance, cache key `(authorityId, resourceUri)`, lossless/resnapshot behavior.                                                    |
+| Host process death may fail active turns and later restart.                            | **Partial → Proposed**            | Durable Session/activity recovery with `sessionEpoch` and explicit recovered/failed outcome; `serverEpoch` scopes only connection-delivery continuity.                                  |
+
+## Authentication, authorization, and security matrix
+
+| AHP requirement                                                                                        | ACP status             | ACP native target                                                                                                                                                                                               |
+| ------------------------------------------------------------------------------------------------------ | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Endpoint/transport access authentication is out of AHP scope.                                          | **Missing → Proposed** | ACP Remote normatively defines TLS, endpoint authentication, authenticated principal, tenant/authority binding, and HTTP/WS challenge behavior.                                                                 |
+| Agent advertises RFC 9728 protected-resource metadata.                                                 | **Partial → Proposed** | The ACP endpoint publishes RFC 9728 metadata for its canonical absolute resource before `initialize`; a Host catalog may separately describe upstream-resource requirements without carrying credentials.       |
+| Client sends RFC 6750 bearer token through `authenticate`.                                             | **Partial → Proposed** | ACP sends the endpoint bearer token only in the HTTPS/WSS authentication handshake before `initialize`; there is no JSON-RPC token-push equivalent. Existing `auth/login` is a separate Agent/upstream feature. |
+| `-32007 AuthRequired` returns resource metadata.                                                       | **Partial → Proposed** | Use the endpoint's HTTP `401` Bearer challenge and RFC 9728 metadata before initialization; post-connect expiry requires reauthentication and authenticated resume, not a shared-state token method.            |
+| `auth/required` reports required or expired/revoked.                                                   | **Partial → Proposed** | Expose a redacted connection authorization-required state, acquire a new endpoint credential, and establish/resume over a newly authenticated transport.                                                        |
+| Resource permission request may allow, deny, prompt, and later revoke.                                 | **Partial → Proposed** | First-class grant ID, principal, operation set, resource pattern, duration, inspect, and revoke.                                                                                                                |
+| MCP auth states: starting, ready, auth-required, error, stopped; expired/insufficient-scope challenge. | **Partial → Proposed** | Customization runtime state and ACP elicitation/auth flow with explicit required scopes.                                                                                                                        |
+| Optional pre-registered OAuth client metadata, possibly including secret.                              | **Missing**            | Do not deliver reusable client secrets to arbitrary remote Clients. Prefer public-client PKCE, dynamic registration policy, or Host-mediated exchange.                                                          |
+| Automations store no credentials and revalidate access at run time.                                    | **Missing → Proposed** | Same requirement plus audit trail and principal/service-account policy.                                                                                                                                         |
+| Remote icons/SVG require trusted-domain and active-content controls.                                   | **Missing → Proposed** | Catalog content-security policy, sanitized media, trusted origins, integrity, and no implicit SVG execution.                                                                                                    |
+
+ACP Remote additionally requires Origin/CORS/CSRF policy, token storage and
+refresh guidance, logout, revocation, replay protection, optional
+proof-of-possession, security audit events, and explicit authorization for
+every mutation. A Client-supplied instance ID is never treated as identity.
+
+## Capability matrix
+
+| AHP capability/advertisement                                                                           | ACP status                        | ACP native target                                                                                                                                                           |
+| ------------------------------------------------------------------------------------------------------ | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Connection, shared-state, and Host capability composition.                                             | **Missing → Proposed**            | One `acp.remote.v2` profile; required `capabilities.remote.core`; optional `sharedSessions` and `hostServices` each depending on `core`, with independent Host subfeatures. |
+| Informational Client/Host implementation name and version.                                             | **Existing**                      | Preserve ACP v2 role-neutral `info`; never authorize based on it.                                                                                                           |
+| Client `mcpApps` support marker.                                                                       | **Missing → Proposed**            | Client capability for sandboxed MCP App rendering and exact subfeatures.                                                                                                    |
+| Agent/provider catalog and models.                                                                     | **Partial → Proposed**            | Live Host catalog complementing the public ACP Agent Registry.                                                                                                              |
+| Model context/output/prompt limits, vision, policy state, config schema, metadata.                     | **Partial → Proposed**            | Catalog model descriptor and session-config integration.                                                                                                                    |
+| OAuth protected resources per Agent.                                                                   | **Partial → Proposed**            | Protected-resource metadata in catalog and errors.                                                                                                                          |
+| `multipleChats.fork` and `multipleChats.sideChat`.                                                     | **Partial → Proposed**            | Separate multi-chat, fork, and side-chat capability objects.                                                                                                                |
+| `multipleWorkingDirectories`, immutable primary, primary replacement.                                  | **Partial → Proposed**            | Extend additional-directory capability with set/remove/CAS-replace and protected-primary flags.                                                                             |
+| Root/session configuration schema, mutable config fields, model config.                                | **Existing / Partial → Proposed** | Preserve session config options; add root/catalog schema and explicit mutability/revision.                                                                                  |
+| Completion trigger characters.                                                                         | **Partial → Proposed**            | General completion capability.                                                                                                                                              |
+| Terminal command prefix.                                                                               | **Missing → Proposed**            | Optional Agent convention in catalog; no Client executes it without permission.                                                                                             |
+| Telemetry logs/traces/metrics URI or template.                                                         | **Missing → Proposed**            | Telemetry stream descriptors and filters.                                                                                                                                   |
+| Changeset URI templates, review, and operation capability.                                             | **Partial → Proposed**            | Changeset service descriptor and per-resource current operations.                                                                                                           |
+| MCP UI Host `serverTools`, `serverResources`, `logging`, and `sampling`; list-changed subcapabilities. | **Partial → Proposed**            | Exact MCP-over-ACP capability union and MCP Apps rendering capability.                                                                                                      |
+| Automation catalog, create, schedules/minimum interval, run cancellation, run-history limit.           | **Missing → Proposed**            | Host automation capability plus per-automation operations and retention.                                                                                                    |
+| Per-automation allowed operations.                                                                     | **Missing → Proposed**            | Resource descriptor operations remain authoritative and principal-specific.                                                                                                 |
+| Subscription views and maximum delivery latency.                                                       | **Missing → Proposed**            | Schema-defined views and bounded delivery preferences.                                                                                                                      |
+| Extension metadata and `x-` namespace.                                                                 | **Existing / Partial → Proposed** | Preserve ACP `_meta` and extensible tagged unions; reserve a documented method/type extension namespace.                                                                    |
+
+## Version, schema, and compatibility matrix
+
+| AHP rule                                                                                                                                                     | ACP status                        | ACP native target                                                                                    |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Ordered exact SemVer negotiation.                                                                                                                            | **Partial → Proposed**            | One exact selected ACP version plus independently negotiated capability/schema versions.             |
+| Same-major compatibility at or after 1.0; same-minor compatibility before 1.0.                                                                               | **Partial → Proposed**            | Publish explicit compatibility and unknown-field/variant rules for every stable line.                |
+| Capabilities, not implementation version, determine optional behavior.                                                                                       | **Existing**                      | Preserve and strengthen ACP capability gating.                                                       |
+| Unknown actions ignored.                                                                                                                                     | **Partial → Proposed**            | Preserve unknown extensible variants for proxy/replay; ignore only where schema marks it safe.       |
+| `x-` extension namespace.                                                                                                                                    | **Partial → Proposed**            | Document extension namespaces and collision rules alongside `_meta`.                                 |
+| Channel stability indices: core/root/session/chat/terminal/telemetry/watch at level 2; annotations 1.1; changeset and MCP 1.2; automations 1.0 experimental. | **Missing → Proposed**            | Per-service schema maturity and version advertisement; do not imply unreleased automation stability. |
+| JSON Schema 2020-12 generated for state, actions, commands, notifications, and errors.                                                                       | **Existing / Partial → Proposed** | Continue generated ACP schema/SDKs; add resource snapshots/events, errors, and conformance fixtures. |
+| Current AHP registry supports 1.0.0 through 0.5.1.                                                                                                           | **Not applicable**                | ACP negotiates ACP versions; gateways own AHP-version conversion.                                    |
+
+## Error matrix
+
+| AHP error                                                 | ACP status                        | ACP native target                                                                                                                  |
+| --------------------------------------------------------- | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| JSON-RPC `-32700`, `-32600`, `-32601`, `-32602`, `-32603` | **Existing**                      | Preserve standard JSON-RPC behavior and HTTP/WS mapping.                                                                           |
+| `-32001 SessionNotFound`                                  | **Partial → Proposed**            | Stable `session_not_found` code with requested ID/URI and no information leak.                                                     |
+| `-32002 ProviderNotFound`                                 | **Missing → Proposed**            | `provider_not_found` tied to catalog revision.                                                                                     |
+| `-32003 SessionAlreadyExists`                             | **Partial → Proposed**            | `already_exists` plus operation-status lookup for idempotent retries.                                                              |
+| `-32004 TurnInProgress`                                   | **Partial → Proposed**            | `activity_in_progress` with the active `activityId` and advertised steering/queue options when authorized; no second turn wire ID. |
+| `-32005 UnsupportedProtocolVersion`                       | **Partial → Proposed**            | Supported versions/capabilities plus defined connection close.                                                                     |
+| `-32006` unused                                           | **Not applicable**                | Do not reserve unexplained gaps; publish a registry.                                                                               |
+| `-32007 AuthRequired`                                     | **Partial → Proposed**            | Pre-initialize HTTP `401` Bearer challenge with RFC 9728 metadata; authenticated resume after credential refresh.                  |
+| `-32008 NotFound`                                         | **Existing / Partial → Proposed** | Typed resource kind and URI, subject to non-disclosure policy.                                                                     |
+| `-32009 PermissionDenied`                                 | **Partial → Proposed**            | Required operation, optional grant request, principal-safe details, and non-retryable/retryable classification.                    |
+| `-32010 AlreadyExists`                                    | **Partial → Proposed**            | Current resource URI/revision and idempotency status.                                                                              |
+| `-32011 Conflict`                                         | **Partial → Proposed**            | Expected/current revision, conflict type, and optional merge/retry guidance.                                                       |
+| `ErrorInfo` type/message/stack/metadata                   | **Partial → Proposed**            | Stable code/details/correlation; stacks only when policy permits.                                                                  |
+| Human-only action `rejectionReason`                       | **Missing**                       | Deliberately replace with typed operation error/result and durable resolution event.                                               |
+
+## Detailed host-feature parity
+
+### Sessions and summaries
+
+ACP must cover AHP's provider/title/status/activity/origin/project/workspace,
+annotation-count, timestamp, change-statistic, read/archive, and `_meta` summary
+fields; asynchronous `creating`, `ready`, and `failed` states; MRU-capable
+cursor pagination; live additions/removals/updates; default chat; and summary
+aggregation across chats. Principal-private read state must not be collapsed
+into AHP's globally shared flag.
+
+### Chats, forks, side chats, workers, and transcript references
+
+ACP must cover initial messages, default chat, interactivity, visible-history
+fork through a stable completed turn, context-only side chat, selected-text
+context, tool-spawned worker chat, ancestry, per-chat workspace subset,
+cross-session bounded transcript attachment, one active turn, turn resume, and
+history truncation. Every conversational turn is an activity subtype/projection
+keyed by the canonical `activityId`, not a second wire identity. ACP should
+reject ancestry cycles rather than merely asking Clients to tolerate them.
+
+### Tool lifecycle and input-needed projection
+
+ACP must cover AHP's server/Client/MCP registry; definitions and input/output
+schema; partial/final input; edit preview; editable parameters; confirmation
+groups/options; user/setting/not-needed decision provenance; risk-judge
+loading/result/reason/safety; partial content; authentication-required state;
+result confirmation; final structured/unstructured result/error; and text,
+embedded resource, content reference, file edit, terminal, and subagent
+results. Session aggregate input-needed variants must include chat input, tool
+confirmation, Client execution, and authentication.
+
+### Elicitation
+
+ACP's elicitation work must cover text, number, integer, boolean, single-select,
+multi-select, constraints/defaults/options/freeform, draft/submitted/skipped
+answers, accept/decline/cancel, URL review, and durable association with the
+requesting turn/tool. Multi-Client answer arbitration and privacy must be
+specified.
+
+### Resources and watches
+
+Parity includes symmetric reads/writes, UTF-8/base64, create-only and ETag,
+truncate/append/range semantics, list/copy/delete/move/resolve/mkdir,
+permission requests, Client virtual resources, recursive include/exclude
+watches, added/updated/deleted batches, and revocation. ACP additionally
+requires pagination, bounded/ranged transfer, integrity, URI normalization,
+sandbox/symlink rules, watch overflow, and reconnect behavior.
+
+### Terminals
+
+Parity includes catalog, create/dispose, claim by Client/session/chat/turn/tool,
+running/exited, raw and command-classified output, input, resize, title, clear,
+cwd, exit, command detection/executed/finished, and tool-result preview. ACP
+adds claim leases/fencing, bounded scrollback, replay classification, and
+uncertain side-effect outcomes.
+
+### Changesets and annotations
+
+Parity includes static/turn/original/modified content references,
+computing/ready/error, files, edit/review state, full/file/range review,
+server-declared operations, confirmation, icons/groups/status/errors,
+follow-up content/external navigation, annotation file/range provenance,
+resolved status, and text/Markdown entries. ACP adds per-principal review,
+annotation author/timestamps, and trusted icon/navigation policy.
+
+### Customizations and MCP
+
+Parity includes plugin/directory containers; Agents, skills, prompts, rules,
+hooks, and MCP leaf nodes; loading/error state; global/workspace/session
+enablement; Client-published plugin nonce and child enablement; writable
+directory and invocation restrictions; MCP start/stop/live auth states; MCP
+Apps capability; and the constrained MCP method union.
+
+### Automations and runs
+
+Parity with unreleased AHP 1.0 includes durable create/update/set/remove;
+initial message and session template; enabled state; portable five-field cron;
+IANA time zone; Unix day-field OR semantics; daylight-saving and misfire
+behavior; minimum interval; discoverable custom event triggers; idempotent
+manual runs; pending/running/completed/failed/cancelled lifecycle; trigger
+provenance; linked/primary sessions; cancellation; bounded/paginated history;
+and one run per occurrence.
+
+### Observability
+
+Parity includes OTLP/JSON logs, traces, metrics, severity-filter templates,
+progress tokens, and standard session/turn/tool-call correlation. ACP adds
+authority, principal where permitted, chat, request, operation, terminal,
+automation, and run correlation plus audit events.
+
+## AHP ambiguities and gaps ACP must improve
+
+| AHP issue                                                                                                                                                                                                                                   | ACP requirement                                                                                                           |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Transport assumes an ordered reliable stream but does not normatively define endpoint discovery, HTTP/WS binding, subprotocol, TLS, authentication headers, Origin/CORS, limits, compression, proxy behavior, backpressure, or close codes. | Specify one interoperable ACP Remote connection profile and security baseline.                                            |
+| Reconnect recovers missed Host actions but not a Client mutation lost at the disconnect boundary. `dispatchAction` is an unacknowledged notification.                                                                                       | Require canonical `operationId`, deduplication, acknowledgements/status, retry windows, and uncertain-outcome resolution. |
+| `clientSeq` monotonicity, uniqueness, persistence, retry, and server dedupe retention are unspecified.                                                                                                                                      | Scope and persist client operation sequence under authenticated authority/client identity.                                |
+| Most RPCs lack idempotency keys; automation manual run is the exception.                                                                                                                                                                    | Require `operationId` for every side effect, including prompt, approval, write, and terminal input.                       |
+| No ACK/checkpoint, replay-retention negotiation, flow control, or protocol slow-consumer recovery.                                                                                                                                          | Add acknowledged cursors, advertised retention, bounded queues, and automatic replay/resnapshot.                          |
+| `serverSeq` scope, persistence, reset, wrap, and restart behavior are unclear; no server epoch exists.                                                                                                                                      | Define authority, server epoch, cursor invalidation, and durable high-watermark.                                          |
+| Empty replay returns no new explicit high-watermark; snapshot reconnect has no `missing` list.                                                                                                                                              | Always return high-watermark and per-resource resumed/snapshot/missing/unauthorized status.                               |
+| Replay/live race and multi-snapshot atomicity are not explicit.                                                                                                                                                                             | Make initialize/subscribe/reconnect responses ordering barriers with a consistent snapshot cut.                           |
+| Reconnect replaces initialization on a fresh transport without version renegotiation or authentication binding.                                                                                                                             | Re-negotiate transport/version/capabilities and resume only with an authenticated, scoped token.                          |
+| Notifications are ephemeral, including session-catalog and auth changes; stateless loss is silent.                                                                                                                                          | Make correctness state queryable/durable and classify unavoidable telemetry loss.                                         |
+| Crash recovery says active turns should fail but does not define persisted state/log/sequence recovery.                                                                                                                                     | Define crash epoch, recovered turn states, durable commit boundary, and SDK behavior.                                     |
+| Any Client can generally cancel, steer, confirm, or answer; no principal, ACL, role, controller, or moderation model exists.                                                                                                                | Bind connection to principal and authorize every action; add optional roles/leases and per-user state.                    |
+| `clientId` can be spoofed/collide and is overloaded for reconnection and contributed tools.                                                                                                                                                 | Separate authenticated principal, Client instance, connection, and contributor lease/fence.                               |
+| Coalescing only promises equivalent reduced state and is unsafe/unclear for deltas, appends, origins, and rejections.                                                                                                                       | Permit coalescing only for schema-declared idempotent replace/patch events.                                               |
+| Rust SDK broadcast receivers may drop events for slow consumers, and MultiHost mirrors can remain desynchronized until a fresh snapshot.                                                                                                    | SDK state stores must be lossless or detect lag and automatically resnapshot before exposing current state.               |
+| Canonical `disposeChat` exists while normative prose denies the method.                                                                                                                                                                     | Define one explicit chat close/dispose lifecycle.                                                                         |
+| Chat prose says server allocates URI while canonical types carry a Client-selected URI.                                                                                                                                                     | Server issues canonical ID/URI; Client supplies `operationId` and may request a non-authoritative alias.                  |
+| Terminal URI allocation is similarly inconsistent.                                                                                                                                                                                          | Server issues canonical terminal identity.                                                                                |
+| A reconnect example asks for root/session subscriptions but includes chat replay.                                                                                                                                                           | Replay is limited to explicitly authorized requested subscriptions, with dependency expansion made explicit.              |
+| MCP prose says responses carry a top-level channel although ordinary JSON-RPC responses have no params/channel.                                                                                                                             | Route requests with connection/channel ID and responses by JSON-RPC ID; do not alter response shape ambiguously.          |
+| Resource-watch lifetime is described as per connection while reconnect language implies resumability.                                                                                                                                       | Advertise ephemeral or durable watch lifetime and exact reconnect behavior.                                               |
+| Resource operations lack pagination/range streaming/checksums and URI/path security rules.                                                                                                                                                  | Add bounded transfer, range, integrity, canonicalization, traversal, symlink, and sandbox requirements.                   |
+| Permission grant lifetime/scope/persistence/revocation is not represented.                                                                                                                                                                  | Make grants typed, scoped, inspectable, expiring, and revocable.                                                          |
+| Bearer tokens travel in JSON while TLS is not mandatory; OAuth grant/PKCE/refresh/logout/proof-of-possession are unspecified.                                                                                                               | Mandate TLS and specify secure login, refresh/logout, token binding/storage guidance, and optional proof-of-possession.   |
+| Optional OAuth client secrets may be exposed to remote Clients.                                                                                                                                                                             | Never distribute reusable confidential-client secrets to untrusted Clients.                                               |
+| Action rejection is only a human string; errors lack consistent retryability/details.                                                                                                                                                       | Use registered machine codes, details, current revision, retry policy, and correlation.                                   |
+| No request cancellation or deadline.                                                                                                                                                                                                        | Apply ACP cancellation and deadlines to long remote requests.                                                             |
+| Terminal input and other non-replay-safe side effects have no exactly-once/unknown-outcome model.                                                                                                                                           | Fence claims and return applied/not-applied or common `operation_outcome_unknown`, keyed by `operationId`.                |
+| Shared drafts, answers, read/archive, and review state do not distinguish users.                                                                                                                                                            | Declare shared, principal-private, and connection-local state explicitly.                                                 |
+| Annotations omit author/timestamps; review state is global.                                                                                                                                                                                 | Add author, timestamps, revision, and principal/team review scope.                                                        |
+| Active-Client cleanup grace and Client-tool failover are host-defined; late completion fencing is absent.                                                                                                                                   | Advertise TTL, lease, fencing token, timeout, failover, and late-result rejection.                                        |
+| Ancestry may contain missing parents/cycles without repair semantics.                                                                                                                                                                       | Validate new ancestry and define tombstone/import behavior for missing historical parents.                                |
+| Extension/capability negotiation is scattered and Client capabilities are largely limited to MCP Apps.                                                                                                                                      | Publish typed Client and Host capability registries for every reverse or UI-dependent feature.                            |
+| Automations are present on `main` but unreleased; host-specific event meaning and persistence policy remain implementation-defined.                                                                                                         | Mark experimental, version triggers, specify run/log retention, and require execution-time policy revalidation.           |
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+An ACP Client can connect to a local Agent, a remote Agent, or a multi-agent
+Host using one protocol and one typed application model. A Host can offer every
+feature currently exposed by AHP: live catalogs, collaborative sessions,
+multi-chat history, tools and structured input, remote resources and
+terminals, review artifacts, MCP Apps, automations, and telemetry.
+
+ACP's result will be stronger at remote boundaries: authenticated principals
+are distinct from Client instances, mutations are idempotent, event loss is
+detectable, replay has an atomic boundary, authorization is explicit, and
+private state is not accidentally broadcast. An AHP-to-ACP gateway remains
+possible, but applications do not need AHP to obtain AHP-class functionality.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+### Parity gates
+
+ACP may claim parity in stages:
+
+1. **Remote-core parity:** the `acp.remote.v2` profile with
+   `capabilities.remote.core`: transport, endpoint authentication,
+   authority/client identity, ordered connection delivery, recovery
+   SnapshotSets, replay, reliable mutation, common progress/errors, and the
+   Rust reconnection base. Generic `resource/*` subscriptions are not Core.
+2. **Conversation parity:** `capabilities.remote.sharedSessions`, depending on
+   `core`, plus authenticated attachments, Session-event subscriptions,
+   attached-Session projections, multi-chat, turn projections keyed by
+   `activityId`, message parts/attachments, tools, durable claimed/CAS
+   elicitation, steering, queue, drafts, and aggregate input-needed. It does
+   not own authority or Session catalogs. Full conversation parity requires
+   the exact `sharedSessions.multiChat`, `sharedSessions.multiChat.fork`, and
+   `sharedSessions.multiChat.sideChat` markers.
+3. **Host-foundation and workspace parity:**
+   `capabilities.remote.hostServices`, depending on `core`, plus the exact
+   `catalogs`, `resources`, `workspaces`, `terminals`, and `artifacts` markers.
+   This gate owns authority/Agent/model/Session catalogs, dynamic
+   configuration, generic resource discovery/subscription, content
+   references, symmetric operations, watches, interactive terminals,
+   changesets, review operations, and annotations.
+4. **Extensibility parity:** the exact Host `customizations` and `mcp` markers,
+   including MCP lifecycle and constrained side channel; MCP Apps also require
+   the matching Client rendering capability. Generic capability negotiation
+   remains Core.
+5. **Operational parity:** the exact Host `automations` and `telemetry`
+   markers. Automations/runs and OTLP streams belong here; common progress,
+   audit correlation, and the cross-cutting error registry remain Core.
+
+Full parity requires all five gates: `core`, `sharedSessions`, the three exact
+multi-chat support markers, `hostServices`, and all nine exact Host support
+markers. A Host can advertise any internally complete subset of the nine Host
+markers because `sharedSessions` and `hostServices` are independent children
+of Core, but it cannot claim the full Host label or full AHP parity for that
+subset.
+
+Each gate requires:
+
+- generated JSON Schema and Rust types;
+- normative state/event application rules;
+- multi-Client authorization tests;
+- transport fault-injection at every request/event disconnect boundary;
+- duplicate, stale revision, replay gap, snapshot race, and slow-consumer tests;
+- conformance fixtures for unknown versions, variants, capabilities, and
+  errors; and
+- an AHP gateway mapping test for every matrix row in that gate.
+
+The repository's `scripts/check_remote_ahp_coverage.py` is a narrower CI
+sentinel. It verifies 169 pinned, category- and direction-specific surface
+entries in mapping rows with an explicit status and nonempty ACP target, plus
+the capability, version, and error table sizes. It prevents accidental ledger
+omissions; it does not by itself prove behavioral parity. A gate is complete
+only when its schema, state rules, conformance traces, and gateway tests above
+also pass.
+
+### Rust Client requirements
+
+The Rust SDK parity target includes:
+
+- pluggable stdio, HTTP streaming, and WebSocket transports;
+- a connection supervisor with backoff, keepalive, authenticated resume,
+  version renegotiation, and server-epoch handling;
+- persisted authority/client identity, acknowledged cursors, subscription set,
+  and in-flight `operationId` values;
+- a revisioned resource store with typed projections for every service;
+- optimistic typed operations with conflict/retry and operation-status lookup;
+- loss detection and automatic replay or resnapshot before state is reported
+  current;
+- bounded application event APIs that report lag instead of silently dropping
+  state transitions;
+- reverse resource, tool, elicitation, and MCP handlers;
+- a multi-authority registry keyed by authority identity plus absolute URI; and
+- deterministic tests for two Clients concurrently steering, cancelling,
+  confirming, answering, editing, claiming a terminal, and losing an owner
+  connection.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Does parity require ACP to use AHP method or action names?
+
+No. It requires native functional coverage. ACP should retain its session,
+prompt, update, tool, permission, elicitation, MCP, and content concepts and
+introduce specialized services where their semantics matter.
+
+### Why is `dispatchAction` marked Missing rather than Proposed?
+
+The AHP behavior is covered, but the mechanism is intentionally not adopted.
+A generic unacknowledged notification cannot safely express remote side
+effects. ACP uses typed idempotent operations and typed resource events.
+
+### Is unreleased AHP 1.0 automation support required?
+
+It is required for parity with the pinned `main` commit and optional for parity
+with published AHP v0.8.0. ACP should ship it as an independently negotiated,
+experimental capability until both designs stabilize.
+
+### Does this make an AHP bridge impossible?
+
+No. The explicit ledger makes a bridge easier: AHP snapshots/actions map to ACP
+resource snapshots/events, while AHP commands map to typed ACP operations. A
+bridge must synthesize the stronger ACP identity, idempotency, authorization,
+and replay guarantees or advertise that it cannot provide them.
+
+## Revision history
+
+- 2026-08-27: Initial exhaustive parity draft against AHP `main` commit
+  `b4016c0e02dd61393de268fa5e5f1a554d0ca611`.

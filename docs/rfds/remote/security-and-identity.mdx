@@ -1,0 +1,740 @@
+---
+title: "Remote Security and Identity"
+---
+
+Author(s): ACP Remote working draft
+
+Status: Draft
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Define the security boundary for ACP over remote HTTP and WebSocket
+transports. Before any ACP JSON-RPC message is accepted, a remote endpoint
+authenticates the caller with a standard HTTP authorization mechanism, binds
+that authenticated principal to the ACP connection, and authorizes every
+session operation against both token scope and a session access-control list.
+
+This RFD standardizes:
+
+- HTTPS and WSS requirements;
+- OAuth protected-resource discovery and access-token transport;
+- a browser-safe WebSocket bootstrap flow;
+- the distinction between principals, client instances, connections,
+  sessions, and attachments;
+- session roles, permissions, delegation, revocation, and audit context; and
+- browser origin, CORS, CSRF, redirect, logging, and token-handling rules.
+
+Transport identifiers and affinity cookies remain routing values. They are not
+credentials and never authorize access.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+The [Streamable HTTP and WebSocket Transport
+RFD](/rfds/streamable-http-websocket-transport) defines a remote endpoint and
+the `Acp-Connection-Id` and `Acp-Session-Id` routing headers. It deliberately
+leaves authentication to HTTP headers, query parameters, or WebSocket
+subprotocols. ACP also has Agent application authentication through v1
+`authenticate` and v2 `auth/login` and `auth/logout`.
+
+Those two kinds of authentication solve different problems. Agent application
+authentication lets an already connected user sign the Agent into an upstream
+service or otherwise unlock Agent functionality. It does not authenticate the
+network caller to the remote ACP service. In particular, an unauthenticated
+remote caller must not be allowed to invoke `initialize`, discover sessions,
+or reach `auth/login` and use it as a substitute for endpoint authentication.
+
+The current transport text does not answer several security-critical
+questions:
+
+- how a Client discovers the authorization server and required scopes;
+- where an access token is carried on HTTP, SSE, or WebSocket requests;
+- how browser WebSocket clients authenticate without putting bearer tokens in
+  URLs;
+- whether a reconnect may change user, tenant, or delegated actor;
+- which identity owns a session and which identities may observe or mutate it;
+- how multiple Client installations or tabs belonging to one user differ;
+- how authorization is revoked while streams are open; and
+- what identity and decision data an implementation must retain for audit.
+
+Without common answers, implementations are likely to treat an opaque session
+ID, connection ID, sticky cookie, or self-declared Client ID as proof of
+authority. Those values can leak through logs, browser history, proxies, or
+another Client and are not suitable credentials.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+Remote ACP uses two explicit security layers:
+
+1. **Remote endpoint authentication and authorization** happens at the HTTP
+   boundary before ACP initialization. It establishes the principal and the
+   maximum authority of the connection.
+2. **Agent application authentication** happens inside ACP after initialization
+   and controls the Agent's access to its own application or upstream services.
+
+Remote endpoints use OAuth protected-resource metadata for discovery and
+OAuth access tokens for endpoint authorization. A deployment may additionally
+support mutually authenticated TLS or another HTTP authentication scheme, but
+supporting another scheme does not weaken the requirements in this RFD.
+
+Each connection is immutably bound to one authenticated principal, one tenant
+or security realm, and one Client instance. Sessions have server-enforced ACLs.
+OAuth scopes place an upper bound on authority; an ACL can narrow that
+authority but cannot expand it. Session roles are convenience bundles over
+explicit permissions, not authentication mechanisms.
+
+Delegation is explicit, time-bounded, audience-restricted, and down-scoped.
+Implementations record both the subject and acting principal. They do not infer
+delegation from arbitrary ACP metadata.
+
+## Shiny future
+
+> How will things play out once this feature exists?
+
+A Client given `https://agents.example.com/acp` can discover how to obtain an
+appropriately scoped token, connect over HTTPS or WSS, and learn its effective
+authority without implementation-specific setup. The service can distinguish
+two devices owned by the same user without treating either device ID as proof
+of identity. A session owner can share read, control, or approval authority
+without sharing bearer tokens or opaque session identifiers.
+
+Reconnecting Clients are reauthenticated and reauthorized. Revoking a token,
+delegation, or ACL entry terminates or narrows existing access promptly.
+Operators can answer who performed a mutation and under what delegated
+authority without recording access tokens or unnecessarily exposing user
+identity to other session participants.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+### Normative terminology
+
+- A **principal** is the authenticated user, service, or workload. Its identity
+  comes from validated credentials, never from a Client-supplied ACP field.
+- A **subject** is the principal on whose behalf an actor operates. Without
+  delegation, subject, actor, and principal identify the same security subject.
+- A **tenant** or **security realm** is the isolation boundary in which
+  principal and session identifiers are meaningful.
+- A **Client instance** is one installation, browser profile, device, or
+  service replica. It is useful for presence and audit but is not a principal.
+- A **physical connection** is one HTTP/SSE or WebSocket transport generation.
+  It is disposable and may be replaced during reliable resume.
+- A **logical connection** is the initialized ACP binding that owns negotiated
+  capabilities, delivery order, and a server-created connection ID. It may
+  survive replacement of its physical connection for a bounded resume grace
+  period.
+- A **session** is the durable Agent conversation and execution context. The
+  Agent creates its session ID.
+- An **attachment** is one Client instance's live participation in one session
+  on one logical connection. It survives physical-generation resume of that
+  logical connection within its grace period, but not creation of a fresh
+  logical connection. Attachments are specified by the Multi-client Sessions
+  RFD.
+- An **actor** is the principal currently exercising authority. In a delegated
+  request the actor and the subject on whose behalf it acts can differ.
+
+All IDs in these domains are opaque. Implementations MUST NOT compare IDs from
+different domains, infer authority from their structure, or reuse an ID from
+one domain as an ID in another.
+
+### TLS and endpoint requirements
+
+A remote ACP endpoint MUST use `https` for Streamable HTTP and `wss` for
+WebSocket. TLS configuration MUST follow the current version of BCP 195. A
+Client MUST reject certificate validation failures and MUST NOT silently
+downgrade from HTTPS or WSS.
+
+An implementation MAY offer an insecure loopback-only development mode, but
+it MUST be disabled by default, MUST bind only to a loopback interface, and
+MUST clearly identify itself as non-remote. An address on a private network is
+not loopback and does not qualify for this exception.
+
+Authentication MUST complete before the server processes `initialize` or
+allocates an ACP connection ID. Every HTTP POST, every SSE GET, every DELETE,
+and every WebSocket upgrade MUST be authenticated. A successful request MUST
+also be checked against the complete immutable connection binding: issuer,
+realm, canonical authority/resource and audience, principal, subject, actor,
+delegation, sender-constraining key or Client credential when present, and
+Client instance. A credential that changes any member MUST NOT rebind an
+existing connection.
+
+Redirects MUST NOT downgrade transport security. A Client MUST NOT forward an
+Authorization header to a different origin unless that origin was explicitly
+advertised as an equivalent ACP resource and the token is audience-bound to
+it.
+
+A Client MUST NOT automatically follow a redirect for a request whose headers
+or body contain a bootstrap proof, resume secret, generation-binding secret,
+WebSocket ticket, DPoP proof, authorization code, or other ACP credential. This
+also forbids 307/308 cross-origin POST replay. These secrets are bound to the
+exact origin and canonical resource. The Client performs fresh protected-
+resource discovery and an explicit authentication decision before constructing
+a new request for any redirected endpoint.
+
+An access token does not become valid indefinitely because an SSE stream or
+WebSocket was opened before its expiry. The server SHOULD send a reliable
+`auth_expiring` transport control record early enough for the Client to obtain
+a replacement. That record carries a required, non-null RFC 3339 `expiresAt`
+timestamp and no token material. At token expiry or confirmed revocation, the
+server MUST stop accepting new submissions and close the affected physical
+connection. A Client then obtains a token outside ACP and resumes or reconnects.
+The replacement token MUST authenticate the same issuer, principal, subject,
+actor, delegation binding, sender-constraining key when present, and security
+realm and MUST be valid for the same ACP authority, resource, and audience;
+otherwise the old logical connection cannot be resumed. Scope or ACL changes
+do not rewrite that immutable identity tuple, but they change the opaque
+`authorizationContextId`. The server then refuses replay from the old delivery
+log and requires a fresh logical connection and newly authorized SnapshotSet;
+it never replays a retained payload that the current view cannot read. A Client
+that changes any identity or delegation member likewise creates a fresh logical
+connection and new attachments.
+
+### OAuth protected-resource discovery
+
+An OAuth-protected ACP endpoint MUST publish [OAuth 2.0 Protected Resource
+Metadata](https://www.rfc-editor.org/rfc/rfc9728) for its absolute resource URI.
+Metadata MUST include:
+
+- `resource`, required and non-null, equal to the canonical absolute ACP
+  resource URI;
+- `authorization_servers`, required and non-null, containing at least one
+  absolute HTTPS issuer URL; and
+- `scopes_supported`, required and non-null, containing every standardized ACP
+  scope accepted by the resource.
+
+Authorization server metadata is discovered through [RFC
+8414](https://www.rfc-editor.org/rfc/rfc8414) or OpenID Connect Discovery. A
+Client MUST validate issuer equality and MUST reject metadata in which an
+issuer changes after redirects or normalization.
+
+An unauthenticated request receives HTTP `401 Unauthorized` with a Bearer
+challenge. The challenge SHOULD carry the protected-resource metadata URL:
+
+```http
+HTTP/1.1 401 Unauthorized
+WWW-Authenticate: Bearer resource_metadata="https://agents.example.com/.well-known/oauth-protected-resource/acp"
+Cache-Control: no-store
+```
+
+An authenticated principal lacking authority receives HTTP `403 Forbidden`.
+Where doing so does not reveal a session's existence, the response SHOULD use
+the Bearer `insufficient_scope` error and identify the required scope. For a
+session the principal is not allowed to discover, the server SHOULD instead
+return the same not-found response used for an unknown session.
+
+The protected-resource metadata MAY contain the extension member
+`acp_websocket_ticket_endpoint`. When present it MUST be a non-null absolute
+HTTPS URL. Omission means that the endpoint does not offer the browser
+WebSocket ticket profile. `null` is invalid.
+
+Example metadata:
+
+```json
+{
+  "resource": "https://agents.example.com/acp",
+  "authorization_servers": ["https://login.example.com"],
+  "scopes_supported": [
+    "acp:connect",
+    "acp:session:create",
+    "acp:session:read",
+    "acp:session:write",
+    "acp:session:approve"
+  ],
+  "acp_websocket_ticket_endpoint": "https://agents.example.com/acp/websocket-ticket"
+}
+```
+
+### OAuth grants and token validation
+
+Interactive public Clients SHOULD use Authorization Code with PKCE. Clients
+without a usable browser MAY use OAuth Device Authorization when advertised.
+Confidential service Clients MAY use a grant appropriate to their deployment.
+ACP does not require an authorization server to support every grant.
+
+Clients SHOULD use [OAuth resource
+indicators](https://www.rfc-editor.org/rfc/rfc8707) so an access token is
+audience-restricted to the canonical ACP resource. Servers MUST validate token
+signature or introspection result, issuer, audience, expiry, not-before time,
+realm, and granted scopes. Servers MUST fail closed when validation state is
+unavailable. Sender-constrained tokens such as
+[DPoP](https://www.rfc-editor.org/rfc/rfc9449) MAY be advertised and required.
+
+When DPoP is required, every HTTP request authenticated with the access token,
+including an SSE GET, direct WebSocket upgrade, and WebSocket-ticket POST, MUST
+carry a fresh proof for that request's method and absolute target URI. The
+server MUST validate the proof, token confirmation key, nonce when required,
+and replay window. The browser subprotocol-ticket flow defined below has no
+proof-of-possession message at redemption, so a server MUST NOT issue such a
+ticket from a DPoP-bound token. Such a browser uses authenticated streaming
+Fetch, or a future separately negotiated ticket profile that proves possession
+during upgrade. An access-token refresh MUST preserve the proof-key binding or
+establish a new logical connection; it MUST NOT silently weaken a
+sender-constrained connection to bearer authentication. WebSocket application
+messages do not carry new DPoP proofs after an authenticated, proof-bearing
+upgrade.
+
+Bearer access tokens MUST be carried in the HTTP `Authorization` header:
+
+```http
+Authorization: Bearer eyJhbGciOi...
+```
+
+Clients and servers MUST NOT put access tokens or refresh tokens in:
+
+- an ACP JSON-RPC message or `_meta` field;
+- a URL query or fragment;
+- `Acp-Connection-Id`, `Acp-Session-Id`, or any other ID;
+- an affinity cookie; or
+- a WebSocket subprotocol value.
+
+The only exception to the final rule is the ACP browser profile's purpose-built,
+single-use WebSocket ticket described below. An OAuth access token, refresh
+token, authorization code, resume secret, or any reusable credential is never
+allowed in a WebSocket subprotocol.
+
+Refresh tokens are exchanged only with the authorization server and MUST
+never be sent to the ACP resource. Servers and intermediaries MUST redact
+Authorization headers, DPoP proofs, authorization codes, and WebSocket tickets
+from logs and telemetry.
+
+### Browser WebSocket profile
+
+The browser WebSocket API cannot reliably set an Authorization header. A
+browser Client that cannot set it MUST use the advertised WebSocket ticket
+endpoint rather than moving a bearer token into the URL or subprotocol.
+
+The Client sends an authenticated HTTPS POST to the absolute ticket endpoint.
+The request uses the access token in its Authorization header and has this
+body:
+
+```json
+{
+  "clientInstanceId": "client_01K39Z"
+}
+```
+
+`clientInstanceId` is required and non-null. No request field is optional or
+nullable. It MUST be identical to the `clientInstanceId` subsequently sent in
+the ticket-authenticated `initialize`; a mismatch invalidates the ticket and
+the connection attempt.
+
+A successful response has this shape:
+
+```json
+{
+  "ticket": "ws1_7K8zqY...",
+  "expiresAt": "2026-08-27T12:01:00Z"
+}
+```
+
+`ticket` and `expiresAt` are required and non-null strings. No field in this
+response is optional or nullable. The ticket is a purpose-built, single-use
+credential; it is not an ACP ID or cookie. It MUST be audience-bound to the
+exact ACP WebSocket endpoint and to the complete immutable context established
+at issuance: issuer, realm, authority/resource and audience, principal,
+subject, actor, delegation, OAuth Client credential when present, requesting
+Client instance, and an effective scope ceiling. It expires at the earliest of
+60 seconds, source access-token expiry, delegation expiry, or any narrower
+source-credential bound, and becomes invalid after its first upgrade attempt.
+Confirmed source-token or delegation revocation revokes every unredeemed ticket
+derived from it. Redemption recreates exactly this context and can only narrow
+it under current ACL policy; it cannot acquire the principal's default or newer
+authority. The server MUST store only a cryptographic digest when practical.
+
+The Client offers the ticket in a dedicated WebSocket handshake header when
+its API permits custom headers. Browser APIs that cannot set such a header
+offer it as a second, single-use subprotocol value:
+
+```http
+Sec-WebSocket-Protocol: acp.v2, acp-ticket.ws1_7K8zqY...
+```
+
+The server validates the ticket but selects only the ACP protocol value, such
+as `acp.v2`, in its response. It MUST NOT echo the ticket. Generic bearer or
+refresh tokens MUST NOT be carried this way.
+
+Browser Streamable HTTP Clients MUST use an authenticated Fetch-style streaming
+request that can set the Authorization and, when required, DPoP headers. They
+MUST NOT use a native EventSource API that cannot set those headers and MUST NOT
+fall back to cookie authentication. A browser environment without authenticated
+streaming fetch support uses the WebSocket ticket profile instead.
+
+### Cookies and transport identifiers
+
+`Acp-Connection-Id`, `Acp-Session-Id`, attachment IDs, event cursors, Client
+instance IDs, and sticky-routing cookies are identifiers or routing hints.
+They are **not credentials**. Possession of one MUST NOT grant access, increase
+authority, or bypass a token and ACL check.
+
+Every cookie defined by the standard ACP Remote profile is affinity-only. Such
+a cookie MUST contain no bearer token, authorization code, bootstrap proof,
+resume secret, generation-binding secret, or other credential; MUST be scoped
+as narrowly as possible; and SHOULD use
+`Secure`, `HttpOnly`, and an appropriate `SameSite` value. Losing or changing
+affinity MUST affect only routing; correctness must come from durable server
+state and reauthorization. Cookie authentication is not part of the standard
+profile.
+
+### Identity binding
+
+A remote-capable Client supplies a `clientInstanceId` during `initialize`.
+`clientInstanceId` is required and non-null on a remote connection, is omitted
+on a Client that does not implement this RFD, and MUST NOT be `null`. It SHOULD
+be a cryptographically random, installation-scoped value. It MUST NOT contain a
+user name, email address, device serial number, filesystem path, or other
+personally identifying value.
+
+Because a Client can copy or invent this value, the server uses it only to
+correlate UX, presence, retries, and audit records beneath the authenticated
+principal. It never uses it as proof of that principal.
+
+At successful initialization the server binds:
+
+```text
+(issuer, security realm, authority, resource, audience, principal, subject,
+ actor, delegation, sender key or Client credential, client instance)
+    -> logical connection
+```
+
+The binding is immutable for the logical-connection lifetime. Reliable resume
+creates a new physical generation of the same logical connection and preserves
+its authorized attachments only when endpoint authentication proves the same
+issuer, realm, authority, resource, audience, principal, subject, actor,
+delegation binding, sender-constraining key or Client credential, and Client
+instance within the advertised grace period. An undelegated connection uses
+the principal as its subject and a distinguished absent-delegation value. The
+new generation fences the old one. A fresh logical connection has a new
+connection ID and creates new attachments; it does not inherit authority or
+attachments merely by presenting IDs from an older logical connection.
+
+Principal IDs exposed by ACP MUST be opaque, scoped to one security realm, and
+non-reassignable. Participant IDs shown to peer Clients SHOULD additionally be
+pseudonymous per session so they cannot be used to correlate activity across
+sessions.
+
+### Scopes, session ACLs, and roles
+
+The initial standardized resource scopes are:
+
+| Scope                 | Upper bound granted by the token                                        |
+| --------------------- | ----------------------------------------------------------------------- |
+| `acp:connect`         | Initialize an ACP connection.                                           |
+| `acp:session:create`  | Create a session.                                                       |
+| `acp:session:read`    | Discover, attach to, replay, and observe authorized sessions.           |
+| `acp:session:write`   | Submit prompts, injections, and non-administrative session mutations.   |
+| `acp:session:control` | Cancel turns, change shared configuration, and acquire a control lease. |
+| `acp:session:approve` | Claim and answer permission or elicitation interactions.                |
+| `acp:session:admin`   | Change ACLs, transfer ownership, close, or delete sessions.             |
+| `acp:delegate`        | Create a narrower delegated grant when policy permits.                  |
+
+Scopes alone do not grant access to an existing session. The principal must
+also have an applicable session ACL entry. A deployment MAY define additional
+scopes beginning with `_`; it MUST NOT redefine a standardized scope.
+
+The session permission registry is the authorization vocabulary used by ACLs,
+attachments, interactions, and audit records:
+
+| Permission         | Authorized operation family                                                   |
+| ------------------ | ----------------------------------------------------------------------------- |
+| `session.read`     | Discover, attach, snapshot, replay, and observe the session.                  |
+| `session.write`    | Prompt, queue, inject, and perform ordinary non-administrative mutations.     |
+| `session.control`  | Cancel or steer turns, mutate shared configuration, and hold a control lease. |
+| `session.approve`  | Read, claim, and answer eligible permission or elicitation interactions.      |
+| `session.presence` | Receive privacy-filtered participant presence.                                |
+| `session.admin`    | List or change the ACL, transfer ownership, close, and delete the session.    |
+| `session.delegate` | Create a narrower delegated session grant when deployment policy permits.     |
+
+Each OAuth scope is an upper bound for the correspondingly named permission
+family. `acp:session:read` also bounds `session.presence`; deployments MAY
+require a narrower additional scope. Unknown standardized permission names are
+reserved for future ACP versions. Implementation-defined names MUST begin with
+`_`. Authorization checks use permission names, not display labels or role
+strings.
+
+The standard session roles are permission bundles:
+
+- `observer`: `session.read`;
+- `controller`: observer permissions plus prompt, inject, and ordinary shared
+  state mutations through `session.write` and `session.control`;
+- `approver`: observer permissions plus claim and response authority for
+  pending user interactions through `session.approve`; and
+- `owner`: all session permissions, including ACL changes, ownership transfer,
+  close, and delete.
+
+A principal may hold multiple roles. Servers MUST authorize the concrete
+operation, not merely test whether a role string is present. A session MUST
+have at least one owner unless it is being deleted. Creating a session grants
+the creating principal `owner` only if server policy allows that principal to
+own sessions.
+
+An ACL entry identifies a principal or a server-managed group, contains a
+non-empty set of roles, and may expire. If an expiry is present it is named
+`expiresAt`, is a non-null RFC 3339 timestamp, and access ends no later than
+that instant. Omission means no protocol-level expiry. `expiresAt: null` is
+invalid. ACL entries MUST NOT target a bare connection ID, session ID, routing
+cookie, or self-declared Client instance ID.
+
+The provisional ACL entry shape is:
+
+```json
+{
+  "entryId": "access_01K3B0",
+  "subject": {
+    "type": "principal",
+    "principalId": "principal_7F2A"
+  },
+  "roles": ["controller", "approver"],
+  "expiresAt": "2026-09-27T12:00:00Z"
+}
+```
+
+`entryId`, `subject`, and `roles` are required and non-null. `roles` MUST be
+non-empty and contain no duplicates. `subject` is a required tagged union:
+
+- `principal` has one required, non-null `principalId`; and
+- `group` has one required, non-null server-issued `groupId`.
+
+`expiresAt` is optional with the semantics above. A group is resolved only by
+the server's trusted identity or directory provider. ACP does not let a Client
+assert group membership, enumerate a group's members, or create a group by
+supplying a `groupId`. Group membership is reevaluated at authorization and
+commit time. A directory change that removes effective access has the same
+fencing and notification effects as an ACL revocation even when the stored ACL
+revision does not change.
+
+All unexpired matching principal and group entries are additive: their roles
+are unioned and then bounded by token scopes and policy. This provisional
+registry has no deny entry. The `owner` role is valid only on a principal entry;
+a grant that assigns it to a group is invalid. Revoking or expiring one entry
+therefore removes only the authority contributed by that entry; authority
+independently granted through another principal or group entry remains. Servers
+MUST calculate and audit the complete set of contributing entries at commit
+time.
+
+### ACL operations and events
+
+The provisional ACL method family uses the `session_access` noun so generated
+SDK names follow the repository's `noun/verb` convention:
+
+- `session_access/list` returns the authorized view of the ACL;
+- `session_access/grant` creates or replaces access for one subject;
+- `session_access/revoke` removes one ACL entry; and
+- `session_access/transfer` atomically transfers session ownership.
+
+`session_access/list` is read-only and requires `session.admin`. Its request
+contains required, non-null `sessionId`. Its response contains required,
+non-null `aclRevision` and `entries`. `aclRevision` is a decimal string. The
+authorized administrative view of a live session MUST contain at least one
+owner, so `entries` cannot be empty for a live session.
+
+Each mutating ACL request contains required, non-null `sessionId`,
+`operationId`, `sessionEpoch`, `expectedSessionVersion`, and
+`expectedAclRevision`. `operationId` MUST be identical to the operation ID on
+the enclosing reliable Remote Frame. Both refer to one operation ledger entry
+and one mutation receipt; nesting does not create a second
+operation-deduplication domain. `expectedSessionVersion` and
+`expectedAclRevision` are decimal strings. A mismatch in either fails with
+`revision_conflict`, whose authorized details identify the conflicting
+revision domain.
+
+`session_access/grant` additionally contains required, non-null `subject` and a
+non-empty `roles` array. It may contain optional non-null `expiresAt`; omission
+means no protocol-level expiry and `null` is invalid. Granting the same subject
+replaces that subject's complete role and expiry set rather than merging it.
+
+`session_access/revoke` additionally contains required, non-null `entryId`.
+Revocation MUST fail if it would leave a live session without an owner.
+
+`session_access/transfer` additionally contains required, non-null
+`newOwnerPrincipalId` and `retainPreviousOwner`. The latter is a Boolean: when
+false, the former owner loses only the `owner` role after the new owner is
+committed; when true, both remain owners. Transfer targets a principal rather
+than a group so there is always an auditable receiving owner. The operation is
+atomic and MUST never expose an ownerless revision.
+
+Each committed ACL mutation increments `aclRevision` and `sessionVersion`
+exactly once and returns the common operation receipt plus both new
+decimal-string revisions. Revisions MUST NOT be reused. The session event log records a
+`session_access_update` carrying required, non-null `aclRevision`, change type,
+and affected `entryId`. Recipients with `session.admin` may receive the complete
+changed entry. The affected principal receives only its new effective roles and
+permissions. Other participants receive only a generic access-changed event
+when policy permits it. Group membership, stable principal IDs, and entries the
+recipient cannot administer MUST be redacted.
+
+Authorization is evaluated when a request is accepted into the authoritative
+session order and again when a delayed or claimed operation commits. Revocation
+therefore fences already queued work that has not committed. Implementations
+MUST close the affected logical delivery stream promptly when its authorized
+view narrows, MUST NOT replay queued or retained payloads under the changed
+view, and MUST require a fresh connection snapshot before reporting current
+state. They MUST invalidate control leases and pending-interaction claims when
+their authority is removed.
+
+### Delegation
+
+Delegation MUST use an authorization-server-issued token or another
+cryptographically verifiable server grant. OAuth Token Exchange is RECOMMENDED
+when the authorization server supports it. A delegated grant MUST:
+
+- identify both subject and actor;
+- be restricted to the ACP resource and, when possible, specific session IDs;
+- contain a strict subset of the delegator's scopes and ACL permissions;
+- have an explicit expiry;
+- be revocable; and
+- be included in authorization and audit decisions.
+
+ACP `_meta`, display names, Client instance IDs, and request parameters MUST
+NOT establish or extend delegation. An Agent proxy or gateway is an actor and
+must not silently collapse its identity into the end user. Each hop either
+preserves verifiable delegation or acts under its own separately authorized
+principal.
+
+### Browser-origin security
+
+Remote ACP servers accepting browser traffic MUST validate the WebSocket
+`Origin` header and HTTP CORS origin against an explicit allowlist. A wildcard
+origin is not allowed for authenticated endpoints. Unexpected origins MUST be
+rejected before allocating a connection or ticket.
+
+Browser OAuth flows MUST use PKCE and `state`; OpenID Connect flows MUST also
+validate `nonce`. Authorization responses MUST return to a pre-registered
+redirect URI. ACP endpoints MUST NOT implement permissive redirectors.
+
+Cross-origin HTTP access MUST allow only required methods and headers. Servers
+MUST NOT use an affinity cookie as CSRF protection. If a deployment adds an
+independent cookie-authenticated browser session outside this profile, it MUST
+define CSRF protection separately and MUST NOT confuse that authentication
+cookie with the ACP affinity cookie.
+
+### Audit requirements
+
+For every authentication decision, attachment change, ACL change, delegated
+grant, state-changing method, control-lease transition, and pending-interaction
+resolution, the service SHOULD retain:
+
+- timestamp and outcome;
+- security realm and canonical resource;
+- principal, subject, and actor identifiers;
+- Client instance, connection, attachment, and session identifiers when
+  applicable;
+- ACP method, JSON-RPC request ID, operation ID, session epoch, and committed
+  command or event sequence when applicable;
+- effective scopes, ACL revision, and authorization rule; and
+- a correlation or trace ID.
+
+Audit records MUST NOT contain access tokens, refresh tokens, authorization
+codes, WebSocket tickets, bootstrap proofs, resume secrets, generation-binding
+secrets, or raw DPoP proofs. Implementations SHOULD
+avoid recording prompts, elicitation contents, tool output, absolute workspace
+paths, or other session content unless an explicit audit policy requires it.
+Audit access itself MUST be authorized and audited.
+
+### Proposed field presence and nullability
+
+All fields proposed by this RFD are required and non-null unless this document
+explicitly calls them optional. Optional fields use omission to mean absence;
+`null` is invalid and is never equivalent to omission in these new shapes.
+
+Specifically:
+
+- remote `clientInstanceId` is required and non-null; legacy or local Clients
+  that do not implement this RFD omit it, and sending `null` is invalid;
+- WebSocket-ticket request `clientInstanceId` is required and non-null and must
+  match the later `initialize` value;
+- `acp_websocket_ticket_endpoint` is optional; omission means unsupported and
+  `null` is invalid;
+- ACL `expiresAt` is optional; omission means no protocol-level expiry and
+  `null` is invalid;
+- `session_access/grant.expiresAt` is optional with the same omission semantics;
+  every other new ACL operation field is required and non-null; and
+- optional human-readable error descriptions and display labels are omitted
+  when unavailable; `null` is invalid and recipients MUST NOT infer identity
+  from omission.
+
+All counters, revisions, sequence values, and fencing tokens introduced by ACP
+Remote use non-negative canonical decimal strings on the wire. This includes
+`aclRevision` and any audit-visible command or event sequence. Leading zeroes
+are invalid except for the value `"0"`. Clients MUST NOT decode these values
+through a floating-point representation.
+
+Every filesystem path carried by an ACP request or event, including an audited
+or delegated workspace boundary, MUST be absolute. For example,
+`/workspace/project/src/main.rs` is valid and `src/main.rs` is not.
+
+### Implementation phases
+
+1. Publish protected-resource metadata, Bearer challenges, TLS requirements,
+   standard scopes, and conformance tests for token placement and rejection.
+2. Bind authenticated principal and Client instance to transport connections;
+   enforce token scope and session ACL checks on every method and stream.
+3. Add the browser WebSocket ticket endpoint and origin-security tests.
+4. Add ACL administration, delegation, revocation propagation, and audit
+   correlation required by multi-client sessions.
+5. Run threat modeling and interoperability testing covering token theft,
+   confused-deputy proxies, cross-origin WebSockets, stale connections,
+   principal substitution, ID guessing, and ACL revocation races.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Is `Acp-Session-Id` a session capability or bearer secret?
+
+No. It is an opaque routing identifier. Servers should make IDs unguessable to
+reduce accidental collisions and enumeration, but they MUST authenticate and
+authorize every use as if the ID were public.
+
+### Are cookies credentials?
+
+The cookies defined by ACP Remote are affinity and routing state, not
+credentials. They MUST NOT contain or replace access tokens. Cookie
+authentication is outside, and does not conform to, the standard ACP Remote
+security profile.
+
+### Does successful `auth/login` authenticate a remote ACP connection?
+
+No. Remote endpoint authentication completes before `initialize`.
+`auth/login` authenticates the Agent application or one of its upstream
+services after the connection has already been authenticated and authorized.
+Neither layer implies success at the other.
+
+### Why not put a bearer token in the WebSocket URL?
+
+URLs are routinely retained in browser history, reverse-proxy logs, analytics,
+and diagnostics. The browser profile instead exchanges the bearer token over
+an authenticated HTTPS POST for a short-lived, single-use, endpoint-bound
+ticket.
+
+### Why distinguish principal and Client instance?
+
+One user can connect from multiple devices, IDE windows, or browser tabs. The
+principal carries authority; the Client instance supports presence,
+reconnection, and audit correlation. Treating a self-declared instance ID as a
+principal would let a caller impersonate another Client by copying a string.
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+- Treating session IDs as capability URLs was rejected because IDs leak and do
+  not provide revocation, roles, delegation, or auditable identity.
+- Defining a custom ACP login handshake was rejected because HTTP and OAuth
+  already define discovery, challenges, token audiences, expiry, and mature
+  implementation guidance.
+- Sending bearer tokens in query parameters or WebSocket subprotocols was
+  rejected because those values are commonly logged. Only the browser
+  profile's single-use ticket may use the constrained subprotocol bootstrap.
+- Using a sticky cookie as both affinity and authentication was rejected
+  because routing must remain independent from authority and durability.
+
+## Revision history
+
+- 2026-08-27: Added logical-connection identity, token-expiry and DPoP rules,
+  browser ticket binding, affinity-only cookies, the session permission
+  registry, and provisional revisioned ACL operations.
+- 2026-08-27: Initial Draft.

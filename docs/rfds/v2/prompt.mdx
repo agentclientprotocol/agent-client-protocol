@@ -4,6 +4,17 @@ title: "v2 Prompt Lifecycle"
 
 Author(s): [@benbrandt](https://github.com/benbrandt)
 
+<Warning>
+  The Draft [ACP Remote multi-client RFD](../remote/multi-client-sessions.mdx)
+  proposes additional v2 breaking changes that are not part of this Active RFD
+  or the current v2 schema: a server-owned activity ID in the prompt
+  acceptance result, a declared FIFO-or-reject policy for prompts submitted
+  while work is running, and activity-targeted cancellation instead of the
+  current session-wide notification. These changes must be accepted into v2
+  before Preview or introduced as new methods/a v3 core; implementations must
+  not infer them from the current empty prompt response.
+</Warning>
+
 ## Elevator pitch
 
 > What are you proposing to change?

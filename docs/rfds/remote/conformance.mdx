@@ -1,0 +1,502 @@
+---
+title: "ACP Remote Conformance and Fault Testing"
+---
+
+Author(s): ACP Remote working draft
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Define an executable conformance suite for ACP Remote. The suite tests protocol
+semantics through disconnects, retries, failover, concurrent clients, expired
+credentials, replay gaps, and slow consumers rather than only testing valid
+JSON serialization on an uninterrupted connection.
+
+An implementation MUST pass the tests for every remote profile and optional
+capability it advertises. Passing the WebSocket happy path alone is not enough
+to claim ACP Remote support.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+The ACP schema repository checks generated JSON Schema, Rust serialization,
+formatting, and compatibility behavior for extensible values. Those tests are
+valuable, but they do not run a client and server through a network transport.
+The current HTTP implementation tests routing and framing in the separate Rust
+SDK. Neither repository has a shared set of failure traces that defines the
+observable result of an interrupted operation.
+
+This leaves important questions implementation-defined:
+
+- Was a prompt accepted if its HTTP response was lost?
+- Which event follows a replay request made while new events are being written?
+- What happens when a token expires after a POST but before its result is read?
+- Can two clients answer the same permission request?
+- How does a client recover when the retained event log starts after its cursor?
+- Does a slow observer block the agent or another controller?
+
+Interoperability cannot be inferred from unit tests that never create these
+conditions.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+Publish a transport-independent trace format, a reference fault proxy, and a
+black-box test runner. Test cases describe client actions, injected faults, and
+required observations. The same case MUST be runnable against Streamable HTTP
+and WebSocket bindings.
+
+### One profile and capability-derived test groups
+
+Servers and Clients negotiate exactly one remote profile: `acp.remote.v2`.
+Core, shared-session, and Host coverage are capability sets, not wire profile
+suffixes:
+
+| Capability set                       | Dependency                 | Required behavior                                                                                                                                  |
+| ------------------------------------ | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `capabilities.remote.core`           | `acp.remote.v2`            | Required. Authenticated connection, one ordered delivery stream, reconnect, replay, idempotent `operationId` mutations, limits, and common errors. |
+| `capabilities.remote.sharedSessions` | `capabilities.remote.core` | Authenticated multi-Client attachments, domain revisions, arbitration, and durable claimed/CAS pending interactions.                               |
+| `capabilities.remote.hostServices`   | `capabilities.remote.core` | Resource substrate plus independently advertised Host subcapabilities.                                                                             |
+
+When `acp.remote.v2` is selected, `capabilities.remote.core` is required and
+non-null. Optional `sharedSessions`, `hostServices`, and their support-marker
+children follow the ACP v2 convention: omission or `null` means unsupported.
+
+The suite may label reports and test selections `acp.remote.v2.core`,
+`acp.remote.v2.shared`, and `acp.remote.v2.host` for readability. Those strings
+are conformance group labels only; they MUST NOT appear as negotiated profile
+values. An implementation MUST NOT report the core group if it silently falls
+back to best-effort semantics, `shared` without complete `sharedSessions`, or
+`host` without `core`, `sharedSessions`,
+`capabilities.remote.sharedSessions.multiChat`,
+`capabilities.remote.sharedSessions.multiChat.fork`,
+`capabilities.remote.sharedSessions.multiChat.sideChat`, `hostServices`, and
+every Host subcapability required by the parity ledger. A partial Host
+implementation can claim its individual capabilities but not the full `host`
+group. Legacy local and best-effort transport tests remain separate suites.
+
+### Test trace format
+
+The repository will contain machine-readable cases with these top-level fields:
+
+```json
+{
+  "caseId": "mutation.response_lost.retry",
+  "profile": "acp.remote.v2",
+  "requiresCapabilities": ["capabilities.remote.core"],
+  "actors": ["client-a", "server"],
+  "steps": [],
+  "invariants": [],
+  "allowedOutcomes": []
+}
+```
+
+`steps` may connect, authenticate, initialize, attach, send a JSON-RPC message,
+wait for an event, acknowledge a cursor, advance a monotonic test clock, or
+inject a fault. `invariants` are evaluated continuously. `allowedOutcomes` is
+an empty array for a deterministic case and lists the complete finite set only
+where the protocol deliberately permits more than one result; it MUST NOT hide
+an unspecified race.
+
+All top-level trace fields are required and non-null:
+
+| Field                  | Type and nullability                                                                                                                                                       |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `caseId`               | Non-empty string, required, `null` invalid.                                                                                                                                |
+| `profile`              | Required exact string `acp.remote.v2`, `null` invalid.                                                                                                                     |
+| `requiresCapabilities` | Required array of unique, non-null capability paths containing their dependency closure; it may contain only `capabilities.remote.core` but is never empty for this suite. |
+| `actors`               | Required non-empty array of unique symbolic actor IDs; `null` entries are invalid.                                                                                         |
+| `steps`                | Required array; it may be empty only in a schema fixture, not an executable case.                                                                                          |
+| `invariants`           | Required array; it may be empty.                                                                                                                                           |
+| `allowedOutcomes`      | Required array; empty means exactly the primary asserted outcome.                                                                                                          |
+
+Step and invariant variant schemas follow the same rule: fields are required
+and non-null unless that variant explicitly marks them optional; omission is
+then the only representation of absence and `null` is invalid. Existing
+embedded ACP JSON-RPC payloads retain their own field rules.
+
+Secrets, bearer tokens, resume credentials, and cookies MUST be represented by
+symbolic handles in recorded traces. A runner MUST redact their concrete values
+from output.
+
+### Common error names
+
+Tests use the complete cross-cutting ACP Remote condition registry across
+transport, shared sessions, and Host services:
+
+| Common condition            | Required condition                                                                                                                                 |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `unauthenticated`           | Endpoint credential is absent, invalid, or expired.                                                                                                |
+| `forbidden`                 | The authenticated principal lacks authority.                                                                                                       |
+| `unsupported_profile`       | The peer does not implement `acp.remote.v2`.                                                                                                       |
+| `unsupported_capability`    | A requested capability or its dependency cannot be satisfied.                                                                                      |
+| `invalid_resume`            | Resume credential or its principal, Client-instance, logical-connection, or audience binding is invalid.                                           |
+| `connection_fenced`         | A newer physical generation superseded this one.                                                                                                   |
+| `connection_not_live`       | A non-allowlisted operation arrived before the initial or recovery `caught_up` barrier.                                                            |
+| `cursor_gap`                | Connection delivery cannot replay from the requested cursor.                                                                                       |
+| `server_epoch_changed`      | Connection-delivery cursor continuity cannot be proven across the server epoch.                                                                    |
+| `snapshot_incomplete`       | A recovery SnapshotSet cannot represent every active authorized Attachment and resource view.                                                      |
+| `snapshot_conflict`         | Snapshot authorization or active-view membership changed before atomic adoption.                                                                   |
+| `operation_conflict`        | One scoped `operationId` was reused with a different canonical payload.                                                                            |
+| `operation_outcome_unknown` | The operation-ledger result expired before the outcome could be proven.                                                                            |
+| `reverse_request_mismatch`  | A response does not bind to the expected durable `reverseRequestId` or `interactionId`.                                                            |
+| `revision_conflict`         | A domain compare-and-set failed; structured data identifies the domain and current authorized revision, including an already-resolved interaction. |
+| `backpressure`              | An unacknowledged-delivery or queued-work limit was exhausted.                                                                                     |
+| `rate_limited`              | Principal or tenant rate policy rejected otherwise valid work.                                                                                     |
+| `message_too_large`         | A frame, batch, schema, or decompressed payload exceeds its negotiated limit.                                                                      |
+| `temporarily_unavailable`   | The Host cannot currently serve an otherwise valid operation.                                                                                      |
+
+These are common conditions, not an exhaustive domain-error registry.
+Domain errors such as `session_not_found`, `provider_not_found`,
+`activity_in_progress`, and `already_exists` retain their typed domain codes.
+Structured domain details can accompany a common condition such as
+`revision_conflict`, but a service MUST NOT create an alias for the same
+cross-cutting condition.
+
+### Fault vocabulary
+
+The reference proxy supports at least:
+
+- Drop a client-to-server message before or after the server accepts it.
+- Drop a server-to-client response or event.
+- Duplicate a complete message.
+- Delay a message until a named barrier.
+- Close a stream cleanly or abort it mid-frame.
+- Half-close one direction while leaving the other direction open.
+- Return a transient HTTP status with or without `Retry-After`.
+- Expire, revoke, or replace an access token.
+- Restart the serving node while preserving or losing durable state as declared
+  by the test.
+- Move a session to a different serving node and fence the former owner.
+- Truncate replay retention at a chosen cursor.
+- Pause one consumer until its delivery window or server queue is exhausted.
+- Skew wall clocks. Correctness MUST depend on protocol revisions and monotonic
+  durations, not synchronized wall clocks.
+
+The WebSocket proxy injects faults only at complete ACP record boundaries unless
+a case explicitly tests malformed framing. TCP fragmentation and retransmission
+are transport responsibilities; ACP tests focus on ambiguity across connection
+loss and process failure.
+
+### Required core matrix
+
+#### Authentication and isolation
+
+1. Reject an unauthenticated initialize without allocating a usable connection
+   or disclosing session metadata.
+2. Bind a connection, durable client instance, and resume credential to the
+   authenticated principal and authorization context.
+3. Reject a resume credential presented by another principal, tenant, or
+   endpoint audience.
+4. Reauthorize every session operation after token scope reduction or ACL
+   change; an old attachment MUST NOT preserve revoked authority.
+5. Refresh or reauthenticate without losing acknowledged delivery progress.
+6. Enforce Origin policy for browser-capable bindings and reject bearer tokens
+   in URLs.
+7. Redact credentials from errors, telemetry, and recorded traces.
+
+#### Initialization and negotiation
+
+1. Reject any ordinary ACP request before initialization.
+2. Negotiate the exact `acp.remote.v2` profile and reject an invalid
+   `core`/`sharedSessions`/`hostServices` capability dependency combination.
+3. Reject a reconnect made against a changed server epoch unless the client
+   performs the required reinitialization or snapshot recovery.
+4. Preserve JSON-RPC batch ordering and notification rules.
+5. Ignore or reject unknown optional capabilities according to their declared
+   extensibility rule.
+
+#### Ordered delivery and replay
+
+1. Assign every durable outbound record a unique cursor in the declared order.
+2. Deliver records after cursor `C` without omitting records that were committed
+   before the replay-to-live barrier.
+3. Permit duplicates after reconnect but never silently reorder committed
+   records. Client reducers MUST converge after deduplication.
+4. Return an explicit replay-gap result containing the earliest retained cursor
+   and a snapshot recovery path.
+5. Produce a recovery SnapshotSet and high-water cursor from one atomic logical
+   cut. Events after that cut are delivered exactly once or more through the
+   tail stream.
+6. Define recovery when the stream fails during replay, after the replay barrier,
+   and before the first live event.
+7. Keep SSE event IDs and WebSocket record cursors semantically identical.
+8. Do not claim durable delivery for explicitly ephemeral events; expose their
+   loss classification after reconnect.
+
+#### Acknowledgements and retention
+
+1. Before emitting a cumulative ACK, either atomically reduce every covered
+   canonical event into durable domain state and persist its connection cursor,
+   or durably stage each bounded SnapshotSet chunk/content reference with its
+   cursor after verifying that chunk's declared size and digest, and persist
+   the manifest/staging metadata. Volatile receipt or queueing is never
+   sufficient. The Client MUST verify the complete SnapshotSet manifest and
+   aggregate integrity and atomically adopt it before acknowledging its
+   adoption barrier or `caught_up` record.
+2. Advance the server-side checkpoint only after an acknowledgement authorized
+   for that logical connection.
+3. Treat repeated acknowledgements as idempotent.
+4. Reject a cursor that is not in the delivered prefix for that logical
+   connection, including a cursor issued after the delivered high-water mark;
+   the cursor remains opaque to the Client and has no Client-side ordering
+   comparison.
+5. Retain records according to the advertised lower bound or return a gap;
+   silently starting at a newer record is forbidden.
+6. Verify that one stalled logical connection cannot indefinitely retain
+   unbounded data or block healthy attachments.
+
+#### Idempotent mutations and uncertain outcomes
+
+For each mutating operation—including session creation, prompt, inject, cancel,
+configuration, pending-interaction response, close, delete, resource write,
+terminal input, and automation run—the suite repeats the same sequence:
+
+1. Establish that the ledger key within the authority is exactly authenticated
+   `(principalId, clientInstanceId, operationId)`; neither connection ID nor
+   JSON-RPC request ID changes that key.
+2. Deliver the request and drop its response.
+3. Reconnect using a new physical transport generation.
+4. Retry with the same `operationId` from the same principal and Client
+   instance.
+5. Require the original outcome and exactly one committed side effect.
+6. Retry with the same scoped `operationId` and a different canonical payload.
+7. Require `operation_conflict`.
+8. Verify that the same `operationId` under a different principal or Client
+   instance is a different ledger key and cannot retrieve or collide with the
+   first actor's outcome.
+9. Retry after the advertised deduplication window.
+10. Require either a retained result or `operation_outcome_unknown`;
+    executing silently as a new operation is forbidden unless the client opted
+    into that risk.
+
+Read-only JSON-RPC requests also carry the Remote Frame's canonical
+`operationId`; the suite verifies that a lost response can be replayed without
+silently substituting a result from a later revision. Pure cumulative
+acknowledgements and transport heartbeats are the only Client frames exempt
+from the operation ledger.
+
+#### Reconnect and liveness
+
+1. Reconnect after loss at every message boundary in initialize, attach, replay,
+   prompt, reverse request, response, acknowledgement, and detach.
+2. Detect a half-open connection using the negotiated heartbeat timeout.
+3. Apply exponential backoff with jitter and honor server retry hints.
+4. Permit exactly one active physical generation for a logical connection and
+   deterministically fence the former generation on takeover. ACP Remote does
+   not negotiate physical-stream fan-out; independent consumers use distinct
+   logical connections and cursors.
+5. Rotate resume credentials and reject replay of a retired credential after
+   its overlap window.
+6. Recover across a serving-node change without relying on affinity cookies.
+
+#### Backpressure and limits
+
+1. Reject oversized headers, records, batches, and decompressed payloads before
+   unbounded allocation.
+2. Apply bounded queues per connection and attachment.
+3. Feed a slow UI newer authorized snapshots after durable reduction instead
+   of pausing the connection ACK or dropping authoritative state.
+4. Require an event-complete consumer to use a separate logical connection and
+   cursor so its backpressure is independent.
+5. Return `backpressure` and retry hints for negotiated limits.
+6. Close only the affected logical connection when policy permits; do not
+   destroy the durable session because one consumer is slow.
+
+### Required shared-session matrix
+
+The `acp.remote.v2.shared` conformance group (the single `acp.remote.v2`
+profile plus `capabilities.remote.sharedSessions`) adds at least these cases:
+
+1. Two principals attach with different roles and receive only authorized
+   events and snapshot fields.
+2. Concurrent mutations are totally ordered and carry authenticated provenance.
+3. An operation using a stale expected revision receives `revision_conflict`
+   with authorized domain detail and does not partially commit.
+4. A controller lease transfer fences commands from the former controller.
+5. Detaching one participant does not cancel work or close the durable session.
+6. Session termination requires the declared privileged scope and is observable
+   by all participants.
+7. Scoped cancellation affects only the target activity unless whole-session
+   cancellation was explicitly authorized.
+8. Concurrent prompt, steer, queue, reorder, and revoke operations converge
+   according to the advertised policy.
+9. Private drafts and per-user read state are not leaked into shared state;
+   fields declared shared converge across clients.
+10. Presence expiration uses leases and is resilient to reconnect grace races.
+
+Advertising `capabilities.remote.sharedSessions.multiChat` adds multi-chat
+creation, selection, history, truncation, error, resume, and subagent/worker
+projection cases. Fork and side-chat cases are required only with their exact
+`.multiChat.fork` and `.multiChat.sideChat` markers; all three are required for
+full conversation and Host parity. The shared-session base also owns
+attachment, tool ownership, confirmation, durable interaction, and owner-loss
+cases rather than assigning them to a Host-services marker.
+
+### Pending interactions
+
+Permission, elicitation, client-tool, resource-access, and result-confirmation
+interactions are tested as durable state, not connection-local callbacks:
+
+1. An eligible responder discovers a pending interaction from a snapshot or
+   replay after reconnect.
+2. An unauthorized observer cannot read sensitive prompt data or respond.
+3. Two Clients claim or answer concurrently; one valid compare-and-set wins and
+   the other receives `revision_conflict` with an interaction-specific detail.
+4. Claim lease expiry and explicit transfer fence late responses.
+5. Deadline expiry, cancellation, decline, and session termination each produce
+   one terminal state.
+6. A response accepted before connection loss is not applied twice when retried.
+7. Disconnecting the original recipient does not strand an interaction when
+   policy allows another eligible responder.
+
+### Host-service matrix
+
+The `acp.remote.v2.host` conformance group means the single `acp.remote.v2`
+profile with `capabilities.remote.sharedSessions`,
+`capabilities.remote.sharedSessions.multiChat`,
+`capabilities.remote.sharedSessions.multiChat.fork`,
+`capabilities.remote.sharedSessions.multiChat.sideChat`,
+`capabilities.remote.hostServices`, and all nine exact Host markers:
+
+- `capabilities.remote.hostServices.catalogs`;
+- `capabilities.remote.hostServices.resources`;
+- `capabilities.remote.hostServices.workspaces`;
+- `capabilities.remote.hostServices.terminals`;
+- `capabilities.remote.hostServices.artifacts`;
+- `capabilities.remote.hostServices.customizations`;
+- `capabilities.remote.hostServices.mcp`;
+- `capabilities.remote.hostServices.automations`; and
+- `capabilities.remote.hostServices.telemetry`.
+
+This is stricter than the wire dependency graph, where `sharedSessions` and
+`hostServices` independently depend only on `core`.
+Every advertised Host subcapability adds positive, authorization, reconnect,
+pagination, conflict, and resource-limit tests. At minimum this covers:
+
+- Agent/model/Session catalog changes and dynamic configuration under
+  `catalogs`.
+- Generic subscriptions, content references, Client/server resource operations,
+  conditional writes, watches, and permission changes under `resources`.
+- Absolute URI/path mapping, workspace membership, and protected-primary
+  behavior under `workspaces`.
+- Terminal output, input uncertainty, claims, resize, and exit under
+  `terminals`.
+- Tool execution, client-contributed ownership, confirmation, authentication,
+  result confirmation, and owner loss as shared-session prerequisite cases.
+- Changeset calculation, review, operations, and annotations under `artifacts`.
+- Customizations, plugins, skills, prompts, rules, hooks, MCP lifecycle, and MCP
+  Apps capability gating under `customizations` and `mcp`.
+- Automation definitions, scheduling edge cases, idempotent manual runs,
+  cancellation, history, and authorization revalidation under `automations`.
+- OTLP log, trace, and metric export without credential leakage under
+  `telemetry`; common progress and errors remain Core cases.
+
+The AHP parity RFD owns the exhaustive feature inventory. A conformance release
+MUST link each inventory row to one or more executable case IDs.
+
+### Security test requirements
+
+The suite includes negative tests for cross-tenant identifiers, guessed session
+IDs, stolen routing cookies, replayed resume credentials, token audience and
+issuer mismatch, expired/revoked tokens, Origin mismatch, session fixation,
+authorization downgrade, symlink/path traversal, malicious content type, active
+SVG content, decompression bombs, and oversized schemas.
+
+Implementations MAY add stronger authentication profiles. The shared suite MUST
+never require real production identity-provider credentials; it uses a local
+test issuer and deterministic test keys.
+
+### Deterministic model and property tests
+
+In addition to scenario traces, the reference model exposes pure transitions for
+sessions, attachments, delivery logs, operations, interactions, and leases.
+Property-based tests generate valid interleavings and assert:
+
+- Ordered decimal domain counters and revisions, including `sessionVersion`,
+  never decrease within their canonical domain scope. Delivery and event
+  cursors are opaque: the model tests equality, delivered-prefix membership,
+  and server-declared boundaries, never lexical or numeric cursor order.
+- One `(principalId, clientInstanceId, operationId)` ledger key commits at most
+  one canonical payload; changing a connection or JSON-RPC request ID does not
+  change that key.
+- Connection-cursor application does not itself change session, attachment,
+  interaction, or resource revisions; only a canonical domain event does.
+- Session, chat, and resource projections of one domain change retain the same
+  `sourceEventId`, including after replay on a new connection wrapper.
+- A terminal interaction state never becomes pending again.
+- A fenced attachment cannot mutate state.
+- Applying any delivered prefix followed by valid replay converges to the same
+  authorized snapshot.
+- Durable session state does not depend on the survival of a transport
+  connection.
+- No principal observes fields outside its authorization view.
+
+Servers need not use the reference reducer internally, but their observable
+behavior MUST satisfy it.
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+An SDK release can state exactly which remote guarantees it provides. A server
+author can reproduce an interoperability failure using a small, redacted trace.
+Transport changes can be tested against the same semantic cases, and new host
+capabilities cannot be marked complete until reconnect, authorization, and
+concurrency behavior are covered.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+1. Publish JSON Schema for the trace format and a small corpus of canonical
+   traces.
+2. Implement an in-process deterministic reference model.
+3. Add the network fault proxy with HTTP/SSE and WebSocket adapters.
+4. Add Rust client/server drivers in the Rust SDK repository.
+5. Run the same suite against other SDKs through a language-neutral process
+   adapter.
+6. Require a generated coverage report that maps advertised capabilities to
+   case IDs.
+7. Add fuzzing for framing and property testing for transition interleavings.
+
+The initial suite will gate the core profile. Shared-session and host-service
+groups become required when their corresponding schema RFDs reach Preview.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Does this promise exactly-once network delivery?
+
+No. ACP Remote uses at-least-once delivery with cursors and deduplication.
+Idempotent `operationId` values provide exactly-once committed effects within a
+declared deduplication window. Those are testable application guarantees; the
+network can still duplicate or lose frames when a connection fails.
+
+### Why test both SSE and WebSocket if their protocol semantics are identical?
+
+The delivery model is identical, but adapters can differ in cursor mapping,
+heartbeats, close behavior, proxy interaction, and backpressure. A conforming
+implementation must demonstrate that those differences do not change ACP
+outcomes.
+
+### Are ephemeral events replayed?
+
+No. Their classification and possible loss are explicit. If losing an event
+would prevent reconstruction of authorized state, that event is not eligible to
+be ephemeral.
+
+### Can a deployment pass only a subset of host tests?
+
+Yes. It reports the single `acp.remote.v2` profile, the negotiated
+`core`/`sharedSessions`/`hostServices` capability closure, and the individual
+Host subcapabilities it implements. It cannot claim complete AHP parity until
+every row in the parity matrix has passing coverage.
+
+## Revision history
+
+- 2026-08-27: Initial working draft.

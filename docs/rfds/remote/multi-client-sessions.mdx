@@ -1,0 +1,1029 @@
+---
+title: "Remote Multi-client Sessions"
+---
+
+Author(s): ACP Remote working draft
+
+Status: Draft
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Allow multiple authenticated remote Client instances to participate in one ACP
+session without duplicating commands, losing updates, or racing to answer
+permissions and elicitations.
+
+This RFD introduces:
+
+- authorized session attachments and explicit event subscriptions;
+- a readiness barrier that prevents events from racing session setup;
+- one authoritative mutation order per session;
+- canonical operation IDs, session epochs, version preconditions, and optional
+  single-writer control leases;
+- durable pending interactions with claim leases and compare-and-set response;
+  and
+- privacy-preserving presence.
+
+Every participant's authority comes from remote endpoint authentication and the
+session ACL defined by the [Remote Security and Identity
+RFD](/rfds/remote/security-and-identity). A participant, attachment, Client
+instance, connection, or session ID is never a credential.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+ACP's original topology is one IDE Client connected over stdio to one local
+Agent. The connection implicitly identifies the user, determines where Agent
+requests are delivered, and supplies a total arrival order. If the connection
+closes, there is no second Client still changing the same session.
+
+Those assumptions do not hold for a remote service:
+
+- several devices, IDE windows, browser tabs, gateways, or collaborators may
+  attach to the same session;
+- POSTs, SSE streams, and WebSocket connections can race or reconnect
+  independently;
+- receipt of a JSON-RPC request does not prove that its effect was committed;
+- retry after a lost response can create a duplicate prompt or injection;
+- a permission or elicitation sent as a reverse request is tied to one
+  connection and disappears with it;
+- broadcasting a reverse request and accepting the first response lets the
+  fastest Client, rather than an explicitly authorized Client, decide;
+- message IDs do not identify tool-call, plan, state, permission, presence, or
+  other events between messages; and
+- a connected-client roster can expose user or device identity across trust
+  boundaries.
+
+The v2 prompt lifecycle provides important building blocks: a prompt response
+acknowledges acceptance, the Agent emits an authoritative `user_message`, and
+`state_update` reports whether the session is running, idle, or requires
+action. Multi-client ACP should reuse those events rather than add parallel
+`prompt_received` or `turn_complete` notifications.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+A principal with session read authority creates an **attachment** on each live
+logical connection. Attaching does not grant membership or select a role; it
+materializes authority already granted by the session ACL. The Agent returns
+the participant's effective roles and permissions, a session epoch and version,
+the current event boundary, and a delivery barrier. The Client installs its
+handlers and acknowledges the barrier with `session/ready` before delivery
+begins.
+
+Each attachment explicitly subscribes to the event categories it needs. The
+server pushes updates to all authorized subscribers. Polling is only a recovery
+and inspection mechanism, not the normal update path.
+
+All state-changing commands pass through one authoritative sequencer per
+session. The server authenticates and authorizes the actor, deduplicates the
+command, checks its epoch, version and control fence, assigns a command
+sequence, commits it, and then emits durable session events. Network arrival
+order has no authority before this commit point.
+
+Agent-to-Client permissions, elicitations, and future user decisions become
+durable **pending interactions**. Eligible participants first acquire an
+exclusive, expiring claim with compare-and-set. Only the current claim holder
+may resolve the interaction, and resolution is itself an idempotent atomic
+transition. This replaces first-response-wins broadcast behavior.
+
+## Shiny future
+
+> How will things play out once this feature exists?
+
+A user starts a session in `/workspace/project` from an IDE, observes it from a
+browser, and later reconnects from another device. Both views receive the same
+ordered events and can deduplicate replayed delivery. If both submit work, each
+accepted command gets one place in the session order; a lost response and retry
+does not run the command twice.
+
+A team can grant one participant control and another approval authority. When
+the Agent needs permission to run a command from `/workspace/project`, eligible
+approvers see the pending interaction. One Client claims it, the others see
+that it is being handled, and only that claimant can commit a response. If the
+Client disconnects, the claim expires and another approver can safely take
+over.
+
+Presence helps people coordinate, but does not leak OAuth subjects, email
+addresses, device identifiers, IP addresses, or activity in other sessions.
+Authorization remains correct when presence is delayed or unavailable.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+### Relationship to other ACP session methods
+
+`session/resume` restores durable Agent state and optionally replays history.
+`session/attach` establishes one live participant binding and its subscriptions
+on the current logical connection. They are different operations:
+
+- a warm, already running session can accept another attachment without being
+  resumed;
+- a cold session is resumed once and may then have several attachments;
+- resuming a physical transport generation of the same logical connection
+  within its grace period preserves the attachment; and
+- creating a fresh logical connection creates a new attachment even when the
+  same Client instance and no new Agent state are involved.
+
+An implementation MAY perform resume and attach internally as one transaction,
+but the observable attach response, readiness barrier, authorization, replay
+boundary, and operation-deduplication rules remain the same.
+
+This RFD depends on a durable session-event stream. An implementation MUST NOT
+claim multi-client recovery support if it stores only message history. Every
+replayable update, including messages, tool calls, plans, state changes,
+configuration, permission and elicitation lifecycle, ACL-visible membership,
+and terminal state, needs a server-assigned event identity and order.
+
+Every nested `operationId` shown in this RFD is the typed method's copy of the
+canonical operation ID on its enclosing reliable Remote Frame. The two values
+MUST be identical. A missing or mismatched nested value is an invalid request.
+They address one operation-ledger record, one deduplication decision, and one
+operation receipt; nesting never creates a second ledger or retention window.
+
+### Capability discovery
+
+An Agent or Host advertises the shared-session baseline through the common ACP
+Remote capability graph:
+
+```json
+{
+  "capabilities": {
+    "remote": {
+      "core": {},
+      "sharedSessions": {}
+    }
+  }
+}
+```
+
+`capabilities.remote.sharedSessions` depends on
+`capabilities.remote.core`. Advertising `sharedSessions` while omitting `core`
+or setting `core` to `null` is invalid. Omission or `null` for
+`sharedSessions` means the peer does not support this RFD. The shared-session
+baseline includes attachments, readiness, subscriptions, canonical operation
+receipts, epochs, capability virtualization, and durable pending interactions;
+implementations MUST NOT advertise it for a partial subset.
+
+Presence, leased single-writer control, and multi-chat behavior are optional
+domain sub-capabilities inside `sharedSessions`:
+
+```json
+{
+  "capabilities": {
+    "remote": {
+      "core": {},
+      "sharedSessions": {
+        "presence": {},
+        "leasedControl": {},
+        "multiChat": {
+          "fork": {},
+          "sideChat": {}
+        }
+      }
+    }
+  }
+}
+```
+
+`presence`, `leasedControl`, and `multiChat` are optional support markers.
+Omission or `null` means unsupported. The first two inner objects currently
+have no fields. Inside `multiChat`, `fork` and `sideChat` are independent
+optional support markers with the same omission-or-null semantics. Advertising
+`multiChat: {}` supports creating additional ordinary chats but neither fork
+nor side-chat semantics. Full AHP conversation parity requires both markers.
+Unknown fields must be ignored and preserved by transparent proxies according
+to ACP extension rules.
+
+### Attachment capabilities and eligible targets
+
+Each `session/attach` request carries a required, non-null
+`attachmentCapabilities` object containing the complete attachment-scoped
+Client capabilities that may affect reverse requests or presentation. An empty
+object means that the attachment offers none. It is not a role, does not grant
+authority, and does not replace the logical connection's negotiated Remote
+capabilities.
+
+For example:
+
+```json
+{
+  "attachmentCapabilities": {
+    "elicitation": {
+      "form": {}
+    },
+    "mcpApps": {}
+  }
+}
+```
+
+Known nested fields follow the nullability rules of their defining ACP
+capability. For the new containing field, omission and `null` are invalid.
+Transparent Hosts preserve unknown attachment-capability fields, but MUST NOT
+treat an unknown field as supported behavior.
+
+An attachment is an eligible target for a reverse or interaction request only
+when all of the following hold at delivery and again at commit:
+
+1. its principal has the required token scope, ACL permission, and interaction
+   visibility;
+2. its attachment is live or durably resumable under the request's policy;
+3. its attachment capabilities support the exact request mode and content;
+4. any provider registration, control lease, or pending-interaction claim names
+   that attachment; and
+5. routing does not disclose a request or resource outside the recipient's
+   authorized view.
+
+Subscription alone never establishes eligibility. The Host MUST NOT broadcast
+a request to an incapable attachment, select the first connected Client, or
+advertise a union of capabilities that no eligible attachment can fulfill.
+
+`session/set_attachment_capabilities` replaces the complete capability object
+for an attachment. Its request contains required, non-null `sessionId`,
+`attachmentId`, `operationId`, `expectedAttachmentRevision`, and
+`attachmentCapabilities`. The revision is a decimal string. The update is one
+canonical operation and follows the Remote Frame operation-ID equality rule.
+Its response contains required, non-null decimal-string `attachmentRevision`
+and the complete required, non-null `attachmentCapabilities` object. Capability
+and subscription replacement share one attachment-revision domain; either
+successful replacement increments it exactly once. Capability removal
+immediately prevents new routing and fences any outstanding provider lease or
+pending-interaction claim that required the removed capability. The resulting
+state transition is durable and revisioned; it does not silently reassign a
+side effect to another Client. The `attachmentId` MUST name the caller's own
+attachment on the authenticated logical connection. Even a session
+administrator cannot assert capabilities for another Client; a mismatch fails
+with `forbidden` without revealing whether the named attachment exists.
+
+A Host proxying an ordinary local or stdio Agent acts as the Agent's one ACP
+Client peer. It advertises upstream only capabilities that the Host itself can
+durably broker even when no remote attachment is currently online. The Host
+maintains each remote attachment's capabilities separately, turns eligible
+permissions and elicitations into durable interactions, and routes
+Client-provided tools, resources, MCP, or UI work only to an explicitly
+registered and fenced provider attachment. It MUST NOT overwrite the Agent's
+initialize-time capability view whenever a remote Client attaches or detaches.
+If no capable authorized target exists, the Host reports the appropriate
+requires-action or unavailable result instead of guessing a recipient.
+
+### Participants and attachments
+
+The server creates a session-scoped `participantId` for each principal with
+membership in the session. A principal can have several Client instances and
+each instance can have several logical connections. Each successful attach
+creates a server-owned `attachmentId` for exactly one tuple:
+
+```text
+(session, participant, client instance, logical connection) -> attachment
+```
+
+The tuple is immutable. Replacing a physical transport while successfully
+resuming the same logical connection generation chain preserves the tuple and
+`attachmentId`. Creating another logical connection creates a new attachment.
+An attachment is never moved or recovered merely by presenting its public ID;
+logical-connection resume uses its separate authenticated resume credential and
+fences the prior physical generation.
+
+The following are distinct opaque domains and MUST NOT be interchanged:
+
+- `principalId` authenticates no request by itself;
+- `participantId` identifies session membership;
+- `clientInstanceId` correlates one Client installation;
+- `connectionId` identifies one logical connection;
+- `physicalGeneration` fences replaceable HTTP/SSE or WebSocket transports for
+  that logical connection;
+- `attachmentId` identifies live participation; and
+- `sessionId` identifies durable session state.
+
+None of these IDs, and no affinity cookie, is a credential. The server derives
+authority from the authenticated principal, token scopes, current ACL, and any
+required concurrency fence.
+
+### Attaching and the delivery barrier
+
+The proposed `session/attach` request is:
+
+```json
+{
+  "sessionId": "sess_01K39Z",
+  "operationId": "01K39Z8FNJ8Q7YB2T4J2D5J8H1",
+  "attachmentCapabilities": {
+    "elicitation": {
+      "form": {}
+    }
+  },
+  "subscriptions": ["events", "pending_interactions", "presence"],
+  "replayFrom": {
+    "type": "after_event",
+    "sourceEventId": "event_01K39X"
+  }
+}
+```
+
+`sessionId`, `operationId`, `attachmentCapabilities`, and `subscriptions` are
+required and non-null. `attachmentCapabilities` follows the complete-object
+replacement rules above. `subscriptions` may be empty. Duplicate subscription
+values are invalid.
+
+`replayFrom` is optional and omission means start at the attach operation's
+live boundary without historical replay. `replayFrom: null` is invalid. Its
+initial variants are:
+
+- `{ "type": "start" }`, which replays from the oldest retained session event;
+  and
+- `{ "type": "after_event", "sourceEventId": "..." }`, which starts strictly after
+  the identified event.
+
+Every discriminator and variant field is required and non-null. A missing,
+expired, or unauthorized source event selects the response's
+`snapshot_required` recovery variant; the server does not disclose an earliest
+boundary or whether that event ever existed.
+
+The response is:
+
+```json
+{
+  "attachmentId": "attachment_01K39Z",
+  "attachmentRevision": "1",
+  "participantId": "participant_4T7P",
+  "roles": ["controller"],
+  "effectivePermissions": ["session.read", "session.write"],
+  "sessionEpoch": "epoch_8",
+  "sessionVersion": "91",
+  "controlPolicy": "ordered_multi_writer",
+  "recovery": {
+    "type": "event_replay",
+    "latestSourceEventId": "event_01K39Z"
+  },
+  "deliveryBarrierId": "barrier_01K39Z",
+  "effectiveSubscriptions": ["events", "pending_interactions"]
+}
+```
+
+Every response field is required and non-null. `roles`,
+`effectivePermissions`, and `effectiveSubscriptions` may be empty. The server
+may narrow requested subscriptions based on capability, ACL, or privacy
+policy; it MUST return the resulting complete set.
+
+`recovery` is a required tagged union. `event_replay` carries required,
+non-null `latestSourceEventId` and establishes an exact replay/live boundary.
+If the requested source event is expired or otherwise unavailable, attach does
+not silently start later and does not leave a partial side effect: it commits a
+pending attachment and returns `snapshot_required` with required, non-null
+`condition: "cursor_gap"`. The pending attachment becomes an active view in the
+Reliable Transport RFD's next complete SnapshotSet. The logical connection
+enters recovery, atomically adopts the whole authorized set, and cannot activate
+this attachment until both SnapshotSet adoption and the readiness control below
+commit. An unauthorized source event still reveals no event identity or
+retention boundary.
+
+The response establishes an atomic replay/live boundary through that recovery
+union.
+The server buffers events for the attachment but does not deliver them until
+the Client sends:
+
+```json
+{
+  "sessionId": "sess_01K39Z",
+  "attachmentId": "attachment_01K39Z",
+  "deliveryBarrierId": "barrier_01K39Z",
+  "operationId": "01K39ZBARRIER7YB2T4J2D5J8"
+}
+```
+
+as a `session/ready` notification. All four fields are required and non-null;
+the nested `operationId` equals the enclosing Remote Frame operation ID. The
+notification is retry-safe and its acceptance or rejection is reported through
+the common operation receipt. A wrong or expired barrier is rejected with
+`revision_conflict` and an authorized `attachment_barrier` detail; it MUST NOT
+activate another attachment. The server starts replay and then atomically tails
+live events, preserving event order. If the barrier is not acknowledged within
+an advertised timeout, the server expires the attachment and its buffer.
+
+This barrier absorbs the intent of the existing `session/ready` proposal but
+binds readiness to a particular authorized attachment and replay boundary.
+
+### Subscriptions
+
+The initial subscription categories are:
+
+- `events`: durable session events visible to the participant;
+- `pending_interactions`: durable interaction lifecycle and eligible request
+  contents; and
+- `presence`: privacy-filtered presence snapshots and changes.
+
+Authorization and mandatory control messages are not optional subscriptions.
+The server always delivers revocation, attachment expiry, replay-gap, and
+connection-termination information needed to use the protocol safely.
+
+`session/set_subscriptions` replaces, rather than patches, the complete desired
+set for an attachment:
+
+```json
+{
+  "sessionId": "sess_01K39Z",
+  "attachmentId": "attachment_01K39Z",
+  "operationId": "01K39ZD8PV4PRH8K4JXGN1VDQZ",
+  "expectedAttachmentRevision": "3",
+  "subscriptions": ["events"]
+}
+```
+
+Every field is required and non-null. The compare-and-set revision prevents
+concurrent updates from silently overwriting subscription state. The
+`attachmentId` MUST name the caller's attachment on the authenticated logical
+connection; another Client cannot subscribe or unsubscribe on its behalf. The
+response returns required, non-null `attachmentRevision` and the complete
+required, non-null `effectiveSubscriptions` array.
+
+Subscription changes affect delivery, not authority or event retention.
+Clients MUST NOT infer that an operation is unauthorized merely because its
+event category was not subscribed.
+
+### Detach and disconnect
+
+`session/detach` contains required, non-null `sessionId`, `attachmentId`, and
+`operationId`. It is idempotent. Detaching stops delivery and presence for
+that attachment but does not close, cancel, or delete the durable session. The
+caller may detach only its own attachment; administrators revoke another
+participant through the ACL operation rather than presenting that Client's
+attachment ID.
+
+On loss of the current physical generation, the server marks attachments on its
+logical connection disconnected and retains them for that logical connection's
+bounded, advertised resume grace period. A successful same-principal,
+same-security-realm, same-resource, same-Client-instance resume within the grace
+period fences the old physical generation and restores the same attachments.
+Presence may show an advisory disconnected state during the gap. When the
+logical-connection grace period ends, each attachment expires. A fresh logical connection must call
+`session/attach` and receives a new attachment ID. Attachment expiry cannot
+revoke session membership, which belongs to the principal's ACL entry.
+
+Control leases and pending-interaction claims have their own explicit expiry.
+They MUST NOT remain valid indefinitely merely because an attachment is in its
+disconnect grace period.
+
+### Durable event envelope
+
+Every durable session notification delivered to a multi-client attachment
+includes:
+
+```json
+{
+  "sessionId": "sess_01K39Z",
+  "sourceEventId": "event_01K3A0",
+  "eventSequence": "157",
+  "sessionEpoch": "epoch_8",
+  "sessionVersion": "92",
+  "update": {
+    "sessionUpdate": "state_update",
+    "state": "running"
+  }
+}
+```
+
+All envelope fields are required and non-null. `update` is an existing or
+future ACP session update and follows its own field-presence rules.
+`eventSequence` is strictly increasing within a session epoch and establishes
+the total event order. `sourceEventId` is globally unique within the session
+and is the opaque replay and deduplication cursor. The same field identifies
+every authorized projection of this canonical event. Clients MUST NOT derive
+sequence or time from `sourceEventId`.
+
+Every counter, revision, sequence, version, and fencing token introduced by
+this RFD is encoded as a non-negative canonical decimal string. This includes
+`eventSequence`, `sessionVersion`, `attachmentRevision`, `commandSequence`,
+`physicalGeneration`, `fencingToken`, interaction `revision`,
+`expectedRevision`, and `presenceRevision`. `requestedTtlSeconds` is also a
+non-negative canonical decimal string because it carries a duration. Leading
+zeroes are invalid except for `"0"`. Clients MUST compare or increment these
+values as arbitrary-precision unsigned integers and MUST NOT decode them
+through floating point.
+
+Delivery is at least once. A Client deduplicates by
+`(sessionId, sourceEventId)` and
+applies events in `eventSequence` order. A server MUST NOT reuse an event ID or
+sequence after failover. Changing the session epoch fences a stale writer but
+does not permit reuse of prior event identifiers.
+
+An optional `actorParticipantId` may be included when the recipient is allowed
+to see the actor. Omission means actor identity is unavailable or redacted;
+`null` is invalid. Actor omission does not make the event unaudited on the
+server.
+
+### Common mutation context
+
+Every state-changing remote session request carries this logical context:
+
+```json
+{
+  "operationId": "01K3A11JNSXG6QMDXJQKQ8X44C",
+  "sessionEpoch": "epoch_8",
+  "expectedSessionVersion": "92"
+}
+```
+
+`operationId` and `sessionEpoch` are required and non-null on every remote
+mutation. `expectedSessionVersion` is optional; omission means the caller does
+not require a version compare-and-set, while `null` is invalid.
+
+Administrative replacements, including ACL changes, ownership transfer,
+destructive close or delete, and replacement of shared configuration, MUST
+include `expectedSessionVersion`. Append-like commands such as a prompt or
+queued injection MAY omit it and rely on the authoritative command order.
+
+The session epoch identifies the current authoritative session owner or
+generation. It changes whenever failover, migration, restoration, or another
+ownership transition could leave a former writer active. A request carrying a
+stale epoch fails with `revision_conflict`; its authorized error details
+identify `session_epoch` as the conflicting domain, and the request MUST have
+no effect.
+
+For each mutation, the authoritative server performs the following transaction:
+
+1. authenticate the connection and bind it to its attachment;
+2. authorize the concrete operation against current scopes and ACL;
+3. find an existing operation-ledger record;
+4. check epoch, control fence, and version precondition;
+5. assign the next `commandSequence`;
+6. commit the effect and its resulting events; and
+7. durably record and return the outcome.
+
+The returned mutation receipt contains required, non-null
+`operationId`, `commandSequence`, `sessionEpoch`, `sessionVersion`, and
+`lastSourceEventId`. Repeating the same method, session, authenticated principal,
+operation ID, and semantically identical parameters returns the recorded
+outcome without assigning another command sequence. Reusing the operation ID
+with a different method or parameters fails with `operation_conflict`.
+For `session/attach` and every attachment-bound mutation, the semantic input
+also includes the Client instance, logical connection ID, and attachment ID
+when present. Retrying attach on the same resumed logical connection returns its
+recorded attachment; presenting that operation ID on a fresh logical connection
+fails with `operation_conflict` and never rebinds the old attachment.
+
+Servers advertise an operation-outcome retention period. A retry within that
+period is safe. After the server can no longer prove whether an old operation ID
+committed, it MUST return `operation_outcome_unknown`; it MUST NOT silently
+execute the command as new. Clients generate a new operation ID only after a
+user or policy explicitly chooses to issue a new logical command.
+
+JSON-RPC request IDs correlate one delivery attempt and remain scoped to their
+connection. They are not operation IDs and cannot prove whether a request
+committed after its response was lost.
+
+### Deterministic prompt, steering, cancellation, and configuration behavior
+
+The prompt and cancellation rules in this section are explicit proposed v2
+wire and behavior breaks. Current v2 returns an empty `PromptResponse`, treats
+`session/cancel` as an unacknowledged session-wide notification, and does not
+normatively queue concurrent prompts in global FIFO order. Under the Remote
+shared-session profile:
+
+- successful `session/prompt` acceptance returns a required, non-null `activityId`
+  in addition to its operation receipt;
+- `session/cancel` becomes a retry-safe request with required, non-null
+  `sessionId`, `activityId`, and common mutation context; and
+- concurrent accepted prompts enter one session-wide FIFO order.
+
+These changes SHOULD land while v2 remains unstable. If v2 freezes first, they
+require v3 or separately named negotiated methods; an implementation MUST NOT
+reinterpret a stabilized v2 method incompatibly.
+
+The authoritative command sequence, not socket, POST, or batch arrival order,
+determines the relative order of concurrent mutations. Responses and replayed
+events expose that order.
+
+Each accepted prompt creates a server-owned, non-null `activityId` and is echoed
+through the v2 authoritative `user_message` update. A conversational turn is an
+activity subtype/projection; the core Remote profile does not introduce a
+second `turnId` identity. A plain prompt submitted
+while another turn runs enters the session's FIFO turn queue unless the Agent
+explicitly rejects queueing before acceptance. It MUST NOT silently become
+steering input. Mid-turn injection uses the separate queue/steer operation and
+the same mutation context. FIFO is the committed command order across all
+participants, not a separate queue per connection.
+
+Cancellation and steering target a required, non-null `activityId`. Cancelling
+an unspecified “current turn” is not safe when several Clients can race and is
+not part of the remote profile. A cancel accepted after that activity completed
+is an idempotent no-op recorded in the command order. Replacing or revoking
+queued input uses its server-owned input ID and a version precondition.
+
+Shared configuration changes are serialized with prompts and controls when
+they affect execution. A replacement carries `expectedSessionVersion`; a stale
+replacement fails with `revision_conflict` and returns the current version and
+authorized current value. It MUST NOT silently overwrite a newer Client's
+change.
+
+### Control policies and fencing leases
+
+Each attach response returns one required `controlPolicy`:
+
+- `ordered_multi_writer`: every authorized controller may submit mutations;
+  the session sequencer orders them; or
+- `leased_single_writer`: mutations classified as controlled require a current
+  control lease.
+
+Under `leased_single_writer`, the `session/acquire_control` request carries
+required, non-null `sessionId`, `attachmentId`, `operationId`, and
+`sessionEpoch`. Optional `expectedSessionVersion` and
+`requestedTtlSeconds` use omission to mean no version precondition and the
+server default TTL respectively; `null` is invalid for either.
+
+The response returns this required, non-null object:
+
+```json
+{
+  "leaseId": "lease_01K3A2",
+  "fencingToken": "14",
+  "expiresAt": "2026-08-27T12:05:00Z"
+}
+```
+
+`fencingToken` increases whenever a new control lease is issued. Every
+controlled mutation includes a required `control` object with non-null
+`leaseId` and `fencingToken`. In `ordered_multi_writer` the `control` field is
+omitted and `null` is invalid. A lease ID and fencing token are concurrency
+fences, not credentials; the caller still needs a currently authenticated and
+authorized attachment.
+
+`session/renew_control` and `session/release_control` use required, non-null
+session, attachment, lease, fencing-token, epoch, and operation-ID fields.
+Renewal cannot reduce a fencing token or revive an expired lease. Release is
+idempotent. Expiry, ACL revocation, detach policy, or a newer lease immediately
+fences the old holder. The server MUST check the fence at commit time, not only
+when it receives the request.
+
+Permission and elicitation responses do not use the control lease. They use
+their own claim fence and require approval authority. Session owners can still
+perform ACL recovery under a single-writer policy, but those operations require
+version compare-and-set.
+
+### Durable pending interactions
+
+An Agent that needs a user decision creates a durable `PendingInteraction`
+before notifying Clients. The baseline interaction kinds are `permission` and
+`elicitation`; future or implementation-specific kinds follow ACP enum
+extension rules.
+
+Example of the complete authorized view:
+
+```json
+{
+  "interactionId": "interaction_01K3A3",
+  "reverseRequestId": "reverse_01K3A30N6YJ2FQ8W4V7K9T1M5",
+  "sessionId": "sess_01K39Z",
+  "kind": "permission",
+  "revision": "1",
+  "createdAt": "2026-08-27T12:00:00Z",
+  "expiresAt": "2026-08-27T12:10:00Z",
+  "requiredPermission": "session.approve",
+  "state": {
+    "type": "open"
+  },
+  "request": {
+    "title": "Run the test suite?",
+    "subject": {
+      "type": "command",
+      "command": "cargo test",
+      "cwd": "/workspace/project"
+    },
+    "options": [
+      { "optionId": "allow_once", "name": "Allow once", "kind": "allow_once" },
+      { "optionId": "reject_once", "name": "Reject", "kind": "reject_once" }
+    ]
+  }
+}
+```
+
+The canonical server object requires non-null `interactionId`,
+`reverseRequestId`, `sessionId`, `kind`, `revision`, `createdAt`,
+`requiredPermission`, `state`, and `request`. A recipient view always requires
+all of those fields except `request`, which is optional and non-null: omission
+means the request content was redacted for that recipient, and `null` is
+invalid. `expiresAt` is optional; omission means no protocol-level deadline and
+`null` is invalid. Every filesystem path inside `request`, including command
+`cwd` or file subjects, MUST be absolute.
+
+The interaction state is a tagged union:
+
+- `open` has no additional fields;
+- `claimed` has required, non-null `claimId`, `participantId`, `attachmentId`,
+  `fencingToken`, and `expiresAt`;
+- `resolved` has required, non-null `resolvedAt`. The canonical object also has
+  a required, non-null `result` governed by the underlying permission or
+  elicitation response schema. In a recipient view, `result` is optional and
+  non-null; omission means response content was redacted, and `null` is
+  invalid;
+- `cancelled` has required, non-null `cancelledAt`; and
+- `expired` has required, non-null `expiredAt`.
+
+An optional `preferredParticipantId` may be present on an interaction to
+preserve conversational continuity. Omission means no preference and `null` is
+invalid. Preference never grants authority and never makes the interaction
+invisible to another eligible participant after a claim expires.
+
+The interaction and every state transition are part of the durable session
+event log. They survive Client disconnect, Agent process restart, and server
+failover until retention permits their removal. Resolving an interaction is
+recorded before its result is delivered to the Agent. If Agent delivery fails,
+the stored resolution is retried and MUST NOT invite another user response.
+
+The server derives a separate `PendingInteractionView` for every recipient.
+It MUST recheck scopes, ACL permission, attachment capability, claim ownership,
+and interaction-specific visibility before every delivery and list result. An
+eligible attachment may receive request content needed to decide whether to
+claim. The current claimant may receive the complete request and its own
+submitted result. The Agent application receives the complete committed result.
+Other participants receive only state, revision, timestamps, and
+policy-approved non-sensitive metadata. Permission subjects, elicitation form
+contents and answers, selected options, command text, paths, URLs, and free-form
+response content are omitted unless separately authorized. `session.admin`
+does not by itself override interaction-content policy.
+
+Redaction uses field omission, never `null`, empty strings, empty objects, or
+fabricated values. Every view retains the same `interactionId`,
+`reverseRequestId`, and decimal-string `revision`, so a redacted lifecycle event
+still deduplicates against another authorized view. Logs and peer presence MUST
+NOT contain request or result content.
+
+### Listing, claiming, releasing, and responding
+
+`interaction/list` is a recovery operation for authorized attachments. It
+returns the currently open or claimed interactions the participant is eligible
+to see, plus their revisions. Optional pagination `cursor` is omitted on the
+first request and when there is no next page; `null` is invalid. The cursor is
+opaque, snapshot-bound, and not a credential. Normal operation uses the
+`pending_interactions` subscription rather than polling this method.
+
+To act, a Client calls `interaction/claim` with:
+
+```json
+{
+  "sessionId": "sess_01K39Z",
+  "interactionId": "interaction_01K3A3",
+  "attachmentId": "attachment_01K39Z",
+  "expectedRevision": "1",
+  "operationId": "01K3A4GGCNJX4HAF1B3VC0PZT",
+  "requestedTtlSeconds": "60"
+}
+```
+
+The first five fields are required and non-null. `requestedTtlSeconds` is
+optional; omission selects the server default and `null` is invalid. The server
+checks current approval authority and atomically changes `open` to `claimed`
+only when `expectedRevision` matches. A conflict returns the authorized current
+state and has no effect.
+
+`interaction/release` requires non-null session, interaction, attachment,
+claim, fencing-token, expected-revision, and operation-ID fields. It atomically
+returns the current claim to `open`. It is idempotent for the same claimant and
+recorded outcome.
+
+`interaction/respond` requires:
+
+- non-null `sessionId`, `interactionId`, `attachmentId`, `claimId`, and claim
+  `fencingToken`;
+- non-null `expectedRevision` and `operationId`; and
+- a required, non-null `response` object whose fields follow the underlying
+  permission or elicitation response schema.
+
+At commit time the server verifies that the caller still has approval
+authority and owns the unexpired claim, then performs a compare-and-set from
+`claimed` to `resolved`. Only this atomic transition delivers a response to the
+Agent. Late, duplicate under another operation ID, stale-revision, stale-claim,
+and unauthorized responses fail with `revision_conflict` or `forbidden`, as
+applicable. Authorized error details identify the interaction revision or claim
+fence that conflicted. Failed responses are not forwarded.
+
+There is no “first response wins” rule. The winner is the participant that
+atomically acquired the currently valid authorized claim. A Client MAY present
+claim and response as one UI action, but it must perform the same server-side
+claim and compare-and-set transaction.
+
+The Agent may atomically cancel an open or claimed interaction when its turn or
+request no longer needs the answer. Cancellation increments the revision,
+invalidates any claim, and emits a durable state event. Expiration does the
+same. The Agent MUST tolerate decline and cancellation results defined by the
+underlying interaction kind.
+
+In the shared-session profile, every permission, elicitation, or future user
+decision MUST use this durable interaction, claim, and compare-and-set response
+flow. A reverse JSON-RPC request may notify one eligible attachment, but its
+payload carries required, non-null `reverseRequestId` and `interactionId`, and
+only `interaction/respond` commits the authoritative answer. The reverse
+request's JSON-RPC ID correlates one delivery attempt and has no commit meaning.
+
+A direct reverse JSON-RPC response is permitted only for local or v1
+compatibility, or as an optimization in a Remote `core` connection that did not
+negotiate `sharedSessions` and has exactly one eligible Client. The Remote
+single-Client form carries a required, non-null durable `reverseRequestId` in
+the request, response, replay record, and operation receipt. The response's
+canonical `operationId` is bound to that `reverseRequestId`; replay or retry
+returns the recorded outcome. A Host MUST NOT switch a request between direct
+and durable-interaction resolution after delivery, and a JSON-RPC ID is never a
+`reverseRequestId` or an operation ID.
+
+### Presence and privacy
+
+Presence is advisory coordination data, not session state, liveness proof, or
+authorization. A presence subscriber first receives a snapshot with a
+required, non-null `presenceRevision`, followed by ordered deltas carrying the
+next revision. A revision gap causes the Client to request another snapshot.
+Presence need not be retained in the durable session event log.
+
+The maximum peer-visible presence record contains:
+
+- required, non-null session-scoped `participantId`;
+- required, non-null state: `online`, `away`, or `disconnected`;
+- a required, non-null set of coarse effective roles; and
+- optional non-null `displayName` and coarse `lastActiveAt`.
+
+Omission of `displayName` means no label was shared. Omission of `lastActiveAt`
+means the service does not expose activity time. `null` is invalid for both.
+
+Peer presence MUST NOT expose OAuth issuer subjects, principal IDs, email
+addresses, access-token claims, Client instance IDs, connection IDs, IP
+addresses, user-agent strings, absolute workspace paths, other session IDs, or
+the names or contents of prompts and interactions. Participant IDs visible to
+peers SHOULD be different and unlinkable across sessions.
+
+ACL and deployment policy may hide some participants or show only aggregate
+counts. Therefore an absent presence record does not imply absence from the
+session. Clients and Agents MUST NOT use presence to authorize a command,
+select an interaction responder, infer that a control lease is free, or decide
+that replay is complete.
+
+When an ACL change removes read access, the server stops event, interaction,
+and presence delivery, invalidates claims and control leases owned under the
+revoked authority, and emits only the minimum terminal control message needed
+to close the attachment safely. Peer notifications reveal no more than their
+recipients' policy permits.
+
+### Error classes
+
+This RFD uses the common provisional Remote condition registry and introduces
+no aliases. The conditions relevant here are:
+
+- `connection_not_live` when an attachment has not crossed its readiness
+  barrier, is outside logical-connection resume grace, or is otherwise not live;
+- `cursor_gap` when exact event replay from a requested cursor is unavailable;
+- `revision_conflict` for a stale Session, attachment, interaction, claim, or
+  control-lease revision or fence;
+- `operation_conflict` and `operation_outcome_unknown` for operation-ledger
+  failures; and
+- `forbidden` when current scope, ACL, role, visibility, or provider authority
+  does not permit the operation.
+
+Structured error data follows the common registry: it SHOULD contain required,
+non-null `condition` and `retryable` fields when that provisional extension is
+used. When authorized, it MAY also contain an optional non-null
+`conflictDomain` such as `session_epoch`, `session_revision`,
+`attachment_state`, `interaction_revision`, `interaction_claim`, or
+`control_lease`. These values refine a common condition; they are not new error
+conditions. Error data MAY also contain optional non-null
+`currentSessionEpoch`, decimal-string `currentSessionVersion`, decimal-string
+`currentInteractionRevision`, or an opaque recovery cursor. Omission means a
+value is unavailable or redacted; `null` is invalid. Error data MUST NOT reveal
+whether an unauthorized session, participant, attachment, interaction, claim,
+or lease exists.
+
+### Field presence, nullability, and paths
+
+All fields proposed by this RFD are required and non-null unless explicitly
+described as optional. Every optional field uses omission to mean absence and
+rejects `null`, except the `remote.sharedSessions` negotiation marker explicitly
+defined under capability discovery. This rule applies to requests, responses, event envelopes,
+presence, claims, receipts, capability objects, and error data introduced here.
+Embedded existing ACP payloads retain the nullability rules of their own RFDs.
+
+In summary, the new optional fields are:
+
+- capability `remote.sharedSessions`: omission or `null` means unsupported;
+  inside an advertised `sharedSessions`, `presence`, `leasedControl`,
+  `multiChat`, and its `fork`/`sideChat` children are optional support markers
+  for which omission or `null` means unsupported;
+- attach `replayFrom`: omitted means begin at the live boundary;
+- mutation `expectedSessionVersion`: omitted means no version precondition;
+- event `actorParticipantId`: omitted means unavailable or redacted;
+- control acquisition `expectedSessionVersion` and `requestedTtlSeconds`:
+  omitted means no version precondition and the server default TTL;
+- controlled-mutation `control`: required under `leased_single_writer` and
+  omitted under `ordered_multi_writer`; `null` is invalid in either policy;
+- interaction `expiresAt` and `preferredParticipantId`: omitted means no
+  protocol deadline and no preference;
+- recipient-view `request` and resolved-state `result`: omitted means that
+  content is redacted for that recipient;
+- interaction-list pagination cursor: omitted means the first page or no next
+  page, according to request or response position;
+- interaction-claim `requestedTtlSeconds`: omitted means the server default;
+- presence `displayName` and `lastActiveAt`: omitted means not disclosed; and
+- error `conflictDomain`, current revision or epoch, and recovery cursor:
+  omitted means unavailable or redacted.
+
+Every path carried by ACP remains absolute. Valid examples include
+`/workspace/project`, `/workspace/project/src/main.rs`, and on Windows
+`C:\workspace\project`. Relative values such as `src/main.rs` are invalid.
+
+### Implementation phases
+
+1. Define shared event envelopes, event replay, session epoch/version, mutation
+   receipts, and operation-ledger storage; build failover and duplicate-delivery
+   conformance tests first.
+2. Add authenticated attach/detach, delivery barriers, subscriptions, and
+   disconnect grace handling.
+3. Route prompts, injections, cancellation, and shared configuration through
+   the authoritative sequencer; add multi-writer race tests.
+4. Replace connection-bound permission and elicitation resolution with durable
+   interaction list/claim/release/respond state machines and Agent redelivery.
+5. Add optional leased control and privacy-filtered presence.
+6. Test ACL revocation, stale writers, lost responses, replay gaps, slow
+   subscribers, Client and Agent crashes, multi-node failover, claim expiry,
+   and simultaneous responses.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Does `session/attach` grant access to a session?
+
+No. The authenticated principal must already have token scope and an applicable
+session ACL entry. Attach materializes that authority on a connection and can
+only narrow subscriptions. Knowing a session or attachment ID grants nothing.
+
+### Why not give every Client equal authority?
+
+Participants often have intentionally different trust: one may observe, one
+may steer, and one may approve sensitive commands. Equal authority also makes
+it impossible to revoke one collaborator without terminating everyone. Roles
+and concrete permissions make those boundaries explicit and auditable.
+
+### Why not accept the first permission response?
+
+Network speed is not authorization. First-response-wins is vulnerable to stale
+tabs, duplicated reverse requests, compromised observers, and reconnect races.
+An expiring claim plus compare-and-set response selects exactly one currently
+authorized responder and exposes conflicts explicitly.
+
+### Why are message IDs not enough for replay?
+
+Many significant state changes occur between messages: tool calls, plans,
+configuration, permissions, elicitation, terminal output, state transitions,
+and ACL-visible membership. A session event ID covers all replayable event
+types; a message ID continues to identify one message entity.
+
+### Does total ordering mean Clients cannot work concurrently?
+
+No. Clients can submit concurrently, and independent network work remains
+parallel. Total order defines where accepted state mutations commit so every
+participant converges on one result. Read-only operations need not enter the
+mutation order.
+
+### Why support both ordered multi-writer and leased control?
+
+Collaborative sessions benefit from concurrent queued commands, while some
+Agents or regulated workflows require a single active controller. Both models
+still need operation deduplication, epochs, versions, and a durable event order.
+The lease adds a monotonically increasing fence; it does not replace
+authentication.
+
+### How does this relate to the existing multi-client attach proposal?
+
+This RFD absorbs its useful attach, detach, history, participant, and pending
+request recovery goals. It supersedes self-assigned identity, equal-client
+authority, first-response-wins permissions, unbounded inline history, and
+message-only replay cursors. It also uses v2 `user_message` and `state_update`
+rather than adding duplicate prompt receipt and turn completion signals.
+
+### Are these changes possible without ACP v3?
+
+They can be incorporated while ACP v2 remains unstable. Making event envelopes,
+operation context, targeted cancellation, and pending-interaction resolution
+mandatory after v2 stabilizes would be breaking and would justify ACP v3.
+Local stdio implementations can omit `capabilities.remote.sharedSessions` and
+retain the simpler single-connection profile.
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+- A proxy-local broadcast buffer was rejected as the normative model because
+  reconnect and failover guarantees must survive the proxy process and be
+  visible to direct Agent implementations.
+- Per-Client command queues were rejected because they do not define a shared
+  order across participants.
+- Last-writer-wins shared state was rejected because it silently loses edits;
+  explicit version conflicts are recoverable and auditable.
+- Connection-scoped reverse JSON-RPC requests alone were rejected because
+  their IDs and lifetime do not survive disconnect or reassignment.
+- Permanent claims were rejected because a crashed Client would block the
+  session indefinitely.
+
+## Revision history
+
+- 2026-08-27: Clarified logical attachments, capability virtualization,
+  operation identity, decimal-string fences, v2 lifecycle breaks, durable
+  interaction CAS and redaction, and common Remote error conditions.
+- 2026-08-27: Initial Draft.

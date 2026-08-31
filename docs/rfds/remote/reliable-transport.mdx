@@ -1,0 +1,1371 @@
+---
+title: "Reliable Remote Transport"
+---
+
+Author(s): ACP Remote working draft
+
+<Warning>
+  This is a design draft, not a stable protocol commitment. All new capability,
+  method, field, header, media-type, subprotocol, frame, and error names in this
+  document are **provisional**. The normative behavior is proposed before final
+  schema spelling so nullable and compatibility rules can be settled first.
+</Warning>
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Define one reliable remote-delivery model with two equivalent bindings:
+
+- **Streamable HTTP:** Client-to-server submissions use POST and all
+  server-to-Client traffic uses one ordered, connection-level SSE stream.
+- **WebSocket:** both directions use one full-duplex socket, with the same
+  initialization, delivery records, cursors, acknowledgements, replay,
+  idempotency, and recovery behavior.
+
+The model adds a resumable logical connection, an ordered delivery envelope,
+cumulative acknowledgements, bounded replay retention, explicit snapshot-gap
+recovery, retry-safe Client operation IDs, liveness, and backpressure.
+
+This RFD supersedes the reliability, routing, reconnect, and lifecycle portions
+of the active [Streamable HTTP and WebSocket Transport
+RFD](../streamable-http-websocket-transport). It replaces connection-scoped plus
+per-session SSE streams with one connection-scoped stream. Endpoint discovery
+and the concrete authentication profile remain companion work.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+ACP's normative v2 transport is newline-delimited JSON-RPC over stdio. The
+current remote transport draft proposes asynchronous POST responses delivered
+through one connection stream plus one stream for every session. It does not
+define replay, sequencing, acknowledgement, retry, or liveness.
+
+That draft cannot be implemented consistently against current v2:
+
+- it routes `session/load`, which v2 removed in favor of `session/resume`;
+- it places `connectionId` in an initialize result that has no such field;
+- it refers to an `initialized` message that ACP does not define;
+- it returns HTTP 501 for batches although v2 follows JSON-RPC batch rules;
+- it treats message entity IDs as stream replay IDs;
+- it says sessions survive disconnect, but later destroys sessions on
+  WebSocket disconnect or HTTP DELETE; and
+- it stores sessions beneath one connection, preventing the same durable
+  session from being attached through independent connections.
+
+Multiple session-scoped streams also create avoidable correctness problems.
+Responses, Agent-to-Client requests, and updates can cross streams without one
+Client-visible order. Opening the stream for a newly created or resumed session
+has a race with events produced before the stream is ready. A response has only
+a JSON-RPC ID, so the transport must retain hidden request-routing state to know
+which session stream should receive it.
+
+Most importantly, HTTP and WebSocket reliability ends at a broken connection.
+If a Client POSTs a prompt and disconnects after the server accepts it but
+before observing a response, neither retrying nor abandoning it is reliably
+correct. ACP needs application-level replay and idempotency rather than packet
+acknowledgement.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+### Scope
+
+This RFD defines reliable delivery for one **logical connection**, as defined by
+the [ACP Remote Overview](./overview). A logical connection can be rebound to a
+new physical HTTP or WebSocket connection for a bounded period.
+
+It does not define:
+
+- how a Principal obtains an access token;
+- Session membership or roles;
+- the complete Session snapshot schema;
+- prompt queue or steering policy;
+- permanent Session-history retention; or
+- Agent Host discovery and provisioning.
+
+Those features depend on this delivery layer. In particular, a reliable
+transport does not authorize a Client to attach to a Session.
+
+### Required transport properties
+
+Both bindings **MUST** provide:
+
+1. transport authentication before ACP Session data is exposed;
+2. complete UTF-8 JSON messages;
+3. one server-authored order for all post-initialize server-to-Client records on
+   the logical connection;
+4. a durable replay cursor for every application delivery record;
+5. cumulative acknowledgement of records safely applied by the Client;
+6. bounded, advertised replay and operation-deduplication retention;
+7. explicit recovery when retention or server epoch makes replay impossible;
+8. retry-safe Client submissions;
+9. fencing of an older physical connection after resume; and
+10. bounded resource use and observable backpressure.
+
+A transport implementation **MUST NOT** select the single wire profile
+`acp.remote.v2` or advertise mandatory `capabilities.remote.core` if any of
+these properties is absent. `capabilities.remote.sharedSessions` and
+`capabilities.remote.hostServices` are separate capability children that each
+depend on `capabilities.remote.core`; this RFD defines the Core transport
+behavior.
+
+### One ordered server-to-Client stream
+
+Each active logical connection generation has exactly one ordered
+server-to-Client delivery stream. It carries:
+
+- responses to Client requests;
+- Agent-to-Client requests;
+- Agent and protocol notifications;
+- updates for every Session attached through that logical connection; and
+- remote-profile control records that require reliable delivery.
+
+The transport **MUST NOT** open a separate SSE stream for each Session. Session
+routing remains in JSON-RPC method parameters, such as `sessionId`; a Client can
+dispatch records concurrently after accepting them in delivery order.
+
+The one-stream rule defines transport delivery order. It does not require Agent
+work in different Sessions to execute serially.
+
+### Provisional remote frame model
+
+After initialization, each transport message is a **Remote Frame**. The exact
+Rust and schema names are provisional. The proposed conceptual variants are:
+
+- `delivery`: the only server-to-Client application record; its ordered
+  envelope wraps JSON-RPC, canonical domain Events, operation receipts, and
+  recovery or authorization controls;
+- `submission`: one Client-to-server command payload plus an operation ID;
+- `submission_batch`: a non-empty set of independently identified submissions;
+  and
+- `ack`: a cumulative Client delivery acknowledgement.
+
+SSE comments and WebSocket Ping/Pong are transport heartbeats, not application
+records. Every other post-initialize server record **MUST** be a `delivery` and
+therefore has a delivery sequence and cursor. There is no unsequenced
+application `control` frame.
+
+Every post-initialize Client Remote Frame carries required, non-null
+`connectionId` and decimal-string `generation` fields. A submission batch has
+one such outer binding for all its entries. The server validates this binding
+against the authenticated logical connection and active physical generation
+before consulting the operation ledger or applying a piggybacked
+acknowledgement. A frame from a superseded generation fails with
+`connection_fenced`; an ID from another Principal or logical connection is
+rejected without disclosing that connection's existence.
+
+When the delivery payload is `jsonrpc`, its contained ACP value remains a valid
+JSON-RPC 2.0 message or, where v2 batching is allowed, a non-empty JSON-RPC 2.0
+batch. Other payload variants carry the common operation receipt or an
+allowlisted recovery control. Wrapping is a transport-profile concern and does
+not add fields to the JSON-RPC envelope used by stdio.
+
+#### Delivery record
+
+```json
+{
+  "type": "delivery",
+  "connectionId": "conn_01J...",
+  "generation": "2",
+  "serverEpoch": "epoch_01J...",
+  "sequence": "43",
+  "cursor": "cur_opaque_43",
+  "payload": {
+    "type": "jsonrpc",
+    "operationId": "op_7f51...",
+    "message": {
+      "jsonrpc": "2.0",
+      "id": 9,
+      "result": {}
+    }
+  }
+}
+```
+
+`sequence` is shown as a decimal string so implementations do not lose integer
+precision. `cursor` is opaque and is the value persisted and returned by a
+Client. A final schema may combine these values, but it **MUST** retain both
+strict ordering and an epoch-safe opaque checkpoint.
+
+The `operationId` member inside a JSON-RPC or receipt payload is present only
+when the record reports progress or outcome for a Client operation. It is
+optional but non-nullable. Omission means the record is not associated with a
+Client operation. An explicit `null` value is invalid.
+
+`generation` identifies the physical-connection generation carrying the record.
+It is not part of the durable record identity. On replay, the server replaces it
+with the newly active generation while preserving the record's sequence,
+cursor, and payload.
+
+The server:
+
+- **MUST** assign each delivery record a sequence immediately following the
+  previous sequence in the same logical connection and server epoch, including
+  across physical-connection generations;
+- **MUST NOT** reuse a `(serverEpoch, connectionId, sequence)` tuple for a
+  different logical record;
+- **MUST** emit records in sequence order;
+- **MUST** reproduce the same sequence, cursor, and payload when replaying,
+  while setting `generation` to the active transport generation, but only while
+  the complete authorization context and authorized view set are unchanged; and
+- **MUST** include responses, requests, and notifications in the same order in
+  which it committed them to the connection's delivery log.
+
+An authorization-context change makes the old delivery log non-replayable; it
+never permits the server to rewrite a sensitive retained payload under the same
+cursor. The resume rules below require a fresh logical connection and newly
+authorized SnapshotSet instead.
+
+The Client:
+
+- **MUST** process or enqueue records in delivery order;
+- **MUST** ignore a byte-for-byte or semantically equivalent duplicate carrying
+  a cursor it has already applied;
+- **MUST NOT** advance its applied cursor across a missing record; and
+- **MUST** stop claiming synchronized state if it observes an undisclosed
+  sequence gap, changed server epoch, or a generation other than the one
+  negotiated for its active transport.
+
+Entity identifiers such as `messageId`, `toolCallId`, canonical Event IDs, and
+JSON-RPC `id` **MUST NOT** be interpreted as delivery cursors.
+
+#### Ordering domains and identifier scope
+
+ACP Remote uses several ordering domains deliberately. Implementations **MUST
+NOT** compare or substitute identifiers from different rows.
+
+| Domain                        | Scope                                                     | Durable ordering fields                                   | Meaning                                                                                        |
+| ----------------------------- | --------------------------------------------------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Physical transport            | One active connection generation                          | `generation` fence                                        | Rejects traffic from a superseded socket or stream; it does not order Session state            |
+| Connection delivery           | `(serverEpoch, connectionId)`                             | `sequence`, opaque delivery `cursor`                      | Total order of every record sent to one logical connection across reconnects                   |
+| Canonical Session state       | `(authorityId, sessionId, sessionEpoch)`                   | canonical `sourceEventId`, `sessionVersion`                     | Shared authoritative Session mutation order retained across fan-out to different Clients       |
+| Canonical resource/view state | `(authorityId, resource URI or view identity)`             | canonical `sourceEventId`, `resourceRevision` or `viewRevision` | Shared authoritative resource/view mutation order                                              |
+| Operation ledger              | `(Principal, clientInstanceId, operationId)`              | receipt state and `receiptRevision`                       | Deduplicates one Client operation and records its authoritative outcome                        |
+| Reverse interaction           | `reverseRequestId` and, where applicable, `interactionId` | `interactionRevision` and claim `fence`                   | Identifies and arbitrates a durable Agent-to-Client request independently of delivery attempts |
+| JSON-RPC attempt              | One request attempt on an active logical connection       | JSON-RPC `id`                                             | Correlates one attempt only; it is not durable identity or shared-state order                  |
+
+All counters, revisions, and fencing values in the proposed remote schema,
+including `generation`, `sequence`, `sessionVersion`, `resourceRevision`,
+`viewRevision`, `receiptRevision`, `interactionRevision`, and claim `fence`,
+**MUST** be encoded as non-negative decimal strings without leading plus signs.
+JSON numbers are invalid for these fields. Opaque IDs, cursors, and
+`serverEpoch` remain strings but are not decimal counters.
+
+One canonical Event is copied into the delivery stream of every authorized
+Attachment. Its canonical Event ID and domain revision remain unchanged, while
+each logical connection assigns its own delivery sequence and cursor. A
+connection delivery order can interleave several Sessions, but it does not
+create a global canonical revision across those Sessions.
+
+`serverEpoch` scopes only connection-delivery cursor continuity. A changed
+delivery epoch does not by itself reset or invalidate a canonical Session or
+resource history. Those histories use their authority and domain identities,
+epochs where defined, event IDs, and revisions; a Host that cannot preserve a
+domain history performs that domain's explicit epoch or snapshot transition.
+
+For example, the same canonical Session Event can appear on two connections
+with different delivery envelopes while preserving this payload:
+
+```json
+{
+  "type": "canonical_event",
+  "sessionId": "sess_abc123",
+  "sourceEventId": "session_event_184",
+  "sessionVersion": "184",
+  "event": { "type": "user_message", "content": [] }
+}
+```
+
+This payload **MUST** itself be carried inside `delivery.payload`; it is never an
+unsequenced side channel.
+
+#### Submission record
+
+```json
+{
+  "type": "submission",
+  "connectionId": "conn_01J...",
+  "generation": "2",
+  "operationId": "op_7f51...",
+  "ackCursor": "cur_opaque_42",
+  "payload": {
+    "type": "jsonrpc",
+    "message": {
+      "jsonrpc": "2.0",
+      "id": 9,
+      "method": "session/prompt",
+      "params": {
+        "sessionId": "sess_abc123",
+        "prompt": [{ "type": "text", "text": "Continue" }]
+      }
+    }
+  }
+}
+```
+
+Every Client command with an independently observable outcome, including new
+initialization, resume, JSON-RPC requests or notifications, reverse-request
+responses, recovery adoption, and batch entries, **MUST** have an
+`operationId`. Pure cumulative acknowledgements and transport heartbeats do not
+create operation-ledger entries. Operation IDs:
+
+- **MUST** be generated by the Client instance;
+- **MUST** be unique within that Client instance's advertised deduplication
+  lifetime;
+- **MUST** remain stable across every retry of the same logical operation; and
+- **MUST NOT** be reused for a different method, parameters, or response
+  content.
+
+`ackCursor` is optional but non-nullable. If present, it has the same effect as
+a cumulative `ack` frame sent before this submission. Omission means the Client
+has no newer acknowledgement to piggyback. Explicit `null` is invalid.
+
+JSON-RPC IDs remain per-logical-connection correlation IDs. A retry **SHOULD**
+reuse its original JSON-RPC ID while the logical connection survives. The
+operation ID, not the JSON-RPC ID, determines whether server-side effects are
+deduplicated.
+
+#### Acknowledgement record
+
+```json
+{
+  "type": "ack",
+  "connectionId": "conn_01J...",
+  "generation": "2",
+  "cursor": "cur_opaque_43"
+}
+```
+
+An acknowledgement is cumulative. It means the Client can recover every record
+through the named cursor after its own process restart without asking the
+server to redeliver it. A canonical event is ACK-eligible only after its domain
+state and cursor are atomically durable. An explicitly chunked SnapshotSet
+component is ACK-eligible after its content hash is verified and the component,
+manifest binding, and cursor are atomically staged in durable storage; this
+does not adopt the SnapshotSet or make its views current. A volatile queue,
+callback, or receipt of network bytes is never sufficient.
+
+The Client:
+
+- **MUST NOT** acknowledge a record merely because network bytes arrived;
+- **MUST NOT** acknowledge past a record that has neither been durably applied
+  nor qualified for the bounded SnapshotSet staging exception above;
+- **SHOULD** acknowledge often enough to remain below the advertised unacked
+  window; and
+- **MAY** repeat an acknowledgement without changing its meaning.
+
+The server:
+
+- **MUST** treat duplicate and older acknowledgements as idempotent no-ops;
+- **MUST** reject an acknowledgement for a cursor from another logical
+  connection or server epoch, while accepting a retained cursor issued before
+  the current physical-connection generation;
+- **MAY** reclaim delivery-log storage through the acknowledged cursor, subject
+  to its advertised retention policy; and
+- **MUST NOT** interpret delivery acknowledgement as a response to an
+  Agent-to-Client JSON-RPC request.
+
+Acknowledging an Agent request means the SDK has durably recorded the request,
+not that the user answered it.
+
+### Initialization and logical connection lifecycle
+
+Every new physical transport begins with a normal ACP `initialize` request and
+response. There is no separate `initialized` notification.
+
+The remote profile adds a provisional tagged `remote` initialization member and
+the capability graph defined by the [ACP Remote Overview](./overview). A Client
+selecting `acp.remote.v2` **MUST** request `capabilities.remote.core`; omission
+of Core is invalid. `capabilities.remote.sharedSessions` and
+`capabilities.remote.hostServices` each depend on Core. They are optional v2
+support markers, so omission or `null` means unsupported; advertising either as
+an object while Core is absent or null is invalid.
+
+Omitting `remote`, or sending `remote: null`, means the peer is not requesting a
+remote wire profile. On a transport endpoint dedicated to ACP Remote, the
+member is required and `null` is invalid. The server **MUST** fail explicitly if
+it cannot provide every requested Remote capability; it **MUST NOT** silently
+downgrade the profile or capability set.
+
+#### Creating a logical connection
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 0,
+  "method": "initialize",
+  "params": {
+    "protocolVersion": 2,
+    "info": { "name": "example-client", "version": "1.0.0" },
+    "capabilities": {
+      "remote": { "core": {} }
+    },
+    "remote": {
+      "profile": "acp.remote.v2",
+      "operationId": "op_initialize_01J...",
+      "clientInstanceId": "client_01J...",
+      "connection": {
+        "type": "new",
+        "bootstrapProof": "bootstrap_high_entropy_value"
+      }
+    }
+  }
+}
+```
+
+`operationId` is the canonical retry identity from the common operation ledger.
+The `new` variant's `bootstrapProof` is a Client-generated high-entropy secret
+used only to authenticate retrieval of this initialization outcome. The server
+stores a digest and never returns it. It MUST have at least 256 bits of
+cryptographic randomness, travel only over the authenticated encrypted
+initialize request, be redacted from logs, and expire with the advertised
+initialization response-recovery window. It is valid only until the Client first
+proves receipt of the response by using the generation-binding secret on the
+SSE GET or a POST. On WebSocket, only a post-initialize Client frame sent after
+the response confirms receipt; the already-open socket does not. That
+confirmation irrevocably consumes the bootstrap proof even though the
+operation receipt remains retained. Later duplicate initialization may return
+only a redacted operation status; every physical takeover then requires the
+current or explicitly overlapping resume secret. Repeating the same operation
+ID under the same complete authenticated identity tuple, Client instance, and
+still-valid bootstrap proof **MUST** return the stored initialization receipt
+and logical connection outcome only while the first response remains
+unconfirmed and the advertised bootstrap-response-recovery window has not
+expired. Public operation and Client-instance IDs alone never retrieve a resume
+or generation-binding secret.
+
+The resume variant instead proves retry authority with its resume secret.
+Reusing an operation ID with different logical initialization input **MUST**
+fail with `operation_conflict`. Initialization uses the common operation ledger
+and receipt, not a second bootstrap deduplication ledger.
+
+A successful response includes ordinary ACP initialization fields plus
+provisional remote state:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 0,
+  "result": {
+    "protocolVersion": 2,
+    "info": { "name": "example-agent", "version": "1.0.0" },
+    "capabilities": {
+      "remote": { "core": {} }
+    },
+    "remote": {
+      "profile": "acp.remote.v2",
+      "operationReceipt": {
+        "operationId": "op_initialize_01J...",
+        "status": "committed",
+        "receiptRevision": "1"
+      },
+      "authorityId": "authority_01J...",
+      "connectionId": "conn_01J...",
+      "generation": "1",
+      "authorizationContextId": "authctx_01J...",
+      "generationBindingSecret": "binding_high_entropy_value",
+      "serverEpoch": "epoch_01J...",
+      "startCursor": "cur_start",
+      "resumeSecret": "secret_high_entropy_value",
+      "retention": {
+        "minimumSeconds": "300",
+        "maximumUnackedRecords": "10000",
+        "maximumUnackedBytes": "67108864",
+        "operationSeconds": "86400",
+        "bootstrapRecoverySeconds": "30",
+        "resumeGraceSeconds": "300",
+        "resumeSecretOverlapSeconds": "30",
+        "snapshotAdoptionSeconds": "300"
+      },
+      "limits": {
+        "maximumFrameBytes": "8388608",
+        "maximumBatchEntries": "100"
+      }
+    }
+  }
+}
+```
+
+All displayed field names and values are provisional. The final response
+**MUST** communicate at least the stable authority identity, connection
+identity, generation, server epoch, initial cursor, a resume secret, replay
+retention, operation-deduplication
+retention, and applicable flow-control limits.
+
+`authorityId` identifies the server-side canonical state domain and survives
+process restart, failover, and delivery-epoch changes. It is bound to the
+canonical authenticated endpoint identity and is not a credential. A resume
+that resolves to a different authority cannot inherit the logical connection;
+the Client creates a new connection and obtains newly authorized snapshots.
+
+`authorizationContextId` is an opaque, non-credential identifier for the
+connection's immutable authentication tuple and effective authorized view set.
+`generationBindingSecret` is a high-entropy credential scoped to exactly one
+Principal, logical connection, and physical generation. Streamable HTTP sends
+it only in a protected provisional request header; it never appears in a
+Remote Frame, URL, cookie, SSE event, or log. On WebSocket the authenticated
+socket itself is the generation binding and the value is retained only for
+uniform credential handling within that physical attempt. Switching between
+WebSocket and HTTP is a new physical attempt and **MUST** use the current resume
+secret to obtain a new generation and binding secret.
+
+An initialization retry reuses the stored logical operation receipt and
+logical connection outcome, but every newly authenticated physical attempt
+receives a new generation and generation-binding secret and fences the prior
+attempt. Those attempt-local binding fields are deliberately outside the
+canonical operation payload and receipt. This makes a lost initialize or resume
+response retryable without allowing two physical transports to use one
+generation.
+
+The initialization response itself is raw JSON-RPC, not a delivery record. The
+server **MUST NOT** commit post-initialize application output before it commits
+the `startCursor`. Any output produced before the Client opens its stream is
+retained and delivered after that cursor.
+
+#### Logical lifecycle states
+
+A reliable Client connection moves through these states:
+
+1. `authenticating` — transport access is being verified;
+2. `initializing` — ACP version and remote profile are negotiated;
+3. `replaying` — retained records or snapshots are being installed;
+4. `live` — the replay barrier was observed and new submissions are allowed;
+5. `disconnected` — no physical transport is active, but bounded resume state
+   remains;
+6. `terminated` — resume credentials and connection state are revoked.
+
+The exact state names are provisional. A Client **MUST NOT** send ordinary
+application submissions until it reaches `live`. Before `live`, the only
+permitted Client frames or operations are:
+
+- cumulative delivery acknowledgement;
+- SnapshotSet request and fetch controls;
+- SnapshotSet adoption;
+- Attachment or view readiness controls needed to complete the atomic set;
+- operation-status queries needed to reconcile the common operation journal;
+- credential-free authentication-expiry or reconnect-required signals; actual
+  endpoint credential acquisition and refresh never occurs in a Remote Frame;
+- transport heartbeat responses; and
+- explicit abort or connection termination.
+
+Exact control names remain provisional. The server **MUST** reject anything else
+with `connection_not_live`; it **MUST NOT** queue a prompt, config mutation,
+steering action, cancellation, or other domain operation for later execution.
+Each allowlisted control that has an observable outcome uses the common
+`operationId` and operation receipt.
+
+A newly created logical connection, not only a resumed one, begins in
+`replaying` and **MUST** receive an initial `caught_up` delivery barrier before
+entering `live`. If it has no initial Attachments or views, the barrier may
+immediately cover `startCursor`. If initialization requests initial views, the
+server sends one complete SnapshotSet before the tail and barrier.
+
+Physical disconnect moves a logical connection to `disconnected`; it **MUST
+NOT** close or delete Sessions. Explicit connection termination revokes resume
+state and detaches according to the future attachment RFD; it **MUST NOT**
+terminate a durable Session merely because that Session was visible on the
+connection.
+
+### Streamable HTTP binding
+
+The provisional endpoint remains `/acp`; endpoint discovery may replace or
+supplement that default in a companion RFD.
+
+#### Initialization
+
+The Client POSTs the raw `initialize` JSON-RPC request. A successful server
+returns HTTP 200 with the raw JSON-RPC response body. Transport authentication
+is required on this request.
+
+#### Server stream
+
+After initialization the Client opens exactly one GET request with:
+
+- `Accept: text/event-stream`;
+- authenticated Principal credentials;
+- the logical connection ID; and
+- the current generation; and
+- the current generation-binding secret in a protected provisional header.
+
+Header names remain provisional. There is no Session ID header.
+
+Each delivery record is encoded as one SSE event:
+
+```text
+id: cur_opaque_43
+event: acp
+data: {"type":"delivery","connectionId":"conn_01J...","generation":"2","serverEpoch":"epoch_01J...","sequence":"43","cursor":"cur_opaque_43","payload":{"type":"jsonrpc","message":{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"sess_abc123","update":{"sessionUpdate":"state_update","state":"running"}}}}}
+
+```
+
+The SSE `id` **MUST** equal the delivery cursor. SSE `Last-Event-ID` **MAY**
+mirror the Client's reconnect input, but it does not replace explicit ACP
+acknowledgement or the authenticated resume handshake. Browser receipt of an
+SSE event is not proof that application state was safely applied.
+
+Only one SSE GET may be active for a logical connection generation. A duplicate
+GET **MUST** be rejected with HTTP 409. Loss of the SSE GET moves the physical
+transport to disconnected; the Client performs the resume handshake, whose new
+generation fences and closes any surviving old stream.
+
+#### Client submissions
+
+The Client POSTs each submission, submission batch, or acknowledgement. The
+request carries the authenticated Principal credentials, logical connection
+ID, current generation, and generation-binding secret in provisional headers;
+the public ID and generation MUST equal the Remote Frame fields. A missing or
+mismatched binding is rejected before admission. A valid admitted frame returns
+HTTP 202 with no application payload.
+HTTP 202 means only that the server durably recorded or recognized the frame;
+it does not mean the ACP operation completed. Every operation receipt remains a
+normal ordered `delivery` on the SSE stream.
+
+A valid JSON-RPC result or error is delivered on the SSE stream in order. An
+HTTP transport error is returned synchronously only when the frame was not
+admitted into the logical connection.
+
+Remote HTTP implementations **MUST** use HTTPS except for an explicitly enabled
+loopback development mode. Servers **MUST** support HTTP/2 for the long-lived
+stream plus concurrent POSTs. HTTP/3 **MAY** be offered. HTTP/1.1 fallback is
+allowed only when explicitly advertised and must use enough connections to
+avoid blocking submissions behind the SSE response.
+
+### WebSocket binding
+
+The WebSocket HTTP handshake **MUST** authenticate the Principal and negotiate
+an ACP Remote WebSocket subprotocol. The exact subprotocol token is provisional.
+Remote deployments **MUST** use WSS except for explicitly enabled loopback
+development.
+
+The first WebSocket application message is the raw `initialize` request. The
+first server application message is its raw response. After successful
+initialization, every application message is one Remote Frame encoded as UTF-8
+JSON in a WebSocket text message.
+
+WebSocket fragmentation may divide a text message into frames, but the receiver
+**MUST** reassemble it before JSON decoding. Binary messages **MUST** be rejected
+or close the socket with an unsupported-data error; they **MUST NOT** be silently
+ignored.
+
+WebSocket transport ordering does not replace ACP delivery cursors. A Client
+still acknowledges applied records, and reconnect still uses the same resume
+and replay protocol as Streamable HTTP.
+
+### Resume, replay, and fencing
+
+#### Resume secret
+
+The resume secret is a high-entropy credential authorizing rebinding of one
+logical connection. It is distinct from the public connection ID.
+
+A server:
+
+- **MUST** bind the secret to the complete immutable authentication tuple from
+  the Security RFD—including issuer, realm, authority/resource, principal,
+  subject, actor, delegation, sender-constraining key when present, and Client
+  instance—plus the logical connection and remote profile;
+- **MUST** transmit it only over an authenticated encrypted transport;
+- **MUST NOT** place it in a URL, query parameter, SSE event ID, or ordinary log;
+- **MUST** store it using credential-grade protections;
+- **MUST** expire and revoke it according to advertised policy; and
+- **SHOULD** rotate it after successful resume.
+
+A Client **MUST** store the secret as sensitive credential material and **MUST
+NOT** treat a cookie or connection ID as an equivalent secret.
+
+Secret rotation **MUST NOT** lock out a Client that loses the resume response.
+The server **MUST** retain the immediately preceding secret for a bounded,
+advertised overlap or use an acknowledgement-based rotation protocol. Once the
+new generation is confirmed, the predecessor **MUST** be revoked.
+
+Possession of a resume secret does not replace endpoint authentication unless a
+future authentication RFD explicitly negotiates that stronger bearer behavior.
+
+#### Resume request
+
+A new physical connection begins with `initialize` carrying a tagged resume
+form:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 0,
+  "method": "initialize",
+  "params": {
+    "protocolVersion": 2,
+    "info": { "name": "example-client", "version": "1.0.0" },
+    "capabilities": {
+      "remote": { "core": {} }
+    },
+    "remote": {
+      "profile": "acp.remote.v2",
+      "operationId": "op_resume_02",
+      "clientInstanceId": "client_01J...",
+      "connection": {
+        "type": "resume",
+        "connectionId": "conn_01J...",
+        "generation": "1",
+        "authorizationContextId": "authctx_01J...",
+        "resumeSecret": "secret_high_entropy_value",
+        "afterCursor": "cur_opaque_43"
+      }
+    }
+  }
+}
+```
+
+`afterCursor` is the last record the Client safely applied. It is required and
+non-null in the provisional resume form. Once validated, it also acts as a
+cumulative acknowledgement through that cursor. A Client with no applied
+records uses a tagged start position in the final schema rather than `null` or
+an empty string.
+
+On successful resume the server:
+
+1. verifies endpoint authentication, complete immutable identity binding,
+   generation, `authorizationContextId`, and resume-secret binding;
+2. increments the logical connection generation;
+3. fences the previous generation before accepting new submissions;
+4. rotates or schedules rotation of the resume secret;
+5. selects replay or snapshot recovery;
+6. returns the new generation, server epoch, high-water cursor, retention, and
+   recovery mode in the initialize response; and
+7. begins delivery only after the Client opens the SSE stream, or immediately
+   after the initialize response on WebSocket.
+
+The old physical connection **MUST** reject later submissions with a
+`connection_fenced` error and **SHOULD** be closed promptly.
+
+Before replay, the server reevaluates token scope, delegation, ACLs, attachment
+capabilities, subscriptions, and every active view. If the effective
+authorization or view set differs from the stored `authorizationContextId`, the
+server **MUST NOT** replay the old delivery log. It rejects resume, fences and
+terminates the old logical connection, and requires creation of a fresh logical
+connection whose newly authorized SnapshotSet re-creates only permitted
+attachments and views. The Principal-scoped operation ledger remains available
+for uncertain-outcome reconciliation. The same rule applies when authorization
+narrows while connected: the server stops the old stream before any queued
+now-unauthorized record is sent; it may send a credential-free reconnect signal
+only if doing so cannot cross such a record.
+
+#### Replay recovery
+
+If `afterCursor` is retained in the same valid epoch, the server **MUST** deliver
+every later record in its original order. It then sends a `caught_up` recovery
+control inside the next delivery envelope:
+
+```json
+{
+  "type": "delivery",
+  "connectionId": "conn_01J...",
+  "generation": "2",
+  "serverEpoch": "epoch_01J...",
+  "sequence": "58",
+  "cursor": "cur_opaque_58",
+  "payload": {
+    "type": "recovery_control",
+    "control": "caught_up",
+    "throughDeliveryCursor": "cur_opaque_57"
+  }
+}
+```
+
+`throughDeliveryCursor` is required and non-null. Before this barrier, every
+delivery through that cursor is replay. After the Client applies the barrier
+delivery, later deliveries are live and allow ordinary Client operations. The
+server **MUST** serialize concurrently created records after the covered cursor
+so no record can fall between replay and live delivery.
+
+The barrier is connection recovery control, not a canonical Session Event. Its
+envelope is nevertheless a normal delivery record: it advances the connection
+delivery cursor and is cumulatively acknowledged. Every new logical connection
+also receives this barrier before becoming live.
+
+#### Cursor gap and snapshot recovery
+
+If the requested cursor is expired, unknown, belongs to another epoch, or
+cannot be replayed exactly, the server **MUST NOT** silently continue at the live
+edge. Its initialize response selects snapshot recovery and uses the common
+`cursor_gap` or `server_epoch_changed` condition. Once the ordered stream opens,
+the server sends one authorized atomic logical `SnapshotSet`. The compact form
+fits in one delivery record; a provisional payload is:
+
+```json
+{
+  "type": "delivery",
+  "connectionId": "conn_01J...",
+  "generation": "2",
+  "serverEpoch": "epoch_01J...",
+  "sequence": "91",
+  "cursor": "cur_opaque_91",
+  "payload": {
+    "type": "recovery_control",
+    "control": "snapshot_set",
+    "snapshotSet": {
+      "snapshotId": "snapshot_01J...",
+      "serverEpoch": "epoch_01J...",
+      "throughDeliveryCursor": "cur_opaque_90",
+      "views": [
+        {
+          "type": "session_attachment",
+          "attachmentId": "attachment_01J...",
+          "sessionId": "sess_abc123",
+          "sessionVersion": "184",
+          "throughSourceEventId": "session_event_184",
+          "state": {}
+        },
+        {
+          "type": "resource_view",
+          "viewId": "view_01J...",
+          "resourceUri": "file:///workspace/result.txt",
+          "resourceRevision": "22",
+          "throughSourceEventId": "resource_event_22",
+          "state": {}
+        }
+      ]
+    }
+  }
+}
+```
+
+`snapshotId`, `serverEpoch`, `throughDeliveryCursor`, and `views` are required
+and non-null. `views` is the complete set of every Attachment and resource view
+active for this logical connection at the snapshot cut. It is not a partial
+list of only the views believed to be affected by the gap.
+
+A logical SnapshotSet **MAY** span a bounded ordered sequence of provisional
+`snapshot_chunk` deliveries when the compact form would exceed
+`maximumFrameBytes`, or its manifest **MAY** contain authenticated content
+references. A chunked form **MUST** repeat or bind to `snapshotId`, carry
+decimal-string `chunkIndex` and `chunkCount`, and provide a cryptographic
+`manifestHash` plus a content hash for every chunk or referenced object. Every
+chunk is a normal connection delivery record. The server **MUST** advertise and
+enforce maximum snapshot bytes, chunk count, and reference lifetime; it **MUST
+NOT** evade negotiated frame or resource limits by sending an unbounded set.
+
+Content references **MUST** use absolute URIs and be bound to the SnapshotSet,
+its complete view manifest, the connection's `authorizationContextId`, and the
+complete immutable authentication tuple. Every fetch is reauthenticated and
+authorized for the referenced views under that unchanged context; a context or
+view-membership change revokes the references instead of serving an older
+payload. References remain available only through the advertised adoption
+window and are integrity-checked before use. Credentials **MUST NOT** appear in
+their URIs. A Client **MUST NOT** automatically forward reference credentials
+across an origin or follow a redirect containing credential material; the
+exact-origin redirect rules from the Security and Identity RFD apply. Failure
+to retrieve, authorize, or verify any content leaves the whole set unadopted.
+
+For snapshot recovery:
+
+1. the server authenticates and authorizes every view at one snapshot cut;
+2. the server establishes `throughDeliveryCursor` and the canonical Event ID
+   and decimal-string revision for every view;
+3. the server emits one logical SnapshotSet containing the complete active view
+   manifest and state, inline or as bounded chunks/content references;
+4. the Client collects every component, validates the epoch, manifest hash,
+   component hashes, and complete view manifest, and durably stages the whole
+   candidate without exposing any view as current;
+5. the Client submits an allowlisted `snapshot_adopt` control with the same
+   `snapshotId`, `throughDeliveryCursor`, and a new `operationId`;
+6. the server revalidates authorization and active-view membership and delivers
+   the common committed operation receipt in connection order;
+7. on that receipt, the Client atomically replaces every corresponding local
+   view or none of them; after any required attachment/view readiness controls
+   commit, the server delivers the tail after `throughDeliveryCursor`; and
+8. the server emits the ordered `caught_up` delivery barrier before accepting
+   normal Client operations.
+
+If one view cannot be authorized or represented, the server **MUST NOT** send a
+partial SnapshotSet. If authorization or membership changes before adoption,
+the server returns `snapshot_conflict`, invalidates the set, and creates a new
+authorized cut. A removed or newly unauthorized view must be represented by an
+authorized revocation/tombstone in the complete manifest or cause the snapshot
+attempt to restart; it must not remain silently cached at the Client.
+
+Every SnapshotSet representation delivery follows `throughDeliveryCursor` and
+precedes the post-cut tail. The Client may acknowledge components that it has
+durably staged, but **MUST NOT** adopt partial state, expose a candidate view, or
+enter `live`. Its durable ACK checkpoint may therefore cover staged chunks
+before its visible state changes. Only the ordered committed adoption receipt
+authorizes atomic activation of the complete set; the Client then consumes the
+later tail and barrier.
+Canonical domain revisions inside the set prevent connection delivery order
+from being mistaken for Session or resource mutation order.
+
+The exact snapshot methods and state are delegated to the Session Attachments,
+Snapshots, and Event History RFD. Until such a snapshot can reconstruct every
+active Attachment and resource view, the server **MUST** return
+`snapshot_incomplete` instead of claiming successful resynchronization.
+
+Current `session/resume` replay from `start` is not by itself a conforming
+snapshot: it has no snapshot cursor, no replay/live barrier, and does not
+promise to reconstruct every live Session state component.
+
+### Retention
+
+Delivery retention is per logical connection and exists to repair interrupted
+delivery. It is separate from permanent Session history.
+
+The server **MUST** advertise:
+
+- a minimum time for which unacknowledged delivery records are retained;
+- maximum unacknowledged record and byte windows;
+- the operation-deduplication retention period;
+- bootstrap-response recovery, logical-connection resume grace, predecessor
+  resume-secret overlap, and SnapshotSet adoption-window durations;
+- whether delivery state survives process restart or failover; and
+- snapshot recovery support.
+
+The server **MAY** retain acknowledged records longer than advertised. It **MUST
+NOT** discard an unacknowledged record earlier than its advertised minimum
+unless a documented resource-emergency policy applies. If emergency truncation
+occurs, the next reconnect **MUST** report a cursor gap.
+
+A server restart that cannot preserve the old delivery order **MUST** create a
+new `serverEpoch` and require snapshot recovery. It **MUST NOT** issue a new
+record under an old epoch as though the sequence remained continuous.
+
+Transport replay may briefly redeliver an advisory notice. That does not make
+the notice part of permanent Session history; it only preserves the interrupted
+connection's delivery contract.
+
+### Retry-safe operations
+
+The server maintains exactly one operation ledger scoped at least by
+authenticated Principal, Client instance, and `operationId`. Initialization,
+resume, requests, notifications, reverse responses, recovery controls, and
+batch entries **MUST NOT** use separate retry-identity namespaces.
+
+When receiving a submission, the server **MUST** atomically decide one of:
+
+- **new:** record the operation before allowing its effects;
+- **duplicate pending:** do not execute it again and report pending status;
+- **duplicate complete:** do not execute it again and replay or return the
+  stored outcome;
+- **conflict:** the operation ID exists with different logical input; or
+- **unknown after expiry:** the deduplication record has expired and the server
+  cannot prove the prior outcome.
+
+Input equivalence **MUST** compare the logical JSON-RPC kind, method, and parsed
+parameters or response payload. Object member ordering and insignificant JSON
+encoding differences **MUST NOT** turn the same logical payload into a conflict.
+The JSON-RPC request ID is excluded from operation identity so a recovered
+attempt can receive a response under its current correlation ID.
+
+Every ledger entry **MUST** be represented by the same provisional
+`operation_receipt` shape, whether returned with initialization, delivered on
+the ordered stream, or obtained through a status query. A receipt contains at
+least `operationId`, a decimal-string `receiptRevision`, and one of `recorded`,
+`committed`, `rejected`, or `outcome_unknown`; a terminal receipt binds the
+stored JSON-RPC result, error, or notification/response outcome. A status query
+**MUST** reuse this receipt schema rather than inventing an equivalent status
+type. Exact method and field names remain provisional.
+
+Every receipt delivery and status query is reauthorized against the operation's
+original authority, Session or resource scope, actor/subject/delegation, and
+current visibility policy. Sharing a Principal or knowing an `operationId` is
+not sufficient. When current policy does not permit the stored result, the
+server returns `forbidden` or a policy-approved redacted terminal status; it
+**MUST NOT** disclose stored content. If redaction cannot distinguish committed
+from uncommitted safely, it returns `operation_outcome_unknown`.
+
+```json
+{
+  "type": "delivery",
+  "connectionId": "conn_01J...",
+  "generation": "2",
+  "serverEpoch": "epoch_01J...",
+  "sequence": "59",
+  "cursor": "cur_opaque_59",
+  "payload": {
+    "type": "operation_receipt",
+    "receipt": {
+      "operationId": "op_7f51...",
+      "receiptRevision": "2",
+      "status": "committed"
+    }
+  }
+}
+```
+
+If an operation record has expired and its effect is not inherently safe to
+repeat, the server **MUST** return an `operation_outcome_unknown` error. The
+Client **MUST NOT** automatically retry under a new operation ID. It should
+surface the uncertain outcome or use a domain-specific state query.
+
+This contract provides exactly-once **effect** within the advertised
+deduplication window; it does not claim exactly-once network delivery.
+
+### Pending Agent-to-Client requests
+
+Before first delivery, the server **MUST** assign every Agent-to-Client request
+a durable `reverseRequestId`. A domain interaction such as a permission or
+elicitation additionally **MUST** carry its durable `interactionId` and
+decimal-string interaction revision. The JSON-RPC `id` identifies only one
+delivery attempt and may change when the request is redelivered.
+
+The server **MUST** retain pending reverse-request state independently of
+delivery acknowledgement. Recovery **MUST** either redeliver each pending
+request with the same `reverseRequestId` and interaction identity, or include
+every pending request and interaction for the active views in the atomic
+SnapshotSet.
+
+A reverse response submission **MUST** carry a new `operationId`, its
+`reverseRequestId`, and the `interactionId` when the request represents a domain
+interaction. The server **MUST** authenticate and validate these durable
+bindings before it ignores the JSON-RPC ID of the delivery attempt. A missing or
+wrong binding fails with `reverse_request_mismatch`; it **MUST NOT** be guessed
+from the attempt ID. A Client retry reuses the same `operationId` and durable
+bindings, and the common operation ledger deduplicates it.
+
+```json
+{
+  "type": "submission",
+  "connectionId": "conn_01J...",
+  "generation": "2",
+  "operationId": "op_reverse_response_01J...",
+  "payload": {
+    "type": "reverse_response",
+    "reverseRequestId": "reverse_01J...",
+    "interactionId": "interaction_01J...",
+    "message": {
+      "jsonrpc": "2.0",
+      "id": 27,
+      "result": { "outcome": "selected", "optionId": "allow_once" }
+    }
+  }
+}
+```
+
+Long-lived permissions and elicitations should eventually become durable,
+addressed decision resources rather than relying only on a pending JSON-RPC
+request. This RFD still makes generic reverse requests recoverable.
+
+### JSON-RPC batches
+
+Reliable ACP Remote **MUST** support the v2 JSON-RPC batch model. It **MUST NOT**
+return HTTP 501 merely because a POST contains a batch.
+
+Every request or notification entry in a Client batch **MUST** have its own
+operation ID so one retried entry cannot duplicate another. The provisional
+`submission_batch` frame therefore contains non-empty `(operationId, payload)`
+items rather than one operation ID for the entire batch. Every payload uses the
+same tagged shape as a single submission.
+
+The receiver may process entries concurrently and responses may appear in any
+order, as JSON-RPC permits. Delivery records themselves remain ordered. A batch
+response may be carried in one delivery record or as an explicitly negotiated
+equivalent, but implementations **MUST** preserve JSON-RPC response correlation
+and all-notification no-response behavior.
+
+Lifecycle-sensitive messages, including initialize and connection resume,
+**MUST NOT** appear in a batch. Implementations **SHOULD NOT** batch Session
+attach, snapshot, prompt, or other methods whose ordering changes which later
+messages are valid.
+
+### Liveness
+
+The server advertises an idle heartbeat interval and a peer-timeout interval.
+
+- On SSE, the server **MUST** send an SSE comment heartbeat before the idle
+  interval expires.
+- On WebSocket, the server **MUST** use Ping frames and the Client **MUST** answer
+  with Pong as required by WebSocket.
+- Either binding **MAY** additionally define an application ping to measure
+  handler responsiveness. Such a ping is an ordinary cursor-wrapped delivery,
+  not an unsequenced control frame.
+- Heartbeats **MUST NOT** advance the application cursor or consume replay
+  retention.
+- A peer that misses the advertised timeout **SHOULD** close the physical
+  transport and begin the resume procedure.
+
+Transport liveness proves only that the peer and path are responsive. It does
+not prove that Agent work is making progress.
+
+### Backpressure and resource limits
+
+The server advertises maximum frame bytes, batch entries, unacknowledged records
+and bytes, and any submission-rate limits. The Client **MUST** obey those limits.
+
+The server:
+
+- **MUST NOT** silently drop an application delivery record because a Client is
+  slow;
+- **SHOULD** pause production or stop accepting new Client mutations before the
+  unacknowledged window is exhausted;
+- **MAY** return HTTP 429 or a typed retryable overload error for new
+  submissions;
+- **SHOULD** provide `Retry-After` or equivalent retry guidance;
+- **MAY** send a cursor-wrapped flow-control warning before closing an unhealthy
+  connection; and
+- **MUST** close and require replay or snapshot rather than continue with an
+  undisclosed gap.
+
+Client SDKs **MUST NOT** use a lossy broadcast queue for the authoritative
+delivery stream. If an application consumer falls behind, the SDK must apply
+backpressure, persist records, or deliberately enter snapshot recovery.
+
+### Error model and HTTP mapping
+
+This RFD uses the one [common provisional remote error
+registry](./overview#common-provisional-remote-error-registry). It **MUST NOT**
+define transport-specific aliases for those conditions. Final JSON-RPC numeric
+codes, HTTP bodies, and Rust variants remain provisional.
+
+For Streamable HTTP, transport rejection before admission uses:
+
+- 400 for malformed remote frames or missing required headers;
+- 401 for `unauthenticated`, with an appropriate authentication
+  challenge;
+- 403 for `forbidden`;
+- 409 for `connection_fenced`, duplicate-stream conflicts, or
+  `operation_conflict`;
+- 410 for `invalid_resume` caused by an expired logical connection or resume
+  credential;
+- 413 for `message_too_large`;
+- 415 for an unsupported content type;
+- 429 for `rate_limited` or `backpressure`, with `Retry-After` when known; and
+- 503 for `temporarily_unavailable`.
+
+The exact response media type and structured error body are provisional. A
+server **MUST NOT** return HTTP 202 if it did not durably admit or recognize the
+operation. After admission, domain success or failure is delivered through the
+ordered stream as JSON-RPC, not changed retroactively into an HTTP error.
+
+WebSocket implementations **MUST** send a structured remote error when possible
+before closing. They **SHOULD** use standard close codes for normal closure,
+policy violation, unsupported data, excessive size, internal error, and service
+restart. Private close-code assignments remain provisional.
+
+### Nullable and omission rules
+
+The final schema **MUST** preserve the following rules:
+
+| Field or concept                                                              | Required?                                | Is `null` valid? | Omission meaning                                            |
+| ----------------------------------------------------------------------------- | ---------------------------------------- | ---------------- | ----------------------------------------------------------- |
+| Remote initialize group on ordinary ACP initialize                            | Optional                                 | Yes              | Omitted or `null` means no remote profile requested         |
+| Remote initialize group on a reliable-only endpoint                           | Required                                 | No               | Invalid request                                             |
+| New-versus-resume connection choice                                           | Required tagged union                    | No               | Invalid request                                             |
+| New-connection `bootstrapProof`                                               | Required in the new variant              | No               | Initialization outcome cannot be securely retrieved         |
+| `operationId`, `clientInstanceId`, and profile                                | Required in remote initialize            | No               | Invalid request                                             |
+| `authorityId`, `connectionId`, generation, `authorizationContextId`, generation-binding secret, `serverEpoch`, start cursor, and resume secret | Required on successful remote initialize | No               | Invalid response                                            |
+| Resume `authorizationContextId` and `afterCursor`                             | Required in the resume variant           | No               | Invalid resume; use an explicit tagged start position when no cursor exists |
+| Delivery sequence and cursor                                                  | Required on every application delivery   | No               | Invalid delivery record                                     |
+| Delivery `operationId`                                                        | Optional                                 | No               | Record is not associated with a Client operation            |
+| Client-frame `connectionId` and generation                                    | Required after initialize                | No               | Invalid or fenced Client frame                              |
+| Submission `operationId`                                                      | Required                                 | No               | Invalid submission                                          |
+| Submission `ackCursor`                                                        | Optional                                 | No               | No newer acknowledgement is piggybacked                     |
+| Ack cursor                                                                    | Required                                 | No               | Invalid acknowledgement                                     |
+| Replay-barrier `throughDeliveryCursor`                                        | Required                                 | No               | Invalid control record                                      |
+| SnapshotSet `snapshotId`, `serverEpoch`, `throughDeliveryCursor`, and `views` | Required                                 | No               | Invalid or incomplete SnapshotSet                           |
+| Chunk `snapshotId`, index, count, manifest hash, and content hash             | Required in a chunked SnapshotSet        | No               | Invalid or unverifiable SnapshotSet                         |
+| Snapshot content reference URI and content hash                               | Required for each referenced object      | No               | Invalid or unverifiable SnapshotSet                         |
+| Reverse-response `reverseRequestId`                                           | Required                                 | No               | Invalid response submission                                 |
+| Reverse-response `interactionId`                                              | Required for domain interactions         | No               | Request is not a durable domain interaction                 |
+| Canonical Event IDs and applicable domain revisions                           | Required in canonical Events and views   | No               | Invalid Event or view                                       |
+| Bootstrap-response-recovery, resume-grace, resume-secret-overlap, and SnapshotSet-adoption durations | Required in remote retention             | No               | Invalid retention contract                                  |
+| Retention and limit values advertised as supported                            | Required                                 | No               | Invalid negotiation response                                |
+
+Empty strings **MUST NOT** stand in for missing IDs, cursors, or secrets.
+Optional non-nullable fields reject explicit `null`; they do not treat malformed
+values as omission. Security, ordering, and replay fields **MUST NOT** use
+default-on-error deserialization. Every counter, revision, duration, limit, and
+fence in these rows **MUST** use the decimal-string encoding defined above.
+
+### Security requirements
+
+This RFD depends on a fuller authentication and authorization RFD, but every
+implementation must already satisfy these transport requirements:
+
+- Remote credentials and resume secrets **MUST** be sent only over HTTPS or WSS,
+  except explicitly enabled loopback development.
+- Tokens **MUST NOT** appear in query parameters or WebSocket subprotocol
+  values.
+- Connection IDs, Session IDs, cursors, and cookies **MUST NOT** be accepted as
+  authentication proof.
+- Standard ACP Remote cookies are affinity-only and **MUST NOT** authenticate a
+  request or carry a resume or generation-binding secret. Cookie authentication
+  is outside this profile.
+- Browser-accessible servers **MUST** validate `Origin` and define CORS and CSRF
+  behavior before enabling credentialed requests.
+- Resume and operation state **MUST** be tenant-isolated and bound to the
+  authenticated Principal.
+- Implementations **MUST** cap frame size, batch size, connection count,
+  unacknowledged data, replay work, and operation-ledger growth.
+- Secrets and authorization headers **MUST** be redacted from logs and tracing.
+
+### Adoption and compatibility
+
+The `acp.remote.v2` profile targets ACP v2 while v2 remains experimental.
+
+Negotiation **MUST** prevent a reliable Client from connecting to a framing-only
+server under false assumptions. A server can support Streamable HTTP,
+WebSocket, or both. A remote Client **MUST** implement at least one advertised
+binding and **SHOULD** implement both. Implementations supporting both **MUST**
+pass the same semantic conformance suite.
+
+This RFD supersedes these parts of the older transport draft:
+
+- per-Session SSE streams;
+- `Acp-Session-Id` transport routing;
+- `connectionId` added ad hoc to the ordinary initialize result;
+- a nonexistent `initialized` lifecycle step;
+- v2 reconnect through `session/load`;
+- treating message IDs as delivery cursors;
+- batch rejection with HTTP 501;
+- cookie affinity as the reconnect guarantee; and
+- disconnect or HTTP DELETE terminating associated Sessions.
+
+The older draft may remain as a legacy v1 best-effort transport, but it **MUST
+NOT** select `acp.remote.v2`, advertise its Remote capabilities, or claim
+reliable replay, retry-safe operations, or native multi-client semantics.
+
+Stdio framing is unchanged. Stdio peers **MUST NOT** select `acp.remote.v2` and
+do not use Remote Frames. Domain-level v2 operation and activity IDs can still
+be useful over stdio, but a closed pipe has no standardized resume guarantee.
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+A Client authenticates, initializes one logical ACP connection, and opens one
+SSE stream or WebSocket. Responses, reverse requests, and all attached Session
+updates arrive in one order. The Client persists its applied cursor and
+cumulatively acknowledges progress.
+
+If the network disappears, the Client reconnects, reauthenticates, presents its
+resume secret and last applied cursor, and receives exactly the missing delivery
+records before a replay barrier. If records have expired, it installs an
+authoritative snapshot and continues after that snapshot's cursor. It never
+silently skips data.
+
+If a prompt POST had an ambiguous outcome, the Client retries with the same
+operation ID. The server returns the pending or completed operation instead of
+running it twice. A newer connection generation fences the old socket, and
+closing either physical connection does not destroy durable Sessions.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+### Phase 1: schema and transport state machine
+
+1. Finalize Remote Frame variants and names.
+2. Define initialize negotiation, logical connection identity, generation,
+   server epoch, resume secret, retention, and limits.
+3. Add typed recovery and transport errors without assigning conflicting
+   JSON-RPC error codes.
+4. Define all nullable fields before schema generation.
+5. Generate v2 schemas and add stable wire fixtures.
+
+### Phase 2: reference bindings
+
+1. Implement one-stream Streamable HTTP.
+2. Implement the semantically equivalent WebSocket binding.
+3. Add a persistent delivery log, cumulative acknowledgements, operation
+   ledger, secret rotation, and generation fencing.
+4. Add liveness, limits, and backpressure.
+
+### Phase 3: snapshot integration
+
+1. Define authoritative Session snapshots and Attachments.
+2. Implement cursor-gap detection and atomic snapshot-to-live cutover.
+3. Define pending Agent-request recovery and durable permission/elicitation
+   resources.
+
+### Phase 4: SDK and conformance
+
+The official Rust SDK should add a reconnect supervisor above a single live
+JSON-RPC connection. It needs persistent Client identity, resume-secret and
+cursor storage, a non-lossy inbound queue, an operation ledger, and APIs that
+surface `replaying`, `live`, `backpressured`, `snapshot_required`, and
+`outcome_unknown` states.
+
+The conformance suite **MUST** inject disconnects:
+
+- before and after server admission of every Client message kind;
+- before and after each delivery and acknowledgement;
+- during replay and immediately before the caught-up barrier;
+- during resume-secret rotation;
+- while an Agent-to-Client request is pending;
+- before, during, and after a batch;
+- across server restart and epoch change; and
+- while a Client is slow enough to exceed soft and hard windows.
+
+Tests **MUST** also cover duplicate frames, conflicting operation IDs, duplicate
+SSE GETs, fenced WebSockets, invalid cursors, retention expiry, message-size
+limits, authentication expiry, and snapshot failure.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Why one SSE stream instead of one stream per Session?
+
+One stream gives the Client one order for responses, reverse requests, and
+updates, removes the race when a new Session stream is opened, and allows a
+single cursor and acknowledgement. Session processing may still run concurrently
+after ordered receipt. Backpressure is connection-wide and explicit rather than
+silently divergent across several streams.
+
+### Does cumulative acknowledgement block on an unanswered permission request?
+
+No. The Client may acknowledge after durably recording the request. The
+request's pending lifecycle is tracked separately and restored on reconnect.
+Acknowledgement means delivery state is safe, not that an application request
+has completed.
+
+### Why use both sequence and cursor?
+
+Sequence makes live gaps and ordering easy to validate. The opaque cursor binds
+resume state to the server epoch and lets servers change internal storage
+without Clients parsing tokens. A final schema may encode the sequence inside
+the cursor, but Clients still need a normative way to detect undisclosed gaps.
+
+### Why not rely only on SSE `Last-Event-ID`?
+
+It records what the SSE implementation received, not necessarily what the ACP
+SDK safely applied. It also does not authenticate a logical connection, fence an
+old generation, deduplicate Client mutations, or recover a WebSocket. ACP uses
+the SSE ID as a useful mirror of its cursor, not as the full protocol.
+
+### Why are acknowledgements and operation IDs both necessary?
+
+Acknowledgements make server-to-Client replay bounded. Operation IDs make
+Client-to-server retry safe. One direction's guarantee cannot prove the other
+direction's outcome.
+
+### Is this exactly-once delivery?
+
+No. Records may be delivered more than once and Clients deduplicate by cursor.
+Within the advertised operation-ledger window, the server applies one logical
+Client operation at most once and returns the stored outcome on retry. Outside
+that window it reports uncertainty rather than guessing.
+
+### Can a server discard everything after acknowledgement?
+
+It may reclaim the per-connection delivery log, but it still needs canonical
+Session state, Session history required by its advertised capabilities, pending
+reverse requests, and operation-deduplication entries for their separately
+advertised lifetimes.
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+- **Raw JSON-RPC on reconnect:** cannot attach cursor, epoch, acknowledgement,
+  and operation identity uniformly to responses and notifications.
+- **One stream per Session:** creates multiple order and recovery domains and
+  cannot naturally route connection-level responses.
+- **WebSocket only:** simpler, but unavailable in some serverless and restricted
+  proxy environments. The shared frame model keeps the two bindings equivalent.
+- **HTTP POST response bodies for normal RPC responses:** works for
+  Client-to-server requests but not reverse requests or one ordered event log,
+  and complicates recovery when the HTTP response is lost.
+- **Unbounded replay:** operationally unsafe. Bounded retention plus explicit
+  snapshot recovery provides a testable guarantee.
+
+## Revision history
+
+- 2026-08-27: Initial working draft.

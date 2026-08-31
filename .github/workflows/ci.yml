@@ -71,6 +71,9 @@ jobs:
         with:
           config: ./typos.toml
 
+      - name: Check ACP Remote AHP coverage
+        run: npm run check:rfd-coverage
+
       - name: Lint
         run: |
           cargo clippy
