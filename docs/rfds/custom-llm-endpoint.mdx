@@ -2,17 +2,17 @@
 title: "Configurable LLM Providers"
 ---
 
-- Author(s): [@anna239](https://github.com/anna239), [@xtmq](https://github.com/xtmq)
+- Author(s): [@anna239](https://github.com/anna239), [@xtmq](https://github.com/xtmq), [@vadim-briliantov](https://github.com/Ololoshechkin)
 
 ## Elevator pitch
 
 > What are you proposing to change?
 
-Add the ability for clients to discover and configure agent LLM providers (identified by `id`) via dedicated provider methods:
+Add the ability for clients to discover and configure agent LLM providers (identified by API type) via dedicated provider methods:
 
-- `providers/list`
-- `providers/set`
-- `providers/disable`
+- `providers/list_api`
+- `providers/configure`
+- `providers/restore`
 
 This allows clients to route LLM requests through their own infrastructure (proxies, gateways, or self-hosted models) without agents needing to know about this configuration in advance.
 
@@ -24,8 +24,8 @@ ACP does not currently define a standard method for configuring LLM providers.
 
 In practice, provider configuration is usually done via environment variables or agent-specific config files. That creates several problems:
 
-- No standard way for clients to discover what providers an agent exposes
-- No standard way to update one specific provider by id
+- No standard way for clients to discover what provider APIs an agent supports/exposes
+- No standard way to configure custom LLM provider connections for all (or some) of the supported LLM provider APIs
 - No standard way to disable a specific provider at runtime while preserving provider discoverability
 - Secret-bearing values in headers are difficult to handle safely when configuration must be round-tripped
 
@@ -63,23 +63,41 @@ sequenceDiagram
     Client->>Agent: initialize
     Agent-->>Client: initialize response (agentCapabilities.providers = {})
 
-    Client->>Agent: providers/list
-    Agent-->>Client: providers/list response
+    Client->>Agent: providers/list_api
+    Agent-->>Client: providers/list_api response
 
-    Client->>Agent: providers/set (id = "main")
-    Agent-->>Client: providers/set response
+    Client->>Agent: providers/configure
+    Agent-->>Client: providers/configure response
 
-    Client->>Agent: providers/disable (optional)
-    Agent-->>Client: providers/disable response
+    Client->>Agent: providers/restore (optional)
+    Agent-->>Client: providers/restore response
 
     Client->>Agent: session/new
+
+    loop Prompt turns
+        Client->>Agent: session/prompt (user message)
+        Agent-->>Client: session/prompt response (stopReason)
+
+        opt Client changes providers
+            opt Configure new LLM provider mapping
+                Client->>Agent: providers/configure (optional)
+                Agent-->>Client: providers/configure response
+            end
+            opt Restore to defaults
+                Client->>Agent: providers/restore (optional)
+                Agent-->>Client: providers/restore response
+            end
+        end
+    end
 ```
 
 1. Client initializes and checks `agentCapabilities.providers`.
-2. Client calls `providers/list` to discover available providers, their current routing targets (or disabled state), supported protocol types, and whether they are required.
-3. Client calls `providers/set` to apply new (required) configuration for a specific provider ID.
-4. Client may call `providers/disable` when a non-required provider should be disabled.
+2. Client calls `providers/list_api` to discover supported provider APIs (protocol types), and whether they are required.
+3. Client calls `providers/configure` to apply new (required) configuration for a set of specific providers.
+4. Client may call `providers/restore` when some set of LLM providers must be restored to defaults.
 5. Client creates or loads sessions.
+6. A client can then send `providers/configure` or `providers/restore` anytime
+7. Then, after starting a new turn in any of the active sessions (there might be multiple sessions in parallel), agent starts using updated providers list.
 
 ### Capability advertisement
 
@@ -116,27 +134,16 @@ type LlmProtocol =
   "anthropic" | "openai" | "azure" | "vertex" | "bedrock" | string;
 
 interface ProviderCurrentConfig {
-  /** Protocol currently used by this provider. */
-  apiType: LlmProtocol;
+  /** Name of the provider to be shown in UI. */
+  presentableName: string;
 
   /** Base URL currently used by this provider. */
   baseUrl: string;
 }
 
-type ProviderId = string;
-
 interface ProviderInfo {
-  /** Provider identifier, for example "main" or "openai". */
-  providerId: ProviderId;
-
-  /** Supported protocol types for this provider. */
-  supported: LlmProtocol[];
-
-  /**
-   * Whether this provider is mandatory and cannot be disabled via providers/disable.
-   * If true, clients must not call providers/disable for this provider ID.
-   */
-  required: boolean;
+  /** LLM protocol. */
+  apiType: LlmProtocol;
 
   /**
    * Current effective non-secret routing config.
@@ -149,15 +156,15 @@ interface ProviderInfo {
 }
 ```
 
-### `providers/list`
+### `providers/list_api`
 
 ```typescript
-interface ProvidersListRequest {
+interface ProviderAPIListRequest {
   /** Extension metadata */
   _meta?: Record<string, unknown>;
 }
 
-interface ProvidersListResponse {
+interface ProviderAPIListResponse {
   /** Configurable providers with current routing info suitable for UI display. */
   providers: ProviderInfo[];
 
@@ -168,15 +175,15 @@ interface ProvidersListResponse {
 
 ### `providers/set`
 
-`providers/set` updates the full configuration for one provider ID.
+`providers/set` overrides (updates) the configuration for a set of providers.
 
 ```typescript
-interface SetProviderRequest {
-  /** Provider ID to configure. */
-  providerId: ProviderId;
+interface ProviderConfigUpdateReq {
+  /** LLM protocol to configure. */
+  apiProtocol: LlmProtocol;
 
-  /** Protocol type for this provider. */
-  apiType: LlmProtocol;
+  /** Name of the provider to be shown in UI. */
+  presentableName: string;
 
   /** Base URL for requests sent through this provider. */
   baseUrl: string;
@@ -192,18 +199,28 @@ interface SetProviderRequest {
   _meta?: Record<string, unknown>;
 }
 
-interface SetProviderResponse {
+interface SetProvidersRequest {
+  providerConfigurations: ProviderConfigUpdateReq[];
+
+  /** Extension metadata */
+  _meta?: Record<string, unknown>;
+}
+
+interface SetProvidersResponse {
   /** Extension metadata */
   _meta?: Record<string, unknown>;
 }
 ```
 
-### `providers/disable`
+### `providers/restore`
 
 ```typescript
-interface DisableProviderRequest {
-  /** Provider ID to disable. */
-  providerId: ProviderId;
+interface RestoreProvidersRequest {
+  /**
+   * List of API protocols to restore to default providers.
+   * Omitted or empty restores all providers.
+   */
+  apiProtocols?: LlmProtocol[];
 
   /** Extension metadata */
   _meta?: Record<string, unknown>;
@@ -237,18 +254,18 @@ interface DisableProviderResponse {
 }
 ```
 
-**providers/list Request:**
+**providers/list_api Request:**
 
 ```json
 {
   "jsonrpc": "2.0",
   "id": 1,
-  "method": "providers/list",
+  "method": "providers/list_api",
   "params": {}
 }
 ```
 
-**providers/list Response:**
+**providers/list_api Response:**
 
 ```json
 {
@@ -257,18 +274,14 @@ interface DisableProviderResponse {
   "result": {
     "providers": [
       {
-        "providerId": "main",
-        "supported": ["bedrock", "vertex", "azure", "anthropic"],
-        "required": true,
+        "apiType": "anthropic",
         "current": {
-          "apiType": "anthropic",
+          "presentableName": "Local Anthropic proxy",
           "baseUrl": "http://localhost/anthropic"
         }
       },
       {
-        "providerId": "openai",
-        "supported": ["openai"],
-        "required": false,
+        "apiType": "openai",
         "current": null
       }
     ]
@@ -276,25 +289,34 @@ interface DisableProviderResponse {
 }
 ```
 
-**providers/set Request:**
+**providers/configure Request:**
 
 ```json
 {
   "jsonrpc": "2.0",
   "id": 2,
-  "method": "providers/set",
+  "method": "providers/configure",
   "params": {
-    "providerId": "main",
-    "apiType": "anthropic",
-    "baseUrl": "https://llm-gateway.corp.example.com/anthropic/v1",
-    "headers": {
-      "X-Request-Source": "my-ide"
-    }
+    "providerConfigurations": [
+      {
+        "apiProtocol": "anthropic",
+        "presentableName": "Corporate Anthropic gateway",
+        "baseUrl": "https://llm-gateway.corp.example.com/anthropic/v1",
+        "headers": {
+          "X-Request-Source": "my-ide"
+        }
+      },
+      {
+        "apiProtocol": "openai",
+        "presentableName": "Corporate OpenAI gateway",
+        "baseUrl": "https://llm-gateway.corp.example.com/openai/v1"
+      }
+    ]
   }
 }
 ```
 
-**providers/set Response:**
+**providers/configure Response:**
 
 ```json
 {
@@ -304,20 +326,20 @@ interface DisableProviderResponse {
 }
 ```
 
-**providers/disable Request:**
+**providers/restore Request:**
 
 ```json
 {
   "jsonrpc": "2.0",
   "id": 3,
-  "method": "providers/disable",
-  "params": {
-    "providerId": "openai"
-  }
+  "method": "providers/restore"
 }
 ```
 
-**providers/disable Response:**
+This restores every provider. To restore only a subset, include `params` with
+`apiProtocols`, for example `{ "apiProtocols": ["openai"] }`.
+
+**providers/restore Response:**
 
 ```json
 {
@@ -330,49 +352,42 @@ interface DisableProviderResponse {
 ### Behavior
 
 1. **Capability discovery**: agents that support provider methods MUST advertise `agentCapabilities.providers: {}` in `initialize`. Clients SHOULD only call `providers/*` when this capability is present.
-2. **Timing and session impact**: provider methods MUST be called after `initialize`. Clients SHOULD configure providers before creating or loading sessions. Agents MAY choose not to apply changes to already running sessions, but SHOULD apply them to sessions created or loaded after the change.
-3. **List semantics**: `providers/list` returns configurable providers, their supported protocol types, current effective routing, and `required` flag. Providers SHOULD remain discoverable in list after `providers/disable`.
-4. **Client behavior for required providers**: clients SHOULD NOT call `providers/disable` for providers where `required: true`.
-5. **Disabled state encoding**: in `providers/list`, `current` omitted or `current: null` means the provider is disabled and MUST NOT be used by the agent for LLM calls.
-6. **Set semantics and validation**: `providers/set` replaces the full configuration for the target `id` (`apiType`, `baseUrl`, `headers`); an omitted `headers` field is treated as an empty map. If `id` is unknown, `apiType` is unsupported for that provider, or params are malformed, agents SHOULD return `invalid_params`.
-7. **Disable semantics**: `providers/disable` disables the target provider at runtime. A disabled provider MUST appear in `providers/list` with `current` omitted or `current: null`. If target provider has `required: true`, agents MUST return `invalid_params`. Disabling an unknown `id` SHOULD be treated as success (idempotent behavior).
-8. **Scope and persistence**: provider configuration is process-scoped and SHOULD NOT be persisted to disk.
+2. **Timing and session impact**: provider methods MUST be called after `initialize`. Clients SHOULD configure providers before creating or loading sessions. Agents MAY choose not to apply changes to prompt turns that are already running, but MUST apply them starting from the next prompt turn in any active session and to sessions created or loaded after the change.
+3. **List semantics**: `providers/list_api` returns the supported provider APIs (protocol types) and the current effective non-secret routing config (`current`). Providers SHOULD remain discoverable in the list after `providers/restore`, and while disabled.
+4. **Disabled state encoding**: in `providers/list_api`, `current` omitted or `current: null` means the provider is disabled and MUST NOT be used by the agent for LLM calls.
+5. **Configure semantics and validation**: `providers/configure` replaces the full configuration (`presentableName`, `baseUrl`, `headers`) for every `apiProtocol` listed in `providerConfigurations`; an omitted `headers` field is treated as an empty map. Providers whose protocols are not listed keep their current configuration. If any `apiProtocol` is unsupported by the agent or params are malformed, agents SHOULD return `invalid_params` and SHOULD NOT apply the update partially.
+6. **Restore semantics**: `providers/restore` restores every listed `apiProtocol` to the agent's default configuration. If `params` is omitted, or `apiProtocols` is omitted or empty, it restores every provider to its default configuration. Explicit `null` is not equivalent to omission and is invalid. If the agent has no default for a protocol, the provider becomes disabled (`current` omitted or `current: null` in `providers/list_api`). Restoring a protocol that is already at its default, or that is unknown to the agent, SHOULD be treated as success (idempotent behavior).
+7. **Scope and persistence**: provider configuration is process-scoped and SHOULD NOT be persisted to disk.
 
 ## Frequently asked questions
 
 > What questions have arisen over the course of authoring this document?
 
-### What does `null` mean in `providers/list`?
+### What does `null` mean in `providers/list_api`?
 
 `current` omitted or `current: null` means the provider is disabled.
 
-When disabled, the agent MUST NOT route LLM calls through that provider until the client enables it again with `providers/set`.
-
-### Why is there a `required` flag?
-
-Some providers are mandatory for agent operation and must not be disabled.
-
-`required` lets clients hide or disable the provider-disable action in UI and avoid calling `providers/disable` for those ids.
+When disabled, the agent MUST NOT route LLM calls through that provider until the client configures it again with `providers/configure`, or `providers/restore` brings back a default configuration for it.
 
 ### Why not a single `providers/update` method for full list replacement?
 
 A full-list update means the client must send complete configuration (including `headers`) for all providers every time.
 
-If the client wants to change only one provider, it may not know headers for the others. In that case it cannot safely build a correct full-list payload.
+If the client wants to change only some providers, it may not know headers for the others. In that case it cannot safely build a correct full-list payload.
 
-Also, `providers/list` does not return headers, so the client cannot simply "take what the agent returned" and send it back with one edit.
+Also, `providers/list_api` does not return headers, so the client cannot simply "take what the agent returned" and send it back with one edit.
 
-Per-provider methods (`set` and `disable`) avoid this problem and keep updates explicit.
+`providers/configure` accepts a subset of protocols and leaves the rest untouched, and `providers/restore` makes going back to defaults explicit. Together they avoid this problem and keep updates explicit.
 
-### Why doesn't `providers/list` return headers?
+### Why doesn't `providers/list_api` return headers?
 
-Header values may contain secrets and should not be echoed by the agent. `providers/list` is intentionally limited to non-secret routing information (`current.apiType`, `current.baseUrl`).
+Header values may contain secrets and should not be echoed by the agent. `providers/list_api` is intentionally limited to non-secret routing information (`current.presentableName`, `current.baseUrl`).
 
-### Why are `providers/list` and `providers/set` payloads different?
+### Why are `providers/list_api` and `providers/configure` payloads different?
 
-`providers/set` accepts `headers`, including secrets, and is write-oriented.
+`providers/configure` accepts `headers`, including secrets, and is write-oriented.
 
-`providers/list` is read-oriented and returns only non-secret routing summary (`current`) for UI and capability discovery.
+`providers/list_api` is read-oriented and returns only non-secret routing summary (`current`) for UI and capability discovery.
 
 ### Why is this separate from `initialize` params?
 
@@ -384,14 +399,15 @@ Clients need capability discovery first, then provider discovery, then configura
 
 We did not choose it as the primary approach in this proposal because provider routing here needs dedicated semantics that are difficult to express with today's session config model:
 
-- Multiple providers identified by `id`, each with its own lifecycle
-- Structured payloads (`apiType`, `baseUrl`, full `headers` map) rather than simple scalar values
-- Explicit discoverable (`providers/list`) and disable (`providers/disable`) semantics
+- Multiple providers identified by API protocol, each with its own lifecycle
+- Structured payloads (`apiProtocol`, `presentableName`, `baseUrl`, full `headers` map) rather than simple scalar values
+- Explicit discovery (`providers/list_api`) and restore-to-defaults (`providers/restore`) semantics
 
 Today, `session-config` values are effectively string-oriented and do not define a standard multi-value/structured model for this use case.
 
 ## Revision history
 
+- 2026-08-18: Reworked the API to be keyed by API protocol instead of provider `id`: `providers/list` renamed to `providers/list_api`, `providers/set` replaced by batch `providers/configure`, `providers/disable` replaced by `providers/restore` (restore protocols to agent defaults); dropped the `required` flag; added `presentableName` to `providerConfigurations` entries
 - 2026-04-19: Made `ProviderInfo.current` optional in `providers/list`; disabled state may be encoded as omitted `current` or `current: null`
 - 2026-03-22: Finalized provider disable semantics - `providers/remove` renamed to `providers/disable`, required providers are non-disableable, and disabled state is represented as `current: null`
 - 2026-03-21: Initial draft of provider configuration API (`providers/list`, `providers/set`, `providers/remove`)

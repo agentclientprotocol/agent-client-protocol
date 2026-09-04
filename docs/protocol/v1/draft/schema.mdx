@@ -706,22 +706,24 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
   The list of suggestions.
 </ResponseField>
 
-<a id="providers-disable"></a>
-### <span class="font-mono">providers/disable</span>
+<a id="providers-configure"></a>
+### <span class="font-mono">providers/configure</span>
 
 **UNSTABLE**
 
 This capability is not part of the spec yet, and may be removed or changed at any point.
 
-Disables a provider.
+Configures a set of providers keyed by API protocol.
 
-#### <span class="font-mono">DisableProviderRequest</span>
+#### <span class="font-mono">ConfigureProvidersRequest</span>
 
 **UNSTABLE**
 
 This capability is not part of the spec yet, and may be removed or changed at any point.
 
-Request parameters for `providers/disable`.
+Request parameters for `providers/configure`.
+
+Overrides (updates) the configuration for a set of providers keyed by API protocol.
 
 **Type:** Object
 
@@ -735,47 +737,17 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
 
 </ResponseField>
-<ResponseField name="providerId" type={<a href="#providerid">ProviderId</a>} required>
-  Provider ID to disable.
+<ResponseField name="providerConfigurations" type={<a href="#providerconfigupdate">ProviderConfigUpdate[]</a>} required>
+  Configuration updates to apply, one per API protocol.
 </ResponseField>
 
-#### <span class="font-mono">DisableProviderResponse</span>
+#### <span class="font-mono">ConfigureProvidersResponse</span>
 
 **UNSTABLE**
 
 This capability is not part of the spec yet, and may be removed or changed at any point.
 
-Response to `providers/disable`.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-
-<a id="providers-list"></a>
-### <span class="font-mono">providers/list</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Lists providers that can be configured by the client.
-
-#### <span class="font-mono">ListProvidersRequest</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Request parameters for `providers/list`.
+Response to `providers/configure`.
 
 **Type:** Object
 
@@ -790,13 +762,43 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </ResponseField>
 
-#### <span class="font-mono">ListProvidersResponse</span>
+<a id="providers-list_api"></a>
+### <span class="font-mono">providers/list_api</span>
 
 **UNSTABLE**
 
 This capability is not part of the spec yet, and may be removed or changed at any point.
 
-Response to `providers/list`.
+Lists the provider APIs supported by the agent.
+
+#### <span class="font-mono">ListApiProvidersRequest</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Request parameters for `providers/list_api`.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
+
+#### <span class="font-mono">ListApiProvidersResponse</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Response to `providers/list_api`.
 
 **Type:** Object
 
@@ -814,24 +816,26 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
   Configurable providers with current routing info suitable for UI display.
 </ResponseField>
 
-<a id="providers-set"></a>
-### <span class="font-mono">providers/set</span>
+<a id="providers-restore"></a>
+### <span class="font-mono">providers/restore</span>
 
 **UNSTABLE**
 
 This capability is not part of the spec yet, and may be removed or changed at any point.
 
-Replaces the configuration for a provider.
+Restores providers to the agent's default configuration.
+When no API protocols are specified, restores all providers.
 
-#### <span class="font-mono">SetProviderRequest</span>
+#### <span class="font-mono">RestoreProvidersRequest</span>
 
 **UNSTABLE**
 
 This capability is not part of the spec yet, and may be removed or changed at any point.
 
-Request parameters for `providers/set`.
+Request parameters for `providers/restore`.
 
-Replaces the full configuration for one provider ID.
+Restores the listed API protocols to the agent's default provider configuration.
+When no API protocols are specified, restores all providers.
 
 **Type:** Object
 
@@ -845,27 +849,18 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
 
 </ResponseField>
-<ResponseField name="apiType" type={<a href="#llmprotocol">LlmProtocol</a>} required>
-  Protocol type for this provider.
-</ResponseField>
-<ResponseField name="baseUrl" type={"string"} required>
-  Base URL for requests sent through this provider.
-</ResponseField>
-<ResponseField name="headers" type={"object"} >
-  Full headers map for this provider.
-May include authorization, routing, or other integration-specific headers.
-</ResponseField>
-<ResponseField name="providerId" type={<a href="#providerid">ProviderId</a>} required>
-  Provider ID to configure.
+<ResponseField name="apiProtocols" type={<a href="#llmprotocol">LlmProtocol[]</a>} >
+  List of API protocols to restore to default providers.
+When omitted or empty, all providers are restored.
 </ResponseField>
 
-#### <span class="font-mono">SetProviderResponse</span>
+#### <span class="font-mono">RestoreProvidersResponse</span>
 
 **UNSTABLE**
 
 This capability is not part of the spec yet, and may be removed or changed at any point.
 
-Response to `providers/set`.
+Response to `providers/restore`.
 
 **Type:** Object
 
@@ -6922,6 +6917,41 @@ Non-breaking changes should be introduced via capabilities.
 | Minimum    | `0`     |
 | Maximum    | `65535` |
 
+## <span class="font-mono">ProviderConfigUpdate</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Configuration update for a single provider, keyed by API protocol.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="apiProtocol" type={<a href="#llmprotocol">LlmProtocol</a>} required>
+  LLM protocol to configure.
+</ResponseField>
+<ResponseField name="baseUrl" type={"string"} required>
+  Base URL for requests sent through this provider.
+</ResponseField>
+<ResponseField name="headers" type={"object"} >
+  Full headers map for this provider.
+May include authorization, routing, or other integration-specific headers.
+Omitting this field is equivalent to an empty map (no headers).
+</ResponseField>
+<ResponseField name="presentableName" type={"string"} required>
+  Name of the provider to be shown in UI.
+</ResponseField>
+
 ## <span class="font-mono">ProviderCurrentConfig</span>
 
 **UNSTABLE**
@@ -6942,22 +6972,12 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
 
 </ResponseField>
-<ResponseField name="apiType" type={<a href="#llmprotocol">LlmProtocol</a>} required>
-  Protocol currently used by this provider.
-</ResponseField>
 <ResponseField name="baseUrl" type={"string"} required>
   Base URL currently used by this provider.
 </ResponseField>
-
-## <span class="font-mono">ProviderId</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Unique identifier for a configurable LLM provider.
-
-**Type:** `string`
+<ResponseField name="presentableName" type={"string"} required>
+  Name of the provider to be shown in UI.
+</ResponseField>
 
 ## <span class="font-mono">ProviderInfo</span>
 
@@ -6979,19 +6999,12 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
 
 </ResponseField>
+<ResponseField name="apiType" type={<a href="#llmprotocol">LlmProtocol</a>} required>
+  LLM protocol.
+</ResponseField>
 <ResponseField name="current" type={<><span><a href="#providercurrentconfig">ProviderCurrentConfig</a></span><span> | null</span></>} >
   Current effective non-secret routing config.
 Null or omitted means provider is disabled.
-</ResponseField>
-<ResponseField name="providerId" type={<a href="#providerid">ProviderId</a>} required>
-  Provider identifier, for example "main" or "openai".
-</ResponseField>
-<ResponseField name="required" type={"boolean"} required>
-  Whether this provider is mandatory and cannot be disabled via `providers/disable`.
-If true, clients must not call `providers/disable` for this provider ID.
-</ResponseField>
-<ResponseField name="supported" type={<a href="#llmprotocol">LlmProtocol[]</a>} required>
-  Supported protocol types for this provider.
 </ResponseField>
 
 ## <span class="font-mono">ProvidersCapabilities</span>
