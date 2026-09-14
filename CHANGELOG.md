@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.8.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.7.0...v1.8.0) - 2026-09-14
+
+### Added
+
+- *(unstable)* add session notices schema ([#2004](https://github.com/agentclientprotocol/agent-client-protocol/pull/2004))
+
+### Other
+
+- *(deps)* bump actions-rust-lang/setup-rust-toolchain from 1.17.0 to 2.0.0 ([#2156](https://github.com/agentclientprotocol/agent-client-protocol/pull/2156))
+
 ## [1.7.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.6.0...v1.7.0) - 2026-08-20
 
 ### Added
