@@ -29,7 +29,10 @@ Standardize reversible session archiving: Clients can hide conversations from de
   "jsonrpc": "2.0",
   "id": 1,
   "method": "session/archive",
-  "params": { "sessionId": "sess_abc123" }
+  "params": {
+    "sessionId": "sess_abc123",
+    "_meta": {}
+  }
 }
 ```
 
@@ -40,34 +43,45 @@ Standardize reversible session archiving: Clients can hide conversations from de
   "jsonrpc": "2.0",
   "id": 2,
   "method": "session/unarchive",
-  "params": { "sessionId": "sess_abc123" }
+  "params": {
+    "sessionId": "sess_abc123",
+    "_meta": {}
+  }
 }
 ```
 
-Both return an empty result with the matching request ID:
+Both return a result object with optional `_meta` and the matching request ID:
 
 ```json
 {
   "jsonrpc": "2.0",
   "id": 1,
-  "result": {}
+  "result": { "_meta": {} }
 }
 ```
 
-`sessionId` is required and non-null. Both methods support the usual optional `_meta` field in requests and responses.
+The new models are:
+
+| Models                                               | Fields                                                       |
+| ---------------------------------------------------- | ------------------------------------------------------------ |
+| `ArchiveSessionRequest`, `UnarchiveSessionRequest`   | Required, non-null `sessionId: SessionId`; optional `_meta`. |
+| `ArchiveSessionResponse`, `UnarchiveSessionResponse` | Optional `_meta`.                                            |
+| `SessionArchiveCapabilities`                         | Optional `_meta`.                                            |
+
+In each model, `_meta` is an object with arbitrary values. Omission and `null` are equivalent. An empty result `{}` remains valid when no metadata is supplied.
 
 ### Capabilities
 
-Agents advertise the methods independently:
+Agents advertise one shared `archive` capability:
 
-- **v1:** `agentCapabilities.sessionCapabilities.archive` and `.unarchive`.
-- **v2 draft:** `capabilities.session.archive` and `.unarchive`.
+- **v1:** `agentCapabilities.sessionCapabilities.archive`.
+- **v2 draft:** `capabilities.session.archive`.
 
-`{}` enables the corresponding method; omission or `null` means unsupported. Clients **MUST** check support before calling it.
+`{}` means the Agent **MUST** support both methods, archived listing, and state reporting; omission or `null` means unsupported. Clients **MUST** check support before using either method or the list parameter.
 
-Advertising either capability **MUST** also enable archived listing and state reporting. In v1, this requires `sessionCapabilities.list: {}`; v2 already requires listing for Agents supporting sessions.
+In v1, this also requires `sessionCapabilities.list: {}`; v2 already requires listing for Agents supporting sessions.
 
-Example v1 initialization response:
+Example v1 initialization response, also advertising the existing `delete` capability for `session/delete`:
 
 ```json
 {
@@ -78,8 +92,8 @@ Example v1 initialization response:
     "agentCapabilities": {
       "sessionCapabilities": {
         "list": {},
-        "archive": {},
-        "unarchive": {}
+        "delete": {},
+        "archive": { "_meta": {} }
       }
     }
   }
@@ -95,7 +109,7 @@ Extend `session/list` with an optional `archived` parameter to include archived 
 | Omitted, `null`, or `false` | Unarchived only.         |
 | `true`                      | Unarchived and archived. |
 
-Clients **MUST NOT** send this parameter without either archive capability. It combines with `cwd` and applies before pagination. Clients keep the same `cwd` and `archived` values when following `nextCursor`; changing either starts a new pagination sequence.
+The parameter combines with `cwd` and applies before pagination. Clients keep the same `cwd` and `archived` values when following `nextCursor`; changing either starts a new pagination sequence.
 
 Include archived sessions alongside unarchived sessions:
 
@@ -136,7 +150,7 @@ Include archived sessions alongside unarchived sessions:
 
 Add an optional, non-null boolean `archived` to:
 
-- **`SessionInfo`:** required in list results when either archive capability is advertised. Otherwise, omission conveys no archive-state guarantee.
+- **`SessionInfo`:** required in list results when the `archive` capability is advertised. Otherwise, omission conveys no archive-state guarantee.
 - **`SessionInfoUpdate`:** omission leaves state unchanged. Agents **SHOULD** report changes through existing `session_info_update` notifications to connected session observers. Listing remains the source of truth after reconnecting; no global subscription is introduced.
 
 ```json
@@ -173,7 +187,7 @@ A user archives a conversation in one Client, finds it in another Client's archi
 
 > Tell me more about your implementation. What is your detailed implementation plan?
 
-Add the methods, capabilities, filter, and state fields behind `unstable_session_archive`; regenerate v1/v2 schemas and update conversions, SDKs, and docs. Validate restoration, retries, persistence, pagination, active sessions, and deletion compatibility with Agent and Client implementations before preview.
+Add the methods, shared capability, filter, and state fields behind `unstable_session_archive`; regenerate v1/v2 schemas and update conversions, SDKs, and docs. Validate restoration, retries, persistence, pagination, active sessions, and deletion compatibility with Agent and Client implementations before preview.
 
 ## Frequently asked questions
 
@@ -181,7 +195,7 @@ Add the methods, capabilities, filter, and state fields behind `unstable_session
 
 ## Why separate methods?
 
-They match the requested actions and allow independent capabilities. A boolean setter is possible, but a general metadata-editing API exceeds this request. Extending deletion cannot guarantee recovery when Agents may permanently remove data.
+They express opposite state transitions under one shared capability. A boolean setter is possible, but a general metadata-editing API exceeds this request. Extending deletion cannot guarantee recovery when Agents may permanently remove data.
 
 ## What needs discussion?
 
