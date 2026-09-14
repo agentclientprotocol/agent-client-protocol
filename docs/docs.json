@@ -195,7 +195,8 @@
               "rfds/plan-operations",
               "rfds/end-turn-token-usage",
               "rfds/get-auth-state",
-              "rfds/session-notices"
+              "rfds/session-notices",
+              "rfds/durable-resumable-http-transport"
             ]
           },
           {
