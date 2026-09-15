@@ -2836,15 +2836,6 @@
           ],
           "x-deserialize-default-on-error": true
         },
-        "subagents": {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nWhether the agent may expose agent-created subagents.\n\nOptional and non-nullable. Omission means the agent does not advertise support.\nSupplying `{}` means the agent may send subagent session updates when the client also\nadvertises support.",
-          "x-deserialize-default-on-error": true,
-          "allOf": [
-            {
-              "$ref": "#/$defs/SubagentCapabilities"
-            }
-          ]
-        },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"],
@@ -2919,18 +2910,6 @@
       "properties": {
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"],
-          "x-deserialize-default-on-error": true,
-          "additionalProperties": true
-        }
-      }
-    },
-    "SubagentCapabilities": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapability marker for exposing subagents as restricted ACP sessions.\n\nSupplying `{}` advertises support for subagent lifecycle updates and restricted-session\nsemantics. Both the client and agent must advertise this capability before the agent sends\nsubagent updates.",
-      "type": "object",
-      "properties": {
-        "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -5255,34 +5234,18 @@
           ]
         },
         {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNotification that the session spawned a subagent.",
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAn upsert for a subagent exposed by this session.",
           "type": "object",
           "properties": {
             "sessionUpdate": {
               "type": "string",
-              "const": "subagent_spawned"
+              "const": "subagent_update"
             }
           },
           "required": ["sessionUpdate"],
           "allOf": [
             {
-              "$ref": "#/$defs/SubagentSpawnedUpdate"
-            }
-          ]
-        },
-        {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNotification that a subagent reached a terminal state.",
-          "type": "object",
-          "properties": {
-            "sessionUpdate": {
-              "type": "string",
-              "const": "subagent_state_update"
-            }
-          },
-          "required": ["sessionUpdate"],
-          "allOf": [
-            {
-              "$ref": "#/$defs/SubagentStateUpdate"
+              "$ref": "#/$defs/SubagentUpdate"
             }
           ]
         }
@@ -6060,11 +6023,6 @@
           "type": "boolean",
           "x-deserialize-default-on-error": true
         },
-        "close": {
-          "description": "Whether the client may close this subagent. Omission is equivalent to `false`.",
-          "type": "boolean",
-          "x-deserialize-default-on-error": true
-        },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.",
           "type": ["object", "null"],
@@ -6073,46 +6031,14 @@
         }
       }
     },
-    "SubagentSpawnedUpdate": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNotification that a session spawned a subagent.",
-      "type": "object",
-      "properties": {
-        "subagentSessionId": {
-          "description": "The opaque session ID used by all subsequent updates for the child.",
-          "allOf": [
-            {
-              "$ref": "#/$defs/SessionId"
-            }
-          ]
-        },
-        "name": {
-          "description": "A short, human-readable label for the subagent.",
-          "type": "string"
-        },
-        "task": {
-          "description": "A human-readable summary of the work delegated to the subagent.",
-          "type": "string"
-        },
-        "capabilities": {
-          "description": "Client-to-agent operations permitted for this subagent session.",
-          "allOf": [
-            {
-              "$ref": "#/$defs/SubagentSessionCapabilities"
-            }
-          ]
-        },
-        "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
-          "type": ["object", "null"],
-          "x-deserialize-default-on-error": true,
-          "additionalProperties": true
-        }
-      },
-      "required": ["subagentSessionId", "name", "task", "capabilities"]
-    },
     "SubagentState": {
-      "description": "Terminal state of an announced subagent.",
+      "description": "Lifecycle state of an announced subagent.\n\nAll states except `running` are terminal.",
       "oneOf": [
+        {
+          "description": "The subagent is working on its task. This is the initial state.",
+          "type": "string",
+          "const": "running"
+        },
         {
           "description": "The subagent completed its task successfully.",
           "type": "string",
@@ -6135,34 +6061,60 @@
         }
       ]
     },
-    "SubagentStateUpdate": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNotification that a subagent reached a terminal state.\n\nSent on the immediate parent session after all child session updates and\nafter every pending permission or elicitation request issued for the child\nhas resolved.",
+    "SubagentUpdate": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAn upsert for a subagent exposed by its parent session.\n\nSent on the immediate parent session. The first update for an unknown\n[`SubagentUpdate::subagent_session_id`] announces the child and MUST be sent\nbefore any `session/update` bearing the child's session ID.\n\nOnly the subagent session ID is required. Omitted fields keep their previous\nvalue; a child whose state was never reported is `running`.\n\nThe update that carries a terminal [`SubagentUpdate::state`] MUST be sent\nafter all child session updates and after every pending permission or\nelicitation request issued for the child has resolved. The Agent MUST NOT\nsend further updates for that child afterwards.",
       "type": "object",
       "properties": {
         "subagentSessionId": {
-          "description": "The session ID of the subagent whose state changed.",
+          "description": "The opaque session ID identifying the child in all ACP messages.",
           "allOf": [
             {
               "$ref": "#/$defs/SessionId"
             }
           ]
         },
+        "name": {
+          "description": "A short, human-readable label for the subagent.\n\nOmitted and `null` both mean unchanged. If never supplied, the Client\nchooses its own fallback presentation.",
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
+        },
+        "task": {
+          "description": "A human-readable summary of the work delegated to the subagent.\n\nOmitted and `null` both mean unchanged.",
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
+        },
+        "capabilities": {
+          "description": "Client-to-agent operations permitted for this subagent session.\n\nOmitted and `null` both mean unchanged. If never supplied, no operations\nare permitted.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SubagentSessionCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
         "state": {
-          "description": "The terminal state reached by the subagent.",
-          "allOf": [
+          "description": "The lifecycle state reached by the subagent.\n\nOmitted and `null` both mean unchanged. If never supplied, the child is\n`running`.",
+          "anyOf": [
             {
               "$ref": "#/$defs/SubagentState"
+            },
+            {
+              "type": "null"
             }
-          ]
+          ],
+          "x-deserialize-default-on-error": true
         },
         "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
         }
       },
-      "required": ["subagentSessionId", "state"]
+      "required": ["subagentSessionId"]
     },
     "CompleteElicitationNotification": {
       "description": "Notification sent by the agent when a URL-based elicitation is complete.",
@@ -6702,6 +6654,18 @@
       "properties": {
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
+    },
+    "SubagentCapabilities": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapability marker for exposing subagents as restricted ACP sessions.\n\nSupplying `{}` advertises support for subagent lifecycle updates and restricted-session\nsemantics. The client must advertise this capability before the agent sends subagent\nupdates.",
+      "type": "object",
+      "properties": {
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
