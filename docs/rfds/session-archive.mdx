@@ -8,7 +8,7 @@ Authors: Mark Tkachenko, Evgeniy Stepanov
 
 > What are you proposing to change?
 
-Standardize reversible session archiving: Clients can hide conversations from default history, discover archived sessions, and restore them with the same ID and saved history.
+Standardize reversible session archiving in both ACP v1 and v2: Clients can hide conversations from default history, discover archived sessions, and restore them with the same ID and saved history.
 
 ## Status quo
 
@@ -187,7 +187,7 @@ A user archives a conversation in one Client, finds it in another Client's archi
 
 > Tell me more about your implementation. What is your detailed implementation plan?
 
-Add the methods, shared capability, filter, and state fields behind `unstable_session_archive`; regenerate v1/v2 schemas and update conversions, SDKs, and docs. Validate restoration, retries, persistence, pagination, active sessions, and deletion compatibility with Agent and Client implementations before preview.
+The implementation **MUST** cover both ACP v1 and v2: `session/archive`, `session/unarchive`, all new models with `_meta`, the shared `archive` capability, the `session/list` parameter, and archive-state reporting. Implement these behind `unstable_session_archive`, regenerate both versions' schemas, and update conversions, SDKs, and docs. Validate restoration, retries, persistence, pagination, active sessions, and deletion compatibility in both protocol versions before preview.
 
 ## Frequently asked questions
 
