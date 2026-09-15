@@ -8703,6 +8703,45 @@ A content block appended to a context compaction's retained summary.
 </Expandable>
 </ResponseField>
 
+<ResponseField name="subagent_update" type="object">
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+A subagent exposed by this session has been created or updated.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted means no metadata update; `null` is an
+explicit clear signal. Implementations MUST NOT make assumptions about values at these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="capabilities" type={<><span><a href="#subagentsessioncapabilities">SubagentSessionCapabilities</a></span><span> | null</span></>} >
+  Client-to-agent operations permitted for this subagent session.
+</ResponseField>
+<ResponseField name="name" type={"string | null"} >
+  A short, human-readable label for the subagent. It need not be unique.
+</ResponseField>
+<ResponseField name="sessionUpdate" type={"string"} required>
+  The discriminator value. Must be `"subagent_update"`.
+</ResponseField>
+<ResponseField name="state" type={<><span><a href="#subagentstate">SubagentState</a></span><span> | null</span></>} >
+  The reported lifecycle state of the subagent.
+</ResponseField>
+<ResponseField name="subagentSessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The opaque session ID identifying the child in all ACP messages.
+</ResponseField>
+<ResponseField name="task" type={"string | null"} >
+  A human-readable summary of the work delegated to the subagent.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 <ResponseField name="other" type="object">
 Custom or future session update.
 
@@ -9013,6 +9052,121 @@ Optional. Omitted and `null` are equivalent and mean there is no pattern constra
 
 Optional. Omitted and `null` are equivalent and mean no title is provided.
 
+</ResponseField>
+
+## <span class="font-mono">SubagentSessionCapabilities</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Client-to-agent operations permitted for a specific subagent session.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"}>
+  The _meta property is reserved by ACP to allow clients and agents to attach
+  additional metadata to their interactions. Implementations MUST NOT make
+  assumptions about values at these keys.
+</ResponseField>
+<ResponseField name="cancel" type={"boolean"}>
+  Whether the client may cancel this subagent. Omission is equivalent to
+  `false`.
+</ResponseField>
+
+## <span class="font-mono">SubagentState</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Lifecycle state of an announced subagent.
+
+All states except `running` are terminal.
+
+**Type:** Union
+
+<ResponseField name="running" type="string">
+  The subagent is working on its task. This is the initial state.
+</ResponseField>
+
+<ResponseField name="completed" type="string">
+  The subagent completed its task successfully.
+</ResponseField>
+
+<ResponseField name="failed" type="string">
+  The subagent failed to complete its task.
+</ResponseField>
+
+<ResponseField name="cancelled" type="string">
+  The subagent was cancelled.
+</ResponseField>
+
+<ResponseField name="disconnected" type="string">
+  The Agent lost the child runtime and cannot determine its task outcome.
+</ResponseField>
+
+<ResponseField name="other" type="string">
+Custom or future subagent state.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+</ResponseField>
+
+## <span class="font-mono">SubagentUpdate</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+An upsert for a subagent exposed by its parent session.
+
+Sent on the immediate parent session. The first update for an unknown
+`SubagentUpdate::subagent_session_id` announces the child and MUST be sent
+before any `session/update` bearing the child's session ID. No Client
+capability is required.
+
+Only `SubagentUpdate::subagent_session_id` is required. Other fields have
+patch semantics: omitted fields leave the stored value unchanged, `null`
+clears or unsets the value, and concrete values replace it. A child whose
+state is unset is `running`; a child whose capabilities are unset permits
+no operations.
+
+The update that carries a terminal `SubagentUpdate::state` MUST be sent
+after all child session updates and after every pending permission or
+elicitation request issued for the child has resolved. The Agent MUST NOT
+send further updates for that child afterwards.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted means no metadata update; `null` is an
+explicit clear signal. Implementations MUST NOT make assumptions about values at these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="capabilities" type={<><span><a href="#subagentsessioncapabilities">SubagentSessionCapabilities</a></span><span> | null</span></>} >
+  Client-to-agent operations permitted for this subagent session.
+</ResponseField>
+<ResponseField name="name" type={"string | null"} >
+  A short, human-readable label for the subagent. It need not be unique.
+</ResponseField>
+<ResponseField name="state" type={<><span><a href="#subagentstate">SubagentState</a></span><span> | null</span></>} >
+  The reported lifecycle state of the subagent.
+</ResponseField>
+<ResponseField name="subagentSessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The opaque session ID identifying the child in all ACP messages.
+</ResponseField>
+<ResponseField name="task" type={"string | null"} >
+  A human-readable summary of the work delegated to the subagent.
 </ResponseField>
 
 ## <span class="font-mono">Terminal</span>
