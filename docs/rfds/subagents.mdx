@@ -14,11 +14,12 @@ subagent is represented by its own ACP session ID, so its messages, thoughts,
 plans, tool calls, and lifecycle can be displayed independently from the parent
 session.
 
-The parent Agent announces a subagent with a `subagent_spawned` session update.
-Subsequent `session/update` notifications use the subagent's session ID. A
-subagent session is observational by default: the Client cannot prompt, queue a
-message for, or steer it. An Agent may separately advertise that a particular
-subagent can be cancelled or closed by the Client.
+The parent Agent announces and tracks each subagent with upsert-style
+`subagent_update` session updates. Subsequent `session/update` notifications
+use the subagent's session ID. A subagent session is observational by default:
+the Client cannot prompt, queue a message for, or steer it. An Agent may
+separately advertise that a particular subagent can be cancelled by the
+Client.
 
 ## Status quo
 
@@ -55,11 +56,6 @@ the Client understands the session updates and restricted-session semantics in
 this RFD. The field is optional and non-nullable. An omitted field means the
 capability is not supported; `{}` means it is supported.
 
-Add an optional `subagents` object to `AgentCapabilities.sessionCapabilities`.
-Its presence means the Agent may expose agent-created subagents. The field is
-optional and non-nullable. An omitted field means the capability is not
-supported; `{}` means it is supported.
-
 ```json
 {
   "clientCapabilities": {
@@ -68,25 +64,29 @@ supported; `{}` means it is supported.
 }
 ```
 
-```json
-{
-  "agentCapabilities": {
-    "sessionCapabilities": {
-      "subagents": {}
-    }
-  }
-}
-```
-
-An Agent **MUST NOT** send the updates defined by this RFD unless both parties
+An Agent **MUST NOT** send the updates defined by this RFD unless the Client
 advertised `subagents`. It may still use subagents internally and present their
 results through the parent session.
 
-### Announcing a subagent
+There is no Agent-side capability. Subagent visibility flows only from Agent to
+Client, so the Client capability alone is enough to prevent sending updates the
+other side cannot understand; a Client learns that a particular Agent exposes
+subagents by receiving the first update. The Client capability itself exists
+only because v1 Clients predate this RFD. In ACP v2, subagent updates are part
+of the baseline session model and support is assumed rather than negotiated;
+see [Subagents in ACP v2](#subagents-in-acp-v2).
 
-When an Agent creates a subagent that it wants to expose, it **MUST** send a
-`subagent_spawned` update on the immediate parent session before sending any
-updates for the child session:
+### Announcing and updating a subagent
+
+All subagent information travels in a single `subagent_update` session update
+with upsert semantics, following the entity-update pattern ACP v2 uses for tool
+calls, messages, and terminals. It is sent on the immediate parent session: the
+first update for an unknown `subagentSessionId` announces the child, and later
+updates for the same ID modify it.
+
+When an Agent creates a subagent that it wants to expose, it **MUST** send the
+announcing `subagent_update` before sending any updates bearing the child's
+session ID:
 
 ```json
 {
@@ -95,50 +95,66 @@ updates for the child session:
   "params": {
     "sessionId": "sess_parent",
     "update": {
-      "sessionUpdate": "subagent_spawned",
+      "sessionUpdate": "subagent_update",
       "subagentSessionId": "sess_child_1",
       "name": "test-investigator",
       "task": "Find the cause of the failing integration tests",
       "capabilities": {
-        "cancel": true,
-        "close": true
+        "cancel": true
       }
     }
   }
 }
 ```
 
-`subagentSessionId`, `name`, `task`, and `capabilities` are required and
-non-nullable:
+Only `subagentSessionId` is required. For every other field, omission and
+`null` are equivalent and mean the field is unchanged; a concrete value
+replaces the previous one. Fields can therefore be revised mid-run — a task
+summary that becomes more specific as work proceeds, for example — but not
+cleared:
 
 - `subagentSessionId` is an opaque `SessionId` unique within the ACP
   connection. It identifies the child in all subsequent ACP messages.
-- `name` is a short, human-readable label. It need not be unique.
-- `task` is a human-readable summary of the work delegated to the child. It is
-  descriptive, not a prompt that the Client can edit or resubmit.
-- `capabilities` describes the Client-to-Agent operations permitted for this
-  specific child session. `cancel` and `close` are optional, non-nullable
-  booleans whose omission is equivalent to `false`.
+- `name` is an optional short, human-readable label. It need not be unique. If
+  it was never supplied, the Client chooses its own fallback presentation.
+- `task` is an optional human-readable summary of the work delegated to the
+  child. It is descriptive, not a prompt that the Client can edit or resubmit.
+- `capabilities` optionally describes the Client-to-Agent operations permitted
+  for this specific child session. `cancel` is an optional, non-nullable
+  boolean whose omission is equivalent to `false`. If `capabilities` was never
+  supplied, no operations are permitted.
+- `state` is the optional lifecycle state defined in [Lifecycle](#lifecycle).
+  If it was never supplied, the child is `running`, so the announcing update
+  usually omits it.
 
 The outer `sessionId` establishes the immediate parent. This supports arbitrary
 nesting without adding a second parent identifier. If a child spawns another
-subagent, the Agent sends `subagent_spawned` with the child's session ID as the
+subagent, the Agent sends `subagent_update` with the child's session ID as the
 outer `sessionId`.
 
-The Agent **MUST** send the spawn update even if it expects the child to finish
-very quickly. The Client **MUST** create the child session before processing
-later updates bearing that session ID.
+The Agent **MUST** send the announcing update even if it expects the child to
+finish very quickly, so that the Client never receives child updates it cannot
+attribute to an announced session. How a Client tracks or renders announced
+children is its own concern; the ordering guarantee is the protocol contract.
+SDKs **MAY** additionally tolerate non-conforming Agents by buffering updates
+for unknown session IDs until the announcing update arrives, but Agents
+**MUST NOT** rely on such tolerance.
 
-The child inherits the parent's effective working directory, additional
-directories, MCP servers, and Client capabilities. The Agent may apply stricter
-runtime or tool restrictions to the child, but it **MUST NOT** grant access that
-was not available to the parent. A future RFD may add explicit per-child
-execution-context fields if Clients need to display or negotiate them.
+The child's execution context — its working directory, MCP servers, and
+available tools — is chosen by the Agent and is not guaranteed to match the
+parent's. An Agent may, for example, run a child in a scratch directory or
+without the parent's MCP servers. Whatever the context, all child activity
+flows through the same ACP connection: Agent-to-Client requests made on behalf
+of a child are subject to the same Client capabilities and permission checks as
+the parent's, and the Agent **MUST NOT** use a child to circumvent restrictions
+the Client imposed on the parent session. A future RFD may add explicit
+per-child execution-context fields if Clients need to display or negotiate
+them.
 
 ### Independent update streams
 
-After the spawn update, the Agent sends existing ACP updates for the child in
-the normal form, using the child's session ID:
+After the announcing update, the Agent sends existing ACP updates for the child
+in the normal form, using the child's session ID:
 
 ```json
 {
@@ -172,10 +188,14 @@ and may use explicitly advertised lifecycle controls, but cannot submit new
 work to it. Existing permission and security boundaries apply equally to parent
 and child activity.
 
-### Lifecycle updates
+### Lifecycle
 
-The Agent **MUST** report the terminal state of every announced subagent by
-sending a `subagent_state_update` on its immediate parent session:
+`state` is one of `running`, `completed`, `failed`, `cancelled`, or
+`disconnected`. A child whose state was never reported is `running`; every
+other state is terminal.
+
+The Agent **MUST** report a terminal state for every announced subagent by
+sending a `subagent_update` on its immediate parent session:
 
 ```json
 {
@@ -184,7 +204,7 @@ sending a `subagent_state_update` on its immediate parent session:
   "params": {
     "sessionId": "sess_parent",
     "update": {
-      "sessionUpdate": "subagent_state_update",
+      "sessionUpdate": "subagent_update",
       "subagentSessionId": "sess_child_1",
       "state": "completed"
     }
@@ -192,22 +212,19 @@ sending a `subagent_state_update` on its immediate parent session:
 }
 ```
 
-`subagentSessionId` and `state` are required and non-nullable. `state` is one
-of `completed`, `failed`, `cancelled`, or `disconnected`. The initial
-`subagent_spawned` update implicitly places the child in the `running` state,
-so a separate running update is unnecessary.
-
 `disconnected` means the Agent can no longer associate the announced child
 with a live runtime and therefore does not know its task outcome. It is a
 terminal state for the exposed ACP child, not a claim that the delegated task
 failed or was cancelled. An Agent **MUST NOT** report `failed` or `cancelled`
 solely because a connection ended or a child runtime could not be restored.
 
-The terminal lifecycle update **MUST** be sent after all child
+The update that carries the terminal state **MUST** be sent after all child
 `session/update` notifications and after every pending Agent-to-Client request
 for the child has resolved, as defined in
 [Pending permission and elicitation requests](#pending-permission-and-elicitation-requests).
-A Client may then retain the child for display or discard its transient state.
+The Agent **MUST NOT** send further `subagent_update`s for that child
+afterwards. A Client may then retain the child for display or discard its
+transient state.
 
 ### Unknown outcomes on a live connection
 
@@ -226,6 +243,11 @@ Client **MUST NOT** present such a child as `failed` or `cancelled`, **MUST
 NOT** continue presenting it as running, and **MUST NOT** wait indefinitely for
 a terminal update.
 
+Waiting for further updates is not a real alternative: after the connection
+ends nothing more can arrive, and after `session/prompt` returns, v1 ties
+`session/update` to the active prompt turn, so there is no defined channel
+through which the child's actual outcome could still be delivered.
+
 This local state is presentational only. The Client **MUST NOT** emit a wire
 message to report it: `session/update` flows only from Agent to Client, and no
 Client-to-Agent notification exists for subagent state.
@@ -233,7 +255,7 @@ Client-to-Agent notification exists for subagent state.
 Because the Client synthesized this state rather than receiving it, it is
 provisional. History replayed by a subsequent `session/load` of the parent,
 including `disconnected` updates synthesized by the orphan-recovery flow below,
-is authoritative and replaces it. If a late `subagent_state_update` for the
+is authoritative and replaces it. If a late terminal `subagent_update` for the
 child nevertheless arrives on a still-live connection, the Client **MAY**
 accept it in place of the local state, but **MUST NOT** return the child to a
 running presentation.
@@ -248,19 +270,18 @@ only the parent runtime.
 The authoritative flow for reconstructing the child tree is:
 
 1. The Client calls `session/load` with the parent session ID.
-2. The Agent examines persisted child history. Every `subagent_spawned` update
-   without a corresponding terminal lifecycle update identifies an orphaned
-   child.
-3. The Agent terminates each orphan with a `subagent_state_update` whose state
-   is `disconnected`. For nested orphans, descendants are terminated before
+2. The Agent examines persisted child history. Every announced child without a
+   corresponding terminal `subagent_update` identifies an orphan.
+3. The Agent terminates each orphan with a `subagent_update` whose state is
+   `disconnected`. For nested orphans, descendants are terminated before
    their parents, and every terminal update is sent on the immediate parent
    session.
 4. The Agent replays the parent and child history in its original order,
    preserving the child session IDs. Each synthesized `disconnected` update is
    sent after all persisted updates for that child.
-5. The Client reconstructs the session tree from `subagent_spawned` updates and
-   treats `disconnected` as terminal. Replayed child IDs are historical display
-   identifiers and cannot be loaded or resumed independently.
+5. The Client reconstructs the session tree from announcing `subagent_update`s
+   and treats `disconnected` as terminal. Replayed child IDs are historical
+   display identifiers and cannot be loaded or resumed independently.
 
 An implementation may persist synthesized terminal updates. Repeated loads
 **MUST** produce the same terminal result, **MUST NOT** revive an orphan, and
@@ -269,7 +290,7 @@ not restored.
 
 `session/resume` does not replay or reconstruct child history. The Agent
 **MUST NOT** send a standalone child terminal update during resume because the
-Client may not have received the corresponding `subagent_spawned` update. A
+Client may not have received the corresponding announcing update. A
 Client that retained UI state from the interrupted connection keeps showing
 unterminated children in the local `disconnected` state defined in
 [Unknown outcomes on a live connection](#unknown-outcomes-on-a-live-connection).
@@ -279,36 +300,32 @@ If it needs the authoritative child tree and terminal states, it uses
 ### Restricted session methods
 
 The Client **MUST NOT** call `session/new`, `session/load`, `session/resume`,
-`session/fork`, `session/prompt`, or any queueing or steering method with a
-subagent session ID. Subagents are created and assigned work by their parent,
-not by the Client.
+`session/fork`, `session/prompt`, `session/close`, or any queueing or steering
+method with a subagent session ID. Subagents are created, assigned work, and
+released by their parent, not by the Client.
 
 If `capabilities.cancel` is `true`, the Client may send the existing
 `session/cancel` notification with the subagent session ID. This cancels only
 that subagent and its descendants. It does not cancel its parent or siblings.
-After cancellation finishes, the Agent sends `subagent_state_update` with
+After cancellation finishes, the Agent sends a `subagent_update` with
 `state: "cancelled"`.
 
 Unlike cancellation of a user-facing session, there is no child
 `session/prompt` request to complete with a `cancelled` stop reason. The
-terminal `subagent_state_update` is the Client's confirmation that cancellation
+terminal `subagent_update` is the Client's confirmation that cancellation
 finished.
 
-If `capabilities.close` is `true`, and the Agent also advertised the existing
-`sessionCapabilities.close` capability, the Client may call `session/close` on
-the subagent session. Closing first applies the cancellation behavior above and
-then releases the child's resources. `close: true` **MUST NOT** be advertised
-for a child unless the connection-level `sessionCapabilities.close` capability
-is also present.
-
-The Client **MUST NOT** infer individual cancellation or close support merely
-because the Agent can spawn subagents. The per-child flags are authoritative.
+The Client **MUST NOT** infer individual cancellation support merely because
+the Agent can spawn subagents. The per-child flag is authoritative.
 
 ### Parent cancellation and failure
 
 Cancelling or closing a parent session **MUST** cascade to all running
-descendants. The Agent **MUST** emit a terminal lifecycle update for each
+descendants. The Agent **MUST** emit a terminal `subagent_update` for each
 announced descendant before completing the parent cancellation or close.
+Closing a subagent's parent — via the existing `sessionCapabilities.close`
+capability — is also how a Client releases child resources; there is no
+child-level close.
 
 A child failure does not automatically fail or cancel its parent. The parent
 Agent decides whether to recover, delegate the work again, or report the
@@ -320,17 +337,17 @@ A child, or one of its descendants, can own pending Agent-to-Client requests
 such as `session/request_permission` and `elicitation/create` when the child or
 an ancestor is cancelled or closed.
 
-Every such request **MUST** resolve before the child's terminal
-`subagent_state_update`. The Agent **MUST NOT** send the terminal update while
-a request it issued for that child or its descendants is still outstanding.
-Resolution is either a Client response — including the `cancelled` permission
-outcome or the `cancel` elicitation action — or
+Every such request **MUST** resolve before the `subagent_update` that carries
+the child's terminal state. The Agent **MUST NOT** send the terminal update
+while a request it issued for that child or its descendants is still
+outstanding. Resolution is either a Client response — including the `cancelled`
+permission outcome or the `cancel` elicitation action — or
 [request cancellation](/protocol/v1/cancellation) by the Agent, which still
 completes the request with a response or a `-32800` error.
 
 Mirroring [prompt-turn cancellation](/protocol/v1/prompt-turn#cancellation),
-when the Client sends `session/cancel` or calls `session/close` for a child, or
-for a parent whose cancellation cascades to the child, it **MUST** respond to
+when the Client sends `session/cancel` for a child, or cancels or closes a
+parent whose cancellation cascades to the child, it **MUST** respond to
 pending `session/request_permission` requests for the child and its descendants
 with the `cancelled` outcome and **SHOULD** respond to pending
 `elicitation/create` requests with the `cancel` action.
@@ -338,7 +355,7 @@ with the `cancelled` outcome and **SHOULD** respond to pending
 Responses travel from Client to Agent while the terminal update travels from
 Agent to Client, so the two can cross on the wire:
 
-- If the Client receives the terminal `subagent_state_update` while it still
+- If the Client receives the terminal `subagent_update` while it still
   holds an unanswered permission or elicitation request for that child or its
   descendants, it **MUST** resolve the request immediately with the `cancelled`
   outcome or the `cancel` action and release the interactive control. The
@@ -355,9 +372,39 @@ Agent to Client, so the two can cross on the wire:
 
 ACP v1 ties `session/update` closely to an active prompt turn. To avoid adding a
 second prompt-lifecycle change to this RFD, all announced subagents and their
-terminal lifecycle updates **MUST** complete before the parent
+terminal `subagent_update`s **MUST** complete before the parent
 `session/prompt` request returns. Detached background subagents that outlive the
 parent turn are out of scope for this initial proposal.
+
+### Subagents in ACP v2
+
+The v2 schema carries the same `subagent_update`, adapted to v2 conventions:
+
+- **No capability.** v2 Clients preserve and otherwise ignore unknown
+  `sessionUpdate` types, so an Agent may send `subagent_update` without prior
+  negotiation. The `subagents` Client capability is v1-only.
+- **v2 patch semantics.** As with tool calls and terminals, only
+  `subagentSessionId` is required; for other fields, omission leaves the stored
+  value unchanged while `null` clears or unsets it (in v1, `null` is instead
+  equivalent to omission). A child whose `state` is unset is `running`; a child
+  whose `capabilities` are unset permits no operations.
+- **Open state enum.** Unknown `state` values are preserved rather than
+  dropped, matching other v2 status enums. Values beginning with `_` are
+  reserved for implementation-specific extensions; other unknown values are
+  reserved for future ACP states.
+
+The restricted-session rules, cancellation flow, pending-request resolution,
+and orphan recovery defined above apply to v2 unchanged. The v1 scope rule
+above does not carry over as-is: the proposed v2 prompt lifecycle decouples
+session updates from the prompt turn and resolves `session/prompt` at
+acceptance, which is expected to make detached subagents that outlive the
+parent turn expressible — and it removes the "prompt returned without a
+terminal update" trigger, leaving connection loss as the only cause for the
+Client-local `disconnected` state in
+[Unknown outcomes on a live connection](#unknown-outcomes-on-a-live-connection).
+Defining detached-subagent semantics stays out of scope for this RFD until the
+v2 prompt lifecycle stabilizes; until then, v2 Agents **SHOULD** still
+terminate announced children within the turn.
 
 ## Shiny future
 
@@ -376,23 +423,28 @@ summarizing their output in the parent session.
 
 > Tell me more about your implementation. What is your detailed implementation plan?
 
-1. Add `SubagentCapabilities` to client and agent initialization capabilities.
-2. Add `SubagentSessionCapabilities`, `SubagentSpawned`, and
-   `SubagentStateUpdate` schema types.
-3. Add the two variants to `SessionUpdate` and regenerate all SDK schemas.
-4. Ship SDK releases that carry the draft `subagents` capability and update
+1. Add `SubagentCapabilities` to the client initialization capabilities.
+2. Add `SubagentSessionCapabilities`, `SubagentUpdate`, and `SubagentState`
+   schema types.
+3. Add the `subagent_update` variant to `SessionUpdate` and regenerate all SDK
+   schemas.
+4. Mirror the `subagent_update` types into the v2 schema behind the same
+   unstable flag — capability-free, with v2 patch semantics and an open state
+   enum — so the v1 and v2 wire shapes stay aligned.
+5. Ship SDK releases that carry the draft `subagents` capability and update
    types — or at minimum preserve them when deserializing and re-serializing —
    before adapter rollout. SDKs that strip the draft fields force temporary
    out-of-band negotiation bridges such as `_meta`-scoped capability flags.
    Such bridges are compatibility shims, not an alternative protocol, and are
    retired once SDK support ships. SDK preservation of the draft fields is an
    explicit prerequisite for the validation step below.
-5. Update example Clients to keep a session tree and route updates by session
-   ID.
-6. Update example Agents to announce a child before its first update and to
-   emit exactly one terminal lifecycle update, including `disconnected` for
+6. Update example Clients to keep a session tree and route updates by session
+   ID. SDKs may buffer updates for unknown child session IDs until the
+   announcing update arrives, as tolerance for non-conforming Agents.
+7. Update example Agents to announce a child before its first update and to
+   emit exactly one terminal `subagent_update`, including `disconnected` for
    orphaned children that cannot be restored after reconnection.
-7. Validate the design in at least one Agent with native subagents and one
+8. Validate the design in at least one Agent with native subagents and one
    Client with concurrent-session UI before stabilization.
 
 ## Frequently asked questions
@@ -426,6 +478,48 @@ Once a child has a real ACP session ID, the existing session-scoped lifecycle
 methods already identify it unambiguously. Reusing them avoids two ways to
 perform the same operation. The subagent capability narrows where those methods
 are valid and defines the required cascade behavior.
+
+### Why one `subagent_update` type instead of separate spawn and state notifications?
+
+An earlier draft used a `subagent_spawned` notification plus a
+`subagent_state_update` for the terminal state. ACP v2 instead treats tool
+calls, messages, and terminals as entities maintained by a single upsert-style
+update, and subagents now follow that pattern so the design carries into v2
+unchanged: the first update announces the entity, later updates patch
+individual fields, and one of them reports the terminal state. A single type
+also lets descriptive fields such as `task` be revised mid-run without adding
+further notification types.
+
+### Why is the child identified by `subagentSessionId` rather than `sessionId`?
+
+A `subagent_update` travels on the parent's stream, where the enclosing
+`params.sessionId` already denotes the parent. Reusing the key name `sessionId`
+for a different session inside the same message would invite routing bugs in
+code that dispatches by field name. The longer name states which of the two
+sessions it identifies.
+
+### Why is `cancel` the only per-child capability?
+
+It is the smallest control validated by the reference integrations: stopping a
+runaway worker is the lifecycle action users reliably need, and it maps
+directly onto the existing `session/cancel` notification. An earlier draft also
+advertised a per-child `close`, but the parent Agent owns the child's runtime
+and releases its resources when the child terminates or when the parent session
+is closed, so a Client-initiated close had no clear job. `capabilities` is an
+object precisely so that future per-child controls — `close`, `prompt`,
+`steer`, or configuration changes — can be added without a breaking change once
+interoperable semantics emerge.
+
+### Why does the `disconnected` state exist?
+
+`completed`, `failed`, and `cancelled` are claims about the delegated task's
+outcome. After a crash or reconnection, an Agent can find an announced child it
+can no longer associate with a live runtime, and the parent session's own state
+cannot express which of its children ended how. Without `disconnected`, the
+Agent would have to guess (`failed`), lie (`cancelled`), or leave the child
+running forever in the Client's presentation. The parent being able to
+re-prompt or recover on its own does not remove the need to close out the
+child's announced history honestly.
 
 ### Why not model a subagent as a tool call?
 
@@ -470,13 +564,24 @@ different.
   many agent-created workers cannot accept.
 - Add dedicated stop and close methods. Existing session methods already have
   the desired addressing and lifecycle semantics.
+- Use separate `subagent_spawned` and `subagent_state_update` notifications, as
+  an earlier draft of this RFD did. Merged into one upsert-style update to
+  match the v2 entity pattern.
 
 Representing each child with a session ID reuses the most protocol machinery
-while the spawn notification and positive capability allowlist capture the
+while the announcing update and positive capability allowlist capture the
 important difference from a user-facing session.
 
 ## Revision history
 
+- 2026-09-15: Merged `subagent_spawned` and `subagent_state_update` into a
+  single upsert-style `subagent_update` following the v2 entity pattern, made
+  `name`, `task`, and `capabilities` optional, added an explicit `running`
+  state, removed the Agent-side capability and the per-child `close`
+  capability, stopped implying that a child inherits the parent's execution
+  context, and allowed SDKs to buffer updates for unannounced children. Added
+  the same `subagent_update` to the v2 schema: capability-free, with v2 patch
+  semantics and an open state enum.
 - 2026-08-31: Defined the Client-local `disconnected` state for unknown
   outcomes on a live connection, required pending permission and elicitation
   requests to resolve before the terminal lifecycle update with defined race
