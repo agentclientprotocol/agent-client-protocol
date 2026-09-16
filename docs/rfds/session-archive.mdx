@@ -81,7 +81,7 @@ Agents advertise one shared `archive` capability:
 
 In v1, this also requires `sessionCapabilities.list: {}`; v2 already requires listing for Agents supporting sessions.
 
-Example v1 initialization response, also advertising the existing `delete` capability for `session/delete`:
+Both `archive` and the existing `delete` capability support optional `_meta` in v1 and v2. Example v1 initialization response:
 
 ```json
 {
@@ -92,7 +92,7 @@ Example v1 initialization response, also advertising the existing `delete` capab
     "agentCapabilities": {
       "sessionCapabilities": {
         "list": {},
-        "delete": {},
+        "delete": { "_meta": {} },
         "archive": { "_meta": {} }
       }
     }
