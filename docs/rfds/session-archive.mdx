@@ -31,7 +31,6 @@ Standardize reversible session archiving in both ACP v1 and v2: Clients can hide
   "method": "session/archive",
   "params": {
     "sessionId": "sess_abc123",
-    "_meta": {}
   }
 }
 ```
@@ -45,7 +44,6 @@ Standardize reversible session archiving in both ACP v1 and v2: Clients can hide
   "method": "session/unarchive",
   "params": {
     "sessionId": "sess_abc123",
-    "_meta": {}
   }
 }
 ```
@@ -92,8 +90,8 @@ Both `archive` and the existing `delete` capability support optional `_meta` in 
     "agentCapabilities": {
       "sessionCapabilities": {
         "list": {},
-        "delete": { "_meta": {} },
-        "archive": { "_meta": {} }
+        "delete": {},
+        "archive": {}
       }
     }
   }
