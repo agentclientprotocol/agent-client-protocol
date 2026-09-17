@@ -224,12 +224,9 @@
             ]
           },
           {
-            "group": "Preview",
-            "pages": ["rfds/tool-call-name"]
-          },
-          {
             "group": "Completed",
             "pages": [
+              "rfds/tool-call-name",
               "rfds/auth-methods",
               "rfds/introduce-rfd-process",
               "rfds/session-config-options",
@@ -274,6 +271,7 @@
           {
             "group": "Announcements",
             "pages": [
+              "announcements/tool-call-name-stabilized",
               "announcements/elicitation-stabilized",
               "announcements/acp-v2-draft",
               "announcements/boolean-config-option-stabilized",

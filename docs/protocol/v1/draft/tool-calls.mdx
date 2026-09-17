@@ -43,7 +43,10 @@ When the language model requests a tool invocation, the Agent **SHOULD** report 
   The programmatic name of the invoked tool, such as `read_file`. This
   identifies which tool is being used; `title` describes this invocation for
   users, while `kind` provides a coarse presentation category. If omitted or
-  `null` on the initial tool call, no name is provided.
+  `null` on the initial tool call, no name is provided. Names are opaque,
+  informational metadata and do not advertise a capability or grant
+  authorization. Agents **SHOULD** include the name when available and **SHOULD
+  NOT** change it later except to correct metadata.
 </ParamField>
 
 <ParamField path="kind" type="ToolKind">
@@ -114,7 +117,8 @@ Updates use the `session/update` notification with `tool_call_update`:
 All fields except `toolCallId` are optional in updates. Only the fields being changed need to be included.
 
 For `name`, a string sets or replaces the tool name. Omission and `null` both
-leave the existing name unchanged.
+leave the existing name unchanged, so ACP v1 cannot clear a previously reported
+name.
 
 ## Requesting Permission
 

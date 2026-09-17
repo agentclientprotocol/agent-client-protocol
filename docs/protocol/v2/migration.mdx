@@ -342,13 +342,24 @@ v1 had `tool_call` (create) and `tool_call_update` (modify). In practice the spl
 {
   "sessionUpdate": "tool_call_update",
   "toolCallId": "call_001",
+  "name": "read_file",
   "title": "Reading configuration file",
   "kind": "read",
   "status": "pending"
 }
 ```
 
-The patch semantics are the same three-state model as messages: omitted fields stay unchanged, `null` explicitly clears a field, and concrete values replace. Array fields such as `content` and `locations` are replaced wholesale when present. The field set (`title`, `kind`, `status`, `content`, `locations`, `rawInput`, `rawOutput`) and `kind` values are unchanged from v1. The `status` enum adds `cancelled`, and both enums are now extensible.
+The patch semantics are the same three-state model as messages: omitted fields
+stay unchanged, `null` explicitly clears a field, and concrete values replace.
+Array fields such as `content` and `locations` are replaced wholesale when
+present. The optional `name` metadata is available in both versions; concrete
+names map directly between versions, but v2's `name: null`
+clear cannot be represented by a v1 update because v1 treats `null` like
+omission. A strict adapter must reject that conversion, while an intentionally
+lossy adapter may omit the clear. The remaining fields (`title`, `kind`,
+`status`, `content`, `locations`, `rawInput`, `rawOutput`) and `kind` values are
+unchanged from v1. The `status` enum adds `cancelled`, and both enums are now
+extensible.
 
 ### Streaming tool-call content
 

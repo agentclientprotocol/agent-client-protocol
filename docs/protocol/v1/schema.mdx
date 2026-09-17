@@ -5040,6 +5040,13 @@ Helps clients choose appropriate icons and UI treatment.
   File locations affected by this tool call.
 Enables "follow-along" features in clients.
 </ResponseField>
+<ResponseField name="name" type={"string | null"} >
+  Programmatic name of the tool being invoked.
+
+This field is optional. Omitting it or sending `null` both mean that no
+tool name is available.
+
+</ResponseField>
 <ResponseField name="rawInput" type={"object"} >
   Raw input parameters sent to the tool.
 </ResponseField>
@@ -5083,6 +5090,13 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
 </ResponseField>
 <ResponseField name="locations" type={<><span><a href="#toolcalllocation">ToolCallLocation[]</a></span><span> | null</span></>} >
   Replace the locations collection.
+</ResponseField>
+<ResponseField name="name" type={"string | null"} >
+  Update the programmatic name of the tool being invoked.
+
+This field is optional. Omitting it or sending `null` both mean that
+the existing name is left unchanged.
+
 </ResponseField>
 <ResponseField name="rawInput" type={"object"} >
   Update the raw input.
@@ -5584,6 +5598,13 @@ Helps clients choose appropriate icons and UI treatment.
   File locations affected by this tool call.
 Enables "follow-along" features in clients.
 </ResponseField>
+<ResponseField name="name" type={"string | null"} >
+  Programmatic name of the tool being invoked.
+
+This field is optional. Omitting it or sending `null` both mean that no
+tool name is available.
+
+</ResponseField>
 <ResponseField name="rawInput" type={"object"} >
   Raw input parameters sent to the tool.
 </ResponseField>
@@ -5783,6 +5804,13 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
 </ResponseField>
 <ResponseField name="locations" type={<><span><a href="#toolcalllocation">ToolCallLocation[]</a></span><span> | null</span></>} >
   Replace the locations collection.
+</ResponseField>
+<ResponseField name="name" type={"string | null"} >
+  Update the programmatic name of the tool being invoked.
+
+This field is optional. Omitting it or sending `null` both mean that
+the existing name is left unchanged.
+
 </ResponseField>
 <ResponseField name="rawInput" type={"object"} >
   Update the raw input.

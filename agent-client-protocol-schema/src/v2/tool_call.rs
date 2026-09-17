@@ -37,17 +37,12 @@ use crate::{IntoMaybeUndefined, IntoOption, MaybeUndefined, SkipListener};
 pub struct ToolCallUpdate {
     /// Unique identifier for this tool call within the session.
     pub tool_call_id: ToolCallId,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Programmatic name of the tool being invoked.
     ///
     /// This field is optional and has patch semantics. Omission means no
     /// change, `null` clears the name, and a string replaces it. For a tool
     /// call ID the client has not seen before, omission or `null` means that no
     /// tool name is available.
-    #[cfg(feature = "unstable_tool_call_name")]
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
@@ -110,7 +105,6 @@ impl ToolCallUpdate {
     pub fn new(tool_call_id: impl Into<ToolCallId>) -> Self {
         Self {
             tool_call_id: tool_call_id.into(),
-            #[cfg(feature = "unstable_tool_call_name")]
             name: MaybeUndefined::Undefined,
             title: MaybeUndefined::Undefined,
             kind: MaybeUndefined::Undefined,
@@ -123,12 +117,7 @@ impl ToolCallUpdate {
         }
     }
 
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Programmatic name of the tool being invoked.
-    #[cfg(feature = "unstable_tool_call_name")]
     #[must_use]
     pub fn name(mut self, name: impl IntoMaybeUndefined<String>) -> Self {
         self.name = name.into_maybe_undefined();
@@ -203,7 +192,6 @@ impl ToolCallUpdate {
     /// render an explicitly cleared value.
     pub fn apply_update(&mut self, update: ToolCallUpdate) {
         debug_assert_eq!(self.tool_call_id, update.tool_call_id);
-        #[cfg(feature = "unstable_tool_call_name")]
         if !update.name.is_undefined() {
             self.name = update.name;
         }
@@ -1054,7 +1042,6 @@ mod tests {
         assert_eq!(deserialized.locations, MaybeUndefined::Value(Vec::new()));
     }
 
-    #[cfg(feature = "unstable_tool_call_name")]
     #[test]
     fn tool_call_name_patch_distinguishes_omitted_null_and_value() {
         let named = ToolCallUpdate::new("tc_1").name("read_file");
