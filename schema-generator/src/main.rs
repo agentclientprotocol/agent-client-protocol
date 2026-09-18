@@ -327,6 +327,32 @@ mod schema_annotation_tests {
     const SKIP_INVALID_ITEMS_EXTENSION: &str = "x-deserialize-skip-invalid-items";
 
     #[test]
+    fn generated_prompt_response_matches_protocol_version() {
+        let schema = root_schema_value();
+        let response = def_schema(&schema, "PromptResponse");
+
+        #[cfg(feature = "unstable_protocol_v2")]
+        {
+            assert_eq!(response["required"], serde_json::json!(["messageId"]));
+            let message_id = property_schema(&schema, "PromptResponse", "messageId");
+            assert!(schema_contains_ref(message_id, "#/$defs/MessageId"));
+            assert_eq!(def_schema(&schema, "MessageId")["type"], "string");
+            assert_no_extension(message_id, DEFAULT_ON_ERROR_EXTENSION);
+            assert!(response.pointer("/properties/stopReason").is_none());
+        }
+
+        #[cfg(not(feature = "unstable_protocol_v2"))]
+        {
+            assert_eq!(response["required"], serde_json::json!(["stopReason"]));
+            assert!(response.pointer("/properties/messageId").is_none());
+        }
+
+        let request = def_schema(&schema, "PromptRequest");
+        assert!(request.pointer("/properties/messageId").is_none());
+        assert!(request.pointer("/properties/promptId").is_none());
+    }
+
+    #[test]
     fn generated_schema_includes_optional_tool_call_names() {
         let schema = root_schema_value();
         let definitions = [

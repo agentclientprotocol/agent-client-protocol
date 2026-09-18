@@ -126,7 +126,7 @@ To request full history replay, Clients set `replayFrom` to
 `{ "type": "start" }`:
 
 Replay cursors are inclusive: replay includes the position identified by the
-cursor. For `{ "type": "start" }`, that means replaying the whole conversation.
+cursor. For `{ "type": "start" }`, that means replaying all retained conversation history.
 
 ```json
 {
@@ -143,10 +143,15 @@ cursor. For `{ "type": "start" }`, that means replaying the whole conversation.
 }
 ```
 
-When `replayFrom.type` is `"start"`, the Agent **MUST** replay the entire
-conversation to the Client in the form of `session/update` notifications before
+When `replayFrom.type` is `"start"`, the Agent **MUST** replay all retained
+conversation history to the Client in the form of `session/update` notifications before
 responding. User, agent, and thought messages can each be replayed as message
 updates with full `content` arrays or as chunks.
+
+Agents are not required to persist every inserted user message or retain it for
+any minimum period. Live-only messages, including locally handled commands, may
+be absent from replay. A successful prompt response confirms insertion, not
+future availability in history; absence from replay does not contradict it.
 
 Live-only `notice` updates are not conversation history and **SHOULD NOT** be
 replayed. If the underlying condition is still relevant after resuming
@@ -197,9 +202,20 @@ Followed by the agent's response:
 ```
 
 During replay, the Agent **MUST** include an opaque, unique `messageId` for each
-replayed message. `user_message`, `agent_message`, and `agent_thought` updates
+replayed message. A retained user message inserted by `session/prompt` **MUST**
+use the ID returned in that prompt response, including after reconnecting or
+restarting the Agent. Replaying a command reports its message; it does not
+execute the command again.
+
+`user_message`, `agent_message`, and `agent_thought` updates
 are upserts keyed by `messageId`; their `content` arrays replace the whole
 message content, while chunk updates with the same `messageId` append content.
+
+When replay reconstructs a message from its beginning using chunks, the Agent
+**MUST** first send the corresponding message update (`user_message`,
+`agent_message`, or `agent_thought`) with the same ID and `content: []`.
+This clears any content the Client already holds before replayed chunks append.
+A full-content message update can instead replace the retained content directly.
 
 Clients apply replayed message updates and chunks in the order they are
 received. If a message update with `content` arrives after chunks for the same

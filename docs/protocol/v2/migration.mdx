@@ -225,11 +225,11 @@ Stable v2 defines `type: "agent"`. Custom types **MUST** begin with `_`. Unknown
 
 ## The new prompt lifecycle
 
-This is the most significant semantic change in v2. Read this section even if you skim the rest. In short, everything that v1 expressed through the pending `session/prompt` request moved into `session/update` notifications:
+This is the most significant semantic change in v2. Read this section even if you skim the rest. In short, foreground progress and completion moved from the pending `session/prompt` request into `session/update` notifications, while the response now acknowledges user-message insertion:
 
 | Foreground signal       | v1                                             | v2                                                   |
 | ----------------------- | ---------------------------------------------- | ---------------------------------------------------- |
-| Prompt accepted         | Implicit                                       | `session/prompt` response (`{}`)                     |
+| Prompt inserted         | Implicit                                       | `session/prompt` response with `messageId`           |
 | User message in history | Implicit (the request itself)                  | `user_message` update with agent-owned `messageId`   |
 | Foreground work running | `session/prompt` still pending                 | `state_update` with `state: "running"`               |
 | Foreground work waiting | Implicit (pending permission request)          | `state_update` with `state: "requires_action"`       |
@@ -246,17 +246,19 @@ In v1, `session/prompt` stayed pending for the entire turn. The Agent streamed `
 
 This entangled prompt acceptance with turn completion, which made replay, multi-client sessions, background work, and queued messages awkward to express.
 
-### v2: the response is an acknowledgment
+### v2: the response acknowledges insertion
 
-In v2, the Agent **MUST** respond to `session/prompt` as soon as it has _accepted_ the prompt, with an empty result:
+In v2, acceptance means insertion of the user message into the ACP conversation. The Agent **MUST** respond to `session/prompt` once the message has been inserted, without waiting for foreground processing to finish. Merely receiving, queueing, or assigning an ID to the input does not justify a successful response:
 
 ```json
-{ "jsonrpc": "2.0", "id": 2, "result": {} }
+{ "jsonrpc": "2.0", "id": 2, "result": { "messageId": "msg_user_8f7a1" } }
 ```
+
+`messageId` is a required, non-null string identifying the inserted user message. The request is unchanged; Clients do not generate this ID.
 
 Everything else happens through `session/update` notifications:
 
-1. **User message acknowledgment.** After accepting the prompt, the Agent **MUST** report where the user message was inserted into session history, either as a `user_message` update with a full `content` array or as streamed `user_message_chunk` updates. This update is the source of truth for the agent-owned `messageId`:
+1. **User message update.** The Agent **MUST** report the inserted message's content and placement, either as a `user_message` update with a full `content` array or as streamed `user_message_chunk` updates. These use the same agent-owned `messageId` as the response. The response and updates describe the same insertion, but updates may arrive before or after the response:
 
    ```json
    {
@@ -293,6 +295,10 @@ Everything else happens through `session/update` notifications:
      }
    }
    ```
+
+Clients reconcile their submitted input with the response's `(sessionId, messageId)`, including when the message update arrived first. They must not match by content or assume that a successful response means the session is idle. SDKs must keep the session's processing and notification handling alive after the prompt RPC completes.
+
+User messages, including locally handled commands, must be reported live but need not be retained. If an Agent retains and replays an inserted user message, it must reuse the response's ID. A lost prompt response remains ambiguous; neither replay omission nor an identical message proves which submission was inserted, and retrying is not automatically safe.
 
 ### Session states
 

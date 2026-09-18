@@ -1277,14 +1277,14 @@ Used in all subsequent requests for this conversation.
 
 Processes a user prompt within a session.
 
-This request accepts the prompt:
+Acceptance means insertion into the ACP conversation:
 
 - Receives user messages with optional context (files, images, etc.)
-- Returns once the prompt is accepted
+- Returns the inserted user message's ID without waiting for processing to finish
 
-After acceptance, the Agent reports the accepted user message,
-processing state, output, tool calls, and completion through
-`session/update` notifications.
+The Agent reports the user message with the same ID through `session/update`;
+this notification may arrive before or after the response. Processing state,
+output, tool calls, and completion are also reported through session updates.
 
 See protocol docs: [Prompt Lifecycle](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle)
 
@@ -1330,9 +1330,10 @@ pieces of context from sources the agent may not have access to.
 
 #### <span class="font-mono">PromptResponse</span>
 
-Response acknowledging that a user prompt was accepted.
+Response acknowledging that a user prompt was inserted into the ACP conversation.
 
-This response does not indicate that the agent has finished processing.
+This response does not indicate that the prompt was merely received or queued, nor that the
+agent has finished processing it.
 Processing and completion are reported through `state_update` session updates.
 
 See protocol docs: [Prompt Accepted](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#2-prompt-accepted)
@@ -1349,6 +1350,16 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
+<ResponseField name="messageId" type={<a href="#messageid">MessageId</a>} required>
+  Identifies the user message inserted into the ACP conversation.
+
+Required and non-null. Omission and explicit `null` are both invalid.
+
+The corresponding user-message session update carries this same identifier and may arrive
+before or after this response. Agents must echo the message during the live session, but are
+not required to retain it. If retained and replayed, the message keeps this identifier.
+
+</ResponseField>
 
 <a id="session-resume"></a>
 ### <span class="font-mono">session/resume</span>
@@ -1357,13 +1368,13 @@ Resumes an existing session.
 
 The agent should resume the session context, allowing the conversation
 to continue. If `replayFrom` is set, the agent should replay
-conversation history before responding.
+retained conversation history before responding.
 
 #### <span class="font-mono">ResumeSessionRequest</span>
 
 Request parameters for resuming an existing session.
 
-Resumes an existing session and optionally replays prior conversation
+Resumes an existing session and optionally replays retained conversation
 history according to `replayFrom`.
 
 **Type:** Object
@@ -1399,8 +1410,8 @@ the request `cwd` matches the session's `cwd`.
 Optional. Omitted or `null` both mean the Agent should resume without
 replaying previous conversation history. Replay cursors are inclusive:
 replay includes the position identified by the cursor. Supplying
-`\{ "type": "start" \}` means the Agent should replay the whole
-conversation before responding.
+`\{ "type": "start" \}` means the Agent should replay all retained
+conversation history before responding.
 
 </ResponseField>
 <ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
@@ -7217,7 +7228,7 @@ Replay includes the position identified by the cursor.
 **Type:** Union
 
 <ResponseField name="start" type="object">
-Replay the whole conversation from its first replayable entry.
+Replay all retained conversation history from its first replayable entry.
 
 <Expandable title="Properties">
 
@@ -7271,7 +7282,7 @@ future ACP variants.
 
 ## <span class="font-mono">ReplayFromStart</span>
 
-Inclusive replay cursor requesting replay from the start of the conversation.
+Inclusive replay cursor requesting replay from the start of retained conversation history.
 
 **Type:** Object
 
