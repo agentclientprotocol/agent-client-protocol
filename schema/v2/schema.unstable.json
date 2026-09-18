@@ -6039,6 +6039,22 @@
           ]
         },
         {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA subagent exposed by this session has been created or updated.",
+          "type": "object",
+          "properties": {
+            "sessionUpdate": {
+              "type": "string",
+              "const": "subagent_update"
+            }
+          },
+          "required": ["sessionUpdate"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/SubagentUpdate"
+            }
+          ]
+        },
+        {
           "title": "other",
           "description": "Custom or future session update.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nReceivers that do not understand this update type should preserve the\nraw payload when storing, replaying, proxying, or forwarding session\nhistory, and otherwise ignore it or display it generically.",
           "type": "object",
@@ -6247,6 +6263,16 @@
                   "sessionUpdate": {
                     "type": "string",
                     "const": "compaction_summary_chunk"
+                  }
+                },
+                "required": ["sessionUpdate"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "sessionUpdate": {
+                    "type": "string",
+                    "const": "subagent_update"
                   }
                 },
                 "required": ["sessionUpdate"]
@@ -7495,6 +7521,113 @@
         }
       },
       "required": ["compactionId", "content"]
+    },
+    "SubagentSessionCapabilities": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nClient-to-agent operations permitted for a specific subagent session.",
+      "type": "object",
+      "properties": {
+        "cancel": {
+          "description": "Whether the client may cancel this subagent. Omission is equivalent to `false`.",
+          "type": "boolean",
+          "x-deserialize-default-on-error": true
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
+    },
+    "SubagentState": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nLifecycle state of an announced subagent.\n\nAll states except `running` are terminal.",
+      "anyOf": [
+        {
+          "description": "The subagent is working on its task. This is the initial state.",
+          "type": "string",
+          "const": "running"
+        },
+        {
+          "description": "The subagent completed its task successfully.",
+          "type": "string",
+          "const": "completed"
+        },
+        {
+          "description": "The subagent failed to complete its task.",
+          "type": "string",
+          "const": "failed"
+        },
+        {
+          "description": "The subagent was cancelled.",
+          "type": "string",
+          "const": "cancelled"
+        },
+        {
+          "description": "The Agent lost the child runtime and cannot determine its task outcome.",
+          "type": "string",
+          "const": "disconnected"
+        },
+        {
+          "title": "other",
+          "description": "Custom or future subagent state.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+          "type": "string"
+        }
+      ]
+    },
+    "SubagentUpdate": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAn upsert for a subagent exposed by its parent session.\n\nSent on the immediate parent session. The first update for an unknown\n[`SubagentUpdate::subagent_session_id`] announces the child and MUST be sent\nbefore any `session/update` bearing the child's session ID. No Client\ncapability is required.\n\nOnly [`SubagentUpdate::subagent_session_id`] is required. Other fields have\npatch semantics: omitted fields leave the stored value unchanged, `null`\nclears or unsets the value, and concrete values replace it. A child whose\nstate is unset is `running`; a child whose capabilities are unset permits\nno operations.\n\nThe update that carries a terminal [`SubagentUpdate::state`] MUST be sent\nafter all child session updates and after every pending permission or\nelicitation request issued for the child has resolved. The Agent MUST NOT\nsend further updates for that child afterwards.",
+      "type": "object",
+      "properties": {
+        "subagentSessionId": {
+          "description": "The opaque session ID identifying the child in all ACP messages.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ]
+        },
+        "name": {
+          "description": "A short, human-readable label for the subagent. It need not be unique.",
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
+        },
+        "task": {
+          "description": "A human-readable summary of the work delegated to the subagent.",
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
+        },
+        "capabilities": {
+          "description": "Client-to-agent operations permitted for this subagent session.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SubagentSessionCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "state": {
+          "description": "The reported lifecycle state of the subagent.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SubagentState"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted means no metadata update; `null` is an\nexplicit clear signal. Implementations MUST NOT make assumptions about values at these keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["subagentSessionId"]
     },
     "CompleteElicitationNotification": {
       "description": "Notification sent by the agent when a URL-based elicitation is complete.",

@@ -176,6 +176,13 @@ pub enum SessionUpdate {
     /// A content block appended to a context compaction's retained summary.
     #[cfg(feature = "unstable_session_compaction")]
     CompactionSummaryChunk(CompactionSummaryChunk),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// A subagent exposed by this session has been created or updated.
+    #[cfg(feature = "unstable_subagents")]
+    SubagentUpdate(SubagentUpdate),
     /// Custom or future session update.
     ///
     /// Values beginning with `_` are reserved for implementation-specific
@@ -457,6 +464,211 @@ impl CompactionSummaryChunk {
     }
 }
 
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// An upsert for a subagent exposed by its parent session.
+///
+/// Sent on the immediate parent session. The first update for an unknown
+/// [`SubagentUpdate::subagent_session_id`] announces the child and MUST be sent
+/// before any `session/update` bearing the child's session ID. No Client
+/// capability is required.
+///
+/// Only [`SubagentUpdate::subagent_session_id`] is required. Other fields have
+/// patch semantics: omitted fields leave the stored value unchanged, `null`
+/// clears or unsets the value, and concrete values replace it. A child whose
+/// state is unset is `running`; a child whose capabilities are unset permits
+/// no operations.
+///
+/// The update that carries a terminal [`SubagentUpdate::state`] MUST be sent
+/// after all child session updates and after every pending permission or
+/// elicitation request issued for the child has resolved. The Agent MUST NOT
+/// send further updates for that child afterwards.
+#[cfg(feature = "unstable_subagents")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct SubagentUpdate {
+    /// The opaque session ID identifying the child in all ACP messages.
+    pub subagent_session_id: SessionId,
+    /// A short, human-readable label for the subagent. It need not be unique.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
+    pub name: MaybeUndefined<String>,
+    /// A human-readable summary of the work delegated to the subagent.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
+    pub task: MaybeUndefined<String>,
+    /// Client-to-agent operations permitted for this subagent session.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
+    pub capabilities: MaybeUndefined<SubagentSessionCapabilities>,
+    /// The reported lifecycle state of the subagent.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
+    pub state: MaybeUndefined<SubagentState>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted means no metadata update; `null` is an
+    /// explicit clear signal. Implementations MUST NOT make assumptions about values at these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(
+        rename = "_meta",
+        default,
+        skip_serializing_if = "MaybeUndefined::is_undefined"
+    )]
+    pub meta: MaybeUndefined<Meta>,
+}
+
+#[cfg(feature = "unstable_subagents")]
+impl SubagentUpdate {
+    /// Builds a subagent upsert with only its required session ID set.
+    #[must_use]
+    pub fn new(subagent_session_id: impl Into<SessionId>) -> Self {
+        Self {
+            subagent_session_id: subagent_session_id.into(),
+            name: MaybeUndefined::Undefined,
+            task: MaybeUndefined::Undefined,
+            capabilities: MaybeUndefined::Undefined,
+            state: MaybeUndefined::Undefined,
+            meta: MaybeUndefined::Undefined,
+        }
+    }
+
+    /// Sets, clears, or leaves unchanged the human-readable label.
+    #[must_use]
+    pub fn name(mut self, name: impl IntoMaybeUndefined<String>) -> Self {
+        self.name = name.into_maybe_undefined();
+        self
+    }
+
+    /// Sets, clears, or leaves unchanged the delegated task summary.
+    #[must_use]
+    pub fn task(mut self, task: impl IntoMaybeUndefined<String>) -> Self {
+        self.task = task.into_maybe_undefined();
+        self
+    }
+
+    /// Sets, clears, or leaves unchanged the permitted client-to-agent operations.
+    #[must_use]
+    pub fn capabilities(
+        mut self,
+        capabilities: impl IntoMaybeUndefined<SubagentSessionCapabilities>,
+    ) -> Self {
+        self.capabilities = capabilities.into_maybe_undefined();
+        self
+    }
+
+    /// Sets, unsets, or leaves unchanged the reported lifecycle state.
+    #[must_use]
+    pub fn state(mut self, state: impl IntoMaybeUndefined<SubagentState>) -> Self {
+        self.state = state.into_maybe_undefined();
+        self
+    }
+
+    /// Sets, clears, or leaves unchanged subagent metadata.
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoMaybeUndefined<Meta>) -> Self {
+        self.meta = meta.into_maybe_undefined();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Client-to-agent operations permitted for a specific subagent session.
+#[cfg(feature = "unstable_subagents")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct SubagentSessionCapabilities {
+    /// Whether the client may cancel this subagent. Omission is equivalent to `false`.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub cancel: bool,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_subagents")]
+impl SubagentSessionCapabilities {
+    /// Builds an empty capability set; cancellation is disabled.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Whether the client may cancel this subagent.
+    #[must_use]
+    pub fn cancel(mut self, cancel: bool) -> Self {
+        self.cancel = cancel;
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Lifecycle state of an announced subagent.
+///
+/// All states except `running` are terminal.
+#[cfg(feature = "unstable_subagents")]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum SubagentState {
+    /// The subagent is working on its task. This is the initial state.
+    Running,
+    /// The subagent completed its task successfully.
+    Completed,
+    /// The subagent failed to complete its task.
+    Failed,
+    /// The subagent was cancelled.
+    Cancelled,
+    /// The Agent lost the child runtime and cannot determine its task outcome.
+    Disconnected,
+    /// Custom or future subagent state.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(untagged)]
+    Other(String),
+}
+
 /// Custom or future session update payload.
 ///
 /// This preserves the unknown `sessionUpdate` discriminator and the rest of the
@@ -538,6 +750,10 @@ fn is_known_session_update(session_update: &str) -> bool {
     if session_update == "plan_removed" {
         return true;
     }
+    #[cfg(feature = "unstable_subagents")]
+    if session_update == "subagent_update" {
+        return true;
+    }
     matches!(
         session_update,
         "user_message_chunk"
@@ -589,6 +805,8 @@ fn other_session_update_schema(schema: &mut Schema) {
             "compaction_update",
             #[cfg(feature = "unstable_session_compaction")]
             "compaction_summary_chunk",
+            #[cfg(feature = "unstable_subagents")]
+            "subagent_update",
         ],
     );
 }
@@ -2630,6 +2848,69 @@ impl AgentNotification {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(feature = "unstable_subagents")]
+    #[test]
+    fn subagent_update_serializes_as_upsert() {
+        use serde_json::json;
+
+        let announced = SessionUpdate::SubagentUpdate(
+            SubagentUpdate::new("sess_child_1")
+                .name("test-investigator".to_string())
+                .task("Find the cause of the failing integration tests".to_string())
+                .capabilities(SubagentSessionCapabilities::new().cancel(true)),
+        );
+        assert_eq!(
+            serde_json::to_value(&announced).unwrap(),
+            json!({
+                "sessionUpdate": "subagent_update",
+                "subagentSessionId": "sess_child_1",
+                "name": "test-investigator",
+                "task": "Find the cause of the failing integration tests",
+                "capabilities": {
+                    "cancel": true
+                }
+            })
+        );
+
+        let terminal = SessionUpdate::SubagentUpdate(
+            SubagentUpdate::new("sess_child_1").state(SubagentState::Completed),
+        );
+        assert_eq!(
+            serde_json::to_value(&terminal).unwrap(),
+            json!({
+                "sessionUpdate": "subagent_update",
+                "subagentSessionId": "sess_child_1",
+                "state": "completed"
+            })
+        );
+
+        // Patch semantics distinguish omitted fields from explicit nulls.
+        let patched: SubagentUpdate = serde_json::from_value(json!({
+            "subagentSessionId": "sess_child_1",
+            "name": null,
+            "state": "disconnected"
+        }))
+        .unwrap();
+        assert!(patched.name.is_null());
+        assert!(patched.task.is_undefined());
+        assert!(patched.capabilities.is_undefined());
+        assert_eq!(
+            patched.state,
+            MaybeUndefined::Value(SubagentState::Disconnected)
+        );
+
+        // Unknown future states are preserved, not dropped.
+        let future: SubagentUpdate = serde_json::from_value(json!({
+            "subagentSessionId": "sess_child_2",
+            "state": "paused"
+        }))
+        .unwrap();
+        assert_eq!(
+            future.state,
+            MaybeUndefined::Value(SubagentState::Other("paused".into()))
+        );
+    }
 
     #[cfg(feature = "unstable_session_notices")]
     #[test]
