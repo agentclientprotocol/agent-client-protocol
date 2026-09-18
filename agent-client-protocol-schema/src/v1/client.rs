@@ -142,8 +142,8 @@ pub enum SessionUpdate {
     ///
     /// Advisory information for the user that is not part of session history.
     ///
-    /// No Client capability is required. Clients that do not understand or
-    /// present notices may ignore them.
+    /// Agents MUST only send this update when the Client advertised
+    /// [`ClientSessionCapabilities::notices`].
     #[cfg(feature = "unstable_session_notices")]
     Notice(Notice),
     /// **UNSTABLE**
@@ -201,7 +201,9 @@ pub enum NoticeSeverity {
 ///
 /// Notices are live events rather than session history. Agents must not rely on
 /// a notice being received, displayed, or seen by the user.
-/// No Client capability is required, and unsupported Clients may ignore notices.
+/// Agents MUST only send notices when the Client advertised
+/// [`ClientSessionCapabilities::notices`]. Otherwise, Agents may use an agent
+/// message when the information should still be surfaced to the user.
 ///
 /// See RFD: [Session Notices](https://agentclientprotocol.com/rfds/session-notices)
 #[cfg(feature = "unstable_session_notices")]
@@ -2268,6 +2270,19 @@ pub struct ClientSessionCapabilities {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub config_options: Option<SessionConfigOptionsCapabilities>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Support for live advisory `notice` session updates.
+    ///
+    /// Optional. Omitted or `null` both mean the client does not advertise support.
+    /// Supplying `{}` means the client can present notices to the user.
+    #[cfg(feature = "unstable_session_notices")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub notices: Option<NoticeCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -2308,6 +2323,14 @@ impl ClientSessionCapabilities {
         self
     }
 
+    /// Advertises support for presenting live advisory notices to the user.
+    #[cfg(feature = "unstable_session_notices")]
+    #[must_use]
+    pub fn notices(mut self, notices: impl IntoOption<NoticeCapabilities>) -> Self {
+        self.notices = notices.into_option();
+        self
+    }
+
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -2335,6 +2358,27 @@ pub struct CompactionCapabilities {}
 #[cfg(feature = "unstable_session_compaction")]
 impl CompactionCapabilities {
     /// Advertises the complete compaction update contract.
+    #[must_use]
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Client support for presenting live advisory notices to the user.
+#[cfg(feature = "unstable_session_notices")]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct NoticeCapabilities {}
+
+#[cfg(feature = "unstable_session_notices")]
+impl NoticeCapabilities {
+    /// Advertises support for presenting live advisory notices to the user.
     #[must_use]
     pub fn new() -> Self {
         Self {}
@@ -3003,6 +3047,59 @@ mod tests {
         ] {
             assert!(serde_json::from_value::<SessionUpdate>(malformed).is_err());
         }
+    }
+
+    #[cfg(feature = "unstable_session_notices")]
+    #[test]
+    fn notice_capability_advertises_support_only_when_present() {
+        use serde_json::json;
+
+        let capabilities = ClientCapabilities::new()
+            .session(ClientSessionCapabilities::new().notices(NoticeCapabilities::new()));
+        let value = serde_json::to_value(&capabilities).unwrap();
+        assert_eq!(value["session"], json!({ "notices": {} }));
+        assert_eq!(
+            serde_json::from_value::<ClientCapabilities>(value).unwrap(),
+            capabilities
+        );
+
+        for unsupported in [
+            json!({}),
+            json!({ "session": null }),
+            json!({ "session": {} }),
+            json!({ "session": { "notices": null } }),
+            json!({ "session": { "notices": false } }),
+            json!({ "session": { "notices": true } }),
+            json!({ "session": { "notices": "supported" } }),
+        ] {
+            let capabilities: ClientCapabilities = serde_json::from_value(unsupported).unwrap();
+            assert!(
+                capabilities
+                    .session
+                    .and_then(|session| session.notices)
+                    .is_none()
+            );
+        }
+
+        assert_eq!(
+            serde_json::to_value(
+                ClientSessionCapabilities::new()
+                    .notices(NoticeCapabilities::new())
+                    .notices(None)
+            )
+            .unwrap(),
+            json!({})
+        );
+    }
+
+    #[cfg(not(feature = "unstable_session_notices"))]
+    #[test]
+    fn unsupported_notice_capability_is_ignored() {
+        use serde_json::json;
+
+        let capabilities: ClientSessionCapabilities =
+            serde_json::from_value(json!({ "notices": {} })).unwrap();
+        assert_eq!(serde_json::to_value(capabilities).unwrap(), json!({}));
     }
 
     #[cfg(not(feature = "unstable_session_notices"))]

@@ -22,6 +22,7 @@ When the language model requests a tool invocation, the Agent **SHOULD** report 
     "update": {
       "sessionUpdate": "tool_call",
       "toolCallId": "call_001",
+      "name": "read_file",
       "title": "Reading configuration file",
       "kind": "read",
       "status": "pending"
@@ -32,6 +33,14 @@ When the language model requests a tool invocation, the Agent **SHOULD** report 
 
 <ParamField path="toolCallId" type="ToolCallId" required>
   A unique identifier for this tool call within the session
+</ParamField>
+
+<ParamField path="name" type="string">
+  The optional programmatic name of the invoked tool, such as `read_file`.
+  Agents **SHOULD** include it in the first report when available and **SHOULD
+  NOT** change it later except to correct metadata. Names are opaque,
+  informational metadata: they do not advertise a capability or grant
+  authorization. Omission and `null` both mean that no name is provided.
 </ParamField>
 
 <ParamField path="title" type="string" required>
@@ -103,7 +112,10 @@ Updates use the `session/update` notification with `tool_call_update`:
 }
 ```
 
-All fields except `toolCallId` are optional in updates. Only the fields being changed need to be included.
+All fields except `toolCallId` are optional in updates. Only the fields being
+changed need to be included. For `name`, omission and `null` both leave the
+existing value unchanged, while a string sets or replaces it. ACP v1 cannot
+clear a previously reported name.
 
 ## Requesting Permission
 

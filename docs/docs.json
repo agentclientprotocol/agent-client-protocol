@@ -194,7 +194,6 @@
               "rfds/next-edit-suggestions",
               "rfds/custom-llm-endpoint",
               "rfds/plan-operations",
-              "rfds/tool-call-name",
               "rfds/get-auth-state",
               "rfds/session-compaction",
               "rfds/session-notices"
@@ -225,12 +224,9 @@
             ]
           },
           {
-            "group": "Preview",
-            "pages": []
-          },
-          {
             "group": "Completed",
             "pages": [
+              "rfds/tool-call-name",
               "rfds/auth-methods",
               "rfds/introduce-rfd-process",
               "rfds/session-config-options",
@@ -275,6 +271,7 @@
           {
             "group": "Announcements",
             "pages": [
+              "announcements/tool-call-name-stabilized",
               "announcements/elicitation-stabilized",
               "announcements/acp-v2-draft",
               "announcements/boolean-config-option-stabilized",

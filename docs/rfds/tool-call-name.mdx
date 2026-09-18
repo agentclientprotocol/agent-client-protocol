@@ -117,14 +117,15 @@ consistently in detailed views, permission UI, logs, and debugging tools.
 
 > Tell me more about your implementation. What is your detailed implementation plan?
 
-1. Add optional `name` fields to v1 `ToolCall` and `ToolCallUpdateFields` behind
-   the `unstable_tool_call_name` Rust feature.
-2. Add an optional three-state `name` patch field to v2 `ToolCallUpdate` behind
-   the same feature.
-3. Document how cross-version adapters preserve the field and why the v2 clear
-   operation is not representable in v1.
-4. Regenerate the draft schemas and generated schema documentation.
-5. Update the hand-written draft tool-call documentation and examples.
+The optional `name` field is implemented in the stable v1 and v2 schema
+baselines and SDK types. v1 includes it on `ToolCall` and
+`ToolCallUpdateFields`; v2 includes it as a three-state patch on
+`ToolCallUpdate`. The protocol guides document the version-specific update and
+cross-version conversion semantics.
+
+ACP v2 as a whole remains behind its existing `unstable_protocol_v2` Rust
+feature while the v2 protocol is in Draft. Stabilizing this field does not
+stabilize the rest of v2.
 
 ### Compatibility and conversion
 
@@ -186,3 +187,6 @@ call and inconsistent with MCP and function-call naming.
 ## Revision history
 
 - 2026-07-21: Initial draft.
+- 2026-09-14: Moved to Preview.
+- 2026-09-17: Moved to Completed and stabilized the v1 and v2 schema and SDK
+  surfaces.

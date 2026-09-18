@@ -31,15 +31,10 @@ pub struct ToolCall {
     pub tool_call_id: ToolCallId,
     /// Human-readable title describing what the tool is doing.
     pub title: String,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Programmatic name of the tool being invoked.
     ///
     /// This field is optional. Omitting it or sending `null` both mean that no
     /// tool name is available.
-    #[cfg(feature = "unstable_tool_call_name")]
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -95,7 +90,6 @@ impl ToolCall {
         Self {
             tool_call_id: tool_call_id.into(),
             title: title.into(),
-            #[cfg(feature = "unstable_tool_call_name")]
             name: None,
             kind: ToolKind::default(),
             status: ToolCallStatus::default(),
@@ -107,12 +101,7 @@ impl ToolCall {
         }
     }
 
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Programmatic name of the tool being invoked.
-    #[cfg(feature = "unstable_tool_call_name")]
     #[must_use]
     pub fn name(mut self, name: impl IntoOption<String>) -> Self {
         self.name = name.into_option();
@@ -180,7 +169,6 @@ impl ToolCall {
         if let Some(title) = fields.title {
             self.title = title;
         }
-        #[cfg(feature = "unstable_tool_call_name")]
         if let Some(name) = fields.name {
             self.name = Some(name);
         }
@@ -286,15 +274,10 @@ pub struct ToolCallUpdateFields {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub title: Option<String>,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Update the programmatic name of the tool being invoked.
     ///
     /// This field is optional. Omitting it or sending `null` both mean that
     /// the existing name is left unchanged.
-    #[cfg(feature = "unstable_tool_call_name")]
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -349,12 +332,7 @@ impl ToolCallUpdateFields {
         self
     }
 
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Update the programmatic name of the tool being invoked.
-    #[cfg(feature = "unstable_tool_call_name")]
     #[must_use]
     pub fn name(mut self, name: impl IntoOption<String>) -> Self {
         self.name = name.into_option();
@@ -403,7 +381,6 @@ impl TryFrom<ToolCallUpdate> for ToolCall {
                     kind,
                     status,
                     title,
-                    #[cfg(feature = "unstable_tool_call_name")]
                     name,
                     content,
                     locations,
@@ -418,7 +395,6 @@ impl TryFrom<ToolCallUpdate> for ToolCall {
             title: title.ok_or_else(|| {
                 Error::invalid_params().data(serde_json::json!("title is required for a tool call"))
             })?,
-            #[cfg(feature = "unstable_tool_call_name")]
             name,
             kind: kind.unwrap_or_default(),
             status: status.unwrap_or_default(),
@@ -436,7 +412,6 @@ impl From<ToolCall> for ToolCallUpdate {
         let ToolCall {
             tool_call_id,
             title,
-            #[cfg(feature = "unstable_tool_call_name")]
             name,
             kind,
             status,
@@ -452,7 +427,6 @@ impl From<ToolCall> for ToolCallUpdate {
                 kind: Some(kind),
                 status: Some(status),
                 title: Some(title),
-                #[cfg(feature = "unstable_tool_call_name")]
                 name,
                 content: Some(content),
                 locations: Some(locations),
@@ -812,7 +786,7 @@ impl ToolCallLocation {
     }
 }
 
-#[cfg(all(test, feature = "unstable_tool_call_name"))]
+#[cfg(test)]
 mod tests {
     use super::*;
 

@@ -3276,6 +3276,17 @@ Omitted or `null` both mean the client does not advertise support for any
 config option extensions.
 
 </ResponseField>
+<ResponseField name="notices" type={<><span><a href="#noticecapabilities">NoticeCapabilities</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Support for live advisory `notice` session updates.
+
+Optional. Omitted or `null` both mean the client does not advertise support.
+Supplying `\{\}` means the client can present notices to the user.
+
+</ResponseField>
 
 ## <span class="font-mono">CompactionCapabilities</span>
 
@@ -6283,7 +6294,9 @@ Fire-and-forget advisory information for the user.
 
 Notices are live events rather than session history. Agents must not rely on
 a notice being received, displayed, or seen by the user.
-No Client capability is required, and unsupported Clients may ignore notices.
+Agents MUST only send notices when the Client advertised
+`ClientSessionCapabilities::notices`. Otherwise, Agents may use an agent
+message when the information should still be surfaced to the user.
 
 See RFD: [Session Notices](https://agentclientprotocol.com/rfds/session-notices)
 
@@ -6312,6 +6325,16 @@ Omitted and `null` are equivalent and mean no description was supplied.
     - Min length: `1`
 
 </ResponseField>
+
+## <span class="font-mono">NoticeCapabilities</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Client support for presenting live advisory notices to the user.
+
+**Type:** `object`
 
 ## <span class="font-mono">NoticeSeverity</span>
 
@@ -7889,11 +7912,7 @@ Helps clients choose appropriate icons and UI treatment.
 Enables "follow-along" features in clients.
 </ResponseField>
 <ResponseField name="name" type={"string | null"} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Programmatic name of the tool being invoked.
+  Programmatic name of the tool being invoked.
 
 This field is optional. Omitting it or sending `null` both mean that no
 tool name is available.
@@ -7944,11 +7963,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
   Replace the locations collection.
 </ResponseField>
 <ResponseField name="name" type={"string | null"} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Update the programmatic name of the tool being invoked.
+  Update the programmatic name of the tool being invoked.
 
 This field is optional. Omitting it or sending `null` both mean that
 the existing name is left unchanged.
@@ -8197,8 +8212,8 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 Advisory information for the user that is not part of session history.
 
-No Client capability is required. Clients that do not understand or
-present notices may ignore them.
+Agents MUST only send this update when the Client advertised
+`ClientSessionCapabilities::notices`.
 
 <Expandable title="Properties">
 
@@ -8677,11 +8692,7 @@ Helps clients choose appropriate icons and UI treatment.
 Enables "follow-along" features in clients.
 </ResponseField>
 <ResponseField name="name" type={"string | null"} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Programmatic name of the tool being invoked.
+  Programmatic name of the tool being invoked.
 
 This field is optional. Omitting it or sending `null` both mean that no
 tool name is available.
@@ -8888,11 +8899,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
   Replace the locations collection.
 </ResponseField>
 <ResponseField name="name" type={"string | null"} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Update the programmatic name of the tool being invoked.
+  Update the programmatic name of the tool being invoked.
 
 This field is optional. Omitting it or sending `null` both mean that
 the existing name is left unchanged.
