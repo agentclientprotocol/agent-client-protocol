@@ -118,9 +118,10 @@ During [Session Setup](/protocol/v2/draft/session-setup) the Agent **MAY** retur
   ID. For `boolean` options this is a boolean.
 </ResponseField>
 
-<ResponseField name="options" type="ConfigOptionValue[]">
+<ResponseField name="options" type="ConfigOptionValue[] | ConfigOptionGroup[]">
   The available values for a `select` option. Required when `type` is `"select"`
-  and omitted when `type` is `"boolean"`.
+  and omitted when `type` is `"boolean"`. This is either a flat array of values
+  or an array of groups; values and groups are not mixed in the same array.
 </ResponseField>
 
 ### ConfigOptionValue
@@ -136,6 +137,31 @@ During [Session Setup](/protocol/v2/draft/session-setup) the Agent **MAY** retur
 <ResponseField name="description" type="string">
   Optional description of what this value does
 </ResponseField>
+
+### Grouped Select Options
+
+Select options may be grouped under labeled headers. Each
+`ConfigOptionGroup` requires `groupId`, `name`, and an `options` array containing
+the same `ConfigOptionValue` objects used by flat selects. A group's `_meta` is
+optional; value descriptions and `_meta` remain optional as described above.
+
+```json
+{
+  "options": [
+    {
+      "groupId": "recommended",
+      "name": "Recommended",
+      "options": [
+        {
+          "value": "model-1",
+          "name": "Model 1",
+          "description": "Fast for everyday tasks"
+        }
+      ]
+    }
+  ]
+}
+```
 
 ### Boolean Config Options
 

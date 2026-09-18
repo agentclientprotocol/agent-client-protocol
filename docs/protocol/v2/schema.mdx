@@ -853,6 +853,45 @@ Form-based elicitation where the client renders a form from the provided schema.
 </ResponseField>
 
 </Expandable>
+
+**Alternatives (`anyOf`):**
+
+<ResponseField name="Session">
+Tied to a session, optionally to a specific tool call within that session.
+
+<Expandable title="Properties">
+
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The session this elicitation is tied to.
+</ResponseField>
+<ResponseField name="toolCallId" type={<><span><a href="#toolcallid">ToolCallId</a></span><span> | null</span></>} >
+  Optional tool call within the session.
+
+Optional. Omitted and `null` are equivalent and mean the elicitation is scoped to the
+session without a specific tool call.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="Request">
+Tied to a specific JSON-RPC request outside of a session
+(e.g., during auth/configuration phases before any session is started).
+
+<Expandable title="Properties">
+
+<ResponseField
+  name="requestId"
+  type={<a href="#requestid">RequestId</a>}
+  required
+>
+  The request this elicitation is tied to.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 </ResponseField>
 
 <ResponseField name="url" type="object">
@@ -874,6 +913,45 @@ URL-based elicitation where the client directs the user to a URL.
 </ResponseField>
 
 </Expandable>
+
+**Alternatives (`anyOf`):**
+
+<ResponseField name="Session">
+Tied to a session, optionally to a specific tool call within that session.
+
+<Expandable title="Properties">
+
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The session this elicitation is tied to.
+</ResponseField>
+<ResponseField name="toolCallId" type={<><span><a href="#toolcallid">ToolCallId</a></span><span> | null</span></>} >
+  Optional tool call within the session.
+
+Optional. Omitted and `null` are equivalent and mean the elicitation is scoped to the
+session without a specific tool call.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="Request">
+Tied to a specific JSON-RPC request outside of a session
+(e.g., during auth/configuration phases before any session is started).
+
+<Expandable title="Properties">
+
+<ResponseField
+  name="requestId"
+  type={<a href="#requestid">RequestId</a>}
+  required
+>
+  The request this elicitation is tied to.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 </ResponseField>
 
 <ResponseField name="other" type="object">
@@ -899,6 +977,45 @@ future ACP variants.
 </ResponseField>
 
 </Expandable>
+
+**Alternatives (`anyOf`):**
+
+<ResponseField name="Session">
+Tied to a session, optionally to a specific tool call within that session.
+
+<Expandable title="Properties">
+
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The session this elicitation is tied to.
+</ResponseField>
+<ResponseField name="toolCallId" type={<><span><a href="#toolcallid">ToolCallId</a></span><span> | null</span></>} >
+  Optional tool call within the session.
+
+Optional. Omitted and `null` are equivalent and mean the elicitation is scoped to the
+session without a specific tool call.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="Request">
+Tied to a specific JSON-RPC request outside of a session
+(e.g., during auth/configuration phases before any session is started).
+
+<Expandable title="Properties">
+
+<ResponseField
+  name="requestId"
+  type={<a href="#requestid">RequestId</a>}
+  required
+>
+  The request this elicitation is tied to.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 </ResponseField>
 
 #### <span class="font-mono">CreateElicitationResponse</span>
@@ -5419,6 +5536,97 @@ The state of the agent's foreground work has changed.
 </ResponseField>
 
 </Expandable>
+
+**Alternatives (`anyOf`):**
+
+<ResponseField name="running" type="object">
+Foreground work is in progress.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+<ResponseField name="state" type={"string"} required>
+  The discriminator value. Must be `"running"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="idle" type="object">
+The agent is ready to process a new prompt.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+<ResponseField name="state" type={"string"} required>
+  The discriminator value. Must be `"idle"`.
+</ResponseField>
+<ResponseField name="stopReason" type={<><span><a href="#stopreason">StopReason</a></span><span> | null</span></>} >
+  Indicates why foreground work stopped.
+
+Optional. Omitted or `null` both mean the agent is not reporting a stop reason.
+Agents SHOULD include this when the idle transition ends foreground work.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="requires_action" type="object">
+Foreground work is blocked on user action.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+<ResponseField name="state" type={"string"} required>
+  The discriminator value. Must be `"requires_action"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="other" type="object">
+Custom or future session state.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+<Expandable title="Properties">
+
+<ResponseField name="state" type={"string"} required>
+  Custom or future session state.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 </ResponseField>
 
 <ResponseField name="tool_call_content_chunk" type="object">

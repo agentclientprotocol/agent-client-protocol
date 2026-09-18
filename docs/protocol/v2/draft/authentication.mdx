@@ -71,7 +71,12 @@ authentication-related extensions, not the availability of the baseline
         "type": "agent",
         "description": "Sign in using the agent's login flow"
       }
-    ]
+    ],
+    "info": {
+      "name": "my-agent",
+      "title": "My Agent",
+      "version": "1.0.0"
+    }
   }
 }
 ```
@@ -133,6 +138,11 @@ during initialization with `capabilities.auth.terminal`:
       "auth": {
         "terminal": {}
       }
+    },
+    "info": {
+      "name": "my-client",
+      "title": "My Client",
+      "version": "1.0.0"
     }
   }
 }

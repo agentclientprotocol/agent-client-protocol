@@ -951,6 +951,45 @@ Form-based elicitation where the client renders a form from the provided schema.
 </ResponseField>
 
 </Expandable>
+
+**Alternatives (`anyOf`):**
+
+<ResponseField name="Session">
+Tied to a session, optionally to a specific tool call within that session.
+
+<Expandable title="Properties">
+
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The session this elicitation is tied to.
+</ResponseField>
+<ResponseField name="toolCallId" type={<><span><a href="#toolcallid">ToolCallId</a></span><span> | null</span></>} >
+  Optional tool call within the session.
+
+Optional. Omitted and `null` are equivalent and mean the elicitation is scoped to the
+session without a specific tool call.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="Request">
+Tied to a specific JSON-RPC request outside of a session
+(e.g., during auth/configuration phases before any session is started).
+
+<Expandable title="Properties">
+
+<ResponseField
+  name="requestId"
+  type={<a href="#requestid">RequestId</a>}
+  required
+>
+  The request this elicitation is tied to.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 </ResponseField>
 
 <ResponseField name="url" type="object">
@@ -972,6 +1011,45 @@ URL-based elicitation where the client directs the user to a URL.
 </ResponseField>
 
 </Expandable>
+
+**Alternatives (`anyOf`):**
+
+<ResponseField name="Session">
+Tied to a session, optionally to a specific tool call within that session.
+
+<Expandable title="Properties">
+
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The session this elicitation is tied to.
+</ResponseField>
+<ResponseField name="toolCallId" type={<><span><a href="#toolcallid">ToolCallId</a></span><span> | null</span></>} >
+  Optional tool call within the session.
+
+Optional. Omitted and `null` are equivalent and mean the elicitation is scoped to the
+session without a specific tool call.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="Request">
+Tied to a specific JSON-RPC request outside of a session
+(e.g., during auth/configuration phases before any session is started).
+
+<Expandable title="Properties">
+
+<ResponseField
+  name="requestId"
+  type={<a href="#requestid">RequestId</a>}
+  required
+>
+  The request this elicitation is tied to.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 </ResponseField>
 
 <ResponseField name="other" type="object">
@@ -997,6 +1075,45 @@ future ACP variants.
 </ResponseField>
 
 </Expandable>
+
+**Alternatives (`anyOf`):**
+
+<ResponseField name="Session">
+Tied to a session, optionally to a specific tool call within that session.
+
+<Expandable title="Properties">
+
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The session this elicitation is tied to.
+</ResponseField>
+<ResponseField name="toolCallId" type={<><span><a href="#toolcallid">ToolCallId</a></span><span> | null</span></>} >
+  Optional tool call within the session.
+
+Optional. Omitted and `null` are equivalent and mean the elicitation is scoped to the
+session without a specific tool call.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="Request">
+Tied to a specific JSON-RPC request outside of a session
+(e.g., during auth/configuration phases before any session is started).
+
+<Expandable title="Properties">
+
+<ResponseField
+  name="requestId"
+  type={<a href="#requestid">RequestId</a>}
+  required
+>
+  The request this elicitation is tied to.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 </ResponseField>
 
 #### <span class="font-mono">CreateElicitationResponse</span>

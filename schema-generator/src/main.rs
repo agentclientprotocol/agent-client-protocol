@@ -1104,9 +1104,18 @@ starting with '$/' it is free to ignore the notification."
             }
         }
 
-        #[expect(clippy::too_many_lines)]
         fn document_variant_table_row(&mut self, variant: &Value) {
+            self.document_variant_with_refs(variant, &mut BTreeSet::new());
+        }
+
+        #[expect(clippy::too_many_lines)]
+        fn document_variant_with_refs(
+            &mut self,
+            variant: &Value,
+            active_references: &mut BTreeSet<String>,
+        ) {
             let enum_values = variant.get("enum").and_then(|v| v.as_array());
+            let merged_variant = self.merge_variant_definition(variant);
 
             write!(&mut self.output, "<ResponseField name=\"").unwrap();
 
@@ -1212,8 +1221,8 @@ starting with '$/' it is free to ignore the notification."
             };
 
             // 1. Check for $ref (direct)
-            if let Some(merged_variant) = self.merge_variant_definition(variant) {
-                merge_from(&merged_variant);
+            if let Some(merged_variant) = &merged_variant {
+                merge_from(merged_variant);
             } else {
                 // 1. Check for $ref (direct)
                 if let Some(ref_val) = variant.get("$ref").and_then(|v| v.as_str()) {
@@ -1254,8 +1263,55 @@ starting with '$/' it is free to ignore the notification."
                 writeln!(&mut self.output, "</Expandable>").unwrap();
             }
 
+            // Traverse the original composition, not the merged properties: each
+            // conjunctive member can introduce its own independent alternatives.
+            // Keep their required fields out of the shared property list.
+            self.document_nested_variants(variant, active_references);
+
             writeln!(&mut self.output, "</ResponseField>").unwrap();
             writeln!(&mut self.output).unwrap();
+        }
+
+        fn document_nested_variants(
+            &mut self,
+            definition: &Value,
+            active_references: &mut BTreeSet<String>,
+        ) {
+            if let Some(reference) = definition.get("$ref").and_then(Value::as_str) {
+                let name = reference.strip_prefix("#/$defs/").unwrap_or(reference);
+                if let Some(referenced) = self.definitions.get(name).cloned() {
+                    if active_references.insert(name.to_string()) {
+                        self.document_nested_variants(&referenced, active_references);
+                        active_references.remove(name);
+                    } else {
+                        writeln!(
+                            &mut self.output,
+                            "\nSee [{name}](#{}) for recursive alternatives.\n",
+                            Self::anchor_text(name)
+                        )
+                        .unwrap();
+                    }
+                }
+            }
+
+            if let Some(members) = definition.get("allOf").and_then(Value::as_array) {
+                for member in members {
+                    self.document_nested_variants(member, active_references);
+                }
+            }
+
+            for keyword in ["anyOf", "oneOf"] {
+                let Some(variants) = definition.get(keyword).and_then(Value::as_array) else {
+                    continue;
+                };
+
+                writeln!(&mut self.output).unwrap();
+                writeln!(&mut self.output, "**Alternatives (`{keyword}`):**").unwrap();
+                writeln!(&mut self.output).unwrap();
+                for variant in variants {
+                    self.document_variant_with_refs(variant, active_references);
+                }
+            }
         }
 
         fn document_enum_simple(&mut self, definition: &Value) {
@@ -2210,6 +2266,314 @@ starting with '$/' it is free to ignore the notification."
             let form_pos = generator.output.find("\"form\"").unwrap();
             assert!(variants_pos < session_pos);
             assert!(session_pos < form_pos);
+        }
+
+        #[test]
+        fn document_union_preserves_nested_ref_any_of_alternatives() {
+            let mut generator = MarkdownGenerator::new("schema.json");
+            generator.definitions.insert(
+                "FormMode".to_string(),
+                json!({
+                    "anyOf": [
+                        {
+                            "properties": {
+                                "sessionId": { "type": "string" },
+                                "toolCallId": { "type": "string" }
+                            },
+                            "required": ["sessionId"],
+                            "title": "Session",
+                            "type": "object"
+                        },
+                        {
+                            "properties": {
+                                "requestId": { "type": "string" }
+                            },
+                            "required": ["requestId"],
+                            "title": "Request",
+                            "type": "object"
+                        }
+                    ],
+                    "properties": {
+                        "mode": { "const": "form", "type": "string" },
+                        "requestedSchema": { "type": "object" }
+                    },
+                    "required": ["mode", "requestedSchema"],
+                    "type": "object"
+                }),
+            );
+            let definition = json!({
+                "oneOf": [
+                    { "$ref": "#/$defs/FormMode" },
+                    {
+                        "properties": {
+                            "mode": { "const": "other", "type": "string" }
+                        },
+                        "required": ["mode"],
+                        "type": "object"
+                    }
+                ]
+            });
+
+            generator.document_type(4, "CreateElicitationRequest", &definition);
+
+            assert_scope_alternatives(&generator.output, "anyOf");
+            assert!(
+                generator
+                    .output
+                    .contains("<ResponseField name=\"mode\" type={\"string\"} required>")
+            );
+            assert!(
+                generator.output.contains(
+                    "<ResponseField name=\"requestedSchema\" type={\"object\"} required>"
+                )
+            );
+            assert!(
+                generator
+                    .output
+                    .contains("<ResponseField name=\"sessionId\" type={\"string\"} required>")
+            );
+            let tool_call_line = generator
+                .output
+                .lines()
+                .find(|line| line.contains("<ResponseField name=\"toolCallId\""))
+                .expect("toolCallId should be rendered");
+            assert!(
+                !tool_call_line.contains("required"),
+                "toolCallId should remain optional"
+            );
+            assert!(
+                generator
+                    .output
+                    .contains("<ResponseField name=\"requestId\" type={\"string\"} required>")
+            );
+        }
+
+        #[test]
+        fn document_union_preserves_nested_all_of_one_of_alternatives() {
+            let mut generator = MarkdownGenerator::new("schema.json");
+            generator.definitions.insert(
+                "UrlMode".to_string(),
+                json!({
+                    "oneOf": [
+                        {
+                            "properties": {
+                                "sessionId": { "type": "string" }
+                            },
+                            "required": ["sessionId"],
+                            "title": "Session",
+                            "type": "object"
+                        },
+                        {
+                            "properties": {
+                                "requestId": { "type": "string" }
+                            },
+                            "required": ["requestId"],
+                            "title": "Request",
+                            "type": "object"
+                        }
+                    ],
+                    "properties": {
+                        "mode": { "const": "url", "type": "string" },
+                        "url": { "type": "string" }
+                    },
+                    "required": ["mode", "url"],
+                    "type": "object"
+                }),
+            );
+            let definition = json!({
+                "oneOf": [
+                    {
+                        "allOf": [
+                            { "$ref": "#/$defs/UrlMode" },
+                            {
+                                "properties": {
+                                    "elicitationId": { "type": "string" }
+                                },
+                                "required": ["elicitationId"]
+                            }
+                        ],
+                        "title": "URL"
+                    },
+                    {
+                        "properties": {
+                            "mode": { "const": "other", "type": "string" }
+                        },
+                        "required": ["mode"],
+                        "type": "object"
+                    }
+                ]
+            });
+
+            generator.document_type(4, "CreateElicitationRequest", &definition);
+
+            assert_scope_alternatives(&generator.output, "oneOf");
+            for field in ["mode", "url", "elicitationId", "sessionId", "requestId"] {
+                assert!(
+                    generator.output.contains(&format!(
+                        "<ResponseField name=\"{field}\" type={{\"string\"}} required>"
+                    )),
+                    "{field} should be rendered with its own required flag"
+                );
+            }
+        }
+
+        fn assert_scope_alternatives(output: &str, keyword: &str) {
+            let (shared, alternatives) = output
+                .split_once(&format!("**Alternatives (`{keyword}`):**"))
+                .expect("scope alternatives should be rendered");
+            for field in ["sessionId", "requestId"] {
+                assert!(!shared.contains(field), "{field} is not a shared field");
+                assert_eq!(
+                    output.matches(&format!("name=\"{field}\"")).count(),
+                    1,
+                    "{field} should be rendered once per mode:\n{output}"
+                );
+            }
+
+            let (_, session) = alternatives
+                .split_once("<ResponseField name=\"Session\"")
+                .expect("session scope should be rendered");
+            let (session, request) = session
+                .split_once("<ResponseField name=\"Request\"")
+                .expect("request scope should be rendered");
+            assert!(session.contains("name=\"sessionId\""));
+            assert!(!session.contains("name=\"requestId\""));
+            assert!(request.contains("name=\"requestId\""));
+            assert!(!request.contains("name=\"sessionId\""));
+        }
+
+        #[test]
+        fn document_union_preserves_inline_and_composed_alternatives() {
+            let scope = json!({
+                "anyOf": [
+                    {
+                        "title": "Session",
+                        "type": "object",
+                        "properties": { "sessionId": { "type": "string" } },
+                        "required": ["sessionId"]
+                    },
+                    {
+                        "title": "Request",
+                        "type": "object",
+                        "properties": { "requestId": { "type": "string" } },
+                        "required": ["requestId"]
+                    }
+                ]
+            });
+
+            for variant in [
+                scope.clone(),
+                json!({ "allOf": [{ "type": "object" }, scope] }),
+                json!({
+                    "allOf": [
+                        { "$ref": "#/$defs/ScopeAlias" },
+                        { "oneOf": [{ "type": "string" }, { "type": "null" }] }
+                    ]
+                }),
+            ] {
+                let mut generator = MarkdownGenerator::new("schema.json");
+                generator
+                    .definitions
+                    .insert("Scope".to_string(), scope.clone());
+                generator.definitions.insert(
+                    "WrappedScope".to_string(),
+                    json!({ "allOf": [{ "$ref": "#/$defs/Scope" }] }),
+                );
+                generator.definitions.insert(
+                    "ScopeAlias".to_string(),
+                    json!({ "$ref": "#/$defs/WrappedScope" }),
+                );
+
+                generator.document_variant_table_row(&variant);
+
+                assert_scope_alternatives(&generator.output, "anyOf");
+                assert_eq!(
+                    generator
+                        .output
+                        .matches("**Alternatives (`anyOf`):**")
+                        .count(),
+                    1
+                );
+                if variant.pointer("/allOf/1/oneOf").is_some() {
+                    assert_eq!(
+                        generator
+                            .output
+                            .matches("**Alternatives (`oneOf`):**")
+                            .count(),
+                        1,
+                        "independent conjunctive groups should remain separate"
+                    );
+                }
+            }
+        }
+
+        #[test]
+        fn document_union_links_recursive_alternatives() {
+            for target in ["Recursive", "Indirect"] {
+                let mut generator = MarkdownGenerator::new("schema.json");
+                generator.definitions.insert(
+                    "Recursive".to_string(),
+                    json!({
+                        "anyOf": [
+                            { "type": "string" },
+                            { "$ref": format!("#/$defs/{target}") }
+                        ]
+                    }),
+                );
+                generator.definitions.insert(
+                    "Indirect".to_string(),
+                    json!({ "oneOf": [{ "$ref": "#/$defs/Recursive" }] }),
+                );
+
+                generator.document_variant_table_row(&json!({ "$ref": "#/$defs/Recursive" }));
+
+                assert_eq!(
+                    generator
+                        .output
+                        .matches("**Alternatives (`anyOf`):**")
+                        .count(),
+                    1,
+                    "a recursive definition should not be expanded again"
+                );
+                assert!(
+                    generator
+                        .output
+                        .contains("See [Recursive](#recursive) for recursive alternatives.")
+                );
+            }
+        }
+
+        #[test]
+        fn document_elicitation_request_includes_each_mode_scope() {
+            let schema = crate::root_schema_value();
+            let mut generator = MarkdownGenerator::new("schema.json");
+            generator.definitions = schema["$defs"]
+                .as_object()
+                .unwrap()
+                .iter()
+                .map(|(name, definition)| (name.clone(), definition.clone()))
+                .collect();
+
+            generator.document_type(
+                4,
+                "CreateElicitationRequest",
+                &schema["$defs"]["CreateElicitationRequest"],
+            );
+
+            let (_, form) = generator
+                .output
+                .split_once("<ResponseField name=\"form\"")
+                .unwrap();
+            let (form, url) = form
+                .split_once("<ResponseField name=\"url\" type=\"object\">")
+                .unwrap();
+            let (url, other) = url
+                .split_once("<ResponseField name=\"other\" type=\"object\">")
+                .unwrap();
+            for mode in [form, url, other] {
+                assert_scope_alternatives(mode, "anyOf");
+                assert_eq!(mode.matches("name=\"toolCallId\"").count(), 1);
+            }
         }
 
         #[test]
