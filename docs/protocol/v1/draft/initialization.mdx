@@ -198,6 +198,25 @@ The Client **SHOULD** specify whether it supports the following capabilities:
   must not send these updates to a v1 Client that does not advertise it.
 </ParamField>
 
+#### Session Notices
+
+<ParamField path="session.notices" type="NoticeCapabilities Object">
+  The Client can present live advisory `notice` session updates to the user.
+  This field is optional and nullable. Omitting `session` or `notices`, or
+  setting either to `null`, means unsupported. Supplying `{}` advertises notice
+  support. Agents must not send notices without this capability and may instead
+  use an agent message when the information should still be surfaced to the
+  user.
+</ParamField>
+
+<Card
+  icon="message"
+  horizontal
+  href="/protocol/v1/draft/prompt-turn#session-notices"
+>
+  Learn more about Session Notices
+</Card>
+
 ### Agent Capabilities
 
 The Agent **SHOULD** specify whether it supports the following capabilities:

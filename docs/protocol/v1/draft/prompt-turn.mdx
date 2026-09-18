@@ -187,8 +187,17 @@ If the model requested tool calls, these are also reported immediately:
 
 #### Session Notices
 
-At any point while a session exists, including outside prompt processing, the
-Agent **MAY** send a live advisory notice:
+The Agent **MUST NOT** send `notice` updates unless the Client advertised support
+by supplying `clientCapabilities.session.notices: {}` in its `initialize`
+request. Omitting `session` or `notices`, or setting either field to `null`,
+means the Client does not advertise support.
+
+When the capability is absent, the Agent may use an ordinary agent message
+instead if the information should still be surfaced to the user. That fallback
+is conversation content and follows normal message-history semantics.
+
+When the Client advertises support, the Agent **MAY** send a live advisory
+notice at any point while a session exists, including outside prompt processing:
 
 ```json
 {
@@ -216,10 +225,11 @@ notice presentation without inferring additional behavior from them.
 presentation. `description` is optional, nullable plain text with supporting
 detail.
 
-Clients may ignore them, and Agents must behave as though a
-notice may not have been received, displayed, or seen. A notice must not carry
-information required for protocol correctness, authorization, user action,
-task completion, or fatal-error reporting.
+Advertising support does not acknowledge delivery or guarantee display of an
+individual notice. Agents must still behave as though a notice may not have
+been received, displayed, or seen. A notice must not carry information required
+for protocol correctness, authorization, user action, task completion, or
+fatal-error reporting.
 
 Clients own presentation and dismissal. They may use a toast, banner, inline
 status region, notification center, or another accessible surface, and may
