@@ -1380,38 +1380,40 @@ impl DidFocusDocumentNotification {
 
 // NES session start
 
-/// Request to start an NES session.
-#[serde_as]
-#[skip_serializing_none]
-#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = NES_START_METHOD_NAME)))]
-#[serde(rename_all = "camelCase")]
-#[non_exhaustive]
-pub struct StartNesRequest {
-    /// The root URI of the workspace.
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    pub workspace_uri: Option<String>,
-    /// The workspace folders.
-    #[serde(default)]
-    pub workspace_folders: Option<Vec<WorkspaceFolder>>,
-    /// Repository metadata, if the workspace is a git repository.
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    pub repository: Option<NesRepository>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
+crate::serde_util::default_on_null! {
+    /// Request to start an NES session.
+    #[serde_as]
+    #[skip_serializing_none]
+    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+    #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = NES_START_METHOD_NAME)))]
+    #[serde(rename_all = "camelCase")]
+    #[non_exhaustive]
+    pub struct StartNesRequest {
+        /// The root URI of the workspace.
+        #[serde_as(deserialize_as = "DefaultOnError")]
+        #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+        #[serde(default)]
+        pub workspace_uri: Option<String>,
+        /// The workspace folders.
+        #[serde(default)]
+        pub workspace_folders: Option<Vec<WorkspaceFolder>>,
+        /// Repository metadata, if the workspace is a git repository.
+        #[serde_as(deserialize_as = "DefaultOnError")]
+        #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+        #[serde(default)]
+        pub repository: Option<NesRepository>,
+        /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+        /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+        /// these keys.
+        ///
+        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+        #[serde_as(deserialize_as = "DefaultOnError")]
+        #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+        #[serde(default)]
+        #[serde(rename = "_meta")]
+        pub meta: Option<Meta>,
+    }
 }
 
 impl StartNesRequest {
@@ -1664,25 +1666,27 @@ impl CloseNesRequest {
     }
 }
 
-/// Response from closing an NES session.
-#[serde_as]
-#[skip_serializing_none]
-#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = NES_CLOSE_METHOD_NAME)))]
-#[serde(rename_all = "camelCase")]
-#[non_exhaustive]
-pub struct CloseNesResponse {
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
+crate::serde_util::default_on_null! {
+    /// Response from closing an NES session.
+    #[serde_as]
+    #[skip_serializing_none]
+    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+    #[derive(Default, Debug, Clone, Serialize, PartialEq, Eq)]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = NES_CLOSE_METHOD_NAME)))]
+    #[serde(rename_all = "camelCase")]
+    #[non_exhaustive]
+    pub struct CloseNesResponse {
+        /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+        /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+        /// these keys.
+        ///
+        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+        #[serde_as(deserialize_as = "DefaultOnError")]
+        #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+        #[serde(default)]
+        #[serde(rename = "_meta")]
+        pub meta: Option<Meta>,
+    }
 }
 
 impl CloseNesResponse {

@@ -1,4 +1,8 @@
-//! Custom option-like field wrappers and builder helpers for serde.
+//! Custom payload adapters, option-like field wrappers, and builder helpers for serde.
+//!
+//! ## Payload adapters
+//!
+//! - [`default_on_null`] — opt a defaultable payload into accepting null.
 //!
 //! ## Types
 //!
@@ -22,6 +26,446 @@ use std::{
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_with::{DeserializeAs, de::DeserializeAsWrap};
+
+// ---- Default-on-null payloads ----
+
+/// Declares a defaultable payload whose `Deserialize` accepts null.
+///
+/// Declare the normal derives except `Deserialize` inside this macro. A private
+/// wire type derives deserialization from the same fields and attributes, so
+/// there is no second field definition to maintain and no public helper methods.
+/// `DefaultOnNull` wraps only deserialization of the entire payload; serialization
+/// and JSON Schema are still derived directly on the public type.
+///
+/// Opt in explicitly; implementing `Default` alone does not change wire behavior.
+macro_rules! default_on_null {
+    (
+        $(#[$attribute:meta])*
+        $visibility:vis struct $payload:ident {
+            $(
+                $(#[$field_attribute:meta])*
+                $field_visibility:vis $field:ident: $field_type:ty
+            ),* $(,)?
+        }
+    ) => {
+        $(#[$attribute])*
+        $visibility struct $payload {
+            $(
+                $(#[$field_attribute])*
+                $field_visibility $field: $field_type,
+            )*
+        }
+
+        impl<'de> serde::Deserialize<'de> for $payload {
+            fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+                $(#[$attribute])*
+                #[derive(serde::Deserialize)]
+                struct Wire {
+                    $(
+                        $(#[$field_attribute])*
+                        $field_visibility $field: $field_type,
+                    )*
+                }
+
+                struct NonNull;
+
+                impl<'de> serde_with::DeserializeAs<'de, $payload> for NonNull {
+                    fn deserialize_as<D: serde::Deserializer<'de>>(
+                        deserializer: D,
+                    ) -> Result<$payload, D::Error> {
+                        let wire = <Wire as serde::Deserialize>::deserialize(deserializer)?;
+                        Ok($payload {
+                            $($field: wire.$field,)*
+                        })
+                    }
+                }
+
+                <serde_with::DefaultOnNull<NonNull> as serde_with::DeserializeAs<
+                    'de,
+                    Self,
+                >>::deserialize_as(deserializer)
+            }
+        }
+    };
+}
+
+pub(crate) use default_on_null;
+
+#[cfg(test)]
+mod default_on_null_tests {
+    use serde::{Deserialize, Serialize, de::DeserializeOwned};
+    use serde_json::{Value, json};
+
+    use crate::{
+        MaybeUndefined,
+        rpc::{JsonRpcMessage, Request, Response},
+        v1::{
+            self, LoadSessionResponse, NewSessionResponse, PromptResponse, ReadTextFileResponse,
+            RequestPermissionResponse, WaitForTerminalExitResponse, WriteTextFileResponse,
+        },
+    };
+
+    // Keep one inventory for the value, streaming, serialization, and schema checks.
+    // Feature gates match the payloads, so the inventory also runs without default
+    // features and with individual unstable features enabled.
+    macro_rules! for_each_defaultable_payload {
+        ($check:ident) => {
+            $check::<v1::AuthenticateResponse>();
+            $check::<v1::LogoutRequest>();
+            $check::<v1::LogoutResponse>();
+            $check::<v1::LoadSessionResponse>();
+            $check::<v1::ResumeSessionResponse>();
+            $check::<v1::CloseSessionResponse>();
+            $check::<v1::ListSessionsRequest>();
+            $check::<v1::DeleteSessionResponse>();
+            $check::<v1::SetSessionModeResponse>();
+            $check::<v1::WriteTextFileResponse>();
+            $check::<v1::ReleaseTerminalResponse>();
+            $check::<v1::KillTerminalResponse>();
+            $check::<v1::WaitForTerminalExitResponse>();
+
+            #[cfg(feature = "unstable_llm_providers")]
+            {
+                $check::<v1::ListProvidersRequest>();
+                $check::<v1::SetProviderResponse>();
+                $check::<v1::DisableProviderResponse>();
+            }
+            #[cfg(feature = "unstable_nes")]
+            {
+                $check::<v1::StartNesRequest>();
+                $check::<v1::CloseNesResponse>();
+            }
+            #[cfg(feature = "unstable_mcp_over_acp")]
+            {
+                $check::<v1::DisconnectMcpResponse>();
+            }
+
+            #[cfg(feature = "unstable_protocol_v2")]
+            {
+                use crate::v2;
+
+                $check::<v2::LoginAuthResponse>();
+                $check::<v2::LogoutAuthRequest>();
+                $check::<v2::LogoutAuthResponse>();
+                $check::<v2::ResumeSessionResponse>();
+                $check::<v2::CloseSessionResponse>();
+                $check::<v2::ListSessionsRequest>();
+                $check::<v2::DeleteSessionResponse>();
+
+                #[cfg(feature = "unstable_llm_providers")]
+                {
+                    $check::<v2::ListProvidersRequest>();
+                    $check::<v2::SetProviderResponse>();
+                    $check::<v2::DisableProviderResponse>();
+                }
+                #[cfg(feature = "unstable_nes")]
+                {
+                    $check::<v2::StartNesRequest>();
+                    $check::<v2::CloseNesResponse>();
+                }
+                #[cfg(feature = "unstable_mcp_over_acp")]
+                {
+                    $check::<v2::DisconnectMcpResponse>();
+                }
+            }
+        };
+    }
+
+    fn assert_defaultable_payload<T>()
+    where
+        T: Default + DeserializeOwned + Serialize + PartialEq + std::fmt::Debug,
+    {
+        let name = std::any::type_name::<T>();
+        for value in [Value::Null, json!({})] {
+            assert_eq!(
+                serde_json::from_value::<T>(value).unwrap(),
+                T::default(),
+                "{name}",
+            );
+        }
+        assert_eq!(
+            serde_json::from_str::<T>("null").unwrap(),
+            T::default(),
+            "{name}",
+        );
+        assert_eq!(
+            serde_json::to_value(T::default()).unwrap(),
+            json!({}),
+            "{name}"
+        );
+
+        let metadata = json!({"_meta": {"example.com/key": ["preserve", 1, null]}});
+        let payload: T = serde_json::from_value(metadata.clone()).unwrap();
+        assert_eq!(serde_json::to_value(payload).unwrap(), metadata, "{name}");
+
+        for value in [json!(false), json!(42), json!("invalid")] {
+            assert!(serde_json::from_value::<T>(value).is_err(), "{name}");
+        }
+
+        // Opting in the payload must not swallow null in surrounding wrappers.
+        assert_eq!(
+            serde_json::from_value::<Option<T>>(Value::Null).unwrap(),
+            None,
+            "{name}",
+        );
+        assert_eq!(
+            serde_json::from_value::<MaybeUndefined<T>>(Value::Null).unwrap(),
+            MaybeUndefined::Null,
+            "{name}",
+        );
+    }
+
+    #[test]
+    fn defaultable_payloads_accept_null_without_losing_information() {
+        for_each_defaultable_payload!(assert_defaultable_payload);
+    }
+
+    #[test]
+    fn inherent_methods_do_not_bypass_null_handling() {
+        // These must resolve to the trait too, not a strict inherent helper.
+        assert_eq!(
+            WriteTextFileResponse::deserialize(Value::Null).unwrap(),
+            WriteTextFileResponse::default(),
+        );
+        assert_eq!(
+            LoadSessionResponse::deserialize(Value::Null).unwrap(),
+            LoadSessionResponse::default(),
+        );
+    }
+
+    #[test]
+    fn optional_payload_fields_are_preserved() {
+        let load = json!({
+            "modes": {
+                "currentModeId": "ask",
+                "availableModes": [{"id": "ask", "name": "Ask"}]
+            },
+            "configOptions": [],
+            "_meta": {"example.com/key": "value"}
+        });
+        let response: LoadSessionResponse = serde_json::from_value(load.clone()).unwrap();
+        assert_eq!(serde_json::to_value(response).unwrap(), load);
+
+        let list = json!({"cwd": "/workspace", "cursor": "next-page"});
+        let request: v1::ListSessionsRequest = serde_json::from_value(list.clone()).unwrap();
+        assert_eq!(serde_json::to_value(request).unwrap(), list);
+
+        #[cfg(feature = "unstable_protocol_v2")]
+        {
+            let request: crate::v2::ListSessionsRequest =
+                serde_json::from_value(list.clone()).unwrap();
+            assert_eq!(serde_json::to_value(request).unwrap(), list);
+        }
+    }
+
+    #[test]
+    fn default_terminal_exit_status_is_unknown_not_success() {
+        let response: WaitForTerminalExitResponse = serde_json::from_value(Value::Null).unwrap();
+        assert_eq!(response.exit_status.exit_code, None);
+        assert_eq!(response.exit_status.signal, None);
+        assert_eq!(response, WaitForTerminalExitResponse::default());
+
+        for value in [
+            json!({"exitCode": 0}),
+            json!({"exitCode": 17}),
+            json!({"signal": "SIGTERM"}),
+        ] {
+            let response: WaitForTerminalExitResponse =
+                serde_json::from_value(value.clone()).unwrap();
+            assert_eq!(serde_json::to_value(response).unwrap(), value);
+        }
+    }
+
+    #[test]
+    fn non_null_payloads_keep_the_derived_deserialization_behavior() {
+        // A default exists, but the field is still required in non-null input.
+        // DefaultOnNull must not become DefaultOnError.
+        super::default_on_null! {
+            #[derive(Default, Debug, Serialize, PartialEq)]
+            struct RequiredField {
+                count: u32,
+            }
+        }
+        #[derive(Deserialize)]
+        struct BaselineWrite {
+            #[serde(
+                default,
+                rename = "_meta",
+                with = "serde_with::As::<serde_with::DefaultOnError>"
+            )]
+            meta: Option<serde_json::Map<String, Value>>,
+        }
+
+        assert_eq!(
+            serde_json::from_value::<RequiredField>(Value::Null).unwrap(),
+            RequiredField::default(),
+        );
+        assert!(serde_json::from_value::<RequiredField>(json!({})).is_err());
+        assert!(serde_json::from_value::<RequiredField>(json!({"count": "invalid"})).is_err());
+
+        for value in [
+            json!({}),
+            json!({"_meta": {"example.com/key": true}}),
+            json!({"_meta": 42}),
+            json!({"modes": "invalid", "configOptions": "invalid"}),
+            json!([]),
+            json!([null]),
+            json!(false),
+            json!(42),
+            json!("invalid"),
+        ] {
+            assert_eq!(
+                serde_json::from_value::<WriteTextFileResponse>(value.clone())
+                    .map(|response| response.meta)
+                    .map_err(|_| ()),
+                serde_json::from_value::<BaselineWrite>(value)
+                    .map(|response| response.meta)
+                    .map_err(|_| ()),
+            );
+        }
+    }
+
+    #[test]
+    fn payloads_with_required_fields_still_reject_null() {
+        assert!(serde_json::from_value::<ReadTextFileResponse>(Value::Null).is_err());
+        assert!(serde_json::from_value::<RequestPermissionResponse>(Value::Null).is_err());
+        assert!(serde_json::from_value::<NewSessionResponse>(Value::Null).is_err());
+        assert!(serde_json::from_value::<PromptResponse>(Value::Null).is_err());
+        assert!(serde_json::from_value::<v1::InitializeResponse>(Value::Null).is_err());
+        assert!(serde_json::from_value::<v1::CreateTerminalResponse>(Value::Null).is_err());
+        assert!(serde_json::from_value::<v1::TerminalOutputResponse>(Value::Null).is_err());
+        assert!(serde_json::from_value::<v1::CreateElicitationResponse>(Value::Null).is_err());
+
+        #[cfg(feature = "unstable_protocol_v2")]
+        {
+            use crate::v2;
+
+            assert!(serde_json::from_value::<v2::InitializeResponse>(Value::Null).is_err());
+            assert!(serde_json::from_value::<v2::NewSessionResponse>(Value::Null).is_err());
+            assert!(serde_json::from_value::<v2::PromptResponse>(Value::Null).is_err());
+            assert!(serde_json::from_value::<v2::RequestPermissionResponse>(Value::Null).is_err());
+            assert!(serde_json::from_value::<v2::CreateElicitationResponse>(Value::Null).is_err());
+        }
+    }
+
+    #[test]
+    fn raw_response_nulls_are_not_rewritten() {
+        let extension: v1::ExtResponse = serde_json::from_value(Value::Null).unwrap();
+        assert_eq!(serde_json::to_value(extension).unwrap(), Value::Null);
+
+        #[cfg(feature = "unstable_mcp_over_acp")]
+        {
+            let mcp: v1::MessageMcpResponse = serde_json::from_value(Value::Null).unwrap();
+            assert_eq!(serde_json::to_value(mcp).unwrap(), Value::Null);
+        }
+
+        #[cfg(feature = "unstable_protocol_v2")]
+        {
+            let extension: crate::v2::ExtResponse = serde_json::from_value(Value::Null).unwrap();
+            assert_eq!(serde_json::to_value(extension).unwrap(), Value::Null);
+
+            #[cfg(feature = "unstable_mcp_over_acp")]
+            {
+                let mcp: crate::v2::MessageMcpResponse =
+                    serde_json::from_value(Value::Null).unwrap();
+                assert_eq!(serde_json::to_value(mcp).unwrap(), Value::Null);
+            }
+        }
+    }
+
+    #[test]
+    fn optional_request_parameters_keep_their_existing_meaning() {
+        type LogoutRequest = Request<v1::LogoutRequest>;
+        for value in [
+            json!({"id": 1, "method": "logout"}),
+            json!({"id": 1, "method": "logout", "params": null}),
+        ] {
+            let request: LogoutRequest = serde_json::from_value(value).unwrap();
+            assert_eq!(request.params, None);
+        }
+        let request: LogoutRequest =
+            serde_json::from_value(json!({"id": 1, "method": "logout", "params": {}})).unwrap();
+        assert_eq!(request.params, Some(v1::LogoutRequest::default()));
+    }
+
+    #[test]
+    fn nullable_fields_keep_their_existing_meaning() {
+        #[derive(Debug, Deserialize, PartialEq)]
+        struct Container {
+            optional: Option<WriteTextFileResponse>,
+            #[serde(default)]
+            patch: MaybeUndefined<WriteTextFileResponse>,
+        }
+
+        assert_eq!(
+            serde_json::from_value::<Option<WriteTextFileResponse>>(Value::Null).unwrap(),
+            None,
+        );
+        assert_eq!(
+            serde_json::from_value::<MaybeUndefined<WriteTextFileResponse>>(Value::Null).unwrap(),
+            MaybeUndefined::Null,
+        );
+        assert_eq!(
+            serde_json::from_value::<Container>(json!({})).unwrap(),
+            Container {
+                optional: None,
+                patch: MaybeUndefined::Undefined,
+            },
+        );
+        assert_eq!(
+            serde_json::from_value::<Container>(json!({"optional": null, "patch": null})).unwrap(),
+            Container {
+                optional: None,
+                patch: MaybeUndefined::Null,
+            },
+        );
+        assert_eq!(
+            serde_json::from_value::<Container>(json!({"optional": {}, "patch": {}})).unwrap(),
+            Container {
+                optional: Some(WriteTextFileResponse::default()),
+                patch: MaybeUndefined::Value(WriteTextFileResponse::default()),
+            },
+        );
+    }
+
+    #[test]
+    fn response_result_is_required_even_when_its_payload_accepts_null() {
+        type WriteResponse = Response<WriteTextFileResponse, Value>;
+        let response: WriteResponse =
+            serde_json::from_value(json!({"id": 1, "result": null})).unwrap();
+        assert_eq!(
+            response,
+            Response::new(1, Ok(WriteTextFileResponse::default())),
+        );
+        assert!(serde_json::from_value::<WriteResponse>(json!({"id": 1})).is_err());
+        assert!(
+            serde_json::from_value::<JsonRpcMessage<WriteResponse>>(
+                json!({"jsonrpc": "2.0", "id": 1})
+            )
+            .is_err()
+        );
+
+        let error = json!({"code": -32603, "message": "Internal error"});
+        let response: JsonRpcMessage<WriteResponse> = serde_json::from_value(json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "error": error.clone()
+        }))
+        .unwrap();
+        assert_eq!(response.into_inner(), Response::new(1, Err(error)));
+    }
+
+    #[cfg(feature = "schemars")]
+    #[test]
+    fn defaultable_payload_schemas_still_require_objects() {
+        fn assert_object_schema<T: schemars::JsonSchema>() {
+            let schema = serde_json::to_value(schemars::schema_for!(T)).unwrap();
+            assert_eq!(schema["type"], "object");
+            assert!(schema.get("anyOf").is_none());
+        }
+        for_each_defaultable_payload!(assert_object_schema);
+    }
+}
 
 // ---- SkipListener ----
 

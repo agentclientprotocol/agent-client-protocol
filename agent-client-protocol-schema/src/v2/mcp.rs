@@ -346,29 +346,31 @@ impl DisconnectMcpRequest {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
-/// Response to `mcp/disconnect`.
-#[serde_as]
-#[skip_serializing_none]
-#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "client", "x-method" = MCP_DISCONNECT_METHOD_NAME)))]
-#[non_exhaustive]
-pub struct DisconnectMcpResponse {
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+crate::serde_util::default_on_null! {
+    /// **UNSTABLE**
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Response to `mcp/disconnect`.
+    #[serde_as]
+    #[skip_serializing_none]
+    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+    #[derive(Default, Debug, Clone, Serialize, PartialEq, Eq)]
+    #[serde(rename_all = "camelCase")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "client", "x-method" = MCP_DISCONNECT_METHOD_NAME)))]
+    #[non_exhaustive]
+    pub struct DisconnectMcpResponse {
+        /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+        /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+        /// these keys.
+        ///
+        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+        #[serde_as(deserialize_as = "DefaultOnError")]
+        #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+        #[serde(default)]
+        #[serde(rename = "_meta")]
+        pub meta: Option<Meta>,
+    }
 }
 
 impl DisconnectMcpResponse {

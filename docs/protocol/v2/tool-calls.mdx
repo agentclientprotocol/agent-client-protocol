@@ -56,11 +56,18 @@ When the language model requests a tool invocation, the Agent **SHOULD** report 
   The category of tool being invoked.
 
 <Expandable title="kinds">
-  - `read` - Reading files or data - `edit` - Modifying files or content -
-  `delete` - Removing files or data - `move` - Moving or renaming files -
-  `search` - Searching for information - `execute` - Running commands or code -
-  `think` - Internal reasoning or planning - `fetch` - Retrieving external data
-  - `other` - Other tool types (default)
+
+- `read` - Reading files or data
+- `edit` - Modifying files or content
+- `delete` - Removing files or data
+- `move` - Moving or renaming files
+- `search` - Searching for information
+- `execute` - Running commands or code
+- `think` - Internal reasoning or planning
+- `fetch` - Retrieving external data
+- `switch_mode` - Changing the session's operating mode
+- `other` - Other tool types (default)
+
 </Expandable>
 
 Tool kinds help Clients choose appropriate icons and optimize how they display tool execution progress.
@@ -81,12 +88,14 @@ Custom or future tool kinds can be used when Clients can fall back to generic to
   [File locations](#following-the-agent) affected by this tool call
 </ParamField>
 
-<ParamField path="rawInput" type="object">
-  The raw input parameters sent to the tool
+<ParamField path="rawInput" type="unknown">
+  The raw input sent to the tool. It may be any JSON value, including an object,
+  array, scalar, or `null`.
 </ParamField>
 
-<ParamField path="rawOutput" type="object">
-  The raw output returned by the tool
+<ParamField path="rawOutput" type="unknown">
+  The raw output returned by the tool. It may be any JSON value, including an
+  object, array, scalar, or `null`.
 </ParamField>
 
 The `tool_call_update` notification is an upsert keyed by `toolCallId`. For
@@ -102,6 +111,12 @@ collection. Display-only terminal bytes use `terminal_output_chunk` instead.
 For `name` specifically, omission leaves the existing name unchanged, `null`
 clears it, and a string sets or replaces it. On a new tool call, omission and
 `null` both result in no name.
+
+`rawInput` and `rawOutput` follow the same patch rule, even though `null` is
+also a valid arbitrary JSON value: omission leaves the stored value unchanged,
+`null` clears it, and any non-null JSON value replaces it. Consequently this
+patch representation cannot distinguish storing a literal JSON `null` from
+clearing the field.
 
 ## Updating
 
@@ -559,6 +574,8 @@ Tool calls can report file locations they're working with, enabling Clients to i
   The absolute file path being accessed or modified
 </ParamField>
 
-<ParamField path="line" type="number">
-  Optional line number within the file
+<ParamField path="line" type="integer | null">
+  Optional line number within the file, represented as an unsigned 32-bit
+  integer. Omission and `null` are equivalent and mean no specific line was
+  provided.
 </ParamField>

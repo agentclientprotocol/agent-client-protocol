@@ -15,8 +15,8 @@ use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
 use super::{
-    AbsolutePath, ClientCapabilities, ContentBlock, ExtNotification, ExtRequest, ExtResponse, Meta,
-    SessionId,
+    AbsolutePath, ClientCapabilities, ContentBlock, ExtNotification, ExtRequest, ExtResponse,
+    MessageId, Meta, SessionId,
 };
 use crate::{IntoOption, ProtocolVersion, SkipListener};
 
@@ -320,25 +320,27 @@ impl LoginAuthRequest {
     }
 }
 
-/// Response to the `auth/login` method.
-#[serde_as]
-#[skip_serializing_none]
-#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = AUTH_LOGIN_METHOD_NAME)))]
-#[serde(rename_all = "camelCase")]
-#[non_exhaustive]
-pub struct LoginAuthResponse {
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
+crate::serde_util::default_on_null! {
+    /// Response to the `auth/login` method.
+    #[serde_as]
+    #[skip_serializing_none]
+    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+    #[derive(Default, Debug, Clone, Serialize, PartialEq, Eq)]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = AUTH_LOGIN_METHOD_NAME)))]
+    #[serde(rename_all = "camelCase")]
+    #[non_exhaustive]
+    pub struct LoginAuthResponse {
+        /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+        /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+        /// these keys.
+        ///
+        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+        #[serde_as(deserialize_as = "DefaultOnError")]
+        #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+        #[serde(default)]
+        #[serde(rename = "_meta")]
+        pub meta: Option<Meta>,
+    }
 }
 
 impl LoginAuthResponse {
@@ -362,31 +364,33 @@ impl LoginAuthResponse {
 
 // Logout
 
-/// Request parameters for the `auth/logout` method.
-///
-/// Terminates the current authenticated session.
-///
-/// Agents MUST support this method when their `initialize` response advertised
-/// at least one valid authentication method. Clients MUST NOT call this method
-/// when `authMethods` was omitted or empty.
-#[serde_as]
-#[skip_serializing_none]
-#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = AUTH_LOGOUT_METHOD_NAME)))]
-#[serde(rename_all = "camelCase")]
-#[non_exhaustive]
-pub struct LogoutAuthRequest {
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+crate::serde_util::default_on_null! {
+    /// Request parameters for the `auth/logout` method.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
+    /// Terminates the current authenticated session.
+    ///
+    /// Agents MUST support this method when their `initialize` response advertised
+    /// at least one valid authentication method. Clients MUST NOT call this method
+    /// when `authMethods` was omitted or empty.
+    #[serde_as]
+    #[skip_serializing_none]
+    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+    #[derive(Default, Debug, Clone, Serialize, PartialEq, Eq)]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = AUTH_LOGOUT_METHOD_NAME)))]
+    #[serde(rename_all = "camelCase")]
+    #[non_exhaustive]
+    pub struct LogoutAuthRequest {
+        /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+        /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+        /// these keys.
+        ///
+        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+        #[serde_as(deserialize_as = "DefaultOnError")]
+        #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+        #[serde(default)]
+        #[serde(rename = "_meta")]
+        pub meta: Option<Meta>,
+    }
 }
 
 impl LogoutAuthRequest {
@@ -408,25 +412,27 @@ impl LogoutAuthRequest {
     }
 }
 
-/// Response to the `auth/logout` method.
-#[serde_as]
-#[skip_serializing_none]
-#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = AUTH_LOGOUT_METHOD_NAME)))]
-#[serde(rename_all = "camelCase")]
-#[non_exhaustive]
-pub struct LogoutAuthResponse {
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
+crate::serde_util::default_on_null! {
+    /// Response to the `auth/logout` method.
+    #[serde_as]
+    #[skip_serializing_none]
+    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+    #[derive(Default, Debug, Clone, Serialize, PartialEq, Eq)]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = AUTH_LOGOUT_METHOD_NAME)))]
+    #[serde(rename_all = "camelCase")]
+    #[non_exhaustive]
+    pub struct LogoutAuthResponse {
+        /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+        /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+        /// these keys.
+        ///
+        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+        #[serde_as(deserialize_as = "DefaultOnError")]
+        #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+        #[serde(default)]
+        #[serde(rename = "_meta")]
+        pub meta: Option<Meta>,
+    }
 }
 
 impl LogoutAuthResponse {
@@ -1178,7 +1184,7 @@ impl ForkSessionResponse {
 
 /// Request parameters for resuming an existing session.
 ///
-/// Resumes an existing session and optionally replays prior conversation
+/// Resumes an existing session and optionally replays retained conversation
 /// history according to `replayFrom`.
 #[serde_as]
 #[skip_serializing_none]
@@ -1212,8 +1218,8 @@ pub struct ResumeSessionRequest {
     /// Optional. Omitted or `null` both mean the Agent should resume without
     /// replaying previous conversation history. Replay cursors are inclusive:
     /// replay includes the position identified by the cursor. Supplying
-    /// `{ "type": "start" }` means the Agent should replay the whole
-    /// conversation before responding.
+    /// `{ "type": "start" }` means the Agent should replay all retained
+    /// conversation history before responding.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -1267,8 +1273,8 @@ impl ResumeSessionRequest {
     /// Omitted or `null` both mean the Agent should resume without replaying
     /// previous conversation history. Replay cursors are inclusive: replay
     /// includes the position identified by the cursor. Supplying
-    /// `{ "type": "start" }` means the Agent should replay the whole
-    /// conversation before responding.
+    /// `{ "type": "start" }` means the Agent should replay all retained
+    /// conversation history before responding.
     #[must_use]
     pub fn replay_from(mut self, replay_from: impl IntoOption<ReplayFrom>) -> Self {
         self.replay_from = replay_from.into_option();
@@ -1295,7 +1301,7 @@ impl ResumeSessionRequest {
 #[serde(tag = "type", rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum ReplayFrom {
-    /// Replay the whole conversation from its first replayable entry.
+    /// Replay all retained conversation history from its first replayable entry.
     Start(ReplayFromStart),
     /// Custom or future replay cursor.
     ///
@@ -1316,7 +1322,7 @@ impl From<ReplayFromStart> for ReplayFrom {
     }
 }
 
-/// Inclusive replay cursor requesting replay from the start of the conversation.
+/// Inclusive replay cursor requesting replay from the start of retained conversation history.
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -1452,30 +1458,32 @@ fn other_replay_from_schema(schema: &mut Schema) {
     super::schema_util::reject_known_string_discriminators(schema, "type", &["start"]);
 }
 
-/// Response from resuming an existing session.
-#[serde_as]
-#[skip_serializing_none]
-#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_RESUME_METHOD_NAME)))]
-#[serde(rename_all = "camelCase")]
-#[non_exhaustive]
-pub struct ResumeSessionResponse {
-    /// Initial session configuration options.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub config_options: Vec<SessionConfigOption>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
+crate::serde_util::default_on_null! {
+    /// Response from resuming an existing session.
+    #[serde_as]
+    #[skip_serializing_none]
+    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+    #[derive(Default, Debug, Clone, Serialize, PartialEq, Eq)]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_RESUME_METHOD_NAME)))]
+    #[serde(rename_all = "camelCase")]
+    #[non_exhaustive]
+    pub struct ResumeSessionResponse {
+        /// Initial session configuration options.
+        #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+        #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        pub config_options: Vec<SessionConfigOption>,
+        /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+        /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+        /// these keys.
+        ///
+        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+        #[serde_as(deserialize_as = "DefaultOnError")]
+        #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+        #[serde(default)]
+        #[serde(rename = "_meta")]
+        pub meta: Option<Meta>,
+    }
 }
 
 impl ResumeSessionResponse {
@@ -1555,25 +1563,27 @@ impl CloseSessionRequest {
     }
 }
 
-/// Response from closing a session.
-#[serde_as]
-#[skip_serializing_none]
-#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_CLOSE_METHOD_NAME)))]
-#[serde(rename_all = "camelCase")]
-#[non_exhaustive]
-pub struct CloseSessionResponse {
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
+crate::serde_util::default_on_null! {
+    /// Response from closing a session.
+    #[serde_as]
+    #[skip_serializing_none]
+    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+    #[derive(Default, Debug, Clone, Serialize, PartialEq, Eq)]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_CLOSE_METHOD_NAME)))]
+    #[serde(rename_all = "camelCase")]
+    #[non_exhaustive]
+    pub struct CloseSessionResponse {
+        /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+        /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+        /// these keys.
+        ///
+        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+        #[serde_as(deserialize_as = "DefaultOnError")]
+        #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+        #[serde(default)]
+        #[serde(rename = "_meta")]
+        pub meta: Option<Meta>,
+    }
 }
 
 impl CloseSessionResponse {
@@ -1643,31 +1653,33 @@ impl_session_list_cursor_option_conversion!(&String);
 impl_session_list_cursor_option_conversion!(Box<str>);
 impl_session_list_cursor_option_conversion!(Cow<'_, str>);
 
-/// Request parameters for listing existing sessions.
-#[serde_as]
-#[skip_serializing_none]
-#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_LIST_METHOD_NAME)))]
-#[serde(rename_all = "camelCase")]
-#[non_exhaustive]
-pub struct ListSessionsRequest {
-    /// Filter sessions by working directory. Must be an absolute path.
-    #[serde(default)]
-    pub cwd: Option<AbsolutePath>,
-    /// Opaque cursor token from a previous response's nextCursor field for cursor-based pagination
-    #[serde(default)]
-    pub cursor: Option<SessionListCursor>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
+crate::serde_util::default_on_null! {
+    /// Request parameters for listing existing sessions.
+    #[serde_as]
+    #[skip_serializing_none]
+    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+    #[derive(Default, Debug, Clone, Serialize, PartialEq, Eq)]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_LIST_METHOD_NAME)))]
+    #[serde(rename_all = "camelCase")]
+    #[non_exhaustive]
+    pub struct ListSessionsRequest {
+        /// Filter sessions by working directory. Must be an absolute path.
+        #[serde(default)]
+        pub cwd: Option<AbsolutePath>,
+        /// Opaque cursor token from a previous response's nextCursor field for cursor-based pagination
+        #[serde(default)]
+        pub cursor: Option<SessionListCursor>,
+        /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+        /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+        /// these keys.
+        ///
+        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+        #[serde_as(deserialize_as = "DefaultOnError")]
+        #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+        #[serde(default)]
+        #[serde(rename = "_meta")]
+        pub meta: Option<Meta>,
+    }
 }
 
 impl ListSessionsRequest {
@@ -1813,25 +1825,27 @@ impl DeleteSessionRequest {
     }
 }
 
-/// Response from deleting a session.
-#[serde_as]
-#[skip_serializing_none]
-#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_DELETE_METHOD_NAME)))]
-#[serde(rename_all = "camelCase")]
-#[non_exhaustive]
-pub struct DeleteSessionResponse {
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
+crate::serde_util::default_on_null! {
+    /// Response from deleting a session.
+    #[serde_as]
+    #[skip_serializing_none]
+    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+    #[derive(Default, Debug, Clone, Serialize, PartialEq, Eq)]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_DELETE_METHOD_NAME)))]
+    #[serde(rename_all = "camelCase")]
+    #[non_exhaustive]
+    pub struct DeleteSessionResponse {
+        /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+        /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+        /// these keys.
+        ///
+        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+        #[serde_as(deserialize_as = "DefaultOnError")]
+        #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+        #[serde(default)]
+        #[serde(rename = "_meta")]
+        pub meta: Option<Meta>,
+    }
 }
 
 impl DeleteSessionResponse {
@@ -3222,20 +3236,29 @@ impl PromptRequest {
     }
 }
 
-/// Response acknowledging that a user prompt was accepted.
+/// Response acknowledging that a user prompt was inserted into the ACP conversation.
 ///
-/// This response does not indicate that the agent has finished processing.
+/// This response does not indicate that the prompt was merely received or queued, nor that the
+/// agent has finished processing it.
 /// Processing and completion are reported through `state_update` session updates.
 ///
 /// See protocol docs: [Prompt Accepted](https://agentclientprotocol.com/protocol/prompt-lifecycle#2-prompt-accepted)
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_PROMPT_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct PromptResponse {
+    /// Identifies the user message inserted into the ACP conversation.
+    ///
+    /// Required and non-null. Omission and explicit `null` are both invalid.
+    ///
+    /// The corresponding user-message session update carries this same identifier and may arrive
+    /// before or after this response. Agents must echo the message during the live session, but are
+    /// not required to retain it. If retained and replayed, the message keeps this identifier.
+    pub message_id: MessageId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -3251,8 +3274,11 @@ pub struct PromptResponse {
 impl PromptResponse {
     /// Builds [`PromptResponse`] with the required response fields set; optional fields start unset or empty.
     #[must_use]
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(message_id: impl Into<MessageId>) -> Self {
+        Self {
+            message_id: message_id.into(),
+            meta: None,
+        }
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -3580,30 +3606,32 @@ impl ProviderInfo {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
-/// Request parameters for `providers/list`.
 #[cfg(feature = "unstable_llm_providers")]
-#[serde_as]
-#[skip_serializing_none]
-#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = PROVIDERS_LIST_METHOD_NAME)))]
-#[serde(rename_all = "camelCase")]
-#[non_exhaustive]
-pub struct ListProvidersRequest {
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+crate::serde_util::default_on_null! {
+    /// **UNSTABLE**
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Request parameters for `providers/list`.
+    #[serde_as]
+    #[skip_serializing_none]
+    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+    #[derive(Default, Debug, Clone, Serialize, PartialEq, Eq)]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = PROVIDERS_LIST_METHOD_NAME)))]
+    #[serde(rename_all = "camelCase")]
+    #[non_exhaustive]
+    pub struct ListProvidersRequest {
+        /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+        /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+        /// these keys.
+        ///
+        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+        #[serde_as(deserialize_as = "DefaultOnError")]
+        #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+        #[serde(default)]
+        #[serde(rename = "_meta")]
+        pub meta: Option<Meta>,
+    }
 }
 
 #[cfg(feature = "unstable_llm_providers")]
@@ -3754,30 +3782,32 @@ impl SetProviderRequest {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
-/// Response to `providers/set`.
 #[cfg(feature = "unstable_llm_providers")]
-#[serde_as]
-#[skip_serializing_none]
-#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = PROVIDERS_SET_METHOD_NAME)))]
-#[serde(rename_all = "camelCase")]
-#[non_exhaustive]
-pub struct SetProviderResponse {
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+crate::serde_util::default_on_null! {
+    /// **UNSTABLE**
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Response to `providers/set`.
+    #[serde_as]
+    #[skip_serializing_none]
+    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+    #[derive(Default, Debug, Clone, Serialize, PartialEq, Eq)]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = PROVIDERS_SET_METHOD_NAME)))]
+    #[serde(rename_all = "camelCase")]
+    #[non_exhaustive]
+    pub struct SetProviderResponse {
+        /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+        /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+        /// these keys.
+        ///
+        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+        #[serde_as(deserialize_as = "DefaultOnError")]
+        #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+        #[serde(default)]
+        #[serde(rename = "_meta")]
+        pub meta: Option<Meta>,
+    }
 }
 
 #[cfg(feature = "unstable_llm_providers")]
@@ -3851,30 +3881,32 @@ impl DisableProviderRequest {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
-/// Response to `providers/disable`.
 #[cfg(feature = "unstable_llm_providers")]
-#[serde_as]
-#[skip_serializing_none]
-#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = PROVIDERS_DISABLE_METHOD_NAME)))]
-#[serde(rename_all = "camelCase")]
-#[non_exhaustive]
-pub struct DisableProviderResponse {
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+crate::serde_util::default_on_null! {
+    /// **UNSTABLE**
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Response to `providers/disable`.
+    #[serde_as]
+    #[skip_serializing_none]
+    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+    #[derive(Default, Debug, Clone, Serialize, PartialEq, Eq)]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = PROVIDERS_DISABLE_METHOD_NAME)))]
+    #[serde(rename_all = "camelCase")]
+    #[non_exhaustive]
+    pub struct DisableProviderResponse {
+        /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+        /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+        /// these keys.
+        ///
+        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+        #[serde_as(deserialize_as = "DefaultOnError")]
+        #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+        #[serde(default)]
+        #[serde(rename = "_meta")]
+        pub meta: Option<Meta>,
+    }
 }
 
 #[cfg(feature = "unstable_llm_providers")]
@@ -5163,7 +5195,7 @@ pub enum ClientRequest {
     ///
     /// The agent should resume the session context, allowing the conversation
     /// to continue. If `replayFrom` is set, the agent should replay
-    /// conversation history before responding.
+    /// retained conversation history before responding.
     ResumeSessionRequest(Box<ResumeSessionRequest>),
     /// Closes an active session and frees up any resources associated with it.
     ///
@@ -5174,13 +5206,13 @@ pub enum ClientRequest {
     SetSessionConfigOptionRequest(Box<SetSessionConfigOptionRequest>),
     /// Processes a user prompt within a session.
     ///
-    /// This request accepts the prompt:
+    /// Acceptance means insertion into the ACP conversation:
     /// - Receives user messages with optional context (files, images, etc.)
-    /// - Returns once the prompt is accepted
+    /// - Returns the inserted user message's ID without waiting for processing to finish
     ///
-    /// After acceptance, the Agent reports the accepted user message,
-    /// processing state, output, tool calls, and completion through
-    /// `session/update` notifications.
+    /// The Agent reports the user message with the same ID through `session/update`;
+    /// this notification may arrive before or after the response. Processing state,
+    /// output, tool calls, and completion are also reported through session updates.
     ///
     /// See protocol docs: [Prompt Lifecycle](https://agentclientprotocol.com/protocol/prompt-lifecycle)
     PromptRequest(Box<PromptRequest>),
@@ -5440,6 +5472,77 @@ mod test_serialization {
             .unwrap()
             .matches("\"_meta\"")
             .count()
+    }
+
+    #[test]
+    fn prompt_response_without_metadata_round_trips() {
+        let response = PromptResponse::new(MessageId::new("message-1"));
+        let serialized = serde_json::to_value(&response).unwrap();
+        assert_eq!(serialized, json!({ "messageId": "message-1" }));
+        assert_eq!(
+            serde_json::from_value::<PromptResponse>(serialized).unwrap(),
+            response
+        );
+        assert_eq!(
+            serde_json::from_value::<PromptResponse>(json!({
+                "messageId": "message-1",
+                "_meta": null
+            }))
+            .unwrap(),
+            response
+        );
+    }
+
+    #[test]
+    fn prompt_response_requires_message_id_and_preserves_metadata_tolerance() {
+        let response = PromptResponse::new("message-1").meta(test_meta());
+        let serialized = serde_json::to_value(&response).unwrap();
+        assert_eq!(
+            serialized,
+            json!({
+                "messageId": "message-1",
+                "_meta": { "source": "test" }
+            })
+        );
+
+        let deserialized: PromptResponse = serde_json::from_value(serialized).unwrap();
+        assert_eq!(deserialized.message_id, MessageId::new("message-1"));
+        assert_eq!(deserialized.meta, Some(test_meta()));
+
+        let malformed_meta: PromptResponse = serde_json::from_value(json!({
+            "messageId": "message-2",
+            "_meta": false
+        }))
+        .unwrap();
+        assert_eq!(malformed_meta.message_id, MessageId::new("message-2"));
+        assert_eq!(malformed_meta.meta, None);
+
+        for invalid in [
+            json!({}),
+            json!({ "messageId": null }),
+            json!({ "messageId": 1 }),
+            json!({ "messageId": false }),
+            json!({ "messageId": {} }),
+            json!({ "messageId": [] }),
+        ] {
+            assert!(
+                serde_json::from_value::<PromptResponse>(invalid).is_err(),
+                "missing, null, and non-string message IDs must be rejected"
+            );
+        }
+    }
+
+    #[cfg(feature = "schemars")]
+    #[test]
+    fn prompt_response_schema_requires_non_null_string_message_id_reference() {
+        let schema = serde_json::to_value(schemars::schema_for!(PromptResponse)).unwrap();
+
+        assert_eq!(schema["required"], json!(["messageId"]));
+        assert_eq!(
+            schema["properties"]["messageId"]["$ref"],
+            "#/$defs/MessageId"
+        );
+        assert_eq!(schema["$defs"]["MessageId"]["type"], "string");
     }
 
     #[test]

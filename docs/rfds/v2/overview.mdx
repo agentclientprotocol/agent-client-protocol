@@ -56,6 +56,7 @@ Other RFDs will progress separately and are not dependent on breaking changes (s
 - Make [permission requests](./permission-requests.mdx) carry a required prompt `title` and optional extensible `subject` tagged union. Tool-call permissions use `subject.type: "tool_call"` with the same `ToolCallUpdate` payload shape as session updates, command permissions use `subject.type: "command"` with the command, required absolute working directory, and optional display associations, and subject-less permissions rely on the common prompt fields.
 - Add [whole-message updates](./message-updates.mdx) for `user_message`, `agent_message`, and `agent_thought` alongside streamed chunks. Message updates are upserts keyed by `messageId`; their `content` arrays replace current message content, while chunks append to the current content.
 - Require [message IDs](../message-id.mdx) on streamed message chunks.
+- Acknowledge [prompt insertion](./prompt.mdx) by returning the inserted user message's `messageId` from `session/prompt`, without waiting for foreground work to finish. Live user-message updates use the same ID; retention remains optional.
 - Follow JSON-RPC 2.0 batch request and notification behavior.
 - Clean up capability naming and organization:
   - Use a single `capabilities` field in both `initialize` params and results, replacing the v1-style `clientCapabilities` and `agentCapabilities` fields.

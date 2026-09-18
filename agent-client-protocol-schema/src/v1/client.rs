@@ -1269,25 +1269,27 @@ impl WriteTextFileRequest {
     }
 }
 
-/// Response to `fs/write_text_file`
-#[serde_as]
-#[skip_serializing_none]
-#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "client", "x-method" = FS_WRITE_TEXT_FILE_METHOD_NAME)))]
-#[non_exhaustive]
-pub struct WriteTextFileResponse {
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
+crate::serde_util::default_on_null! {
+    /// Response to `fs/write_text_file`
+    #[serde_as]
+    #[skip_serializing_none]
+    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+    #[derive(Default, Debug, Clone, Serialize, PartialEq, Eq)]
+    #[serde(rename_all = "camelCase")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "client", "x-method" = FS_WRITE_TEXT_FILE_METHOD_NAME)))]
+    #[non_exhaustive]
+    pub struct WriteTextFileResponse {
+        /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+        /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+        /// these keys.
+        ///
+        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+        #[serde_as(deserialize_as = "DefaultOnError")]
+        #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+        #[serde(default)]
+        #[serde(rename = "_meta")]
+        pub meta: Option<Meta>,
+    }
 }
 
 impl WriteTextFileResponse {
@@ -1766,25 +1768,27 @@ impl ReleaseTerminalRequest {
     }
 }
 
-/// Response to terminal/release method
-#[serde_as]
-#[skip_serializing_none]
-#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "client", "x-method" = TERMINAL_RELEASE_METHOD_NAME)))]
-#[non_exhaustive]
-pub struct ReleaseTerminalResponse {
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
+crate::serde_util::default_on_null! {
+    /// Response to terminal/release method
+    #[serde_as]
+    #[skip_serializing_none]
+    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+    #[derive(Default, Debug, Clone, Serialize, PartialEq, Eq)]
+    #[serde(rename_all = "camelCase")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "client", "x-method" = TERMINAL_RELEASE_METHOD_NAME)))]
+    #[non_exhaustive]
+    pub struct ReleaseTerminalResponse {
+        /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+        /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+        /// these keys.
+        ///
+        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+        #[serde_as(deserialize_as = "DefaultOnError")]
+        #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+        #[serde(default)]
+        #[serde(rename = "_meta")]
+        pub meta: Option<Meta>,
+    }
 }
 
 impl ReleaseTerminalResponse {
@@ -1854,25 +1858,27 @@ impl KillTerminalRequest {
     }
 }
 
-/// Response to `terminal/kill` method
-#[serde_as]
-#[skip_serializing_none]
-#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "client", "x-method" = TERMINAL_KILL_METHOD_NAME)))]
-#[non_exhaustive]
-pub struct KillTerminalResponse {
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
+crate::serde_util::default_on_null! {
+    /// Response to `terminal/kill` method
+    #[serde_as]
+    #[skip_serializing_none]
+    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+    #[derive(Default, Debug, Clone, Serialize, PartialEq, Eq)]
+    #[serde(rename_all = "camelCase")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "client", "x-method" = TERMINAL_KILL_METHOD_NAME)))]
+    #[non_exhaustive]
+    pub struct KillTerminalResponse {
+        /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+        /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+        /// these keys.
+        ///
+        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+        #[serde_as(deserialize_as = "DefaultOnError")]
+        #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+        #[serde(default)]
+        #[serde(rename = "_meta")]
+        pub meta: Option<Meta>,
+    }
 }
 
 impl KillTerminalResponse {
@@ -1942,28 +1948,30 @@ impl WaitForTerminalExitRequest {
     }
 }
 
-/// Response containing the exit status of a terminal command.
-#[serde_as]
-#[skip_serializing_none]
-#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "client", "x-method" = TERMINAL_WAIT_FOR_EXIT_METHOD_NAME)))]
-#[non_exhaustive]
-pub struct WaitForTerminalExitResponse {
-    /// The exit status of the terminal command.
-    #[serde(flatten)]
-    pub exit_status: TerminalExitStatus,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
+crate::serde_util::default_on_null! {
+    /// Response containing the exit status of a terminal command.
+    #[serde_as]
+    #[skip_serializing_none]
+    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+    #[derive(Default, Debug, Clone, Serialize, PartialEq, Eq)]
+    #[serde(rename_all = "camelCase")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "client", "x-method" = TERMINAL_WAIT_FOR_EXIT_METHOD_NAME)))]
+    #[non_exhaustive]
+    pub struct WaitForTerminalExitResponse {
+        /// The exit status of the terminal command.
+        #[serde(flatten)]
+        pub exit_status: TerminalExitStatus,
+        /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+        /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+        /// these keys.
+        ///
+        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+        #[serde_as(deserialize_as = "DefaultOnError")]
+        #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+        #[serde(default)]
+        #[serde(rename = "_meta")]
+        pub meta: Option<Meta>,
+    }
 }
 
 impl WaitForTerminalExitResponse {

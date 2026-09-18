@@ -7,13 +7,14 @@ The filesystem methods allow Agents to read and write text files within the Clie
 
 ## Checking Support
 
-Before attempting to use filesystem methods, Agents **MUST** verify that the Client supports these capabilities by checking the [Client Capabilities](/protocol/v1/initialization#client-capabilities) field in the `initialize` response:
+Before attempting to use filesystem methods, Agents **MUST** verify that the Client supports these capabilities by checking the [Client Capabilities](/protocol/v1/initialization#client-capabilities) field in the Client's `initialize` request:
 
-```json highlight={8,9}
+```json highlight={9,10}
 {
   "jsonrpc": "2.0",
   "id": 0,
-  "result": {
+  "method": "initialize",
+  "params": {
     "protocolVersion": 1,
     "clientCapabilities": {
       "fs": {
@@ -113,6 +114,6 @@ The Client responds with an empty result on success:
 {
   "jsonrpc": "2.0",
   "id": 4,
-  "result": null
+  "result": {}
 }
 ```

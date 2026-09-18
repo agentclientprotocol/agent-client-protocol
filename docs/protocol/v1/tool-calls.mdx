@@ -51,11 +51,18 @@ When the language model requests a tool invocation, the Agent **SHOULD** report 
   The category of tool being invoked.
 
 <Expandable title="kinds">
-  - `read` - Reading files or data - `edit` - Modifying files or content -
-  `delete` - Removing files or data - `move` - Moving or renaming files -
-  `search` - Searching for information - `execute` - Running commands or code -
-  `think` - Internal reasoning or planning - `fetch` - Retrieving external data
-  - `other` - Other tool types (default)
+
+- `read` - Reading files or data
+- `edit` - Modifying files or content
+- `delete` - Removing files or data
+- `move` - Moving or renaming files
+- `search` - Searching for information
+- `execute` - Running commands or code
+- `think` - Internal reasoning or planning
+- `fetch` - Retrieving external data
+- `switch_mode` - Switching the session mode
+- `other` - Other tool types (default)
+
 </Expandable>
 
 Tool kinds help Clients choose appropriate icons and optimize how they display tool execution progress.
@@ -74,13 +81,19 @@ Tool kinds help Clients choose appropriate icons and optimize how they display t
   [File locations](#following-the-agent) affected by this tool call
 </ParamField>
 
-<ParamField path="rawInput" type="object">
-  The raw input parameters sent to the tool
+<ParamField path="rawInput" type="unknown">
+  The raw input sent to the tool. Any JSON value is accepted, including objects,
+  arrays, strings, numbers, booleans, and `null`.
 </ParamField>
 
-<ParamField path="rawOutput" type="object">
-  The raw output returned by the tool
+<ParamField path="rawOutput" type="unknown">
+  The raw output returned by the tool. Any JSON value is accepted, including
+  objects, arrays, strings, numbers, booleans, and `null`.
 </ParamField>
+
+Omission and `null` are equivalent for `rawInput` and `rawOutput`.
+On an initial tool call, both mean no value is provided. On a tool call
+update, both leave the previously reported value unchanged.
 
 ## Updating
 
@@ -317,6 +330,8 @@ Tool calls can report file locations they're working with, enabling Clients to i
   The absolute file path being accessed or modified
 </ParamField>
 
-<ParamField path="line" type="number">
-  Optional line number within the file
+<ParamField path="line" type="integer | null">
+  Optional line number within the file, represented as an unsigned 32-bit
+  integer. Omission and `null` are equivalent and mean no specific line was
+  provided.
 </ParamField>

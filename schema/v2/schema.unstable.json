@@ -5080,9 +5080,17 @@
       "x-method": "session/set_config_option"
     },
     "PromptResponse": {
-      "description": "Response acknowledging that a user prompt was accepted.\n\nThis response does not indicate that the agent has finished processing.\nProcessing and completion are reported through `state_update` session updates.\n\nSee protocol docs: [Prompt Accepted](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#2-prompt-accepted)",
+      "description": "Response acknowledging that a user prompt was inserted into the ACP conversation.\n\nThis response does not indicate that the prompt was merely received or queued, nor that the\nagent has finished processing it.\nProcessing and completion are reported through `state_update` session updates.\n\nSee protocol docs: [Prompt Accepted](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#2-prompt-accepted)",
       "type": "object",
       "properties": {
+        "messageId": {
+          "description": "Identifies the user message inserted into the ACP conversation.\n\nRequired and non-null. Omission and explicit `null` are both invalid.\n\nThe corresponding user-message session update carries this same identifier and may arrive\nbefore or after this response. Agents must echo the message during the live session, but are\nnot required to retain it. If retained and replayed, the message keeps this identifier.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/MessageId"
+            }
+          ]
+        },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
           "type": ["object", "null"],
@@ -5090,8 +5098,13 @@
           "additionalProperties": true
         }
       },
+      "required": ["messageId"],
       "x-side": "agent",
       "x-method": "session/prompt"
+    },
+    "MessageId": {
+      "description": "Unique identifier for a message within a session.",
+      "type": "string"
     },
     "StartNesResponse": {
       "description": "Response to `nes/start`.",
@@ -6256,10 +6269,6 @@
           "additionalProperties": true
         }
       ]
-    },
-    "MessageId": {
-      "description": "Unique identifier for a message within a session.",
-      "type": "string"
     },
     "ContentChunk": {
       "description": "A streamed item of message content.",
@@ -7669,7 +7678,7 @@
                 },
                 {
                   "title": "ResumeSessionRequest",
-                  "description": "Resumes an existing session.\n\nThe agent should resume the session context, allowing the conversation\nto continue. If `replayFrom` is set, the agent should replay\nconversation history before responding.",
+                  "description": "Resumes an existing session.\n\nThe agent should resume the session context, allowing the conversation\nto continue. If `replayFrom` is set, the agent should replay\nretained conversation history before responding.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/ResumeSessionRequest"
@@ -7696,7 +7705,7 @@
                 },
                 {
                   "title": "PromptRequest",
-                  "description": "Processes a user prompt within a session.\n\nThis request accepts the prompt:\n- Receives user messages with optional context (files, images, etc.)\n- Returns once the prompt is accepted\n\nAfter acceptance, the Agent reports the accepted user message,\nprocessing state, output, tool calls, and completion through\n`session/update` notifications.\n\nSee protocol docs: [Prompt Lifecycle](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle)",
+                  "description": "Processes a user prompt within a session.\n\nAcceptance means insertion into the ACP conversation:\n- Receives user messages with optional context (files, images, etc.)\n- Returns the inserted user message's ID without waiting for processing to finish\n\nThe Agent reports the user message with the same ID through `session/update`;\nthis notification may arrive before or after the response. Processing state,\noutput, tool calls, and completion are also reported through session updates.\n\nSee protocol docs: [Prompt Lifecycle](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/PromptRequest"
@@ -8518,7 +8527,7 @@
       "x-method": "session/fork"
     },
     "ResumeSessionRequest": {
-      "description": "Request parameters for resuming an existing session.\n\nResumes an existing session and optionally replays prior conversation\nhistory according to `replayFrom`.",
+      "description": "Request parameters for resuming an existing session.\n\nResumes an existing session and optionally replays retained conversation\nhistory according to `replayFrom`.",
       "type": "object",
       "properties": {
         "sessionId": {
@@ -8556,7 +8565,7 @@
           "x-deserialize-skip-invalid-items": true
         },
         "replayFrom": {
-          "description": "Inclusive cursor describing where conversation replay should begin.\n\nOptional. Omitted or `null` both mean the Agent should resume without\nreplaying previous conversation history. Replay cursors are inclusive:\nreplay includes the position identified by the cursor. Supplying\n`{ \"type\": \"start\" }` means the Agent should replay the whole\nconversation before responding.",
+          "description": "Inclusive cursor describing where conversation replay should begin.\n\nOptional. Omitted or `null` both mean the Agent should resume without\nreplaying previous conversation history. Replay cursors are inclusive:\nreplay includes the position identified by the cursor. Supplying\n`{ \"type\": \"start\" }` means the Agent should replay all retained\nconversation history before responding.",
           "anyOf": [
             {
               "$ref": "#/$defs/ReplayFrom"
@@ -8582,7 +8591,7 @@
       "description": "Inclusive cursor describing where replayed session history should begin.\n\nReplay includes the position identified by the cursor.",
       "anyOf": [
         {
-          "description": "Replay the whole conversation from its first replayable entry.",
+          "description": "Replay all retained conversation history from its first replayable entry.",
           "type": "object",
           "properties": {
             "type": {
@@ -8633,7 +8642,7 @@
       ]
     },
     "ReplayFromStart": {
-      "description": "Inclusive replay cursor requesting replay from the start of the conversation.",
+      "description": "Inclusive replay cursor requesting replay from the start of retained conversation history.",
       "type": "object",
       "properties": {
         "_meta": {
