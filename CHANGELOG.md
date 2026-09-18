@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.9.1](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.9.0...v1.9.1) - 2026-09-18
+
+### Fixed
+
+- *(rust)* accept null for defaultable payloads ([#2178](https://github.com/agentclientprotocol/agent-client-protocol/pull/2178))
+
 ## [1.9.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.8.0...v1.9.0) - 2026-09-18
 
 ### Added
