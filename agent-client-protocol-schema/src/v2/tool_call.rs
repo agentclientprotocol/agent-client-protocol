@@ -995,6 +995,7 @@ impl ToolCallLocation {
 mod tests {
     use super::*;
     use crate::MaybeUndefined;
+    use serde_json::{from_value, json, to_value};
 
     #[test]
     fn tool_call_serializes_as_upsert() {
@@ -1110,6 +1111,84 @@ mod tests {
         let mut stored = ToolCallUpdate::new("tc_1").meta(meta);
         stored.apply_update(ToolCallUpdate::new("tc_1").meta(None::<Meta>));
         assert_eq!(stored.meta, MaybeUndefined::Null);
+    }
+
+    #[test]
+    fn tool_call_wire_patches_preserve_omitted_fields_and_replace_values() {
+        let initial = json!({
+            "toolCallId": "tc_1",
+            "_meta": {"source": "replay", "opaque": {"sequence": 1}}
+        });
+        let mut stored: ToolCallUpdate = from_value(initial.clone()).unwrap();
+        // A metadata-only first update must not invent content or a status.
+        assert_eq!(to_value(&stored).unwrap(), initial);
+
+        let populated = json!({
+            "toolCallId": "tc_1",
+            "name": "read_file",
+            "title": "Reading configuration",
+            "kind": "read",
+            "status": "in_progress",
+            "content": [{
+                "type": "content",
+                "content": {
+                    "type": "text",
+                    "text": "old",
+                    "_meta": {"source": "tool"}
+                }
+            }],
+            "locations": [{"path": "/workspace/config.json", "line": 3}],
+            "rawInput": {"path": "/workspace/config.json"},
+            "rawOutput": {"text": "old"}
+        });
+        stored.apply_update(from_value(populated.clone()).unwrap());
+        let mut expected = populated;
+        expected["_meta"] = initial["_meta"].clone();
+        assert_eq!(to_value(&stored).unwrap(), expected);
+
+        for (field, empty) in [
+            ("content", json!([])),
+            ("locations", json!([])),
+            ("rawInput", json!({})),
+            ("rawOutput", json!({})),
+            ("_meta", json!({})),
+        ] {
+            let original = expected[field].clone();
+            // Empty values replace rather than merge; null remains distinct.
+            // Restoring the value also checks that clearing is not permanent.
+            for replacement in [empty, json!(null), original] {
+                stored.apply_update(
+                    from_value(json!({"toolCallId": "tc_1", (field): replacement})).unwrap(),
+                );
+                expected[field] = replacement;
+                assert_eq!(to_value(&stored).unwrap(), expected, "patching {field}");
+
+                stored.apply_update(from_value(json!({"toolCallId": "tc_1"})).unwrap());
+                assert_eq!(to_value(&stored).unwrap(), expected, "omitting {field}");
+            }
+        }
+    }
+
+    #[test]
+    fn tool_call_wire_patches_preserve_unknown_statuses() {
+        for status in ["deferred", "_awaiting_review"] {
+            let mut stored = ToolCallUpdate::new("tc_1").status(ToolCallStatus::InProgress);
+            stored
+                .apply_update(from_value(json!({"toolCallId": "tc_1", "status": status})).unwrap());
+            let expected_status = MaybeUndefined::Value(ToolCallStatus::Other(status.to_owned()));
+            assert_eq!(stored.status, expected_status);
+
+            // An unrelated patch must not reset a future or extension status
+            // to a known value, including a success or failure state.
+            stored.apply_update(
+                from_value(json!({"toolCallId": "tc_1", "title": "Still waiting"})).unwrap(),
+            );
+            assert_eq!(stored.status, expected_status);
+            assert_eq!(
+                to_value(&stored).unwrap(),
+                json!({"toolCallId": "tc_1", "title": "Still waiting", "status": status})
+            );
+        }
     }
 
     #[test]

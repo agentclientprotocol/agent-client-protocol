@@ -354,6 +354,7 @@ impl TerminalOutputChunk {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::{from_value, json, to_value};
 
     #[test]
     fn terminal_reference_meta_is_optional_and_content_scoped() {
@@ -449,6 +450,51 @@ mod tests {
             stored.exit_status,
             MaybeUndefined::Value(TerminalExitStatus::new().signal("SIGTERM"))
         );
+    }
+
+    #[test]
+    fn terminal_wire_patches_preserve_omitted_fields_and_replace_values() {
+        let initial = json!({
+            "terminalId": "term_1",
+            "_meta": {"source": "replay", "opaque": {"sequence": 1}}
+        });
+        let mut stored: TerminalUpdate = from_value(initial.clone()).unwrap();
+        // A metadata-only first update leaves output and exit status unknown.
+        assert_eq!(to_value(&stored).unwrap(), initial);
+
+        let populated = json!({
+            "terminalId": "term_1",
+            "command": "cargo check",
+            "cwd": "/workspace/project",
+            "output": {"data": "b2xk", "_meta": {"source": "snapshot"}},
+            "exitStatus": {"exitCode": 0, "_meta": {"observed": true}}
+        });
+        stored.apply_update(from_value(populated.clone()).unwrap());
+        let mut expected = populated;
+        expected["_meta"] = initial["_meta"].clone();
+        assert_eq!(to_value(&stored).unwrap(), expected);
+
+        for (field, empty) in [
+            ("command", json!("")),
+            ("output", json!({"data": ""})),
+            ("exitStatus", json!({})),
+            ("_meta", json!({})),
+        ] {
+            let original = expected[field].clone();
+            // Nested objects are replacements too: an empty output snapshot
+            // must not inherit snapshot metadata, and an empty exit-status
+            // object means exited with unknown details, not exit code zero.
+            for replacement in [empty, json!(null), original] {
+                stored.apply_update(
+                    from_value(json!({"terminalId": "term_1", (field): replacement})).unwrap(),
+                );
+                expected[field] = replacement;
+                assert_eq!(to_value(&stored).unwrap(), expected, "patching {field}");
+
+                stored.apply_update(from_value(json!({"terminalId": "term_1"})).unwrap());
+                assert_eq!(to_value(&stored).unwrap(), expected, "omitting {field}");
+            }
+        }
     }
 
     #[test]
