@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.9.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.8.0...v1.9.0) - 2026-09-18
+
+### Added
+
+- *(unstable-v2)* return message ID on prompt insertion ([#2175](https://github.com/agentclientprotocol/agent-client-protocol/pull/2175))
+- *(unstable)* add v1 session notice capability ([#2171](https://github.com/agentclientprotocol/agent-client-protocol/pull/2171))
+
+### Other
+
+- *(unstable-v2)* cover stateful tool and terminal patches ([#2174](https://github.com/agentclientprotocol/agent-client-protocol/pull/2174))
+
 ## [1.8.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.7.0...v1.8.0) - 2026-09-17
 
 ### Added
