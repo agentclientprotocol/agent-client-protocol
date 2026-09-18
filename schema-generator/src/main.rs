@@ -327,6 +327,34 @@ mod schema_annotation_tests {
     const SKIP_INVALID_ITEMS_EXTENSION: &str = "x-deserialize-skip-invalid-items";
 
     #[test]
+    fn generated_schema_includes_optional_tool_call_names() {
+        let schema = root_schema_value();
+        let definitions = [
+            "ToolCallUpdate",
+            #[cfg(not(feature = "unstable_protocol_v2"))]
+            "ToolCall",
+        ];
+
+        for definition in definitions {
+            let name = property_schema(&schema, definition, "name");
+            assert_eq!(name["type"], serde_json::json!(["string", "null"]));
+            assert!(
+                !def_schema(&schema, definition)["required"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|field| field == "name"),
+                "{definition}.name must remain optional"
+            );
+            assert!(
+                !name["description"].as_str().unwrap().contains("UNSTABLE"),
+                "{definition}.name must be stable"
+            );
+            assert_bool_extension(name, DEFAULT_ON_ERROR_EXTENSION);
+        }
+    }
+
+    #[test]
     fn generated_schema_includes_tolerant_deserialization_extensions() {
         let schema = root_schema_value();
 

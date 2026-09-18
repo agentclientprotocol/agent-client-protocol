@@ -26,6 +26,7 @@ When the language model requests a tool invocation, the Agent **SHOULD** report 
     "update": {
       "sessionUpdate": "tool_call_update",
       "toolCallId": "call_001",
+      "name": "read_file",
       "title": "Reading configuration file",
       "kind": "read",
       "status": "pending"
@@ -36,6 +37,14 @@ When the language model requests a tool invocation, the Agent **SHOULD** report 
 
 <ParamField path="toolCallId" type="ToolCallId" required>
   A unique identifier for this tool call within the session
+</ParamField>
+
+<ParamField path="name" type="string">
+  The optional programmatic name of the invoked tool, such as `read_file`.
+  Agents **SHOULD** include it in the first report when available and **SHOULD
+  NOT** change it later except to correct metadata. Names are opaque,
+  informational metadata: they do not advertise a capability or grant
+  authorization.
 </ParamField>
 
 <ParamField path="title" type="string">
@@ -90,6 +99,9 @@ the field to leave it unchanged or set it to `null` to clear it. Use
 `tool_call_content_chunk` when a tool produces content incrementally and the
 Client should append each item instead of replacing the whole `content`
 collection. Display-only terminal bytes use `terminal_output_chunk` instead.
+For `name` specifically, omission leaves the existing name unchanged, `null`
+clears it, and a string sets or replaces it. On a new tool call, omission and
+`null` both result in no name.
 
 ## Updating
 

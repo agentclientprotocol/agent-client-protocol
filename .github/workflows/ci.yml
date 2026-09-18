@@ -33,7 +33,7 @@ jobs:
           echo "version=$msrv" >> "$GITHUB_OUTPUT"
 
       - name: Setup Rust
-        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659
+        uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f
         with:
           toolchain: ${{ steps.msrv.outputs.version }}
 
@@ -55,7 +55,7 @@ jobs:
           cache: "npm"
 
       - name: Setup Rust
-        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659
+        uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f
         with:
           toolchain: nightly,stable
           components: rustfmt,clippy
@@ -67,7 +67,7 @@ jobs:
         run: npm run format:check
 
       - name: Check for typos
-        uses: crate-ci/typos@4d9c206a77c041268485162b8e2579ad7a5cb9a3
+        uses: crate-ci/typos@d43b6c087ac471e2ea7b8af622ff15f05c0c365b
         with:
           config: ./typos.toml
 
@@ -144,12 +144,12 @@ jobs:
           persist-credentials: false
 
       - name: Setup Rust
-        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659
+        uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f
         with:
           toolchain: stable
 
       - name: Install cargo-hack
-        uses: taiki-e/install-action@ba47c86ac325773530516bb756137ac718732518
+        uses: taiki-e/install-action@9534c84618278caac52cb373bb164ed464dbd8af
         with:
           tool: cargo-hack
 

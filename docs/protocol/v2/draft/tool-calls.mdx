@@ -49,7 +49,9 @@ When the language model requests a tool invocation, the Agent **SHOULD** report 
   identifies which tool is being used; `title` describes this invocation for
   users, while `kind` provides a coarse presentation category. Agents **SHOULD**
   include the name the first time they report a `toolCallId` when it is
-  available.
+  available and **SHOULD NOT** change it later except to correct metadata. Names
+  are opaque, informational metadata and do not advertise a capability or grant
+  authorization.
 </ParamField>
 
 <ParamField path="kind" type="ToolKind">
@@ -99,6 +101,9 @@ the field to leave it unchanged or set it to `null` to clear it. Use
 `tool_call_content_chunk` when a tool produces content incrementally and the
 Client should append each item instead of replacing the whole `content`
 collection. Display-only terminal bytes use `terminal_output_chunk` instead.
+For `name` specifically, omission leaves the existing name unchanged, `null`
+clears it, and a string sets or replaces it. On a new tool call, omission and
+`null` both result in no name.
 
 ## Updating
 
