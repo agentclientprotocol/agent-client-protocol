@@ -196,6 +196,7 @@
               "rfds/plan-operations",
               "rfds/get-auth-state",
               "rfds/session-compaction",
+              "rfds/model-request-relationships",
               "rfds/session-notices"
             ]
           },
