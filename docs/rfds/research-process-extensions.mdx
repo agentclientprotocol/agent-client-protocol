@@ -1,0 +1,232 @@
+---
+title: "Research Process Extensions"
+---
+
+Author(s): [@n24q02m](https://github.com/n24q02m)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Add an optional **research state** capability to ACP so that long-horizon research sessions — literature reviews, experiments, comparative analyses — can expose their working structure as first-class protocol objects instead of leaving it buried in the transcript:
+
+- a **task graph**: typed nodes (`question`, `task`, `evidence`, `claim`, `blocker`) connected by typed edges (`answers`, `supports`, `contradicts`, `depends_on`),
+- an append-only **decision log**: what was decided, why, and which alternatives were rejected,
+- explicit **claim → evidence** links so every conclusion stays auditable,
+
+plus two methods to record and hydrate this state, so any ACP client can render a live research workspace and any ACP agent can drive one.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+ACP today models a session as a linear stream: `session/prompt` turns with `session/update` notifications (message chunks, tool calls, plans). Nothing in the protocol captures the _structure_ of an investigation. An agent doing multi-hour research — tracking open questions, recording why option B was rejected, linking conclusions to supporting evidence — can only express that structure as prose or as private tool state.
+
+This causes three concrete problems:
+
+1. **No portable rendering.** Clients that want to show a task graph or decision log must parse free-form agent output. Every client reimplements its own heuristics and none are reliable.
+2. **No interoperable format between harnesses.** Agent workspaces and research harnesses that keep research state (Paseo's proposed research-workspace plugin, holaOS workspaces, Dr. Claw's research lab, and similar projects) each define private schemas. An agent's research trail cannot move between them, and a client that supports one cannot render another.
+3. **Opaque sessions.** A user joining a session mid-flight — or a teammate reviewing it later — faces thousands of transcript lines in which the decisions and their justifications are indistinguishable from noise.
+
+A structured, agent-owned research state fixes all three with a small protocol surface.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+Four additions, all optional and backwards compatible.
+
+### 1. Capability declaration
+
+Agents that maintain research state add a `researchState` object to `agentCapabilities` in the `initialize` response:
+
+```json
+{
+  "protocolVersion": 1,
+  "agentCapabilities": {
+    "researchState": {}
+  }
+}
+```
+
+The object is empty in this proposal and reserved for future options (e.g. supported node types, persistence hints).
+
+### 2. Research state objects
+
+Four object types, all identified by agent-assigned IDs unique within a session.
+
+**ResearchNode** — one vertex of the investigation:
+
+```json
+{
+  "nodeId": "n_7",
+  "type": "question",
+  "title": "Does provider X support streaming tool calls?",
+  "details": "Optional longer description.",
+  "status": "open"
+}
+```
+
+- `type`: `question` | `task` | `evidence` | `claim` | `blocker`
+- `status`: `open` | `resolved` | `rejected` | `blocked` (optional)
+
+**ResearchEdge** — a directed, typed relation between two nodes:
+
+```json
+{
+  "edgeId": "e_3",
+  "fromNodeId": "n_7",
+  "toNodeId": "n_2",
+  "relation": "answers"
+}
+```
+
+- `relation`: `answers` | `supports` | `contradicts` | `depends_on`
+
+**DecisionEntry** — an immutable, append-only record of a decision:
+
+```json
+{
+  "decisionId": "d_1",
+  "decision": "Store research state on the agent side",
+  "rationale": "It survives client restarts and session/load.",
+  "alternatives": ["Client-side store", "Flat file per workspace"],
+  "nodeId": "n_2"
+}
+```
+
+`alternatives` preserves rejected options so the "why" trail is never lost; corrections are new entries, never edits. `nodeId` optionally anchors the decision in the graph.
+
+**Claim → evidence** needs no fifth object: a `claim` node, its `evidence` nodes, and `supports`/`contradicts` edges between them express it on the wire.
+
+### 3. `session/record_research` (agent → client request)
+
+The agent pushes mutations to the client's mirror:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 12,
+  "method": "session/record_research",
+  "params": {
+    "sessionId": "sess_789xyz",
+    "operations": [
+      {
+        "kind": "upsertNode",
+        "node": { "nodeId": "n_7", "type": "question", "title": "..." }
+      },
+      {
+        "kind": "addEdge",
+        "edge": {
+          "edgeId": "e_3",
+          "fromNodeId": "n_7",
+          "toNodeId": "n_2",
+          "relation": "answers"
+        }
+      },
+      {
+        "kind": "recordDecision",
+        "decision": {
+          "decisionId": "d_1",
+          "decision": "...",
+          "rationale": "...",
+          "alternatives": []
+        }
+      },
+      { "kind": "removeNode", "nodeId": "n_9" }
+    ]
+  }
+}
+```
+
+The client applies the operations in order and responds:
+
+```json
+{ "jsonrpc": "2.0", "id": 12, "result": { "stateVersion": 5 } }
+```
+
+Semantics:
+
+- `upsertNode` / `addEdge` are idempotent upserts by ID; `recordDecision` appends; `removeNode` also removes edges referencing the node.
+- Clients MAY reject operations that reference unknown nodes with a protocol error.
+- The returned `stateVersion` is a client-maintained monotonic counter; agents MAY include their own `stateVersion` in requests so clients can detect divergence.
+
+### 4. `session/get_research_state` (client → agent request)
+
+On `session/load`, `session/fork`, or after a detected gap, the client hydrates the full state from the agent's store:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 13,
+  "method": "session/get_research_state",
+  "params": { "sessionId": "sess_789xyz" }
+}
+```
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 13,
+  "result": {
+    "stateVersion": 5,
+    "nodes": [],
+    "edges": [],
+    "decisions": []
+  }
+}
+```
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+A user starts a literature review. The editor's research pane fills in live: questions branch into tasks, evidence accumulates under claims, and the decision log records each fork in the road with its rejected alternatives. A teammate can join the session at any point and see _where the investigation stands_, not just what was last said.
+
+Because the state is wire-defined, it is also portable: a Paseo daemon, a Dr. Claw lab session, or a holaOS-hosted agent can all feed the same pane in the same format, and a session moved between clients keeps its research trail. Reviewers audit a paper draft by walking claim → evidence edges instead of reading scrollback.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+Protocol surface (all behind the `researchState` capability):
+
+1. `ResearchNode`, `ResearchEdge`, `DecisionEntry` schema types; `upsertNode` | `addEdge` | `recordDecision` | `removeNode` operation kinds.
+2. `session/record_research` (agent → client) and `session/get_research_state` (client → agent) methods.
+3. Schema-generator entries plus TypeScript, Rust, Python, Kotlin, and Java library updates.
+
+Phases:
+
+1. Land the schema types and the capability flag (behind the unstable feature flag first, per the contribution policy).
+2. Reference implementation: one agent fixture plus one client pane to prove the render loop end to end.
+3. Stabilize based on feedback from research-tool adopters.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+**Q: Why not extend the existing `plan` update instead?**
+
+The plan is a flat, ordered task list scoped to near-term turn progress. Research state is a graph with provenance (typed edges, immutable decisions, evidence links) that lives across the whole session. They also differ in lifetime and semantics: plan entries are rewritten as the agent re-plans; decisions are append-only. Keeping them separate keeps the plan simple.
+
+**Q: Why request/response rather than a `session/update` variant?**
+
+Mutations benefit from acknowledgement: the client may persist, assign its own state version, or reject an invalid reference, and the agent gets a durable confirmation point. A fire-and-forget variant would force clients to reconcile unacknowledged deltas. That said, if maintainers prefer a notification-shaped design, the same operations could ride `session/update` — see the alternatives below.
+
+**Q: Who owns the state — agent or client?**
+
+The agent owns the store; the client mirrors it for rendering. This matches the existing `plan` model, keeps state available to the agent across `session/load`, and lets the client stay a thin, disposable view. The single-writer rule (only the agent mutates) avoids concurrency issues; `stateVersion` lets either side detect divergence and re-hydrate.
+
+**Q: Why not put this behind MCP tools instead?**
+
+Research state is session-scoped presentation and provenance, not a tool invocation. Behind MCP, every client would need custom integration with every agent's private tool schema; as an ACP capability, every ACP client gets a standard research pane for every research-capable agent.
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+- **`session/update` variant (`researchState`)**: viable, kept as a fallback if maintainers prefer notifications over requests; loses per-operation acknowledgement and rejection semantics.
+- **Client-owned store with agent-side tools**: inverts ownership — state would not survive client switches, would not hydrate on `session/load` without extra machinery, and would multiply schemas per client.
+- **Plain Markdown artifacts**: flexible but unstructured; clients cannot render a graph from prose reliably, which is exactly the status quo problem.
+
+## Revision history
+
+- 2026-09-20: Initial version.
