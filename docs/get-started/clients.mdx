@@ -48,6 +48,7 @@ The following projects implement ACP directly, connect ACP agents to other envir
 - [Nori CLI](https://github.com/tilework-tech/nori-cli)
 - [pool](https://github.com/poolsideai/pool)
 - [Toad](https://www.batrachian.ai/)
+- [Intelligent Terminal](https://github.com/microsoft/intelligent-terminal) — Windows Terminal fork with native agent integration, driving ACP-compatible agent CLIs over stdio
 
 ## Desktop and Web
 
@@ -96,6 +97,9 @@ The following projects implement ACP directly, connect ACP agents to other envir
 - [ACP Components](https://github.com/zvzuola/acp-components) - A universal frontend component library for building AI Agent interfaces based on the ACP
 - [ACP Inspector](https://github.com/newioapp/acp-inspector) — desktop debugger/inspector for the ACP protocol (macOS, Linux)
 - [Newio](https://newio.app) — a multi-channel, multi-player agent native messaging app
+- [ClawX](https://github.com/ValueCell-ai/ClawX) — desktop GUI for OpenClaw agents, with a chat UI that talks to them over ACP
+- [OmniGet](https://github.com/tonhowtf/omniget) — desktop app for local coding agents with permissions, undo, jobs, and a built-in MCP server (Windows, macOS, Linux)
+- [Paca](https://github.com/Paca-AI/paca) — self-hosted, AI-native project management where humans and ACP agents share the same board and sprints
 
 ## Notebook and data tools
 
@@ -133,6 +137,7 @@ These mobile-first tools bring ACP and related coding-agent workflows to phones 
 - [Zooid](https://github.com/zooid-ai/zooid) (Matrix) - coding agent runtime paired with a Matrix client/ACP bridge for interacting with agents
 - [Pomerium AgentOps](https://github.com/pomerium/agentops) (Slack)
 - [VibeAround](https://github.com/jazzenchen/VibeAround) (Telegram, Feishu/Lark, Discord, Slack, WeChat, WhatsApp, DingTalk, WeCom, QQ) — continue desktop/CLI agent sessions from messaging apps through channel plugins
+- [cc-connect](https://github.com/chenhg5/cc-connect) (Feishu/Lark, DingTalk, Slack, Telegram, Discord, LINE, WeCom) — bridges local coding agents to messaging platforms
 
 ## Frameworks
 
@@ -146,6 +151,7 @@ These frameworks add ACP support through dedicated integrations or adapters:
 - [LlamaIndex](https://github.com/AstraBert/workflows-acp) — through the [`workflows-acp`](https://github.com/AstraBert/workflows-acp) adapter for Agent Workflows
 - [LLMling-Agent](https://github.com/phil65/llmling-agent) — with built-in ACP support for running agents through ACP clients
 - [Mastra](https://mastra.ai/docs/agents/acp) — through the [`@mastra/acp`](https://mastra.ai/docs/agents/acp) package for wrapping external ACP agents as tools or subagents
+- [AgentOS](https://github.com/rivet-dev/agentos) — with built-in ACP agents, and sessions created, managed, and resumed over ACP
 
 ## Connectors
 
@@ -159,3 +165,4 @@ These connectors bridge ACP into other environments and transport layers:
 - [OpenClaw](https://docs.openclaw.ai/cli/acp) — through the [`openclaw acp`](https://docs.openclaw.ai/cli/acp) bridge to an OpenClaw Gateway
 - [stdio Bus](https://stdiobus.com) – deterministic stdio-based kernel providing transport-level routing for ACP/MCP-style agent protocols.
 - [acpdbg](https://github.com/phimage/acpdbg) — bridges LLDB crashes (C/C++/Rust/Swift) to any ACP coding agent for root-cause analysis and live debugging
+- [Octop](https://github.com/TencentCloud/Octop) — self-hosted multi-user AI assistant with bidirectional ACP support for IDE and terminal agents
