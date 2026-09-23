@@ -1766,8 +1766,16 @@ pub struct SessionInfo {
     /// Additional workspace roots reported for this session. Each path must be absolute.
     ///
     /// When present, this is the complete ordered additional-root list reported
-    /// by the Agent. Omitted and empty values are equivalent: the response
-    /// reports no additional roots.
+    /// by the Agent. An explicit empty array reports that the session has no
+    /// additional roots. Omitting the field means the Agent is not reporting
+    /// additional-root state: Clients MUST NOT treat an omitted field as proof
+    /// that the session has no additional roots. When the field is present,
+    /// Clients MUST NOT merge it with prior values or infer additional roots
+    /// from agent-specific state.
+    // This v1 binding deserializes an omitted field as an empty `Vec`, so a
+    // reader here cannot tell "not reported" from "reports none"; the v2
+    // binding models the field as `Option<Vec<_>>`. Changing the v1 type is a
+    // breaking change and is left as is.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]

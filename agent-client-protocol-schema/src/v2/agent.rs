@@ -1882,12 +1882,16 @@ pub struct SessionInfo {
     /// Additional workspace roots reported for this session. Each path must be absolute.
     ///
     /// When present, this is the complete ordered additional-root list reported
-    /// by the Agent. Omitted and empty values are equivalent: the response
-    /// reports no additional roots.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    /// by the Agent. An explicit empty array reports that the session has no
+    /// additional roots. Omitting the field means the Agent is not reporting
+    /// additional-root state: Clients MUST NOT treat an omitted field as proof
+    /// that the session has no additional roots. When the field is present,
+    /// Clients MUST NOT merge it with prior values or infer additional roots
+    /// from agent-specific state. `null` is equivalent to an omitted key.
+    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub additional_directories: Vec<AbsolutePath>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub additional_directories: Option<Vec<AbsolutePath>>,
 
     /// Human-readable title for the session
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -1918,7 +1922,7 @@ impl SessionInfo {
         Self {
             session_id: session_id.into(),
             cwd: cwd.into(),
-            additional_directories: vec![],
+            additional_directories: None,
             title: None,
             updated_at: None,
             meta: None,
@@ -1932,7 +1936,8 @@ impl SessionInfo {
         I: IntoIterator<Item = P>,
         P: Into<AbsolutePath>,
     {
-        self.additional_directories = additional_directories.into_iter().map(Into::into).collect();
+        self.additional_directories =
+            Some(additional_directories.into_iter().map(Into::into).collect());
         self
     }
 
@@ -6247,7 +6252,43 @@ mod test_serialization {
             }))
             .unwrap()
             .additional_directories,
-            Vec::<AbsolutePath>::new()
+            None
+        );
+    }
+
+    #[test]
+    fn test_session_info_additional_directories_omitted_is_not_empty() {
+        assert_eq!(
+            serde_json::from_value::<SessionInfo>(json!({
+                "sessionId": "sess_abc123",
+                "cwd": "/home/user/project",
+                "additionalDirectories": null
+            }))
+            .unwrap()
+            .additional_directories,
+            None
+        );
+        assert_eq!(
+            serde_json::from_value::<SessionInfo>(json!({
+                "sessionId": "sess_abc123",
+                "cwd": "/home/user/project",
+                "additionalDirectories": []
+            }))
+            .unwrap()
+            .additional_directories,
+            Some(Vec::new())
+        );
+        assert_eq!(
+            serde_json::to_value(
+                SessionInfo::new("sess_abc123", "/home/user/project")
+                    .additional_directories(Vec::<PathBuf>::new())
+            )
+            .unwrap(),
+            json!({
+                "sessionId": "sess_abc123",
+                "cwd": "/home/user/project",
+                "additionalDirectories": []
+            })
         );
     }
     #[test]
