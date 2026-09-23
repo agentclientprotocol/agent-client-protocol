@@ -9,6 +9,35 @@ A prompt starts or contributes to foreground work in a session. The [Agent](/pro
 
 Before sending prompts, Clients **MUST** first complete the [initialization](/protocol/v2/initialization) phase and [session setup](/protocol/v2/session-setup).
 
+## Session Updates
+
+Agents send `session/update` notifications to report streamed content, tool activity, and changes to session state. The `sessionUpdate` field inside `params.update` identifies the variant:
+
+| `sessionUpdate` value       | Description                                                                                                                  |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `user_message_chunk`        | A streamed chunk of a user message.                                                                                          |
+| `user_message`              | Creates or updates a user message identified by `messageId`.                                                                 |
+| `agent_message_chunk`       | A streamed chunk of the Agent's response.                                                                                    |
+| `agent_message`             | Creates or updates an Agent message identified by `messageId`.                                                               |
+| `agent_thought_chunk`       | A streamed chunk of the Agent's reasoning.                                                                                   |
+| `agent_thought`             | Creates or updates an Agent reasoning message identified by `messageId`.                                                     |
+| `state_update`              | A change to the Agent's [foreground work state](#session-states).                                                            |
+| `tool_call_content_chunk`   | Appends a [content chunk to a tool call](/protocol/v2/tool-calls#streaming-content).                                         |
+| `tool_call_update`          | Creates or updates a [tool call](/protocol/v2/tool-calls#reporting).                                                         |
+| `terminal_update`           | Creates or updates an [Agent-owned terminal](/protocol/v2/tool-calls#display-only-terminals).                                |
+| `terminal_output_chunk`     | Appends output bytes to an [Agent-owned terminal](/protocol/v2/tool-calls#display-only-terminals).                           |
+| `plan_update`               | Creates or updates the [content of a plan](/protocol/v2/agent-plan) identified by ID.                                        |
+| `available_commands_update` | The set of [available slash commands](/protocol/v2/slash-commands) is ready or has changed.                                  |
+| `config_option_update`      | The session's [configuration options](/protocol/v2/session-config-options#from-the-agent) have changed.                      |
+| `session_info_update`       | [Session metadata](/protocol/v2/session-list#updating-session-metadata), such as the title or last update time, has changed. |
+| `usage_update`              | The session's [context window usage and cumulative cost](#session-usage-updates).                                            |
+
+This is the complete set of standard variants defined in the current [`SessionUpdate` schema](/protocol/v2/schema#sessionupdate), which describes each payload in detail. The walkthrough below illustrates common uses of these updates.
+
+The protocol also supports [custom and future variants](/protocol/v2/extensibility#enum-and-tagged-union-variants). Clients that do not understand an update should preserve its raw payload when storing, replaying, proxying, or forwarding session history, and otherwise ignore it or display it generically.
+
+Session updates are not limited to prompt-driven foreground work. For example, Agents may advertise commands after creating a session, and background activity may emit updates while the Agent is [idle](#session-states).
+
 ## Prompt Lifecycle
 
 A typical prompt-driven flow enables rich interactions between the user, Agent, and any connected tools.
@@ -31,7 +60,7 @@ sequenceDiagram
 
     loop While foreground work is in progress
         Note right of Agent: LLM responds with<br/>content/tool calls
-        Agent->>Client: session/update (plan)
+        Agent->>Client: session/update (plan_update)
         Agent->>Client: session/update (agent_message)
 
         opt Tool calls requested
