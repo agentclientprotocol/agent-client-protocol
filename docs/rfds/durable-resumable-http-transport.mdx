@@ -1,0 +1,268 @@
+---
+title: "Durable & Resumable HTTP/WS Transport"
+---
+
+Author(s): [alexhancock](https://github.com/alexhancock)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+The [Streamable HTTP & WebSocket transport](./streamable-http-websocket-transport) explicitly defers durability to a later revision [here](https://github.com/agentclientprotocol/agent-client-protocol/blob/main/docs/rfds/streamable-http-websocket-transport.mdx#durability-and-reliability-expectations): there is no message sequencing, no stream resumption, and no defined reconnect story in the first RFD for the transport. Every client or server that uses remote ACP today has to implement that layer.
+
+This RFD closes this gap by defining the following:
+
+- **A stream cursor.** Every server→client message on a stream carries a monotonic, opaque `cursor`. It is emitted as the SSE `id:` field for Streamable HTTP and inside the JSON-RPC envelope (via `_meta`) for both profiles, so WebSocket gets the same primitive.
+- **Resumption by cursor.** A reconnecting client re-opens a stream with `Last-Event-ID` (or an equivalent handshake field on WebSocket) and the server replays the messages it missed before resuming live delivery.
+- **Defined reconnect semantics.** Clients reconnect to the same `Acp-Connection-Id` with a jittered backoff and a cap on number of total retries. The protocol says when a resume must succeed, when the server must refuse it, and how the client recovers when it does — by falling back to `session/resume`.
+
+Session state recovery is deliberately **out of scope** as v2 of ACP already solves it generally: `session/resume` with a `replayFrom` cursor rebuilds conversation history, and `state_update` reports whether foreground work is running. This RFD is only about not losing messages on the wire.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+The transport RFD's "Durability and reliability expectations" section is honest about the v1 position: sessions survive disconnects and cookie-based affinity routes a client back to the right backend, but **in-flight messages are not replayed**, and reconnect, retry, and liveness detection are all "the implementer's responsibility."
+
+It was always our plan to do a followup RFD to address the challenges below:
+
+**Messages are silently lost.** A dropped SSE stream loses every notification emitted while the client was away. Because ACP streams carry the actual work product — `agent_message_chunk`, `tool_call_update`, `terminal_output_chunk` — a five-second network blip leaves a permanently corrupted transcript. There is no way for the client to even detect that it happened.
+
+**Every SDK builds its own reconnect layer.** Feedback from a team running ACP internally is that automatic reconnection had to be solved in their own client layer "as an extension of the existing protocol." That work is being duplicated in every SDK, incompatibly, and none of it can be tested against a shared spec.
+
+**A client cannot tell why it disconnected.** This is the subtle one. There are two failure modes with opposite recovery paths:
+
+1. **The connection broke.** The agent is fine and the turn is very likely still running. The right move is to reattach and keep streaming.
+2. **The agent broke.** The process died, restarted, or lost its sandbox. The turn is gone. The right move is to rebuild state and tell the user the turn was interrupted.
+
+Both look identical from the client-side today: a closed socket.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+### 1. A stream cursor on every server→client message
+
+Each stream (connection-scoped and session-scoped) is an ordered sequence. The server assigns each message it writes an opaque `cursor` that is monotonically increasing **within that stream**. Cursors are not comparable across streams and clients MUST NOT parse them.
+
+The cursor is surfaced in two places, so both connectivity profiles get it:
+
+- **Streamable HTTP:** as the SSE `id:` field. This drives [Last-Event-ID](https://http.dev/last-event-id) to work with no custom client machinery. This is a convention SSE consumers in the agent ecosystem already expect.
+- **Both profiles:** in the JSON-RPC envelope under `_meta`, as `_meta["acp/cursor"]`. WebSocket has no SSE framing, and a cursor in the envelope survives proxying and logging.
+
+```
+event: message
+id: 1J8kQ2
+data: {"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"sess_abc123",
+data:  "update":{"sessionUpdate":"agent_message_chunk","messageId":"msg_7f3a","content":{...}},
+data:  "_meta":{"acp/cursor":"1J8kQ2"}}}
+```
+
+Cursors are transport-level positions, not protocol entities. They are explicitly **not** the same thing as `messageId` or `toolCallId`, which identify domain objects and are not ordered. Reusing a `messageId` as a resume point would only work for streams that consist entirely of message chunks; a real stream interleaves tool calls, terminal output, plan updates, and state changes, and a resume point has to be able to name a position between any two of them.
+
+### 2. Resumption by cursor
+
+A client that has been disconnected re-opens the stream and asks for everything after the last cursor it durably processed.
+
+- **Streamable HTTP:** `GET /acp` with `Last-Event-ID: <cursor>`, alongside the existing `Acp-Connection-Id` (and `Acp-Session-Id` for session-scoped streams).
+- **WebSocket:** the client sends a `stream/resume` control message as its first frame after the upgrade, carrying the per-stream cursors it wants to resume from.
+
+The server then either replays or refuses:
+
+- **Replay.** The server writes every message after `<cursor>` in order, then continues live. Replayed messages are the same as the originals, including their cursors, so replay is idempotent and a client that reconnects twice converges on the same state.
+- **Refuse.** If the cursor is unknown, is older than the server's retention window, or belongs to a connection the server no longer has, the server responds `409 Conflict` (Streamable HTTP) or a `stream/resume_failed` message with a `reason` (WebSocket). It MUST NOT silently open a live stream, because that is the failure that loses messages today.
+
+On refusal the client falls back to the v2 path it already has: `session/resume` with `replayFrom` to rebuild history, then continue. Resumption is an optimization over that fallback, never a replacement for it.
+
+Servers advertise support and their retention window at `initialize`, so a client knows whether to bother buffering cursors:
+
+```json
+{
+  "capabilities": {
+    "transport": {
+      "resumable": { "retentionMessages": 1000, "retentionSeconds": 300 }
+    }
+  }
+}
+```
+
+Absent `transport.resumable`, the transport behaves exactly as it does today and clients go straight to `session/resume`. Retention is a floor, not a promise of unbounded history: a server only needs to hold enough to cover a plausible network blip, and the `session/resume` fallback covers everything beyond it.
+
+#### Resumption Message Flow
+
+The flow below shows a session-scoped stream dropping mid-turn, the client resuming by
+cursor, and — on the next drop — the server refusing the cursor and the client falling
+back to `session/resume`. Streamable HTTP is shown; the WebSocket profile is identical
+with `stream/resume` in place of `Last-Event-ID` and `stream/resume_failed` in place of
+`409 Conflict`.
+
+```
+Client                             Server
+  │                                    │
+  │  ═══ Capability Negotiation ═══    │
+  │                                    │
+  │─── POST /acp ─────────────────────>│  { method: "initialize", id: 1 }
+  │                                    │
+  │<────── 200 OK ─────────────────────│  { id: 1, result: { capabilities: { transport: {
+  │    Acp-Connection-Id: <conn_id>    │    resumable: { retentionMessages: 1000,
+  │                                    │                 retentionSeconds: 300 } } } } }
+  │                                    │
+  │  ═══ Streaming a Turn ═══          │  (session-scoped SSE stream for sess_abc123)
+  │                                    │
+  │─── GET /acp ──────────────────────>│  Open session-scoped SSE stream
+  │    Acp-Connection-Id: <conn_id>    │
+  │    Acp-Session-Id: sess_abc123     │
+  │    Accept: text/event-stream       │
+  │              ┌─────────────────────│  (SSE stream open)
+  │              │                     │
+  │─── POST /acp ─────────────────────>│  { method: "session/prompt", id: 2, ... }
+  │<────── 202 Accepted ───────────────│
+  │              │                     │
+  │<─────────────│─ SSE event ─────────│  id: c001  state_update (running)
+  │<─────────────│─ SSE event ─────────│  id: c002  agent_message_chunk
+  │<─────────────│─ SSE event ─────────│  id: c003  tool_call
+  │              │                     │  client durably processed through c003
+  │              ╳                     │
+  │       ╳╳╳ stream drops ╳╳╳         │  server keeps running the turn and buffering
+  │                                    │  (c004, c005, ... written to replay buffer)
+  │                                    │
+  │  ═══ Resume by Cursor (success) ═══│
+  │                                    │
+  │  (backoff + jitter, same conn_id)  │
+  │─── GET /acp ──────────────────────>│  Resume the same stream from last cursor
+  │    Acp-Connection-Id: <conn_id>    │
+  │    Acp-Session-Id: sess_abc123     │
+  │    Last-Event-ID: c003             │
+  │    Accept: text/event-stream       │
+  │              ┌─────────────────────│  200 OK (SSE stream re-opened)
+  │              │                     │
+  │<─────────────│─ SSE event ─────────│  id: c004  tool_call_update    ┐ replay,
+  │<─────────────│─ SSE event ─────────│  id: c005  agent_message_chunk ┘ same cursors
+  │<─────────────│─ SSE event ─────────│  state_update (running)  ← REQUIRED on resume,
+  │              │                     │    before live delivery continues
+  │<─────────────│─ SSE event ─────────│  id: c006  agent_message_chunk ┐ live
+  │<─────────────│─ SSE event ─────────│  id: c007  state_update (idle) ┘ delivery
+  │              │                     │
+  │       ╳╳╳ stream drops ╳╳╳         │  agent process dies; replay buffer is lost
+  │                                    │
+  │  ═══ Resume Refused → Fallback ═══ │
+  │                                    │
+  │─── GET /acp ──────────────────────>│  { Last-Event-ID: c007 }
+  │    Acp-Connection-Id: <conn_id>    │
+  │    Acp-Session-Id: sess_abc123     │
+  │    Last-Event-ID: c007             │
+  │                                    │
+  │<────── 409 Conflict ───────────────│  Cursor unknown / outside retention.
+  │                                    │  MUST NOT silently open a live stream.
+  │                                    │
+  │─── POST /acp ─────────────────────>│  { method: "session/resume", id: 3,
+  │    Acp-Connection-Id: <conn_id>    │    params: { sessionId: "sess_abc123",
+  │                                    │              replayFrom: <protocol cursor> } }
+  │<────── 202 Accepted ───────────────│
+  │                                    │
+  │─── GET /acp ──────────────────────>│  Open a fresh session-scoped stream
+  │    Acp-Session-Id: sess_abc123     │  (no Last-Event-ID)
+  │              ┌─────────────────────│  (SSE stream open)
+  │<─────────────│─ SSE event ─────────│  id: d001  session history replay (v2 replayFrom)
+  │<─────────────│─ SSE event ─────────│  id: d002  state_update (idle, stopReason:
+  │              │                     │            "cancelled") ← turn was interrupted
+  │              │                     │
+```
+
+### 3. Defined reconnect semantics
+
+Reconnection moves from "implementer's responsibility" to specified behavior that SDKs will implement by default.
+
+**Clients** MUST attempt to reconnect on unexpected stream closure, reusing the same `Acp-Connection-Id`, with backoff, jitter, and a bounded attempt count. They MUST NOT reconnect after a `DELETE`, after an explicit `session/close`, or after the server signals a terminal condition.
+
+**Servers** MUST treat a connection as durable beyond the lifetime of any one stream. A closed stream is not a closed connection: an agent MUST NOT cancel in-flight work or tear down sessions because a stream dropped. Both are only torn down on explicit `DELETE`, or after a server-defined grace period during which no stream has been re-established (TODO: think if this should be ACP-wide or agent server specific)
+
+**Liveness** gets a keepalive so half-open connections are detectable rather than permanently silent. Servers send SSE comment frames or WebSocket pings at a negotiated interval; a client that sees no traffic for five intervals treats the stream as dead and reconnects. This also keeps intermediaries from idling out long-lived streams, which is the other reason these connections die in practice.
+
+### 4. Answering "is my turn still alive?" on reconnect
+
+This is the question the cursor alone does not answer, and it is where v2 does most of the work for us.
+
+In v2, foreground progress is reported entirely through notifications: `state_update` with `running`, `idle`, or `requires_action`, with the stop reason on the idle transition. That means turn status is already a message on the stream rather than the state of a pending request — which is precisely what makes it recoverable.
+
+So the rule is simple: **after a successful resume, the server MUST send a `state_update` reflecting current session state before resuming live delivery**, even if that state has not changed. A resumed client therefore always learns, without asking:
+
+- `running` → the connection broke, the turn survived, keep streaming.
+- `idle` with `stopReason` → the turn ended while you were away; the stop reason says how.
+- `requires_action` → work is blocked on you, most likely on a permission request you never received.
+
+The two failure modes are now distinguishable from a single notification, and the ambiguity is gone.
+
+Because this leans on `state_update`, full fidelity to this RFD is a **v2** story. For **v1** deployments, where the pending `session/prompt` request _is_ the turn, the same information is available as an optional `_meta` field on the resume acknowledgment:
+
+```json
+{ "_meta": { "acp/turnState": { "state": "running", "promptRequestId": 3 } } }
+```
+
+This is deliberately advisory — `_meta` is the right home for something that must be safely ignorable by peers that predate it — and it lets v1 clients get the same signal without a breaking change. v2 implementations SHOULD use `state_update` and treat the `_meta` form as a compatibility shim.
+
+(TODO - Decide if we event want to do the above for v1)
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+A network blip is invisible. The stream drops, the client reconnects with its last cursor, missed chunks replay in order, and a `state_update` confirms the turn is still running. The user sees a continuous transcript and does not experience a UX gap aside from the time they were disconnected.
+
+An agent crash is comprehensible to a client using the HTTP/WS transport instead of mysterious. The client reconnects, the server refuses the cursor, the client falls back to `session/resume`, and the idle `state_update` explains the turn was interrupted. The user gets an accurate message rather than a hang or a silently truncated response.
+
+SDK users delete code. Reconnect, backoff, and replay live in the transport layer against a spec with a shared conformance suite in the SDK, instead of being reimplemented per consumer. Remote ACP over a flaky network stops being something each client has to harden on its own.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+1. **Cursor emission.** Add cursor assignment per stream and emit it as SSE `id:` plus `_meta["acp/cursor"]`. Purely additive; clients that ignore it are unaffected.
+2. **Replay buffer.** Add a bounded per-stream ring buffer behind the `transport.resumable` capability, with `Last-Event-ID` handling and `409` on unsatisfiable resume.
+3. **WebSocket parity.** Define the `stream/resume` and `stream/resume_failed` control messages so both profiles share one model.
+4. **Reconnect and keepalive in SDKs.** Implement backoff, cursor tracking, and keepalive timeouts in the Rust SDK first, then TypeScript, with the `session/resume` fallback wired in.
+5. **State-on-resume.** Require the post-resume `state_update` for v2, and specify the `_meta["acp/turnState"]` shim for v1.
+6. **Conformance tests.** A shared suite covering mid-stream disconnect, expired cursor, duplicate resume, agent restart, and half-open connections.
+
+Steps 1–3 are server-side and additive. Step 4 is where the client-side duplication actually gets deleted.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Why a separate transport cursor instead of reusing `messageId` or `toolCallId`?
+
+Because a resume point has to name a position in a stream, and those name domain objects. A stream interleaves message chunks, tool-call updates, plan updates, and state changes; only some of them have IDs, and none of those IDs are ordered relative to each other. There is also no defined answer to "what comes after this `messageId`" without the server maintaining a separate index. A monotonic per-stream cursor answers that directly, and keeping the two concepts separate means a future change to message identity does not become a transport-compatibility problem.
+
+That said, a server is free to _derive_ cursors from whatever it already tracks. The requirement is only that they are opaque, ordered within the stream, and stable across replay.
+
+### Why both `Last-Event-ID` and a cursor in the envelope?
+
+`Last-Event-ID` is the reason this works with existing SSE tooling — it is widely supported and requires nothing custom on the client. But WebSocket has no SSE framing, and cursors that only exist in HTTP framing are lost the moment a message is proxied, logged, or persisted. Carrying it in `_meta` as well gives one model across both profiles at the cost of a few bytes.
+
+### How does this interact with `session/resume` and `replayFrom`?
+
+They operate at different layers and compose. Cursor resumption is transport-level: replay the exact messages this stream missed. `session/resume` with `replayFrom` is protocol-level: rebuild conversation history from session state. Cursor resumption is the fast path, `session/resume` is the always-available fallback when it fails. A client should try the cursor first and fall back on refusal.
+
+### What if the server can't buffer messages?
+
+Then it omits `transport.resumable` and nothing changes for it. Clients see no resumability advertised and go straight to `session/resume` on reconnect — the behavior in the transport RFD today. This matters for serverless deployments, where an in-memory replay buffer may not survive between invocations.
+
+### Does the replay buffer have to be durable?
+
+No. In-memory is fine and is the expected implementation. The buffer exists to cover network blips, not process restarts — if the agent process dies, its in-flight work is gone anyway and the cursor should be refused so the client rebuilds from session state. Making replay buffers durable would be solving a different problem.
+
+### Is this v1 or v2?
+
+The transport mechanics — cursors, replay, reconnect, keepalive — are version-independent and additive, so they can land in both. The turn-status half is only fully clean in v2, where `state_update` exists; v1 gets the advisory `_meta["acp/turnState"]` shim instead (TODO - Decide if we can just go only v2)
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+- **Client-side reconnect only, no protocol change.** This is the status quo, and it cannot work: no amount of client cleverness recovers a message the server already dropped on the floor.
+- **Reuse `messageId` as the cursor.** Rejected for the reasons above — it cannot name positions between non-message updates.
+- **A dedicated `session/status` method to poll turn state after reconnect.** Rejected as redundant in v2: `state_update` already carries exactly this, and requiring it on resume costs one notification instead of a new method and a round trip.
+- **Durable, persistent replay logs.** Rejected as scope creep. It solves agent-restart recovery, which `session/resume` already handles at the right layer, and it would make the transport far more expensive to implement.
+
+## Revision history
+
+<!-- If there have been major updates to this RFD, you can include the git revisions and a summary of the changes. -->
