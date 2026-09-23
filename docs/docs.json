@@ -196,7 +196,8 @@
               "rfds/plan-operations",
               "rfds/get-auth-state",
               "rfds/session-compaction",
-              "rfds/session-notices"
+              "rfds/session-notices",
+              "rfds/lsp-proxy"
             ]
           },
           {
