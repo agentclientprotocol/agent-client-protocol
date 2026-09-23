@@ -195,7 +195,6 @@
               "rfds/custom-llm-endpoint",
               "rfds/plan-operations",
               "rfds/get-auth-state",
-              "rfds/session-compaction",
               "rfds/session-notices"
             ]
           },
@@ -222,6 +221,10 @@
                 ]
               }
             ]
+          },
+          {
+            "group": "Preview",
+            "pages": ["rfds/session-compaction"]
           },
           {
             "group": "Completed",
