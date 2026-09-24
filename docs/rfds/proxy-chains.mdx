@@ -253,9 +253,11 @@ Note: A conductor can be configured to run in either terminal mode (expecting `i
 
 ### MCP-over-ACP support
 
-Proxies that provide MCP servers use the [MCP-over-ACP transport](./mcp-over-acp) mechanism. The conductor always advertises `mcpCapabilities.acp: true` to proxies and handles bridging for agents that don't support native ACP transport.
+The [MCP-over-ACP modernization audit](./mcp-over-acp#modernization-audit-mcp-2026-07-28) targets stateless MCP 2026-07-28 only. The connection-oriented implementation described here is a draft checkpoint; its connect/disconnect lifecycle is not a compatibility requirement for the stabilized transport.
 
-All proxies MUST respond to `proxy/initialize` with the MCP-over-ACP capability enabled. When the conductor sends `proxy/initialize`, proxies should be prepared to handle `mcp/connect`, `mcp/message`, and `mcp/disconnect` messages for any MCP servers they provide.
+Proxies that provide MCP servers use the [MCP-over-ACP transport](./mcp-over-acp) mechanism. Capability advertising reflects what the downstream chain can consume; the conductor does not unconditionally add MCP-over-ACP support. In the Rust SDK, an explicit `McpOverAcpPolyfill` proxy can be placed immediately before an HTTP-capable agent that lacks native ACP MCP support.
+
+A forwarding proxy preserves downstream MCP capabilities. A bridging proxy may advertise ACP MCP support only when it can adapt to a transport its successor supports. Proxies that publish MCP servers should be prepared to handle `mcp/connect`, `mcp/message`, and `mcp/disconnect` for those servers as soon as their declarations are forwarded, including while session setup is still in progress. See the transport RFD for the v1 and draft-v2 capability shapes.
 
 ### Message reference
 
@@ -409,9 +411,9 @@ The key advantage is that proxy-based extensions work with any ACP-compatible ag
 
 Proxies can provide MCP servers via [MCP-over-ACP transport](./mcp-over-acp), enabling a single proxy to add context, provide tools, and handle callbacks with full awareness of the conversation state.
 
-The conductor always advertises `mcpCapabilities.acp: true` to proxies, regardless of whether the downstream agent supports it natively. When the agent doesn't support ACP transport, the conductor handles bridging transparently - spawning stdio shims or HTTP servers that the agent connects to normally, then relaying messages to/from the proxy's ACP channel.
+When the agent supports native ACP MCP transport, no adapter is needed. Otherwise, the chain can include an explicit adapter to a transport the agent does support. The Rust SDK's HTTP polyfill rewrites MCP declarations to local HTTP endpoints and relays messages to and from the providing proxy's ACP channel. Each logical MCP session retains its own native connection, even when sessions share a listening endpoint.
 
-This means proxy authors don't need to worry about agent compatibility - they implement MCP-over-ACP, and the conductor handles the rest.
+Tool-providing proxies implement MCP-over-ACP without managing those alternative transports themselves. The chain's owner chooses an appropriate adapter, and the resulting advertised capability tells providers whether ACP MCP servers can be consumed.
 
 ```mermaid
 sequenceDiagram
