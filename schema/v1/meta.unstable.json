@@ -40,9 +40,7 @@
     "terminal_release": "terminal/release",
     "terminal_wait_for_exit": "terminal/wait_for_exit",
     "terminal_kill": "terminal/kill",
-    "mcp_connect": "mcp/connect",
     "mcp_message": "mcp/message",
-    "mcp_disconnect": "mcp/disconnect",
     "elicitation_create": "elicitation/create",
     "elicitation_complete": "elicitation/complete"
   },

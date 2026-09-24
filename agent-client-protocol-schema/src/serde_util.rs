@@ -135,10 +135,6 @@ mod default_on_null_tests {
                 $check::<v1::StartNesRequest>();
                 $check::<v1::CloseNesResponse>();
             }
-            #[cfg(feature = "unstable_mcp_over_acp")]
-            {
-                $check::<v1::DisconnectMcpResponse>();
-            }
 
             #[cfg(feature = "unstable_protocol_v2")]
             {
@@ -162,10 +158,6 @@ mod default_on_null_tests {
                 {
                     $check::<v2::StartNesRequest>();
                     $check::<v2::CloseNesResponse>();
-                }
-                #[cfg(feature = "unstable_mcp_over_acp")]
-                {
-                    $check::<v2::DisconnectMcpResponse>();
                 }
             }
         };

@@ -1931,7 +1931,7 @@ starting with '$/' it is free to ignore the notification."
                 "document/didClose" => self.agent.get("DidCloseDocumentNotification").unwrap(),
                 "document/didSave" => self.agent.get("DidSaveDocumentNotification").unwrap(),
                 "document/didFocus" => self.agent.get("DidFocusDocumentNotification").unwrap(),
-                "mcp/message" => self.agent.get("MessageMcpRequest").unwrap(),
+                "mcp/message" => self.agent.get("MessageMcpNotification").unwrap(),
                 _ => panic!("Introduced a method? Add it here :)"),
             }
         }
@@ -1957,9 +1957,7 @@ starting with '$/' it is free to ignore the notification."
                 "elicitation/complete" => {
                     self.client.get("CompleteElicitationNotification").unwrap()
                 }
-                "mcp/connect" => self.client.get("ConnectMcpRequest").unwrap(),
                 "mcp/message" => self.client.get("MessageMcpRequest").unwrap(),
-                "mcp/disconnect" => self.client.get("DisconnectMcpRequest").unwrap(),
                 _ => panic!("Introduced a method? Add it here :)"),
             }
         }

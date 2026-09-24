@@ -419,86 +419,43 @@ The client should disconnect, if it doesn't support this version.
 
 This capability is not part of the spec yet, and may be removed or changed at any point.
 
-Exchanges an MCP-over-ACP message.
+Sends an MCP-over-ACP notification.
 
 #### <span class="font-mono">MessageMcpNotification</span>
 
 **UNSTABLE**
 
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Notification parameters for `mcp/message`.
-
-This is used when the wrapped MCP message is a notification and the outer JSON-RPC
-envelope has no `id`.
+Notification for an active request, sent from provider to consumer.
+Includes subscription acknowledgements and updates.
 
 **Type:** Object
 
 **Properties:**
 
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="connectionId" type={<a href="#mcpconnectionid">McpConnectionId</a>} required>
-  The MCP-over-ACP connection this message is sent on.
+<ResponseField name="_meta" type={"object | null"}>
+  ACP extension metadata (not inner MCP params._meta); null is equivalent to
+  omission.
 </ResponseField>
 <ResponseField name="method" type={"string"} required>
   The inner MCP method name.
 </ResponseField>
-<ResponseField name="params" type={"object | null"} >
-  Optional inner MCP params.
-
-If omitted or set to `null`, the inner MCP message has no params.
-
+<ResponseField name="params" type={"object | null"}>
+  Optional inner MCP params; null is equivalent to omission.
 </ResponseField>
-
-#### <span class="font-mono">MessageMcpRequest</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Request parameters for `mcp/message`.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
-
+<ResponseField
+  name="requestId"
+  type={<a href="#mcprequestid">McpRequestId</a>}
+  required
+>
+  The identifier of the active inner MCP request.
 </ResponseField>
-<ResponseField name="connectionId" type={<a href="#mcpconnectionid">McpConnectionId</a>} required>
-  The MCP-over-ACP connection this message is sent on.
+<ResponseField
+  name="serverId"
+  type={<a href="#mcpserveracpid">McpServerAcpId</a>}
+  required
+>
+  The declared ACP MCP server handling the associated request.
 </ResponseField>
-<ResponseField name="method" type={"string"} required>
-  The inner MCP method name.
-</ResponseField>
-<ResponseField name="params" type={"object | null"} >
-  Optional inner MCP params.
-
-If omitted or set to `null`, the inner MCP message has no params.
-
-</ResponseField>
-
-#### <span class="font-mono">MessageMcpResponse</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Response to `mcp/message`.
-
-This is the inner MCP response result payload. Any JSON value is valid.
 
 <a id="nes-accept"></a>
 ### <span class="font-mono">nes/accept</span>
@@ -1885,117 +1842,6 @@ future ACP variants.
 </Expandable>
 </ResponseField>
 
-<a id="mcp-connect"></a>
-### <span class="font-mono">mcp/connect</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Opens an MCP-over-ACP connection.
-
-#### <span class="font-mono">ConnectMcpRequest</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Request parameters for `mcp/connect`.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="serverId" type={<a href="#mcpserveracpid">McpServerAcpId</a>} required>
-  The ACP MCP server ID that was provided by the component declaring the MCP server.
-</ResponseField>
-
-#### <span class="font-mono">ConnectMcpResponse</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Response to `mcp/connect`.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="connectionId" type={<a href="#mcpconnectionid">McpConnectionId</a>} required>
-  The unique identifier for this MCP-over-ACP connection.
-</ResponseField>
-
-<a id="mcp-disconnect"></a>
-### <span class="font-mono">mcp/disconnect</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Closes an MCP-over-ACP connection.
-
-#### <span class="font-mono">DisconnectMcpRequest</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Request parameters for `mcp/disconnect`.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="connectionId" type={<a href="#mcpconnectionid">McpConnectionId</a>} required>
-  The MCP-over-ACP connection to close.
-</ResponseField>
-
-#### <span class="font-mono">DisconnectMcpResponse</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Response to `mcp/disconnect`.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
-
-</ResponseField>
-
 <a id="client-mcp-message"></a>
 ### <span class="font-mono">mcp/message</span>
 
@@ -2005,84 +1851,47 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 Exchanges an MCP-over-ACP message.
 
-#### <span class="font-mono">MessageMcpNotification</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Notification parameters for `mcp/message`.
-
-This is used when the wrapped MCP message is a notification and the outer JSON-RPC
-envelope has no `id`.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="connectionId" type={<a href="#mcpconnectionid">McpConnectionId</a>} required>
-  The MCP-over-ACP connection this message is sent on.
-</ResponseField>
-<ResponseField name="method" type={"string"} required>
-  The inner MCP method name.
-</ResponseField>
-<ResponseField name="params" type={"object | null"} >
-  Optional inner MCP params.
-
-If omitted or set to `null`, the inner MCP message has no params.
-
-</ResponseField>
-
 #### <span class="font-mono">MessageMcpRequest</span>
 
 **UNSTABLE**
 
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Request parameters for `mcp/message`.
+Request parameters for `mcp/message`, sent from consumer to provider.
 
 **Type:** Object
 
 **Properties:**
 
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="connectionId" type={<a href="#mcpconnectionid">McpConnectionId</a>} required>
-  The MCP-over-ACP connection this message is sent on.
+<ResponseField name="_meta" type={"object | null"}>
+  ACP extension metadata (not inner MCP params._meta); null is equivalent to
+  omission.
 </ResponseField>
 <ResponseField name="method" type={"string"} required>
   The inner MCP method name.
 </ResponseField>
-<ResponseField name="params" type={"object | null"} >
-  Optional inner MCP params.
-
-If omitted or set to `null`, the inner MCP message has no params.
-
+<ResponseField name="params" type={"object | null"}>
+  Optional inner MCP params; null is equivalent to omission.
+</ResponseField>
+<ResponseField
+  name="requestId"
+  type={<a href="#mcprequestid">McpRequestId</a>}
+  required
+>
+  The caller-generated identifier for the inner MCP request.
+</ResponseField>
+<ResponseField
+  name="serverId"
+  type={<a href="#mcpserveracpid">McpServerAcpId</a>}
+  required
+>
+  The declared ACP MCP server receiving this request.
 </ResponseField>
 
 #### <span class="font-mono">MessageMcpResponse</span>
 
 **UNSTABLE**
 
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Response to `mcp/message`.
-
-This is the inner MCP response result payload. Any JSON value is valid.
+Response to `mcp/message`: transparent inner MCP result. MCP errors use
+the outer ACP JSON-RPC error envelope.
 
 <a id="session-request_permission"></a>
 ### <span class="font-mono">session/request_permission</span>
@@ -4995,16 +4804,6 @@ Supplying `\{\}` means the agent supports stdio MCP server transports.
 
 </ResponseField>
 
-## <span class="font-mono">McpConnectionId</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-A unique identifier for an active MCP-over-ACP connection.
-
-**Type:** `string`
-
 ## <span class="font-mono">McpHttpCapabilities</span>
 
 Capabilities for HTTP MCP server transports.
@@ -5023,6 +4822,16 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
+
+## <span class="font-mono">McpRequestId</span>
+
+**UNSTABLE**
+
+Identifies an inner MCP request active against a server on this ACP connection.
+Generated by the caller and preserved unchanged by proxies, independently of
+the outer ACP JSON-RPC request ID.
+
+**Type:** `string`
 
 ## <span class="font-mono">McpServer</span>
 
@@ -5174,7 +4983,7 @@ This capability is not part of the spec yet, and may be removed or changed at an
 ACP transport configuration for MCP.
 
 The MCP server is provided by an ACP component and communicates over the ACP channel
-using `mcp/connect`, `mcp/message`, and `mcp/disconnect`.
+using `mcp/message`.
 
 **Type:** Object
 
@@ -5208,8 +5017,7 @@ This capability is not part of the spec yet, and may be removed or changed at an
 Unique identifier for an MCP server using the ACP transport.
 
 The value is opaque and generated by the ACP component providing the MCP server. It is
-used by `mcp/connect` to route connection requests back to the component that declared the
-server.
+used by `mcp/message` to route requests to the component that declared the server.
 
 **Type:** `string`
 

@@ -31,9 +31,7 @@
   "clientMethods": {
     "session_request_permission": "session/request_permission",
     "session_update": "session/update",
-    "mcp_connect": "mcp/connect",
     "mcp_message": "mcp/message",
-    "mcp_disconnect": "mcp/disconnect",
     "elicitation_create": "elicitation/create",
     "elicitation_complete": "elicitation/complete"
   },
