@@ -194,8 +194,7 @@
               "rfds/custom-llm-endpoint",
               "rfds/plan-operations",
               "rfds/end-turn-token-usage",
-              "rfds/get-auth-state",
-              "rfds/session-notices"
+              "rfds/get-auth-state"
             ]
           },
           {
@@ -224,7 +223,7 @@
           },
           {
             "group": "Preview",
-            "pages": ["rfds/session-compaction"]
+            "pages": ["rfds/session-compaction", "rfds/session-notices"]
           },
           {
             "group": "Completed",

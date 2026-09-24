@@ -151,23 +151,32 @@ and accessibility model.
 
 > Tell me more about your implementation. What is your detailed implementation plan?
 
-1. Add `Notice` and `NoticeSeverity` types in both versions behind the
-   `unstable_session_notices` Rust feature.
-2. Add the `notice` variant to both `SessionUpdate` unions and an optional
-   `notices: NoticeCapabilities` object to v1 `ClientSessionCapabilities` behind
-   the same feature. Do not add a v2 capability.
-3. Document the presentation, dismissal, severity, replay semantics, and
-   non-conversational semantics in both protocol versions, plus v1 capability
-   gating and the agent-message fallback.
-4. Add schema tests for capability advertisement, serialization, nullable-field
-   semantics, open severity, version-specific unsupported-update behavior,
-   malformed known-update handling, and cross-version notice wire parity. The
-   schema crate intentionally provides no built-in v1/v2 conversion layer.
+### Implemented
 
-Capability gating and the recommendation against replay are part of the
-protocol contract rather than something the schema crate can enforce. Runtime
-SDKs and example Agents and Clients can adopt notices separately after
-consuming the schema surface.
+The protocol implementation landed in
+[PR #2004](https://github.com/agentclientprotocol/agent-client-protocol/pull/2004),
+with the v1 Client capability added in
+[PR #2171](https://github.com/agentclientprotocol/agent-client-protocol/pull/2171):
+
+- Both protocol versions define `Notice`, the open `NoticeSeverity` string
+  enum, and the `notice` variant in their `SessionUpdate` unions.
+- V1 defines the optional `ClientSessionCapabilities.notices` capability;
+  v2 does not require a capability.
+- Generated unstable schemas and draft protocol guides include the feature.
+  See the [v1 guide](/protocol/v1/draft/prompt-turn#session-notices) and
+  [v2 guide](/protocol/v2/draft/prompt-lifecycle#session-notices).
+
+The feature remains behind `unstable_session_notices` and is not included in
+the stable schemas. Preview does not stabilize the wire contract. The schema
+crate intentionally provides no built-in v1/v2 conversion layer.
+
+V1 runtime implementations have also landed:
+
+| Implementation       | Reference                                                                                                                                                                          | Behavior                                                                                                                                                        |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Zed                  | [PR #64606](https://github.com/zed-industries/zed/pull/64606)                                                                                                                      | Advertises support with ACP beta enabled; presents session-local, dismissible notices outside the transcript, with generic presentation for unknown severities. |
+| Claude Agent adapter | [PR #1155](https://github.com/agentclientprotocol/claude-agent-acp/pull/1155), included in [v0.81.1](https://github.com/agentclientprotocol/claude-agent-acp/releases/tag/v0.81.1) | Gates live advisory notices on the Client capability, retains fallback behavior, and keeps notices separate from history and task/error control flow.           |
+| Codex adapter        | [PR #532](https://github.com/agentclientprotocol/codex-acp/pull/532), included in [v1.13.1](https://github.com/agentclientprotocol/codex-acp/releases/tag/v1.13.1)                 | Gates advisory notices on the Client capability, preserves legacy fallback behavior, and excludes notices from loaded history.                                  |
 
 ## Frequently asked questions
 
@@ -220,6 +229,7 @@ turning notices into a second elicitation system.
 
 ## Revision history
 
+- 2026-09-24: Moved to Preview
 - 2026-09-17: Added a v1 Client capability so Agents can choose between notices
   and an agent-message fallback. V2 remains capability-free.
 - 2026-08-20: Updated the implementation plan for the schema-only architecture,
