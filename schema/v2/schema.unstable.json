@@ -9521,9 +9521,72 @@
       }
     },
     "MessageMcpResponse": {
-      "description": "**UNSTABLE**\n\nResponse to `mcp/message`: transparent inner MCP result. MCP errors use\nthe outer ACP JSON-RPC error envelope.",
+      "description": "**UNSTABLE**\n\nThe successful outer ACP `mcp/message` response carries exactly one\ninner MCP outcome: an opaque result (including JSON null), or an MCP error.\nOuter ACP errors are reserved for binding and runtime failures.\n\nBoth branches require their carrier key. An error must be a non-null object.\nCarrier `_meta` is optional; null is equivalent to omission.",
+      "anyOf": [
+        {
+          "title": "Result",
+          "description": "An opaque inner MCP result.",
+          "type": "object",
+          "properties": {
+            "result": {
+              "description": "Required, even if JSON null."
+            },
+            "_meta": {
+              "description": "Optional ACP carrier metadata.",
+              "type": ["object", "null"],
+              "x-deserialize-default-on-error": true,
+              "additionalProperties": true
+            }
+          },
+          "required": ["result"],
+          "additionalProperties": false
+        },
+        {
+          "title": "Error",
+          "description": "A structured inner MCP error.",
+          "type": "object",
+          "properties": {
+            "error": {
+              "description": "Required, non-null MCP error object.",
+              "allOf": [
+                {
+                  "$ref": "#/$defs/McpError"
+                }
+              ]
+            },
+            "_meta": {
+              "description": "Optional ACP carrier metadata.",
+              "type": ["object", "null"],
+              "x-deserialize-default-on-error": true,
+              "additionalProperties": true
+            }
+          },
+          "required": ["error"],
+          "additionalProperties": false
+        }
+      ],
       "x-side": "client",
       "x-method": "mcp/message"
+    },
+    "McpError": {
+      "description": "**UNSTABLE**\n\nAn inner MCP error, distinct from an outer ACP binding or runtime error.\n\n`code` and `message` are required and non-null. `data` is optional;\nexplicit `null` is preserved separately from an omitted key.",
+      "type": "object",
+      "properties": {
+        "code": {
+          "description": "Inner MCP error code; never an ACP error code.",
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "description": "Inner MCP error message.",
+          "type": "string"
+        },
+        "data": {
+          "description": "Optional error data; explicit null is retained."
+        }
+      },
+      "required": ["code", "message"],
+      "additionalProperties": true
     },
     "ClientNotification": {
       "description": "A JSON-RPC notification object.",

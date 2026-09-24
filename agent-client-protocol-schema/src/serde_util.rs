@@ -347,8 +347,9 @@ mod default_on_null_tests {
 
         #[cfg(feature = "unstable_mcp_over_acp")]
         {
-            let mcp: v1::MessageMcpResponse = serde_json::from_value(Value::Null).unwrap();
-            assert_eq!(serde_json::to_value(mcp).unwrap(), Value::Null);
+            let mcp: v1::MessageMcpResponse =
+                serde_json::from_value(json!({"result": null})).unwrap();
+            assert_eq!(serde_json::to_value(mcp).unwrap(), json!({"result": null}));
         }
 
         #[cfg(feature = "unstable_protocol_v2")]
@@ -359,8 +360,8 @@ mod default_on_null_tests {
             #[cfg(feature = "unstable_mcp_over_acp")]
             {
                 let mcp: crate::v2::MessageMcpResponse =
-                    serde_json::from_value(Value::Null).unwrap();
-                assert_eq!(serde_json::to_value(mcp).unwrap(), Value::Null);
+                    serde_json::from_value(json!({"result": null})).unwrap();
+                assert_eq!(serde_json::to_value(mcp).unwrap(), json!({"result": null}));
             }
         }
     }

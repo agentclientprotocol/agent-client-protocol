@@ -45,6 +45,8 @@
 //! For the complete protocol specification and documentation, visit
 //! <https://agentclientprotocol.com>.
 
+#[cfg(feature = "unstable_mcp_over_acp")]
+mod mcp;
 pub mod rpc;
 mod serde_util;
 pub mod v1;

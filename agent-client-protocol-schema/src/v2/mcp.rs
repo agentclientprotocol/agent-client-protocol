@@ -4,12 +4,13 @@ use std::sync::Arc;
 
 use derive_more::{Display, From};
 use serde::{Deserialize, Serialize};
-use serde_json::value::RawValue;
 use serde_with::{DefaultOnError, serde_as, skip_serializing_none};
 
 use crate::IntoOption;
 
 use super::{McpServerAcpId, Meta};
+
+pub use crate::mcp::{McpError, MessageMcpResponse};
 
 /// **UNSTABLE**
 ///
@@ -155,27 +156,6 @@ impl MessageMcpNotification {
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
         self
-    }
-}
-
-/// **UNSTABLE**
-///
-/// Response to `mcp/message`: transparent inner MCP result. MCP errors use
-/// the outer ACP JSON-RPC error envelope.
-#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, Serialize, Deserialize, From)]
-#[serde(transparent)]
-#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "client", "x-method" = MCP_MESSAGE_METHOD_NAME)))]
-#[non_exhaustive]
-pub struct MessageMcpResponse(
-    #[cfg_attr(feature = "schemars", schemars(with = "serde_json::Value"))] pub Arc<RawValue>,
-);
-
-impl MessageMcpResponse {
-    /// Builds [`MessageMcpResponse`] with the result payload.
-    #[must_use]
-    pub fn new(result: Arc<RawValue>) -> Self {
-        Self(result)
     }
 }
 

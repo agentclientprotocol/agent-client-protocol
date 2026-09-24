@@ -2104,11 +2104,44 @@ If omitted or set to `null`, the inner MCP message has no params.
 
 **UNSTABLE**
 
-This capability is not part of the spec yet, and may be removed or changed at any point.
+The successful outer ACP `mcp/message` response carries exactly one
+inner MCP outcome: an opaque result (including JSON null), or an MCP error.
+Outer ACP errors are reserved for binding and runtime failures.
 
-Response to `mcp/message`.
+Both branches require their carrier key. An error must be a non-null object.
+Carrier `_meta` is optional; null is equivalent to omission.
 
-This is the inner MCP response result payload. Any JSON value is valid.
+**Type:** Union
+
+<ResponseField name="Result" type="object">
+An opaque inner MCP result.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"}>
+  Optional ACP carrier metadata.
+</ResponseField>
+<ResponseField name="result" type={"any"} required>
+  Required, even if JSON null.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="Error" type="object">
+A structured inner MCP error.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"}>
+  Optional ACP carrier metadata.
+</ResponseField>
+<ResponseField name="error" type={<a href="#mcperror">McpError</a>} required>
+  Required, non-null MCP error object.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
 
 <a id="session-request_permission"></a>
 ### <span class="font-mono">session/request_permission</span>
@@ -4835,6 +4868,29 @@ Agent supports `McpServer::Acp`.
 
     - Default: `false`
 
+</ResponseField>
+
+## <span class="font-mono">McpError</span>
+
+**UNSTABLE**
+
+An inner MCP error, distinct from an outer ACP binding or runtime error.
+
+`code` and `message` are required and non-null. `data` is optional;
+explicit `null` is preserved separately from an omitted key.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="code" type={"int32"} required>
+  Inner MCP error code; never an ACP error code.
+</ResponseField>
+<ResponseField name="data" type={"any"}>
+  Optional error data; explicit null is retained.
+</ResponseField>
+<ResponseField name="message" type={"string"} required>
+  Inner MCP error message.
 </ResponseField>
 
 ## <span class="font-mono">McpRequestId</span>

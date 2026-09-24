@@ -1648,6 +1648,15 @@ starting with '$/' it is free to ignore the notification."
         }
 
         fn get_type_string(schema: &Value) -> String {
+            // An unconstrained JSON Schema (possibly with only a description)
+            // accepts every JSON value, not only objects.
+            if schema
+                .as_object()
+                .is_some_and(|fields| fields.keys().all(|key| key == "description"))
+            {
+                return "\"any\"".to_string();
+            }
+
             // Check for $ref
             if let Some(ref_val) = schema.get("$ref").and_then(|v| v.as_str()) {
                 let type_name = ref_val.strip_prefix("#/$defs/").unwrap_or(ref_val);
@@ -2109,6 +2118,19 @@ starting with '$/' it is free to ignore the notification."
     mod tests {
         use super::MarkdownGenerator;
         use serde_json::json;
+
+        #[test]
+        fn unconstrained_json_schema_renders_any_value() {
+            assert_eq!(MarkdownGenerator::get_type_string(&json!({})), "\"any\"");
+            assert_eq!(
+                MarkdownGenerator::get_type_string(&json!({"description": "Opaque MCP result"})),
+                "\"any\""
+            );
+            assert_eq!(
+                MarkdownGenerator::get_type_string(&json!({"type": "object"})),
+                "\"object\""
+            );
+        }
 
         #[test]
         fn document_union_includes_shared_properties() {
