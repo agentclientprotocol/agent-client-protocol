@@ -439,9 +439,11 @@ The existing polyfill's downstream `http` capability alone does not establish su
 
 ### SDK and schema work
 
-The reviewed Rust SDK requests `rmcp = "2.1.0"` and its lockfile resolves `rmcp 2.2.0`. That dependency recognizes a `2026-07-28` version constant, but its `ProtocolVersion::LATEST` is still `2025-11-25`; its service lifecycle is initialization-based, and the inspected model does not provide `server/discover`, `subscriptions/listen`, or `InputRequiredResult`. Selecting the newer version string is not a conformance implementation.
+The initial audit examined the Rust SDK's pinned `rmcp 2.2.0`, which lacks the modern service model. The available upgrade is tracked in [Rust SDK PR #372](https://github.com/agentclientprotocol/rust-sdk/pull/372): `rmcp 3.4.0` provides discovery, per-request metadata, MRTR, and subscription APIs. Land that dependency migration before building the replacement ACP transport, rather than introducing a temporary MCP implementation.
 
-Before choosing public APIs, establish a modern-capable MCP dependency or a deliberately scoped stateless implementation. Keep MCP-specific types out of the core ACP transport where possible. A raw JSON/byte transport can still carry modern MCP; neither byte streams nor an existing ACP connection inherently violate statelessness. The problems are hidden session semantics, old typed models, and missing request-stream/correlation behavior.
+The upgrade includes adapter tests for real MCP 2026-07-28 tool calls without initialization, discovery, per-request version validation, required cache metadata, and MRTR elicitation with nonempty input responses and fresh metadata. This is evidence for the dependency path, not proof of complete MCP conformance or of a redesigned ACP binding. The public rmcp major-version change also requires the integration crate's next release to be 4.x; the core ACP SDK remains on 2.x.
+
+`rmcp 3.4.0` still defaults `ProtocolVersion::LATEST` to `2025-11-25`. The new transport's callers must select 2026-07-28 explicitly and carry its required metadata on every request. Keep MCP-specific types out of the core ACP transport where possible. A raw JSON/byte transport can still carry modern MCP; neither byte streams nor an existing ACP connection inherently violate statelessness. The remaining transport work is request routing, correlation, streaming, cancellation, and removal of implicit session semantics.
 
 Implementation work spans:
 
@@ -470,8 +472,8 @@ The stateful HTTP engine, connect/disconnect wire lifecycle, per-MCP-connection 
 
 ### Delivery order and acceptance criteria
 
-1. **Settle the transport contract:** direct server routing, logical MCP request identity, notification correlation, cancellation, and declaration lifetime. Decide the corresponding unstable schema changes before adding another consumer API.
-2. **Prove the modern dependency path:** a real `server/discover` and `tools/call` with per-request metadata, no preceding handshake, and modern result shapes. Do not claim conformance based only on synthetic JSON echoes.
+1. **Land the modern dependency path:** [Rust SDK PR #372](https://github.com/agentclientprotocol/rust-sdk/pull/372) upgrades rmcp and proves real discovery, tool calls without initialization, per-request metadata, and MRTR through the adapter. Keep its tests as the baseline, not a claim of full transport conformance.
+2. **Settle the transport contract:** direct server routing, logical MCP request identity, notification correlation, cancellation, and declaration lifetime. Decide the corresponding unstable schema changes before adding another consumer API.
 3. **Implement the native transport:** request-scoped tools, MRTR, subscriptions, errors, and cancellation; then add an example with a direct ACP client/agent pair.
 4. **Implement optional HTTP adaptation:** full modern header, security, POST/SSE, and request-close behavior. It need not block a native-only first implementation.
 5. **Run a conformance matrix:** two independent callers with overlapping local IDs; different per-request capabilities without inherited state; discovery without setup; exact MRTR state round-trips and new retry IDs; concurrent filtered subscriptions and acknowledgement ordering; request-specific progress; cancellation during a pending tool call and subscription; provider loss; late-message rejection; opaque metadata/errors/results; catalog/cache isolation; HTTP malformed headers, forbidden origins, unsupported methods, batch rejection, and broken streams.
