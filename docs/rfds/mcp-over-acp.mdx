@@ -96,9 +96,7 @@ The v2 field is an optional object: omission or `null` means support is not adve
 
 An intermediary only advertises support when its downstream chain can consume this transport. The conductor does not unconditionally add the capability. A proxy that provides no adaptation preserves its successor's capabilities.
 
-The advertised capability covers this request-scoped transport, including notification delivery and a per-request cancellation path. Agents can cancel their outgoing MCP operations using `$/cancel_request`; providers handle cancellation for those operations, and adapting proxies forward it using the appropriate hop-local request ID. This does not make cancellation mandatory for unrelated ACP methods or require support for every optional MCP feature.
-
-The cancellation requirement is a choice of this binding, not a claim that MCP universally mandates ACP cancellation. A `subscriptions/listen` request can remain open indefinitely, and an HTTP adapter must translate response-stream closure into cancellation of that request. Without a per-request signal, the caller would have to close the whole ACP connection to release one stream, disrupting unrelated work. [MCP defines cancellation per transport](https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/cancellation); this binding reuses ACP's existing mechanism rather than adding another cancellation message. Cancellation remains subject to completion races and cannot undo external side effects.
+This capability advertises the MCP transport, not every optional MCP feature or a guarantee that every operation can be cancelled. MCP discovery and per-request capabilities describe the supported features.
 
 ## Requests and results
 
@@ -236,7 +234,7 @@ Each subscription notification carries `io.modelcontextprotocol/subscriptionId` 
 
 ## Cancellation and lifetime
 
-Use ACP's existing `$/cancel_request` to cancel the **outer ACP request**. For the example request above:
+Cancellation uses ACP's existing `$/cancel_request` for the **outer ACP request**; this binding adds no separate cancellation method or support requirement. A caller can request cancellation when it no longer needs an operation's result. For the example request above:
 
 ```json
 {
@@ -248,15 +246,17 @@ Use ACP's existing `$/cancel_request` to cancel the **outer ACP request**. For t
 }
 ```
 
-This cancellation ID is hop-local. Proxies forward cancellation using their downstream ACP request ID; they do not rewrite the logical MCP `requestId` or tunnel an unrelated hop's cancellation ID.
+This cancellation ID is hop-local. When a proxy forwards cancellation, it uses its downstream ACP request ID; it does not rewrite the logical MCP `requestId` or tunnel an unrelated hop's cancellation ID.
 
-The provider observes cancellation, immediately revokes that operation's notification permission, and stops its owned backend work. It answers the original ACP request with a cancellation error, or with the already-completed outcome if completion won the race. Cancelling one operation must not stop sibling requests, subscriptions, the server registration, or the containing ACP connection.
+Cancellation is best effort. A provider may complete an operation normally if it cannot cancel it or completion wins the race. When it honors cancellation, it stops producing new notifications for that operation and answers the original ACP request with a cancellation error after cleanup. Cancelling one operation does not cancel sibling requests, subscriptions, the server registration, or the containing ACP connection.
 
-Cancellation is not merely deletion of a routing entry. Execution and cleanup remain supervised; admission permits and the active logical ID stay owned until cleanup finishes. A reusable service remains available for sibling operations. Queued work cancelled before execution must not start later. Cancellation cannot roll back already-performed external side effects, and an application must not detach work while promising request-owned cancellation.
+For long-lived operations such as `subscriptions/listen`, per-request cancellation is useful because it avoids closing the whole ACP connection to stop one stream. An HTTP adapter translates response-stream closure into a cancellation request upstream, following [MCP's transport-specific cancellation rules](https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/cancellation).
+
+Honoring cancellation is not merely deletion of a routing entry. Execution and cleanup remain supervised; admission permits and the active logical ID stay owned until cleanup finishes. A reusable service remains available for sibling operations. Work reported as cancelled before execution does not start later. Cancellation cannot roll back already-performed external side effects.
 
 Releasing a provider registration or closing its ACP connection cancels all work owned by it. Transport EOF initiates cancellation; it must not wait indefinitely for an application future that is itself awaiting the disconnected peer. Unknown servers and invalid or duplicate active request IDs receive errors; malformed notifications do not receive synthetic replies.
 
-Bound notification buffering, frame sizes, and outstanding work. Retain resource accounting while messages are queued, deferred, serialized, or held in an unread response body, not only while backend execution is active. Cancellation and shutdown must remain possible when data capacity is exhausted. If an implementation cannot continue a stream safely, fail or cancel that request explicitly instead of silently dropping subscription events or growing an unbounded queue. Do not block unrelated dispatch while waiting for a slow consumer.
+Bound notification buffering, frame sizes, and outstanding work. Retain resource accounting while messages are queued, deferred, serialized, or held in an unread response body, not only while backend execution is active. Keep shutdown and any supported cancellation responsive when data capacity is exhausted. If an implementation cannot continue a stream safely, fail or cancel that request explicitly instead of silently dropping subscription events or growing an unbounded queue. Do not block unrelated dispatch while waiting for a slow consumer.
 
 ## Interactive tools
 
@@ -268,14 +268,14 @@ This flow needs neither a persistent MCP session nor a provider-originated ACP r
 
 ## Proxying and HTTP adaptation
 
-Proxies preserve `serverId`, logical `requestId`, inner payloads, and metadata. Normal ACP forwarding handles outer responses and hop-local cancellation. Providers claim requests for their declared servers; other components forward them normally. There is no conductor MCP connection table or special connect/disconnect routing.
+Proxies preserve `serverId`, logical `requestId`, inner payloads, and metadata. Normal ACP forwarding handles outer responses and, where supported, hop-local cancellation. Providers claim requests for their declared servers; other components forward them normally. There is no conductor MCP connection table or special connect/disconnect routing.
 
 An optional adapter may expose a native server to a **modern MCP HTTP client**. HTTP capability alone does not prove that an agent supports this MCP revision. The adapter must not add a legacy fallback.
 
 The HTTP endpoint can be reused, but every POST represents its own request:
 
 - Accept a single JSON-RPC request per POST and return JSON or request-scoped SSE. Reject batches and client-sent responses.
-- Support subscriptions as long-lived POST response streams. Closing one response stream cancels only its mapped ACP request.
+- Support subscriptions as long-lived POST response streams. Closing one response stream requests cancellation of only its mapped ACP request and stops delivery on that stream.
 - Return 405 for GET and DELETE. Do not issue session headers or implement SSE resumption.
 - Validate protocol-version, method, name, and applicable mirrored tool-parameter headers against the body, including required value decoding.
 - Validate supplied Origin headers, bind local listeners to loopback, and enforce access control. A random port is not authentication.
@@ -307,7 +307,7 @@ The Rust implementation uses each ACP version's unstable `MessageMcpRequest`, `M
 
 The SDK's target API separates a reusable `McpService` from each owned operation. A `McpRequestContext` supplies logical/server identity, validated metadata and capabilities, cancellation, and request-scoped notifications. A backend factory is an explicit adapter for implementations that need per-operation construction, not a requirement imposed by stateless MCP. Integration adapters must supervise any tasks spawned by their underlying library, not assume dropping a wrapper joins detached handlers.
 
-Acceptance tests must demonstrate:
+Reference implementation tests cover:
 
 - Real discovery and tool calls without MCP initialization, directly and through a proxy.
 - Stable logical IDs when ACP outer IDs are renumbered.
@@ -327,7 +327,7 @@ The Rust reference implementation exercises the versioned response carriers, reu
 
 Concrete buffer sizes and concurrency quotas are implementation policies, not wire-protocol constants. Their behavior must be configurable or documented, and quota failures must preserve the error-domain distinction above. Both ACP v1 and draft v2 must exercise the same binding semantics; this proposal does not otherwise stabilize ACP v2 or optional MCP extensions.
 
-Custom service adapters are responsible for observing operation cancellation and joining their owned backend work before returning. The binding waits for that completion; it cannot forcibly terminate detached application work. The reference tests establish the covered binding behavior, not full conformance for every MCP feature or readiness to publish packages. The draft schema must be released and dependent SDK major versions coordinated before publication.
+The Rust reference implementation supervises cancellation and joins owned backend work before reporting it complete; it cannot forcibly terminate detached application work. These are implementation safeguards, not additional cancellation requirements for advertising the transport. The reference tests establish the covered binding behavior, not full conformance for every MCP feature or readiness to publish packages. The draft schema must be released and dependent SDK major versions coordinated before publication.
 
 ## References and revision history
 
